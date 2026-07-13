@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../shared/widgets/app_close_button.dart';
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -1642,7 +1644,6 @@ class _MaterialDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
     final supplier = detail['supplier'] as Map<String, dynamic>? ?? {};
     final category = detail['category'] as Map<String, dynamic>? ?? {};
     final location = detail['location'] as Map<String, dynamic>? ?? {};
@@ -1653,131 +1654,104 @@ class _MaterialDetailDialog extends StatelessWidget {
     final isFree = detail['isFree'] as bool? ?? true;
     final pendingCount = (reportSummary['pendingCount'] as num?)?.toInt() ?? 0;
     final totalReports = (reportSummary['totalCount'] as num?)?.toInt() ?? 0;
+    final status = detail['status'] as String? ?? 'UNKNOWN';
+    final hasModerationActions =
+        onHide != null || onUnavailable != null || onRestore != null;
+    final locationLabel = [
+      location['city'] as String?,
+      location['area'] as String?,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
 
-    return AlertDialog(
-      title: null,
-      contentPadding: EdgeInsets.zero,
-      content: SizedBox(
-        width: 640,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(context).height * 0.78,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    return AppDialogShell(
+      maxWidth: 1040,
+      maxHeightFactor: 0.9,
+      contentPadding: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(detail['title'] as String? ?? 'Material details'),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-                decoration: BoxDecoration(
-                  color: palette.bannerBackground,
-                  border: Border(bottom: BorderSide(color: palette.cardBorder)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            detail['title'] as String? ?? 'Material details',
-                            style: AdminTypography.pageTitle(
-                              palette,
-                            ).copyWith(fontSize: 18),
-                          ),
-                        ),
-                        AppCloseButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        MaterialStatusBadge(
-                          label: _formatStatusLabel(
-                            detail['status'] as String? ?? 'UNKNOWN',
-                          ),
-                          tone: materialLifecycleStatusTone(
-                            detail['status'] as String? ?? '',
-                          ),
-                        ),
-                        _SemanticBadge(
-                          label: isFree ? 'Free' : 'Paid',
-                          tone: isFree ? _BadgeTone.success : _BadgeTone.paid,
-                        ),
-                        if (pendingCount > 0)
-                          _SemanticBadge(
-                            label: '$pendingCount pending report(s)',
-                            tone: _BadgeTone.warning,
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
+              AppStatusBadge(
+                label: _displayEnum(status),
+                tone: materialLifecycleStatusTone(status).appStatusTone,
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (moderation.detailLockMessage != null) ...[
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: palette.bannerBackground,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: palette.cardBorder),
-                          ),
-                          child: Text(
-                            moderation.detailLockMessage!,
-                            style: AdminTypography.pageSubtitle(
-                              palette,
-                            ).copyWith(color: palette.textMuted),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      if (images.isNotEmpty) ...[
-                        _DetailSection(
-                          title: 'Images',
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: images.take(4).map((raw) {
-                              final image = Map<String, dynamic>.from(
-                                raw as Map,
-                              );
-                              final url = image['imageUrl'] as String?;
-                              if (url == null) return const SizedBox.shrink();
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.network(
-                                  ApiConfig.resolveMediaUrl(url),
-                                  width: 96,
-                                  height: 96,
-                                  fit: BoxFit.cover,
+              AppStatusBadge(
+                label: isFree ? 'Free' : 'Paid',
+                tone: isFree ? AppStatusTone.success : AppStatusTone.info,
+              ),
+              if ((category['nameEn'] as String?)?.trim().isNotEmpty ?? false)
+                AppStatusBadge(
+                  label: category['nameEn'] as String,
+                  tone: AppStatusTone.neutral,
+                ),
+            ],
+          ),
+        ],
+      ),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (moderation.detailLockMessage != null) ...[
+            _ModerationLockNotice(message: moderation.detailLockMessage!),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final leftColumn = Column(
+                children: [
+                  _DetailSection(
+                    title: 'Images',
+                    icon: Icons.photo_outlined,
+                    child: _FeaturedMaterialImages(images: images),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _DetailSection(
+                    title: 'Material overview',
+                    icon: Icons.inventory_2_outlined,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if ((detail['description'] as String?)
+                                ?.trim()
+                                .isNotEmpty ??
+                            false) ...[
+                          Text(
+                            detail['description'] as String,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: AppThemeColors.of(
+                                    context,
+                                  ).textSecondary,
                                 ),
-                              );
-                            }).toList(),
                           ),
-                        ),
-                      ],
-                      _DetailSection(
-                        title: 'Material overview',
-                        child: _DetailGrid(
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                        _DetailMetadataWrap(
                           entries: [
-                            _DetailEntry('Description', detail['description']),
                             _DetailEntry('Category', category['nameEn']),
-                            _DetailEntry('Condition', detail['condition']),
-                            _DetailEntry('Source', detail['sourceType']),
+                            _DetailEntry(
+                              'Condition',
+                              detail['condition'],
+                              enumValue: true,
+                            ),
+                            _DetailEntry(
+                              'Source',
+                              detail['sourceType'],
+                              enumValue: true,
+                            ),
                             _DetailEntry(
                               'Quantity',
-                              '${detail['quantity']} ${detail['unit']}',
+                              '${detail['quantity'] ?? '—'} ${detail['unit'] ?? ''}'
+                                  .trim(),
                             ),
                             _DetailEntry(
                               'Created',
@@ -1789,184 +1763,208 @@ class _MaterialDetailDialog extends StatelessWidget {
                             ),
                           ],
                         ),
-                      ),
-                      _DetailSection(
-                        title: 'Supplier',
-                        child: _DetailGrid(
-                          entries: [
-                            _DetailEntry('Name', supplier['displayName']),
-                            _DetailEntry('Email', supplier['email']),
-                            _DetailEntry(
-                              'Verification',
-                              supplier['verificationStatus'],
-                            ),
-                            if (supplier['organization'] is Map)
-                              _DetailEntry(
-                                'Organization',
-                                (supplier['organization']
-                                        as Map)['organizationName']
-                                    as String?,
-                              ),
-                          ],
-                        ),
-                      ),
-                      _DetailSection(
-                        title: 'Location & fulfillment',
-                        child: _DetailGrid(
-                          entries: [
-                            _DetailEntry(
-                              'Location',
-                              '${location['city'] ?? ''}${location['area'] == null ? '' : ', ${location['area']}'}',
-                            ),
-                            _DetailEntry(
-                              'Pickup allowed',
-                              '${detail['pickupAllowed'] ?? false}',
-                            ),
-                            _DetailEntry(
-                              'Delivery allowed',
-                              '${detail['deliveryAllowed'] ?? false}',
-                            ),
-                            _DetailEntry('Pickup notes', detail['pickupNotes']),
-                          ],
-                        ),
-                      ),
-                      _DetailSection(
-                        title: 'Pricing',
-                        child: _DetailGrid(
-                          entries: [
-                            _DetailEntry('Type', isFree ? 'Free' : 'Paid'),
-                            if (!isFree)
-                              _DetailEntry(
-                                'Price',
-                                '${detail['price']} ${detail['currency']}',
-                              ),
-                            _DetailEntry(
-                              'Max at check',
-                              detail['maxAllowedPriceAtCheck']?.toString(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _DetailSection(
-                        title: 'Reports',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '$pendingCount pending • $totalReports total',
-                              style: AdminTypography.pageSubtitle(palette),
-                            ),
-                            if (latestReports.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              ...latestReports.take(3).map((raw) {
-                                final report = Map<String, dynamic>.from(
-                                  raw as Map,
-                                );
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: palette.bannerBackground,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: palette.cardBorder,
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _formatReportReason(
-                                            report['reason'] as String? ?? '',
-                                          ),
-                                          style: AdminTypography.kpiLabel(
-                                            palette,
-                                          ),
-                                        ),
-                                        if (report['note'] != null)
-                                          Text(
-                                            '${report['note']}',
-                                            style: AdminTypography.kpiHelper(
-                                              palette,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ],
-                          ],
-                        ),
-                      ),
-                      _DetailSection(
-                        title: 'Moderation',
-                        child: _DetailGrid(
-                          entries: [
-                            _DetailEntry('Status', detail['status']),
-                            _DetailEntry(
-                              'Moderation reason',
-                              detail['moderationReason'],
-                            ),
-                            _DetailEntry(
-                              'Moderated at',
-                              _formatDate(detail['moderatedAt'] as String?),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: palette.cardBorder)),
-                ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
+                  const SizedBox(height: AppSpacing.md),
+                  _DetailSection(
+                    title: 'Supplier',
+                    icon: Icons.storefront_outlined,
+                    child: _SupplierSummary(supplier: supplier),
+                  ),
+                ],
+              );
+              final rightColumn = Column(
+                children: [
+                  _DetailSection(
+                    title: 'Location & fulfillment',
+                    icon: Icons.location_on_outlined,
+                    child: Column(
+                      children: [
+                        _DetailInfoRow(
+                          icon: Icons.place_outlined,
+                          label: 'Location',
+                          value: locationLabel.isEmpty
+                              ? 'Not provided'
+                              : locationLabel,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _DetailInfoRow(
+                          icon: Icons.local_shipping_outlined,
+                          label: 'Pickup allowed',
+                          trailing: _YesNoBadge(
+                            value: detail['pickupAllowed'] as bool? ?? false,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _DetailInfoRow(
+                          icon: Icons.delivery_dining_outlined,
+                          label: 'Delivery allowed',
+                          trailing: _YesNoBadge(
+                            value: detail['deliveryAllowed'] as bool? ?? false,
+                          ),
+                        ),
+                        if ((detail['pickupNotes'] as String?)
+                                ?.trim()
+                                .isNotEmpty ??
+                            false) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _DetailNote(
+                            title: 'Pickup notes',
+                            note: detail['pickupNotes'] as String,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _DetailSection(
+                    title: 'Pricing',
+                    icon: Icons.sell_outlined,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppStatusBadge(
+                          label: isFree ? 'Free' : 'Paid',
+                          tone: isFree
+                              ? AppStatusTone.success
+                              : AppStatusTone.info,
+                        ),
+                        if (!isFree) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            '${detail['price'] ?? '—'} ${detail['currency'] ?? ''}'
+                                .trim(),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(
+                                  color: AppThemeColors.of(context).textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
+                        if (detail['maxAllowedPriceAtCheck'] != null) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Price check limit: ${detail['maxAllowedPriceAtCheck']}',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppThemeColors.of(context).textMuted,
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _DetailSection(
+                    title: 'Reports',
+                    icon: Icons.flag_outlined,
+                    child: _ReportsSummary(
+                      pendingCount: pendingCount,
+                      totalReports: totalReports,
+                      latestReports: latestReports,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _DetailSection(
+                    title: 'Moderation',
+                    icon: Icons.gavel_outlined,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _DetailInfoRow(
+                          label: 'Current status',
+                          trailing: AppStatusBadge(
+                            label: _displayEnum(status),
+                            tone: materialLifecycleStatusTone(
+                              status,
+                            ).appStatusTone,
+                          ),
+                        ),
+                        if ((detail['moderationReason'] as String?)
+                                ?.trim()
+                                .isNotEmpty ??
+                            false) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _DetailNote(
+                            title: 'Moderation reason',
+                            note: detail['moderationReason'] as String,
+                          ),
+                        ],
+                        if (_formatDate(detail['moderatedAt'] as String?) !=
+                            null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _DetailInfoRow(
+                            label: 'Last moderated',
+                            value: _formatDate(
+                              detail['moderatedAt'] as String?,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              );
+
+              if (constraints.maxWidth < 760) {
+                return Column(
                   children: [
-                    if (onHide != null)
-                      OutlinedButton(
-                        onPressed: onHide,
-                        style: AppStatusButtonStyle.outlined(
-                          context,
-                          AppStatusTone.danger,
-                        ),
-                        child: const Text('Hide'),
-                      ),
-                    if (onUnavailable != null)
-                      OutlinedButton(
-                        onPressed: onUnavailable,
-                        style: AppStatusButtonStyle.outlined(
-                          context,
-                          AppStatusTone.danger,
-                        ),
-                        child: const Text('Mark unavailable'),
-                      ),
-                    if (onRestore != null)
-                      FilledButton(
-                        onPressed: onRestore,
-                        style: AppStatusButtonStyle.filled(
-                          context,
-                          AppStatusTone.primary,
-                        ),
-                        child: const Text('Restore'),
-                      ),
+                    leftColumn,
+                    const SizedBox(height: AppSpacing.md),
+                    rightColumn,
                   ],
-                ),
-              ),
-            ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: leftColumn),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(child: rightColumn),
+                ],
+              );
+            },
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+        ],
       ),
+      footer: hasModerationActions
+          ? Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              alignment: WrapAlignment.end,
+              children: [
+                if (onHide != null)
+                  OutlinedButton(
+                    onPressed: onHide,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.danger,
+                    ),
+                    child: const Text('Hide'),
+                  ),
+                if (onUnavailable != null)
+                  OutlinedButton(
+                    onPressed: onUnavailable,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.danger,
+                    ),
+                    child: const Text('Mark unavailable'),
+                  ),
+                if (onRestore != null)
+                  FilledButton(
+                    onPressed: onRestore,
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
+                    ),
+                    child: const Text('Restore'),
+                  ),
+              ],
+            )
+          : null,
     );
   }
 
@@ -1979,31 +1977,45 @@ class _MaterialDetailDialog extends StatelessWidget {
 }
 
 class _DetailSection extends StatelessWidget {
-  const _DetailSection({required this.title, required this.child});
+  const _DetailSection({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
 
   final String title;
+  final IconData icon;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+    final colors = AppThemeColors.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: colors.borderSubtle),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AdminTypography.sectionTitle(palette)),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: palette.bannerBackground,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: palette.cardBorder),
-            ),
-            child: child,
+          Row(
+            children: [
+              Icon(icon, size: 20, color: colors.primary),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: AppSpacing.md),
+          child,
         ],
       ),
     );
@@ -2011,20 +2023,163 @@ class _DetailSection extends StatelessWidget {
 }
 
 class _DetailEntry {
-  const _DetailEntry(this.label, this.value);
+  const _DetailEntry(this.label, this.value, {this.enumValue = false});
 
   final String label;
   final dynamic value;
+  final bool enumValue;
 }
 
-class _DetailGrid extends StatelessWidget {
-  const _DetailGrid({required this.entries});
+class _ModerationLockNotice extends StatelessWidget {
+  const _ModerationLockNotice({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.warningSoft,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.warningBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lock_outline, color: colors.warningText, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.warningText),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeaturedMaterialImages extends StatelessWidget {
+  const _FeaturedMaterialImages({required this.images});
+
+  final List<dynamic> images;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrls = images
+        .whereType<Map>()
+        .map((image) => image['imageUrl'] as String?)
+        .whereType<String>()
+        .where((url) => url.trim().isNotEmpty)
+        .toList();
+    final colors = AppThemeColors.of(context);
+
+    if (imageUrls.isEmpty) {
+      return Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: colors.surfaceMuted,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: colors.borderSubtle),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image_not_supported_outlined, color: colors.textMuted),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'No images provided',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: AppRadius.mdAll,
+          child: AspectRatio(
+            aspectRatio: 16 / 10,
+            child: Image.network(
+              ApiConfig.resolveMediaUrl(imageUrls.first),
+              width: double.infinity,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(
+                color: colors.surfaceMuted,
+                alignment: Alignment.center,
+                child: Text(
+                  'Image unavailable',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (imageUrls.length > 1) ...[
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 56,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: imageUrls.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+              itemBuilder: (context, index) => Container(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                decoration: BoxDecoration(
+                  color: colors.cardSurface,
+                  borderRadius: AppRadius.smAll,
+                  border: Border.all(
+                    color: index == 0 ? colors.primary : colors.borderSubtle,
+                    width: index == 0 ? 2 : 1,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: AppRadius.smAll,
+                  child: Image.network(
+                    ApiConfig.resolveMediaUrl(imageUrls[index]),
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(
+                      width: 48,
+                      color: colors.surfaceMuted,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: colors.textMuted,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DetailMetadataWrap extends StatelessWidget {
+  const _DetailMetadataWrap({required this.entries});
 
   final List<_DetailEntry> entries;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
     final visible = entries
         .where(
           (entry) =>
@@ -2034,35 +2189,321 @@ class _DetailGrid extends StatelessWidget {
     if (visible.isEmpty) {
       return Text(
         'No details available.',
-        style: AdminTypography.kpiHelper(palette),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppThemeColors.of(context).textMuted,
+        ),
       );
     }
-    return Column(
+    final colors = AppThemeColors.of(context);
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
       children: visible
           .map(
-            (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 130,
-                    child: Text(
-                      entry.label,
-                      style: AdminTypography.kpiHelper(palette),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '${entry.value}',
-                      style: AdminTypography.kpiLabel(palette),
-                    ),
-                  ),
-                ],
+            (entry) => Container(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.sm,
+                AppSpacing.xs,
+                AppSpacing.sm,
+                AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: colors.surfaceMuted,
+                borderRadius: AppRadius.smAll,
+                border: Border.all(color: colors.borderSubtle),
+              ),
+              child: Text(
+                '${entry.label}: ${entry.enumValue ? _displayEnum(entry.value) : entry.value}',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: colors.textSecondary),
               ),
             ),
           )
           .toList(),
     );
   }
+}
+
+class _SupplierSummary extends StatelessWidget {
+  const _SupplierSummary({required this.supplier});
+
+  final Map<String, dynamic> supplier;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final organization = supplier['organization'] as Map?;
+    final organizationName = organization?['organizationName'] as String?;
+    final verification = supplier['verificationStatus'] as String?;
+    final name = supplier['displayName'] as String? ?? 'Supplier';
+    final email = supplier['email'] as String?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: colors.primarySoft,
+                borderRadius: AppRadius.mdAll,
+              ),
+              child: Icon(
+                organizationName?.trim().isNotEmpty ?? false
+                    ? Icons.storefront_outlined
+                    : Icons.person_outline,
+                color: colors.primary,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (email?.trim().isNotEmpty ?? false) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      email!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (verification?.trim().isNotEmpty ?? false)
+              AppStatusBadge(
+                label: _displayEnum(verification),
+                tone: supplierVerificationStatusTone(verification!),
+              ),
+          ],
+        ),
+        if (organizationName?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: 1, color: colors.borderSubtle),
+          const SizedBox(height: AppSpacing.md),
+          _DetailInfoRow(
+            icon: Icons.business_outlined,
+            label: 'Organization',
+            value: organizationName,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DetailInfoRow extends StatelessWidget {
+  const _DetailInfoRow({
+    required this.label,
+    this.icon,
+    this.value,
+    this.trailing,
+  });
+
+  final String label;
+  final IconData? icon;
+  final String? value;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 18, color: colors.textMuted),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(color: colors.textMuted),
+              ),
+              if (value != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  value!,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: colors.textPrimary),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (trailing != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          trailing!,
+        ],
+      ],
+    );
+  }
+}
+
+class _YesNoBadge extends StatelessWidget {
+  const _YesNoBadge({required this.value});
+
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: value ? 'Yes' : 'No',
+    tone: value ? AppStatusTone.success : AppStatusTone.neutral,
+  );
+}
+
+class _DetailNote extends StatelessWidget {
+  const _DetailNote({required this.title, required this.note});
+
+  final String title;
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.surfaceMuted,
+        borderRadius: AppRadius.smAll,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: colors.textMuted),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            note,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportsSummary extends StatelessWidget {
+  const _ReportsSummary({
+    required this.pendingCount,
+    required this.totalReports,
+    required this.latestReports,
+  });
+
+  final int pendingCount;
+  final int totalReports;
+  final List<dynamic> latestReports;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            AppStatusBadge(
+              label: '$pendingCount pending',
+              tone: pendingCount > 0
+                  ? AppStatusTone.warning
+                  : AppStatusTone.neutral,
+            ),
+            AppStatusBadge(
+              label: '$totalReports total',
+              tone: AppStatusTone.neutral,
+            ),
+          ],
+        ),
+        if (latestReports.isEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            pendingCount == 0
+                ? 'No reports pending.'
+                : 'No recent reports to display.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+          ),
+        ] else ...[
+          const SizedBox(height: AppSpacing.md),
+          for (final raw in latestReports.take(3))
+            if (raw is Map) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: colors.surfaceMuted,
+                  borderRadius: AppRadius.smAll,
+                  border: Border.all(color: colors.borderSubtle),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formatReportReason(raw['reason'] as String? ?? ''),
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if ((raw['note'] as String?)?.trim().isNotEmpty ??
+                        false) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        raw['note'] as String,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+        ],
+      ],
+    );
+  }
+}
+
+String _displayEnum(Object? value) {
+  if (value == null) return 'Not provided';
+  final raw = value.toString().trim();
+  if (raw.isEmpty) return 'Not provided';
+  return raw
+      .replaceAll('_', ' ')
+      .toLowerCase()
+      .replaceFirstMapped(
+        RegExp(r'^[a-z]'),
+        (match) => match.group(0)!.toUpperCase(),
+      );
 }
