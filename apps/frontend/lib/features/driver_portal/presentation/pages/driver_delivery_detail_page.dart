@@ -53,6 +53,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
               title: 'Could not load delivery details.',
               subtitle: 'Please try again.',
               actionLabel: 'Retry',
+              actionTone: AppStatusTone.primary,
               onAction: () => refreshActiveDriverDelivery(ref, deliveryId),
             ),
             data: (state) {
@@ -72,6 +73,8 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                   subtitle: inactiveContext.message ??
                       'This delivery is no longer active. It was moved to admin review.',
                   actionLabel: 'Back to jobs',
+                  actionTone: AppStatusTone.neutral,
+                  actionProminent: false,
                   onAction: () => context.popOrGo('/driver/jobs'),
                 ),
                 DriverDeliveryDetailNotFound() => _StatePanel(
@@ -80,6 +83,8 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                   subtitle:
                       'Open the jobs board to view your current assigned delivery.',
                   actionLabel: 'Back to jobs',
+                  actionTone: AppStatusTone.neutral,
+                  actionProminent: false,
                   onAction: () => context.popOrGo('/driver/jobs'),
                 ),
               };
@@ -344,6 +349,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
               onPressed: canPressAction ? () => _advance(nextStatus) : null,
+              style: AppStatusButtonStyle.filled(
+                context,
+                deliveryStatusAppTone(nextStatus),
+              ),
               icon: isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -405,6 +414,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.popOrGo('/driver/jobs'),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.local_shipping_outlined),
             label: const Text('Back to jobs'),
           ),
@@ -800,6 +810,10 @@ class _LocationSharingSectionState
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             onPressed: isBusy ? null : () => _sendManualLocation(context),
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.info,
+            ),
             icon: isBusy
                 ? const SizedBox(
                     width: 18,
@@ -1171,6 +1185,8 @@ class _StatePanel extends StatelessWidget {
     required this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.actionTone = AppStatusTone.primary,
+    this.actionProminent = true,
   });
 
   final IconData icon;
@@ -1178,6 +1194,8 @@ class _StatePanel extends StatelessWidget {
   final String subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final AppStatusTone actionTone;
+  final bool actionProminent;
 
   @override
   Widget build(BuildContext context) {
@@ -1204,7 +1222,13 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: actionProminent
+                  ? AppStatusButtonStyle.filled(context, actionTone)
+                  : AppStatusButtonStyle.outlined(context, actionTone),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),
