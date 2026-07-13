@@ -277,8 +277,10 @@ class _InvitationsBodyState extends ConsumerState<_InvitationsBody> {
             ),
             FilledButton.icon(
               onPressed: () => _openCreateDialog(context),
-              style:
-                  FilledButton.styleFrom(backgroundColor: palette.primaryTeal),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               icon: const Icon(Icons.mail_outline),
               label: Text(l.t('Send Invitation', 'إرسال دعوة')),
             ),
@@ -506,8 +508,9 @@ class _InvitationsList extends ConsumerWidget {
                     onDuplicate: (existing) => onOpenDetails(existing),
                   ),
                 ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: palette.primaryTeal,
+                style: AppStatusButtonStyle.filled(
+                  context,
+                  AppStatusTone.primary,
                 ),
                 icon: const Icon(Icons.mail_outline),
                 label: Text(l.t('Send Invitation', 'إرسال دعوة')),
@@ -616,16 +619,28 @@ class _InvitationsList extends ConsumerWidget {
                             ],
                           ),
                         ),
+                        style: AppStatusButtonStyle.text(
+                          context,
+                          AppStatusTone.danger,
+                        ),
                         child: Text(l.t('View error', 'عرض الخطأ')),
                       ),
                     if (canAct)
                       TextButton(
                         onPressed: () => _resend(context, ref, item.id),
+                        style: AppStatusButtonStyle.text(
+                          context,
+                          AppStatusTone.warning,
+                        ),
                         child: Text(l.t('Resend', 'إعادة إرسال')),
                       ),
                     if (canAct)
                       TextButton(
                         onPressed: () => _revoke(context, ref, item.id),
+                        style: AppStatusButtonStyle.text(
+                          context,
+                          AppStatusTone.danger,
+                        ),
                         child: Text(l.t('Revoke', 'إلغاء')),
                       ),
                   ],

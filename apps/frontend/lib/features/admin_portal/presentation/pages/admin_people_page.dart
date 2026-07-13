@@ -259,8 +259,9 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: context.adminPalette.amber,
+            style: AppStatusButtonStyle.filled(
+              dialogContext,
+              AppStatusTone.warning,
             ),
             child: const Text('Suspend account'),
           ),
@@ -307,6 +308,10 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
+            style: AppStatusButtonStyle.filled(
+              dialogContext,
+              AppStatusTone.primary,
+            ),
             child: const Text('Reactivate account'),
           ),
         ],
@@ -725,15 +730,20 @@ class _PersonCard extends StatelessWidget {
                 if (onSuspend != null)
                   OutlinedButton.icon(
                     onPressed: onSuspend,
-                    icon: Icon(Icons.pause_circle_outline, size: 18, color: palette.amber),
-                    label: Text(
-                      'Suspend account',
-                      style: TextStyle(color: palette.amber),
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.warning,
                     ),
+                    icon: const Icon(Icons.pause_circle_outline, size: 18),
+                    label: const Text('Suspend account'),
                   ),
                 if (onReactivate != null)
                   FilledButton.icon(
                     onPressed: onReactivate,
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
+                    ),
                     icon: const Icon(Icons.play_circle_outline, size: 18),
                     label: const Text('Reactivate account'),
                   ),

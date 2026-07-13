@@ -806,9 +806,14 @@ class _ProjectTrailingActions extends StatelessWidget {
     final badge = _ProjectStatusBadge(status: item.status);
     final reviewButton = OutlinedButton(
       onPressed: () => onDetails(item.id),
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+      style: AppStatusButtonStyle.outlined(
+        context,
+        AppStatusTone.neutral,
+      ).copyWith(
+        minimumSize: const WidgetStatePropertyAll(Size(0, 40)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 16),
+        ),
       ),
       child: const Text('Review'),
     );
