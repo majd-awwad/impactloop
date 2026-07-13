@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/learning_project_status_presentation.dart';
 import '../../data/admin_learning_projects_api.dart';
 import '../../data/models/admin_learning_projects_models.dart';
 import '../l10n/admin_l10n.dart';
@@ -136,25 +137,8 @@ final adminLearningProjectsListProvider =
   );
 });
 
-Color _statusAccent(AdminPalette palette, String status) {
-  switch (status) {
-    case 'PENDING_REVIEW':
-      return palette.amber;
-    case 'PUBLISHED':
-      return palette.green;
-    case 'CHANGES_REQUESTED':
-      return palette.purple;
-    case 'REJECTED':
-      return palette.red;
-    case 'HIDDEN':
-      return palette.amber;
-    case 'ARCHIVED':
-    case 'DRAFT':
-      return palette.textMuted;
-    default:
-      return palette.primaryTeal;
-  }
-}
+Color _statusAccent(BuildContext context, String status) =>
+    AppStatusStyle.of(context, learningProjectStatusTone(status)).foreground;
 
 class _ProjectStatusBadge extends StatelessWidget {
   const _ProjectStatusBadge({required this.status});
@@ -162,28 +146,10 @@ class _ProjectStatusBadge extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final accent = _statusAccent(palette, status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: palette.isDark ? 0.2 : 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: accent.withValues(alpha: 0.45)),
-      ),
-      child: Text(
-        humanizeEnum(status),
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-          color: accent,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: humanizeEnum(status),
+    tone: learningProjectStatusTone(status),
+  );
 }
 
 class AdminLearningProjectsPage extends ConsumerStatefulWidget {
@@ -684,7 +650,7 @@ class _ProjectsList extends StatelessWidget {
                 decoration: BoxDecoration(
                   border: Border(
                     left: BorderSide(
-                      color: _statusAccent(palette, item.status),
+                      color: _statusAccent(context, item.status),
                       width: 3,
                     ),
                   ),

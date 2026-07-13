@@ -12,8 +12,10 @@ import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/learning_project_status_presentation.dart';
 import '../../../materials/data/models/category.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project_draft_component.dart';
@@ -1109,24 +1111,10 @@ class _StatusChip extends StatelessWidget {
   final LearningProjectSubmissionStatus status;
 
   @override
-  Widget build(BuildContext context) {
-    final color = _toneColor(context, status);
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.13),
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        status.label(),
-        style: AppTextStyles.badgeLabel(context).copyWith(color: color),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: status.label(),
+    tone: learningProjectStatusTone(status.apiValue),
+  );
 }
 
 class _FeedbackPanel extends StatelessWidget {
@@ -1332,18 +1320,11 @@ class _StatePanel extends StatelessWidget {
   }
 }
 
-Color _toneColor(BuildContext context, LearningProjectSubmissionStatus status) {
-  final scheme = Theme.of(context).colorScheme;
-  return switch (status) {
-    LearningProjectSubmissionStatus.published => Colors.green.shade700,
-    LearningProjectSubmissionStatus.changesRequested => Colors.amber.shade800,
-    LearningProjectSubmissionStatus.rejected => scheme.error,
-    LearningProjectSubmissionStatus.hidden ||
-    LearningProjectSubmissionStatus.archived => scheme.outline,
-    LearningProjectSubmissionStatus.draft => Colors.blueGrey.shade700,
-    LearningProjectSubmissionStatus.pendingReview => Colors.blue.shade700,
-  };
-}
+Color _toneColor(BuildContext context, LearningProjectSubmissionStatus status) =>
+    AppStatusStyle.of(
+      context,
+      learningProjectStatusTone(status.apiValue),
+    ).foreground;
 
 String _formatDateLabel(DateTime? date, String prefix) {
   if (date == null) {
