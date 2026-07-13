@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../data/supplier_location_service.dart';
 import '../../data/models/reverse_geocode_result.dart';
@@ -657,44 +658,35 @@ class _SupplierProfileContentState
     final followers = profile.latestFollowers;
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: Text('Followers (${profile.stats.followersCount})'),
-        content: SizedBox(
-          width: 420,
-          child: followers.isEmpty
-              ? const Text('No followers yet.')
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final follower in followers)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          child: Text(
-                            (follower.displayName.isNotEmpty
-                                    ? follower.displayName
-                                    : follower.email)
-                                .characters
-                                .first
-                                .toUpperCase(),
-                          ),
+        content: followers.isEmpty
+            ? const Text('No followers yet.')
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final follower in followers)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        child: Text(
+                          (follower.displayName.isNotEmpty
+                                  ? follower.displayName
+                                  : follower.email)
+                              .characters
+                              .first
+                              .toUpperCase(),
                         ),
-                        title: Text(
-                          follower.displayName.isNotEmpty
-                              ? follower.displayName
-                              : follower.email,
-                        ),
-                        subtitle: Text(follower.email),
                       ),
-                  ],
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
+                      title: Text(
+                        follower.displayName.isNotEmpty
+                            ? follower.displayName
+                            : follower.email,
+                      ),
+                      subtitle: Text(follower.email),
+                    ),
+                ],
+              ),
       ),
     );
   }

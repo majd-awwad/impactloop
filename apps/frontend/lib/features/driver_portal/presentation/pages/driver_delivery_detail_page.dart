@@ -8,6 +8,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
@@ -64,19 +66,20 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                 ),
                 DriverDeliveryDetailInactive(context: final inactiveContext) =>
                   _StatePanel(
-                  icon: inactiveContext.movedToAdminReview
-                      ? Icons.admin_panel_settings_outlined
-                      : Icons.lock_outline,
-                  title: inactiveContext.movedToAdminReview
-                      ? 'Delivery moved to admin review'
-                      : 'Delivery no longer active',
-                  subtitle: inactiveContext.message ??
-                      'This delivery is no longer active. It was moved to admin review.',
-                  actionLabel: 'Back to jobs',
-                  actionTone: AppStatusTone.neutral,
-                  actionProminent: false,
-                  onAction: () => context.popOrGo('/driver/jobs'),
-                ),
+                    icon: inactiveContext.movedToAdminReview
+                        ? Icons.admin_panel_settings_outlined
+                        : Icons.lock_outline,
+                    title: inactiveContext.movedToAdminReview
+                        ? 'Delivery moved to admin review'
+                        : 'Delivery no longer active',
+                    subtitle:
+                        inactiveContext.message ??
+                        'This delivery is no longer active. It was moved to admin review.',
+                    actionLabel: 'Back to jobs',
+                    actionTone: AppStatusTone.neutral,
+                    actionProminent: false,
+                    onAction: () => context.popOrGo('/driver/jobs'),
+                  ),
                 DriverDeliveryDetailNotFound() => _StatePanel(
                   icon: Icons.lock_outline,
                   title: 'Delivery not active or not assigned to you',
@@ -97,10 +100,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
 }
 
 class _DeliveryContent extends StatelessWidget {
-  const _DeliveryContent({
-    required this.delivery,
-    required this.onRefresh,
-  });
+  const _DeliveryContent({required this.delivery, required this.onRefresh});
 
   final DriverDelivery delivery;
   final VoidCallback onRefresh;
@@ -136,10 +136,7 @@ class _DeliveryContent extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.delivery,
-    required this.onRefresh,
-  });
+  const _Header({required this.delivery, required this.onRefresh});
 
   final DriverDelivery delivery;
   final VoidCallback onRefresh;
@@ -213,7 +210,10 @@ class _SummaryPanel extends StatelessWidget {
                 : '${delivery.material.title} - ${delivery.material.quantityLabel}',
           ),
           const SizedBox(height: AppSpacing.lg),
-          _InfoRow(label: 'Pickup window', value: driverPickupWindowDetail(delivery)),
+          _InfoRow(
+            label: 'Pickup window',
+            value: driverPickupWindowDetail(delivery),
+          ),
           _InfoRow(label: 'Supplier', value: _partySummary(delivery.supplier)),
           _InfoRow(
             label: 'Pickup',
@@ -304,10 +304,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _StatusGuidanceCard(
-            delivery: widget.delivery,
-            guidance: guidance,
-          ),
+          _StatusGuidanceCard(delivery: widget.delivery, guidance: guidance),
           const SizedBox(height: AppSpacing.lg),
           _StepList(currentStatus: widget.delivery.status),
           const SizedBox(height: AppSpacing.lg),
@@ -360,17 +357,15 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.arrow_forward_rounded),
-              label: Text(
-                isSubmitting ? 'Updating...' : guidance.actionLabel,
-              ),
+              label: Text(isSubmitting ? 'Updating...' : guidance.actionLabel),
             ),
             if (!guidance.isActionEnabled) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
                 _disabledActionReason(widget.delivery, nextStatus),
-                style: AppTextStyles.body(context).copyWith(
-                  color: MaterialsUiPalette.of(context).textMuted,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: MaterialsUiPalette.of(context).textMuted),
               ),
             ],
           ],
@@ -565,7 +560,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Report driver issue'),
         content: TextField(
           controller: noteController,
@@ -577,23 +572,16 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             hintText: 'Describe why you cannot continue delivery',
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () {
               if (noteController.text.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
-            style: AppStatusButtonStyle.filled(
-              context,
-              AppStatusTone.danger,
-            ),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
             child: const Text('Submit report'),
           ),
-        ],
+        ),
       ),
     );
     final note = noteController.text.trim();
@@ -625,58 +613,47 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setState) => AppDialogShell(
           title: Text(title),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: selectedReason,
-                  decoration: const InputDecoration(labelText: 'Reason'),
-                  items: reasonOptions.entries
-                      .map(
-                        (entry) => DropdownMenuItem(
-                          value: entry.key,
-                          child: Text(entry.value),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => selectedReason = value);
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  maxLength: 1000,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (required)',
-                  ),
-                ),
-              ],
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                decoration: const InputDecoration(labelText: 'Reason'),
+                items: reasonOptions.entries
+                    .map(
+                      (entry) => DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => selectedReason = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLength: 1000,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(labelText: 'Note (required)'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
+          footer: AppDialogFooter.form(
+            primaryAction: FilledButton(
               onPressed: () {
                 if (noteController.text.trim().isEmpty) return;
                 Navigator.of(context).pop(true);
               },
-              style: AppStatusButtonStyle.filled(
-                context,
-                AppStatusTone.danger,
-              ),
+              style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
               child: const Text('Submit report'),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -810,10 +787,7 @@ class _LocationSharingSectionState
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             onPressed: isBusy ? null : () => _sendManualLocation(context),
-            style: AppStatusButtonStyle.filled(
-              context,
-              AppStatusTone.info,
-            ),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
             icon: isBusy
                 ? const SizedBox(
                     width: 18,
@@ -883,10 +857,7 @@ class _LocationSharingSectionState
 }
 
 class _StatusGuidanceCard extends StatelessWidget {
-  const _StatusGuidanceCard({
-    required this.delivery,
-    required this.guidance,
-  });
+  const _StatusGuidanceCard({required this.delivery, required this.guidance});
 
   final DriverDelivery delivery;
   final DriverNextActionGuidance guidance;
@@ -906,9 +877,9 @@ class _StatusGuidanceCard extends StatelessWidget {
         children: [
           Text(
             'Next: ${guidance.actionLabel}',
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textPrimary,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textPrimary),
           ),
           if (delivery.status == 'ARRIVED_PICKUP' ||
               delivery.nextStatus == 'PICKED_UP') ...[
@@ -946,9 +917,9 @@ class _RequirementRow extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ),
       ],
