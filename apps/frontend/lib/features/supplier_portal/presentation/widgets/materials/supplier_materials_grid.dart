@@ -4,6 +4,7 @@ import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../app/theme/app_theme_colors.dart';
 import '../../../../../core/config/api_config.dart';
+import '../../../../../shared/widgets/app_status_badge.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_material_card.dart';
@@ -167,7 +168,7 @@ List<Widget> buildSupplierMaterialCardActions({
   final actions = <Widget>[
     FilledButton(
       onPressed: onManage,
-      style: SupplierMyMaterialsColors.manageButtonStyle(context),
+      style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
       child: Text(manageLabel),
     ),
     Tooltip(
