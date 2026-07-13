@@ -236,8 +236,13 @@ class SupplierProfileHeader extends StatelessWidget {
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     label: Text(context.s.editSupplierProfile),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
+                    ).copyWith(
+                      minimumSize: const WidgetStatePropertyAll(
+                        Size.fromHeight(44),
+                      ),
                     ),
                   ),
                 ],
