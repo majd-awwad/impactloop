@@ -16,22 +16,32 @@ import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
 
+const _kApprovalsPageSize = 10;
+
 class _ApprovalsFilters {
   const _ApprovalsFilters({
     required this.tab,
     required this.status,
     required this.search,
+    required this.page,
   });
 
   final String tab; // CATEGORY | PRICE
   final String status; // PENDING | APPROVED | REJECTED | ALL
   final String search;
+  final int page;
 
-  _ApprovalsFilters copyWith({String? tab, String? status, String? search}) {
+  _ApprovalsFilters copyWith({
+    String? tab,
+    String? status,
+    String? search,
+    int? page,
+  }) {
     return _ApprovalsFilters(
       tab: tab ?? this.tab,
       status: status ?? this.status,
       search: search ?? this.search,
+      page: page ?? this.page,
     );
   }
 }
@@ -43,16 +53,22 @@ class _ApprovalsFiltersNotifier extends Notifier<_ApprovalsFilters> {
       tab: 'CATEGORY',
       status: 'PENDING',
       search: '',
+      page: 1,
     );
   }
 
-  void setTab(String tab) => state = state.copyWith(tab: tab, search: '');
-  void setStatus(String status) => state = state.copyWith(status: status);
-  void setSearch(String search) => state = state.copyWith(search: search);
+  void setTab(String tab) =>
+      state = state.copyWith(tab: tab, search: '', page: 1);
+  void setStatus(String status) =>
+      state = state.copyWith(status: status, page: 1);
+  void setSearch(String search) =>
+      state = state.copyWith(search: search, page: 1);
+  void setPage(int page) => state = state.copyWith(page: page);
   void reset() => state = const _ApprovalsFilters(
     tab: 'CATEGORY',
     status: 'PENDING',
     search: '',
+    page: 1,
   );
 }
 
@@ -74,8 +90,8 @@ final adminApprovalsCategoryRequestsProvider = FutureProvider.autoDispose((
       .fetchCategoryRequests(
         status: filters.status,
         search: filters.search,
-        page: 1,
-        limit: 50,
+        page: filters.page,
+        limit: _kApprovalsPageSize,
       );
 });
 
@@ -86,8 +102,8 @@ final adminApprovalsPriceRequestsProvider = FutureProvider.autoDispose((ref) {
       .fetchPriceRequests(
         status: filters.status,
         search: filters.search,
-        page: 1,
-        limit: 50,
+        page: filters.page,
+        limit: _kApprovalsPageSize,
       );
 });
 
@@ -147,15 +163,15 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
           'Review supplier requests for new categories and price approvals before they affect the marketplace.',
           style: AdminTypography.pageSubtitle(palette),
         ),
-        const SizedBox(height: 16),
-        _SummaryRow(),
         const SizedBox(height: 18),
-        _TabsRow(selected: filters.tab),
-        const SizedBox(height: 12),
-        _FiltersRow(
+        const _ApprovalsSummaryStrip(),
+        const SizedBox(height: 18),
+        _ApprovalsSegmentedTabs(selected: filters.tab),
+        const SizedBox(height: 14),
+        _ApprovalsFilterBar(
           key: ValueKey('${filters.tab}|${filters.status}|${filters.search}'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
         if (filters.tab == 'CATEGORY') const _CategoryRequestsPanel(),
         if (filters.tab == 'PRICE') const _PriceRequestsPanel(),
       ],
@@ -163,7 +179,10 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
   }
 }
 
-class _SummaryRow extends ConsumerWidget {
+/// Compact KPI strip — one icon-tile card per approval metric.
+class _ApprovalsSummaryStrip extends ConsumerWidget {
+  const _ApprovalsSummaryStrip();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = context.adminPalette;
@@ -171,7 +190,7 @@ class _SummaryRow extends ConsumerWidget {
 
     return asyncSummary.when(
       loading: () => const SizedBox(
-        height: 64,
+        height: 84,
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Container(
@@ -198,134 +217,261 @@ class _SummaryRow extends ConsumerWidget {
         ),
       ),
       data: (summary) {
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            _SummaryChip(
-              label: 'Pending',
-              count: summary.pendingTotal,
-              color: AppStatusStyle.of(
-                context,
-                reviewStatusTone('PENDING'),
-              ).foreground,
-            ),
-            _SummaryChip(
-              label: 'Approved',
-              count: summary.approvedTotal,
-              color: AppStatusStyle.of(
-                context,
-                reviewStatusTone('APPROVED'),
-              ).foreground,
-            ),
-            _SummaryChip(
-              label: 'Rejected',
-              count: summary.rejectedTotal,
-              color: AppStatusStyle.of(
-                context,
-                reviewStatusTone('REJECTED'),
-              ).foreground,
-            ),
-            _SummaryChip(
-              label: 'Category',
-              count: summary.categoryPending,
-              color: palette.blue,
-            ),
-            _SummaryChip(
-              label: 'Price',
-              count: summary.pricePending,
-              color: palette.purple,
-            ),
-          ],
+        final tiles = [
+          _ApprovalKpiTile(
+            label: 'Pending',
+            value: summary.pendingTotal,
+            icon: Icons.outlined_flag,
+            color: palette.amber,
+          ),
+          _ApprovalKpiTile(
+            label: 'Approved',
+            value: summary.approvedTotal,
+            icon: Icons.check_circle_outline,
+            color: palette.green,
+          ),
+          _ApprovalKpiTile(
+            label: 'Rejected',
+            value: summary.rejectedTotal,
+            icon: Icons.cancel_outlined,
+            color: palette.red,
+          ),
+          _ApprovalKpiTile(
+            label: 'Category',
+            value: summary.categoryPending,
+            icon: Icons.sell_outlined,
+            color: palette.blue,
+          ),
+          _ApprovalKpiTile(
+            label: 'Price',
+            value: summary.pricePending,
+            icon: Icons.attach_money,
+            color: palette.purple,
+          ),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 900
+                ? 5
+                : constraints.maxWidth >= 560
+                ? 3
+                : constraints.maxWidth >= 360
+                ? 2
+                : 1;
+            const spacing = 12.0;
+
+            final rows = <Widget>[];
+            for (var i = 0; i < tiles.length; i += columns) {
+              final chunk = tiles.skip(i).take(columns).toList();
+              rows.add(
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: i + columns < tiles.length ? spacing : 0,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var j = 0; j < chunk.length; j++) ...[
+                          if (j > 0) const SizedBox(width: spacing),
+                          Expanded(child: chunk[j]),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rows,
+            );
+          },
         );
       },
     );
   }
 }
 
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({
+class _ApprovalKpiTile extends StatelessWidget {
+  const _ApprovalKpiTile({
     required this.label,
-    required this.count,
+    required this.value,
+    required this.icon,
     required this.color,
   });
 
   final String label;
-  final int count;
+  final int value;
+  final IconData icon;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 14,
-        vertical: 10,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow,
+            blurRadius: palette.isDark ? 12 : 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: AdminTypography.kpiHelper(palette)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: palette.isDark ? 0.2 : 0.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, size: 19, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$value', style: AdminTypography.kpiValue(palette)),
+                    Text('Requests', style: AdminTypography.kpiHelper(palette)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-width segmented tab bar with an underline indicator on the active tab.
+class _ApprovalsSegmentedTabs extends ConsumerWidget {
+  const _ApprovalsSegmentedTabs({required this.selected});
+  final String selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = context.adminPalette;
+
+    void select(String tab) =>
+        ref.read(_approvalsFiltersProvider.notifier).setTab(tab);
+
+    return Container(
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: palette.cardBorder),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          Expanded(
+            child: _ApprovalsTabItem(
+              label: 'Category Requests',
+              icon: Icons.category_outlined,
+              isSelected: selected == 'CATEGORY',
+              onTap: () => select('CATEGORY'),
+            ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            '$count',
-            style: AdminTypography.kpiValue(palette).copyWith(fontSize: 18),
+          Container(width: 1, height: 26, color: palette.cardBorder),
+          Expanded(
+            child: _ApprovalsTabItem(
+              label: 'Price Requests',
+              icon: Icons.price_check_outlined,
+              isSelected: selected == 'PRICE',
+              onTap: () => select('PRICE'),
+            ),
           ),
-          const SizedBox(width: 6),
-          Text(label, style: AdminTypography.kpiHelper(palette)),
         ],
       ),
     );
   }
 }
 
-class _TabsRow extends ConsumerWidget {
-  const _TabsRow({required this.selected});
-  final String selected;
+class _ApprovalsTabItem extends StatelessWidget {
+  const _ApprovalsTabItem({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      width: double.infinity,
-      child: SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(
-            value: 'CATEGORY',
-            label: Text('Category Requests'),
-            icon: Icon(Icons.category_outlined),
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final color = isSelected ? palette.textPrimary : palette.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? palette.primaryTeal : Colors.transparent,
+                width: 3,
+              ),
+            ),
           ),
-          ButtonSegment(
-            value: 'PRICE',
-            label: Text('Price Requests'),
-            icon: Icon(Icons.price_check_outlined),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-        ],
-        selected: {selected},
-        onSelectionChanged: (value) {
-          ref.read(_approvalsFiltersProvider.notifier).setTab(value.first);
-        },
+        ),
       ),
     );
   }
 }
 
-class _FiltersRow extends ConsumerStatefulWidget {
-  const _FiltersRow({super.key});
+class _ApprovalsFilterBar extends ConsumerStatefulWidget {
+  const _ApprovalsFilterBar({super.key});
 
   @override
-  ConsumerState<_FiltersRow> createState() => _FiltersRowState();
+  ConsumerState<_ApprovalsFilterBar> createState() =>
+      _ApprovalsFilterBarState();
 }
 
-class _FiltersRowState extends ConsumerState<_FiltersRow> {
+class _ApprovalsFilterBarState extends ConsumerState<_ApprovalsFilterBar> {
   late final TextEditingController _controller;
 
   @override
@@ -346,13 +492,13 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final filters = ref.watch(_approvalsFiltersProvider);
-    final compact = MediaQuery.sizeOf(context).width < 560;
+    final compact = MediaQuery.sizeOf(context).width < 640;
 
     final searchField = TextField(
       controller: _controller,
       decoration: const InputDecoration(
         prefixIcon: Icon(Icons.search),
-        hintText: 'Search by supplier, material, category...',
+        hintText: 'Search by supplier or material...',
         border: OutlineInputBorder(),
         isDense: true,
       ),
@@ -379,7 +525,7 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
       },
     );
 
-    final resetButton = OutlinedButton(
+    final resetButton = OutlinedButton.icon(
       onPressed: () {
         _controller.clear();
         ref.read(_approvalsFiltersProvider.notifier).reset();
@@ -387,7 +533,9 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
         ref.invalidate(adminApprovalsPriceRequestsProvider);
         context.go('/admin/approvals');
       },
-      child: const Text('Reset'),
+      icon: const Icon(Icons.restart_alt, size: 18),
+      label: const Text('Reset'),
+      style: OutlinedButton.styleFrom(foregroundColor: palette.textSecondary),
     );
 
     final refreshButton = OutlinedButton.icon(
@@ -396,8 +544,11 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
         ref.invalidate(adminApprovalsCategoryRequestsProvider);
         ref.invalidate(adminApprovalsPriceRequestsProvider);
       },
-      icon: const Icon(Icons.refresh, size: 18),
-      label: const Text('Refresh'),
+      icon: Icon(Icons.refresh, size: 18, color: palette.primaryTeal),
+      label: Text('Refresh', style: TextStyle(color: palette.primaryTeal)),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: palette.primaryTeal.withValues(alpha: 0.5)),
+      ),
     );
 
     return Container(
@@ -424,14 +575,15 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
                 ),
               ],
             )
-          : Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              crossAxisAlignment: WrapCrossAlignment.center,
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(width: 280, child: searchField),
-                SizedBox(width: 200, child: statusField),
+                Expanded(child: searchField),
+                const SizedBox(width: 12),
+                SizedBox(width: 180, child: statusField),
+                const SizedBox(width: 10),
                 resetButton,
+                const SizedBox(width: 10),
                 refreshButton,
               ],
             ),
@@ -480,6 +632,7 @@ class _CategoryRequestsPanel extends ConsumerWidget {
         }
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final item in response.items)
               _CategoryRequestCard(
@@ -488,6 +641,13 @@ class _CategoryRequestsPanel extends ConsumerWidget {
                 onApprove: () => _quickApproveCategory(context, ref, item),
                 onReject: () => _quickRejectCategory(context, ref, item),
               ),
+            const SizedBox(height: 4),
+            _ApprovalsPaginationBar(
+              itemCount: response.items.length,
+              pagination: response.pagination,
+              onPageChanged: (page) =>
+                  ref.read(_approvalsFiltersProvider.notifier).setPage(page),
+            ),
           ],
         );
       },
@@ -536,6 +696,7 @@ class _PriceRequestsPanel extends ConsumerWidget {
         }
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final item in response.items)
               _PriceRequestCard(
@@ -544,9 +705,124 @@ class _PriceRequestsPanel extends ConsumerWidget {
                 onApprove: () => _quickApprovePrice(context, ref, item),
                 onReject: () => _quickRejectPrice(context, ref, item),
               ),
+            const SizedBox(height: 4),
+            _ApprovalsPaginationBar(
+              itemCount: response.items.length,
+              pagination: response.pagination,
+              onPageChanged: (page) =>
+                  ref.read(_approvalsFiltersProvider.notifier).setPage(page),
+            ),
           ],
         );
       },
+    );
+  }
+}
+
+/// "Showing X of Y requests" footer with a compact pager.
+class _ApprovalsPaginationBar extends StatelessWidget {
+  const _ApprovalsPaginationBar({
+    required this.itemCount,
+    required this.pagination,
+    required this.onPageChanged,
+  });
+
+  final int itemCount;
+  final AdminApprovalsPagination pagination;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final total = pagination.total;
+    final totalPages = total == 0 ? 1 : (total / pagination.limit).ceil();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 8,
+        children: [
+          Text(
+            'Showing $itemCount of $total request${total == 1 ? '' : 's'}',
+            style: AdminTypography.kpiHelper(palette),
+          ),
+          if (totalPages > 1)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _PaginationArrow(
+                  icon: Icons.chevron_left,
+                  enabled: pagination.page > 1,
+                  onTap: () => onPageChanged(pagination.page - 1),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: palette.primaryTeal,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${pagination.page}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _PaginationArrow(
+                  icon: Icons.chevron_right,
+                  enabled: pagination.page < totalPages,
+                  onTap: () => onPageChanged(pagination.page + 1),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationArrow extends StatelessWidget {
+  const _PaginationArrow({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: palette.cardBorder),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled
+              ? palette.textPrimary
+              : palette.textMuted.withValues(alpha: 0.4),
+        ),
+      ),
     );
   }
 }
@@ -573,60 +849,36 @@ class _CategoryRequestCard extends StatelessWidget {
       item.supplierName,
       item.supplierEmail,
     );
-    final similarHint = item.similarCategories.isEmpty
+    final suggestedCategory = item.similarCategories.isEmpty
         ? 'No suggested existing category'
-        : 'Similar existing categories: ${item.similarCategories.join(', ')}';
+        : item.similarCategories.first;
 
-    return _ApprovalCardShell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _ApprovalCardHeader(
-            title: item.requestedName,
-            status: item.status,
-            submittedLabel: dateFormat.format(item.createdAt),
-            typeLabel: 'Category request',
-            typeColor: palette.blue,
-          ),
-          const SizedBox(height: 10),
-          Text(supplierLabel, style: AdminTypography.pageSubtitle(palette)),
-          const SizedBox(height: 12),
-          _InfoBlock(
-            rows: [
-              _InfoRow('Material', item.materialTitle ?? '—'),
-              _InfoRow('Description', _truncate(item.materialDescription, 180)),
-              _InfoRow(
-                'Quantity',
-                item.quantity == null
-                    ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
-                          .trim(),
-              ),
-              _InfoRow('Condition', _formatCondition(item.condition)),
-              _InfoRow('Location', item.locationLabel ?? '—'),
-              _InfoRow('Reason', item.categoryRequestReason ?? '—'),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(similarHint, style: AdminTypography.kpiHelper(palette)),
-          if (item.adminNote?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Admin note: ${item.adminNote!.trim()}',
-              style: AdminTypography.kpiHelper(palette),
-            ),
-          ],
-          const SizedBox(height: 12),
-          _ApprovalActionRow(
-            isPending: item.status.toUpperCase() == 'PENDING',
-            onDetails: onDetails,
-            onReject: onReject,
-            onApprove: onApprove,
-            rejectLabel: 'Reject',
-            approveLabel: 'Approve',
-          ),
-        ],
-      ),
+    final keyFacts = <Widget>[
+      if (item.materialTitle?.trim().isNotEmpty == true)
+        _ApprovalKeyFact(label: 'Material', value: item.materialTitle!),
+      _ApprovalKeyFact(label: 'Suggested category', value: suggestedCategory),
+    ];
+
+    final reason = item.categoryRequestReason?.trim();
+
+    return _ApprovalCard(
+      icon: Icons.category_outlined,
+      iconColor: palette.blue,
+      title: item.requestedName,
+      typeLabel: 'Category request',
+      typeColor: palette.blue,
+      submittedLabel: dateFormat.format(item.createdAt),
+      supplierLabel: supplierLabel,
+      status: item.status,
+      keyFacts: keyFacts,
+      secondaryLine: reason?.isNotEmpty == true
+          ? 'Reason: ${_truncate(reason, 140)}'
+          : null,
+      onDetails: onDetails,
+      onApprove: onApprove,
+      onReject: onReject,
+      approveLabel: 'Approve',
+      rejectLabel: 'Reject',
     );
   }
 }
@@ -654,65 +906,196 @@ class _PriceRequestCard extends StatelessWidget {
       item.supplierEmail,
     );
     final unit = item.unit ?? 'unit';
-    final supplierPrice = item.supplierPriceNis == null
-        ? '—'
-        : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS per $unit';
-    final aiSuggested = item.aiSuggestedMaxUnitPriceNis == null
-        ? 'AI/base suggestion unavailable'
-        : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS max per $unit (base)';
-    final multiplierLabel = item.conditionMultiplier == null
-        ? '—'
-        : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%';
-    final adjustedMax = item.adjustedMaxUnitPriceNis == null
-        ? '—'
-        : '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS max per $unit';
 
-    return _ApprovalCardShell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final keyFacts = <Widget>[
+      _ApprovalKeyFact(
+        label: 'Requested',
+        value: item.supplierPriceNis == null
+            ? '—'
+            : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS',
+      ),
+      _ApprovalKeyFact(
+        label: 'Suggested',
+        value: item.aiSuggestedMaxUnitPriceNis == null
+            ? '—'
+            : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
+      ),
+      if (item.adjustedMaxUnitPriceNis != null)
+        _ApprovalKeyFact(
+          label: 'Adjusted max',
+          value: '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
+        ),
+      if (item.quantity != null)
+        _ApprovalKeyFact(
+          label: 'Quantity',
+          value: '${_formatQuantity(item.quantity!)} $unit'.trim(),
+        ),
+    ];
+
+    final secondaryParts = <String>[
+      'Condition: ${_formatCondition(item.condition)}',
+      if (item.categoryName?.trim().isNotEmpty == true)
+        'Category: ${item.categoryName!.trim()}',
+    ];
+
+    return _ApprovalCard(
+      icon: Icons.sell_outlined,
+      iconColor: palette.purple,
+      title: item.materialTitle ?? 'Unknown material',
+      typeLabel: 'Price request',
+      typeColor: palette.purple,
+      submittedLabel: dateFormat.format(item.createdAt),
+      supplierLabel: supplierLabel,
+      status: item.status,
+      keyFacts: keyFacts,
+      secondaryLine: secondaryParts.join('  ·  '),
+      onDetails: onDetails,
+      onApprove: onApprove,
+      onReject: onReject,
+      approveLabel: 'Approve price',
+      rejectLabel: 'Reject price',
+    );
+  }
+}
+
+/// Shared horizontal approval card: icon tile + scannable main content
+/// (title, badges, supplier, compact key facts) + status + actions.
+class _ApprovalCard extends StatelessWidget {
+  const _ApprovalCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.typeLabel,
+    required this.typeColor,
+    required this.submittedLabel,
+    required this.supplierLabel,
+    required this.status,
+    required this.onDetails,
+    required this.onApprove,
+    required this.onReject,
+    required this.approveLabel,
+    required this.rejectLabel,
+    this.keyFacts = const [],
+    this.secondaryLine,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String typeLabel;
+  final Color typeColor;
+  final String submittedLabel;
+  final String supplierLabel;
+  final String status;
+  final VoidCallback onDetails;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  final String approveLabel;
+  final String rejectLabel;
+  final List<Widget> keyFacts;
+  final String? secondaryLine;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final isPending = status.toUpperCase() == 'PENDING';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow,
+            blurRadius: palette.isDark ? 14 : 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ApprovalCardHeader(
-            title: item.materialTitle ?? 'Unknown material',
-            status: item.status,
-            submittedLabel: dateFormat.format(item.createdAt),
-            typeLabel: 'Price request',
-            typeColor: palette.purple,
-          ),
-          const SizedBox(height: 10),
-          Text(supplierLabel, style: AdminTypography.pageSubtitle(palette)),
-          const SizedBox(height: 12),
-          _InfoBlock(
-            rows: [
-              _InfoRow('Supplier price', supplierPrice),
-              _InfoRow('AI/base suggested price', aiSuggested),
-              _InfoRow('Condition multiplier', multiplierLabel),
-              _InfoRow('Adjusted suggested/max price', adjustedMax),
-              _InfoRow(
-                'Quantity',
-                item.quantity == null
-                    ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
-                          .trim(),
-              ),
-              _InfoRow('Condition', _formatCondition(item.condition)),
-              _InfoRow('Category', item.categoryName ?? '—'),
-            ],
-          ),
-          if (item.adminNote?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Admin note: ${item.adminNote!.trim()}',
-              style: AdminTypography.kpiHelper(palette),
+          Container(
+            width: 52,
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: palette.isDark ? 0.2 : 0.12),
+              borderRadius: BorderRadius.circular(14),
             ),
-          ],
-          const SizedBox(height: 12),
-          _ApprovalActionRow(
-            isPending: item.status.toUpperCase() == 'PENDING',
-            onDetails: onDetails,
-            onReject: onReject,
-            onApprove: onApprove,
-            rejectLabel: 'Reject price',
-            approveLabel: 'Approve price',
+            child: Icon(icon, size: 24, color: iconColor),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AdminTypography.pageTitle(
+                          palette,
+                        ).copyWith(fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    AppStatusBadge(
+                      label: _formatApprovalStatus(status),
+                      tone: reviewStatusTone(status),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _TypeBadge(label: typeLabel, color: typeColor),
+                    Text(
+                      'Submitted $submittedLabel',
+                      style: AdminTypography.kpiHelper(palette),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  supplierLabel,
+                  style: AdminTypography.pageSubtitle(
+                    palette,
+                  ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                if (keyFacts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(spacing: 8, runSpacing: 8, children: keyFacts),
+                ],
+                if (secondaryLine != null &&
+                    secondaryLine!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    secondaryLine!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                _ApprovalActionRow(
+                  isPending: isPending,
+                  onDetails: onDetails,
+                  onReject: onReject,
+                  onApprove: onApprove,
+                  rejectLabel: rejectLabel,
+                  approveLabel: approveLabel,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -720,83 +1103,37 @@ class _PriceRequestCard extends StatelessWidget {
   }
 }
 
-class _ApprovalCardShell extends StatelessWidget {
-  const _ApprovalCardShell({required this.child});
+/// Small labeled pill used for compact "key facts" (e.g. price, quantity).
+class _ApprovalKeyFact extends StatelessWidget {
+  const _ApprovalKeyFact({required this.label, required this.value});
 
-  final Widget child;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: palette.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: palette.cardBorder),
-        ),
-        child: child,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: palette.pageBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: palette.cardBorder),
       ),
-    );
-  }
-}
-
-class _ApprovalCardHeader extends StatelessWidget {
-  const _ApprovalCardHeader({
-    required this.title,
-    required this.status,
-    required this.submittedLabel,
-    required this.typeLabel,
-    required this.typeColor,
-  });
-
-  final String title;
-  final String status;
-  final String submittedLabel;
-  final String typeLabel;
-  final Color typeColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: AdminTypography.pageTitle(
-                  palette,
-                ).copyWith(fontSize: 18),
-              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$label  ', style: AdminTypography.kpiHelper(palette)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
             ),
-            const SizedBox(width: 10),
-            AppStatusBadge(
-              label: _formatApprovalStatus(status),
-              tone: reviewStatusTone(status),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _TypeBadge(label: typeLabel, color: typeColor),
-            Text(
-              'Submitted $submittedLabel',
-              style: AdminTypography.kpiHelper(palette),
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -822,58 +1159,6 @@ class _TypeBadge extends StatelessWidget {
         style: AdminTypography.kpiHelper(
           palette,
         ).copyWith(fontWeight: FontWeight.w700, color: color),
-      ),
-    );
-  }
-}
-
-class _InfoRow {
-  const _InfoRow(this.label, this.value);
-
-  final String label;
-  final String value;
-}
-
-class _InfoBlock extends StatelessWidget {
-  const _InfoBlock({required this.rows});
-
-  final List<_InfoRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: palette.pageBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 108,
-                  child: Text(
-                    rows[i].label,
-                    style: AdminTypography.kpiHelper(palette),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    rows[i].value,
-                    style: AdminTypography.pageSubtitle(palette),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
       ),
     );
   }
