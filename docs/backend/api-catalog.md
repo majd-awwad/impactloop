@@ -393,11 +393,17 @@ Saved locations are private to the authenticated user. Response rows include `la
 
 **Admin people list query:** `tab` (`ALL` \| `LEARNERS` \| `SUPPLIERS` \| `DRIVERS` \| `MODERATORS` \| `ADMINS`), `search`, `status`, `page`, `limit`.
 
-**Summary counts:** unique `users` rows per role filter (`prisma.user.count`); `learners` = users with `LEARNER` role and without `SUPPLIER`/`DRIVER`/`MODERATOR`/`ADMIN`. Invitations are not counted as users.
+**Summary counts:** unique `users` rows per role filter (`prisma.user.count`); `learners` = users with `LEARNER` role and without `SUPPLIER`/`DRIVER`/`MODERATOR`/`ADMIN`. Invitations are not counted as users. **Additional summary KPIs:** `activeUsers` (`users.account_status = ACTIVE`), `verifiedSuppliers` (`supplier_profiles.verification_status IN ('APPROVED','VERIFIED')`), `newThisMonth` (`users.created_at >=` start of current UTC calendar month). Returned by both `GET /people/summary` and the nested `summary` on `GET /people`.
 
 **People management safety (MVP):** No delete-user or manual role-edit endpoints. `suspend` / `reactivate` are blocked for the acting admin (self), any user with `ADMIN` role, and the last active admin account. Admin tab is view-only in Flutter (no suspend button). Pending admin invitations are still revoked via `/api/admin/invitations/:id/revoke`. Future admin suspension should require `SUPER_ADMIN` (not implemented).
 
 **People list/detail extras:** each user item includes `verifiedStrikeCount` — count of `no_show_reports` where this user is `targetUserId`, `status=VERIFIED`, and `targetRole` is `LEARNER`/`SUPPLIER`/`DRIVER` (not a separate strikes table).
+
+**People list activity metrics (list items only):** `materialsCount` (`materials.owner_id`), `reservationsAsRequesterCount` (`reservations.requester_id`), `reservationsAsOwnerCount` (`reservations.owner_id`), `submittedLearningProjectsCount` (`learning_projects.created_by` where `submitted_at IS NOT NULL`), `projectBuildsCount` (`project_builds.learner_id`), `assignedDeliveriesCount` (`deliveries.assigned_driver_profile_id` mapped back to the driver user via loaded `driverProfile.id`). Computed per page via bounded `groupBy` on the current list user IDs or driver profile IDs (not per-user N+1). Omitted users default to `0`.
+
+**People detail activity metrics (`GET /people/:id`):** same list metrics as above, plus `pendingNoShowReportsCount` (`no_show_reports` where `target_user_id` matches, `status=PENDING_REVIEW`, eligible `target_role`). Resolved via the same aggregate helpers scoped to the single requested user (bounded parallel counts, not N+1).
+
+**People list location labels (list items):** optional `locationCity`, `locationArea`, `locationLabel` (`City · Area` when both exist). Resolved from existing includes only — supplier organization `businessLocation`, else supplier `defaultPickupLocation`, else driver profile `city`/`area`, else a learner's single saved location when exactly one `user_saved_locations` row exists. No lat/long, `addressLine`, or coordinates. Omitted when unknown or ambiguous (multiple saved learner locations).
 
 **`PATCH /api/admin/people/:id/suspend` body:** `{ reason: string }` (required, min 3 chars). Persists `suspensionReason`, `suspendedAt`, `suspendedById` on `users`. Logs `USER_SUSPENDED` to `admin_activity_logs`.
 

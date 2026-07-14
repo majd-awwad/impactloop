@@ -1536,21 +1536,28 @@ class _PaginationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final buttonStyle = AppStatusButtonStyle.outlined(
+      context,
+      AppStatusTone.neutral,
+    ).copyWith(
+      minimumSize: const WidgetStatePropertyAll(Size(0, 42)),
+    );
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         OutlinedButton(
           onPressed: onPrevious,
-          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          style: buttonStyle,
           child: const Text('Previous'),
         ),
-        const SizedBox(width: 8),
         OutlinedButton(
           onPressed: onNext,
-          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          style: buttonStyle,
           child: const Text('Next'),
         ),
-        const SizedBox(width: 12),
         Text(
           'Page $page of $totalPages · $total total',
           style: AdminTypography.kpiHelper(palette),
