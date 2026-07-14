@@ -22,11 +22,15 @@ type TestContext = {
   driverId: string;
   userIds: string[];
   categoryId?: string;
+  projectCategoryId?: string;
   locationId?: string;
-  driverLocationId?: string;
+  driverProfileId?: string;
   materialIds: string[];
   reservationIds: string[];
   savedLocationIds: string[];
+  learningProjectIds: string[];
+  projectBuildIds: string[];
+  deliveryIds: string[];
 };
 
 const ctx: TestContext = {
@@ -39,6 +43,9 @@ const ctx: TestContext = {
   materialIds: [],
   reservationIds: [],
   savedLocationIds: [],
+  learningProjectIds: [],
+  projectBuildIds: [],
+  deliveryIds: [],
 };
 
 async function createBaseCategoryAndLocation() {
@@ -181,14 +188,105 @@ describe('admin people management', () => {
 
     const firstMaterial = await createMaterial(ctx.supplierId, 'a');
     await createMaterial(ctx.supplierId, 'b');
-    await createReservation({
+    const reservation = await createReservation({
       materialId: firstMaterial.id,
       requesterId: ctx.learnerId,
       ownerId: ctx.supplierId,
     });
+
+    const projectCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} Projects`,
+        nameAr: `${TEST_MARKER} مشاريع`,
+        categoryType: 'PROJECT',
+        isActive: true,
+      },
+    });
+    ctx.projectCategoryId = projectCategory.id;
+
+    const submittedProject = await prisma.learningProject.create({
+      data: {
+        createdBy: ctx.learnerId,
+        categoryId: projectCategory.id,
+        title: `${TEST_MARKER} submitted project`,
+        shortDescription: 'Submitted short description',
+        description: 'Submitted full description',
+        difficulty: 'BEGINNER',
+        status: 'PENDING_REVIEW',
+        submittedAt: new Date(),
+      },
+    });
+    ctx.learningProjectIds.push(submittedProject.id);
+
+    const draftProject = await prisma.learningProject.create({
+      data: {
+        createdBy: ctx.learnerId,
+        categoryId: projectCategory.id,
+        title: `${TEST_MARKER} draft project`,
+        shortDescription: 'Draft short description',
+        description: 'Draft full description',
+        difficulty: 'BEGINNER',
+        status: 'DRAFT',
+        submittedAt: null,
+      },
+    });
+    ctx.learningProjectIds.push(draftProject.id);
+
+    const publishedProject = await prisma.learningProject.create({
+      data: {
+        createdBy: ctx.actorAdminId,
+        categoryId: projectCategory.id,
+        title: `${TEST_MARKER} published project`,
+        shortDescription: 'Published short description',
+        description: 'Published full description',
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+      },
+    });
+    ctx.learningProjectIds.push(publishedProject.id);
+
+    const projectBuild = await prisma.projectBuild.create({
+      data: {
+        projectId: publishedProject.id,
+        learnerId: ctx.learnerId,
+        status: 'IN_PROGRESS',
+      },
+    });
+    ctx.projectBuildIds.push(projectBuild.id);
+
+    const driverProfile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: ctx.driverId },
+    });
+    ctx.driverProfileId = driverProfile.id;
+
+    const delivery = await prisma.delivery.create({
+      data: {
+        reservationId: reservation.id,
+        pickupLocationId: ctx.locationId!,
+        dropoffLocationId: ctx.locationId!,
+        requestedByUserId: ctx.learnerId,
+        assignedDriverProfileId: driverProfile.id,
+        status: 'DRIVER_ASSIGNED',
+        assignedAt: new Date(),
+      },
+    });
+    ctx.deliveryIds.push(delivery.id);
   });
 
   after(async () => {
+    if (ctx.deliveryIds.length > 0) {
+      await prisma.delivery.deleteMany({ where: { id: { in: ctx.deliveryIds } } });
+    }
+    if (ctx.projectBuildIds.length > 0) {
+      await prisma.projectBuild.deleteMany({
+        where: { id: { in: ctx.projectBuildIds } },
+      });
+    }
+    if (ctx.learningProjectIds.length > 0) {
+      await prisma.learningProject.deleteMany({
+        where: { id: { in: ctx.learningProjectIds } },
+      });
+    }
     if (ctx.reservationIds.length > 0) {
       await prisma.reservation.deleteMany({
         where: { id: { in: ctx.reservationIds } },
@@ -215,6 +313,9 @@ describe('admin people management', () => {
     }
     if (ctx.categoryId) {
       await prisma.category.delete({ where: { id: ctx.categoryId } });
+    }
+    if (ctx.projectCategoryId) {
+      await prisma.category.delete({ where: { id: ctx.projectCategoryId } });
     }
     if (ctx.locationId) {
       await prisma.location.delete({ where: { id: ctx.locationId } });
@@ -377,6 +478,42 @@ describe('admin people management', () => {
     assert.equal(admin!.materialsCount, 0);
     assert.equal(admin!.reservationsAsRequesterCount, 0);
     assert.equal(admin!.reservationsAsOwnerCount, 0);
+    assert.equal(admin!.submittedLearningProjectsCount, 0);
+    assert.equal(admin!.projectBuildsCount, 0);
+    assert.equal(admin!.assignedDeliveriesCount, 0);
+  });
+
+  test('list items include learner and driver activity metrics', async () => {
+    const result = await listAdminPeople(ctx.actorAdminId, {
+      tab: 'ALL',
+      page: 1,
+      limit: 50,
+    });
+
+    const learner = result.items.find((item) => item.userId === ctx.learnerId);
+    const driver = result.items.find((item) => item.userId === ctx.driverId);
+    const supplier = result.items.find((item) => item.userId === ctx.supplierId);
+    const admin = result.items.find((item) => item.userId === ctx.otherAdminId);
+
+    assert.ok(learner);
+    assert.equal(learner!.submittedLearningProjectsCount, 1);
+    assert.equal(learner!.projectBuildsCount, 1);
+    assert.equal(learner!.assignedDeliveriesCount, 0);
+
+    assert.ok(driver);
+    assert.equal(driver!.submittedLearningProjectsCount, 0);
+    assert.equal(driver!.projectBuildsCount, 0);
+    assert.equal(driver!.assignedDeliveriesCount, 1);
+
+    assert.ok(supplier);
+    assert.equal(supplier!.submittedLearningProjectsCount, 0);
+    assert.equal(supplier!.projectBuildsCount, 0);
+    assert.equal(supplier!.assignedDeliveriesCount, 0);
+
+    assert.ok(admin);
+    assert.equal(admin!.submittedLearningProjectsCount, 0);
+    assert.equal(admin!.projectBuildsCount, 0);
+    assert.equal(admin!.assignedDeliveriesCount, 0);
   });
 
   test('list items include safe location labels by role', async () => {

@@ -107,6 +107,9 @@ type AdminPeopleListMetrics = {
   materialsCount?: number;
   reservationsAsRequesterCount?: number;
   reservationsAsOwnerCount?: number;
+  submittedLearningProjectsCount?: number;
+  projectBuildsCount?: number;
+  assignedDeliveriesCount?: number;
 };
 
 const mapListItem = (
@@ -143,6 +146,9 @@ const mapListItem = (
     materialsCount: metrics.materialsCount ?? 0,
     reservationsAsRequesterCount: metrics.reservationsAsRequesterCount ?? 0,
     reservationsAsOwnerCount: metrics.reservationsAsOwnerCount ?? 0,
+    submittedLearningProjectsCount: metrics.submittedLearningProjectsCount ?? 0,
+    projectBuildsCount: metrics.projectBuildsCount ?? 0,
+    assignedDeliveriesCount: metrics.assignedDeliveriesCount ?? 0,
     locationCity: location?.city ?? null,
     locationArea: location?.area ?? null,
     locationLabel: location
@@ -190,29 +196,49 @@ export const listAdminPeople = async (
 ) => {
   const result = await repository.listUsersForAdmin(query);
   const userIds = result.items.map((item) => item.id);
+  const driverProfileIdByUserId = new Map(
+    result.items
+      .filter((item) => item.driverProfile?.id)
+      .map((item) => [item.id, item.driverProfile!.id]),
+  );
+  const driverProfileIds = [...new Set(driverProfileIdByUserId.values())];
   const [
     strikeCounts,
     materialsCounts,
     requesterReservationCounts,
     ownerReservationCounts,
+    submittedLearningProjectsCounts,
+    projectBuildsCounts,
+    assignedDeliveryCountsByDriverProfileId,
   ] = await Promise.all([
     repository.countVerifiedStrikesForUserIds(userIds),
     repository.countMaterialsByOwnerIds(userIds),
     repository.countReservationsByRequesterIds(userIds),
     repository.countReservationsByOwnerIds(userIds),
+    repository.countSubmittedLearningProjectsByCreatorIds(userIds),
+    repository.countProjectBuildsByLearnerIds(userIds),
+    repository.countAssignedDeliveriesByDriverProfileIds(driverProfileIds),
   ]);
 
   return {
     summary: await repository.countPeopleSummary(),
-    items: result.items.map((item) =>
-      mapListItem(item, actorId, {
+    items: result.items.map((item) => {
+      const driverProfileId = driverProfileIdByUserId.get(item.id);
+
+      return mapListItem(item, actorId, {
         verifiedStrikeCount: strikeCounts.get(item.id) ?? 0,
         materialsCount: materialsCounts.get(item.id) ?? 0,
         reservationsAsRequesterCount:
           requesterReservationCounts.get(item.id) ?? 0,
         reservationsAsOwnerCount: ownerReservationCounts.get(item.id) ?? 0,
-      }),
-    ),
+        submittedLearningProjectsCount:
+          submittedLearningProjectsCounts.get(item.id) ?? 0,
+        projectBuildsCount: projectBuildsCounts.get(item.id) ?? 0,
+        assignedDeliveriesCount: driverProfileId
+          ? (assignedDeliveryCountsByDriverProfileId.get(driverProfileId) ?? 0)
+          : 0,
+      });
+    }),
     pagination: {
       page: query.page,
       limit: query.limit,

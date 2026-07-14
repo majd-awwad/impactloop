@@ -46,6 +46,7 @@ const userListInclude = {
   },
   driverProfile: {
     select: {
+      id: true,
       status: true,
       transportationType: true,
       city: true,
@@ -256,6 +257,57 @@ export const countReservationsByOwnerIds = async (userIds: string[]) => {
   });
 
   return toCountMap(rows, 'ownerId');
+};
+
+export const countSubmittedLearningProjectsByCreatorIds = async (
+  userIds: string[],
+) => {
+  if (userIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.learningProject.groupBy({
+    by: ['createdBy'],
+    where: {
+      createdBy: { in: userIds },
+      submittedAt: { not: null },
+    },
+    _count: { _all: true },
+  });
+
+  return toCountMap(rows, 'createdBy');
+};
+
+export const countProjectBuildsByLearnerIds = async (userIds: string[]) => {
+  if (userIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.projectBuild.groupBy({
+    by: ['learnerId'],
+    where: { learnerId: { in: userIds } },
+    _count: { _all: true },
+  });
+
+  return toCountMap(rows, 'learnerId');
+};
+
+export const countAssignedDeliveriesByDriverProfileIds = async (
+  driverProfileIds: string[],
+) => {
+  if (driverProfileIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.delivery.groupBy({
+    by: ['assignedDriverProfileId'],
+    where: {
+      assignedDriverProfileId: { in: driverProfileIds },
+    },
+    _count: { _all: true },
+  });
+
+  return toCountMap(rows, 'assignedDriverProfileId');
 };
 
 export const findUserWithRoles = async (userId: string) =>
