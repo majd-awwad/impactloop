@@ -7,6 +7,7 @@ import { AppError } from '../../utils/app-error.js';
 
 import {
   getAdminPersonById,
+  getAdminPeopleSummary,
   listAdminPeople,
   reactivateAdminPerson,
   suspendAdminPerson,
@@ -173,7 +174,10 @@ describe('admin people management', () => {
 
     await prisma.supplierProfile.update({
       where: { userId: ctx.supplierId },
-      data: { defaultPickupLocationId: ctx.locationId },
+      data: {
+        defaultPickupLocationId: ctx.locationId,
+        verificationStatus: 'VERIFIED',
+      },
     });
 
     const learnerSavedLocation = await prisma.userSavedLocation.create({
@@ -481,6 +485,42 @@ describe('admin people management', () => {
     assert.equal(admin!.submittedLearningProjectsCount, 0);
     assert.equal(admin!.projectBuildsCount, 0);
     assert.equal(admin!.assignedDeliveriesCount, 0);
+  });
+
+  test('people summary includes enriched platform KPI counts', async () => {
+    const monthStart = new Date(
+      Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1),
+    );
+    const fixtureVerifiedSuppliers = await prisma.supplierProfile.count({
+      where: {
+        verificationStatus: { in: ['APPROVED', 'VERIFIED'] },
+        userId: { in: ctx.userIds },
+      },
+    });
+    const fixtureNewThisMonth = await prisma.user.count({
+      where: {
+        id: { in: ctx.userIds },
+        createdAt: { gte: monthStart },
+      },
+    });
+
+    const summary = await getAdminPeopleSummary();
+
+    assert.ok(summary.activeUsers > 0);
+    assert.ok(summary.activeUsers <= summary.total);
+    assert.ok(summary.verifiedSuppliers >= fixtureVerifiedSuppliers);
+    assert.equal(fixtureVerifiedSuppliers, 1);
+    assert.ok(summary.newThisMonth >= fixtureNewThisMonth);
+    assert.equal(fixtureNewThisMonth, ctx.userIds.length);
+
+    const list = await listAdminPeople(ctx.actorAdminId, {
+      tab: 'ALL',
+      page: 1,
+      limit: 10,
+    });
+    assert.equal(list.summary.activeUsers, summary.activeUsers);
+    assert.equal(list.summary.verifiedSuppliers, summary.verifiedSuppliers);
+    assert.equal(list.summary.newThisMonth, summary.newThisMonth);
   });
 
   test('list items include learner and driver activity metrics', async () => {

@@ -112,17 +112,46 @@ const countUsersWithRole = (role: UserRole) =>
     },
   });
 
+const VERIFIED_SUPPLIER_STATUSES = ['APPROVED', 'VERIFIED'] as const;
+
+const startOfCurrentMonthUtc = () => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+};
+
 export const countPeopleSummary = async () => {
-  const [total, suspended, suppliers, drivers, moderators, admins, learners] =
-    await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { accountStatus: 'SUSPENDED' } }),
-      countUsersWithRole('SUPPLIER'),
-      countUsersWithRole('DRIVER'),
-      countUsersWithRole('MODERATOR'),
-      countUsersWithRole('ADMIN'),
-      prisma.user.count({ where: learnersWhere() }),
-    ]);
+  const monthStart = startOfCurrentMonthUtc();
+  const [
+    total,
+    suspended,
+    suppliers,
+    drivers,
+    moderators,
+    admins,
+    learners,
+    activeUsers,
+    verifiedSuppliers,
+    newThisMonth,
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.count({ where: { accountStatus: 'SUSPENDED' } }),
+    countUsersWithRole('SUPPLIER'),
+    countUsersWithRole('DRIVER'),
+    countUsersWithRole('MODERATOR'),
+    countUsersWithRole('ADMIN'),
+    prisma.user.count({ where: learnersWhere() }),
+    prisma.user.count({ where: { accountStatus: 'ACTIVE' } }),
+    prisma.supplierProfile.count({
+      where: {
+        verificationStatus: { in: [...VERIFIED_SUPPLIER_STATUSES] },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        createdAt: { gte: monthStart },
+      },
+    }),
+  ]);
 
   return {
     total,
@@ -132,6 +161,9 @@ export const countPeopleSummary = async () => {
     drivers,
     moderators,
     admins,
+    activeUsers,
+    verifiedSuppliers,
+    newThisMonth,
   };
 };
 
