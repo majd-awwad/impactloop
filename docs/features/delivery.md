@@ -18,7 +18,7 @@ Role-scope boundary: driver is an operational support role for basic internal de
 | Driver location pings | **Partial** | Assigned active drivers can share foreground location manually or automatically every 45 seconds while the active delivery detail page is open; no background tracking |
 | Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff with optional current-location coordinates + optional save), `/learner/deliveries/:id` status page, `/learner/deliveries/:id/track` polling map after `PICKED_UP`; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, code prompts, incident reports, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live route map or background pings |
-| Flutter admin operations | **Partial** | Delivery monitor, pre-pickup **Reopen to drivers** action, and no-show/incident queue recovery actions; no selected-driver reassignment or general delivery cancel screen |
+| Flutter admin operations | **Partial** | Responsive delivery monitoring overview with server-backed summary/filter/pagination data, a concise Delivery/Journey/Progress/Attention/Updated list, existing pre-pickup **Reopen to drivers** detail action, and no-show/incident queue recovery actions; no selected-driver reassignment or general delivery cancel screen |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
 ## Data Model

@@ -24,7 +24,7 @@ Admin is an operational support role. It is not available through public registr
 | Flutter admin portal | **Partial** | `/admin` shell with overview, users, supplier verification, materials, approvals, invitations, impact, audit logs, incident reports, read-only operations monitors, and learning project moderation |
 | Impact analytics route | **Implemented** | `/admin/impact` uses dashboard impact data; broader analytics remain future work |
 | Audit logs route | **Implemented** | `/admin/audit-logs` reads paginated `admin_activity_logs` with filters/details |
-| Delivery/reservation admin ops | **Partial** | Read-only monitoring pages exist; reassignment/cancellation operations are not implemented |
+| Delivery/reservation admin ops | **Partial** | Deliveries has a responsive, server-filtered monitoring overview with six compact server-summary KPIs, primary/secondary filters, a concise six-column operational list, pagination, and the existing detail dialog; reassignment/cancellation operations remain limited to existing detail/incident flows |
 | AI usage/log viewer | **Not implemented** | Material-matching AI is not implemented |
 | Project moderation | **Implemented for ADMIN** | `/admin/learning-projects` review queue with approve/request changes/reject/hide/restore/archive actions plus per-component enrichment on pending review |
 
@@ -110,7 +110,7 @@ From the role capability plan:
 
 - No separate `SUPER_ADMIN` role exists; future admin suspension or sensitive role management needs policy.
 - Moderator responsibilities currently overlap with admin because the moderator portal is not implemented.
-- Delivery failure/reassignment/cancellation admin workflow is not implemented.
+- Delivery failure/reassignment/cancellation admin workflow is not implemented beyond the existing eligible pre-pickup reopen and incident recovery flows.
 
 See [09-open-questions.md](../09-open-questions.md) for unresolved admin/moderator questions.
 

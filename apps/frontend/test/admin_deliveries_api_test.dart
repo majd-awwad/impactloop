@@ -145,6 +145,18 @@ void main() {
         'displayName': 'Legacy',
         'email': 'legacy@test',
       },
+      'currentDriver': {
+        'id': 'current',
+        'displayName': 'Current',
+        'email': 'current@test',
+      },
+      'lastAssignedDriver': {
+        'id': 'last',
+        'displayName': 'Last',
+        'email': 'last@test',
+      },
+      'itemCount': 2,
+      'hasMoreItems': true,
       'availableMutations': [],
       'availableLinks': [],
     });
@@ -152,6 +164,10 @@ void main() {
     expect(item.adminAttentionState, AdminAttentionState.none);
     expect(item.assignmentState, AssignmentState.active);
     expect(item.kpiBucket, DeliveryKpiBucket.activeInProgress);
+    expect(item.currentDriver?.displayName, 'Current');
+    expect(item.lastAssignedDriver?.displayName, 'Last');
+    expect(item.itemCount, 2);
+    expect(item.hasMoreItems, isTrue);
   });
 
   test('recovery contracts preserve incident actions without inference', () {

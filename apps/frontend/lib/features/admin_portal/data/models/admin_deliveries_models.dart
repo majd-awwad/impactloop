@@ -262,8 +262,12 @@ class AdminDeliveryListItem {
     this.pickedUpAt,
     this.deliveredAt,
     this.driver,
+    this.currentDriver,
+    this.lastAssignedDriver,
     this.pickupArea,
     this.dropoffArea,
+    this.itemCount = 1,
+    this.hasMoreItems = false,
     required this.scope,
     required this.lifecyclePhase,
     required this.adminAttentionState,
@@ -289,9 +293,15 @@ class AdminDeliveryListItem {
   final AdminDeliveryMaterialSummary material;
   final AdminDeliveryPerson learner;
   final AdminDeliveryPerson supplier;
+
+  /// Legacy compatibility field. Never use this to present current assignment.
   final AdminDeliveryPerson? driver;
+  final AdminDeliveryPerson? currentDriver;
+  final AdminDeliveryPerson? lastAssignedDriver;
   final String? pickupArea;
   final String? dropoffArea;
+  final int itemCount;
+  final bool hasMoreItems;
   final DeliveryScope scope;
   final LifecyclePhase lifecyclePhase;
   final AdminAttentionState adminAttentionState;
@@ -331,8 +341,20 @@ class AdminDeliveryListItem {
       driver: json['driver'] is Map<String, dynamic>
           ? AdminDeliveryPerson.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
+      currentDriver: json['currentDriver'] is Map<String, dynamic>
+          ? AdminDeliveryPerson.fromJson(
+              json['currentDriver'] as Map<String, dynamic>,
+            )
+          : null,
+      lastAssignedDriver: json['lastAssignedDriver'] is Map<String, dynamic>
+          ? AdminDeliveryPerson.fromJson(
+              json['lastAssignedDriver'] as Map<String, dynamic>,
+            )
+          : null,
       pickupArea: json['pickupArea'] as String?,
       dropoffArea: json['dropoffArea'] as String?,
+      itemCount: (json['itemCount'] as num?)?.toInt() ?? 1,
+      hasMoreItems: json['hasMoreItems'] as bool? ?? false,
       scope: _scope(json['scope'] as String?),
       lifecyclePhase: _lifecycle(json['lifecyclePhase'] as String?),
       adminAttentionState: _attention(json['adminAttentionState'] as String?),
