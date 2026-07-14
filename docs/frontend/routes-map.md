@@ -126,7 +126,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/admin/no-show-reports` | `AdminNoShowReportsPage` | admin | Incident report queue with View details navigation |
 | `/admin/no-show-reports/:reportId` | `AdminNoShowReportDetailPage` | admin | Dedicated responsive incident-review workspace; deep-link-safe detail, contract-driven actions, messages and report/delivery history |
 | `/admin/reservations` | `AdminReservationsPage` | admin | Read-only platform reservations monitor with filters, summary stats, detail dialog |
-| `/admin/deliveries` | `AdminDeliveriesPage` | admin | Read-only delivery lifecycle monitor with timeline/location history, filters, detail dialog |
+| `/admin/deliveries` | `AdminDeliveriesPage` | admin | Read-only delivery lifecycle monitor with filters and an explicit route to delivery details |
+| `/admin/deliveries/:deliveryId` | `AdminDeliveryDetailPage` | admin | Adaptive contract-driven delivery workspace with overview, timeline, assignment, conditional group/incident/tracking views, and only server-authorized reopen action |
 | `/admin/learning-projects` | `AdminLearningProjectsPage` | admin | Learning Hub project moderation: summary stats, filters, review detail dialog, approve/reject/hide/archive actions |
 
 ## Admin shell navigation

@@ -18,7 +18,7 @@ Role-scope boundary: driver is an operational support role for basic internal de
 | Driver location pings | **Partial** | Assigned active drivers can share foreground location manually or automatically every 45 seconds while the active delivery detail page is open; no background tracking |
 | Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff with optional current-location coordinates + optional save), `/learner/deliveries/:id` status page, `/learner/deliveries/:id/track` polling map after `PICKED_UP`; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, code prompts, incident reports, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live route map or background pings |
-| Flutter admin operations | **Partial** | Responsive delivery monitoring overview with server-backed summary/filter/pagination data, a concise Delivery/Journey/Progress/Attention/Updated list, existing pre-pickup **Reopen to drivers** detail action, and no-show/incident queue recovery actions; no selected-driver reassignment or general delivery cancel screen |
+| Flutter admin operations | **Partial** | Responsive delivery monitoring overview with server-backed summary/filter/pagination data, a concise Delivery/Journey/Progress/Attention/Updated list, and `/admin/deliveries/:deliveryId`: a conditional overview/timeline/assignment/group/incident/tracking workspace. It renders only returned contract fields and exposes pre-pickup **Reopen to drivers** only when authorized; no selected-driver reassignment or general delivery cancel screen |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
 ## Data Model
@@ -90,7 +90,7 @@ Driver assignment:
 
 Admin driver assignment reopen:
 
-- Admins can call `POST /api/admin/deliveries/:id/reopen-driver-assignment` from the admin delivery detail dialog.
+- Admins can call `POST /api/admin/deliveries/:id/reopen-driver-assignment` from the dedicated admin delivery detail workspace, only when `availableMutations` returns `REOPEN_DRIVER_ASSIGNMENT`.
 - Eligible delivery state is exactly `DRIVER_ASSIGNED` with an active assigned driver and active `DeliveryAssignment`; `WAITING_FOR_DRIVER`, pickup-started states (`ARRIVED_PICKUP` or later), terminal/failed/admin-review states, missing active assignment rows, and incompatible grouped delivery state are rejected with `409`.
 - The operation runs transactionally, guards the delivery row by current status and driver, releases the active `DeliveryAssignment`, clears `assignedDriverProfileId` and `assignedAt`, writes `DRIVER_ASSIGNED -> WAITING_FOR_DRIVER` history, and returns the updated admin delivery detail.
 - For grouped deliveries, the delivery group must still be `ASSIGNED` to the same driver and all delivery reservations in the group must still be `ACCEPTED`; the group is reopened to `OPEN` with no assigned driver.

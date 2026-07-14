@@ -61,6 +61,7 @@ import '../../features/admin_portal/presentation/pages/admin_overview_page.dart'
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_delivery_detail_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_no_show_report_detail_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_no_show_reports_page.dart';
@@ -868,6 +869,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/deliveries',
             builder: (context, state) => AdminDeliveriesPage(
               initialOpenDeliveryId: state.uri.queryParameters['open'],
+            ),
+          ),
+          GoRoute(
+            path: '/admin/deliveries/:deliveryId',
+            builder: (context, state) => AdminDeliveryDetailPage(
+              deliveryId: state.pathParameters['deliveryId']!,
             ),
           ),
           GoRoute(

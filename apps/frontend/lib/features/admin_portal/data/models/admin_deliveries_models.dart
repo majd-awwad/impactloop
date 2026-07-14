@@ -216,12 +216,18 @@ class AdminDeliveryGroupSummary {
     required this.reservationCount,
     required this.reservations,
     required this.hasMoreReservations,
+    this.items = const [],
+    this.itemCount = 0,
+    this.hasMoreItems = false,
   });
   final String id;
   final String status;
   final int reservationCount;
   final List<AdminDeliveryReservationPreview> reservations;
   final bool hasMoreReservations;
+  final List<AdminDeliveryGroupItem> items;
+  final int itemCount;
+  final bool hasMoreItems;
   factory AdminDeliveryGroupSummary.fromJson(Map<String, dynamic> json) =>
       AdminDeliveryGroupSummary(
         id: json['id'] as String? ?? '',
@@ -232,6 +238,52 @@ class AdminDeliveryGroupSummary {
             .map(AdminDeliveryReservationPreview.fromJson)
             .toList(growable: false),
         hasMoreReservations: json['hasMoreReservations'] as bool? ?? false,
+        items: (json['items'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(AdminDeliveryGroupItem.fromJson)
+            .toList(growable: false),
+        itemCount:
+            (json['itemCount'] as num?)?.toInt() ??
+            (json['reservationCount'] as num?)?.toInt() ??
+            0,
+        hasMoreItems:
+            json['hasMoreItems'] as bool? ??
+            json['hasMoreReservations'] as bool? ??
+            false,
+      );
+}
+
+class AdminDeliveryGroupItem {
+  const AdminDeliveryGroupItem({
+    required this.reservationId,
+    required this.status,
+    this.materialTitle,
+    this.quantity,
+    this.unit,
+    this.learnerName,
+  });
+
+  final String reservationId;
+  final String status;
+  final String? materialTitle;
+  final num? quantity;
+  final String? unit;
+  final String? learnerName;
+
+  factory AdminDeliveryGroupItem.fromJson(Map<String, dynamic> json) =>
+      AdminDeliveryGroupItem(
+        reservationId:
+            json['reservationId'] as String? ?? json['id'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+        materialTitle:
+            json['materialTitle'] as String? ??
+            (json['material'] as Map<String, dynamic>?)?['title'] as String?,
+        quantity: json['quantity'] as num? ?? json['quantityRequested'] as num?,
+        unit: json['unit'] as String?,
+        learnerName:
+            json['learnerName'] as String? ??
+            (json['learner'] as Map<String, dynamic>?)?['displayName']
+                as String?,
       );
 }
 
@@ -464,6 +516,34 @@ class AdminDeliveryLocationHistory {
   }
 }
 
+class AdminDeliveryTracking {
+  const AdminDeliveryTracking({
+    this.availability,
+    this.locationPings = const [],
+    this.isLiveTracking,
+    this.isBackgroundTracking,
+    this.eta,
+  });
+
+  final String? availability;
+  final List<AdminDeliveryLocationPing> locationPings;
+  final bool? isLiveTracking;
+  final bool? isBackgroundTracking;
+  final String? eta;
+
+  factory AdminDeliveryTracking.fromJson(Map<String, dynamic> json) =>
+      AdminDeliveryTracking(
+        availability: json['availability'] as String?,
+        locationPings: (json['locationPings'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(AdminDeliveryLocationPing.fromJson)
+            .toList(growable: false),
+        isLiveTracking: json['isLiveTracking'] as bool?,
+        isBackgroundTracking: json['isBackgroundTracking'] as bool?,
+        eta: json['eta'] as String?,
+      );
+}
+
 class AdminDeliveryLocationDetail {
   const AdminDeliveryLocationDetail({
     this.label,
@@ -544,6 +624,7 @@ class AdminDeliveryDetail {
     this.incidentCount = 0,
     this.hasMoreLinkedIncidents = false,
     this.group,
+    this.tracking,
   });
 
   final String id;
@@ -584,6 +665,7 @@ class AdminDeliveryDetail {
   final int incidentCount;
   final bool hasMoreLinkedIncidents;
   final AdminDeliveryGroupSummary? group;
+  final AdminDeliveryTracking? tracking;
   final AdminDeliveryPickupDetail pickup;
   final AdminDeliveryDropoffDetail dropoff;
   final List<AdminDeliveryTimelineItem> timeline;
@@ -691,6 +773,11 @@ class AdminDeliveryDetail {
       group: json['group'] is Map<String, dynamic>
           ? AdminDeliveryGroupSummary.fromJson(
               json['group'] as Map<String, dynamic>,
+            )
+          : null,
+      tracking: json['tracking'] is Map<String, dynamic>
+          ? AdminDeliveryTracking.fromJson(
+              json['tracking'] as Map<String, dynamic>,
             )
           : null,
     );

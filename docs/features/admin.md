@@ -24,7 +24,7 @@ Admin is an operational support role. It is not available through public registr
 | Flutter admin portal | **Partial** | `/admin` shell with overview, users, supplier verification, materials, approvals, invitations, impact, audit logs, incident reports, read-only operations monitors, and learning project moderation |
 | Impact analytics route | **Implemented** | `/admin/impact` uses dashboard impact data; broader analytics remain future work |
 | Audit logs route | **Implemented** | `/admin/audit-logs` reads paginated `admin_activity_logs` with filters/details |
-| Delivery/reservation admin ops | **Partial** | Deliveries has a responsive, server-filtered monitoring overview with six compact server-summary KPIs, primary/secondary filters, a concise six-column operational list, pagination, and the existing detail dialog; reassignment/cancellation operations remain limited to existing detail/incident flows |
+| Delivery/reservation admin ops | **Partial** | Deliveries has a responsive, server-filtered monitoring overview with six compact server-summary KPIs, primary/secondary filters, a concise six-column operational list, pagination, and a dedicated adaptive detail workspace at `/admin/deliveries/:deliveryId`; reassignment/cancellation operations remain limited to server-authorized detail/incident flows |
 | AI usage/log viewer | **Not implemented** | Material-matching AI is not implemented |
 | Project moderation | **Implemented for ADMIN** | `/admin/learning-projects` review queue with approve/request changes/reject/hide/restore/archive actions plus per-component enrichment on pending review |
 
@@ -49,7 +49,7 @@ Admin is an operational support role. It is not available through public registr
 | Area | Path |
 |------|------|
 | Feature root | `apps/frontend/lib/features/admin_portal/` |
-| Routes | `/admin`, `/admin/users`, `/admin/supplier-verification`, `/admin/materials`, `/admin/approvals`, `/admin/invitations`, `/admin/impact`, `/admin/audit-logs`, `/admin/no-show-reports`, `/admin/reservations`, `/admin/deliveries`, `/admin/learning-projects` |
+| Routes | `/admin`, `/admin/users`, `/admin/supplier-verification`, `/admin/materials`, `/admin/approvals`, `/admin/invitations`, `/admin/impact`, `/admin/audit-logs`, `/admin/no-show-reports`, `/admin/reservations`, `/admin/deliveries`, `/admin/deliveries/:deliveryId`, `/admin/learning-projects` |
 | Data | `data/admin_dashboard_api.dart`, `admin_invitations_api.dart`, `admin_supplier_verification_api.dart`, `admin_approvals_api.dart`, `admin_materials_api.dart`, `admin_people_api.dart`, `admin_learning_projects_api.dart` |
 | Pages | `presentation/pages/admin_overview_page.dart`, `admin_people_page.dart`, `admin_supplier_verification_page.dart`, `admin_materials_page.dart`, `admin_approvals_page.dart`, `admin_invitations_page.dart`, `admin_learning_projects_page.dart`, analytics/audit/monitoring pages |
 | Shell/widgets | `presentation/widgets/admin_shell.dart`, sidebar/topbar/dashboard widgets |

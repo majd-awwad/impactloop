@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
@@ -191,10 +192,10 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
     super.initState();
     final openId = widget.initialOpenDeliveryId?.trim();
     if (openId != null && openId.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_initialOpenHandled) return;
         _initialOpenHandled = true;
-        await _openDeliveryById(openId);
+        context.go('/admin/deliveries/${Uri.encodeComponent(openId)}');
       });
     }
   }
@@ -213,27 +214,8 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
         .setSearch(_searchController.text.trim());
   }
 
-  Future<void> _openDeliveryById(String deliveryId) async {
-    try {
-      final detail = await ref
-          .read(adminDeliveriesApiProvider)
-          .fetchDeliveryDetail(deliveryId);
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (context) => _DeliveryDetailDialog(detail: detail),
-      );
-    } on ApiException catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
-    }
-  }
-
-  Future<void> _showDetails(AdminDeliveryListItem item) async {
-    await _openDeliveryById(item.id);
-  }
+  void _showDetails(AdminDeliveryListItem item) =>
+      context.push('/admin/deliveries/${Uri.encodeComponent(item.id)}');
 
   @override
   Widget build(BuildContext context) {
@@ -971,7 +953,9 @@ class _DeliveryColumn extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  maxLines: 2,
+                  // Row height is intentionally capped for the operational list.
+                  // The full title remains available through the surrounding tooltip.
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AdminTypography.sectionTitle(
                     palette,
