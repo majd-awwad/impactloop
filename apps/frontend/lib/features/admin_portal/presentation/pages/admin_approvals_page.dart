@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../shared/widgets/app_dialog_detail.dart';
+import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -13,6 +14,7 @@ import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
 import '../../data/admin_approvals_api.dart';
 import '../theme/admin_decoration_set.dart';
+import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
 
@@ -1863,98 +1865,764 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
     final item = widget.item;
     final supplierLabel = _supplierLabel(
       item.supplierOrganization,
       item.supplierName,
       item.supplierEmail,
     );
-    final similarHint = item.similarCategories.isEmpty
-        ? 'No suggested existing category'
-        : item.similarCategories.join(', ');
+    final screenSize = MediaQuery.sizeOf(context);
+    final maxDialogWidth = (screenSize.width - 48).clamp(280.0, 940.0);
 
-    return AppDialogShell(
-      title: const Text('Category request'),
-      maxWidth: 660,
-      closeEnabled: !_submitting,
-      content: SizedBox(
-        width: 620,
+    return Dialog(
+      backgroundColor: palette.cardBackground,
+      elevation: 12,
+      shadowColor: colors.shadow,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: palette.cardBorder),
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: maxDialogWidth,
+          maxHeight: screenSize.height * 0.86,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(item.requestedName, style: AdminTypography.pageTitle(palette)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text('Status', style: AdminTypography.kpiHelper(palette)),
-                AppStatusBadge(
-                  label: _formatApprovalStatus(item.status),
-                  tone: reviewStatusTone(item.status),
-                ),
-              ],
+            _CategoryDialogHeader(item: item, onClose: _closeDialog),
+            const SizedBox(height: 20),
+            _CategoryMetadataStrip(item: item, supplierLabel: supplierLabel),
+            const SizedBox(height: 18),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(32, 0, 32, 4),
+                child: _CategoryDialogBody(item: item),
+              ),
             ),
-            const SizedBox(height: 12),
-            _dialogKv('Supplier', supplierLabel),
-            _dialogKv('Material', item.materialTitle ?? '—'),
-            _dialogKv('Description', item.materialDescription ?? '—'),
-            _dialogKv(
-              'Quantity',
-              item.quantity == null
-                  ? '—'
-                  : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'
-                        .trim(),
+            const SizedBox(height: 4),
+            _CategoryDialogFooter(
+              submitting: _submitting,
+              canApprove: item.status.toUpperCase() == 'PENDING',
+              onClose: _closeDialog,
+              onReject: _reject,
+              onApprove: _approve,
             ),
-            _dialogKv('Condition', _formatCondition(item.condition)),
-            _dialogKv('Location', item.locationLabel ?? '—'),
-            _dialogKv('Reason', item.categoryRequestReason ?? '—'),
-            _dialogKv('Similar categories', similarHint),
-            if (item.adminNote?.trim().isNotEmpty == true) ...[
-              const SizedBox(height: 8),
-              Text('Admin note', style: AdminTypography.kpiHelper(palette)),
-              const SizedBox(height: 4),
-              Text(item.adminNote!.trim()),
-            ],
           ],
         ),
       ),
-      footer: AppDialogFooter.actions(
-        actions: [
-          OutlinedButton(
-            onPressed: _submitting ? null : _reject,
-            style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
-            child: const Text('Reject'),
+    );
+  }
+
+  void _closeDialog() {
+    if (_submitting) return;
+    Navigator.of(context).maybePop();
+  }
+}
+
+/// Header: category icon tile + dialog type title + close button, followed
+/// by the request title and its "Category request" type badge.
+class _CategoryDialogHeader extends StatelessWidget {
+  const _CategoryDialogHeader({required this.item, required this.onClose});
+
+  final AdminCategoryRequestListItem item;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 28, 32, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: palette.blue.withValues(
+                    alpha: palette.isDark ? 0.2 : 0.12,
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  Icons.category_outlined,
+                  size: 24,
+                  color: palette.blue,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'Category request',
+                  style: AdminTypography.sectionTitle(palette),
+                ),
+              ),
+              AppCloseButton(onPressed: onClose, tooltip: 'Close'),
+            ],
           ),
-          FilledButton(
-            onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
-                ? null
-                : _approve,
-            style: AppStatusButtonStyle.filled(
-              context,
-              AppStatusTone.success,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: _submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Approve'),
+          const SizedBox(height: 16),
+          Text(
+            item.requestedName,
+            style: AdminTypography.pageTitle(palette).copyWith(fontSize: 21),
+          ),
+          const SizedBox(height: 10),
+          const AppStatusBadge(
+            label: 'Category request',
+            tone: AppStatusTone.info,
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _dialogKv(String label, String value) {
+/// Horizontal three-section strip: Status | Supplier | Material.
+class _CategoryMetadataStrip extends StatelessWidget {
+  const _CategoryMetadataStrip({
+    required this.item,
+    required this.supplierLabel,
+  });
+
+  final AdminCategoryRequestListItem item;
+  final String supplierLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: AppDialogInfoRow(label: label, value: value),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: palette.cardBackground,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: palette.cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: palette.cardShadow,
+              blurRadius: palette.isDark ? 12 : 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final items = [
+              _MetadataItem(
+                icon: Icons.access_time_rounded,
+                tone: AppStatusTone.warning,
+                label: 'Status',
+                valueWidget: AppStatusBadge(
+                  label: _formatApprovalStatus(item.status),
+                  tone: reviewStatusTone(item.status),
+                ),
+              ),
+              _MetadataItem(
+                icon: Icons.storefront_outlined,
+                tone: AppStatusTone.info,
+                label: 'Supplier',
+                value: supplierLabel,
+              ),
+              _MetadataItem(
+                icon: Icons.inventory_2_outlined,
+                tone: AppStatusTone.success,
+                label: 'Material',
+                value: _dashOr(item.materialTitle),
+              ),
+            ];
+
+            if (constraints.maxWidth < 480) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 14),
+                    items[i],
+                  ],
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: items[0]),
+                _MetaDivider(palette: palette),
+                Expanded(child: items[1]),
+                _MetaDivider(palette: palette),
+                Expanded(child: items[2]),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
+}
+
+class _MetaDivider extends StatelessWidget {
+  const _MetaDivider({required this.palette});
+
+  final AdminPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Container(width: 1, height: 36, color: palette.cardBorder),
+    );
+  }
+}
+
+/// Icon tile + muted label + value used by the metadata strip and the
+/// request summary card.
+class _MetadataItem extends StatelessWidget {
+  const _MetadataItem({
+    required this.icon,
+    required this.tone,
+    required this.label,
+    this.value,
+    this.valueWidget,
+    this.valueMaxLines = 1,
+  });
+
+  final IconData icon;
+  final AppStatusTone tone;
+  final String label;
+  final String? value;
+  final Widget? valueWidget;
+  final int valueMaxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final style = AppStatusStyle.of(context, tone);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: style.background,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 17, color: style.foreground),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: AdminTypography.kpiHelper(palette)),
+              const SizedBox(height: 4),
+              valueWidget ??
+                  Text(
+                    value ?? '—',
+                    maxLines: valueMaxLines,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textPrimary,
+                      height: 1.35,
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Two-column desktop body: Request details + Category matching on the
+/// left, Request summary on the right. Stacks on narrow widths.
+class _CategoryDialogBody extends StatelessWidget {
+  const _CategoryDialogBody({required this.item});
+
+  final AdminCategoryRequestListItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final quantityValue = item.quantity == null
+        ? '—'
+        : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim();
+    final similarValue = item.similarCategories.isEmpty
+        ? 'No suggested existing category'
+        : item.similarCategories.join(', ');
+
+    final leftColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DialogSectionCard(
+          title: 'Request details',
+          child: Column(
+            children: [
+              _DetailRow(
+                label: 'Description',
+                value: _dashOr(item.materialDescription),
+              ),
+              _DetailRow(label: 'Quantity', value: quantityValue),
+              _DetailRow(
+                label: 'Condition',
+                value: _formatCondition(item.condition),
+              ),
+              _DetailRow(
+                label: 'Location',
+                value: _dashOr(item.locationLabel),
+              ),
+              _DetailRow(
+                label: 'Reason',
+                value: _dashOr(item.categoryRequestReason),
+                isLast: true,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _CategoryMatchingCard(similarCategoryLabel: similarValue),
+      ],
+    );
+
+    final rightColumn = _RequestSummaryCard(
+      submittedLabel: _formatSubmittedTimestamp(item.createdAt),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 620) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [leftColumn, const SizedBox(height: 16), rightColumn],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 2, child: leftColumn),
+            const SizedBox(width: 18),
+            SizedBox(width: 300, child: rightColumn),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DialogSectionCard extends StatelessWidget {
+  const _DialogSectionCard({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AdminTypography.sectionTitle(palette)),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact label/value row for the Request details card. When [pillTone]
+/// is provided (and the value is not a missing-value dash), the value is
+/// rendered as a small semantic pill instead of plain text.
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.isLast = false,
+    this.pillTone,
+  });
+
+  final String label;
+  final String value;
+  final bool isLast;
+  final AppStatusTone? pillTone;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final showPill = pillTone != null && value.trim() != '—';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : Border(
+                bottom: BorderSide(
+                  color: palette.cardBorder.withValues(alpha: 0.6),
+                ),
+              ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: AdminTypography.kpiHelper(
+              palette,
+            ).copyWith(fontSize: 13),
+          ),
+          const Spacer(),
+          Flexible(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: showPill
+                  ? _InlinePricePill(label: value, tone: pillTone!)
+                  : Text(
+                      value,
+                      textAlign: TextAlign.right,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small pill used to highlight important price/condition values inside
+/// label/value rows (e.g. "Used", "22.50 NIS").
+class _InlinePricePill extends StatelessWidget {
+  const _InlinePricePill({required this.label, required this.tone});
+
+  final String label;
+  final AppStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppStatusStyle.of(context, tone);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: style.border),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w800,
+          color: style.foreground,
+        ),
+      ),
+    );
+  }
+}
+
+/// "Category matching" card: search icon tile + similar-category summary.
+class _CategoryMatchingCard extends StatelessWidget {
+  const _CategoryMatchingCard({required this.similarCategoryLabel});
+
+  final String similarCategoryLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final style = AppStatusStyle.of(context, AppStatusTone.success);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: palette.pageBackground,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Category matching',
+            style: AdminTypography.sectionTitle(palette),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: style.background,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.search, size: 17, color: style.foreground),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Similar categories',
+                      style: AdminTypography.kpiHelper(palette),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      similarCategoryLabel,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Request summary" card: green top accent, submitted timestamp and
+/// static admin guidance copy.
+class _RequestSummaryCard extends StatelessWidget {
+  const _RequestSummaryCard({required this.submittedLabel});
+
+  final String submittedLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        decoration: BoxDecoration(
+          color: palette.cardBackground,
+          border: Border.all(color: palette.cardBorder),
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(height: 4, color: palette.green),
+            Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Request summary',
+                    style: AdminTypography.sectionTitle(palette),
+                  ),
+                  const SizedBox(height: 14),
+                  _MetadataItem(
+                    icon: Icons.calendar_today_outlined,
+                    tone: AppStatusTone.success,
+                    label: 'Submitted',
+                    value: submittedLabel,
+                  ),
+                  const SizedBox(height: 14),
+                  Divider(color: palette.cardBorder, height: 1),
+                  const SizedBox(height: 14),
+                  _MetadataItem(
+                    icon: Icons.info_outline,
+                    tone: AppStatusTone.info,
+                    label: 'Admin guidance',
+                    value:
+                        'Review the proposed category and approve it if it '
+                        'should be added to the marketplace taxonomy.',
+                    valueMaxLines: 4,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Fixed footer: Close, Reject, and Approve actions aligned to the end.
+class _CategoryDialogFooter extends StatelessWidget {
+  const _CategoryDialogFooter({
+    required this.submitting,
+    required this.canApprove,
+    required this.onClose,
+    required this.onReject,
+    required this.onApprove,
+  });
+
+  final bool submitting;
+  final bool canApprove;
+  final VoidCallback onClose;
+  final VoidCallback onReject;
+  final VoidCallback onApprove;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
+    final dangerColor = AppStatusStyle.of(context, AppStatusTone.danger).foreground;
+
+    final closeButton = SizedBox(
+      height: 46,
+      child: OutlinedButton(
+        onPressed: submitting ? null : onClose,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.textSecondary,
+          side: BorderSide(color: palette.cardBorder),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        child: const Text('Close'),
+      ),
+    );
+
+    final rejectButton = SizedBox(
+      height: 46,
+      child: OutlinedButton.icon(
+        onPressed: submitting ? null : onReject,
+        icon: Icon(Icons.close, size: 16, color: dangerColor),
+        label: const Text('Reject'),
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger)
+            .copyWith(
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+      ),
+    );
+
+    final approveButton = SizedBox(
+      height: 46,
+      child: FilledButton(
+        onPressed: (submitting || !canApprove) ? null : onApprove,
+        style: AppStatusButtonStyle.filled(context, AppStatusTone.success)
+            .copyWith(
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+        child: submitting
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.textOnPrimary,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check, size: 16, color: colors.textOnPrimary),
+                  const SizedBox(width: 6),
+                  const Text('Approve'),
+                ],
+              ),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: palette.cardBorder)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 480) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                approveButton,
+                const SizedBox(height: 10),
+                rejectButton,
+                const SizedBox(height: 10),
+                closeButton,
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              closeButton,
+              const SizedBox(width: 12),
+              rejectButton,
+              const SizedBox(width: 12),
+              approveButton,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+String _dashOr(String? value) {
+  final trimmed = value?.trim() ?? '';
+  return trimmed.isEmpty ? '—' : trimmed;
+}
+
+String _formatSubmittedTimestamp(DateTime createdAt) {
+  final diff = DateTime.now().difference(createdAt);
+  if (diff.inSeconds < 45) return 'Just now';
+  if (diff.inMinutes < 60) {
+    final minutes = diff.inMinutes;
+    return '$minutes minute${minutes == 1 ? '' : 's'} ago';
+  }
+  if (diff.inHours < 24) {
+    final hours = diff.inHours;
+    return '$hours hour${hours == 1 ? '' : 's'} ago';
+  }
+  return DateFormat.yMMMd().add_jm().format(createdAt);
 }
 
 class _PriceRequestDialog extends StatefulWidget {
@@ -2104,105 +2772,926 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
     }
   }
 
+  void _closeDialog() {
+    if (_submitting) return;
+    Navigator.of(context).maybePop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
     final item = widget.item;
+    final supplierLabel = _supplierLabel(
+      item.supplierOrganization,
+      item.supplierName,
+      item.supplierEmail,
+    );
+    final screenSize = MediaQuery.sizeOf(context);
+    final maxDialogWidth = (screenSize.width - 48).clamp(280.0, 940.0);
 
-    return AppDialogShell(
-      title: const Text('Price request'),
-      maxWidth: 600,
-      closeEnabled: !_submitting,
-      content: SizedBox(
-        width: 560,
+    return Dialog(
+      backgroundColor: palette.cardBackground,
+      elevation: 12,
+      shadowColor: colors.shadow,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: palette.cardBorder),
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: maxDialogWidth,
+          maxHeight: screenSize.height * 0.88,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              item.materialTitle ?? 'Unknown material',
-              style: AdminTypography.pageTitle(palette),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Text('Status', style: AdminTypography.kpiHelper(palette)),
-                AppStatusBadge(
-                  label: _formatApprovalStatus(item.status),
-                  tone: reviewStatusTone(item.status),
+            _PriceDialogHeader(item: item, onClose: _closeDialog),
+            const SizedBox(height: 20),
+            _PriceMetadataStrip(item: item, supplierLabel: supplierLabel),
+            const SizedBox(height: 18),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(32, 0, 32, 4),
+                child: _PriceDialogBody(
+                  item: item,
+                  supplierLabel: supplierLabel,
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 12),
-            _kv(
-              'Supplier price',
-              item.supplierPriceNis == null
-                  ? '—'
-                  : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS',
+            const SizedBox(height: 4),
+            _PriceDialogFooter(
+              submitting: _submitting,
+              canDecide: item.status.toUpperCase() == 'PENDING',
+              onClose: _closeDialog,
+              onReject: _reject,
+              onApprove: _approve,
             ),
-            _kv(
-              'AI/base suggested price',
-              item.aiSuggestedMaxUnitPriceNis == null
-                  ? 'AI/base suggestion unavailable'
-                  : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS (max unit)',
-            ),
-            _kv('Condition', _formatCondition(item.condition)),
-            _kv(
-              'Condition multiplier',
-              item.conditionMultiplier == null
-                  ? '—'
-                  : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%',
-            ),
-            _kv(
-              'Adjusted suggested/max price',
-              item.adjustedMaxUnitPriceNis == null
-                  ? '—'
-                  : '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
-            ),
-            if (item.adminNote?.trim().isNotEmpty == true) ...[
-              const SizedBox(height: 12),
-              Text('Admin note', style: AdminTypography.kpiHelper(palette)),
-              const SizedBox(height: 4),
-              Text(item.adminNote!.trim()),
-            ],
           ],
         ),
       ),
-      footer: AppDialogFooter.actions(
-        actions: [
-          OutlinedButton(
-            onPressed: _submitting ? null : _reject,
-            style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
-            child: const Text('Reject'),
+    );
+  }
+}
+
+/// Header: purple price-tag icon tile + "Price request" title + close
+/// button, followed by the material title and its status badge inline.
+class _PriceDialogHeader extends StatelessWidget {
+  const _PriceDialogHeader({required this.item, required this.onClose});
+
+  final AdminPriceRequestListItem item;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 28, 32, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: palette.purple.withValues(
+                    alpha: palette.isDark ? 0.2 : 0.12,
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  Icons.sell_outlined,
+                  size: 24,
+                  color: palette.purple,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'Price request',
+                  style: AdminTypography.sectionTitle(
+                    palette,
+                  ).copyWith(fontSize: 18),
+                ),
+              ),
+              AppCloseButton(onPressed: onClose, tooltip: 'Close'),
+            ],
           ),
-          FilledButton(
-            onPressed: (_submitting || item.status.toUpperCase() != 'PENDING')
-                ? null
-                : _approve,
-            style: AppStatusButtonStyle.filled(
-              context,
-              AppStatusTone.success,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: _submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Approve'),
+          const SizedBox(height: 16),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 6,
+            children: [
+              Text(
+                item.materialTitle ?? 'Unknown material',
+                style: AdminTypography.pageTitle(
+                  palette,
+                ).copyWith(fontSize: 21),
+              ),
+              AppStatusBadge(
+                label: _formatApprovalStatus(item.status),
+                tone: reviewStatusTone(item.status),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _kv(String label, String value) {
+/// Horizontal three-section strip: Status | Supplier | Material category.
+class _PriceMetadataStrip extends StatelessWidget {
+  const _PriceMetadataStrip({
+    required this.item,
+    required this.supplierLabel,
+  });
+
+  final AdminPriceRequestListItem item;
+  final String supplierLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: AppDialogInfoRow(label: label, value: value),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: palette.cardBackground,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: palette.cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: palette.cardShadow,
+              blurRadius: palette.isDark ? 12 : 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final items = [
+              _MetadataItem(
+                icon: Icons.access_time_rounded,
+                tone: AppStatusTone.warning,
+                label: 'Status',
+                valueWidget: AppStatusBadge(
+                  label: _formatApprovalStatus(item.status),
+                  tone: reviewStatusTone(item.status),
+                ),
+              ),
+              _MetadataItem(
+                icon: Icons.storefront_outlined,
+                tone: AppStatusTone.info,
+                label: 'Supplier',
+                value: supplierLabel,
+              ),
+              _MetadataItem(
+                icon: Icons.widgets_outlined,
+                tone: AppStatusTone.success,
+                label: 'Material category',
+                value: _dashOr(item.categoryName),
+              ),
+            ];
+
+            if (constraints.maxWidth < 480) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 14),
+                    items[i],
+                  ],
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: items[0]),
+                _MetaDivider(palette: palette),
+                Expanded(child: items[1]),
+                _MetaDivider(palette: palette),
+                Expanded(child: items[2]),
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
+}
+
+/// Real-value-only comparison between the supplier's requested price and
+/// the admin-adjusted suggested maximum for this condition.
+class _PriceComparison {
+  const _PriceComparison({this.supplierPrice, this.adjustedMax});
+
+  final double? supplierPrice;
+  final double? adjustedMax;
+
+  factory _PriceComparison.fromItem(AdminPriceRequestListItem item) {
+    return _PriceComparison(
+      supplierPrice: item.supplierPriceNis,
+      adjustedMax: item.adjustedMaxUnitPriceNis,
+    );
+  }
+
+  bool get hasComparison =>
+      supplierPrice != null && adjustedMax != null && adjustedMax! > 0;
+
+  double? get difference => hasComparison ? supplierPrice! - adjustedMax! : null;
+
+  bool get exceedsMax => hasComparison && difference! > 0;
+
+  double? get percentAboveMax =>
+      hasComparison ? (difference! / adjustedMax!) * 100 : null;
+
+  double? get fillRatio {
+    if (!hasComparison || supplierPrice! <= 0) return null;
+    return (adjustedMax! / supplierPrice!).clamp(0.0, 1.0);
+  }
+}
+
+/// Two-column desktop body: Price details/comparison/guidance on the left,
+/// Request summary/warning/decision risk on the right. Stacks on narrow
+/// widths.
+class _PriceDialogBody extends StatelessWidget {
+  const _PriceDialogBody({required this.item, required this.supplierLabel});
+
+  final AdminPriceRequestListItem item;
+  final String supplierLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final unit = item.unit?.trim();
+    final quantityValue = item.quantity == null
+        ? '—'
+        : '${_formatQuantity(item.quantity!)}${unit != null && unit.isNotEmpty ? ' $unit' : ''}';
+    final comparison = _PriceComparison.fromItem(item);
+
+    final leftColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DialogSectionCard(
+          title: 'Price details',
+          child: Column(
+            children: [
+              _DetailRow(
+                label: 'Supplier price',
+                value: _formatMoney(item.supplierPriceNis),
+                pillTone: AppStatusTone.neutral,
+              ),
+              _DetailRow(
+                label: 'AI / base suggested price',
+                value: item.aiSuggestedMaxUnitPriceNis == null
+                    ? '—'
+                    : '${_formatMoney(item.aiSuggestedMaxUnitPriceNis)} (max unit)',
+              ),
+              _DetailRow(
+                label: 'Condition',
+                value: _formatCondition(item.condition),
+                pillTone: AppStatusTone.neutral,
+              ),
+              _DetailRow(
+                label: 'Condition multiplier',
+                value: item.conditionMultiplier == null
+                    ? '—'
+                    : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%',
+              ),
+              _DetailRow(
+                label: 'Adjusted suggested / max price',
+                value: _formatMoney(item.adjustedMaxUnitPriceNis),
+                pillTone: AppStatusTone.success,
+              ),
+              _DetailRow(
+                label: 'Quantity',
+                value: quantityValue,
+                isLast: true,
+              ),
+              const SizedBox(height: 18),
+              _PriceComparisonSection(comparison: comparison),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        const _PriceAdminGuidanceCard(),
+      ],
+    );
+
+    final rightColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PriceRequestSummaryCard(item: item, supplierLabel: supplierLabel),
+        if (comparison.hasComparison) ...[
+          const SizedBox(height: 16),
+          _PriceWarningCard(comparison: comparison),
+          const SizedBox(height: 16),
+          _DecisionRiskCard(comparison: comparison),
+        ],
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 700) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [leftColumn, const SizedBox(height: 16), rightColumn],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 11, child: leftColumn),
+            const SizedBox(width: 18),
+            Expanded(flex: 10, child: rightColumn),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// "Price comparison (per unit)" block: side-by-side values, a simple
+/// proportional bar, and a difference line — all derived from real values.
+class _PriceComparisonSection extends StatelessWidget {
+  const _PriceComparisonSection({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Price comparison (per unit)',
+          style: AdminTypography.sectionTitle(
+            palette,
+          ).copyWith(fontSize: 13.5),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Supplier price',
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatMoney(comparison.supplierPrice),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('vs.', style: AdminTypography.kpiHelper(palette)),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Suggested max price',
+                    textAlign: TextAlign.right,
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatMoney(comparison.adjustedMax),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: palette.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _PriceComparisonBar(comparison: comparison),
+        const SizedBox(height: 10),
+        _PriceDifferenceLine(comparison: comparison),
+      ],
+    );
+  }
+}
+
+/// Simple two-tone proportional bar (no chart package): the filled segment
+/// represents the adjusted max as a share of the requested price, with the
+/// remainder highlighted in danger tone when the request exceeds that max.
+class _PriceComparisonBar extends StatelessWidget {
+  const _PriceComparisonBar({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final ratio = comparison.fillRatio;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        height: 8,
+        child: ratio == null
+            ? Container(color: palette.cardBorder)
+            : Row(
+                children: [
+                  Expanded(
+                    flex: (ratio * 1000).round().clamp(1, 1000),
+                    child: Container(color: palette.green),
+                  ),
+                  if (comparison.exceedsMax)
+                    Expanded(
+                      flex: (1000 - (ratio * 1000).round()).clamp(1, 1000),
+                      child: Container(color: palette.red),
+                    ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// "Difference: X.XX NIS (Y% higher/lower)" line, danger-toned only when
+/// the requested price exceeds the adjusted maximum.
+class _PriceDifferenceLine extends StatelessWidget {
+  const _PriceDifferenceLine({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    if (!comparison.hasComparison) {
+      return Text('Difference: —', style: AdminTypography.kpiHelper(palette));
+    }
+
+    final diff = comparison.difference!.abs();
+    final percent = comparison.percentAboveMax?.abs();
+    final direction = comparison.exceedsMax ? 'higher' : 'lower';
+    final percentLabel = percent == null
+        ? ''
+        : ' (${percent.toStringAsFixed(0)}% $direction)';
+    final color = comparison.exceedsMax ? palette.red : palette.green;
+
+    return RichText(
+      text: TextSpan(
+        style: AdminTypography.kpiHelper(palette),
+        children: [
+          const TextSpan(text: 'Difference: '),
+          TextSpan(
+            text: '${diff.toStringAsFixed(2)} NIS$percentLabel',
+            style: TextStyle(fontWeight: FontWeight.w800, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Static moderation guidance — compact info-toned card.
+class _PriceAdminGuidanceCard extends StatelessWidget {
+  const _PriceAdminGuidanceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final style = AppStatusStyle.of(context, AppStatusTone.info);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.pageBackground,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.background,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(
+              Icons.info_outline,
+              size: 17,
+              color: style.foreground,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Admin guidance',
+                  style: AdminTypography.sectionTitle(
+                    palette,
+                  ).copyWith(fontSize: 13.5),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Approve if the requested price is justified by condition '
+                  'and market context; reject if it significantly exceeds '
+                  'the adjusted recommendation.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Request summary" card: submitted-by/on plus the two key price values.
+class _PriceRequestSummaryCard extends StatelessWidget {
+  const _PriceRequestSummaryCard({
+    required this.item,
+    required this.supplierLabel,
+  });
+
+  final AdminPriceRequestListItem item;
+  final String supplierLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DialogSectionCard(
+      title: 'Request summary',
+      child: Column(
+        children: [
+          _DetailRow(label: 'Submitted by', value: supplierLabel),
+          _DetailRow(
+            label: 'Submitted on',
+            value: DateFormat.yMMMd().add_jm().format(item.createdAt),
+          ),
+          _DetailRow(
+            label: 'Requested price (per unit)',
+            value: _formatMoney(item.supplierPriceNis),
+            pillTone: AppStatusTone.neutral,
+          ),
+          _DetailRow(
+            label: 'Adjusted suggested max',
+            value: _formatMoney(item.adjustedMaxUnitPriceNis),
+            pillTone: AppStatusTone.success,
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact warning (or success, when within range) card summarizing
+/// whether the requested price exceeds the adjusted maximum.
+class _PriceWarningCard extends StatelessWidget {
+  const _PriceWarningCard({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final exceeds = comparison.exceedsMax;
+    final tone = exceeds ? AppStatusTone.warning : AppStatusTone.success;
+    final style = AppStatusStyle.of(context, tone);
+    final diff = comparison.difference!.abs();
+    final percent = comparison.percentAboveMax?.abs();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: style.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.background,
+              shape: BoxShape.circle,
+              border: Border.all(color: style.border),
+            ),
+            child: Icon(
+              exceeds ? Icons.trending_up : Icons.check_circle_outline,
+              size: 17,
+              color: style.foreground,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  exceeds
+                      ? 'Requested price exceeds recommended max'
+                      : 'Requested price is within the recommended range',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: palette.textPrimary,
+                  ),
+                ),
+                if (exceeds && percent != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'by ${diff.toStringAsFixed(2)} NIS (${percent.toStringAsFixed(0)}%)',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: style.foreground,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          AppStatusBadge(
+            label: exceeds ? 'Needs review' : 'Looks good',
+            tone: tone,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact card explaining the approval risk implied by the price
+/// comparison. Text only — omits any non-functional "Learn more" action.
+class _DecisionRiskCard extends StatelessWidget {
+  const _DecisionRiskCard({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final percent = comparison.percentAboveMax;
+    final AppStatusTone tone;
+    final String message;
+
+    if (!comparison.exceedsMax) {
+      tone = AppStatusTone.success;
+      message =
+          'The requested price is within the recommended range, which '
+          'keeps approval risk low.';
+    } else if (percent != null && percent > 20) {
+      tone = AppStatusTone.warning;
+      message =
+          'Approving a price significantly above the adjusted '
+          'recommendation may increase costs and set an unfavorable '
+          'precedent.';
+    } else {
+      tone = AppStatusTone.neutral;
+      message =
+          'The requested price is close to the recommended maximum — '
+          'review the condition and market context before approving.';
+    }
+
+    final style = AppStatusStyle.of(context, tone);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: style.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.background,
+              shape: BoxShape.circle,
+              border: Border.all(color: style.border),
+            ),
+            child: Icon(
+              Icons.shield_outlined,
+              size: 17,
+              color: style.foreground,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Decision risk',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: palette.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fixed footer: Close, Reject price, and Approve price actions aligned to
+/// the end (stacked on very narrow widths).
+class _PriceDialogFooter extends StatelessWidget {
+  const _PriceDialogFooter({
+    required this.submitting,
+    required this.canDecide,
+    required this.onClose,
+    required this.onReject,
+    required this.onApprove,
+  });
+
+  final bool submitting;
+  final bool canDecide;
+  final VoidCallback onClose;
+  final VoidCallback onReject;
+  final VoidCallback onApprove;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
+    final dangerColor =
+        AppStatusStyle.of(context, AppStatusTone.danger).foreground;
+
+    final closeButton = SizedBox(
+      height: 46,
+      child: OutlinedButton(
+        onPressed: submitting ? null : onClose,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.textSecondary,
+          side: BorderSide(color: palette.cardBorder),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        child: const Text('Close'),
+      ),
+    );
+
+    final rejectButton = SizedBox(
+      height: 46,
+      child: OutlinedButton.icon(
+        onPressed: (submitting || !canDecide) ? null : onReject,
+        icon: Icon(Icons.close, size: 16, color: dangerColor),
+        label: const Text('Reject price'),
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger)
+            .copyWith(
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+      ),
+    );
+
+    final approveButton = SizedBox(
+      height: 46,
+      child: FilledButton(
+        onPressed: (submitting || !canDecide) ? null : onApprove,
+        style: AppStatusButtonStyle.filled(context, AppStatusTone.success)
+            .copyWith(
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+        child: submitting
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.textOnPrimary,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check, size: 16, color: colors.textOnPrimary),
+                  const SizedBox(width: 6),
+                  const Text('Approve price'),
+                ],
+              ),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: palette.cardBorder)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 520) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                approveButton,
+                const SizedBox(height: 10),
+                rejectButton,
+                const SizedBox(height: 10),
+                closeButton,
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              closeButton,
+              const SizedBox(width: 12),
+              rejectButton,
+              const SizedBox(width: 12),
+              approveButton,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+String _formatMoney(double? value) {
+  if (value == null) return '—';
+  return '${value.toStringAsFixed(2)} NIS';
 }
