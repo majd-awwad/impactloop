@@ -6,6 +6,10 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme_colors.dart';
+import '../../features/ai/application/ai_assistant_shell_provider.dart';
+import '../../features/ai/application/ai_chat_controller.dart';
+import '../../features/ai/presentation/widgets/ai_assistant_launcher.dart';
+import '../../features/ai/presentation/widgets/ai_assistant_shell.dart';
 import '../../features/auth/application/auth_controller.dart';
 
 const appMobileBottomNavReservedHeight = 96.0;
@@ -148,20 +152,42 @@ class AppMobileBottomNavBar extends ConsumerWidget {
   }
 }
 
-class AppMobileNavigationShell extends StatelessWidget {
+class AppMobileNavigationShell extends ConsumerWidget {
   const AppMobileNavigationShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width >= 600) {
-      return child;
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(authControllerProvider, (previous, next) {
+      final previousUserId = previous?.user?.id;
+      final nextUserId = next.user?.id;
+      if (previousUserId != nextUserId ||
+          next.status == AuthStatus.unauthenticated) {
+        ref.read(aiAssistantControllerProvider.notifier).resetForSignOut();
+        ref.read(aiAssistantShellProvider.notifier).close();
+      }
+    });
+
+    final shellOpen = ref.watch(aiAssistantShellProvider.select((s) => s.isOpen));
+    final isWide = MediaQuery.sizeOf(context).width >= 600;
+
+    final shellContent = Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        if (shellOpen) const AiAssistantShellOverlay(),
+        if (!shellOpen) const AiAssistantLauncher(),
+      ],
+    );
+
+    if (isWide) {
+      return shellContent;
     }
 
     return Scaffold(
-      body: child,
-      bottomNavigationBar: const AppMobileBottomNavBar(),
+      body: shellContent,
+      bottomNavigationBar: shellOpen ? null : const AppMobileBottomNavBar(),
     );
   }
 }

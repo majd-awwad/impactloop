@@ -69,6 +69,7 @@ import '../../features/admin_portal/presentation/pages/admin_materials_page.dart
 import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
+import '../../features/ai/presentation/pages/general_learning_chat_page.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
@@ -168,7 +169,9 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/') ||
-      path.startsWith('/home/recommendations/')) {
+      path.startsWith('/home/recommendations/') ||
+      path == '/ai/assistant' ||
+      path == '/ai/general-learning') {
     return _RouteAccessLevel.learner;
   }
 
@@ -534,6 +537,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: ProfilePage()),
           ),
+          GoRoute(
+            path: '/ai/assistant',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: AiAssistantRoutePage(
+                conversationId: state.uri.queryParameters['conversationId'],
+              ),
+            ),
+          ),
         ],
       ),
       GoRoute(
@@ -580,6 +591,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => LearnerReservationDetailPage(
           reservationId: state.pathParameters['id']!,
         ),
+      ),
+      GoRoute(
+        path: '/ai/general-learning',
+        redirect: (context, state) {
+          final conversationId = state.uri.queryParameters['conversationId'];
+          if (conversationId == null || conversationId.isEmpty) {
+            return '/ai/assistant';
+          }
+          return '/ai/assistant?conversationId=$conversationId';
+        },
       ),
       GoRoute(
         path: authCheckingRoute,
