@@ -19,11 +19,14 @@ type TestContext = {
   otherAdminId: string;
   supplierId: string;
   learnerId: string;
+  driverId: string;
   userIds: string[];
   categoryId?: string;
   locationId?: string;
+  driverLocationId?: string;
   materialIds: string[];
   reservationIds: string[];
+  savedLocationIds: string[];
 };
 
 const ctx: TestContext = {
@@ -31,9 +34,11 @@ const ctx: TestContext = {
   otherAdminId: '',
   supplierId: '',
   learnerId: '',
+  driverId: '',
   userIds: [],
   materialIds: [],
   reservationIds: [],
+  savedLocationIds: [],
 };
 
 async function createBaseCategoryAndLocation() {
@@ -124,6 +129,19 @@ async function createUser(input: {
               },
             }
           : undefined,
+      driverProfile:
+        input.role === 'DRIVER'
+          ? {
+              create: {
+                displayName: `${TEST_MARKER} Driver ${input.suffix}`,
+                phone: '+970599000001',
+                city: 'Ramallah',
+                area: 'Al-Bireh',
+                transportationType: 'CAR',
+                vehicleType: 'UNSPECIFIED',
+              },
+            }
+          : undefined,
     },
   });
   ctx.userIds.push(user.id);
@@ -138,11 +156,28 @@ describe('admin people management', () => {
     const otherAdmin = await createUser({ suffix: 'other-admin', role: 'ADMIN' });
     const supplier = await createUser({ suffix: 'supplier', role: 'SUPPLIER' });
     const learner = await createUser({ suffix: 'learner', role: 'LEARNER' });
+    const driver = await createUser({ suffix: 'driver', role: 'DRIVER' });
 
     ctx.actorAdminId = actorAdmin.id;
     ctx.otherAdminId = otherAdmin.id;
     ctx.supplierId = supplier.id;
     ctx.learnerId = learner.id;
+    ctx.driverId = driver.id;
+
+    await prisma.supplierProfile.update({
+      where: { userId: ctx.supplierId },
+      data: { defaultPickupLocationId: ctx.locationId },
+    });
+
+    const learnerSavedLocation = await prisma.userSavedLocation.create({
+      data: {
+        userId: ctx.learnerId,
+        locationId: ctx.locationId!,
+        label: 'Home',
+        isDefault: true,
+      },
+    });
+    ctx.savedLocationIds.push(learnerSavedLocation.id);
 
     const firstMaterial = await createMaterial(ctx.supplierId, 'a');
     await createMaterial(ctx.supplierId, 'b');
@@ -161,6 +196,11 @@ describe('admin people management', () => {
     }
     if (ctx.materialIds.length > 0) {
       await prisma.material.deleteMany({ where: { id: { in: ctx.materialIds } } });
+    }
+    if (ctx.savedLocationIds.length > 0) {
+      await prisma.userSavedLocation.deleteMany({
+        where: { id: { in: ctx.savedLocationIds } },
+      });
     }
     if (ctx.userIds.length > 0) {
       await prisma.adminActivityLog.deleteMany({
@@ -337,5 +377,83 @@ describe('admin people management', () => {
     assert.equal(admin!.materialsCount, 0);
     assert.equal(admin!.reservationsAsRequesterCount, 0);
     assert.equal(admin!.reservationsAsOwnerCount, 0);
+  });
+
+  test('list items include safe location labels by role', async () => {
+    const result = await listAdminPeople(ctx.actorAdminId, {
+      tab: 'ALL',
+      page: 1,
+      limit: 50,
+    });
+
+    const supplier = result.items.find((item) => item.userId === ctx.supplierId);
+    const learner = result.items.find((item) => item.userId === ctx.learnerId);
+    const driver = result.items.find((item) => item.userId === ctx.driverId);
+    const admin = result.items.find((item) => item.userId === ctx.otherAdminId);
+
+    assert.ok(supplier);
+    assert.equal(supplier!.locationCity, 'Nablus');
+    assert.equal(supplier!.locationArea, 'Rafidia');
+    assert.equal(supplier!.locationLabel, 'Nablus · Rafidia');
+
+    assert.ok(learner);
+    assert.equal(learner!.locationCity, 'Nablus');
+    assert.equal(learner!.locationArea, 'Rafidia');
+    assert.equal(learner!.locationLabel, 'Nablus · Rafidia');
+
+    assert.ok(driver);
+    assert.equal(driver!.locationCity, 'Ramallah');
+    assert.equal(driver!.locationArea, 'Al-Bireh');
+    assert.equal(driver!.locationLabel, 'Ramallah · Al-Bireh');
+
+    assert.ok(admin);
+    assert.equal(admin!.locationCity, null);
+    assert.equal(admin!.locationArea, null);
+    assert.equal(admin!.locationLabel, null);
+
+    const ambiguousLearner = await createUser({
+      suffix: 'ambiguous-learner',
+      role: 'LEARNER',
+    });
+    const secondLocation = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: 'Jenin',
+        area: 'Downtown',
+        visibility: 'PRIVATE',
+        isApproximate: true,
+      },
+    });
+    const firstSaved = await prisma.userSavedLocation.create({
+      data: {
+        userId: ambiguousLearner.id,
+        locationId: ctx.locationId!,
+        label: 'Home',
+      },
+    });
+    const secondSaved = await prisma.userSavedLocation.create({
+      data: {
+        userId: ambiguousLearner.id,
+        locationId: secondLocation.id,
+        label: 'Work',
+      },
+    });
+    ctx.savedLocationIds.push(firstSaved.id, secondSaved.id);
+
+    const ambiguousResult = await listAdminPeople(ctx.actorAdminId, {
+      tab: 'ALL',
+      search: ambiguousLearner.email,
+      page: 1,
+      limit: 10,
+    });
+    const ambiguousItem = ambiguousResult.items.find(
+      (item) => item.userId === ambiguousLearner.id,
+    );
+    assert.ok(ambiguousItem);
+    assert.equal(ambiguousItem!.locationCity, null);
+    assert.equal(ambiguousItem!.locationArea, null);
+    assert.equal(ambiguousItem!.locationLabel, null);
+
+    await prisma.location.delete({ where: { id: secondLocation.id } });
   });
 });

@@ -12,6 +12,11 @@ const moderatorSelect = {
   email: true,
 } as const;
 
+const locationCityAreaSelect = {
+  city: true,
+  area: true,
+} as const;
+
 const userListInclude = {
   roles: {
     select: {
@@ -27,13 +32,36 @@ const userListInclude = {
       publicName: true,
       supplierType: true,
       verificationStatus: true,
+      organizationProfile: {
+        select: {
+          businessLocation: {
+            select: locationCityAreaSelect,
+          },
+        },
+      },
+      defaultPickupLocation: {
+        select: locationCityAreaSelect,
+      },
     },
   },
   driverProfile: {
     select: {
       status: true,
       transportationType: true,
+      city: true,
+      area: true,
     },
+  },
+  savedLocations: {
+    select: {
+      location: {
+        select: locationCityAreaSelect,
+      },
+    },
+    orderBy: {
+      createdAt: 'asc' as const,
+    },
+    take: 2,
   },
   suspendedBy: {
     select: moderatorSelect,

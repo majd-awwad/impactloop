@@ -37,6 +37,71 @@ const mapPrimaryRole = (user: UserRecord) => {
   return primary?.role ?? user.roles[0]?.role ?? null;
 };
 
+type LocationParts = {
+  city: string;
+  area: string | null;
+};
+
+const pickCityArea = (
+  location: { city: string; area: string | null } | null | undefined,
+): LocationParts | null => {
+  const city = location?.city?.trim();
+  if (!city) {
+    return null;
+  }
+
+  const area = location.area?.trim();
+  return {
+    city,
+    area: area && area.length > 0 ? area : null,
+  };
+};
+
+const formatLocationLabel = (
+  city: string | null,
+  area: string | null,
+): string | null => {
+  if (city && area) {
+    return `${city} · ${area}`;
+  }
+  if (city) {
+    return city;
+  }
+  if (area) {
+    return area;
+  }
+  return null;
+};
+
+const resolveListLocation = (user: UserRecord): LocationParts | null => {
+  const supplierBusinessLocation =
+    user.supplierProfile?.organizationProfile?.businessLocation;
+  const supplierPickupLocation = user.supplierProfile?.defaultPickupLocation;
+  const supplierLocation =
+    pickCityArea(supplierBusinessLocation) ?? pickCityArea(supplierPickupLocation);
+  if (supplierLocation) {
+    return supplierLocation;
+  }
+
+  if (user.driverProfile) {
+    const city = user.driverProfile.city?.trim();
+    if (city) {
+      const area = user.driverProfile.area?.trim();
+      return {
+        city,
+        area: area && area.length > 0 ? area : null,
+      };
+    }
+  }
+
+  const savedLocations = user.savedLocations ?? [];
+  if (savedLocations.length === 1) {
+    return pickCityArea(savedLocations[0]?.location);
+  }
+
+  return null;
+};
+
 type AdminPeopleListMetrics = {
   verifiedStrikeCount?: number;
   materialsCount?: number;
@@ -55,6 +120,8 @@ const mapListItem = (
     !user.roles.some((role) =>
       ['SUPPLIER', 'DRIVER', 'MODERATOR', 'ADMIN'].includes(role.role),
     );
+
+  const location = resolveListLocation(user);
 
   return {
     userId: user.id,
@@ -76,6 +143,11 @@ const mapListItem = (
     materialsCount: metrics.materialsCount ?? 0,
     reservationsAsRequesterCount: metrics.reservationsAsRequesterCount ?? 0,
     reservationsAsOwnerCount: metrics.reservationsAsOwnerCount ?? 0,
+    locationCity: location?.city ?? null,
+    locationArea: location?.area ?? null,
+    locationLabel: location
+      ? formatLocationLabel(location.city, location.area)
+      : null,
     ...flags,
   };
 };
