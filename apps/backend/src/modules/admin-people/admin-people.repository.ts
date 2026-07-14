@@ -249,6 +249,24 @@ export const countVerifiedStrikesForUserIds = async (userIds: string[]) => {
   return toCountMap(rows, 'targetUserId');
 };
 
+export const countPendingNoShowReportsForUserIds = async (userIds: string[]) => {
+  if (userIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.noShowReport.groupBy({
+    by: ['targetUserId'],
+    where: {
+      targetUserId: { in: userIds },
+      status: 'PENDING_REVIEW',
+      targetRole: { in: [...STRIKE_ELIGIBLE_TARGET_ROLES] },
+    },
+    _count: { _all: true },
+  });
+
+  return toCountMap(rows, 'targetUserId');
+};
+
 export const countMaterialsByOwnerIds = async (userIds: string[]) => {
   if (userIds.length === 0) {
     return new Map<string, number>();

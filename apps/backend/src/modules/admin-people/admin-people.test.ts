@@ -523,6 +523,65 @@ describe('admin people management', () => {
     assert.equal(list.summary.newThisMonth, summary.newThisMonth);
   });
 
+  test('person detail includes real activity metrics with zero defaults', async () => {
+    const learner = await getAdminPersonById(ctx.actorAdminId, ctx.learnerId);
+    assert.equal(learner.materialsCount, 0);
+    assert.equal(learner.reservationsAsRequesterCount, 1);
+    assert.equal(learner.reservationsAsOwnerCount, 0);
+    assert.equal(learner.submittedLearningProjectsCount, 1);
+    assert.equal(learner.projectBuildsCount, 1);
+    assert.equal(learner.assignedDeliveriesCount, 0);
+    assert.equal(learner.pendingNoShowReportsCount, 0);
+    assert.equal(learner.locationLabel, 'Nablus · Rafidia');
+
+    const supplier = await getAdminPersonById(ctx.actorAdminId, ctx.supplierId);
+    assert.equal(supplier.materialsCount, 2);
+    assert.equal(supplier.reservationsAsOwnerCount, 1);
+    assert.equal(supplier.reservationsAsRequesterCount, 0);
+    assert.equal(supplier.submittedLearningProjectsCount, 0);
+    assert.equal(supplier.projectBuildsCount, 0);
+    assert.equal(supplier.assignedDeliveriesCount, 0);
+    assert.equal(supplier.pendingNoShowReportsCount, 0);
+
+    const driver = await getAdminPersonById(ctx.actorAdminId, ctx.driverId);
+    assert.equal(driver.materialsCount, 0);
+    assert.equal(driver.reservationsAsRequesterCount, 0);
+    assert.equal(driver.reservationsAsOwnerCount, 0);
+    assert.equal(driver.submittedLearningProjectsCount, 0);
+    assert.equal(driver.projectBuildsCount, 0);
+    assert.equal(driver.assignedDeliveriesCount, 1);
+    assert.equal(driver.pendingNoShowReportsCount, 0);
+
+    const admin = await getAdminPersonById(ctx.actorAdminId, ctx.otherAdminId);
+    assert.equal(admin.materialsCount, 0);
+    assert.equal(admin.reservationsAsRequesterCount, 0);
+    assert.equal(admin.reservationsAsOwnerCount, 0);
+    assert.equal(admin.submittedLearningProjectsCount, 0);
+    assert.equal(admin.projectBuildsCount, 0);
+    assert.equal(admin.assignedDeliveriesCount, 0);
+    assert.equal(admin.pendingNoShowReportsCount, 0);
+    assert.equal(admin.locationCity, null);
+    assert.equal(admin.locationLabel, null);
+
+    const list = await listAdminPeople(ctx.actorAdminId, {
+      tab: 'ALL',
+      page: 1,
+      limit: 50,
+    });
+    const listLearner = list.items.find((item) => item.userId === ctx.learnerId);
+    assert.ok(listLearner);
+    assert.equal(listLearner!.materialsCount, learner.materialsCount);
+    assert.equal(
+      listLearner!.reservationsAsRequesterCount,
+      learner.reservationsAsRequesterCount,
+    );
+    assert.equal(
+      listLearner!.submittedLearningProjectsCount,
+      learner.submittedLearningProjectsCount,
+    );
+    assert.equal(listLearner!.projectBuildsCount, learner.projectBuildsCount);
+  });
+
   test('list items include learner and driver activity metrics', async () => {
     const result = await listAdminPeople(ctx.actorAdminId, {
       tab: 'ALL',

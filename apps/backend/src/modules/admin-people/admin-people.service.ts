@@ -4,7 +4,6 @@ import {
   ADMIN_ACTIVITY_ACTIONS,
   logAdminActivity,
 } from '../admin/admin-activity-log.js';
-import { countVerifiedStrikesForUser } from '../reservations/account-suspension.js';
 
 import * as repository from './admin-people.repository.js';
 import {
@@ -112,6 +111,53 @@ type AdminPeopleListMetrics = {
   assignedDeliveriesCount?: number;
 };
 
+type AdminPeopleDetailMetrics = AdminPeopleListMetrics & {
+  pendingNoShowReportsCount?: number;
+};
+
+const resolveUserMetrics = async (
+  user: UserRecord,
+): Promise<AdminPeopleDetailMetrics> => {
+  const userIds = [user.id];
+  const driverProfileId = user.driverProfile?.id;
+  const driverProfileIds = driverProfileId ? [driverProfileId] : [];
+
+  const [
+    strikeCounts,
+    materialsCounts,
+    requesterReservationCounts,
+    ownerReservationCounts,
+    submittedLearningProjectsCounts,
+    projectBuildsCounts,
+    assignedDeliveryCountsByDriverProfileId,
+    pendingNoShowReportCounts,
+  ] = await Promise.all([
+    repository.countVerifiedStrikesForUserIds(userIds),
+    repository.countMaterialsByOwnerIds(userIds),
+    repository.countReservationsByRequesterIds(userIds),
+    repository.countReservationsByOwnerIds(userIds),
+    repository.countSubmittedLearningProjectsByCreatorIds(userIds),
+    repository.countProjectBuildsByLearnerIds(userIds),
+    repository.countAssignedDeliveriesByDriverProfileIds(driverProfileIds),
+    repository.countPendingNoShowReportsForUserIds(userIds),
+  ]);
+
+  return {
+    verifiedStrikeCount: strikeCounts.get(user.id) ?? 0,
+    materialsCount: materialsCounts.get(user.id) ?? 0,
+    reservationsAsRequesterCount:
+      requesterReservationCounts.get(user.id) ?? 0,
+    reservationsAsOwnerCount: ownerReservationCounts.get(user.id) ?? 0,
+    submittedLearningProjectsCount:
+      submittedLearningProjectsCounts.get(user.id) ?? 0,
+    projectBuildsCount: projectBuildsCounts.get(user.id) ?? 0,
+    assignedDeliveriesCount: driverProfileId
+      ? (assignedDeliveryCountsByDriverProfileId.get(driverProfileId) ?? 0)
+      : 0,
+    pendingNoShowReportsCount: pendingNoShowReportCounts.get(user.id) ?? 0,
+  };
+};
+
 const mapListItem = (
   user: UserRecord,
   actorId: string,
@@ -159,10 +205,11 @@ const mapListItem = (
 };
 
 const mapDetail = async (user: UserRecord, actorId: string) => {
-  const verifiedStrikeCount = await countVerifiedStrikesForUser(user.id);
+  const metrics = await resolveUserMetrics(user);
 
   return {
-    ...mapListItem(user, actorId, { verifiedStrikeCount }),
+    ...mapListItem(user, actorId, metrics),
+    pendingNoShowReportsCount: metrics.pendingNoShowReportsCount ?? 0,
     phone: user.phone,
     emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
     phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
