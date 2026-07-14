@@ -41,7 +41,7 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 
 | Widget/helper | File | Current purpose |
 |---------------|------|-----------------|
-| `AppDialogShell` | `app_dialog_shell.dart` | Theme-aware responsive dialog chrome with a directional top-end close button, scrollable body, and optional footer. Use for form and information dialogs. |
+| `AppDialogShell` | `app_dialog_shell.dart` | Theme-aware responsive dialog chrome with a directional top-end close button, scrollable body, and optional footer. Use for form and information dialogs. Accepts an optional `borderRadius` override (defaults to `AppRadius.lgAll`) for wider, softer status-aware detail dialogs. |
 | `AppCloseButton` | `app_close_button.dart` | Localized, semantic close button for dialogs and modal sheets. It uses Flutter's localized close tooltip unless copy is supplied. |
 | `AppDialogFooter` | `app_dialog_footer.dart` | Standard footer layouts: `.form` renders one content-sized, end-aligned primary action; `.decision` retains a secondary action such as Cancel beside the primary action; `.actions` keeps multiple semantic actions content-sized, end-aligned, and naturally wrapping at narrow widths. |
 | `AppDialogTitleBlock` / `AppDialogMetaStrip` / `AppDialogMetaItem` / `AppDialogSection` / `AppDialogInfoRow` / `AppDialogNote` | `app_dialog_detail.dart` | Route-independent detail/review dialog composition: icon-and-badge title blocks, responsive metadata strips, neutral titled section cards, label/value rows with optional badges, and readable note blocks. Pass display-ready values and domain status tones from the owning feature. |
