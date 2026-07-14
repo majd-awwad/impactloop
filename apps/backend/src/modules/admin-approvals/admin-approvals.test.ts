@@ -17,6 +17,9 @@ import {
 
 const TEST_MARKER = '[test-admin-approvals]';
 
+const PG_CONCURRENT_QUERY_WARNING =
+  'Calling client.query() when the client is already executing a query is deprecated';
+
 async function createAdminUser() {
   const passwordHash = await hashPassword('TestPassword123!');
   return prisma.user.create({
@@ -175,48 +178,77 @@ describe('admin approvals', () => {
   });
 
   test('price approve/reject updates request status and approved max price', async () => {
-    const admin = await createAdminUser();
-    const supplier = await seedSupplierUser();
+    const deprecationWarnings: string[] = [];
+    const onWarning = (warning: Error) => {
+      if (warning.name === 'DeprecationWarning') {
+        deprecationWarnings.push(warning.message);
+      }
+    };
 
-    const request = await prisma.priceRuleRequest.create({
-      data: {
-        materialName: `${TEST_MARKER} Material`,
-        normalizedMaterialName: 'material',
-        unit: 'piece',
-        supplierPriceNis: 25,
-        requestedByUserId: supplier.id,
-        status: 'PENDING',
-      },
-    });
+    process.on('warning', onWarning);
 
-    const approved = await approvePriceRequest(admin.id, request.id, {});
-    assert.equal(approved.status, 'APPROVED');
-    const approvedMax =
-      (approved.adminApprovedMaxUnitPriceNis as any)?.toNumber?.() ??
-      Number(approved.adminApprovedMaxUnitPriceNis);
-    assert.equal(approvedMax, 25);
+    try {
+      const admin = await createAdminUser();
+      const supplier = await seedSupplierUser();
 
-    const request2 = await prisma.priceRuleRequest.create({
-      data: {
-        materialName: `${TEST_MARKER} Material 2`,
-        normalizedMaterialName: 'material-2',
-        unit: 'piece',
-        supplierPriceNis: 35,
-        requestedByUserId: supplier.id,
-        status: 'PENDING',
-      },
-    });
+      const request = await prisma.priceRuleRequest.create({
+        data: {
+          materialName: `${TEST_MARKER} Material`,
+          normalizedMaterialName: 'material',
+          unit: 'piece',
+          supplierPriceNis: 25,
+          requestedByUserId: supplier.id,
+          status: 'PENDING',
+        },
+      });
 
-    const rejected = await rejectPriceRequest(admin.id, request2.id, {
-      adminNote: 'Too high',
-      maxAllowedPrice: 20,
-    });
-    assert.equal(rejected.status, 'REJECTED');
-    const rejectedMax =
-      (rejected.adminApprovedMaxUnitPriceNis as any)?.toNumber?.() ??
-      Number(rejected.adminApprovedMaxUnitPriceNis);
-    assert.equal(rejectedMax, 20);
-    assert.equal(rejected.aiSuggestedMaxUnitPriceNis, null);
+      const approved = await approvePriceRequest(admin.id, request.id, {});
+      assert.equal(approved.status, 'APPROVED');
+      assert.equal(approved.requestedBy?.id, supplier.id);
+      assert.ok('category' in approved);
+      assert.ok('materialType' in approved);
+      assert.ok('publishedMaterial' in approved);
+      const approvedMax =
+        (approved.adminApprovedMaxUnitPriceNis as any)?.toNumber?.() ??
+        Number(approved.adminApprovedMaxUnitPriceNis);
+      assert.equal(approvedMax, 25);
+
+      const request2 = await prisma.priceRuleRequest.create({
+        data: {
+          materialName: `${TEST_MARKER} Material 2`,
+          normalizedMaterialName: 'material-2',
+          unit: 'piece',
+          supplierPriceNis: 35,
+          requestedByUserId: supplier.id,
+          status: 'PENDING',
+        },
+      });
+
+      const rejected = await rejectPriceRequest(admin.id, request2.id, {
+        adminNote: 'Too high',
+        maxAllowedPrice: 20,
+      });
+      assert.equal(rejected.status, 'REJECTED');
+      assert.equal(rejected.requestedBy?.id, supplier.id);
+      assert.ok('category' in rejected);
+      assert.ok('materialType' in rejected);
+      assert.ok('publishedMaterial' in rejected);
+      const rejectedMax =
+        (rejected.adminApprovedMaxUnitPriceNis as any)?.toNumber?.() ??
+        Number(rejected.adminApprovedMaxUnitPriceNis);
+      assert.equal(rejectedMax, 20);
+      assert.equal(rejected.aiSuggestedMaxUnitPriceNis, null);
+    } finally {
+      process.off('warning', onWarning);
+    }
+
+    assert.equal(
+      deprecationWarnings.some((message) =>
+        message.includes(PG_CONCURRENT_QUERY_WARNING),
+      ),
+      false,
+      `Unexpected deprecation warnings: ${deprecationWarnings.join('; ')}`,
+    );
   });
 });
 

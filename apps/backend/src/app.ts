@@ -1,10 +1,10 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorMiddleware } from './middlewares/error.middleware.js';
 import { notFoundMiddleware } from './middlewares/not-found.middleware.js';
+import { requestContextMiddleware } from './middlewares/request-context.middleware.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { categoriesRouter } from './modules/categories/categories.routes.js';
 import { healthRouter } from './modules/health/health.routes.js';
@@ -22,6 +22,7 @@ import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
 import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/saved-dropoff-addresses.routes.js';
 import { profileRouter } from './modules/profile/profile.routes.js';
+import { learnerHomeRouter } from './modules/learner-home/learner-home.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
   ensureMaterialUploadsDir,
@@ -41,6 +42,7 @@ export const app = express();
 
 const isProduction = env.nodeEnv === 'production';
 
+app.use(requestContextMiddleware);
 app.use(
   helmet({
     crossOriginResourcePolicy: isProduction ? { policy: 'same-origin' } : false,
@@ -54,9 +56,18 @@ app.use(
         : false
       : true,
     credentials: true,
+    exposedHeaders: ['X-Request-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Cache-Control',
+      'X-Request-Id',
+      'X-Client-Platform',
+      'Idempotency-Key',
+    ],
   }),
 );
-app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use('/uploads/materials', express.static(MATERIAL_UPLOADS_DIR));
 app.use('/uploads/profiles', express.static(PROFILE_UPLOADS_DIR));
 app.use(
@@ -83,6 +94,7 @@ app.use(
   '/api/learner/saved-dropoff-addresses',
   savedDropoffAddressesRouter,
 );
+app.use('/api/learner', learnerHomeRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/supplier', supplierRouter);
 app.use('/api/admin', adminRouter);

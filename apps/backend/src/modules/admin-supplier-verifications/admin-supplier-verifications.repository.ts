@@ -152,7 +152,7 @@ export const updateSupplierVerificationReview = async (input: {
 }) => {
   const reviewedAt = new Date();
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const profile = await tx.supplierProfile.update({
       where: { id: input.supplierProfileId },
       data: {
@@ -161,22 +161,22 @@ export const updateSupplierVerificationReview = async (input: {
         verificationReviewedById: input.adminId,
         verificationAdminNote: input.adminNote,
       },
-      include: organizationSupplierInclude,
+      select: { id: true },
     });
 
-    if (profile.organizationProfile) {
-      await tx.organizationProfile.update({
-        where: { id: profile.organizationProfile.id },
-        data: {
-          verificationDocumentStatus: input.verificationDocumentStatus,
-        },
-      });
-    }
-
-    return tx.supplierProfile.findFirstOrThrow({
-      where: { id: input.supplierProfileId },
-      include: organizationSupplierInclude,
+    await tx.organizationProfile.updateMany({
+      where: { supplierProfileId: profile.id },
+      data: {
+        verificationDocumentStatus: input.verificationDocumentStatus,
+      },
     });
+
+    return profile;
+  });
+
+  return prisma.supplierProfile.findFirstOrThrow({
+    where: { id: updated.id },
+    include: organizationSupplierInclude,
   });
 };
 

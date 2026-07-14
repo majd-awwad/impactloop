@@ -10,7 +10,9 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/learning_projects_result.dart';
@@ -922,7 +924,7 @@ class _LearningPaginationControls extends StatelessWidget {
       alignment: AlignmentDirectional.center,
       child: Container(
         padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.sm,
+          horizontal: AppSpacing.xs,
           vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
@@ -955,32 +957,35 @@ class _LearningPaginationControls extends StatelessWidget {
             );
 
             if (compact) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  pageLabel,
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Expanded(child: previous),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: next),
-                    ],
-                  ),
-                ],
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    pageLabel,
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        Expanded(child: previous),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(child: next),
+                      ],
+                    ),
+                  ],
+                ),
               );
             }
 
             return ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
+              constraints: const BoxConstraints(maxWidth: 348),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(width: 126, child: previous),
-                  const SizedBox(width: AppSpacing.md),
+                  SizedBox(width: 102, child: previous),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(child: pageLabel),
-                  const SizedBox(width: AppSpacing.md),
-                  SizedBox(width: 126, child: next),
+                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: 102, child: next),
                 ],
               ),
             );
@@ -1020,10 +1025,10 @@ class _PaginationButton extends StatelessWidget {
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
         ),
-        minimumSize: const Size(0, 36),
+        minimumSize: const Size(0, 32),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      icon: Icon(icon, size: 18),
+      icon: Icon(icon, size: 16),
       label: Text(label.resolve(context)),
     );
   }
@@ -1081,6 +1086,10 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
             children: [
               FilledButton.icon(
                 onPressed: onSubmitProject,
+                style: AppStatusButtonStyle.filled(
+                  context,
+                  AppStatusTone.primary,
+                ),
                 icon: const Icon(Icons.edit_note_rounded),
                 label: Text(
                   const LocalizedText(
@@ -1091,6 +1100,10 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
               ),
               OutlinedButton.icon(
                 onPressed: () => context.go('/materials'),
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.inventory_2_outlined),
                 label: Text(
                   const LocalizedText(
@@ -1177,55 +1190,111 @@ class _SubmitProjectCallout extends StatelessWidget {
               ),
             ],
           );
+          final mySubmissionsButton = onMySubmissions == null
+              ? null
+              : _CalloutActionButton(
+                  compact: compact,
+                  maxWidth: 176,
+                  child: OutlinedButton.icon(
+                    onPressed: onMySubmissions,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.neutral,
+                    ),
+                    icon: const Icon(Icons.assignment_outlined),
+                    label: Text(
+                      const LocalizedText(
+                        en: 'My submissions',
+                        ar: 'إرسالاتي',
+                      ).resolve(context),
+                    ),
+                  ),
+                );
+          final addDraftButton = _CalloutActionButton(
+            compact: compact,
+            maxWidth: 196,
+            child: FilledButton.icon(
+              onPressed: onSubmitProject,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              icon: const Icon(Icons.edit_note_rounded),
+              label: Text(
+                const LocalizedText(
+                  en: 'Add project draft',
+                  ar: 'إضافة مسودة مشروع',
+                ).resolve(context),
+              ),
+            ),
+          );
+          final actionChildren = <Widget>[];
+          if (mySubmissionsButton != null) {
+            actionChildren.add(mySubmissionsButton);
+          }
+          actionChildren.add(addDraftButton);
+
+          if (compact) {
+            final compactChildren = <Widget>[
+              copy,
+              const SizedBox(height: AppSpacing.md),
+            ];
+            if (mySubmissionsButton != null) {
+              compactChildren.add(mySubmissionsButton);
+              compactChildren.add(const SizedBox(height: AppSpacing.sm));
+            }
+            compactChildren.add(addDraftButton);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: compactChildren,
+            );
+          }
+
           final actions = Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            alignment: compact ? WrapAlignment.start : WrapAlignment.end,
-            children: [
-              if (onMySubmissions != null)
-                OutlinedButton.icon(
-                  onPressed: onMySubmissions,
-                  icon: const Icon(Icons.assignment_outlined),
-                  label: Text(
-                    const LocalizedText(
-                      en: 'My submissions',
-                      ar: 'إرسالاتي',
-                    ).resolve(context),
-                  ),
-                ),
-              FilledButton.icon(
-                onPressed: onSubmitProject,
-                icon: const Icon(Icons.edit_note_rounded),
-                label: Text(
-                  const LocalizedText(
-                    en: 'Add project draft',
-                    ar: 'إضافة مسودة مشروع',
-                  ).resolve(context),
-                ),
-              ),
-            ],
+            alignment: WrapAlignment.end,
+            children: actionChildren,
           );
-
-          if (compact) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                copy,
-                const SizedBox(height: AppSpacing.md),
-                actions,
-              ],
-            );
-          }
 
           return Row(
             children: [
               Expanded(child: copy),
               const SizedBox(width: AppSpacing.lg),
-              Flexible(child: actions),
+              Flexible(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 392),
+                    child: actions,
+                  ),
+                ),
+              ),
             ],
           );
         },
       ),
+    );
+  }
+}
+
+class _CalloutActionButton extends StatelessWidget {
+  const _CalloutActionButton({
+    required this.compact,
+    required this.maxWidth,
+    required this.child,
+  });
+
+  final bool compact;
+  final double maxWidth;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: compact ? double.infinity : maxWidth,
+      child: child,
     );
   }
 }
@@ -1328,6 +1397,10 @@ class _LearningHubFilters extends StatelessWidget {
                 alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: hasActiveFilters ? onClearFilters : null,
+                  style: AppStatusButtonStyle.text(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   icon: const Icon(Icons.refresh_rounded),
                   label: Text(
                     const LocalizedText(
@@ -1552,42 +1625,20 @@ class _HubStatePanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
-
     return Center(
       child: Padding(
         padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 40, color: palette.textSecondary),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                title.resolve(context),
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: palette.textPrimary),
-                textAlign: TextAlign.center,
+        child: AppEmptyStateCard(
+          icon: icon,
+          title: title.resolve(context),
+          subtitle: subtitle.resolve(context),
+          actions: [
+            if (actionLabel != null && onAction != null)
+              OutlinedButton(
+                onPressed: onAction,
+                child: Text(actionLabel!.resolve(context)),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                subtitle.resolve(context),
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-                textAlign: TextAlign.center,
-              ),
-              if (actionLabel != null && onAction != null) ...[
-                const SizedBox(height: AppSpacing.lg),
-                OutlinedButton(
-                  onPressed: onAction,
-                  child: Text(actionLabel!.resolve(context)),
-                ),
-              ],
-            ],
-          ),
+          ],
         ),
       ),
     );

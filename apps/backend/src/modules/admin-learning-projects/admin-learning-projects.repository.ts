@@ -273,9 +273,14 @@ export const updateLearningProjectModeration = async (
   id: string,
   data: Prisma.LearningProjectUpdateInput,
 ) => {
-  return prisma.learningProject.update({
+  const updated = await prisma.learningProject.update({
     where: { id },
     data,
+    select: { id: true },
+  });
+
+  return prisma.learningProject.findUniqueOrThrow({
+    where: { id: updated.id },
     include: adminLearningProjectDetailInclude,
   });
 };

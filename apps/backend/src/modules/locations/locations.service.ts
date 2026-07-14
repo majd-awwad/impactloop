@@ -5,6 +5,7 @@ import {
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber } from '../../utils/decimal.js';
+import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 
 import * as locationsRepository from './locations.repository.js';
 import type {
@@ -85,6 +86,7 @@ export const createUserSavedLocation = async (
     );
   });
 
+  invalidateLearnerHomeCache(userId);
   return mapSavedLocation(savedLocation);
 };
 
@@ -155,6 +157,18 @@ export const updateUserSavedLocation = async (
     throw new AppError('Saved location not found', 404, 'NOT_FOUND');
   }
 
+  if (
+    input.isDefault !== undefined ||
+    input.country !== undefined ||
+    input.city !== undefined ||
+    input.area !== undefined ||
+    input.addressLine !== undefined ||
+    input.latitude !== undefined ||
+    input.longitude !== undefined
+  ) {
+    invalidateLearnerHomeCache(userId);
+  }
+
   return mapSavedLocation(savedLocation);
 };
 
@@ -190,6 +204,7 @@ export const deleteUserSavedLocation = async (userId: string, id: string) => {
     }
   });
 
+  invalidateLearnerHomeCache(userId);
   return { id, deleted: true };
 };
 

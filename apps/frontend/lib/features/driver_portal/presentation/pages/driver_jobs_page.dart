@@ -8,7 +8,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
+import '../../../../shared/widgets/app_empty_state_card.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../deliveries/presentation/pickup_window_presentation.dart';
@@ -453,9 +454,9 @@ class _ActiveDeliveryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              MaterialStatusBadge(
+              AppStatusBadge(
                 label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusTone(delivery.status),
+                tone: deliveryStatusAppTone(delivery.status),
               ),
             ],
           ),
@@ -501,6 +502,10 @@ class _ActiveDeliveryCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             onPressed: () => context.push('/driver/deliveries/${delivery.id}'),
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.primary,
+            ),
             icon: const Icon(Icons.route_outlined),
             label: const Text('Open delivery'),
           ),
@@ -687,6 +692,10 @@ class _AvailableJobsFilters extends ConsumerWidget {
                 onPressed: meta == null
                     ? null
                     : () => notifier.resetToProfileDefaults(meta!),
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 child: const Text('Reset filters'),
               ),
               if (!radiusEnabled)
@@ -891,7 +900,7 @@ class _AvailableJobsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _StatePanel(
+    return AppEmptyStateCard(
       icon: Icons.local_shipping_outlined,
       title: copy.title,
       subtitle: copy.subtitle,
@@ -900,15 +909,27 @@ class _AvailableJobsEmptyState extends StatelessWidget {
         if (onIncreaseRadius != null)
           FilledButton(
             onPressed: onIncreaseRadius,
+            style: AppStatusButtonStyle.filled(
+              context,
+              AppStatusTone.primary,
+            ),
             child: const Text('Increase radius'),
           ),
         if (onShowAnyDistance != null)
-          FilledButton.tonal(
+          OutlinedButton(
             onPressed: onShowAnyDistance,
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.neutral,
+            ),
             child: const Text('Show any distance'),
           ),
         if (onReset != null)
-          TextButton(onPressed: onReset, child: const Text('Reset filters')),
+          TextButton(
+            onPressed: onReset,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
+            child: const Text('Reset filters'),
+          ),
       ],
     );
   }
@@ -986,9 +1007,9 @@ class _AvailableJobCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              MaterialStatusBadge(
+              AppStatusBadge(
                 label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusTone(delivery.status),
+                tone: deliveryStatusAppTone(delivery.status),
               ),
             ],
           ),
@@ -1008,6 +1029,10 @@ class _AvailableJobCard extends ConsumerWidget {
               onPressed: acceptDisabled || isSubmitting
                   ? null
                   : () => _acceptDelivery(context, ref),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.success,
+              ),
               icon: isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -1154,7 +1179,14 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
           if (actions.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),

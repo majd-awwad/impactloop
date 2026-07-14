@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../theme/admin_decoration_set.dart';
 import 'admin_kpi_card.dart' show AdminTypography;
 import 'admin_monitoring_utils.dart';
@@ -18,16 +20,17 @@ class AdminStatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: palette.primaryTeal.withValues(alpha: palette.isDark ? 0.18 : 0.1),
+        color: palette.primaryTeal.withValues(
+          alpha: palette.isDark ? 0.18 : 0.1,
+        ),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: palette.cardBorder),
       ),
       child: Text(
         label,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-        ),
+        style: AdminTypography.kpiHelper(
+          palette,
+        ).copyWith(fontWeight: FontWeight.w700, fontSize: 11),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
@@ -46,20 +49,16 @@ class AdminDetailSection extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+    child: AppDialogSection(
+      title: title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AdminTypography.sectionTitle(palette)),
-          const SizedBox(height: 8),
-          ...children,
-        ],
+        children: children,
       ),
-    );
-  }
+    ),
+  );
 }
 
 class AdminDetailRow extends StatelessWidget {
@@ -75,27 +74,10 @@ class AdminDetailRow extends StatelessWidget {
   final bool muted;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AdminTypography.kpiHelper(palette)),
-          Text(
-            value,
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              color: muted ? palette.textMuted : palette.textPrimary,
-              fontSize: muted ? 12 : 14,
-            ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    child: AppDialogInfoRow(label: label, value: value, muted: muted),
+  );
 }
 
 class AdminCompactFilterDropdown extends StatelessWidget {
@@ -183,8 +165,9 @@ class AdminCompactDateField extends StatelessWidget {
 
     final field = InkWell(
       onTap: () async {
-        final initial =
-            value != null && value!.isNotEmpty ? DateTime.tryParse(value!) : null;
+        final initial = value != null && value!.isNotEmpty
+            ? DateTime.tryParse(value!)
+            : null;
         final picked = await showDatePicker(
           context: context,
           initialDate: initial ?? DateTime.now(),

@@ -165,8 +165,6 @@ String monitoringStatusLabel(String status) {
       return 'Disabled';
     case 'PENDING_REVIEW':
       return 'Pending review';
-    case 'VERIFIED':
-      return 'Verified';
     default:
       final label = humanizeEnum(status);
       if (label.isEmpty) return status;

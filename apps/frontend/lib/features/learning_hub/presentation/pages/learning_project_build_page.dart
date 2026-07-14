@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_build.dart';
@@ -82,8 +84,9 @@ class _LearningProjectBuildPageState
     final controller = TextEditingController(text: item.learnerNote ?? '');
     final note = await showDialog<String?>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Checklist note'),
+        onClose: () => Navigator.of(context).pop(),
         content: TextField(
           controller: controller,
           maxLines: 4,
@@ -93,18 +96,14 @@ class _LearningProjectBuildPageState
             hintText: 'Example: ask supplier for this size',
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () {
               Navigator.of(context).pop(controller.text.trim());
             },
             child: const Text('Save note'),
           ),
-        ],
+        ),
       ),
     );
     controller.dispose();
@@ -353,7 +352,8 @@ class _BuildContent extends StatelessWidget {
                           onShowMaterialCandidates(item),
                       onUnlinkMaterial: () => onUnlinkMaterial(item),
                       onViewLinkedMaterial: () => onViewLinkedMaterial(item),
-                      onReserveLinkedMaterial: () => onReserveLinkedMaterial(item),
+                      onReserveLinkedMaterial: () =>
+                          onReserveLinkedMaterial(item),
                     ),
                   );
                 }),
@@ -459,13 +459,14 @@ class _BuildItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final statusMeta = _BuildStatusMeta.fromStatus(item.status);
+    final statusStyle = AppStatusStyle.of(context, statusMeta.tone);
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: statusMeta.borderColor(palette)),
+        border: Border.all(color: statusStyle.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,12 +476,12 @@ class _BuildItemCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: statusMeta.backgroundColor(palette),
+                backgroundColor: statusStyle.background,
                 child: Text(
                   '${index + 1}',
                   style: AppTextStyles.label(
                     context,
-                  ).copyWith(color: statusMeta.foregroundColor(palette)),
+                  ).copyWith(color: statusStyle.foreground),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -539,6 +540,7 @@ class _BuildItemCard extends StatelessWidget {
                 .map((status) {
                   final selected = status == item.status;
                   final meta = _BuildStatusMeta.fromStatus(status);
+                  final style = AppStatusStyle.of(context, meta.tone);
 
                   return ChoiceChip(
                     selected: selected,
@@ -547,22 +549,20 @@ class _BuildItemCard extends StatelessWidget {
                       meta.icon,
                       size: 18,
                       color: selected
-                          ? meta.foregroundColor(palette)
+                          ? style.foreground
                           : palette.textSecondary,
                     ),
                     onSelected: isUpdating
                         ? null
                         : (_) => onStatusChanged(status),
-                    selectedColor: meta.backgroundColor(palette),
+                    selectedColor: style.background,
                     backgroundColor: palette.mutedChip,
                     side: BorderSide(
-                      color: selected
-                          ? meta.borderColor(palette)
-                          : palette.borderSubtle,
+                      color: selected ? style.border : palette.borderSubtle,
                     ),
                     labelStyle: AppTextStyles.label(context).copyWith(
                       color: selected
-                          ? meta.foregroundColor(palette)
+                          ? style.foreground
                           : palette.textSecondary,
                     ),
                   );
@@ -651,8 +651,8 @@ class _BuildStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
     final meta = _BuildStatusMeta.fromStatus(status);
+    final style = AppStatusStyle.of(context, meta.tone);
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -660,20 +660,20 @@ class _BuildStatusChip extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: meta.backgroundColor(palette),
+        color: style.background,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: meta.borderColor(palette)),
+        border: Border.all(color: style.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(meta.icon, size: 16, color: meta.foregroundColor(palette)),
+          Icon(meta.icon, size: 16, color: style.foreground),
           const SizedBox(width: AppSpacing.xs),
           Text(
             meta.label,
             style: AppTextStyles.label(
               context,
-            ).copyWith(color: meta.foregroundColor(palette)),
+            ).copyWith(color: style.foreground),
           ),
         ],
       ),
@@ -685,76 +685,43 @@ class _BuildStatusMeta {
   const _BuildStatusMeta({
     required this.label,
     required this.icon,
-    required this.colorRole,
+    required this.tone,
   });
 
   final String label;
   final IconData icon;
-  final _BuildStatusColorRole colorRole;
-
-  Color backgroundColor(LearningUiPalette palette) {
-    return switch (colorRole) {
-      _BuildStatusColorRole.ready => palette.lime.withValues(alpha: 0.18),
-      _BuildStatusColorRole.warning => Colors.amber.withValues(alpha: 0.18),
-      _BuildStatusColorRole.info => Colors.blue.withValues(alpha: 0.12),
-      _BuildStatusColorRole.neutral => palette.mutedChip,
-    };
-  }
-
-  Color borderColor(LearningUiPalette palette) {
-    return switch (colorRole) {
-      _BuildStatusColorRole.ready => AppColorTokens.forest.withValues(
-        alpha: 0.45,
-      ),
-      _BuildStatusColorRole.warning => Colors.amber.shade700.withValues(
-        alpha: 0.55,
-      ),
-      _BuildStatusColorRole.info => AppColorTokens.blue.withValues(alpha: 0.45),
-      _BuildStatusColorRole.neutral => palette.borderSubtle,
-    };
-  }
-
-  Color foregroundColor(LearningUiPalette palette) {
-    return switch (colorRole) {
-      _BuildStatusColorRole.ready => AppColorTokens.forest,
-      _BuildStatusColorRole.warning => Colors.amber.shade900,
-      _BuildStatusColorRole.info => AppColorTokens.blue,
-      _BuildStatusColorRole.neutral => palette.textPrimary,
-    };
-  }
+  final AppStatusTone tone;
 
   static _BuildStatusMeta fromStatus(ProjectBuildItemStatus status) {
     return switch (status) {
       ProjectBuildItemStatus.available => const _BuildStatusMeta(
         label: 'Available',
         icon: Icons.inventory_2_outlined,
-        colorRole: _BuildStatusColorRole.ready,
+        tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.missing => const _BuildStatusMeta(
         label: 'Missing',
         icon: Icons.search_off_rounded,
-        colorRole: _BuildStatusColorRole.warning,
+        tone: AppStatusTone.warning,
       ),
       ProjectBuildItemStatus.alternative => const _BuildStatusMeta(
         label: 'Alternative',
         icon: Icons.swap_horiz_rounded,
-        colorRole: _BuildStatusColorRole.ready,
+        tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.alreadyOwned => const _BuildStatusMeta(
         label: 'Already owned',
         icon: Icons.home_repair_service_outlined,
-        colorRole: _BuildStatusColorRole.ready,
+        tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.reserved => const _BuildStatusMeta(
         label: 'Reserved',
         icon: Icons.lock_clock_rounded,
-        colorRole: _BuildStatusColorRole.info,
+        tone: AppStatusTone.info,
       ),
     };
   }
 }
-
-enum _BuildStatusColorRole { ready, warning, info, neutral }
 
 class _EmptyChecklistCard extends StatelessWidget {
   const _EmptyChecklistCard({required this.palette});

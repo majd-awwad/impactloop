@@ -271,7 +271,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     status: SupplierIncomingRequestStatus.pending,
     requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
     learnerNote: 'I need it for a robotics project.',
-    pickupPreference: 'Self pickup',
   ),
   SupplierIncomingRequest(
     id: 'req-fabric-1',
@@ -283,7 +282,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     unit: 'kg',
     status: SupplierIncomingRequestStatus.pending,
     requestedAt: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-    pickupPreference: 'Self pickup',
   ),
   SupplierIncomingRequest(
     id: 'req-wax-accepted',
@@ -294,7 +292,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     status: SupplierIncomingRequestStatus.accepted,
     requestedAt: DateTime.now().subtract(const Duration(days: 2)),
     canSupplierComplete: true,
-    pickupPreference: 'Self pickup',
     pickupWindow: SupplierPickupWindow(
       start: DateTime.now().add(const Duration(days: 1, hours: 10)),
       end: DateTime.now().add(const Duration(days: 1, hours: 12)),
@@ -309,7 +306,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     unit: 'sheet',
     status: SupplierIncomingRequestStatus.declined,
     requestedAt: DateTime.now().subtract(const Duration(days: 4)),
-    pickupPreference: 'Self pickup',
     declineReason: 'Already reserved for another learner.',
   ),
   SupplierIncomingRequest(
@@ -320,7 +316,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     unit: 'bottle',
     status: SupplierIncomingRequestStatus.completed,
     requestedAt: DateTime.now().subtract(const Duration(days: 8)),
-    pickupPreference: 'Self pickup',
     pickupWindow: SupplierPickupWindow(
       start: DateTime.now().subtract(const Duration(days: 6, hours: 2)),
       end: DateTime.now().subtract(const Duration(days: 6)),

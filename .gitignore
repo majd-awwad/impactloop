@@ -51,4 +51,6 @@ apps/backend/pnpm-lock.yaml
 .DS_Store
 Thumbs.db
 .vscode/
-.idea/
+.idea/.cursor/
+AGENTS.md
+.cursor/

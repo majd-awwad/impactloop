@@ -4,6 +4,17 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
+import {
+  getOrBuildMaterialFeaturePool,
+  resetMaterialFeaturePoolCacheForTests,
+} from '../learner-home/learner-home.material-features.js';
+import {
+  getLearnerHome,
+  invalidateAllLearnerHomeResponseCaches,
+  invalidateLearnerHomeCache,
+  invalidateLearnerHomeForReservationTransition,
+} from '../learner-home/learner-home.service.js';
+import type { LearnerHomeMaterialCandidate } from '../learner-home/learner-home.types.js';
 
 import {
   getMaterialById,
@@ -527,6 +538,115 @@ describe('public material discovery', () => {
     assert.equal(unliked.isLiked, false);
     assert.equal(unlikedAgain.likesCount, 0);
     assert.equal(unlikedAgain.isLiked, false);
+  });
+
+  test('material like and unlike invalidate only the acting learner home cache', async () => {
+    const unique = `${TEST_MARKER}-home-cache-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} Arduino Uno`,
+    });
+    const learnerA = await createLearnerUser(`home-cache-a-${Date.now()}`);
+    const learnerB = await createLearnerUser(`home-cache-b-${Date.now()}`);
+    ctx.createdUserIds.push(learnerA.id, learnerB.id);
+
+    const learnerAHome = await getLearnerHome(learnerA.id);
+    const learnerBHome = await getLearnerHome(learnerB.id);
+
+    const featureCandidate: LearnerHomeMaterialCandidate = {
+      id: 'shared-feature-material',
+      ownerId: ctx.supplierId,
+      title: 'Shared feature material',
+      description: 'Shared recommendation feature cache fixture',
+      materialType: 'Electronics component',
+      categoryId: ctx.categoryId,
+      categoryNameEn: 'Electronics',
+      categoryNameAr: 'Electronics',
+      status: 'AVAILABLE',
+      isFree: true,
+      deliveryAllowed: false,
+      pickupAllowed: true,
+      viewsCount: 0,
+      likesCount: 0,
+      city: 'Nablus',
+      area: null,
+      tags: ['arduino'],
+      createdAt: new Date(),
+      availableQuantity: 1,
+      mapped: {},
+    };
+    resetMaterialFeaturePoolCacheForTests();
+    const sharedFeaturesBefore = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    await likeMaterialById(material.id, learnerA.id);
+
+    const sharedFeaturesAfterLike = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    const learnerAAfterLike = await getLearnerHome(learnerA.id);
+    const learnerBAfterLike = await getLearnerHome(learnerB.id);
+
+    assert.notStrictEqual(learnerAAfterLike, learnerAHome);
+    assert.strictEqual(learnerBAfterLike, learnerBHome);
+    assert.strictEqual(
+      sharedFeaturesAfterLike.features,
+      sharedFeaturesBefore.features,
+    );
+
+    resetMaterialFeaturePoolCacheForTests();
+    const sharedFeaturesBeforeUnlike = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+    await unlikeMaterialById(material.id, learnerA.id);
+    const sharedFeaturesAfterUnlike = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    const learnerAAfterUnlike = await getLearnerHome(learnerA.id);
+    const learnerBAfterUnlike = await getLearnerHome(learnerB.id);
+
+    assert.notStrictEqual(learnerAAfterUnlike, learnerAAfterLike);
+    assert.strictEqual(learnerBAfterUnlike, learnerBHome);
+    assert.strictEqual(
+      sharedFeaturesAfterUnlike.features,
+      sharedFeaturesBeforeUnlike.features,
+    );
+    assert.doesNotThrow(() => invalidateLearnerHomeCache('missing-learner'));
+    resetMaterialFeaturePoolCacheForTests();
+  });
+
+  test('failed material like and unlike leave the learner home cache intact', async () => {
+    const learner = await createLearnerUser(`failed-home-cache-${Date.now()}`);
+    ctx.createdUserIds.push(learner.id);
+    const cachedHome = await getLearnerHome(learner.id);
+    const missingMaterialId = `${TEST_MARKER}-missing-like-${Date.now()}`;
+
+    await assert.rejects(() => likeMaterialById(missingMaterialId, learner.id));
+    assert.strictEqual(await getLearnerHome(learner.id), cachedHome);
+
+    await assert.rejects(() => unlikeMaterialById(missingMaterialId, learner.id));
+    assert.strictEqual(await getLearnerHome(learner.id), cachedHome);
+  });
+
+  test('availability-changing reservation transitions clear every learner home response cache', async () => {
+    const learnerA = await createLearnerUser(`reservation-cache-a-${Date.now()}`);
+    const learnerB = await createLearnerUser(`reservation-cache-b-${Date.now()}`);
+    ctx.createdUserIds.push(learnerA.id, learnerB.id);
+
+    const learnerAHome = await getLearnerHome(learnerA.id);
+    const learnerBHome = await getLearnerHome(learnerB.id);
+
+    invalidateLearnerHomeForReservationTransition('PENDING', 'ACCEPTED');
+    assert.strictEqual(await getLearnerHome(learnerA.id), learnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+
+    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
+    assert.notStrictEqual(await getLearnerHome(learnerA.id), learnerAHome);
+    assert.notStrictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+
+    assert.doesNotThrow(() => invalidateAllLearnerHomeResponseCaches());
   });
 
   test('missing material detail does not increment viewsCount', async () => {

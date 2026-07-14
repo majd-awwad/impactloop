@@ -8,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
@@ -15,8 +16,8 @@ import '../widgets/coming_soon_card.dart';
 import '../widgets/empty_activity_card.dart';
 import '../widgets/home_action_card.dart';
 import '../widgets/home_section_header.dart';
-import '../widgets/learning_spotlight_section.dart';
-import '../widgets/suggested_materials_section.dart';
+import '../widgets/learner_home_feed_sections.dart';
+import '../../application/learner_home_provider.dart';
 
 class LearnerHomePage extends ConsumerWidget {
   const LearnerHomePage({super.key});
@@ -51,11 +52,7 @@ class LearnerHomePage extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.xl),
                         _QuickActionsSection(),
                         const SizedBox(height: AppSpacing.xl),
-                        const SuggestedMaterialsSection(),
-                        const SizedBox(height: AppSpacing.xl),
-                        const LearningSpotlightSection(),
-                        const SizedBox(height: AppSpacing.xl),
-                        _FutureActivitySection(),
+                        const _PersonalizedFeedSection(),
                         const SizedBox(height: AppSpacing.xl),
                         _FutureToolsSection(),
                       ],
@@ -98,18 +95,21 @@ class _WelcomeHero extends StatelessWidget {
     return [
       _HeroActionButton(
         compact: compact,
-        maxWidth: 352,
+        maxWidth: 220,
         child: FilledButton.icon(
           onPressed: () => context.go('/materials'),
-          style: FilledButton.styleFrom(
-            backgroundColor: palette.mint,
-            foregroundColor: palette.ctaForeground,
-            minimumSize: const Size(0, 52),
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.primary,
             padding: const EdgeInsetsDirectional.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.sm,
             ),
-            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+          ).copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            ),
           ),
           icon: const Icon(Icons.search_rounded),
           label: const Text('Browse Materials'),
@@ -117,19 +117,26 @@ class _WelcomeHero extends StatelessWidget {
       ),
       _HeroActionButton(
         compact: compact,
-        maxWidth: 300,
+        maxWidth: 248,
         child: OutlinedButton.icon(
           onPressed: () => context.go('/learning'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: palette.textPrimary,
-            backgroundColor: palette.cardSurface.withValues(alpha: 0.7),
-            side: BorderSide(color: palette.borderStrong),
-            minimumSize: const Size(0, 52),
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
+          style: AppStatusButtonStyle.outlined(
+            context,
+            AppStatusTone.neutral,
+          ).copyWith(
+            backgroundColor: WidgetStatePropertyAll(
+              palette.cardSurface.withValues(alpha: 0.7),
             ),
-            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            ),
           ),
           icon: const Icon(Icons.school_outlined),
           label: const Text('Explore Learning Hub'),
@@ -285,7 +292,7 @@ class _HeroActionButton extends StatelessWidget {
       return SizedBox(width: double.infinity, height: 52, child: child);
     }
 
-    return SizedBox(width: maxWidth, height: 52, child: child);
+    return SizedBox(width: maxWidth, height: 48, child: child);
   }
 }
 
@@ -387,43 +394,28 @@ class _QuickActionsSection extends ConsumerWidget {
   }
 }
 
-class _FutureActivitySection extends StatelessWidget {
+class _PersonalizedFeedSection extends ConsumerWidget {
+  const _PersonalizedFeedSection();
+
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const HomeSectionHeader(
-          title: 'Activity updates',
-          subtitle:
-              'Reservation and delivery status live in My Reservations. Saved projects are not available yet.',
+  Widget build(BuildContext context, WidgetRef ref) {
+    final feedState = ref.watch(learnerHomeFeedProvider);
+
+    return feedState.when(
+      loading: () => const Center(
+        child: Padding(
+          padding: EdgeInsetsDirectional.all(AppSpacing.xl),
+          child: CircularProgressIndicator(),
         ),
-        const SizedBox(height: AppSpacing.md),
-        _ResponsiveGrid(
-          minItemWidth: 280,
-          itemHeight: 216,
-          children: [
-            HomeActionCard(
-              icon: Icons.local_shipping_outlined,
-              title: 'Track reservations and delivery',
-              description:
-                  'View pickup, delivery, and reservation updates from My Reservations.',
-              badge: 'Open My Reservations',
-              onPressed: () => context.go(learnerReservationsRoute),
-            ),
-            ComingSoonCard(
-              icon: Icons.bookmark_border_rounded,
-              title: 'Saved projects',
-              description:
-                  'Projects you save for later will appear here after saved projects are added.',
-              onTap: () => showInfoSnackBar(
-                context,
-                'This feature will be connected later.',
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
+      error: (error, _) => EmptyActivityCard(
+        icon: Icons.cloud_off_outlined,
+        title: 'Could not load recommendations',
+        description: 'Pull to refresh or try again in a moment.',
+        actionLabel: 'Retry',
+        onAction: () => ref.invalidate(learnerHomeFeedProvider),
+      ),
+      data: (feed) => LearnerHomeFeedSections(feed: feed),
     );
   }
 }

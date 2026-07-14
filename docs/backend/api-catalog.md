@@ -78,10 +78,13 @@ Supplier **derived action inbox** remains at `GET /api/supplier/notifications` (
 |--------|------|------|-------------|
 | PATCH | `/api/profile` | Bearer JWT | `profile/profile.routes.ts` |
 | PATCH | `/api/profile/learner` | Bearer JWT + `LEARNER` role | `profile/profile.routes.ts` |
+| GET | `/api/profile/learner/interests/options` | Public (read-only) | `profile/profile.routes.ts` |
 
 `PATCH /api/profile` body (partial, at least one field): `{ displayName?, phone?, profileImageUrl? }`. Changing `phone` clears `phoneVerifiedAt`. `profileImageUrl` accepts `/uploads/profiles/...` or safe `https://` URLs only.
 
-`PATCH /api/profile/learner` body: `{ learnerType, skillLevel, interests?, bio? }`. Upserts `learner_profiles` for users with the `LEARNER` role.
+`PATCH /api/profile/learner` body: `{ learnerType, skillLevel, interests?, bio? }`. Upserts `learner_profiles` for users with the `LEARNER` role. `interests` must be known taxonomy keys (e.g. `arduino`, `audio_media`); legacy display labels are normalized on save when mappable.
+
+`GET /api/profile/learner/interests/options` returns grouped selectable interests for registration/profile edit: `{ groups: [{ key, label, items: [{ key, label }] }] }`. Does not expose scoring weights.
 
 Both routes return `{ user }` using the same summary shape as `/api/auth/me`.
 
@@ -186,6 +189,18 @@ Admin incident review (`/api/admin/no-show-reports` and `/api/admin/reservation-
 Public material list/detail responses include `quantity` (remaining stock), `availableQuantity` (remaining minus active holds), and `unit`.
 
 `POST /api/reservations/:id/delivery` creates an internal delivery attempt for an accepted learner-owned **pickup** reservation (`fulfillmentMethod = PICKUP`). Body: either `{ savedDropoffAddressId, learnerNote? }` or `{ dropoffLocation, learnerNote?, saveDropoffAddressLabel? }`. Inline `dropoffLocation` includes country/city plus optional area/address/latitude/longitude; optional `saveDropoffAddressLabel` persists the address for reuse (max 10 per learner). The route creates copied pickup/dropoff locations, a `Delivery` row with `WAITING_FOR_DRIVER`, and delivery status history. It rejects non-accepted reservations, delivery-fulfillment reservations, delivery-disabled materials, and reservations with an active delivery.
+
+## Learner home — `/api/learner`
+
+| Method | Path | Auth | Roles | Source file |
+|--------|------|------|-------|-------------|
+| GET | `/api/learner/home` | Bearer JWT | `LEARNER` | `learner-home/learner-home.routes.ts` |
+
+Returns a personalized learner home feed: `profileCompletion` (`hasInterests`, `hasSavedLocation`, `hasSavedProjects`) plus ordered sections (`suggested_materials`, `materials_for_saved_projects`, `suggested_projects`, `continue_projects`, `saved_projects`, `free_materials_near_you`, `popular_projects`). Each recommended item includes `score`, `reasons[]`, and a typed payload (`material`, `project`, or `continue_project` with nested `build`). Ranking uses deterministic weighted scoring from learner interests, saved projects/components, default saved location, material availability, popularity, and recency — no AI or vector search.
+
+| GET | `/api/learner/home/sections/:sectionKey` | Bearer JWT | `LEARNER` | `learner-home/learner-home.routes.ts` |
+
+Returns one ranked section for Browse-all pages. Supported `sectionKey` values match the home feed section keys. Query: `limit` (optional, default 20, max 50). Response includes `key`, `title`, `subtitle`, `items[]`, `emptyState`, `nextCursor` (always `null` in this slice). Uses the same scoring as `GET /api/learner/home`. Invalid `sectionKey` → `400 INVALID_SECTION_KEY`.
 
 ## Learner saved dropoff addresses — `/api/learner/saved-dropoff-addresses`
 
@@ -378,11 +393,17 @@ Saved locations are private to the authenticated user. Response rows include `la
 
 **Admin people list query:** `tab` (`ALL` \| `LEARNERS` \| `SUPPLIERS` \| `DRIVERS` \| `MODERATORS` \| `ADMINS`), `search`, `status`, `page`, `limit`.
 
-**Summary counts:** unique `users` rows per role filter (`prisma.user.count`); `learners` = users with `LEARNER` role and without `SUPPLIER`/`DRIVER`/`MODERATOR`/`ADMIN`. Invitations are not counted as users.
+**Summary counts:** unique `users` rows per role filter (`prisma.user.count`); `learners` = users with `LEARNER` role and without `SUPPLIER`/`DRIVER`/`MODERATOR`/`ADMIN`. Invitations are not counted as users. **Additional summary KPIs:** `activeUsers` (`users.account_status = ACTIVE`), `verifiedSuppliers` (`supplier_profiles.verification_status IN ('APPROVED','VERIFIED')`), `newThisMonth` (`users.created_at >=` start of current UTC calendar month). Returned by both `GET /people/summary` and the nested `summary` on `GET /people`.
 
 **People management safety (MVP):** No delete-user or manual role-edit endpoints. `suspend` / `reactivate` are blocked for the acting admin (self), any user with `ADMIN` role, and the last active admin account. Admin tab is view-only in Flutter (no suspend button). Pending admin invitations are still revoked via `/api/admin/invitations/:id/revoke`. Future admin suspension should require `SUPER_ADMIN` (not implemented).
 
 **People list/detail extras:** each user item includes `verifiedStrikeCount` — count of `no_show_reports` where this user is `targetUserId`, `status=VERIFIED`, and `targetRole` is `LEARNER`/`SUPPLIER`/`DRIVER` (not a separate strikes table).
+
+**People list activity metrics (list items only):** `materialsCount` (`materials.owner_id`), `reservationsAsRequesterCount` (`reservations.requester_id`), `reservationsAsOwnerCount` (`reservations.owner_id`), `submittedLearningProjectsCount` (`learning_projects.created_by` where `submitted_at IS NOT NULL`), `projectBuildsCount` (`project_builds.learner_id`), `assignedDeliveriesCount` (`deliveries.assigned_driver_profile_id` mapped back to the driver user via loaded `driverProfile.id`). Computed per page via bounded `groupBy` on the current list user IDs or driver profile IDs (not per-user N+1). Omitted users default to `0`.
+
+**People detail activity metrics (`GET /people/:id`):** same list metrics as above, plus `pendingNoShowReportsCount` (`no_show_reports` where `target_user_id` matches, `status=PENDING_REVIEW`, eligible `target_role`). Resolved via the same aggregate helpers scoped to the single requested user (bounded parallel counts, not N+1).
+
+**People list location labels (list items):** optional `locationCity`, `locationArea`, `locationLabel` (`City · Area` when both exist). Resolved from existing includes only — supplier organization `businessLocation`, else supplier `defaultPickupLocation`, else driver profile `city`/`area`, else a learner's single saved location when exactly one `user_saved_locations` row exists. No lat/long, `addressLine`, or coordinates. Omitted when unknown or ambiguous (multiple saved learner locations).
 
 **`PATCH /api/admin/people/:id/suspend` body:** `{ reason: string }` (required, min 3 chars). Persists `suspensionReason`, `suspendedAt`, `suspendedById` on `users`. Logs `USER_SUSPENDED` to `admin_activity_logs`.
 
@@ -461,6 +482,8 @@ Organization suppliers (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) must s
 
 
 `PATCH /api/supplier/materials/:id` updates safe listing fields only (`title`, `description`, `quantity`, `unit`, `condition`, `pickupAllowed`, `deliveryAllowed`, `pickupNotes`, `suggestedUses`). Edit is allowed only when `canEdit` is true (same lifecycle rules as delete). List/detail responses include `canEdit` / `editBlockedReason` and `canDelete` / `deleteBlockedReason`.
+
+`GET /api/supplier/materials` and `GET /api/supplier/materials/:id` include engagement and demand metrics on each material: `viewsCount`, `likesCount`, `pendingReservationsCount`, `reservedReservationsCount`, `activeRequestsCount`, `completedReservationsCount`, `reusedCount`, optional `lastCompletedAt`, `activeDemandScore`, `demandScore` (lifetime raw score), and `demandScorePercent` (0–100). `demandScore`/`demandScorePercent` include views, likes, active reservations, and completed reuses; `activeDemandScore` counts only unfinished reservations. `reservationsCount` remains an alias of `activeRequestsCount` for backward compatibility. Detail additionally returns `reservations[]` summaries for the material.
 
 `DELETE /api/supplier/materials/:id` removes an owned listing when `canDelete` is true (409 when blocked).
 

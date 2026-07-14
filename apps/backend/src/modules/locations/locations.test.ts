@@ -15,6 +15,7 @@ import {
   setReverseGeocodeFetcherForTests,
 } from '../../services/reverse-geocoding.service.js';
 import { hashPassword } from '../../utils/password.js';
+import { getLearnerHome } from '../learner-home/learner-home.service.js';
 
 import {
   createUserSavedLocation,
@@ -318,6 +319,90 @@ describe('user saved locations', () => {
             startsWith: TEST_MARKER,
           },
         },
+      });
+    }
+  });
+
+  test('ranking-relevant saved location mutations invalidate only the owner cache', async () => {
+    const passwordHash = await hashPassword('TestPassword123!');
+    const suffix = Date.now();
+    const [learnerA, learnerB] = await Promise.all(
+      ['a', 'b'].map((label) =>
+        prisma.user.create({
+          data: {
+            displayName: `${TEST_MARKER} cache learner ${label} ${suffix}`,
+            email: `${TEST_MARKER}-cache-${label}-${suffix}@impactloop.test`,
+            passwordHash,
+            accountStatus: 'ACTIVE',
+            emailVerifiedAt: new Date(),
+            roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+            learnerProfile: {
+              create: { learnerType: 'STUDENT', skillLevel: 'BEGINNER' },
+            },
+          },
+          select: { id: true },
+        }),
+      ),
+    );
+
+    try {
+      const primary = await createUserSavedLocation(learnerA.id, {
+        label: 'Campus',
+        country: 'Palestine',
+        city: `${TEST_MARKER}-cache-Nablus-${suffix}`,
+        isDefault: true,
+      });
+      const secondary = await createUserSavedLocation(learnerA.id, {
+        label: 'Workshop',
+        country: 'Palestine',
+        city: `${TEST_MARKER}-cache-Ramallah-${suffix}`,
+        isDefault: false,
+      });
+
+      let learnerAHome = await getLearnerHome(learnerA.id);
+      const learnerBHome = await getLearnerHome(learnerB.id);
+
+      const created = await createUserSavedLocation(learnerA.id, {
+        label: 'Library',
+        country: 'Palestine',
+        city: `${TEST_MARKER}-cache-Hebron-${suffix}`,
+        isDefault: false,
+      });
+      let refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+      assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+      assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+
+      learnerAHome = refreshedLearnerAHome;
+      await updateUserSavedLocation(learnerA.id, created.id, {
+        city: `${TEST_MARKER}-cache-Hebron-updated-${suffix}`,
+      });
+      refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+      assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+      learnerAHome = refreshedLearnerAHome;
+      await updateUserSavedLocation(learnerA.id, secondary.id, {
+        isDefault: true,
+      });
+      refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+      assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+      learnerAHome = refreshedLearnerAHome;
+      await deleteUserSavedLocation(learnerA.id, secondary.id);
+      refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+      assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+      await assert.rejects(() =>
+        updateUserSavedLocation(learnerB.id, primary.id, {
+          city: `${TEST_MARKER}-cache-unauthorized-${suffix}`,
+        }),
+      );
+      assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+    } finally {
+      await prisma.user.deleteMany({
+        where: { id: { in: [learnerA.id, learnerB.id] } },
+      });
+      await prisma.location.deleteMany({
+        where: { city: { startsWith: `${TEST_MARKER}-cache-` } },
       });
     }
   });

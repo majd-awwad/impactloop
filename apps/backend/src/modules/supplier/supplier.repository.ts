@@ -12,6 +12,13 @@ import {
   resolveSupplierProfileForUser,
   type SupplierMaterialScope,
 } from "./supplier-material-scope.js";
+import {
+  emptyMaterialReservationStatusCounts,
+  foldMaterialReservationStatusCounts,
+  MATERIAL_DEMAND_ACTIVE_STATUSES,
+  MATERIAL_DEMAND_TRACKED_STATUSES,
+  type MaterialReservationStatusCounts,
+} from "./supplier.material-demand-metrics.js";
 type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 const decimalToNumber = (value: { toNumber(): number } | number): number => {
@@ -610,6 +617,31 @@ const supplierMaterialListInclude = {
   },
 } satisfies Prisma.MaterialInclude;
 
+const supplierMaterialMutationSelect = {
+  id: true,
+  title: true,
+  description: true,
+  quantity: true,
+  unit: true,
+  condition: true,
+  pickupAllowed: true,
+  deliveryAllowed: true,
+  pickupNotes: true,
+  suggestedUses: true,
+  materialType: true,
+  status: true,
+  isFree: true,
+  price: true,
+  currency: true,
+  viewsCount: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
+export type SupplierOwnedMaterialListRecord = Prisma.MaterialGetPayload<{
+  include: typeof supplierMaterialListInclude;
+}>;
+
 const buildSupplierMaterialsWhere = (
   scope: SupplierMaterialScope,
   query: {
@@ -855,7 +887,7 @@ export const updateSupplierOwnedMaterial = async (
   return prisma.material.update({
     where: { id: materialId },
     data,
-    include: supplierMaterialListInclude,
+    select: supplierMaterialMutationSelect,
   });
 };
 
@@ -1102,18 +1134,16 @@ export const createSupplierMaterial = async (input: {
   return prisma.$transaction((tx) => createMaterial(tx));
 };
 
-export type MaterialReservationDemandCounts = {
-  pendingReservationsCount: number;
-  reservedReservationsCount: number;
-  reservationsCount: number;
-  demandScore: number;
+export type MaterialReservationDemandCounts = MaterialReservationStatusCounts;
+
+export type MaterialReuseSummary = {
+  reusedCount: number;
+  lastCompletedAt: Date | null;
 };
 
-const emptyDemandCounts = (): MaterialReservationDemandCounts => ({
-  pendingReservationsCount: 0,
-  reservedReservationsCount: 0,
-  reservationsCount: 0,
-  demandScore: 0,
+const emptyReuseSummary = (): MaterialReuseSummary => ({
+  reusedCount: 0,
+  lastCompletedAt: null,
 });
 
 export const findReservationDemandByMaterialIds = async (
@@ -1125,35 +1155,80 @@ export const findReservationDemandByMaterialIds = async (
   }
 
   for (const materialId of materialIds) {
-    map.set(materialId, emptyDemandCounts());
+    map.set(materialId, emptyMaterialReservationStatusCounts());
   }
 
   const groups = await prisma.reservation.groupBy({
     by: ["materialId", "status"],
     where: {
       materialId: { in: materialIds },
-      status: { in: ["PENDING", "ACCEPTED"] },
+      status: { in: [...MATERIAL_DEMAND_TRACKED_STATUSES] },
     },
     _count: { _all: true },
   });
 
-  for (const group of groups) {
-    const entry = map.get(group.materialId);
-    if (!entry) {
-      continue;
-    }
+  const groupedByMaterial = new Map<string, Array<{ status: string; count: number }>>();
 
-    if (group.status === "PENDING") {
-      entry.pendingReservationsCount = group._count._all;
-    } else if (group.status === "ACCEPTED") {
-      entry.reservedReservationsCount = group._count._all;
-    }
+  for (const group of groups) {
+    const materialGroups = groupedByMaterial.get(group.materialId) ?? [];
+    materialGroups.push({
+      status: group.status,
+      count: group._count._all,
+    });
+    groupedByMaterial.set(group.materialId, materialGroups);
   }
 
-  for (const entry of map.values()) {
-    entry.demandScore =
-      entry.pendingReservationsCount + entry.reservedReservationsCount;
-    entry.reservationsCount = entry.demandScore;
+  for (const [materialId, statusGroups] of groupedByMaterial) {
+    map.set(materialId, foldMaterialReservationStatusCounts(statusGroups));
+  }
+
+  return map;
+};
+
+export const findMaterialReuseSummaryByMaterialIds = async (
+  materialIds: string[],
+): Promise<Map<string, MaterialReuseSummary>> => {
+  const map = new Map<string, MaterialReuseSummary>();
+  if (materialIds.length === 0) {
+    return map;
+  }
+
+  for (const materialId of materialIds) {
+    map.set(materialId, emptyReuseSummary());
+  }
+
+  const [materials, completedGroups] = await Promise.all([
+    prisma.material.findMany({
+      where: { id: { in: materialIds } },
+      select: {
+        id: true,
+        reusedAt: true,
+        status: true,
+      },
+    }),
+    prisma.reservation.groupBy({
+      by: ["materialId"],
+      where: {
+        materialId: { in: materialIds },
+        status: "COMPLETED",
+      },
+      _max: {
+        completedAt: true,
+      },
+    }),
+  ]);
+
+  for (const material of materials) {
+    map.set(material.id, {
+      reusedCount: material.reusedAt != null || material.status === "REUSED" ? 1 : 0,
+      lastCompletedAt: null,
+    });
+  }
+
+  for (const group of completedGroups) {
+    const entry = map.get(group.materialId) ?? emptyReuseSummary();
+    entry.lastCompletedAt = group._max.completedAt ?? null;
+    map.set(group.materialId, entry);
   }
 
   return map;
@@ -1163,7 +1238,7 @@ export const countActiveReservationsForMaterial = async (materialId: string) => 
   return prisma.reservation.count({
     where: {
       materialId,
-      status: { in: ["PENDING", "ACCEPTED"] },
+      status: { in: [...MATERIAL_DEMAND_ACTIVE_STATUSES] },
     },
   });
 };
@@ -1209,6 +1284,12 @@ export const findReservationsForSupplierMaterial = async (
   });
 };
 
+const supplierMaterialStatusMutationSelect = {
+  id: true,
+  status: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
 export const updateSupplierOwnedMaterialStatus = async (
   scope: SupplierMaterialScope,
   materialId: string,
@@ -1237,7 +1318,7 @@ export const updateSupplierOwnedMaterialStatus = async (
           }
         : {}),
     },
-    include: supplierMaterialListInclude,
+    select: supplierMaterialStatusMutationSelect,
   });
 };
 

@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_reservations_api.dart';
 import '../../data/models/admin_reservations_models.dart';
+import '../../../deliveries/presentation/delivery_status_presentation.dart';
+import '../../../reservations/presentation/learner_reservation_ui_helpers.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
@@ -144,115 +148,21 @@ bool _reservationDeliveryStatusesMatch({
   return reservationStatus.toUpperCase() == normalizedDelivery.toUpperCase();
 }
 
-String _statusBadgeText(
-  String status, {
-  String? scope,
-}) {
+String _statusBadgeText(String status, {String? scope}) {
   final label = _statusLabel(status);
   if (scope == null || scope.isEmpty) return label;
   return '$scope · $label';
 }
 
-Color _reservationStatusAccent(AdminPalette palette, String status) {
-  final normalized = status.toUpperCase();
-  if (normalized == 'PENDING' || normalized.contains('WAITING')) {
-    return palette.amber;
-  }
-  if (normalized == 'ACCEPTED' ||
-      normalized.contains('ACTIVE') ||
-      normalized.contains('PROGRESS') ||
-      normalized.contains('ASSIGNED') ||
-      normalized.contains('ON_THE_WAY') ||
-      normalized.contains('PICKED_UP') ||
-      normalized.contains('ARRIVED')) {
-    return palette.green;
-  }
-  if (normalized == 'COMPLETED' || normalized == 'DELIVERED') {
-    return palette.purple;
-  }
-  if (normalized == 'REJECTED' ||
-      normalized == 'CANCELLED' ||
-      normalized == 'EXPIRED' ||
-      normalized.contains('FAILED')) {
-    return palette.red;
-  }
-  return palette.textMuted;
-}
-
-({Color background, Color foreground}) _reservationStatusBadgeColors(
-  AdminPalette palette,
+AppStatusTone _reservationStatusTone(
   String status, {
   bool isDelivery = false,
-}) {
-  if (isDelivery) {
-    return (
-      background: palette.primaryTeal.withValues(
-        alpha: palette.isDark ? 0.26 : 0.16,
-      ),
-      foreground: palette.isDark ? palette.brightTeal : const Color(0xFF0F766E),
-    );
-  }
+}) => isDelivery
+    ? deliveryStatusAppTone(status)
+    : learnerReservationStatusTone(status);
 
-  final normalized = status.toUpperCase();
-  if (normalized == 'PENDING' || normalized.contains('WAITING')) {
-    return (
-      background: palette.amber.withValues(alpha: palette.isDark ? 0.26 : 0.18),
-      foreground: palette.isDark
-          ? const Color(0xFFFCD34D)
-          : const Color(0xFFB45309),
-    );
-  }
-  if (normalized == 'ACCEPTED' ||
-      normalized.contains('ACTIVE') ||
-      normalized.contains('APPROVED') ||
-      normalized.contains('PROGRESS') ||
-      normalized.contains('ASSIGNED') ||
-      normalized.contains('ON_THE_WAY') ||
-      normalized.contains('PICKED_UP') ||
-      normalized.contains('ARRIVED')) {
-    return (
-      background: palette.green.withValues(alpha: palette.isDark ? 0.26 : 0.16),
-      foreground: palette.isDark
-          ? const Color(0xFF86EFAC)
-          : const Color(0xFF15803D),
-    );
-  }
-  if (normalized == 'COMPLETED' || normalized == 'DELIVERED') {
-    return (
-      background: palette.purple.withValues(
-        alpha: palette.isDark ? 0.26 : 0.16,
-      ),
-      foreground: palette.isDark
-          ? const Color(0xFFC4B5FD)
-          : const Color(0xFF6D28D9),
-    );
-  }
-  if (normalized == 'REJECTED' ||
-      normalized == 'CANCELLED' ||
-      normalized.contains('FAILED')) {
-    return (
-      background: palette.red.withValues(alpha: palette.isDark ? 0.26 : 0.14),
-      foreground: palette.isDark
-          ? const Color(0xFFFDA4AF)
-          : const Color(0xFFB91C1C),
-    );
-  }
-  if (normalized == 'EXPIRED') {
-    return (
-      background: palette.red.withValues(alpha: palette.isDark ? 0.2 : 0.12),
-      foreground: palette.isDark
-          ? const Color(0xFFFDA4AF)
-          : const Color(0xFFBE123C),
-    );
-  }
-
-  return (
-    background: palette.textMuted.withValues(
-      alpha: palette.isDark ? 0.22 : 0.14,
-    ),
-    foreground: palette.textSecondary,
-  );
-}
+Color _reservationStatusAccent(BuildContext context, String status) =>
+    AppStatusStyle.of(context, _reservationStatusTone(status)).foreground;
 
 class _ReservationStatusBadge extends StatelessWidget {
   const _ReservationStatusBadge({
@@ -266,34 +176,10 @@ class _ReservationStatusBadge extends StatelessWidget {
   final String? scope;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final colors = _reservationStatusBadgeColors(
-      palette,
-      status,
-      isDelivery: isDelivery,
-    );
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 22),
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-      decoration: BoxDecoration(
-        color: colors.background,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        _statusBadgeText(status, scope: scope),
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          color: colors.foreground,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-          height: 1.1,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: _statusBadgeText(status, scope: scope),
+    tone: _reservationStatusTone(status, isDelivery: isDelivery),
+  );
 }
 
 class _ReservationSummaryCard extends StatelessWidget {
@@ -867,6 +753,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
                 onPressed: widget.onReset,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.filter_alt_off, size: 18),
                 label: const Text('Reset'),
               ),
@@ -1021,13 +911,12 @@ class _ReservationRow extends StatelessWidget {
       reservationStatus: item.status,
       deliveryStatus: deliveryStatus,
     );
-    final deliveryLabel =
-        deliveryStatus != null && deliveryStatus.isNotEmpty
+    final deliveryLabel = deliveryStatus != null && deliveryStatus.isNotEmpty
         ? _statusLabel(deliveryStatus)
         : item.hasDelivery
         ? 'Linked'
         : '—';
-    final statusAccent = _reservationStatusAccent(palette, item.status);
+    final statusAccent = _reservationStatusAccent(context, item.status);
 
     final inner = InkWell(
       onTap: onTap,
@@ -1329,8 +1218,9 @@ class _ReservationDetailDialog extends ConsumerWidget {
       _adminReservationDetailProvider(reservationId),
     );
 
-    return AlertDialog(
+    return AppDialogShell(
       title: const Text('Reservation details'),
+      maxWidth: 600,
       content: SizedBox(
         width: 560,
         child: detailAsync.when(
@@ -1346,17 +1236,9 @@ class _ReservationDetailDialog extends ConsumerWidget {
             onRetry: () =>
                 ref.invalidate(_adminReservationDetailProvider(reservationId)),
           ),
-          data: (detail) => SingleChildScrollView(
-            child: _ReservationDetailBody(detail: detail),
-          ),
+          data: (detail) => _ReservationDetailBody(detail: detail),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
     );
   }
 }
@@ -1549,6 +1431,10 @@ class _ReservationDetailBody extends StatelessWidget {
                     context.push('/admin/no-show-reports');
                   }
                 },
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.open_in_new_rounded, size: 18),
                 label: const Text('Open report'),
               ),
@@ -1604,6 +1490,10 @@ class _ReservationDetailBody extends StatelessWidget {
                     context.push('/admin/deliveries');
                   }
                 },
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.local_shipping_outlined, size: 18),
                 label: const Text('View delivery details'),
               ),
@@ -1646,13 +1536,28 @@ class _PaginationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final buttonStyle = AppStatusButtonStyle.outlined(
+      context,
+      AppStatusTone.neutral,
+    ).copyWith(
+      minimumSize: const WidgetStatePropertyAll(Size(0, 42)),
+    );
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton(onPressed: onPrevious, child: const Text('Previous')),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: onNext, child: const Text('Next')),
-        const SizedBox(width: 12),
+        OutlinedButton(
+          onPressed: onPrevious,
+          style: buttonStyle,
+          child: const Text('Previous'),
+        ),
+        OutlinedButton(
+          onPressed: onNext,
+          style: buttonStyle,
+          child: const Text('Next'),
+        ),
         Text(
           'Page $page of $totalPages · $total total',
           style: AdminTypography.kpiHelper(palette),

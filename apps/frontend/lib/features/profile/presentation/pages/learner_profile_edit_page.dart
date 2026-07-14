@@ -9,12 +9,13 @@ import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_area.dart';
-import '../../../../shared/widgets/app_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
-import '../../../auth/data/models/registration_draft.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/profile_providers.dart';
+import '../../../../shared/widgets/app_text_field.dart';
+import '../../data/models/learner_interest_options.dart';
 import '../../data/models/learner_profile_options.dart';
+import '../widgets/learner_interest_chip_picker.dart';
 import '../widgets/profile_image_picker.dart';
 
 class LearnerProfileEditPage extends ConsumerStatefulWidget {
@@ -28,10 +29,11 @@ class LearnerProfileEditPage extends ConsumerStatefulWidget {
 class _LearnerProfileEditPageState
     extends ConsumerState<LearnerProfileEditPage> {
   final _formKey = GlobalKey<FormState>();
-  final _interestsController = TextEditingController();
+  final _customInterestController = TextEditingController();
   final _bioController = TextEditingController();
   String? _learnerType;
   String? _skillLevel;
+  Set<String> _selectedInterestKeys = {};
   bool _isSubmitting = false;
   String? _learnerTypeError;
   String? _skillLevelError;
@@ -45,11 +47,14 @@ class _LearnerProfileEditPageState
     _applyUser(ref.read(authControllerProvider).user);
   }
 
-  void _applyUser(User? user) {
+  void _applyUser(User? user, {Map<String, String>? labelByKey}) {
     final profile = user?.learnerProfile;
     _learnerType = _nullableValue(profile?.learnerType);
     _skillLevel = _nullableValue(profile?.skillLevel);
-    _interestsController.text = profile?.interests.join(', ') ?? '';
+    _selectedInterestKeys = normalizeSelectedInterestKeys(
+      profile?.interests ?? const [],
+      labelByKey: labelByKey,
+    );
     _bioController.text = profile?.bio?.trim() ?? '';
   }
 
@@ -60,7 +65,7 @@ class _LearnerProfileEditPageState
 
   @override
   void dispose() {
-    _interestsController.dispose();
+    _customInterestController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -91,7 +96,10 @@ class _LearnerProfileEditPageState
           .updateLearnerProfile(
             learnerType: _learnerType!,
             skillLevel: _skillLevel!,
-            interests: parseInterestsInput(_interestsController.text),
+            interests: mergeInterestSelection(
+              selectedKeys: _selectedInterestKeys,
+              customInterestText: _customInterestController.text,
+            ),
             bio: bio.isEmpty ? null : bio,
           );
 
@@ -138,6 +146,7 @@ class _LearnerProfileEditPageState
   Widget build(BuildContext context) {
     final user = ref.watch(authControllerProvider).user;
     final isLearner = user?.hasRole('LEARNER') == true;
+    final optionsAsync = ref.watch(learnerInterestOptionsProvider);
 
     if (!isLearner) {
       return ProfileSubpageScaffold(
@@ -153,74 +162,98 @@ class _LearnerProfileEditPageState
     return ProfileSubpageScaffold(
       title: 'Edit learner profile',
       child: ProfileEditCard(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppDropdownField<String>(
-                label: 'Learner type',
-                hint: 'Select your learner type',
-                value: _learnerType,
-                errorText: _learnerTypeError,
-                items: [
-                  for (final type in LearnerProfileOptions.learnerTypes)
-                    DropdownMenuItem(value: type, child: Text(type)),
-                ],
-                onChanged: (value) => setState(() => _learnerType = value),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Learner type is required';
-                  }
-                  return null;
-                },
-              ),
-              const AppFieldGap(),
-              AppDropdownField<String>(
-                label: 'Skill level',
-                hint: 'Select your skill level',
-                value: _skillLevel,
-                errorText: _skillLevelError,
-                items: [
-                  for (final level in LearnerProfileOptions.skillLevels)
-                    DropdownMenuItem(value: level, child: Text(level)),
-                ],
-                onChanged: (value) => setState(() => _skillLevel = value),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Skill level is required';
-                  }
-                  return null;
-                },
-              ),
-              const AppFieldGap(),
-              AppTextField(
-                controller: _interestsController,
-                label: 'Interests',
-                hint: 'Arduino, robotics, electronics',
-                textInputAction: TextInputAction.next,
-                errorText: _interestsError,
-              ),
-              const AppFieldGap(),
-              AppTextArea(
-                controller: _bioController,
-                label: 'Bio',
-                hint: 'Tell others a little about your learning goals',
-                textInputAction: TextInputAction.done,
-                errorText: _bioError,
-                onFieldSubmitted: (_) => _submit(),
-              ),
-              if (_formError != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                AppInlineError(message: _formError!),
-              ],
-              const SizedBox(height: AppSpacing.lg),
-              AppPrimaryButton(
-                label: _isSubmitting ? 'Saving...' : 'Save changes',
-                onPressed: _isSubmitting ? null : _submit,
-              ),
-            ],
+        child: optionsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => LearnerInterestChipPicker(
+            options: fallbackLearnerInterestOptions,
+            selectedKeys: _selectedInterestKeys,
+            onChanged: (value) =>
+                setState(() => _selectedInterestKeys = value),
+            customInterestController: _customInterestController,
+            label: 'Interests',
+            errorText: _interestsError,
           ),
+          data: (options) {
+            if (_selectedInterestKeys.isEmpty &&
+                (user?.learnerProfile?.interests.isNotEmpty ?? false)) {
+              _selectedInterestKeys = normalizeSelectedInterestKeys(
+                user!.learnerProfile!.interests,
+                labelByKey: options.labelByKey,
+              );
+            }
+
+            return Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppDropdownField<String>(
+                    label: 'Learner type',
+                    hint: 'Select your learner type',
+                    value: _learnerType,
+                    errorText: _learnerTypeError,
+                    items: [
+                      for (final type in LearnerProfileOptions.learnerTypes)
+                        DropdownMenuItem(value: type, child: Text(type)),
+                    ],
+                    onChanged: (value) => setState(() => _learnerType = value),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Learner type is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const AppFieldGap(),
+                  AppDropdownField<String>(
+                    label: 'Skill level',
+                    hint: 'Select your skill level',
+                    value: _skillLevel,
+                    errorText: _skillLevelError,
+                    items: [
+                      for (final level in LearnerProfileOptions.skillLevels)
+                        DropdownMenuItem(value: level, child: Text(level)),
+                    ],
+                    onChanged: (value) => setState(() => _skillLevel = value),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Skill level is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const AppFieldGap(),
+                  LearnerInterestChipPicker(
+                    options: options,
+                    selectedKeys: _selectedInterestKeys,
+                    onChanged: (value) =>
+                        setState(() => _selectedInterestKeys = value),
+                    customInterestController: _customInterestController,
+                    label: 'Interests',
+                    errorText: _interestsError,
+                  ),
+                  const AppFieldGap(),
+                  AppTextArea(
+                    controller: _bioController,
+                    label: 'Bio',
+                    hint: 'Tell others a little about your learning goals',
+                    textInputAction: TextInputAction.done,
+                    errorText: _bioError,
+                    onFieldSubmitted: (_) => _submit(),
+                  ),
+                  if (_formError != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    AppInlineError(message: _formError!),
+                  ],
+                  const SizedBox(height: AppSpacing.lg),
+                  AppPrimaryButton(
+                    label: _isSubmitting ? 'Saving...' : 'Save changes',
+                    onPressed: _isSubmitting ? null : _submit,
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

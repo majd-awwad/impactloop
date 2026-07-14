@@ -45,6 +45,15 @@ class AdminDeliveriesApi {
       AdminDeliveryDetail.fromJson,
     );
   }
+
+  Future<AdminDeliveryDetail> reopenDriverAssignment(String id) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/admin/deliveries/$id/reopen-driver-assignment',
+      ),
+      AdminDeliveryDetail.fromJson,
+    );
+  }
 }
 
 final adminDeliveriesApiProvider = Provider<AdminDeliveriesApi>((ref) {

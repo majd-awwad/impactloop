@@ -20,10 +20,7 @@ void main() {
         'unit': 'sheet',
         'deliveryAllowed': false,
       },
-      'supplier': {
-        'id': 'sup-1',
-        'displayName': 'Supplier',
-      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
     });
 
     expect(reservation.quantityRequested, 2.5);
@@ -231,68 +228,71 @@ void main() {
     expect(location.formattedAddress, 'Nablus');
   });
 
-  test('LearnerReservation shouldShowSelfPickupAddress respects delivery flags', () {
-    final reservation = LearnerReservation.fromJson({
-      'id': 'res-6',
-      'status': 'ACCEPTED',
-      'quantityRequested': 1,
-      'fulfillmentMethod': 'DELIVERY',
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-      'pickupLocationFull': {
-        'city': 'Nablus',
-        'addressLine': '12 Supplier Street',
-      },
-      'material': {
-        'id': 'mat-1',
-        'title': 'Wood panels',
-        'materialType': 'Wood',
-        'status': 'RESERVED',
-        'unit': 'sheet',
-      },
-      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
-    });
+  test(
+    'LearnerReservation shouldShowSelfPickupAddress respects delivery flags',
+    () {
+      final reservation = LearnerReservation.fromJson({
+        'id': 'res-6',
+        'status': 'ACCEPTED',
+        'quantityRequested': 1,
+        'fulfillmentMethod': 'DELIVERY',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'updatedAt': '2026-01-01T00:00:00.000Z',
+        'pickupLocationFull': {
+          'city': 'Nablus',
+          'addressLine': '12 Supplier Street',
+        },
+        'material': {
+          'id': 'mat-1',
+          'title': 'Wood panels',
+          'materialType': 'Wood',
+          'status': 'RESERVED',
+          'unit': 'sheet',
+        },
+        'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+      });
 
-    expect(reservation.hasRevealedPickupLocation, isTrue);
-    expect(
-      reservation.shouldShowSelfPickupAddress(hasDeliveryRecord: false),
-      isFalse,
-    );
-    expect(
-      reservation.shouldShowSelfPickupAddress(hasDeliveryRecord: true),
-      isFalse,
-    );
+      expect(reservation.hasRevealedPickupLocation, isTrue);
+      expect(
+        reservation.shouldShowSelfPickupAddress(hasDeliveryRecord: false),
+        isFalse,
+      );
+      expect(
+        reservation.shouldShowSelfPickupAddress(hasDeliveryRecord: true),
+        isFalse,
+      );
 
-    final selfPickup = LearnerReservation.fromJson({
-      'id': 'res-7',
-      'status': 'ACCEPTED',
-      'quantityRequested': 1,
-      'fulfillmentMethod': 'PICKUP',
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-      'pickupLocationFull': {
-        'city': 'Nablus',
-        'addressLine': '12 Supplier Street',
-      },
-      'material': {
-        'id': 'mat-1',
-        'title': 'Wood panels',
-        'materialType': 'Wood',
-        'status': 'RESERVED',
-        'unit': 'sheet',
-      },
-      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
-    });
+      final selfPickup = LearnerReservation.fromJson({
+        'id': 'res-7',
+        'status': 'ACCEPTED',
+        'quantityRequested': 1,
+        'fulfillmentMethod': 'PICKUP',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'updatedAt': '2026-01-01T00:00:00.000Z',
+        'pickupLocationFull': {
+          'city': 'Nablus',
+          'addressLine': '12 Supplier Street',
+        },
+        'material': {
+          'id': 'mat-1',
+          'title': 'Wood panels',
+          'materialType': 'Wood',
+          'status': 'RESERVED',
+          'unit': 'sheet',
+        },
+        'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+      });
 
-    expect(
-      selfPickup.shouldShowSelfPickupAddress(hasDeliveryRecord: false),
-      isTrue,
-    );
-    expect(
-      selfPickup.shouldShowSelfPickupAddress(hasDeliveryRecord: true),
-      isFalse,
-    );
-  });
+      expect(
+        selfPickup.shouldShowSelfPickupAddress(hasDeliveryRecord: false),
+        isTrue,
+      );
+      expect(
+        selfPickup.shouldShowSelfPickupAddress(hasDeliveryRecord: true),
+        isFalse,
+      );
+    },
+  );
 
   test('LearnerReservation parses fulfillment fields', () {
     final reservation = LearnerReservation.fromJson({
@@ -347,6 +347,31 @@ void main() {
     expect(json['fulfillmentMethod'], 'PICKUP');
     expect(json['learnerPreferredPickupWindows'], hasLength(1));
     expect(json.containsKey('deliveryAddressText'), isFalse);
+  });
+
+  test('CreateReservationRequest omits empty optional preferred windows', () {
+    final pickupRequest = CreateReservationRequest(
+      materialId: 'mat-1',
+      quantityRequested: 1,
+      fulfillmentMethod: 'PICKUP',
+    );
+    final deliveryRequest = CreateReservationRequest(
+      materialId: 'mat-1',
+      quantityRequested: 1,
+      fulfillmentMethod: 'DELIVERY',
+      deliveryAddressText: '12 Learner Street',
+      dropoffCity: 'Nablus',
+      safeDropoffAllowed: false,
+    );
+
+    expect(
+      pickupRequest.toJson().containsKey('learnerPreferredPickupWindows'),
+      isFalse,
+    );
+    expect(
+      deliveryRequest.toJson().containsKey('learnerPreferredDeliveryWindows'),
+      isFalse,
+    );
   });
 
   test('LearnerReservation parses awaiting confirmation scheduling fields', () {

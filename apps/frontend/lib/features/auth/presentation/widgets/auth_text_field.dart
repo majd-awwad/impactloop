@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'auth_ui_palette.dart';
 
@@ -41,12 +40,12 @@ class AuthTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
-    final error = Theme.of(context).colorScheme.error;
+    final textTheme = Theme.of(context).textTheme;
 
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
-      style: TextStyle(color: colors.textPrimary),
+      style: textTheme.bodyMedium?.copyWith(color: colors.textPrimary),
       cursorColor: colors.primary,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
@@ -60,34 +59,7 @@ class AuthTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: TextStyle(
-          color: colors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
-        hintStyle: TextStyle(color: colors.textMuted),
         floatingLabelBehavior: FloatingLabelBehavior.always,
-        filled: true,
-        fillColor: colors.surfaceElevated,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: 18,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdAll,
-          borderSide: BorderSide(color: colors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdAll,
-          borderSide: BorderSide(color: colors.primary, width: 1.4),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdAll,
-          borderSide: BorderSide(color: error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdAll,
-          borderSide: BorderSide(color: error, width: 1.4),
-        ),
         suffixIcon: suffixIcon,
       ),
     );

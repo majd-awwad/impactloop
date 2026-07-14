@@ -8,10 +8,12 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/location/current_location_service.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../deliveries/presentation/pickup_window_presentation.dart';
@@ -53,6 +55,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
               title: 'Could not load delivery details.',
               subtitle: 'Please try again.',
               actionLabel: 'Retry',
+              actionTone: AppStatusTone.primary,
               onAction: () => refreshActiveDriverDelivery(ref, deliveryId),
             ),
             data: (state) {
@@ -63,23 +66,28 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                 ),
                 DriverDeliveryDetailInactive(context: final inactiveContext) =>
                   _StatePanel(
-                  icon: inactiveContext.movedToAdminReview
-                      ? Icons.admin_panel_settings_outlined
-                      : Icons.lock_outline,
-                  title: inactiveContext.movedToAdminReview
-                      ? 'Delivery moved to admin review'
-                      : 'Delivery no longer active',
-                  subtitle: inactiveContext.message ??
-                      'This delivery is no longer active. It was moved to admin review.',
-                  actionLabel: 'Back to jobs',
-                  onAction: () => context.popOrGo('/driver/jobs'),
-                ),
+                    icon: inactiveContext.movedToAdminReview
+                        ? Icons.admin_panel_settings_outlined
+                        : Icons.lock_outline,
+                    title: inactiveContext.movedToAdminReview
+                        ? 'Delivery moved to admin review'
+                        : 'Delivery no longer active',
+                    subtitle:
+                        inactiveContext.message ??
+                        'This delivery is no longer active. It was moved to admin review.',
+                    actionLabel: 'Back to jobs',
+                    actionTone: AppStatusTone.neutral,
+                    actionProminent: false,
+                    onAction: () => context.popOrGo('/driver/jobs'),
+                  ),
                 DriverDeliveryDetailNotFound() => _StatePanel(
                   icon: Icons.lock_outline,
                   title: 'Delivery not active or not assigned to you',
                   subtitle:
                       'Open the jobs board to view your current assigned delivery.',
                   actionLabel: 'Back to jobs',
+                  actionTone: AppStatusTone.neutral,
+                  actionProminent: false,
                   onAction: () => context.popOrGo('/driver/jobs'),
                 ),
               };
@@ -92,10 +100,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
 }
 
 class _DeliveryContent extends StatelessWidget {
-  const _DeliveryContent({
-    required this.delivery,
-    required this.onRefresh,
-  });
+  const _DeliveryContent({required this.delivery, required this.onRefresh});
 
   final DriverDelivery delivery;
   final VoidCallback onRefresh;
@@ -131,10 +136,7 @@ class _DeliveryContent extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.delivery,
-    required this.onRefresh,
-  });
+  const _Header({required this.delivery, required this.onRefresh});
 
   final DriverDelivery delivery;
   final VoidCallback onRefresh;
@@ -171,9 +173,9 @@ class _Header extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              MaterialStatusBadge(
+              AppStatusBadge(
                 label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusTone(delivery.status),
+                tone: deliveryStatusAppTone(delivery.status),
               ),
               Text(
                 'Assigned ${_formatDateTime(delivery.assignedAt ?? delivery.requestedAt)}',
@@ -208,7 +210,10 @@ class _SummaryPanel extends StatelessWidget {
                 : '${delivery.material.title} - ${delivery.material.quantityLabel}',
           ),
           const SizedBox(height: AppSpacing.lg),
-          _InfoRow(label: 'Pickup window', value: driverPickupWindowDetail(delivery)),
+          _InfoRow(
+            label: 'Pickup window',
+            value: driverPickupWindowDetail(delivery),
+          ),
           _InfoRow(label: 'Supplier', value: _partySummary(delivery.supplier)),
           _InfoRow(
             label: 'Pickup',
@@ -299,10 +304,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _StatusGuidanceCard(
-            delivery: widget.delivery,
-            guidance: guidance,
-          ),
+          _StatusGuidanceCard(delivery: widget.delivery, guidance: guidance),
           const SizedBox(height: AppSpacing.lg),
           _StepList(currentStatus: widget.delivery.status),
           const SizedBox(height: AppSpacing.lg),
@@ -344,6 +346,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             const SizedBox(height: AppSpacing.md),
             FilledButton.icon(
               onPressed: canPressAction ? () => _advance(nextStatus) : null,
+              style: AppStatusButtonStyle.filled(
+                context,
+                deliveryStatusAppTone(nextStatus),
+              ),
               icon: isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -351,17 +357,15 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.arrow_forward_rounded),
-              label: Text(
-                isSubmitting ? 'Updating...' : guidance.actionLabel,
-              ),
+              label: Text(isSubmitting ? 'Updating...' : guidance.actionLabel),
             ),
             if (!guidance.isActionEnabled) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
                 _disabledActionReason(widget.delivery, nextStatus),
-                style: AppTextStyles.body(context).copyWith(
-                  color: MaterialsUiPalette.of(context).textMuted,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: MaterialsUiPalette.of(context).textMuted),
               ),
             ],
           ],
@@ -369,6 +373,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           if (widget.delivery.canDriverReportPickupFailed)
             OutlinedButton.icon(
               onPressed: isSubmitting ? null : _reportPickupFailed,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
               icon: const Icon(Icons.report_problem_outlined),
               label: const Text('Report pickup failed'),
             ),
@@ -376,6 +384,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: isSubmitting ? null : _reportDeliveryFailed,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
               icon: const Icon(Icons.no_accounts_outlined),
               label: const Text('Report delivery failed'),
             ),
@@ -384,6 +396,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: isSubmitting ? null : _reportDriverIssue,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
               icon: const Icon(Icons.car_crash_outlined),
               label: const Text('Report driver issue'),
             ),
@@ -393,6 +409,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.popOrGo('/driver/jobs'),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.local_shipping_outlined),
             label: const Text('Back to jobs'),
           ),
@@ -421,6 +438,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         message:
             'Enter the code the learner gives you when they receive the material.',
         confirmLabel: 'Mark delivered',
+        confirmTone: AppStatusTone.success,
       );
       if (confirmationCode == null || !mounted) {
         return;
@@ -542,7 +560,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Report driver issue'),
         content: TextField(
           controller: noteController,
@@ -554,19 +572,16 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             hintText: 'Describe why you cannot continue delivery',
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () {
               if (noteController.text.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
             child: const Text('Submit report'),
           ),
-        ],
+        ),
       ),
     );
     final note = noteController.text.trim();
@@ -598,54 +613,47 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setState) => AppDialogShell(
           title: Text(title),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: selectedReason,
-                  decoration: const InputDecoration(labelText: 'Reason'),
-                  items: reasonOptions.entries
-                      .map(
-                        (entry) => DropdownMenuItem(
-                          value: entry.key,
-                          child: Text(entry.value),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => selectedReason = value);
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  maxLength: 1000,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (required)',
-                  ),
-                ),
-              ],
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                decoration: const InputDecoration(labelText: 'Reason'),
+                items: reasonOptions.entries
+                    .map(
+                      (entry) => DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => selectedReason = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLength: 1000,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(labelText: 'Note (required)'),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
+          footer: AppDialogFooter.form(
+            primaryAction: FilledButton(
               onPressed: () {
                 if (noteController.text.trim().isEmpty) return;
                 Navigator.of(context).pop(true);
               },
+              style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
               child: const Text('Submit report'),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -779,6 +787,7 @@ class _LocationSharingSectionState
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             onPressed: isBusy ? null : () => _sendManualLocation(context),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
             icon: isBusy
                 ? const SizedBox(
                     width: 18,
@@ -848,10 +857,7 @@ class _LocationSharingSectionState
 }
 
 class _StatusGuidanceCard extends StatelessWidget {
-  const _StatusGuidanceCard({
-    required this.delivery,
-    required this.guidance,
-  });
+  const _StatusGuidanceCard({required this.delivery, required this.guidance});
 
   final DriverDelivery delivery;
   final DriverNextActionGuidance guidance;
@@ -871,9 +877,9 @@ class _StatusGuidanceCard extends StatelessWidget {
         children: [
           Text(
             'Next: ${guidance.actionLabel}',
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textPrimary,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textPrimary),
           ),
           if (delivery.status == 'ARRIVED_PICKUP' ||
               delivery.nextStatus == 'PICKED_UP') ...[
@@ -911,9 +917,9 @@ class _RequirementRow extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
         ),
       ],
@@ -1150,6 +1156,8 @@ class _StatePanel extends StatelessWidget {
     required this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.actionTone = AppStatusTone.primary,
+    this.actionProminent = true,
   });
 
   final IconData icon;
@@ -1157,6 +1165,8 @@ class _StatePanel extends StatelessWidget {
   final String subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final AppStatusTone actionTone;
+  final bool actionProminent;
 
   @override
   Widget build(BuildContext context) {
@@ -1183,7 +1193,13 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: actionProminent
+                  ? AppStatusButtonStyle.filled(context, actionTone)
+                  : AppStatusButtonStyle.outlined(context, actionTone),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),

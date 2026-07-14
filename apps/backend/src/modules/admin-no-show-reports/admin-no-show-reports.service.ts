@@ -19,6 +19,7 @@ import {
   notifyNoDriverSupplierRescheduleRequested,
   notifyStalePickupSupplierRescheduleRequested,
 } from '../notifications/reservation-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   id: report.id,
@@ -155,7 +156,7 @@ export const verifyAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending no-show reports can be verified.',
       409,
@@ -207,7 +208,7 @@ export const resolveAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending reports can be resolved without strike.',
       409,
@@ -218,12 +219,19 @@ export const resolveAdminNoShowReport = async (
   return mapReport(result.report);
 };
 
+type PickupRecoveryResolutionError =
+  | Exclude<
+      Awaited<ReturnType<typeof requestSupplierRescheduleForPickupRecoveryReport>>,
+      { outcome: 'REQUESTED' }
+    >
+  | Exclude<
+      Awaited<ReturnType<typeof cancelAndReleaseHoldForPickupRecoveryReport>>,
+      { outcome: 'CANCELLED' }
+    >;
+
 const mapNoDriverResolutionError = (
-  result: Exclude<
-    Awaited<ReturnType<typeof requestSupplierRescheduleForPickupRecoveryReport>>,
-    { outcome: 'REQUESTED' }
-  >,
-) => {
+  result: PickupRecoveryResolutionError,
+): never => {
   if (result.outcome === 'NOT_FOUND') {
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
@@ -270,23 +278,28 @@ export const requestSupplierRescheduleAdminNoShowReport = async (
     adminNote: input.adminNote,
   });
 
-  if (result.outcome !== 'REQUESTED') {
-    mapNoDriverResolutionError(result);
-  }
+  switch (result.outcome) {
+    case 'REQUESTED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'AWAITING_SUPPLIER_CONFIRMATION',
+      );
+      if (result.recoveryKind === 'NO_DRIVER') {
+        await notifyNoDriverSupplierRescheduleRequested(
+          result.reservationId,
+          input.adminNote,
+        );
+      } else {
+        await notifyStalePickupSupplierRescheduleRequested(
+          result.reservationId,
+          input.adminNote,
+        );
+      }
 
-  if (result.recoveryKind === 'NO_DRIVER') {
-    await notifyNoDriverSupplierRescheduleRequested(
-      result.reservationId,
-      input.adminNote,
-    );
-  } else {
-    await notifyStalePickupSupplierRescheduleRequested(
-      result.reservationId,
-      input.adminNote,
-    );
+      return mapReport(result.report);
+    default:
+      return mapNoDriverResolutionError(result);
   }
-
-  return mapReport(result.report);
 };
 
 export const cancelReleaseHoldAdminNoShowReport = async (
@@ -300,11 +313,16 @@ export const cancelReleaseHoldAdminNoShowReport = async (
     adminNote: input.adminNote,
   });
 
-  if (result.outcome !== 'CANCELLED') {
-    mapNoDriverResolutionError(result);
+  switch (result.outcome) {
+    case 'CANCELLED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'EXPIRED',
+      );
+      return mapReport(result.report);
+    default:
+      return mapNoDriverResolutionError(result);
   }
-
-  return mapReport(result.report);
 };
 
 export const rejectAdminNoShowReport = async (
@@ -322,7 +340,7 @@ export const rejectAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending no-show reports can be rejected.',
       409,

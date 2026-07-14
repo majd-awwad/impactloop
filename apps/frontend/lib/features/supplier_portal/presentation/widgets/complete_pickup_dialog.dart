@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_close_button.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class CompletePickupDialog extends StatefulWidget {
@@ -44,10 +46,9 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final actionStyle = AppStatusStyle.of(context, AppStatusTone.success);
     final compact = MediaQuery.sizeOf(context).width < 480;
-    final dialogWidth = compact
-        ? MediaQuery.sizeOf(context).width - 32
-        : 420.0;
+    final dialogWidth = compact ? MediaQuery.sizeOf(context).width - 32 : 420.0;
 
     return Dialog(
       backgroundColor: colors.surfaceSolid,
@@ -57,7 +58,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
       ),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.lgAll,
-        side: BorderSide(color: colors.border.withValues(alpha: 0.4)),
+        side: BorderSide(color: actionStyle.border),
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: dialogWidth),
@@ -72,12 +73,19 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                context.s.completePickupTitle,
-                style: context.supplierTitle().copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      context.s.completePickupTitle,
+                      style: context.supplierTitle().copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  AppCloseButton(onPressed: () => Navigator.of(context).pop()),
+                ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -107,41 +115,17 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
                 onSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: colors.textPrimary,
-                        side: BorderSide(
-                          color: colors.border.withValues(alpha: 0.55),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.mdAll,
-                        ),
-                      ),
-                      child: Text(context.s.cancel),
-                    ),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _submit,
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.success,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _submit,
-                      style: FilledButton.styleFrom(
-                        backgroundColor:
-                            colors.accentMuted.withValues(alpha: 0.82),
-                        foregroundColor: colors.textOnAccent,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.mdAll,
-                        ),
-                      ),
-                      child: Text(context.s.markCompleted),
-                    ),
-                  ),
-                ],
+                  child: Text(context.s.markCompleted),
+                ),
               ),
             ],
           ),

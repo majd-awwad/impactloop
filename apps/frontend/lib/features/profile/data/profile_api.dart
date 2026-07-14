@@ -4,6 +4,7 @@ import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
 import '../../auth/data/models/user.dart';
+import 'models/learner_interest_options.dart';
 import 'models/uploaded_profile_image.dart';
 
 class ProfileApi {
@@ -44,6 +45,13 @@ class ProfileApi {
         }
         return User.fromJson(userJson);
       },
+    );
+  }
+
+  Future<LearnerInterestOptionsResponse> getLearnerInterestOptions() {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('$_profileBasePath/learner/interests/options'),
+      (json) => LearnerInterestOptionsResponse.fromJson(json),
     );
   }
 

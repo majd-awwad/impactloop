@@ -1,5 +1,7 @@
 import type { Prisma, DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import type { AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
 
@@ -142,6 +144,18 @@ export const adminDeliveryDetailInclude = {
       },
     },
   },
+  deliveryGroup: {
+    select: {
+      status: true,
+      assignedDriverProfileId: true,
+      reservations: {
+        select: {
+          status: true,
+          fulfillmentMethod: true,
+        },
+      },
+    },
+  },
   statusHistory: {
     orderBy: { createdAt: 'asc' as const },
     select: {
@@ -186,6 +200,162 @@ export type AdminDeliveryListRecord = Prisma.DeliveryGetPayload<{
 export type AdminDeliveryDetailRecord = Prisma.DeliveryGetPayload<{
   include: typeof adminDeliveryDetailInclude;
 }>;
+
+type ReopenDeliveryGroupRecord = {
+  id: string;
+  status: string;
+  assignedDriverProfileId: string | null;
+  reservations: Array<{
+    id: string;
+    status: string;
+    fulfillmentMethod: string;
+  }>;
+};
+
+type ReopenDriverAssignmentRecord = {
+  id: string;
+  status: DeliveryStatus;
+  arrivedPickupAt: Date | null;
+  pickedUpAt: Date | null;
+  onTheWayAt: Date | null;
+  arrivedDropoffAt: Date | null;
+  assignedDriverProfileId: string | null;
+  assignedDriverProfile: { id: string; userId: string } | null;
+  reservation: { material: { title: string } };
+  deliveryGroup: ReopenDeliveryGroupRecord | null;
+};
+
+const loadReopenDelivery = async (
+  tx: Prisma.TransactionClient,
+  deliveryId: string,
+): Promise<ReopenDriverAssignmentRecord | null> => {
+  const delivery = await tx.delivery.findUnique({
+    where: { id: deliveryId },
+    select: {
+      id: true,
+      status: true,
+      arrivedPickupAt: true,
+      pickedUpAt: true,
+      onTheWayAt: true,
+      arrivedDropoffAt: true,
+      assignedDriverProfileId: true,
+      deliveryGroupId: true,
+      assignedDriverProfile: {
+        select: {
+          id: true,
+          userId: true,
+        },
+      },
+      reservation: {
+        select: {
+          material: { select: { title: true } },
+        },
+      },
+    },
+  });
+
+  if (!delivery) {
+    return null;
+  }
+
+  const deliveryGroup = delivery.deliveryGroupId
+    ? await tx.deliveryGroup.findUnique({
+        where: { id: delivery.deliveryGroupId },
+        select: {
+          id: true,
+          status: true,
+          assignedDriverProfileId: true,
+          reservations: {
+            select: {
+              id: true,
+              status: true,
+              fulfillmentMethod: true,
+            },
+          },
+        },
+      })
+    : null;
+
+  return {
+    id: delivery.id,
+    status: delivery.status,
+    arrivedPickupAt: delivery.arrivedPickupAt,
+    pickedUpAt: delivery.pickedUpAt,
+    onTheWayAt: delivery.onTheWayAt,
+    arrivedDropoffAt: delivery.arrivedDropoffAt,
+    assignedDriverProfileId: delivery.assignedDriverProfileId,
+    assignedDriverProfile: delivery.assignedDriverProfile,
+    reservation: delivery.reservation,
+    deliveryGroup,
+  };
+};
+
+export type ReopenDriverAssignmentResult =
+  | {
+      outcome: 'REOPENED';
+      deliveryId: string;
+      removedDriverUserId: string;
+      materialTitle: string;
+    }
+  | {
+      outcome:
+        | 'NOT_FOUND'
+        | 'ALREADY_WAITING'
+        | 'NOT_ASSIGNED'
+        | 'PICKUP_STARTED'
+        | 'TERMINAL_OR_FAILED'
+        | 'GROUP_INCOMPATIBLE'
+        | 'ACTIVE_ASSIGNMENT_MISSING'
+        | 'CONCURRENT_UPDATE';
+      status?: DeliveryStatus;
+    };
+
+const pickupStartedStatuses = new Set<DeliveryStatus>([
+  'ARRIVED_PICKUP',
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+]);
+
+export const hasPickupStarted = (delivery: {
+  status: DeliveryStatus;
+  arrivedPickupAt: Date | null;
+  pickedUpAt: Date | null;
+  onTheWayAt: Date | null;
+  arrivedDropoffAt: Date | null;
+}) =>
+  pickupStartedStatuses.has(delivery.status) ||
+  delivery.arrivedPickupAt != null ||
+  delivery.pickedUpAt != null ||
+  delivery.onTheWayAt != null ||
+  delivery.arrivedDropoffAt != null;
+
+const terminalOrFailedStatuses = new Set<DeliveryStatus>([
+  'DELIVERED',
+  'CANCELLED',
+  'FAILED_PICKUP',
+  'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+  'AWAITING_RESOLUTION',
+]);
+
+const activeAssignedStatuses: DeliveryStatus[] = [
+  'DRIVER_ASSIGNED',
+  'ARRIVED_PICKUP',
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+];
+
+const hasIncompatibleGroupedReservation = (
+  delivery: ReopenDriverAssignmentRecord,
+) =>
+  delivery.deliveryGroup?.reservations.some(
+    (reservation) =>
+      reservation.fulfillmentMethod === 'DELIVERY' &&
+      reservation.status !== 'ACCEPTED',
+  ) ?? false;
 
 const buildSearchWhere = (search?: string): Prisma.DeliveryWhereInput | undefined => {
   const normalized = search?.trim();
@@ -319,3 +489,156 @@ export const findAdminDeliveryById = async (id: string) => {
     include: adminDeliveryDetailInclude,
   });
 };
+
+export const reopenDriverAssignmentForAdmin = async (input: {
+  deliveryId: string;
+  adminUserId: string;
+}): Promise<ReopenDriverAssignmentResult> =>
+  runSerializableTransaction(async (tx) => {
+    const delivery = await loadReopenDelivery(tx, input.deliveryId);
+
+    if (!delivery) {
+      return { outcome: 'NOT_FOUND' as const };
+    }
+
+    if (delivery.status === 'WAITING_FOR_DRIVER') {
+      return { outcome: 'ALREADY_WAITING' as const, status: delivery.status };
+    }
+
+    if (!delivery.assignedDriverProfileId || !delivery.assignedDriverProfile) {
+      return { outcome: 'NOT_ASSIGNED' as const, status: delivery.status };
+    }
+
+    if (hasPickupStarted(delivery)) {
+      return { outcome: 'PICKUP_STARTED' as const, status: delivery.status };
+    }
+
+    if (terminalOrFailedStatuses.has(delivery.status)) {
+      return { outcome: 'TERMINAL_OR_FAILED' as const, status: delivery.status };
+    }
+
+    if (delivery.status !== 'DRIVER_ASSIGNED') {
+      return { outcome: 'NOT_ASSIGNED' as const, status: delivery.status };
+    }
+
+    if (
+      delivery.deliveryGroup &&
+      (delivery.deliveryGroup.status !== 'ASSIGNED' ||
+        delivery.deliveryGroup.assignedDriverProfileId !==
+          delivery.assignedDriverProfileId ||
+        hasIncompatibleGroupedReservation(delivery))
+    ) {
+      return { outcome: 'GROUP_INCOMPATIBLE' as const, status: delivery.status };
+    }
+
+    const activeAssignmentCount = await tx.deliveryAssignment.count({
+      where: {
+        deliveryId: delivery.id,
+        driverProfileId: delivery.assignedDriverProfileId,
+        status: 'ACTIVE',
+      },
+    });
+
+    if (activeAssignmentCount === 0) {
+      return {
+        outcome: 'ACTIVE_ASSIGNMENT_MISSING' as const,
+        status: delivery.status,
+      };
+    }
+
+    const now = new Date();
+    const update = await tx.delivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: 'DRIVER_ASSIGNED',
+        assignedDriverProfileId: delivery.assignedDriverProfileId,
+      },
+      data: {
+        status: 'WAITING_FOR_DRIVER',
+        assignedDriverProfileId: null,
+        assignedAt: null,
+      },
+    });
+
+    if (update.count !== 1) {
+      return { outcome: 'CONCURRENT_UPDATE' as const, status: delivery.status };
+    }
+
+    const assignmentUpdate = await tx.deliveryAssignment.updateMany({
+      where: {
+        deliveryId: delivery.id,
+        driverProfileId: delivery.assignedDriverProfileId,
+        status: 'ACTIVE',
+      },
+      data: {
+        status: 'RELEASED',
+        releasedAt: now,
+        releaseReason: 'Admin reopened delivery to driver pool',
+      },
+    });
+
+    if (assignmentUpdate.count !== activeAssignmentCount) {
+      throw new AppError(
+        'Driver assignment changed. Refresh and try again.',
+        409,
+        'CONFLICT',
+      );
+    }
+
+    if (delivery.deliveryGroup) {
+      const groupUpdate = await tx.deliveryGroup.updateMany({
+        where: {
+          id: delivery.deliveryGroup.id,
+          status: 'ASSIGNED',
+          assignedDriverProfileId: delivery.assignedDriverProfileId,
+        },
+        data: {
+          status: 'OPEN',
+          assignedDriverProfileId: null,
+        },
+      });
+
+      if (groupUpdate.count !== 1) {
+        throw new AppError(
+          'Grouped delivery state changed. Refresh and try again.',
+          409,
+          'CONFLICT',
+        );
+      }
+    }
+
+    const remainingActive = await tx.delivery.count({
+      where: {
+        assignedDriverProfileId: delivery.assignedDriverProfileId,
+        status: { in: activeAssignedStatuses },
+      },
+    });
+
+    if (remainingActive === 0) {
+      await tx.driverProfile.updateMany({
+        where: {
+          id: delivery.assignedDriverProfileId,
+          status: 'ACTIVE',
+          availability: 'ON_DELIVERY',
+        },
+        data: { availability: 'AVAILABLE' },
+      });
+    }
+
+    await tx.deliveryStatusHistory.create({
+      data: {
+        deliveryId: delivery.id,
+        oldStatus: 'DRIVER_ASSIGNED',
+        newStatus: 'WAITING_FOR_DRIVER',
+        changedByUserId: input.adminUserId,
+        note: 'Admin reopened delivery to driver pool',
+      },
+    });
+
+    return {
+      outcome: 'REOPENED' as const,
+      deliveryId: delivery.id,
+      removedDriverUserId: delivery.assignedDriverProfile.userId,
+      materialTitle: delivery.reservation.material.title,
+    };
+  });

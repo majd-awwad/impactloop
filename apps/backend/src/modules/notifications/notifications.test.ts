@@ -219,6 +219,7 @@ describe('notifications module', () => {
     const listed = await listMyNotifications(ctx.learnerId, {
       page: 1,
       limit: 20,
+      isRead: undefined,
     });
 
     assert.equal(listed.items.length, 1);

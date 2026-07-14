@@ -24,7 +24,7 @@ Public signup and login for **LEARNER** and **SUPPLIER** roles, session bootstra
 3. **Login:** email/password → `POST /api/auth/login` → same redirect rule.
 4. **Session restore:** app/router sends unknown auth to `/auth/checking` → `AuthController.bootstrapSession()` → refresh + `/me`.
 5. **Authenticated request refresh:** shared Dio requests attach the in-memory access token. If an eligible request receives 401, the auth interceptor uses a bare refresh client to call `/api/auth/refresh`, updates the token holder/storage, and retries the original request once.
-6. **Change password:** supplier account security card → `PATCH /api/auth/change-password` (uses `authRepository`).
+6. **Change password:** profile security page or supplier account security card → `authController.changePassword` → `PATCH /api/auth/change-password` (returns fresh session).
 7. **Forgot/reset password:** `/login` link opens `/forgot-password` with optional email prefill. Forgot always shows a generic success message. Reset reads `token` from the query string, requires new password + confirmation in Flutter, calls `POST /api/auth/reset-password`, and links back to `/login` after success without creating a session.
 
 ## Frontend files
@@ -84,7 +84,7 @@ Related but separate flow: invitations for `DRIVER`, `MODERATOR`, and `ADMIN` us
 | `auth_tokens` | Refresh tokens, password reset, OTP hashes |
 | `learner_profiles` | Created on register when LEARNER role |
 | `supplier_profiles` | Created on register when SUPPLIER role |
-| `locations` | Supplier pickup area parsed from `pickupArea` on register — **Needs verification** of exact create path in `auth.repository.ts` |
+| `locations` | Supplier pickup area parsed from `pickupArea` on register — created as `defaultPickupLocation` in `auth.repository.ts` |
 
 ## Reusable components
 
@@ -93,12 +93,73 @@ From [reusable-widgets](../frontend/reusable-widgets.md):
 - `AppTextField`, `AppTextArea`, `AppDropdownField`, `AppPrimaryButton`, `AppInlineError` — used in profile forms
 - Auth-specific widgets (`AuthShell`, `AuthFormCard`, etc.) — **not** promoted for reuse outside auth
 
-## Known gaps / Needs verification
+## Account status and verification (code-verified)
 
-- Web refresh token: `WebCookieTokenStorage` is a no-op; refresh relies on **httpOnly cookie** from backend (`auth-token-delivery.ts`) and a credentialed bare refresh Dio client — **Needs verification** on all browsers.
-- Existing learner accounts can become suppliers from `/become-supplier` via `POST /api/auth/become-supplier` without creating a second account or removing `LEARNER`. Only **Student supplier** and **Individual supplier** types are allowed in this self-upgrade flow; organization types (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) are rejected with a separate-verification message. Admin, moderator, driver, and accounts that already have a supplier profile cannot use this endpoint. The response issues fresh auth tokens so supplier API routes authorize immediately.
-- Personal suppliers (`STUDENT_SUPPLIER`, `INDIVIDUAL_SUPPLIER`) without learner access can add learner role from `/become-learner` via `POST /api/auth/become-learner`. The page reuses `RegistrationWizard` with `LearnerSetupMode.addToExistingAccount` (same interests/goals/location/learner-basics steps as registration, without account fields). Organization supplier types, admin, moderator, and driver cannot use this endpoint. Response sets `activeRole` to `LEARNER` and returns refreshed auth session.
-- Dual-role users switch active portal with `POST /api/auth/switch-role` (`activeRole` = `LEARNER` or `SUPPLIER`). Organization supplier types (`WORKSHOP`, `FACTORY`, `EDUCATIONAL_INSTITUTION`) cannot switch to learner unless they already have the `LEARNER` role. Response includes refreshed auth tokens and updated `user`.
-- `RegistrationIntent.both` registers both roles in one `/register` wizard. Interests are collected once and mapped to `learnerProfile.interests`; learner bio is not collected during registration. Student/self-learner selections can suggest a matching supplier type, supplier public name defaults to the account full name, and supplier `pickupArea` is derived from onboarding city/area. Default `activeRole` after register is `LEARNER` when both roles are present.
-- Email/phone verification enforcement — **Needs verification** (`account_status` vs actual gate).
+| Field / gate | Registration default | Login | Refresh | `authMiddleware` protected APIs |
+|--------------|---------------------|-------|---------|--------------------------------|
+| `accountStatus` | `PENDING_VERIFICATION` (schema default) | Blocks only `SUSPENDED` and `DISABLED` | Same as login | Blocks only `SUSPENDED` and `DISABLED` |
+| `emailVerifiedAt` | `null` on public register | Not checked | Not checked | Not checked |
+| `phoneVerifiedAt` | `null` on public register | Not checked | Not checked | Not checked |
+
+- **Email verification is not implemented end-to-end.** `AuthTokenType.EMAIL_VERIFICATION` exists in schema, but there is no verify-email API, mail flow, or login gate.
+- **Phone verification is not implemented end-to-end.** `AuthTokenType.PHONE_OTP` exists in schema; profile PATCH clears `phoneVerifiedAt` on phone change, but there is no OTP send/verify flow or login gate.
+- `PENDING_VERIFICATION` does **not** block login, refresh, or protected API access today. Invitation-created users are created as `ACTIVE` with `emailVerifiedAt` set immediately.
+
+## Session and token behavior (code-verified)
+
+| Topic | Behavior |
+|-------|----------|
+| Access token | JWT (`sub`, `roles`); default expiry `JWT_ACCESS_EXPIRES_IN` → `15m` |
+| Refresh token | JWT stored hashed in `auth_tokens`; rotated on each refresh (old row marked `usedAt`) |
+| Refresh reuse | Used refresh tokens are rejected; no token-family reuse detection that revokes all sessions |
+| Logout | Revokes the presented refresh token only; web also clears httpOnly cookie |
+| Logout-all | **Not implemented** (no API) |
+| Change password | Updates hash, revokes **all** refresh tokens in one transaction, issues one fresh session for current client, sends password-changed email (failure logged only) | Profile `/profile/security` + supplier dialog via `authController.changePassword` |
+| Reset password | Marks token used, updates hash, revokes **all** user refresh tokens, sends password-changed email; does not auto-login |
+| Role changes | `become-supplier`, `become-learner`, and `switch-role` issue fresh access+refresh tokens with updated JWT `roles` |
+| Stale JWT roles | Access tokens carry JWT `roles` until expiry; `requireRoles` checks JWT claims, not live DB role rows |
+| Suspended user + valid access token | Next protected request fails in `authMiddleware` with `403 ACCOUNT_SUSPENDED` (DB check) |
+| Admin manual suspend | Sets `SUSPENDED` but **does not** revoke refresh tokens (unlike strike auto-suspend) |
+| Token version / security stamp | **Not implemented** |
+
+### Web vs mobile refresh delivery
+
+| Client | `X-Client-Platform` | Refresh transport | Access token storage |
+|--------|---------------------|-------------------|----------------------|
+| Web | `web` | httpOnly cookie `refreshToken`, path `/api/auth`, `SameSite=Lax`, `Secure` only in production; **not** returned in JSON | In-memory `AccessTokenHolder` only |
+| Mobile | `mobile` | JSON `refreshToken` in login/register/refresh responses | `FlutterSecureStorage` |
+
+Web Dio uses `withCredentials: true`; backend CORS sets `credentials: true`. `WebCookieTokenStorage` is intentionally a no-op.
+
+Bootstrap: `ImpactLoopApp` watches `authNetworkBootstrapProvider`, which microtask-calls `AuthController.bootstrapSession()` → refresh + `/me`.
+
+401 handling: shared `AuthInterceptor` single-flights refresh, retries once, skips auth endpoints and `skipAuthRefresh` requests; refresh failure clears local session.
+
+## Registration rules (code-verified)
+
+- Public roles: `LEARNER`, `SUPPLIER` only (`auth.validation.ts`).
+- Email normalized to lowercase via `bodyEmailSchema()`.
+- Password policy: min 8, max 128.
+- Duplicate email → `409 CONFLICT`; duplicate phone → `409 CONFLICT`.
+- Supplier register creates `locations` row for `defaultPickupLocation` inside the same transaction (`auth.repository.ts`).
+- Register issues access+refresh immediately regardless of `PENDING_VERIFICATION`.
+- Post-register org verification upload failure is recoverable in Flutter without recreating the account.
+
+## Known gaps
+
+- Manual admin suspend should revoke refresh tokens for parity with strike auto-suspend.
+- Email/phone verification flows and `PENDING_VERIFICATION` enforcement are product decisions still open.
+- Web cookie session persistence across browser restarts is implemented in code but needs manual cross-browser verification.
 - `choose_role_page.dart` exists but is **not** in `app_router.dart`.
+- Reset/change password on web does not explicitly clear a stale httpOnly refresh cookie unless the user logs out (reset does not auto-login; revoked server tokens still fail refresh).
+
+## Test coverage (auth)
+
+| Area | Backend | Flutter |
+|------|---------|---------|
+| Registration | `auth.registration.test.ts` | `registration_wizard_test.dart`, `widget_test.dart` |
+| Password reset | `auth.password-reset.test.ts` | `auth_password_reset_test.dart` |
+| Role switch / become flows | `auth.role-switch.test.ts` | `portal_navigation_test.dart` |
+| 401 refresh interceptor | — | `auth_interceptor_test.dart` |
+| Login gates by account status | **Not covered** | **Not covered** |
+| Change password | `auth.change-password.test.ts` | `auth_change_password_test.dart` |

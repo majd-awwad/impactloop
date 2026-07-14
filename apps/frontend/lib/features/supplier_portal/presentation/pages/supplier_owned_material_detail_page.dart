@@ -7,6 +7,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
@@ -323,7 +324,7 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         ),
         const SizedBox(height: AppSpacing.md),
         _SectionCard(
-          title: l.demandSectionTitle,
+          title: l.activeDemandSectionTitle,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -337,26 +338,72 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
               ),
               _MetricRow(
                 label: l.totalActiveRequestsLabel,
-                value: '${material.reservationsCount}',
+                value: '${material.totalActiveRequests}',
               ),
-              _MetricRow(label: l.viewsLabel, value: '${material.viewsCount}'),
-              _MetricRow(label: l.likesLabel, value: '${material.likesCount}'),
               _MetricRow(
-                label: l.demandScoreLabel,
-                value: '${material.demandScore}',
+                label: l.activeDemandScoreLabel,
+                value: '${material.activeDemandScore}',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _SectionCard(
+          title: l.interestScoreSectionTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MetricRow(
+                label: l.overallDemandScoreLabel,
+                value: l.overallDemandScoreValue(material.demandScorePercent),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                material.demandScore > 0
-                    ? l.activeDemandLabel
-                    : l.noActiveDemandYet,
+                l.demandScoreExplanation,
                 style: context.supplierBody().copyWith(
-                  color: material.demandScore > 0
+                  color: colors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                l.materialDemandStatusMessage(
+                  activeRequestsCount: material.totalActiveRequests,
+                  completedReservationsCount: material.completedReservationsCount,
+                  demandScorePercent: material.demandScorePercent,
+                  viewsCount: material.viewsCount,
+                  likesCount: material.likesCount,
+                ),
+                style: context.supplierBody().copyWith(
+                  color: material.totalActiveRequests > 0 ||
+                          material.demandScorePercent > 0 ||
+                          material.completedReservationsCount > 0
                       ? colors.accent
                       : colors.textMuted,
                   fontWeight: FontWeight.w600,
                 ),
               ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _SectionCard(
+          title: l.reuseHistorySectionTitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MetricRow(
+                label: l.completedReservationsMetricLabel,
+                value: '${material.completedReservationsCount}',
+              ),
+              _MetricRow(
+                label: l.completedReusesMetricLabel,
+                value: '${material.reusedCount}',
+              ),
+              if (material.lastCompletedAt != null)
+                _MetricRow(
+                  label: l.lastCompletedLabel,
+                  value: _formatDate(material.lastCompletedAt!),
+                ),
             ],
           ),
         ),
@@ -402,6 +449,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
             if (material.canMarkUnavailable)
               OutlinedButton(
                 onPressed: _statusSubmitting ? null : _markUnavailable,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.danger,
+                ),
                 child: _statusSubmitting
                     ? const SizedBox(
                         width: 18,
@@ -413,6 +464,10 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
             if (material.canRestoreAvailable)
               OutlinedButton(
                 onPressed: _statusSubmitting ? null : _restoreAvailable,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.primary,
+                ),
                 child: _statusSubmitting
                     ? const SizedBox(
                         width: 18,

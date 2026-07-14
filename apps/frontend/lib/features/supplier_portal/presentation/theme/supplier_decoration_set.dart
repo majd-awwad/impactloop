@@ -15,7 +15,7 @@ class SupplierDecorationSet {
         end: Alignment.bottomRight,
         colors: [
           colors.landingBackground,
-          colors.backgroundElevated,
+          colors.surfaceSolid,
           colors.background,
         ],
         stops: const [0.0, 0.58, 1.0],
@@ -53,18 +53,14 @@ class SupplierDecorationSet {
   }
 
   BoxDecoration get dashboardCard => BoxDecoration(
-        color: colors.surfaceSolid.withValues(alpha: colors.isDark ? 0.74 : 1),
+        color: colors.surfaceSolid,
         borderRadius: AppRadius.lgAll,
-        border: colors.isDark
-            ? Border.all(
-                color: colors.border.withValues(alpha: 0.55),
-              )
-            : Border.all(color: colors.border),
+        border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: colors.cardShadow,
-            blurRadius: colors.isDark ? 22 : 14,
-            offset: Offset(0, colors.isDark ? 10 : 6),
+            color: colors.cardShadow.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       );
@@ -79,45 +75,43 @@ class SupplierDecorationSet {
 
   BoxDecoration get heroPanel => BoxDecoration(
         gradient: heroGradient,
-        borderRadius: AppRadius.xlAll,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(
-          color: colors.border.withValues(alpha: colors.isDark ? 0.65 : 0.55),
+          color: colors.border,
         ),
         boxShadow: [
           BoxShadow(
-            color: colors.accentSoft.withValues(alpha: colors.isDark ? 0.18 : 0.12),
-            blurRadius: 34,
-            offset: const Offset(0, 12),
+            color: colors.cardShadow.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
         ],
       );
 
   BoxDecoration get statCard => BoxDecoration(
-        color: colors.surfaceSolid.withValues(alpha: colors.isDark ? 0.68 : 1),
+        color: colors.surfaceSolid,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(
-          color: colors.border.withValues(alpha: colors.isDark ? 0.3 : 0.65),
-        ),
+        border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: colors.cardShadow,
-            blurRadius: colors.isDark ? 18 : 10,
-            offset: Offset(0, colors.isDark ? 8 : 4),
+            color: colors.cardShadow.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       );
 
   BoxDecoration get highlightedStatCard => BoxDecoration(
-        color: colors.surfaceSolid.withValues(alpha: colors.isDark ? 0.74 : 1),
+        color: colors.surfaceSolid,
         borderRadius: AppRadius.lgAll,
         border: Border.all(
-          color: colors.borderFocused.withValues(alpha: colors.isDark ? 0.42 : 0.75),
+          color: colors.borderFocused.withValues(alpha: 0.42),
         ),
         boxShadow: [
           BoxShadow(
-            color: colors.accentSoft.withValues(alpha: colors.isDark ? 0.16 : 0.1),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: colors.cardShadow.withValues(alpha: 0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
       );
@@ -246,10 +240,10 @@ class SupplierDecorationSet {
       hintText: hint,
       hintStyle: TextStyle(color: colors.textMuted),
       filled: true,
-      fillColor: colors.surfaceSolid.withValues(alpha: colors.isDark ? 0.92 : 1),
+      fillColor: colors.surfaceSolid,
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: 16,
+        horizontal: AppSpacing.fieldHorizontal,
+        vertical: AppSpacing.fieldVertical,
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: AppRadius.mdAll,

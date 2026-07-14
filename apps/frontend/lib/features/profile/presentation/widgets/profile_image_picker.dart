@@ -11,6 +11,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/uploaded_profile_image.dart';
 
 const _maxBytes = 5 * 1024 * 1024;
@@ -93,12 +94,20 @@ class ProfileImagePicker extends StatelessWidget {
                 children: [
                   OutlinedButton.icon(
                     onPressed: isUploading ? null : onPickImage,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.primary,
+                    ),
                     icon: const Icon(Icons.photo_outlined, size: 18),
                     label: Text(isUploading ? 'Uploading...' : 'Choose photo'),
                   ),
                   if (imageProvider != null)
                     TextButton(
                       onPressed: isUploading ? null : onRemoveImage,
+                      style: AppStatusButtonStyle.text(
+                        context,
+                        AppStatusTone.danger,
+                      ),
                       child: const Text('Remove'),
                     ),
                 ],

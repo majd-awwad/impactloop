@@ -5,11 +5,13 @@ import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/material_discovery/domain/discovery_material.dart';
 import 'package:frontend/features/material_discovery/presentation/material_reserve_eligibility.dart';
+import 'package:frontend/features/reservations/data/models/learner_reservation.dart';
 import 'package:frontend/shared/models/localized_text.dart';
 import 'package:frontend/shared/widgets/materials/material_condition_badge.dart';
 import 'package:frontend/shared/widgets/materials/material_status_badge.dart';
 
 DiscoveryMaterial _material({
+  String status = 'AVAILABLE',
   double availableQuantity = 5,
   bool pickupAllowed = true,
   bool deliveryAvailable = true,
@@ -19,7 +21,7 @@ DiscoveryMaterial _material({
 }) {
   return DiscoveryMaterial(
     id: 'material-1',
-    status: 'AVAILABLE',
+    status: status,
     quantity: 5,
     availableQuantity: availableQuantity,
     unit: 'piece',
@@ -47,6 +49,27 @@ DiscoveryMaterial _material({
   );
 }
 
+LearnerReservation _reservation(String status) {
+  return LearnerReservation(
+    id: 'reservation-$status',
+    status: status,
+    quantityRequested: 1,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
+    material: const LearnerReservationMaterial(
+      id: 'material-1',
+      title: 'Board',
+      materialType: 'Electronics',
+      status: 'AVAILABLE',
+      deliveryAllowed: true,
+    ),
+    supplier: const LearnerReservationSupplier(
+      id: 'supplier-1',
+      displayName: 'Supplier',
+    ),
+  );
+}
+
 AuthState _learnerAuth() {
   return AuthState(
     user: User(
@@ -64,7 +87,7 @@ AuthState _learnerAuth() {
 }
 
 void main() {
-  test('learner can tap reserve before quote or fulfillment selection', () {
+  test('no previous reservation and available material can reserve', () {
     final eligibility = MaterialReserveEligibility.resolve(
       material: _material(canReserve: null),
       authState: _learnerAuth(),
@@ -76,6 +99,91 @@ void main() {
 
     expect(eligibility.canTapReserve, isTrue);
     expect(eligibility.disabledReason, isNull);
+  });
+
+  for (final status in const [
+    'PENDING',
+    'AWAITING_LEARNER_CONFIRMATION',
+    'AWAITING_SUPPLIER_CONFIRMATION',
+    'ACCEPTED',
+    'AWAITING_RESOLUTION',
+  ]) {
+    test('$status previous reservation blocks duplicate reservation', () {
+      final eligibility = MaterialReserveEligibility.resolve(
+        material: _material(canReserve: null),
+        authState: _learnerAuth(),
+        isSubmitting: false,
+        isLoadingReservation: false,
+        showReservationStatusCta: false,
+        learnerReservation: _reservation(status),
+      );
+
+      expect(eligibility.canTapReserve, isFalse);
+      expect(eligibility.learnerReservation?.status, status);
+      expect(
+        eligibility.disabledReason?.en,
+        'You already have a reservation request for this material.',
+      );
+    });
+  }
+
+  for (final status in const [
+    'REJECTED',
+    'CANCELLED',
+    'EXPIRED',
+    'COMPLETED',
+  ]) {
+    test(
+      '$status previous reservation does not block a reservable material',
+      () {
+        final eligibility = MaterialReserveEligibility.resolve(
+          material: _material(canReserve: null),
+          authState: _learnerAuth(),
+          isSubmitting: false,
+          isLoadingReservation: false,
+          showReservationStatusCta: false,
+          learnerReservation: _reservation(status),
+        );
+
+        expect(eligibility.canTapReserve, isTrue);
+        expect(eligibility.learnerReservation, isNull);
+        expect(eligibility.disabledReason, isNull);
+      },
+    );
+  }
+
+  test('terminal previous reservation cannot reserve unavailable material', () {
+    final eligibility = MaterialReserveEligibility.resolve(
+      material: _material(
+        status: 'REUSED',
+        availableQuantity: 1,
+        canReserve: null,
+      ),
+      authState: _learnerAuth(),
+      isSubmitting: false,
+      isLoadingReservation: false,
+      showReservationStatusCta: false,
+      learnerReservation: _reservation('REJECTED'),
+    );
+
+    expect(eligibility.canTapReserve, isFalse);
+    expect(eligibility.learnerReservation, isNull);
+    expect(eligibility.disabledReason?.en, 'This material is not available.');
+  });
+
+  test('completed previous reservation cannot reserve with no quantity', () {
+    final eligibility = MaterialReserveEligibility.resolve(
+      material: _material(availableQuantity: 0, canReserve: null),
+      authState: _learnerAuth(),
+      isSubmitting: false,
+      isLoadingReservation: false,
+      showReservationStatusCta: false,
+      learnerReservation: _reservation('COMPLETED'),
+    );
+
+    expect(eligibility.canTapReserve, isFalse);
+    expect(eligibility.learnerReservation, isNull);
+    expect(eligibility.disabledReason?.en, 'This material is not available.');
   });
 
   test('supplier-only authenticated user sees learner CTA reason', () {

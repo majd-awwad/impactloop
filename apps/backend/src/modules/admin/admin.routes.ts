@@ -102,6 +102,7 @@ import {
 import {
   getAdminDeliveryHandler,
   listAdminDeliveriesHandler,
+  reopenAdminDeliveryDriverAssignmentHandler,
 } from '../admin-deliveries/admin-deliveries.controller.js';
 import {
   adminDeliveriesListQuerySchema,
@@ -462,6 +463,14 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminDeliveriesListQuerySchema, 'query'),
   asyncHandler(listAdminDeliveriesHandler),
+);
+
+adminRouter.post(
+  '/deliveries/:id/reopen-driver-assignment',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveryIdParamSchema, 'params'),
+  asyncHandler(reopenAdminDeliveryDriverAssignmentHandler),
 );
 
 adminRouter.get(

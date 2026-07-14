@@ -93,6 +93,7 @@ async function createPendingReservation(ctx: TestContext) {
   const reservation = await createReservation(ctx.learnerId, {
     materialId: material.id,
     quantityRequested: 1,
+    fulfillmentMethod: 'PICKUP',
   });
   ctx.createdReservationIds.push(reservation.id);
   return reservation;
@@ -188,6 +189,19 @@ describe('listMyReservations pickupLocationFull privacy', () => {
   after(async () => {
     await cleanup(ctx);
     await prisma.$disconnect();
+  });
+
+  test('listMyReservations loads learner reservations without error', async () => {
+    const reservation = await createPendingReservation(ctx);
+
+    const listed = await listMyReservations(ctx.learnerId);
+
+    assert.ok(Array.isArray(listed));
+    const match = listed.find((item) => item.id === reservation.id);
+    assert.ok(match);
+    assert.equal(match?.status, 'PENDING');
+    assert.equal(match?.deliveryGroupId, null);
+    assert.equal(match?.groupItemCount, null);
   });
 
   test('PENDING reservation returns pickupLocationFull null', async () => {

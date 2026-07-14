@@ -252,6 +252,7 @@ describe('saved dropoff addresses', () => {
         addressLine: 'Unit 4',
         isApproximate: false,
       },
+      isDefault: false,
     });
 
     const delivery = await requestDeliveryForReservation(

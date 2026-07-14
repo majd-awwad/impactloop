@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_color_tokens.dart';
-import '../theme/supplier_ui_palette.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../l10n/supplier_l10n.dart';
 
@@ -22,90 +21,69 @@ class SupplierNotificationStyle {
     bool isCompleted = false,
   }) {
     final l = SupplierL10n.of(context);
-    final c = SupplierUiPalette.of(context);
-
-    if (isCompleted) {
-      return SupplierNotificationStyle(
+    final presentation = switch (kind) {
+      SupplierActionNotificationKind.categoryApproved => (
+        icon: Icons.category_outlined,
+        tone: AppStatusTone.success,
+      ),
+      SupplierActionNotificationKind.categorySuggestion => (
+        icon: Icons.category_outlined,
+        tone: AppStatusTone.warning,
+      ),
+      SupplierActionNotificationKind.categoryRejected => (
+        icon: Icons.category_outlined,
+        tone: AppStatusTone.danger,
+      ),
+      SupplierActionNotificationKind.categoryPending => (
+        icon: Icons.hourglass_top_outlined,
+        tone: AppStatusTone.warning,
+      ),
+      SupplierActionNotificationKind.categoryCompleted => (
         icon: Icons.check_circle_outline,
-        accent: c.textMuted,
-        typeLabel: l.notificationCompleted,
-      );
-    }
+        tone: AppStatusTone.neutral,
+      ),
+      SupplierActionNotificationKind.priceApproved => (
+        icon: Icons.payments_outlined,
+        tone: AppStatusTone.success,
+      ),
+      SupplierActionNotificationKind.priceRejected => (
+        icon: Icons.price_change_outlined,
+        tone: AppStatusTone.danger,
+      ),
+      SupplierActionNotificationKind.pricePending => (
+        icon: Icons.payments_outlined,
+        tone: AppStatusTone.warning,
+      ),
+      SupplierActionNotificationKind.priceCompleted => (
+        icon: Icons.check_circle_outline,
+        tone: AppStatusTone.neutral,
+      ),
+      SupplierActionNotificationKind.reservationPending => (
+        icon: Icons.inbox_outlined,
+        tone: AppStatusTone.warning,
+      ),
+    };
+    final tone = isCompleted ? AppStatusTone.neutral : presentation.tone;
 
-    switch (kind) {
-      case SupplierActionNotificationKind.categoryApproved:
-      case SupplierActionNotificationKind.categorySuggestion:
-        return SupplierNotificationStyle(
-          icon: Icons.category_outlined,
-          accent:
-              c.isDark ? AppColorTokens.supplierNotificationCategoryDark : c.purpleAccent,
-          typeLabel: l.notificationTypeLabel(kind),
-        );
-      case SupplierActionNotificationKind.categoryRejected:
-        return SupplierNotificationStyle(
-          icon: Icons.category_outlined,
-          accent: c.redAccent,
-          typeLabel: l.notificationTypeLabel(kind),
-        );
-      case SupplierActionNotificationKind.categoryPending:
-        return SupplierNotificationStyle(
-          icon: Icons.hourglass_top_outlined,
-          accent: c.textSecondary,
-          typeLabel: l.notificationTypeLabel(kind),
-        );
-      case SupplierActionNotificationKind.categoryCompleted:
-        return forKind(
-          context,
-          SupplierActionNotificationKind.categoryApproved,
-          isCompleted: true,
-        );
-      case SupplierActionNotificationKind.priceApproved:
-        return SupplierNotificationStyle(
-          icon: Icons.payments_outlined,
-          accent: c.isDark ? AppColorTokens.supplierDarkBlue : c.blueAccent,
-          typeLabel: l.notificationTypeLabel(kind),
-        );
-      case SupplierActionNotificationKind.priceRejected:
-        return SupplierNotificationStyle(
-          icon: Icons.price_change_outlined,
-          accent: c.amberAccent,
-          typeLabel: l.notificationTypeLabel(kind),
-        );
-      case SupplierActionNotificationKind.pricePending:
-        return SupplierNotificationStyle(
-          icon: Icons.payments_outlined,
-          accent: c.textSecondary,
-          typeLabel: l.notificationTypeLabel(kind),
-        );
-      case SupplierActionNotificationKind.priceCompleted:
-        return forKind(
-          context,
-          SupplierActionNotificationKind.priceApproved,
-          isCompleted: true,
-        );
-      case SupplierActionNotificationKind.reservationPending:
-        return SupplierNotificationStyle(
-          icon: Icons.inbox_outlined,
-          accent: c.isDark
-              ? AppColorTokens.supplierNotificationReservationDark
-              : c.blueAccent,
-          typeLabel: l.notificationTypeLabel(kind),
-        );
-    }
+    return SupplierNotificationStyle(
+      icon: isCompleted ? Icons.check_circle_outline : presentation.icon,
+      accent: AppStatusStyle.of(context, tone).foreground,
+      typeLabel: isCompleted
+          ? l.notificationCompleted
+          : l.notificationTypeLabel(kind),
+    );
   }
 
   static Color filterSelectedColor(
     BuildContext context,
     SupplierNotificationFilter filter,
   ) {
-    final c = SupplierUiPalette.of(context);
-    return switch (filter) {
-      SupplierNotificationFilter.all => c.accentMuted,
-      SupplierNotificationFilter.actionNeeded => c.isDark
-          ? AppColorTokens.supplierNotificationActionNeededDark
-          : c.accent,
-      SupplierNotificationFilter.reservations => c.blueAccent,
-      SupplierNotificationFilter.completed => c.textMuted,
+    final tone = switch (filter) {
+      SupplierNotificationFilter.all => AppStatusTone.primary,
+      SupplierNotificationFilter.actionNeeded => AppStatusTone.warning,
+      SupplierNotificationFilter.reservations => AppStatusTone.info,
+      SupplierNotificationFilter.completed => AppStatusTone.neutral,
     };
+    return AppStatusStyle.of(context, tone).foreground;
   }
 }

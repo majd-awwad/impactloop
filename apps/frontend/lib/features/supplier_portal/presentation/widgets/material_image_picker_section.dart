@@ -6,6 +6,7 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_th
 import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../materials/data/models/material_draft_image.dart';
 
@@ -207,6 +208,8 @@ class _UploadDropZone extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uploadStyle = AppStatusStyle.of(context, AppStatusTone.primary);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -269,12 +272,14 @@ class _UploadDropZone extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: context.supplierColors.textOnAccent,
                     backgroundColor: canAddMore
-                        ? context.supplierColors.accent
+                        ? uploadStyle.foreground
                         : context.supplierColors.chipUnselected,
                     side: BorderSide(
                       color: canAddMore
-                          ? context.supplierColors.accent
-                          : context.supplierColors.border.withValues(alpha: 0.45),
+                          ? uploadStyle.border
+                          : context.supplierColors.border.withValues(
+                              alpha: 0.45,
+                            ),
                       width: 1.5,
                     ),
                     padding: const EdgeInsets.symmetric(

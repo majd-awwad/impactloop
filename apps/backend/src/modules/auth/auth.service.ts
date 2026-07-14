@@ -45,6 +45,7 @@ import {
 import { getAuthEmailProvider } from './email/index.js';
 
 import type { ChangePasswordInput, LoginInput, RegisterInput } from './auth.validation.js';
+import { registerSchema } from './auth.validation.js';
 
 export type LearnerProfileSummary = {
   learnerType: string;
@@ -310,30 +311,31 @@ export const createAuthSessionForUser = createAuthSession;
 export const registerUser = async (
   input: RegisterInput,
 ): Promise<AuthResult> => {
-  const existingUser = await authRepository.findUserIdByEmail(input.email);
+  const parsed = registerSchema.parse(input);
+  const existingUser = await authRepository.findUserIdByEmail(parsed.email);
 
   if (existingUser) {
     throw new AppError('Email is already registered', 409, 'CONFLICT');
   }
 
-  if (input.phone) {
-    const existingPhone = await authRepository.findUserIdByPhone(input.phone);
+  if (parsed.phone) {
+    const existingPhone = await authRepository.findUserIdByPhone(parsed.phone);
 
     if (existingPhone) {
       throw new AppError('Phone number is already registered', 409, 'CONFLICT');
     }
   }
 
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(parsed.password);
 
   const user = await authRepository.createUserWithOnboarding({
-    displayName: input.displayName,
-    email: input.email,
-    phone: input.phone,
+    displayName: parsed.displayName,
+    email: parsed.email,
+    phone: parsed.phone,
     passwordHash,
-    roles: input.roles,
-    learnerProfile: input.learnerProfile,
-    supplierProfile: input.supplierProfile,
+    roles: parsed.roles,
+    learnerProfile: parsed.learnerProfile,
+    supplierProfile: parsed.supplierProfile,
   });
 
   return createAuthSession(user);
@@ -357,9 +359,16 @@ export const loginUser = async (input: LoginInput): Promise<AuthResult> => {
     throw new AppError('Invalid email or password', 401, 'UNAUTHENTICATED');
   }
 
-  const updatedUser = await authRepository.updateLastLoginAt(user.id);
+  const loginTimestamp = new Date();
+  const persistedLastLoginAt = await authRepository.updateLastLoginAt(
+    user.id,
+    loginTimestamp,
+  );
 
-  return createAuthSession(updatedUser);
+  return createAuthSession({
+    ...user,
+    lastLoginAt: persistedLastLoginAt,
+  });
 };
 
 export const refreshAuthSession = async (
@@ -497,8 +506,8 @@ export const resetPasswordWithToken = async (
 export const changePasswordForUser = async (
   userId: string,
   input: ChangePasswordInput,
-): Promise<void> => {
-  const user = await authRepository.findUserPasswordHashById(userId);
+): Promise<AuthResult> => {
+  const user = await authRepository.findUserByIdWithRoles(userId);
 
   if (!user) {
     throw new AppError('User not found', 404, 'NOT_FOUND');
@@ -519,10 +528,22 @@ export const changePasswordForUser = async (
 
   const passwordHash = await hashPassword(input.newPassword);
 
-  await authRepository.updateUserPasswordHash({
+  await authRepository.changePasswordAndRevokeRefreshTokens({
     userId: user.id,
     passwordHash,
   });
+
+  const session = await createAuthSession(user);
+
+  const emailResult = await getAuthEmailProvider().sendPasswordChangedEmail({
+    recipientEmail: user.email,
+  });
+
+  if (emailResult.status === 'FAILED') {
+    logAuthEmailFailure('Password changed email', emailResult.sendError);
+  }
+
+  return session;
 };
 
 export const becomeSupplier = async (
@@ -707,13 +728,13 @@ export const switchActiveRole = async (
     throw new AppError('Invalid active role', 400, 'VALIDATION_ERROR');
   }
 
-  await authRepository.setUserActiveRole(userId, requestedRole);
+  const persistedActiveRole = await authRepository.setUserActiveRole(
+    userId,
+    requestedRole,
+  );
 
-  const freshUser = await authRepository.findUserByIdWithRoles(userId);
-
-  if (!freshUser) {
-    throw new AppError('User not found', 404, 'NOT_FOUND');
-  }
-
-  return createAuthSession(freshUser);
+  return createAuthSession({
+    ...user,
+    activeRole: persistedActiveRole,
+  });
 };

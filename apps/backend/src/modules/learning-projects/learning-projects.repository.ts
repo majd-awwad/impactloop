@@ -506,7 +506,7 @@ export const startProjectBuild = async (
   projectId: string,
   learnerId: string,
 ) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const project = await tx.learningProject.findFirst({
       where: {
         id: projectId,
@@ -563,13 +563,15 @@ export const startProjectBuild = async (
       });
     }
 
-    return tx.projectBuild.findUnique({
-      where: {
-        id: build.id,
-      },
-      include: projectBuildInclude,
-    });
+    return build;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.id },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const updateProjectBuildItem = async (input: {
@@ -579,7 +581,7 @@ export const updateProjectBuildItem = async (input: {
   status: UpdateProjectBuildItemInput['status'];
   learnerNote?: string | null;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const item = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -611,13 +613,15 @@ export const updateProjectBuildItem = async (input: {
       },
     });
 
-    return tx.projectBuild.findUnique({
-      where: {
-        id: item.buildId,
-      },
-      include: projectBuildInclude,
-    });
+    return item;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.buildId },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const findLearnerBuildItem = async (input: {
@@ -663,7 +667,7 @@ export const linkBuildItemMaterial = async (input: {
   itemId: string;
   materialId: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const item = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -694,11 +698,15 @@ export const linkBuildItemMaterial = async (input: {
       },
     });
 
-    return tx.projectBuild.findUnique({
-      where: { id: item.buildId },
-      include: projectBuildInclude,
-    });
+    return item;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.buildId },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const unlinkBuildItemMaterial = async (input: {
@@ -707,7 +715,7 @@ export const unlinkBuildItemMaterial = async (input: {
   itemId: string;
   clearReservationLink: boolean;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const item = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -740,11 +748,15 @@ export const unlinkBuildItemMaterial = async (input: {
       },
     });
 
-    return tx.projectBuild.findUnique({
-      where: { id: item.buildId },
-      include: projectBuildInclude,
-    });
+    return item;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.buildId },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const linkBuildItemReservation = async (input: {
@@ -753,7 +765,7 @@ export const linkBuildItemReservation = async (input: {
   itemId: string;
   reservationId: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const buildItem = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -807,10 +819,7 @@ export const linkBuildItemReservation = async (input: {
       buildItem.linkedReservationId &&
       buildItem.linkedReservationId === reservation.id
     ) {
-      return tx.projectBuild.findUnique({
-        where: { id: buildItem.buildId },
-        include: projectBuildInclude,
-      });
+      return { id: buildItem.buildId };
     }
 
     const validation = await validateBuildItemForReservationLink(tx, {
@@ -847,10 +856,12 @@ export const linkBuildItemReservation = async (input: {
 
     await setBuildItemLinkedReservationId(tx, buildItem.id, reservation.id);
 
-    return tx.projectBuild.findUnique({
-      where: { id: buildItem.buildId },
-      include: projectBuildInclude,
-    });
+    return { id: buildItem.buildId };
+  });
+
+  return prisma.projectBuild.findUniqueOrThrow({
+    where: { id: build.id },
+    include: projectBuildInclude,
   });
 };
 
@@ -1253,7 +1264,7 @@ export const updateMyLearningProjectSubmission = async (input: {
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const existing = await tx.learningProject.findFirst({
       where: {
         id: input.id,
@@ -1283,7 +1294,6 @@ export const updateMyLearningProjectSubmission = async (input: {
     }
 
     const projectUpdateData: Prisma.LearningProjectUpdateManyMutationInput = {
-      categoryId: input.categoryId,
       title: input.title,
       shortDescription: input.shortDescription,
       description: input.description,
@@ -1310,6 +1320,11 @@ export const updateMyLearningProjectSubmission = async (input: {
     if (projectUpdate.count === 0) {
       return null;
     }
+
+    await tx.learningProject.update({
+      where: { id: input.id },
+      data: { categoryId: input.categoryId },
+    });
 
     if (input.requiredComponents !== undefined) {
       const existingIds = new Set(
@@ -1402,14 +1417,18 @@ export const updateMyLearningProjectSubmission = async (input: {
       }
     }
 
-    return tx.learningProject.findFirst({
-      where: {
-        id: input.id,
-        createdBy: input.userId,
-      },
-      include: myLearningProjectDetailInclude,
-    });
+    return { id: input.id };
   });
+
+  return updated
+    ? prisma.learningProject.findFirst({
+        where: {
+          id: updated.id,
+          createdBy: input.userId,
+        },
+        include: myLearningProjectDetailInclude,
+      })
+    : null;
 };
 
 export const resubmitMyLearningProjectSubmission = async (

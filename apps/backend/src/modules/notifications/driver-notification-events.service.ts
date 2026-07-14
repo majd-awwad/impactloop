@@ -318,6 +318,25 @@ export const notifyDriverDropoffTime = async (deliveryId: string) =>
     });
   });
 
+export const notifyDriverDeliveryUnassignedByAdmin = async (input: {
+  deliveryId: string;
+  driverUserId: string;
+  materialTitle: string;
+}) =>
+  notifySafely(async () => {
+    const material = input.materialTitle.trim() || 'Delivery';
+
+    await createNotificationIfMissing({
+      userId: input.driverUserId,
+      notificationType:
+        DRIVER_NOTIFICATION_TYPES.DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN,
+      title: 'Delivery assignment removed',
+      body: `${material} was reopened to the driver pool by an admin.`,
+      relatedEntityType: 'DELIVERY',
+      relatedEntityId: input.deliveryId,
+    });
+  });
+
 /**
  * Idempotent due-only sync for pickup/drop-off reminders.
  * Safe to call from GET /api/notifications — never creates NEW JOB rows.
@@ -361,13 +380,21 @@ export const clearUnreadNewJobNotificationsForDelivery = async (
   });
 };
 
-/** Disabled — not in the allowed driver notification set. */
-export const notifyDriverDeliveryMovedToAdminReview = async (_input: {
+export const notifyDriverDeliveryMovedToAdminReview = async (input: {
   deliveryId: string;
   driverUserId: string;
-}) => {
-  // Intentionally no-op.
-};
+}) =>
+  notifySafely(async () => {
+    await createNotificationIfMissing({
+      userId: input.driverUserId,
+      notificationType:
+        DRIVER_NOTIFICATION_TYPES.DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW,
+      title: 'Delivery moved to admin review',
+      body: 'Delivery moved to admin review because pickup was not completed within the pickup window.',
+      relatedEntityType: 'DELIVERY',
+      relatedEntityId: input.deliveryId,
+    });
+  });
 
 export const resetDriverDeliveryReminderSyncThrottleForTests = () => {
   // Kept for test compatibility.

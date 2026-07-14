@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../shared/widgets/app_section_card.dart';
+import '../../../../../shared/widgets/app_status_badge.dart';
 import '../../theme/supplier_theme_extension.dart';
-import 'supplier_dashboard_colors.dart';
 
 class SupplierDashboardStatCard extends StatelessWidget {
   const SupplierDashboardStatCard({
@@ -11,7 +13,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
     required this.value,
     required this.helperText,
     required this.icon,
-    required this.accentColor,
+    required this.tone,
     this.highlight = false,
   });
 
@@ -19,30 +21,32 @@ class SupplierDashboardStatCard extends StatelessWidget {
   final String value;
   final String helperText;
   final IconData icon;
-  final Color accentColor;
+  final AppStatusTone tone;
   final bool highlight;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
+    final statusStyle = AppStatusStyle.of(context, tone);
+    final accent = statusStyle.foreground;
 
-    return Container(
+    return AppSectionCard(
       height: 164,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: highlight
-          ? context.supplierDecorations.highlightedStatCard
-          : context.supplierDecorations.statCard,
+      tone: tone,
+      emphasized: highlight,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             height: 3,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: AppRadius.pillAll,
               gradient: LinearGradient(
                 colors: [
-                  accentColor,
-                  accentColor.withValues(alpha: 0.35),
+                  accent,
+                  accent.withValues(alpha: 0.35),
                 ],
               ),
             ),
@@ -55,13 +59,13 @@ class SupplierDashboardStatCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
+                  color: statusStyle.background,
+                  borderRadius: AppRadius.mdAll,
                   border: Border.all(
-                    color: accentColor.withValues(alpha: 0.28),
+                    color: statusStyle.border,
                   ),
                 ),
-                child: Icon(icon, color: accentColor, size: 20),
+                child: Icon(icon, color: accent, size: 20),
               ),
               const Spacer(),
               if (highlight)
@@ -71,14 +75,13 @@ class SupplierDashboardStatCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(999),
+                    color: statusStyle.background,
+                    borderRadius: AppRadius.pillAll,
                   ),
                   child: Text(
                     context.s.statActionBadge,
-                    style: context.supplierChip().copyWith(
-                      color: accentColor,
-                      fontSize: 10,
+                    style: textTheme.labelSmall?.copyWith(
+                      color: accent,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -88,15 +91,16 @@ class SupplierDashboardStatCard extends StatelessWidget {
           const Spacer(),
           Text(
             value,
-            style: context.supplierTitle().copyWith(
+            style: textTheme.headlineMedium?.copyWith(
+              color: colors.textPrimary,
               fontSize: 28,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: context.supplierLabel().copyWith(
+            style: textTheme.labelLarge?.copyWith(
               color: colors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
@@ -105,8 +109,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
             helperText,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: context.supplierBody().copyWith(
-              fontSize: 12,
+            style: textTheme.bodySmall?.copyWith(
               color: colors.textSecondary,
             ),
           ),
@@ -144,14 +147,14 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             value: '$activeMaterials',
             helperText: context.s.statHelperVisibleToLearners,
             icon: Icons.inventory_2_outlined,
-            accentColor: SupplierDashboardColors.available,
+            tone: AppStatusTone.primary,
           ),
           SupplierDashboardStatCard(
             label: context.s.statPendingRequests,
             value: '$pendingRequests',
             helperText: context.s.statHelperWaitingResponse,
             icon: Icons.inbox_outlined,
-            accentColor: SupplierDashboardColors.pending,
+            tone: AppStatusTone.warning,
             highlight: pendingRequests > 0,
           ),
           SupplierDashboardStatCard(
@@ -159,14 +162,14 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             value: '$scheduledPickups',
             helperText: context.s.statHelperAcceptedPickups,
             icon: Icons.local_shipping_outlined,
-            accentColor: SupplierDashboardColors.accepted,
+            tone: AppStatusTone.success,
           ),
           SupplierDashboardStatCard(
             label: context.s.statReusedMaterials,
             value: '$reusedMaterials',
             helperText: context.s.statHelperCompletedReuse,
             icon: Icons.recycling_outlined,
-            accentColor: SupplierDashboardColors.reused,
+            tone: AppStatusTone.success,
           ),
         ];
 
@@ -221,43 +224,38 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
 
     final metrics = [
       _SecondaryMetric(
         label: context.s.statTotalMaterials,
         value: '$totalMaterials',
         icon: Icons.layers_outlined,
-        accentColor: SupplierDashboardColors.totalMaterials,
       ),
       _SecondaryMetric(
         label: context.s.statAvailableMaterials,
         value: '$availableMaterials',
         icon: Icons.check_circle_outline,
-        accentColor: SupplierDashboardColors.available,
       ),
       _SecondaryMetric(
         label: context.s.statReservedMaterials,
         value: '$reservedMaterials',
         icon: Icons.lock_outline,
-        accentColor: SupplierDashboardColors.reserved,
       ),
       _SecondaryMetric(
         label: context.s.statTotalViews,
         value: '$totalViews',
         icon: Icons.visibility_outlined,
-        accentColor: SupplierDashboardColors.views,
       ),
       _SecondaryMetric(
         label: context.s.statTotalLikes,
         value: '$totalLikes',
         icon: Icons.favorite_outline,
-        accentColor: SupplierDashboardColors.likes,
       ),
       _SecondaryMetric(
         label: context.s.statFollowers,
         value: '$followersCount',
         icon: Icons.people_outline,
-        accentColor: SupplierDashboardColors.followers,
       ),
     ];
 
@@ -266,46 +264,25 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
       runSpacing: AppSpacing.sm,
       children: metrics
           .map(
-            (metric) => Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: colors.surfaceSolid.withValues(
-                  alpha: colors.isDark ? 0.72 : 1,
-                ),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: colors.border.withValues(
-                    alpha: colors.isDark ? 0.35 : 0.55,
-                  ),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.cardShadow,
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+            (metric) => AppSectionCard(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              borderRadius: AppRadius.mdAll,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(metric.icon, size: 14, color: metric.accentColor),
+                  Icon(metric.icon, size: 14, color: colors.accent),
                   const SizedBox(width: 6),
                   Text(
                     metric.value,
-                    style: context.supplierLabel().copyWith(
-                      fontSize: 13,
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     metric.label,
-                    style: context.supplierBody().copyWith(
-                      fontSize: 11,
+                    style: textTheme.labelSmall?.copyWith(
                       color: colors.textSecondary,
                     ),
                   ),
@@ -323,11 +300,9 @@ class _SecondaryMetric {
     required this.label,
     required this.value,
     required this.icon,
-    required this.accentColor,
   });
 
   final String label;
   final String value;
   final IconData icon;
-  final Color accentColor;
 }

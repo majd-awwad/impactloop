@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_section_card.dart';
 import '../../data/models/supplier_profile.dart';
 import '../../data/models/supplier_profile_location.dart';
 import 'supplier_type_selector.dart';
@@ -38,9 +40,9 @@ class SupplierProfileIdentityCard extends StatelessWidget {
     final profileImageUrl = profile.user.profileImageUrl;
     final isCompact = MediaQuery.sizeOf(context).width < 720;
 
-    return Container(
-      width: double.infinity,
-      decoration: context.supplierDecorations.profileGlassCard,
+    return AppSectionCard(
+      padding: EdgeInsets.zero,
+      borderRadius: AppRadius.xlAll,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

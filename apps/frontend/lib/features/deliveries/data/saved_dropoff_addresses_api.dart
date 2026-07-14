@@ -57,14 +57,15 @@ class SavedDropoffAddressesApi {
     SavedDropoffLocation? location,
     bool? isDefault,
   }) {
+    final data = <String, dynamic>{};
+    if (label != null) data['label'] = label;
+    if (location != null) data['location'] = location.toJson();
+    if (isDefault != null) data['isDefault'] = isDefault;
+
     return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(
         '/api/learner/saved-dropoff-addresses/$id',
-        data: {
-          if (label != null) 'label': label,
-          if (location != null) 'location': location.toJson(),
-          if (isDefault != null) 'isDefault': isDefault,
-        },
+        data: data,
       ),
       (json) => SavedDropoffAddress.fromJson(
         Map<String, dynamic>.from(json['savedAddress'] as Map? ?? const {}),

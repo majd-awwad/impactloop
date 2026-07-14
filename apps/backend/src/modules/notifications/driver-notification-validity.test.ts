@@ -17,15 +17,20 @@ describe('driver notification display filter', () => {
     ];
 
     const filtered = filterNotificationsForDisplay(items);
-    assert.equal(filtered.length, 4);
+    assert.equal(filtered.length, 5);
+    assert.ok(
+      filtered.some(
+        (item) =>
+          item.notificationType ===
+          DRIVER_NOTIFICATION_TYPES.DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW,
+      ),
+    );
     assert.ok(
       filtered.every(
         (item) =>
-          ![
-            'DRIVER_DELIVERY_AVAILABLE',
-            'DRIVER_DELIVERY_ACCEPTED',
-            'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW',
-          ].includes(item.notificationType),
+          !['DRIVER_DELIVERY_AVAILABLE', 'DRIVER_DELIVERY_ACCEPTED'].includes(
+            item.notificationType,
+          ),
       ),
     );
   });

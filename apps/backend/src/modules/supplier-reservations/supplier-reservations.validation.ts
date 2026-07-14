@@ -162,16 +162,37 @@ export type CancelSupplierReservationInput = z.infer<
   typeof cancelSupplierReservationSchema
 >;
 
+export const SUPPLIER_NO_SHOW_REPORT_REASON_CODES = [
+  'LEARNER_DID_NOT_ARRIVE',
+  'DRIVER_DID_NOT_ARRIVE',
+  'NO_RESPONSE_AFTER_PICKUP_WINDOW',
+  'REPEATED_DELAY',
+  'WRONG_INFORMATION',
+  'SAFETY_OR_TRUST_CONCERN',
+  'OTHER',
+] as const;
+
+export type SupplierNoShowReportReasonCode =
+  (typeof SUPPLIER_NO_SHOW_REPORT_REASON_CODES)[number];
+
+export const SUPPLIER_GENERAL_INCIDENT_REASON_CODES = [
+  'REPEATED_DELAY',
+  'WRONG_INFORMATION',
+  'SAFETY_OR_TRUST_CONCERN',
+] as const satisfies readonly SupplierNoShowReportReasonCode[];
+
+export type SupplierGeneralIncidentReasonCode =
+  (typeof SUPPLIER_GENERAL_INCIDENT_REASON_CODES)[number];
+
+export const isSupplierGeneralIncidentReasonCode = (
+  reasonCode: SupplierNoShowReportReasonCode,
+): reasonCode is SupplierGeneralIncidentReasonCode =>
+  (SUPPLIER_GENERAL_INCIDENT_REASON_CODES as readonly string[]).includes(
+    reasonCode,
+  );
+
 export const submitNoShowReportSchema = z.object({
-  reasonCode: z.enum([
-    'LEARNER_DID_NOT_ARRIVE',
-    'DRIVER_DID_NOT_ARRIVE',
-    'NO_RESPONSE_AFTER_PICKUP_WINDOW',
-    'REPEATED_DELAY',
-    'WRONG_INFORMATION',
-    'SAFETY_OR_TRUST_CONCERN',
-    'OTHER',
-  ]),
+  reasonCode: z.enum(SUPPLIER_NO_SHOW_REPORT_REASON_CODES),
   note: z.string().trim().min(1).max(1000),
 });
 

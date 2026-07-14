@@ -1,3 +1,5 @@
+import type { Prisma } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import {
   assertRescheduleAllowedOutsideHandover,
@@ -5,14 +7,19 @@ import {
 } from './reservation-reschedule.js';
 import { recomputeAndUpdateMaterialStatus } from './reservations.quantity.js';
 
-const learnerRescheduleInclude = {
-  material: true,
+const learnerRescheduleExistingSelect = {
+  id: true,
+  status: true,
+  fulfillmentMethod: true,
+  pickupWindowStart: true,
+  pickupWindowEnd: true,
+  materialId: true,
   _count: {
     select: {
       deliveries: true,
     },
   },
-} as const;
+} satisfies Prisma.ReservationSelect;
 
 export const requestLearnerPickupReschedule = async (input: {
   requesterId: string;
@@ -28,7 +35,7 @@ export const requestLearnerPickupReschedule = async (input: {
         id: input.reservationId,
         requesterId: input.requesterId,
       },
-      include: learnerRescheduleInclude,
+      select: learnerRescheduleExistingSelect,
     });
 
     if (!existing) {
@@ -36,11 +43,11 @@ export const requestLearnerPickupReschedule = async (input: {
     }
 
     if (existing.status !== 'ACCEPTED') {
-      return { conflict: true as const, reservation: existing };
+      return { conflict: true as const };
     }
 
     if (existing.fulfillmentMethod !== 'PICKUP' || existing._count.deliveries > 0) {
-      return { conflict: true as const, reservation: existing };
+      return { conflict: true as const };
     }
 
     const phaseCheck = assertRescheduleAllowedOutsideHandover({
@@ -49,13 +56,13 @@ export const requestLearnerPickupReschedule = async (input: {
     });
 
     if (!phaseCheck.ok) {
-      return { duringHandover: true as const, reservation: existing };
+      return { duringHandover: true as const };
     }
 
     const reason = input.reason.trim();
     const note = input.note?.trim() || null;
 
-    const reservation = await tx.reservation.update({
+    await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'AWAITING_SUPPLIER_CONFIRMATION',
@@ -67,12 +74,12 @@ export const requestLearnerPickupReschedule = async (input: {
         pendingRescheduleReason: reason,
         pendingRescheduleNote: note,
       },
-      include: learnerRescheduleInclude,
+      select: { id: true },
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: existing.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'ACCEPTED',
         newStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
@@ -84,7 +91,7 @@ export const requestLearnerPickupReschedule = async (input: {
     if (note) {
       await tx.reservationMessage.create({
         data: {
-          reservationId: reservation.id,
+          reservationId: existing.id,
           senderUserId: input.requesterId,
           body: note,
         },
@@ -93,7 +100,7 @@ export const requestLearnerPickupReschedule = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const };
   });
 };
 
@@ -107,7 +114,7 @@ export const cancelLearnerRescheduleRequest = async (input: {
         id: input.reservationId,
         requesterId: input.requesterId,
       },
-      include: learnerRescheduleInclude,
+      select: learnerRescheduleExistingSelect,
     });
 
     if (!existing) {
@@ -115,10 +122,10 @@ export const cancelLearnerRescheduleRequest = async (input: {
     }
 
     if (existing.status !== 'AWAITING_SUPPLIER_CONFIRMATION') {
-      return { conflict: true as const, reservation: existing };
+      return { conflict: true as const };
     }
 
-    const reservation = await tx.reservation.update({
+    await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'CANCELLED',
@@ -126,12 +133,12 @@ export const cancelLearnerRescheduleRequest = async (input: {
         rejectionReason: 'Learner cancelled after reschedule request',
         ...clearPendingRescheduleFields(),
       },
-      include: learnerRescheduleInclude,
+      select: { id: true },
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: existing.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
         newStatus: 'CANCELLED',
@@ -142,6 +149,6 @@ export const cancelLearnerRescheduleRequest = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const };
   });
 };

@@ -1,12 +1,40 @@
 import type { Prisma } from '../../generated/prisma/client.js';
+import { prisma } from '../../database/prisma.js';
 import { computeEarliestDeliveryStart } from './supplier-reservation-scheduling.js';
 import {
   isAdminSupplierPickupReconfirmReason,
-  NO_DRIVER_SUPPLIER_RECONFIRM_REASON,
 } from '../reservations/reservation-timing-policy.js';
 import { assertValidPickupWindow } from '../reservations/pickup-window-validation.js';
 import { runSerializableTransaction } from '../reservations/reservations.quantity.js';
-import { reservationInclude } from './supplier-reservations.repository.js';
+import {
+  reservationInclude,
+  type SupplierReservationRecord,
+} from './supplier-reservations.repository.js';
+
+const supplierReservationLookupSelect = {
+  id: true,
+  status: true,
+  fulfillmentMethod: true,
+  pendingRescheduleReason: true,
+  supplierNote: true,
+} satisfies Prisma.ReservationSelect;
+
+const deliveryLookupSelect = {
+  id: true,
+  status: true,
+} satisfies Prisma.DeliverySelect;
+
+const reservationMutationSelect = {
+  id: true,
+} satisfies Prisma.ReservationSelect;
+
+const loadSupplierReservationRecord = async (
+  reservationId: string,
+): Promise<SupplierReservationRecord> =>
+  prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: reservationInclude,
+  });
 
 const resolvePendingNoDriverReport = async (
   tx: Prisma.TransactionClient,
@@ -20,6 +48,7 @@ const resolvePendingNoDriverReport = async (
       reasonCode: 'NO_DRIVER_AVAILABLE',
       status: 'PENDING_REVIEW',
     },
+    select: { id: true },
   });
 
   if (!report) {
@@ -33,6 +62,7 @@ const resolvePendingNoDriverReport = async (
       reviewedAt: new Date(),
       reviewNote: note,
     },
+    select: { id: true },
   });
 };
 
@@ -42,19 +72,14 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
   supplierPickupWindowStart: Date;
   supplierPickupWindowEnd: Date;
   supplierNote?: string;
-}) =>
-  runSerializableTransaction(async (tx) => {
+}) => {
+  const outcome = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
         ownerId: input.ownerId,
       },
-      include: {
-        deliveries: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
+      select: supplierReservationLookupSelect,
     });
 
     if (!existing) {
@@ -62,21 +87,25 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
     }
 
     if (existing.fulfillmentMethod !== 'DELIVERY') {
-      return { outcome: 'NOT_DELIVERY' as const, reservation: existing };
+      return { outcome: 'NOT_DELIVERY' as const };
     }
 
     if (existing.status !== 'AWAITING_SUPPLIER_CONFIRMATION') {
-      return { outcome: 'INVALID_RESERVATION_STATUS' as const, reservation: existing };
+      return { outcome: 'INVALID_RESERVATION_STATUS' as const };
     }
 
     if (!isAdminSupplierPickupReconfirmReason(existing.pendingRescheduleReason)) {
-      return { outcome: 'NOT_ELIGIBLE' as const, reservation: existing };
+      return { outcome: 'NOT_ELIGIBLE' as const };
     }
 
-    const delivery = existing.deliveries[0];
+    const delivery = await tx.delivery.findFirst({
+      where: { reservationId: existing.id },
+      orderBy: { createdAt: 'desc' },
+      select: deliveryLookupSelect,
+    });
 
     if (!delivery || delivery.status !== 'AWAITING_RESOLUTION') {
-      return { outcome: 'INVALID_DELIVERY_STATUS' as const, reservation: existing };
+      return { outcome: 'INVALID_DELIVERY_STATUS' as const };
     }
 
     assertValidPickupWindow(
@@ -103,7 +132,7 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
       },
     });
 
-    const reservation = await tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'ACCEPTED',
@@ -120,7 +149,7 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
         pendingRescheduleNote: null,
         supplierNote: input.supplierNote?.trim() || existing.supplierNote,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
 
     await tx.reservationStatusHistory.create({
@@ -162,14 +191,14 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
       'Supplier provided new pickup window after no driver available',
     );
 
-    const refreshed = await tx.reservation.findFirst({
-      where: { id: existing.id },
-      include: reservationInclude,
-    });
-
-    if (!refreshed) {
-      return { outcome: 'NOT_FOUND' as const };
-    }
-
-    return { outcome: 'SUBMITTED' as const, reservation: refreshed };
+    return { outcome: 'SUBMITTED' as const, reservationId: updated.id };
   });
+
+  if (outcome.outcome !== 'SUBMITTED') {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+
+  return { outcome: 'SUBMITTED' as const, reservation };
+};

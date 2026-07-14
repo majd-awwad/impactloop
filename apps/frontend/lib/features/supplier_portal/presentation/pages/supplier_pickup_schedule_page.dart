@@ -132,7 +132,7 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                           )
                                       : null,
                                   onReschedule: item.canSupplierReschedule
-                                      ? () => handleReschedulePickup(
+                                      ? () => handleRequestReschedulePickup(
                                             context,
                                             ref,
                                             reservationId: item.id,
@@ -165,7 +165,7 @@ class SupplierPickupSchedulePage extends ConsumerWidget {
                                       _handleCompletePickup(context, ref, item)
                                 : null,
                             onReschedule: item.canSupplierReschedule
-                                ? () => handleReschedulePickup(
+                                ? () => handleRequestReschedulePickup(
                                       context,
                                       ref,
                                       reservationId: item.id,

@@ -35,7 +35,7 @@ Authenticated session; access token in memory; refresh via cookie/body; user red
 ### Error states
 
 - Validation 400 → field errors on form (`ApiException` mapping).
-- Duplicate email 409 — **Needs verification** of exact code.
+- Duplicate email → `409 CONFLICT` with message `Email is already registered`.
 - Incomplete wizard state → inline `/register` error.
 
 ### Files involved
@@ -79,7 +79,7 @@ Validate credentials → issue JWT + refresh → set refresh cookie (`sendAuthSe
 
 ### Database changes
 
-Update `users.last_login_at`; insert/revoke `auth_tokens` for refresh — **Needs verification** of rotation rules.
+Update `users.last_login_at`; insert new `auth_tokens` refresh hash (rotation happens on `/refresh`, not login).
 
 ### Success state
 
@@ -104,7 +104,9 @@ App start or navigation while `AuthStatus.unknown`.
 
 ### Frontend path
 
-`app_router` → `/auth/checking` → **Needs verification** which widget calls `bootstrapSession` (likely `app.dart` / provider listener).
+`app_router` → `/auth/checking` while `AuthStatus.unknown`.
+
+`ImpactLoopApp` watches `authNetworkBootstrapProvider` (`auth_providers.dart`), which microtask-calls `AuthController.bootstrapSession()`.
 
 `auth_repository.restoreSession()` → `refresh()` → `me()`.
 
@@ -148,19 +150,44 @@ If refresh fails, the access token and refresh storage are cleared, `AuthControl
 
 ---
 
-## Flow F — Change password (supplier)
+## Flow F — Change password (profile or supplier)
 
 ### Trigger
 
-Supplier opens change password from profile/security UI.
+Authenticated user opens change password from `/profile/security` or the supplier account security card.
 
 ### Path
 
-`change_password_dialog.dart` → `authRepository.changePassword` → `PATCH /api/auth/change-password`.
+`ProfileSecurityPage` or `change_password_dialog.dart` → `authController.changePassword` → `authRepository.changePassword` → `PATCH /api/auth/change-password`.
+
+### Backend path
+
+1. Validate current/new password (Zod + bcrypt compare).
+2. Transaction: update `users.password_hash` and revoke all active `REFRESH_TOKEN` rows for the user.
+3. Issue one fresh auth session via `createAuthSession` (new access + refresh).
+4. Return session through `sendAuthSessionResponse` (web cookie / mobile JSON).
+5. Send password-changed email; provider failure is logged only and does not roll back.
 
 ### Database changes
 
-Update `users.password_hash`; may revoke sessions — **Needs verification**.
+Update `users.password_hash`; mark all user refresh tokens `usedAt`; insert one new refresh token row for the current session.
+
+### Success state
+
+Current client stays logged in with a new access token and refresh session. Other devices fail on next refresh.
+
+### Access-token limitation
+
+Already-issued access JWTs on other devices remain valid until normal expiry (~15m) or until `authMiddleware` rejects the account (e.g. `SUSPENDED`/`DISABLED`). This slice revokes refresh sessions only.
+
+### Error states
+
+- Wrong current password → `400 VALIDATION_ERROR`; password and refresh sessions unchanged.
+- New password same as current → blocked by Zod before service call.
+
+### Files involved
+
+`profile_security_page.dart`, `change_password_dialog.dart`, `auth_controller.dart`, `auth_repository.dart`, `auth_api.dart`, `auth.service.ts`, `auth.repository.ts`, `auth.controller.ts`
 
 ---
 
@@ -368,8 +395,15 @@ Updated `activeRole`, refreshed tokens, portal routes match active mode.
 
 ---
 
+## Resolved behavior (2026-07 audit)
+
+- `PENDING_VERIFICATION` is **not** enforced on login, refresh, or `authMiddleware`. Only `SUSPENDED` and `DISABLED` are blocked.
+- Email and phone verification are **not** implemented (no OTP/verify endpoints); invitation accept sets `emailVerifiedAt` at account creation only.
+- Web refresh is cookie-only (`WebCookieTokenStorage` no-op + httpOnly cookie + `withCredentials: true`).
+- Supplier register creates a `locations` row for `defaultPickupLocation` in `auth.repository.ts`.
+- Bootstrap caller is `authNetworkBootstrapProvider` from `app.dart`.
+
 ## Open questions
 
-- Is `account_status = PENDING_VERIFICATION` enforced on login?
-- Web session persistence without secure storage — cookie-only behavior on Flutter web?
-- Does register always create a `locations` row for supplier `pickupArea`?
+- Should `PENDING_VERIFICATION` block login once email verification ships?
+- Manual cross-browser verification of web cookie session persistence.

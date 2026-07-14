@@ -1,4 +1,5 @@
 import type {
+  DeliveryStatus,
   NoShowReportReason,
   NoShowReportTargetRole,
   Prisma,
@@ -155,7 +156,7 @@ export const escalateNoDriverAvailableInTransaction = async (
     };
     delivery: {
       id: string;
-      status: string;
+      status: DeliveryStatus;
     };
     reporterUserId: string;
     changedBy: string | null;
@@ -240,7 +241,7 @@ export const escalateStaleAssignedDriverPickupInTransaction = async (
     };
     delivery: {
       id: string;
-      status: string;
+      status: DeliveryStatus;
       assignedDriverProfileId: string | null;
     };
     reporterUserId: string;

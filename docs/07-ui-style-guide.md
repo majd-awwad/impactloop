@@ -1,20 +1,20 @@
 # ImpactLoop UI Style Guide
 
-**Status:** legacy/auth-specific style reference. For current app-wide theme layers, raw tokens, semantic colors, dark/light mode, supplier theme, and feature palettes, use [07-theme-system.md](07-theme-system.md).
+**Status:** auth-specific style reference. For current app-wide theme layers, raw tokens, semantic colors, dark/light mode, supplier theme, and feature palettes, use [07-theme-system.md](07-theme-system.md).
 
-This file is kept because auth widgets still have feature-specific layout and palette rules. Do not treat it as the complete frontend theme system.
+This file is kept because auth widgets still have feature-specific layout and palette rules. Do not treat it as the complete frontend theme system or as a separate design system from the central theme.
 
 ## Auth visual concept: Green loop, bright start
 
-Auth screens use a modern eco-tech startup feel:
+Auth screens use the same premium clean eco-tech direction as the rest of the app:
 
-- Green gradient branding with soft blob shapes (Flutter widgets only, no image assets)
+- Neutral form surfaces with green as the primary accent
 - Feature badges/chips highlighting platform value
-- Elevated form card with shadow — not a generic centered white card
+- Elevated form card with restrained border/shadow
 - Distinct mobile and web layouts (mobile is not a squeezed desktop layout)
-- Material 3–inspired typography and controls
+- Material 3 typography and controls
 
-The Login screen is the reference implementation. All future Auth screens must follow this system.
+The Login screen is the reference implementation for auth layout. Future auth visual work should preserve behavior while deriving colors, type, spacing, and radius from central app theme primitives.
 
 ---
 
@@ -22,21 +22,16 @@ The Login screen is the reference implementation. All future Auth screens must f
 
 ### Color tokens
 
-**File:** `apps/frontend/lib/app/theme/app_colors.dart`
+**Primary files:** `apps/frontend/lib/app/theme/app_theme_colors.dart`, `apps/frontend/lib/features/auth/presentation/widgets/auth_ui_palette.dart`
 
-| Token | Purpose |
-|-------|---------|
-| `primary`, `secondary`, `accent` | Brand greens and warm accent |
-| `background`, `surface`, `surfaceElevated` | Page and card surfaces |
-| `brandingGradientStart`, `brandingGradientEnd` | Web branding panel gradient |
-| `blobPrimary`, `blobSecondary`, `blobAccent` | Soft decorative blobs |
-| `textPrimary`, `textSecondary` | Form and body text |
-| `textOnBrand`, `textOnBrandMuted` | Text on gradient panels |
-| `border`, `borderFocused` | Input borders |
-| `error`, `errorSurface` | Validation and errors |
-| `link`, `shadow` | Links and card shadows |
+Auth widgets should use:
 
-Gradients and composite decorations live in `apps/frontend/lib/app/theme/app_decorations.dart`.
+- `AppThemeColors.of(context)` for app-wide semantic colors
+- `AuthUiPalette.of(context)` for auth-scoped compatibility names
+- `Theme.of(context).textTheme` for typography
+- `Theme.of(context).colorScheme` for Material component semantics where appropriate
+
+`AppColors` and auth dark compatibility files still exist in code, but new auth styling should not add new dependencies on those legacy layers.
 
 ### Spacing tokens
 
@@ -103,7 +98,7 @@ Each Auth page uses a `LayoutBuilder` at breakpoint `AppSpacing.authLayoutBreakp
 
 - Left: `AuthBrandingPanel(variant: full)` — gradient, blobs, headline, feature badges
 - Right: `_FormPanel` — centered, scrollable form column (`authFormMaxWidth`)
-- Background: `AppColors.background`
+- Background: central theme/auth palette surfaces
 - Form content is passed as `formContent` — typically `AuthHeader` + `AuthFormCard`
 
 ### Mobile auth layout
@@ -153,7 +148,7 @@ Each Auth page uses a `LayoutBuilder` at breakpoint `AppSpacing.authLayoutBreakp
 
 **File:** `apps/frontend/lib/features/auth/presentation/widgets/auth_form_card.dart`
 
-- Elevated white card using `AppDecorations.authFormCard`
+- Elevated card aligned to the central surface, radius, border, and shadow direction
 - Wraps form fields and optional `footer` widget
 - Inner padding: `AppSpacing.lg`
 - Do not build custom card containers in Auth pages
@@ -182,10 +177,11 @@ Each Auth page uses a `LayoutBuilder` at breakpoint `AppSpacing.authLayoutBreakp
 2. **Reuse form structure** — `AuthHeader` + `AuthFormCard` + screen-specific form widget + footer.
 3. **Reuse shared widgets** — `AppTextField`, `AppPrimaryButton`, `AppLinkButton` only; no raw Material form controls in pages.
 4. **Reuse branding** — Same `AuthBrandingPanel` on every Auth screen; only header, form, and footer copy change.
-5. **No raw colors in presentation** — No `Color(0x…)` or `Colors.*` in Auth pages, views, or widgets. Use `AppColors` and `AppDecorations`.
+5. **No raw colors in presentation** — No `Color(0x…)` or non-semantic `Colors.*` in Auth pages, views, or widgets. Use `AppThemeColors`, `AuthUiPalette`, and central component themes.
 6. **No magic spacing or radius** — Use `AppSpacing` and `AppRadius` in pages and views.
 7. **No new dependencies** for visual-only Auth work unless explicitly approved.
 8. **No generic admin UI** — No full-screen centered white card; always use the split/hero + elevated card pattern.
+9. **Keep auth scoped** — Do not import auth palette/widgets into unrelated features unless a widget is promoted and documented as shared.
 
 ### RegisterPage reuse pattern
 
@@ -208,7 +204,8 @@ Only `RegisterForm`, footer links, and `AuthHeader` copy differ from Login.
 
 | Concern | File |
 |---------|------|
-| Colors | `app_colors.dart` |
+| Semantic colors | `app_theme_colors.dart` |
+| Auth bridge palette | `auth_ui_palette.dart` |
 | Spacing | `app_spacing.dart` |
 | Radius | `app_radius.dart` |
 | Typography | `app_text_styles.dart` |

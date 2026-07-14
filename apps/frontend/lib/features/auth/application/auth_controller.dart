@@ -350,6 +350,38 @@ class AuthController extends Notifier<AuthState> {
       throw apiError;
     }
   }
+
+  Future<User> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmNewPassword,
+  }) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+
+    try {
+      final freshUser = await _repository.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+        confirmNewPassword: confirmNewPassword,
+      );
+
+      state = AuthState(
+        user: freshUser,
+        accessToken: _repository.accessToken,
+        isLoading: false,
+        hasBootstrapped: true,
+      );
+
+      return freshUser;
+    } on ApiException catch (error) {
+      state = state.copyWith(isLoading: false, error: error);
+      rethrow;
+    } catch (error) {
+      final apiError = normalizeApiException(error);
+      state = state.copyWith(isLoading: false, error: apiError);
+      throw apiError;
+    }
+  }
 }
 
 final authControllerProvider = NotifierProvider<AuthController, AuthState>(

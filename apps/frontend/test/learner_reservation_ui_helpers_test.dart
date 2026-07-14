@@ -3,6 +3,23 @@ import 'package:frontend/features/reservations/data/models/learner_reservation.d
 import 'package:frontend/features/reservations/presentation/learner_reservation_ui_helpers.dart';
 
 void main() {
+  LearnerReservation reservationWithStatus(String status) {
+    return LearnerReservation.fromJson({
+      'id': 'res-$status',
+      'status': status,
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'AVAILABLE',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+  }
+
   test('reservationMatchesStatusFilter includes overdue accepted in needs action', () {
     final overdueAccepted = LearnerReservation.fromJson({
       'id': 'res-overdue',
@@ -118,36 +135,114 @@ void main() {
     expect(summary, contains('Requested pickup'));
   });
 
-  test('reservationMatchesStatusFilter groups cancelled terminal states', () {
-    final cancelled = LearnerReservation.fromJson({
-      'id': 'res-1',
-      'status': 'CANCELLED',
-      'quantityRequested': 1,
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-      'material': {
-        'id': 'mat-1',
-        'title': 'Wood panels',
-        'materialType': 'Wood',
-        'status': 'AVAILABLE',
-      },
-      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
-    });
+  test('reservation filters cover active and closed lifecycle statuses', () {
+    for (final status in const [
+      'PENDING',
+      'AWAITING_LEARNER_CONFIRMATION',
+      'AWAITING_SUPPLIER_CONFIRMATION',
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    ]) {
+      expect(
+        reservationMatchesStatusFilter(
+          reservationWithStatus(status),
+          LearnerReservationStatusFilter.active,
+        ),
+        isTrue,
+        reason: '$status should be active.',
+      );
+    }
 
-    expect(
-      reservationMatchesStatusFilter(
-        cancelled,
-        LearnerReservationStatusFilter.cancelled,
-      ),
-      isTrue,
-    );
-    expect(
-      reservationMatchesStatusFilter(
-        cancelled,
-        LearnerReservationStatusFilter.active,
-      ),
-      isFalse,
-    );
+    for (final status in const [
+      'CANCELLED',
+      'REJECTED',
+      'EXPIRED',
+      'NO_SHOW',
+      'FULFILLMENT_FAILED',
+    ]) {
+      final reservation = reservationWithStatus(status);
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.closed,
+        ),
+        isTrue,
+        reason: '$status should be closed.',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.active,
+        ),
+        isFalse,
+        reason: '$status should not be active.',
+      );
+    }
+  });
+
+  test('each status has the expected tab coverage', () {
+    const activeStatuses = {
+      'PENDING',
+      'AWAITING_LEARNER_CONFIRMATION',
+      'AWAITING_SUPPLIER_CONFIRMATION',
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    };
+    const closedStatuses = {
+      'CANCELLED',
+      'REJECTED',
+      'EXPIRED',
+      'NO_SHOW',
+      'FULFILLMENT_FAILED',
+    };
+    const statuses = {...activeStatuses, ...closedStatuses, 'COMPLETED'};
+
+    for (final status in statuses) {
+      final reservation = reservationWithStatus(status);
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.all,
+        ),
+        isTrue,
+        reason: 'All should include $status.',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.active,
+        ),
+        activeStatuses.contains(status),
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.pending,
+        ),
+        status == 'PENDING' || status == 'AWAITING_SUPPLIER_CONFIRMATION',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.accepted,
+        ),
+        status == 'ACCEPTED',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.completed,
+        ),
+        status == 'COMPLETED',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.closed,
+        ),
+        closedStatuses.contains(status),
+      );
+    }
   });
 
   test('reservationStatusLabel maps missed pickup expiry', () {

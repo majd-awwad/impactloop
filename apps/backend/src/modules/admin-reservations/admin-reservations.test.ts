@@ -8,6 +8,7 @@ import { hashPassword } from '../../utils/password.js';
 import {
   getAdminDeliveryById,
   listAdminDeliveries,
+  reopenAdminDeliveryDriverAssignment,
 } from '../admin-deliveries/admin-deliveries.service.js';
 import {
   getAdminReservationById,
@@ -19,6 +20,7 @@ const TEST_MARKER = '[test-admin-reservations-deliveries]';
 type TestContext = {
   learnerId: string;
   supplierId: string;
+  adminId: string;
   driverProfileId: string;
   categoryId: string;
   locationId: string;
@@ -34,6 +36,7 @@ type TestContext = {
 const ctx: TestContext = {
   learnerId: '',
   supplierId: '',
+  adminId: '',
   driverProfileId: '',
   categoryId: '',
   locationId: '',
@@ -48,7 +51,7 @@ const ctx: TestContext = {
 
 async function createUser(input: {
   suffix: string;
-  role: 'LEARNER' | 'SUPPLIER' | 'DRIVER';
+  role: 'LEARNER' | 'SUPPLIER' | 'DRIVER' | 'ADMIN';
 }) {
   const passwordHash = await hashPassword('TestPassword123!');
   const user = await prisma.user.create({
@@ -144,26 +147,43 @@ async function createReservation(materialId: string, withDelivery: boolean) {
 async function createDelivery(
   reservationId: string,
   status: DeliveryStatus = 'DRIVER_ASSIGNED',
+  options: {
+    markPickupProgress?: boolean;
+    createAssignment?: boolean;
+    driverProfileId?: string;
+  } = {},
 ) {
+  const markPickupProgress = options.markPickupProgress ?? true;
+  const assignedDriverProfileId = options.driverProfileId ?? ctx.driverProfileId;
   const delivery = await prisma.delivery.create({
     data: {
       reservationId,
       pickupLocationId: ctx.locationId,
       dropoffLocationId: ctx.locationId,
       requestedByUserId: ctx.learnerId,
-      assignedDriverProfileId: ctx.driverProfileId,
+      assignedDriverProfileId,
       status,
       assignedAt: new Date(),
-      arrivedPickupAt: new Date(),
-      pickedUpAt: new Date(),
+      arrivedPickupAt: markPickupProgress ? new Date() : null,
+      pickedUpAt: markPickupProgress ? new Date() : null,
     },
   });
   ctx.deliveryIds.push(delivery.id);
 
+  if (options.createAssignment) {
+    await prisma.deliveryAssignment.create({
+      data: {
+        deliveryId: delivery.id,
+        driverProfileId: assignedDriverProfileId,
+        status: 'ACTIVE',
+      },
+    });
+  }
+
   await prisma.deliveryLocationPing.create({
     data: {
       deliveryId: delivery.id,
-      driverProfileId: ctx.driverProfileId,
+      driverProfileId: assignedDriverProfileId,
       latitude: 31.9038,
       longitude: 35.2034,
       capturedAt: new Date(),
@@ -195,10 +215,12 @@ describe('admin reservations and deliveries monitoring', () => {
     const learner = await createUser({ suffix: 'learner', role: 'LEARNER' });
     const supplier = await createUser({ suffix: 'supplier', role: 'SUPPLIER' });
     const driver = await createUser({ suffix: 'driver', role: 'DRIVER' });
+    const admin = await createUser({ suffix: 'admin', role: 'ADMIN' });
 
     ctx.learnerId = learner.id;
     ctx.supplierId = supplier.id;
     ctx.driverProfileId = driver.driverProfile!.id;
+    ctx.adminId = admin.id;
 
     const materialWithDelivery = await createMaterial(
       ctx.supplierId,
@@ -221,12 +243,18 @@ describe('admin reservations and deliveries monitoring', () => {
     ctx.reservationWithDeliveryId = reservationWithDelivery.id;
     ctx.reservationWithoutDeliveryId = reservationWithoutDelivery.id;
 
-    const delivery = await createDelivery(reservationWithDelivery.id);
+    const delivery = await createDelivery(reservationWithDelivery.id, 'PICKED_UP', {
+      markPickupProgress: true,
+      createAssignment: true,
+    });
     ctx.deliveryId = delivery.id;
   });
 
   after(async () => {
     if (ctx.deliveryIds.length) {
+      await prisma.deliveryAssignment.deleteMany({
+        where: { deliveryId: { in: ctx.deliveryIds } },
+      });
       await prisma.deliveryLocationPing.deleteMany({
         where: { deliveryId: { in: ctx.deliveryIds } },
       });
@@ -251,6 +279,9 @@ describe('admin reservations and deliveries monitoring', () => {
       });
     }
     if (ctx.userIds.length) {
+      await prisma.notification.deleteMany({
+        where: { userId: { in: ctx.userIds } },
+      });
       await prisma.user.deleteMany({ where: { id: { in: ctx.userIds } } });
     }
   });
@@ -312,6 +343,97 @@ describe('admin reservations and deliveries monitoring', () => {
     assert.ok(detail.pickup.location.label);
     assert.ok(detail.dropoff.learnerName);
     assert.ok(detail.driver);
+    assert.equal(detail.canReopenDriverAssignment, false);
+  });
+
+  test('admin can reopen a pre-pickup assigned delivery to the driver pool', async () => {
+    const reopenDriver = await createUser({
+      suffix: 'reopen-driver',
+      role: 'DRIVER',
+    });
+    const reopenDriverProfileId = reopenDriver.driverProfile!.id;
+
+    const material = await createMaterial(
+      ctx.supplierId,
+      `${TEST_MARKER} Reopen Assigned`,
+    );
+    const reservation = await createReservation(material.id, true);
+    const delivery = await createDelivery(reservation.id, 'DRIVER_ASSIGNED', {
+      markPickupProgress: false,
+      createAssignment: true,
+      driverProfileId: reopenDriverProfileId,
+    });
+
+    await prisma.driverProfile.update({
+      where: { id: reopenDriverProfileId },
+      data: { availability: 'ON_DELIVERY' },
+    });
+
+    const result = await reopenAdminDeliveryDriverAssignment(
+      delivery.id,
+      ctx.adminId,
+    );
+
+    assert.equal(result.status, 'WAITING_FOR_DRIVER');
+    assert.equal(result.driver, null);
+    assert.equal(result.assignedAt, null);
+    assert.equal(result.canReopenDriverAssignment, false);
+
+    const storedDelivery = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+      select: {
+        status: true,
+        assignedDriverProfileId: true,
+        assignedAt: true,
+        reservation: { select: { status: true, quantityRequested: true } },
+      },
+    });
+    assert.equal(storedDelivery.status, 'WAITING_FOR_DRIVER');
+    assert.equal(storedDelivery.assignedDriverProfileId, null);
+    assert.equal(storedDelivery.assignedAt, null);
+    assert.equal(storedDelivery.reservation.status, 'ACCEPTED');
+    assert.equal(Number(storedDelivery.reservation.quantityRequested), 1);
+
+    const assignment = await prisma.deliveryAssignment.findFirstOrThrow({
+      where: { deliveryId: delivery.id },
+      select: { status: true, releasedAt: true, releaseReason: true },
+    });
+    assert.equal(assignment.status, 'RELEASED');
+    assert.ok(assignment.releasedAt);
+    assert.equal(
+      assignment.releaseReason,
+      'Admin reopened delivery to driver pool',
+    );
+
+    const driver = await prisma.driverProfile.findUniqueOrThrow({
+      where: { id: reopenDriverProfileId },
+      select: { availability: true, userId: true },
+    });
+    assert.equal(driver.availability, 'AVAILABLE');
+
+    const notification = await prisma.notification.findFirst({
+      where: {
+        userId: driver.userId,
+        relatedEntityType: 'DELIVERY',
+        relatedEntityId: delivery.id,
+        notificationType: 'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN',
+      },
+    });
+    assert.ok(notification);
+  });
+
+  test('admin cannot reopen a delivery once pickup has started', async () => {
+    await assert.rejects(
+      () => reopenAdminDeliveryDriverAssignment(ctx.deliveryId, ctx.adminId),
+      (error) => {
+        assert.equal((error as { code?: string }).code, 'CONFLICT');
+        assert.match(
+          (error as Error).message,
+          /Pickup has already started/i,
+        );
+        return true;
+      },
+    );
   });
 
   test('filters and pagination work without 500 on missing optional relations', async () => {
@@ -329,7 +451,7 @@ describe('admin reservations and deliveries monitoring', () => {
       page: 1,
       limit: 20,
       assignment: 'ASSIGNED',
-      status: 'DRIVER_ASSIGNED',
+      status: 'PICKED_UP',
       search: TEST_MARKER,
     });
     assert.ok(deliveries.items.some((item) => item.id === ctx.deliveryId));

@@ -38,43 +38,25 @@ class AuthUiPalette {
   final Color border;
   final Color borderStrong;
 
-  static final AuthUiPalette light = AuthUiPalette(
-    background: AppThemeColors.light.pageBackground,
-    surface: AppThemeColors.light.surface,
-    surfaceElevated: AppThemeColors.light.surfaceElevated,
-    panelDark: AppThemeColors.dark.panelSurface,
-    panelDark2: AppThemeColors.dark.panelSurfaceAlt,
-    primary: AppThemeColors.light.primary,
-    primarySoft: AppThemeColors.light.primarySoft,
-    accentMint: AppThemeColors.light.accentMint,
-    accentAmber: AppThemeColors.light.accentAmber,
-    textPrimary: AppThemeColors.light.textPrimary,
-    textSecondary: AppThemeColors.light.textSecondary,
-    textMuted: AppThemeColors.light.textMuted,
-    textOnPrimary: AppThemeColors.light.textOnPrimary,
-    border: AppThemeColors.light.borderSubtle,
-    borderStrong: AppThemeColors.light.borderStrong,
-  );
-
-  static final AuthUiPalette dark = AuthUiPalette(
-    background: AppThemeColors.dark.pageBackground,
-    surface: AppThemeColors.dark.surface,
-    surfaceElevated: AppThemeColors.dark.surfaceElevated,
-    panelDark: AppThemeColors.dark.panelSurface,
-    panelDark2: AppThemeColors.dark.panelSurfaceAlt,
-    primary: AppThemeColors.dark.primary,
-    primarySoft: AppThemeColors.dark.primarySoft,
-    accentMint: AppThemeColors.dark.accentMint,
-    accentAmber: AppThemeColors.dark.accentAmber,
-    textPrimary: AppThemeColors.dark.textPrimary,
-    textSecondary: AppThemeColors.dark.textSecondary,
-    textMuted: AppThemeColors.dark.textMuted,
-    textOnPrimary: AppThemeColors.dark.textOnPrimary,
-    border: AppThemeColors.dark.borderSubtle,
-    borderStrong: AppThemeColors.dark.borderStrong,
-  );
-
   static AuthUiPalette of(BuildContext context) {
-    return Theme.of(context).brightness == Brightness.dark ? dark : light;
+    final colors = AppThemeColors.of(context);
+
+    return AuthUiPalette(
+      background: colors.pageBackground,
+      surface: colors.cardSurface,
+      surfaceElevated: colors.surfaceElevated,
+      panelDark: colors.panelSurface,
+      panelDark2: colors.panelSurfaceAlt,
+      primary: colors.primary,
+      primarySoft: colors.primarySoft,
+      accentMint: colors.primary,
+      accentAmber: colors.primaryHover,
+      textPrimary: colors.textPrimary,
+      textSecondary: colors.textSecondary,
+      textMuted: colors.textMuted,
+      textOnPrimary: colors.textOnPrimary,
+      border: colors.borderSubtle,
+      borderStrong: colors.borderStrong,
+    );
   }
 }

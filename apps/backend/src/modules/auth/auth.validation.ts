@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { bodyEmailSchema } from '../../utils/zod-helpers.js';
+import { optionalLearnerInterestsFieldSchema } from '../learner-home/learner-interests.validation.js';
 import {
   isBlockedBecomeSupplierType,
   isPersonalBecomeSupplierType,
@@ -12,7 +13,7 @@ export const PUBLIC_SIGNUP_ROLES = ['LEARNER', 'SUPPLIER'] as const;
 const learnerProfileSchema = z.object({
   learnerType: z.string().trim().min(1).max(100),
   skillLevel: z.string().trim().min(1).max(100),
-  interests: z.array(z.string().trim().min(1).max(100)).optional(),
+  interests: optionalLearnerInterestsFieldSchema,
   bio: z.string().trim().max(2000).optional(),
 });
 

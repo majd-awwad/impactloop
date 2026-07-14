@@ -6,6 +6,23 @@ import 'package:frontend/features/reservations/presentation/learner_reservation_
 
 void main() {
   group('PreferredWindowDraft', () {
+    test('isBlank is true only when no date or times are selected', () {
+      expect(PreferredWindowDraft().isBlank, isTrue);
+      expect(PreferredWindowDraft(date: DateTime(2026, 7, 5)).isBlank, isFalse);
+      expect(
+        PreferredWindowDraft(
+          startTime: const TimeOfDay(hour: 16, minute: 0),
+        ).isBlank,
+        isFalse,
+      );
+      expect(
+        PreferredWindowDraft(
+          endTime: const TimeOfDay(hour: 18, minute: 0),
+        ).isBlank,
+        isFalse,
+      );
+    });
+
     test('validationError requires date, start, and end', () {
       final draft = PreferredWindowDraft();
 
@@ -53,14 +70,11 @@ void main() {
     });
   });
 
-  testWidgets('PreferredWindowInput retains values when parent updates state',
-      (tester) async {
+  testWidgets('PreferredWindowInput retains values when parent updates state', (
+    tester,
+  ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: _PreferredWindowInputHarness(),
-        ),
-      ),
+      MaterialApp(home: Scaffold(body: _PreferredWindowInputHarness())),
     );
 
     expect(find.text('Add another window'), findsNothing);
@@ -81,29 +95,32 @@ void main() {
     );
   });
 
-  test('resolveLearnerConfirmation payload includes deliveryWindow UTC times', () {
-    final start = DateTime(2026, 7, 5, 16, 0);
-    final end = DateTime(2026, 7, 5, 18, 0);
+  test(
+    'resolveLearnerConfirmation payload includes deliveryWindow UTC times',
+    () {
+      final start = DateTime(2026, 7, 5, 16, 0);
+      final end = DateTime(2026, 7, 5, 18, 0);
 
-    final payload = <String, dynamic>{
-      'action': 'SUBMIT_DELIVERY_WINDOW',
-      'deliveryWindow': {
-        'start': start.toUtc().toIso8601String(),
-        'end': end.toUtc().toIso8601String(),
-      },
-    };
+      final payload = <String, dynamic>{
+        'action': 'SUBMIT_DELIVERY_WINDOW',
+        'deliveryWindow': {
+          'start': start.toUtc().toIso8601String(),
+          'end': end.toUtc().toIso8601String(),
+        },
+      };
 
-    expect(payload['action'], 'SUBMIT_DELIVERY_WINDOW');
-    expect(payload['deliveryWindow'], isA<Map<String, dynamic>>());
-    expect(
-      (payload['deliveryWindow'] as Map<String, dynamic>)['start'],
-      start.toUtc().toIso8601String(),
-    );
-    expect(
-      (payload['deliveryWindow'] as Map<String, dynamic>)['end'],
-      end.toUtc().toIso8601String(),
-    );
-  });
+      expect(payload['action'], 'SUBMIT_DELIVERY_WINDOW');
+      expect(payload['deliveryWindow'], isA<Map<String, dynamic>>());
+      expect(
+        (payload['deliveryWindow'] as Map<String, dynamic>)['start'],
+        start.toUtc().toIso8601String(),
+      );
+      expect(
+        (payload['deliveryWindow'] as Map<String, dynamic>)['end'],
+        end.toUtc().toIso8601String(),
+      );
+    },
+  );
 }
 
 class _PreferredWindowInputHarness extends StatefulWidget {

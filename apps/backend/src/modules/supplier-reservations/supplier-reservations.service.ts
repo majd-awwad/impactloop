@@ -64,6 +64,7 @@ import {
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -228,15 +229,14 @@ const mapNoShowReportSummary = (
 };
 
 export const mapSupplierReservation = (
-  reservation: supplierReservationsRepository.SupplierReservationRecord,
+  reservation: supplierReservationsRepository.SupplierReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
   const directDelivery = reservation.deliveries[0] ?? null;
-  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
-  const latestDelivery = directDelivery ?? groupDelivery;
+  const latestDelivery = directDelivery;
   const hasDelivery = latestDelivery != null;
   const deliveryCount = hasDelivery ? 1 : 0;
-  const groupItemCount = reservation.deliveryGroup?.reservations.length ?? 0;
+  const groupItemCount = 0;
   const followUp = resolveReservationFollowUp({
     status: reservation.status,
     pickupWindowStart: reservation.pickupWindowStart,
@@ -338,13 +338,11 @@ export const mapSupplierReservation = (
           status: latestDelivery.status,
         }
       : null,
-    deliveryGroupId: reservation.deliveryGroupId,
-    groupedDelivery: reservation.deliveryGroupId != null,
+    deliveryGroupId: null,
+    groupedDelivery: false,
     groupItemCount: groupItemCount > 0 ? groupItemCount : null,
     combinedDeliveryLabel:
-      reservation.deliveryGroupId != null && groupItemCount > 0
-        ? 'Combined delivery'
-        : null,
+      groupItemCount > 0 ? 'Combined delivery' : null,
     supplierHandoverCode:
       reservation.status === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'DELIVERY' &&
@@ -586,17 +584,6 @@ export const acceptSupplierReservation = async (
       );
     }
 
-    const learnerDeliveryWindows = mapPreferredWindowsForResponse(
-      existing.learnerPreferredDeliveryWindows,
-    );
-
-    if (!learnerDeliveryWindows.length) {
-      throw new AppError(
-        'Learner delivery windows are required.',
-        400,
-        'VALIDATION_ERROR',
-      );
-    }
   }
 
   const result = await supplierReservationsRepository.acceptSupplierReservation({
@@ -679,6 +666,7 @@ export const declineSupplierReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('PENDING', 'REJECTED');
   void notifyReservationDeclined(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
@@ -727,6 +715,7 @@ export const completeSupplierReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
   return mapSupplierReservation(result.reservation);
 };
 
@@ -866,6 +855,7 @@ export const cancelSupplierAcceptedReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'CANCELLED');
   return mapSupplierReservation(result.reservation);
 };
 
@@ -929,6 +919,7 @@ export const submitSupplierNoShowReport = async (
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'NO_SHOW');
   return mapSupplierReservation(reservation);
 };
 
@@ -968,6 +959,10 @@ export const reportSupplierNoDriverAvailable = async (
         'CONFLICT',
       );
     case 'CREATED':
+      invalidateLearnerHomeForReservationTransition(
+        'ACCEPTED',
+        'AWAITING_RESOLUTION',
+      );
       break;
     default:
       throw new AppError('Unable to submit no-driver report.', 500, 'INTERNAL_ERROR');

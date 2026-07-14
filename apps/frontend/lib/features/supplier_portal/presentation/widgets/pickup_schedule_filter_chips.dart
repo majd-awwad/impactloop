@@ -55,6 +55,8 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusStyle = style.resolve(context);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -66,10 +68,13 @@ class _FilterChip extends StatelessWidget {
             vertical: 6,
           ),
           decoration: BoxDecoration(
-            color: isSelected ? style.selectedBackground : style.background,
+            color: isSelected
+                ? statusStyle.selectedBackground
+                : statusStyle.background,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
-              color: isSelected ? style.selectedBorder : style.border,
+              color:
+                  isSelected ? statusStyle.selectedBorder : statusStyle.border,
             ),
           ),
           child: Text(
@@ -77,8 +82,8 @@ class _FilterChip extends StatelessWidget {
             style: context.supplierChip().copyWith(
               fontSize: 13,
               color: isSelected
-                  ? style.foreground
-                  : style.foreground.withValues(alpha: 0.78),
+                  ? statusStyle.foreground
+                  : statusStyle.foreground.withValues(alpha: 0.78),
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             ),
           ),

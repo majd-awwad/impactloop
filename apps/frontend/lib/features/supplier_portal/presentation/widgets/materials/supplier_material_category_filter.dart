@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../app/theme/app_theme_colors.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../theme/supplier_theme_extension.dart';
-import 'supplier_my_materials_colors.dart';
 import 'supplier_responsive_chip_row.dart';
 
 class SupplierMaterialCategoryFilter extends StatelessWidget {
@@ -24,7 +24,8 @@ class SupplierMaterialCategoryFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final colors = context.supplierColors;
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     if (categories.isEmpty) {
       return const SizedBox.shrink();
@@ -35,7 +36,7 @@ class SupplierMaterialCategoryFilter extends StatelessWidget {
       children: [
         Text(
           l.filterCategory,
-          style: context.supplierLabel().copyWith(
+          style: textTheme.labelLarge?.copyWith(
             color: colors.textSecondary,
             fontWeight: FontWeight.w700,
           ),
@@ -78,7 +79,8 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = SupplierMyMaterialsColors.statTotal(context);
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Material(
       color: Colors.transparent,
@@ -88,45 +90,24 @@ class _CategoryChip extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 14,
-            vertical: 8,
+            horizontal: AppSpacing.md - AppSpacing.xs,
+            vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: selected
-                ? SupplierMyMaterialsColors.chipSelectedBackground(
-                    context,
-                    accent,
-                  )
-                : SupplierMyMaterialsColors.chipUnselectedBackground(
-                    context,
-                    accent,
-                  ),
+            color: selected ? colors.primarySoft : colors.surfaceMuted,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
               color: selected
-                  ? SupplierMyMaterialsColors.chipSelectedBorder(
-                      context,
-                      accent,
-                    )
-                  : SupplierMyMaterialsColors.chipUnselectedBorder(
-                      context,
-                      accent,
-                    ),
-              width: selected ? 1.5 : 1,
+                  ? colors.primary.withValues(alpha: 0.34)
+                  : colors.borderSubtle,
             ),
           ),
           child: Text(
             '$label ($count)',
             softWrap: false,
-            style: context.supplierBody().copyWith(
-              color: selected
-                  ? SupplierMyMaterialsColors.chipSelectedText(context, accent)
-                  : SupplierMyMaterialsColors.chipUnselectedText(
-                      context,
-                      accent,
-                    ),
+            style: textTheme.labelMedium?.copyWith(
+              color: selected ? colors.primary : colors.textSecondary,
               fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              fontSize: 13,
             ),
           ),
         ),

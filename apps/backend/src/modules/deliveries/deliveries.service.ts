@@ -102,7 +102,29 @@ export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
 
 export const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
 
-const deliveryInclude = {
+const deliveryScalarSelect = {
+  id: true,
+  reservationId: true,
+  status: true,
+  requestedAt: true,
+  assignedAt: true,
+  arrivedPickupAt: true,
+  pickedUpAt: true,
+  onTheWayAt: true,
+  arrivedDropoffAt: true,
+  deliveredAt: true,
+  cancelledAt: true,
+  failedAt: true,
+  learnerNote: true,
+  driverNote: true,
+  failureReason: true,
+  supplierHandoverCodeHash: true,
+  learnerDeliveryCodeHash: true,
+  createdAt: true,
+} satisfies Prisma.DeliverySelect;
+
+const deliverySelect = {
+  ...deliveryScalarSelect,
   reservation: {
     select: {
       id: true,
@@ -155,11 +177,20 @@ const deliveryInclude = {
     orderBy: { capturedAt: 'desc' as const },
     take: 1,
   },
-} satisfies Prisma.DeliveryInclude;
+} satisfies Prisma.DeliverySelect;
 
 export type DeliveryRecord = Prisma.DeliveryGetPayload<{
-  include: typeof deliveryInclude;
+  select: typeof deliverySelect;
 }>;
+
+const loadDeliveryRecord = async (
+  deliveryId: string,
+): Promise<DeliveryRecord> => {
+  return prisma.delivery.findUniqueOrThrow({
+    where: { id: deliveryId },
+    select: deliverySelect,
+  });
+};
 
 const resolveSupplierDisplayName = (
   owner: DeliveryRecord['reservation']['owner'],
@@ -319,7 +350,7 @@ export const requestDeliveryForReservation = async (
       | 'INVALID_STATUS'
       | 'DELIVERY_NOT_ALLOWED'
       | 'ACTIVE_DELIVERY_EXISTS';
-    delivery?: DeliveryRecord;
+    deliveryId?: string;
   }>>>;
 
   try {
@@ -329,12 +360,11 @@ export const requestDeliveryForReservation = async (
           id: reservationId,
           requesterId: learnerId,
         },
-        include: {
-          material: {
-            include: {
-              location: true,
-            },
-          },
+        select: {
+          id: true,
+          status: true,
+          fulfillmentMethod: true,
+          materialId: true,
         },
       });
 
@@ -350,8 +380,33 @@ export const requestDeliveryForReservation = async (
         return { outcome: 'INVALID_STATUS' as const };
       }
 
-      if (!reservation.material.deliveryAllowed) {
+      const material = await tx.material.findUnique({
+        where: { id: reservation.materialId },
+        select: {
+          deliveryAllowed: true,
+          locationId: true,
+        },
+      });
+
+      if (!material?.deliveryAllowed) {
         return { outcome: 'DELIVERY_NOT_ALLOWED' as const };
+      }
+
+      const materialLocation = await tx.location.findUnique({
+        where: { id: material.locationId },
+        select: {
+          country: true,
+          city: true,
+          area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          isApproximate: true,
+        },
+      });
+
+      if (!materialLocation) {
+        return { outcome: 'NOT_FOUND' as const };
       }
 
       const activeDeliveryCount = await tx.delivery.count({
@@ -367,14 +422,14 @@ export const requestDeliveryForReservation = async (
 
       const pickupLocation = await tx.location.create({
         data: {
-          country: reservation.material.location.country,
-          city: reservation.material.location.city,
-          area: reservation.material.location.area,
-          addressLine: reservation.material.location.addressLine,
-          latitude: reservation.material.location.latitude,
-          longitude: reservation.material.location.longitude,
+          country: materialLocation.country,
+          city: materialLocation.city,
+          area: materialLocation.area,
+          addressLine: materialLocation.addressLine,
+          latitude: materialLocation.latitude,
+          longitude: materialLocation.longitude,
           visibility: 'PRIVATE',
-          isApproximate: reservation.material.location.isApproximate,
+          isApproximate: materialLocation.isApproximate,
           locationType: 'DELIVERY_PICKUP',
         },
       });
@@ -415,10 +470,10 @@ export const requestDeliveryForReservation = async (
             },
           },
         },
-        include: deliveryInclude,
+        select: { id: true },
       });
 
-      return { outcome: 'CREATED' as const, delivery };
+      return { outcome: 'CREATED' as const, deliveryId: delivery.id };
     });
   } catch (error) {
     if (isPrismaCode(error, 'P2002')) {
@@ -449,9 +504,10 @@ export const requestDeliveryForReservation = async (
         });
       }
 
-      await notifyNewDriverJob(result.delivery!.id);
+      const delivery = await loadDeliveryRecord(result.deliveryId!);
+      await notifyNewDriverJob(delivery.id);
 
-      return mapLearnerDelivery(result.delivery!);
+      return mapLearnerDelivery(delivery);
     }
     case 'NOT_FOUND':
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
@@ -481,7 +537,7 @@ export const requestDeliveryForReservation = async (
 export const listMyDeliveries = async (learnerId: string) => {
   let deliveries = await prisma.delivery.findMany({
     where: { requestedByUserId: learnerId },
-    include: deliveryInclude,
+    select: deliverySelect,
     orderBy: { createdAt: 'desc' },
   });
 
@@ -493,7 +549,7 @@ export const listMyDeliveries = async (learnerId: string) => {
     await escalateStaleAssignedDriverPickupsByIds(reservationIds);
     deliveries = await prisma.delivery.findMany({
       where: { requestedByUserId: learnerId },
-      include: deliveryInclude,
+      select: deliverySelect,
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -520,7 +576,7 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
       id: deliveryId,
       requestedByUserId: learnerId,
     },
-    include: deliveryInclude,
+    select: deliverySelect,
   });
 
   if (!delivery) {
@@ -534,7 +590,7 @@ export const getMyDelivery = async (learnerId: string, deliveryId: string) => {
       id: deliveryId,
       requestedByUserId: learnerId,
     },
-    include: deliveryInclude,
+    select: deliverySelect,
   });
 
   if (!delivery) {
@@ -562,7 +618,7 @@ export const getLearnerDeliveryTracking = async (
       id: deliveryId,
       requestedByUserId: learnerId,
     },
-    include: deliveryInclude,
+    select: deliverySelect,
   });
 
   if (!delivery) {

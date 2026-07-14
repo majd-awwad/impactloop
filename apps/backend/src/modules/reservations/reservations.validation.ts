@@ -42,22 +42,7 @@ export const createReservationSchema = z
   })
   .superRefine((value, ctx) => {
     if (value.fulfillmentMethod === 'PICKUP') {
-      if (!value.learnerPreferredPickupWindows?.length) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'At least one preferred pickup window is required.',
-          path: ['learnerPreferredPickupWindows'],
-        });
-      }
       return;
-    }
-
-    if (!value.learnerPreferredDeliveryWindows?.length) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'At least one preferred delivery window is required.',
-        path: ['learnerPreferredDeliveryWindows'],
-      });
     }
 
     if (!value.deliveryAddressText?.trim()) {
@@ -104,14 +89,6 @@ export const reservationQuoteSchema = z
           code: 'custom',
           message: 'Drop-off city is required for delivery pricing.',
           path: ['dropoffCity'],
-        });
-      }
-
-      if (!value.learnerPreferredDeliveryWindows?.length) {
-        ctx.addIssue({
-          code: 'custom',
-          message: 'At least one preferred delivery window is required.',
-          path: ['learnerPreferredDeliveryWindows'],
         });
       }
     }

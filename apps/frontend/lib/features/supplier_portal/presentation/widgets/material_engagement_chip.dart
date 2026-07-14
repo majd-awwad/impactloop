@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_theme_colors.dart';
+
 enum MaterialEngagementChipTone { views, likes, neutral }
 
 class MaterialEngagementChip extends StatelessWidget {
@@ -16,26 +20,32 @@ class MaterialEngagementChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final palette = switch (tone) {
       MaterialEngagementChipTone.views => (
-          background: const Color(0xFF0F4C5C).withValues(alpha: 0.82),
-          foreground: Colors.white,
+          background: colors.cardSurface.withValues(alpha: 0.90),
+          foreground: colors.primary,
         ),
       MaterialEngagementChipTone.likes => (
-          background: const Color(0xFFBE185D).withValues(alpha: 0.88),
-          foreground: Colors.white,
+          background: colors.cardSurface.withValues(alpha: 0.90),
+          foreground: colors.primary,
         ),
       MaterialEngagementChipTone.neutral => (
-          background: Colors.black.withValues(alpha: 0.55),
-          foreground: Colors.white,
+          background: colors.cardSurface.withValues(alpha: 0.90),
+          foreground: colors.textSecondary,
         ),
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: palette.background,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: colors.borderSubtle),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -44,9 +54,8 @@ class MaterialEngagementChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '$count',
-            style: TextStyle(
+            style: textTheme.labelSmall?.copyWith(
               color: palette.foreground,
-              fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
           ),

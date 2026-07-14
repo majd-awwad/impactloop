@@ -7,7 +7,6 @@ import '../../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../theme/supplier_theme_extension.dart';
 import '../material_engagement_chip.dart';
-import 'supplier_my_materials_colors.dart';
 
 const supplierMaterialCardHeight = 440.0;
 
@@ -67,6 +66,7 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
     final hasImage = widget.imageUrl != null && widget.imageUrl!.trim().isNotEmpty;
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
@@ -83,14 +83,14 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
         curve: Curves.easeOutCubic,
         transform: Matrix4.translationValues(0, _hovered ? -2 : 0, 0),
         decoration: BoxDecoration(
-          borderRadius: AppRadius.xlAll,
+          borderRadius: AppRadius.lgAll,
           boxShadow: [
             BoxShadow(
               color: colors.cardShadow.withValues(
-                alpha: _hovered ? 0.16 : 0.07,
+                alpha: _hovered ? 0.14 : 0.08,
               ),
-              blurRadius: _hovered ? 18 : 10,
-              offset: Offset(0, _hovered ? 8 : 3),
+              blurRadius: _hovered ? 20 : 16,
+              offset: Offset(0, _hovered ? 10 : 6),
             ),
           ],
         ),
@@ -98,26 +98,20 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: AppRadius.xlAll,
+            borderRadius: AppRadius.lgAll,
             child: Ink(
               height: cardHeight,
               decoration: BoxDecoration(
-                color: colors.surfaceSolid.withValues(
-                  alpha: colors.isDark ? 0.78 : 1,
-                ),
-                borderRadius: AppRadius.xlAll,
-                border: Border.all(
-                  color: colors.isDark
-                      ? colors.border.withValues(alpha: 0.45)
-                      : colors.border,
-                ),
+                color: colors.surfaceSolid,
+                borderRadius: AppRadius.lgAll,
+                border: Border.all(color: colors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ClipRRect(
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
+                      top: Radius.circular(AppRadius.lg),
                     ),
                     child: SizedBox(
                       height: 160,
@@ -183,9 +177,8 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
                         children: [
                           Text(
                             widget.categoryLabel,
-                            style: context.supplierChip().copyWith(
-                              color: SupplierMyMaterialsColors.lightTeal,
-                              fontSize: 12,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colors.accent,
                               fontWeight: FontWeight.w700,
                             ),
                             maxLines: 1,
@@ -194,10 +187,9 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
                           const SizedBox(height: 6),
                           Text(
                             widget.title,
-                            style: context.supplierSectionTitle().copyWith(
+                            style: textTheme.titleMedium?.copyWith(
                               color: colors.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               height: 1.2,
                             ),
                             maxLines: 2,
@@ -225,17 +217,15 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
                           const SizedBox(height: AppSpacing.sm),
                           Text(
                             widget.quantityLabel,
-                            style: context.supplierBody().copyWith(
+                            style: textTheme.bodyMedium?.copyWith(
                               color: colors.textSecondary,
-                              fontSize: 13,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             widget.locationLabel,
-                            style: context.supplierBody().copyWith(
+                            style: textTheme.bodySmall?.copyWith(
                               color: colors.textMuted,
-                              fontSize: 12.5,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -243,9 +233,8 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
                           const SizedBox(height: 4),
                           Text(
                             widget.availabilityLabel,
-                            style: context.supplierBody().copyWith(
+                            style: textTheme.bodySmall?.copyWith(
                               color: colors.textMuted,
-                              fontSize: 12,
                             ),
                           ),
                           const Spacer(),
@@ -258,9 +247,8 @@ class _SupplierMaterialCardState extends State<SupplierMaterialCard> {
                                 if ((widget.viewsCount ?? 0) > 0)
                                   '${widget.viewsCount} views',
                               ].join(' · '),
-                              style: context.supplierBody().copyWith(
+                              style: textTheme.labelSmall?.copyWith(
                                 color: colors.textMuted,
-                                fontSize: 11.5,
                               ),
                             ),
                           if (widget.actions != null &&
@@ -292,17 +280,20 @@ class _CompactBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.62),
-        borderRadius: BorderRadius.circular(999),
+        color: colors.surfaceSolid.withValues(alpha: 0.86),
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: colors.border),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
+        style: textTheme.labelSmall?.copyWith(
+          color: colors.textPrimary,
           fontWeight: FontWeight.w700,
         ),
       ),

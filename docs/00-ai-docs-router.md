@@ -38,11 +38,13 @@ Read:
 - [04-api-conventions.md](04-api-conventions.md)
 - [backend/api-catalog.md](backend/api-catalog.md)
 - [backend/modules-map.md](backend/modules-map.md)
+- [backend/observability.md](backend/observability.md) if error handling, logging, or request correlation changed
 
 Update:
 
 - [backend/api-catalog.md](backend/api-catalog.md) if endpoint/request/response changed
 - [backend/modules-map.md](backend/modules-map.md) if module responsibilities changed
+- [backend/observability.md](backend/observability.md) if error handling, logging, or request correlation changed
 - [08-implementation-status.md](08-implementation-status.md) if feature ship status changed
 - Matching [features/](features/) and [flows/](flows/) doc when API or flow behavior changed (see [Feature & flow docs](#feature--flow-docs))
 
@@ -91,7 +93,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Feature | Feature doc | Flow doc(s) | Ship status (summary) |
 |---------|-------------|-------------|------------------------|
 | Roles and capabilities | [features/roles-and-capabilities.md](features/roles-and-capabilities.md) | — | Product framing; mixes current code status with planned capabilities |
-| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — forgot/reset UI and API exist; verification enforcement needs verification |
+| Auth | [features/auth.md](features/auth.md) | [flows/auth-flow.md](flows/auth-flow.md) | **Implemented for auth MVP** — login/register/refresh/logout/me, forgot/reset, role switch; email/phone verification not implemented; change-password does not revoke sessions |
 | Material discovery | [features/material-discovery.md](features/material-discovery.md) | [flows/material-discovery-flow.md](flows/material-discovery-flow.md) | **Implemented** |
 | Supplier portal | [features/supplier-portal.md](features/supplier-portal.md) | [flows/supplier-material-listing-flow.md](flows/supplier-material-listing-flow.md), [flows/supplier-reservation-flow.md](flows/supplier-reservation-flow.md) | **Partial** — material read/create/edit/delete; supplier reservations; delivery complete guarded backend-only |
 | Learning hub | [features/learning-hub.md](features/learning-hub.md) | [flows/learning-hub-browse-flow.md](flows/learning-hub-browse-flow.md) | **Partial** — read path API-backed (`/learning`, `/learning/:id`, Home spotlight); add-draft submit, admin moderation, server-side page navigation, and learner project likes/saves/follows/reviews wired; legacy mock file retained for sample catalog only |
@@ -104,7 +106,7 @@ Code-derived narratives. Status labels match [08-implementation-status.md](08-im
 | Locations | [features/locations.md](features/locations.md) | — | **Partial** — forward/reverse geocode + profile/material usage; public redaction **Needs verification** |
 | Invitations | [features/invitations.md](features/invitations.md) | [flows/invitation-flow.md](flows/invitation-flow.md) | **Implemented** — admin UI + accept UI exist; email delivery depends on provider |
 | Landing | [features/landing.md](features/landing.md) | — | **Implemented** — static UI; no API |
-| Home (learner) | [features/home-learner.md](features/home-learner.md) | — | **Partial** — suggested materials + learning spotlight **API-backed** |
+| Home (learner) | [features/home-learner.md](features/home-learner.md) | `GET /api/learner/home` | **Partial** — personalized home feed (7 sections) **API-backed** |
 
 ### Phase 2C — gaps and open questions
 

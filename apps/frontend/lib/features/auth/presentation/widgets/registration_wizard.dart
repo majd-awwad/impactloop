@@ -9,6 +9,9 @@ import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../supplier_portal/application/supplier_verification_access.dart';
 import '../../../supplier_portal/data/supplier_verification_api.dart';
+import '../../../profile/application/profile_providers.dart';
+import '../../../profile/data/models/learner_interest_options.dart';
+import '../../../profile/presentation/widgets/learner_interest_chip_picker.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
 import '../../application/registration_draft_notifier.dart';
@@ -312,12 +315,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         break;
 
       case RegistrationWizardStep.interests:
-        final interests = {..._selectedInterests};
-        final custom = _customInterestController.text.trim();
-        if (custom.isNotEmpty) {
-          interests.add(custom);
-        }
-        draftNotifier.setOnboardingInterests(interests.toList());
+        draftNotifier.setOnboardingInterests(_currentInterestSelection());
         break;
 
       case RegistrationWizardStep.goals:
@@ -446,18 +444,21 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     await ref.read(authControllerProvider.notifier).refreshCurrentUser();
   }
 
+  List<String> _currentInterestSelection() {
+    return mergeInterestSelection(
+      selectedKeys: _selectedInterests,
+      customInterestText: _customInterestController.text,
+    );
+  }
+
   void _syncAllProfiles() {
     final draftNotifier = ref.read(registrationDraftProvider.notifier);
-    final interests = {..._selectedInterests};
-    final customInterest = _customInterestController.text.trim();
-    if (customInterest.isNotEmpty) {
-      interests.add(customInterest);
-    }
+    final interests = _currentInterestSelection();
 
     draftNotifier.setOnboardingGoals(_selectedGoals.toList());
 
     if (_needsLearnerProfile) {
-      draftNotifier.setOnboardingInterests(interests.toList());
+      draftNotifier.setOnboardingInterests(interests);
       if (_learnerType != null && _skillLevel != null) {
         if (_intent == RegistrationIntent.both && _supplierType == null) {
           _supplierType = suggestedSupplierTypeForLearnerType(_learnerType);
@@ -466,7 +467,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           LearnerProfileDraft(
             learnerType: _learnerType!,
             skillLevel: _skillLevel!,
-            interests: interests.toList(),
+            interests: interests,
           ),
         );
       }
@@ -650,17 +651,6 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         _formError = 'Something went wrong. Please try again.';
       });
     }
-  }
-
-  void _toggleInterest(String interest) {
-    _clearErrors();
-    setState(() {
-      if (_selectedInterests.contains(interest)) {
-        _selectedInterests.remove(interest);
-      } else {
-        _selectedInterests.add(interest);
-      }
-    });
   }
 
   void _toggleGoal(String goal) {
@@ -1023,41 +1013,34 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildInterestsStep() {
-    final colors = AuthUiPalette.of(context);
+    final optionsAsync = ref.watch(learnerInterestOptionsProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Select any areas that fit your real interests. You can mix practical, creative, repair, study, and community topics.',
-          style: TextStyle(
-            fontSize: 13,
-            height: 1.45,
-            color: colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final interest in registrationInterestOptions)
-              AuthIntentChip(
-                label: interest,
-                isSelected: _selectedInterests.contains(interest),
-                onTap: () => _toggleInterest(interest),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        AuthTextField(
-          controller: _customInterestController,
-          label: 'Add another interest (optional)',
-          hint: 'Cooking tools, school projects, event decor, etc.',
-          textInputAction: TextInputAction.done,
-          onChanged: (_) => _clearErrors(),
-        ),
-      ],
+    return optionsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => LearnerInterestChipPicker(
+        options: fallbackLearnerInterestOptions,
+        selectedKeys: _selectedInterests,
+        onChanged: (value) => setState(() {
+          _selectedInterests
+            ..clear()
+            ..addAll(value);
+        }),
+        customInterestController: _customInterestController,
+        useAuthFields: true,
+        errorText: _formError,
+      ),
+      data: (options) => LearnerInterestChipPicker(
+        options: options,
+        selectedKeys: _selectedInterests,
+        onChanged: (value) => setState(() {
+          _selectedInterests
+            ..clear()
+            ..addAll(value);
+        }),
+        customInterestController: _customInterestController,
+        useAuthFields: true,
+        errorText: _formError,
+      ),
     );
   }
 
@@ -1408,7 +1391,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           _ReviewRow(label: 'Email', value: _emailController.text.trim()),
         ],
         if (interests.isNotEmpty)
-          _ReviewRow(label: 'Interests', value: interests.join(', ')),
+          _ReviewRow(
+            label: 'Interests',
+            value: interests.map(learnerInterestLabel).join(', '),
+          ),
         if (goals.isNotEmpty)
           _ReviewRow(label: 'Goals', value: goals.join(', ')),
         if (_isAddToExistingAccount && learnerLocation != null)

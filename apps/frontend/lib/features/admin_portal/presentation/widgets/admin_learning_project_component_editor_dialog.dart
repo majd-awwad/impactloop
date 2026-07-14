@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
 import '../../data/admin_learning_projects_api.dart';
@@ -178,7 +180,9 @@ class _AdminLearningProjectComponentEditorDialogState
       text: component.quantity.toString(),
     );
     _unitController = TextEditingController(text: component.unit);
-    _materialTypeController = TextEditingController(text: component.materialType);
+    _materialTypeController = TextEditingController(
+      text: component.materialType,
+    );
     _notesController = TextEditingController(text: component.notes ?? '');
     _keywordController = TextEditingController();
     _alternativeKeywordController = TextEditingController();
@@ -187,8 +191,9 @@ class _AdminLearningProjectComponentEditorDialogState
     _isRequired = component.isRequired;
     _canBeSubstituted = component.canBeSubstituted;
     _keywords = normalizeAdminComponentKeywords(component.searchKeywords);
-    _alternativeKeywords =
-        normalizeAdminComponentKeywords(component.alternativeKeywords);
+    _alternativeKeywords = normalizeAdminComponentKeywords(
+      component.alternativeKeywords,
+    );
   }
 
   @override
@@ -281,203 +286,199 @@ class _AdminLearningProjectComponentEditorDialogState
     final palette = context.adminPalette;
     final categoriesAsync = ref.watch(materialCategoriesProvider);
 
-    return AlertDialog(
+    return AppDialogShell(
       title: const Text('Edit component'),
+      maxWidth: 560,
+      closeEnabled: !_isSaving,
       content: SizedBox(
         width: 520,
         child: Form(
           key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Component name',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Component name is required.';
-                    }
-                    return null;
-                  },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Component name',
+                  border: OutlineInputBorder(),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _quantityController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: const InputDecoration(
-                          labelText: 'Quantity',
-                          border: OutlineInputBorder(),
-                        ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Component name is required.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _quantityController,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _unitController,
-                        decoration: const InputDecoration(
-                          labelText: 'Unit',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _componentRole,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Role',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'REQUIRED_MATERIAL',
-                      child: Text('Required material'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'OPTIONAL_MATERIAL',
-                      child: Text('Optional material'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'CONSUMABLE',
-                      child: Text('Consumable'),
-                    ),
-                    DropdownMenuItem(value: 'TOOL', child: Text('Tool')),
-                    DropdownMenuItem(
-                      value: 'ALTERNATIVE',
-                      child: Text('Alternative'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _componentRole = value);
-                  },
-                ),
-                const SizedBox(height: 12),
-                categoriesAsync.when(
-                  loading: () => const LinearProgressIndicator(),
-                  error: (error, _) => Text(
-                    'Could not load categories.',
-                    style: AdminTypography.pageSubtitle(palette),
-                  ),
-                  data: (categories) {
-                    final selectableCategories =
-                        materialSelectableCategories(categories);
-                    final selectedCategoryId = resolveSelectableCategoryId(
-                      categoryId: _categoryId,
-                      categories: categories,
-                    );
-
-                    return DropdownButtonFormField<String?>(
-                      value: selectedCategoryId,
-                      isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Material category',
+                        labelText: 'Quantity',
                         border: OutlineInputBorder(),
                       ),
-                      items: [
-                        const DropdownMenuItem<String?>(
-                          value: null,
-                          child: Text('None'),
-                        ),
-                        for (final MaterialCategory category
-                            in selectableCategories)
-                          DropdownMenuItem<String?>(
-                            value: category.id,
-                            child: Text(
-                              category.nameEn,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      onChanged: (value) => setState(() => _categoryId = value),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _materialTypeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Material type',
-                    border: OutlineInputBorder(),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                _KeywordEditor(
-                  label: 'Search keywords',
-                  controller: _keywordController,
-                  keywords: _keywords,
-                  onAdd: () => _addKeyword(
-                    controller: _keywordController,
-                    target: _keywords,
-                    update: (value) => _keywords = value,
-                  ),
-                  onRemove: (keyword) =>
-                      setState(() => _keywords.remove(keyword)),
-                ),
-                const SizedBox(height: 12),
-                _KeywordEditor(
-                  label: 'Alternative keywords',
-                  controller: _alternativeKeywordController,
-                  keywords: _alternativeKeywords,
-                  onAdd: () => _addKeyword(
-                    controller: _alternativeKeywordController,
-                    target: _alternativeKeywords,
-                    update: (value) => _alternativeKeywords = value,
-                  ),
-                  onRemove: (keyword) =>
-                      setState(() => _alternativeKeywords.remove(keyword)),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Required component'),
-                  value: _isRequired,
-                  onChanged: (value) => setState(() => _isRequired = value),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Allow alternatives'),
-                  value: _canBeSubstituted,
-                  onChanged: (value) =>
-                      setState(() => _canBeSubstituted = value),
-                ),
-                TextFormField(
-                  controller: _notesController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _errorMessage!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _unitController,
+                      decoration: const InputDecoration(
+                        labelText: 'Unit',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _componentRole,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Role',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'REQUIRED_MATERIAL',
+                    child: Text('Required material'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'OPTIONAL_MATERIAL',
+                    child: Text('Optional material'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'CONSUMABLE',
+                    child: Text('Consumable'),
+                  ),
+                  DropdownMenuItem(value: 'TOOL', child: Text('Tool')),
+                  DropdownMenuItem(
+                    value: 'ALTERNATIVE',
+                    child: Text('Alternative'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _componentRole = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              categoriesAsync.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (error, _) => Text(
+                  'Could not load categories.',
+                  style: AdminTypography.pageSubtitle(palette),
+                ),
+                data: (categories) {
+                  final selectableCategories = materialSelectableCategories(
+                    categories,
+                  );
+                  final selectedCategoryId = resolveSelectableCategoryId(
+                    categoryId: _categoryId,
+                    categories: categories,
+                  );
+
+                  return DropdownButtonFormField<String?>(
+                    initialValue: selectedCategoryId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Material category',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('None'),
+                      ),
+                      for (final MaterialCategory category
+                          in selectableCategories)
+                        DropdownMenuItem<String?>(
+                          value: category.id,
+                          child: Text(
+                            category.nameEn,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) => setState(() => _categoryId = value),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _materialTypeController,
+                decoration: const InputDecoration(
+                  labelText: 'Material type',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _KeywordEditor(
+                label: 'Search keywords',
+                controller: _keywordController,
+                keywords: _keywords,
+                onAdd: () => _addKeyword(
+                  controller: _keywordController,
+                  target: _keywords,
+                  update: (value) => _keywords = value,
+                ),
+                onRemove: (keyword) =>
+                    setState(() => _keywords.remove(keyword)),
+              ),
+              const SizedBox(height: 12),
+              _KeywordEditor(
+                label: 'Alternative keywords',
+                controller: _alternativeKeywordController,
+                keywords: _alternativeKeywords,
+                onAdd: () => _addKeyword(
+                  controller: _alternativeKeywordController,
+                  target: _alternativeKeywords,
+                  update: (value) => _alternativeKeywords = value,
+                ),
+                onRemove: (keyword) =>
+                    setState(() => _alternativeKeywords.remove(keyword)),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Required component'),
+                value: _isRequired,
+                onChanged: (value) => setState(() => _isRequired = value),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Allow alternatives'),
+                value: _canBeSubstituted,
+                onChanged: (value) => setState(() => _canBeSubstituted = value),
+              ),
+              TextFormField(
+                controller: _notesController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: _isSaving ? null : _save,
           child: _isSaving
               ? const SizedBox(
@@ -487,7 +488,7 @@ class _AdminLearningProjectComponentEditorDialogState
                 )
               : const Text('Save'),
         ),
-      ],
+      ),
     );
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 import 'learning_hub_text.dart';
@@ -24,6 +24,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final hasMore = widget.components.length > _collapsedVisibleCount;
     final visibleComponents = _expanded
         ? widget.components
@@ -33,11 +34,11 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: palette.cardSurface,
-        borderRadius: AppRadius.xlAll,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: palette.cardShadow,
+            color: palette.cardShadow.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -52,8 +53,11 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: palette.darkSurfaceSoft,
+                  color: palette.limeSoft,
                   borderRadius: AppRadius.pillAll,
+                  border: Border.all(
+                    color: palette.lime.withValues(alpha: 0.28),
+                  ),
                 ),
                 child: Icon(Icons.inventory_2_outlined, color: palette.lime),
               ),
@@ -63,9 +67,10 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                   en: 'Required components',
                   ar: 'المكونات المطلوبة',
                 ).resolve(context),
-                style: AppTextStyles.display(
-                  context,
-                ).copyWith(color: palette.textPrimary),
+                style: textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -82,15 +87,16 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: palette.darkSurface,
+                  color: palette.cardSurfaceAlt,
                   borderRadius: AppRadius.pillAll,
                   border: Border.all(color: palette.borderSubtle),
                 ),
                 child: Text(
                   component.resolve(context),
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
+                  style: textTheme.labelMedium?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                   textAlign: TextAlign.start,
                 ),
               );
@@ -100,6 +106,10 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
             const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
               onPressed: () => setState(() => _expanded = !_expanded),
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.neutral,
+              ),
               icon: Icon(
                 _expanded
                     ? Icons.keyboard_arrow_up_rounded
@@ -126,7 +136,7 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
               vertical: AppSpacing.md,
             ),
             decoration: BoxDecoration(
-              color: palette.darkSurfaceSoft,
+              color: palette.cardSurfaceAlt,
               borderRadius: AppRadius.lgAll,
               border: Border.all(color: palette.borderSubtle),
             ),
@@ -135,9 +145,10 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                 en: 'Use these components as the starting point for your material search and build checklist.',
                 ar: 'استخدم هذه المكونات كنقطة بداية للبحث عن المواد وقائمة البناء.',
               ).resolve(context),
-              style: AppTextStyles.body(
-                context,
-              ).copyWith(color: palette.textSecondary),
+              style: textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
+                height: 1.45,
+              ),
               textAlign: TextAlign.start,
             ),
           ),

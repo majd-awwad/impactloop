@@ -1,9 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_deliveries_api.dart';
 import '../../data/models/admin_deliveries_models.dart';
+import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_audit_stat_card.dart';
@@ -49,9 +55,12 @@ class _DeliveryFilters {
       status: status ?? this.status,
       assignment: assignment ?? this.assignment,
       timeRange: timeRange ?? this.timeRange,
-      customDateFrom:
-          clearCustomDates ? null : (customDateFrom ?? this.customDateFrom),
-      customDateTo: clearCustomDates ? null : (customDateTo ?? this.customDateTo),
+      customDateFrom: clearCustomDates
+          ? null
+          : (customDateFrom ?? this.customDateFrom),
+      customDateTo: clearCustomDates
+          ? null
+          : (customDateTo ?? this.customDateTo),
     );
   }
 
@@ -67,23 +76,25 @@ class _DeliveryFilters {
 class _DeliveryFiltersNotifier extends Notifier<_DeliveryFilters> {
   @override
   _DeliveryFilters build() => const _DeliveryFilters(
-        page: 1,
-        search: '',
-        status: 'ALL',
-        assignment: 'ALL',
-        timeRange: kTimeRangeAll,
-      );
+    page: 1,
+    search: '',
+    status: 'ALL',
+    assignment: 'ALL',
+    timeRange: kTimeRangeAll,
+  );
 
   void setPage(int page) => state = state.copyWith(page: page);
-  void setSearch(String search) => state = state.copyWith(page: 1, search: search);
-  void setStatus(String status) => state = state.copyWith(page: 1, status: status);
+  void setSearch(String search) =>
+      state = state.copyWith(page: 1, search: search);
+  void setStatus(String status) =>
+      state = state.copyWith(page: 1, status: status);
   void setAssignment(String assignment) =>
       state = state.copyWith(page: 1, assignment: assignment);
   void setTimeRange(String timeRange) => state = state.copyWith(
-        page: 1,
-        timeRange: timeRange,
-        clearCustomDates: timeRange != kTimeRangeCustom,
-      );
+    page: 1,
+    timeRange: timeRange,
+    clearCustomDates: timeRange != kTimeRangeCustom,
+  );
   void setCustomDateFrom(String? value) =>
       state = state.copyWith(page: 1, customDateFrom: value);
   void setCustomDateTo(String? value) =>
@@ -93,8 +104,8 @@ class _DeliveryFiltersNotifier extends Notifier<_DeliveryFilters> {
 
 final _deliveryFiltersProvider =
     NotifierProvider<_DeliveryFiltersNotifier, _DeliveryFilters>(
-  _DeliveryFiltersNotifier.new,
-);
+      _DeliveryFiltersNotifier.new,
+    );
 
 final adminDeliveriesListProvider = FutureProvider.autoDispose((ref) async {
   final filters = ref.watch(_deliveryFiltersProvider);
@@ -106,7 +117,9 @@ final adminDeliveriesListProvider = FutureProvider.autoDispose((ref) async {
   final skipDates =
       filters.timeRange == kTimeRangeCustom && resolved.error != null;
 
-  return ref.read(adminDeliveriesApiProvider).fetchDeliveries(
+  return ref
+      .read(adminDeliveriesApiProvider)
+      .fetchDeliveries(
         page: filters.page,
         limit: _DeliveryFilters.limit,
         search: filters.search,
@@ -198,9 +211,9 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     }
   }
 
@@ -249,7 +262,7 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
               data: (data) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SummaryRow(summary: data.summary, palette: palette),
+                  _SummaryRow(summary: data.summary),
                   const SizedBox(height: 16),
                   _FiltersPanel(
                     compact: compact,
@@ -303,13 +316,13 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
                       total: data.pagination.total,
                       onPrevious: data.pagination.page > 1
                           ? () => ref
-                              .read(_deliveryFiltersProvider.notifier)
-                              .setPage(data.pagination.page - 1)
+                                .read(_deliveryFiltersProvider.notifier)
+                                .setPage(data.pagination.page - 1)
                           : null,
                       onNext: data.pagination.page < data.pagination.totalPages
                           ? () => ref
-                              .read(_deliveryFiltersProvider.notifier)
-                              .setPage(data.pagination.page + 1)
+                                .read(_deliveryFiltersProvider.notifier)
+                                .setPage(data.pagination.page + 1)
                           : null,
                     ),
                   ],
@@ -324,48 +337,50 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.summary, required this.palette});
+  const _SummaryRow({required this.summary});
 
   final AdminDeliveriesSummary summary;
-  final AdminPalette palette;
 
   @override
   Widget build(BuildContext context) {
+    Color accentFor(AppStatusTone tone) =>
+        AppStatusStyle.of(context, tone).foreground;
+
     final stats = [
       (
         'Total',
         summary.total.toString(),
         'All delivery records',
         Icons.local_shipping_outlined,
-        palette.blue,
+        accentFor(AppStatusTone.info),
       ),
       (
         'Pending / unassigned',
         summary.pendingUnassigned.toString(),
         'Waiting for driver',
         Icons.hourglass_empty_outlined,
-        palette.amber,
+        accentFor(AppStatusTone.warning),
       ),
       (
         'Assigned / in progress',
         summary.assignedInProgress.toString(),
         'Active deliveries',
         Icons.delivery_dining_outlined,
-        palette.primaryTeal,
+        accentFor(AppStatusTone.info),
       ),
       (
         'Delivered',
         summary.delivered.toString(),
         'Completed successfully',
         Icons.check_circle_outline,
-        palette.green,
+        accentFor(AppStatusTone.success),
       ),
       (
         'Failed / cancelled',
         summary.failedCancelled.toString(),
         'Did not complete',
         Icons.cancel_outlined,
-        palette.red,
+        accentFor(AppStatusTone.danger),
       ),
     ];
 
@@ -374,10 +389,10 @@ class _SummaryRow extends StatelessWidget {
         final columns = constraints.maxWidth >= 1100
             ? 5
             : constraints.maxWidth >= 720
-                ? 3
-                : constraints.maxWidth >= 480
-                    ? 2
-                    : 1;
+            ? 3
+            : constraints.maxWidth >= 480
+            ? 2
+            : 1;
         return Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -436,18 +451,28 @@ class _FiltersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return _buildFilters(context, constraints.maxWidth);
+      },
+    );
+  }
+
+  Widget _buildFilters(BuildContext context, double maxWidth) {
     final palette = context.adminPalette;
-    final dropdownWidth = compact ? double.infinity : 170.0;
-    final statusValue =
-        safeDropdownValue(filters.status, statuses) ?? 'ALL';
+    final boundedWidth = maxWidth.isFinite
+        ? maxWidth
+        : MediaQuery.sizeOf(context).width;
+    final stacked = compact || boundedWidth < 900;
+    final innerWidth = math.max(170.0, boundedWidth - 28);
+    final dropdownWidth = stacked ? innerWidth : 170.0;
+    final statusValue = safeDropdownValue(filters.status, statuses) ?? 'ALL';
 
     final statusEntries = [
       const DropdownMenuEntry(value: 'ALL', label: 'All statuses'),
       ...statuses.map(
-        (status) => DropdownMenuEntry(
-          value: status,
-          label: humanizeEnum(status),
-        ),
+        (status) =>
+            DropdownMenuEntry(value: status, label: humanizeEnum(status)),
       ),
     ];
     const assignmentEntries = [
@@ -506,12 +531,14 @@ class _FiltersPanel extends StatelessWidget {
 
     final refreshButton = IconButton.filledTonal(
       onPressed: onRefresh,
+      style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
       tooltip: 'Refresh',
       icon: const Icon(Icons.sync, size: 20),
     );
 
     final resetButton = OutlinedButton.icon(
       onPressed: onReset,
+      style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
       icon: const Icon(Icons.filter_alt_off, size: 18),
       label: const Text('Reset'),
     );
@@ -526,7 +553,7 @@ class _FiltersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (compact) ...[
+          if (stacked) ...[
             searchField,
             const SizedBox(height: 10),
             statusFilter,
@@ -535,39 +562,32 @@ class _FiltersPanel extends StatelessWidget {
             const SizedBox(height: 10),
             timeFilter,
             const SizedBox(height: 10),
-            Row(
-              children: [
-                refreshButton,
-                const SizedBox(width: 8),
-                Expanded(child: resetButton),
-              ],
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [refreshButton, resetButton],
+              ),
             ),
           ] else
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                Expanded(flex: 3, child: searchField),
-                const SizedBox(width: 10),
+                SizedBox(width: 280, child: searchField),
                 statusFilter,
-                const SizedBox(width: 10),
                 assignmentFilter,
-                const SizedBox(width: 10),
                 timeFilter,
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: refreshButton,
-                ),
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: resetButton,
-                ),
+                refreshButton,
+                resetButton,
               ],
             ),
           if (filters.timeRange == kTimeRangeCustom) ...[
             const SizedBox(height: 10),
-            if (compact)
+            if (stacked)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -608,9 +628,9 @@ class _FiltersPanel extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 dateRangeError!,
-                style: AdminTypography.kpiHelper(palette).copyWith(
-                  color: palette.red,
-                ),
+                style: AdminTypography.kpiHelper(
+                  palette,
+                ).copyWith(color: palette.red),
               ),
             ],
           ],
@@ -665,8 +685,9 @@ class _DeliveriesTable extends StatelessWidget {
               color: palette.isDark
                   ? palette.cardBackground
                   : const Color(0xFFF9FAFB),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
               border: Border(bottom: BorderSide(color: palette.cardBorder)),
             ),
             child: Row(
@@ -747,13 +768,20 @@ class _DeliveryRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                item.material.title.isEmpty ? 'Untitled material' : item.material.title,
-                style: AdminTypography.sectionTitle(palette).copyWith(fontSize: 14),
+                item.material.title.isEmpty
+                    ? 'Untitled material'
+                    : item.material.title,
+                style: AdminTypography.sectionTitle(
+                  palette,
+                ).copyWith(fontSize: 14),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
-              AdminStatusBadge(status: item.status),
+              AppStatusBadge(
+                label: deliveryStatusLabel(item.status),
+                tone: deliveryStatusAppTone(item.status),
+              ),
             ],
           ),
         ),
@@ -764,17 +792,23 @@ class _DeliveryRow extends StatelessWidget {
             children: [
               Text(
                 'Learner: ${displayPersonLabel(item.learner.displayName, item.learner.email)}',
-                style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
+                style: AdminTypography.pageSubtitle(
+                  palette,
+                ).copyWith(fontSize: 13),
               ),
               const SizedBox(height: 2),
               Text(
                 'Supplier: ${displayPersonLabel(item.supplier.displayName, item.supplier.email)}',
-                style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
+                style: AdminTypography.pageSubtitle(
+                  palette,
+                ).copyWith(fontSize: 13),
               ),
               const SizedBox(height: 2),
               Text(
                 'Driver: $driverLabel',
-                style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
+                style: AdminTypography.pageSubtitle(
+                  palette,
+                ).copyWith(fontSize: 13),
               ),
             ],
           ),
@@ -796,26 +830,26 @@ class _DeliveryRow extends StatelessWidget {
               if (requestedAt != null)
                 Text(
                   'Requested: $requestedAt',
-                  style: AdminTypography.kpiHelper(palette).copyWith(
-                    color: palette.textMuted,
-                  ),
+                  style: AdminTypography.kpiHelper(
+                    palette,
+                  ).copyWith(color: palette.textMuted),
                 ),
               if (pickedUpAt != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   'Picked up: $pickedUpAt',
-                  style: AdminTypography.kpiHelper(palette).copyWith(
-                    color: palette.textMuted,
-                  ),
+                  style: AdminTypography.kpiHelper(
+                    palette,
+                  ).copyWith(color: palette.textMuted),
                 ),
               ],
               if (deliveredAt != null) ...[
                 const SizedBox(height: 2),
                 Text(
                   'Delivered: $deliveredAt',
-                  style: AdminTypography.kpiHelper(palette).copyWith(
-                    color: palette.textMuted,
-                  ),
+                  style: AdminTypography.kpiHelper(
+                    palette,
+                  ).copyWith(color: palette.textMuted),
                 ),
               ],
             ],
@@ -827,6 +861,7 @@ class _DeliveryRow extends StatelessWidget {
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
               onPressed: onDetails,
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               child: const Text('Details'),
             ),
           ),
@@ -853,261 +888,350 @@ class _DeliveryRow extends StatelessWidget {
   }
 }
 
-class _DeliveryDetailDialog extends StatelessWidget {
+class _DeliveryDetailDialog extends ConsumerStatefulWidget {
   const _DeliveryDetailDialog({required this.detail});
 
   final AdminDeliveryDetail detail;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
+  ConsumerState<_DeliveryDetailDialog> createState() =>
+      _DeliveryDetailDialogState();
+}
 
-    return AlertDialog(
-      title: Text(detail.material.title.isEmpty ? 'Delivery details' : detail.material.title),
-      content: SizedBox(
-        width: 560,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AdminDetailSection(
-                title: 'Delivery summary',
-                children: [
-                  AdminDetailRow(
-                    label: 'Status',
-                    value: humanizeEnum(detail.status),
-                  ),
-                  AdminDetailRow(
-                    label: 'Material',
-                    value: detail.material.title.isEmpty
-                        ? '—'
-                        : detail.material.title,
-                  ),
-                  AdminDetailRow(
-                    label: 'Reservation',
-                    value: detail.reservation.id.isEmpty
-                        ? '—'
-                        : detail.reservation.id,
-                    muted: true,
-                  ),
-                  AdminDetailRow(
-                    label: 'Requested at',
-                    value: formatAdminDateTime(detail.requestedAt) ??
-                        detail.requestedAt,
-                  ),
-                  if (detail.deliveredAt != null)
-                    AdminDetailRow(
-                      label: 'Delivered at',
-                      value: formatAdminDateTime(detail.deliveredAt) ??
-                          detail.deliveredAt!,
-                    ),
-                  if (detail.cancelledAt != null)
-                    AdminDetailRow(
-                      label: 'Cancelled at',
-                      value: formatAdminDateTime(detail.cancelledAt) ??
-                          detail.cancelledAt!,
-                    ),
-                  if (detail.failedAt != null)
-                    AdminDetailRow(
-                      label: 'Failed at',
-                      value:
-                          formatAdminDateTime(detail.failedAt) ?? detail.failedAt!,
-                    ),
-                  if (detail.failureReason != null &&
-                      detail.failureReason!.trim().isNotEmpty)
-                    AdminDetailRow(
-                      label: 'Failure reason',
-                      value: detail.failureReason!.trim(),
-                    ),
-                  if (detail.learnerNote != null &&
-                      detail.learnerNote!.trim().isNotEmpty)
-                    AdminDetailRow(
-                      label: 'Learner note',
-                      value: detail.learnerNote!.trim(),
-                    ),
-                  if (detail.driverNote != null &&
-                      detail.driverNote!.trim().isNotEmpty)
-                    AdminDetailRow(
-                      label: 'Driver note',
-                      value: detail.driverNote!.trim(),
-                    ),
-                ],
-              ),
-              AdminDetailSection(
-                title: 'Driver',
-                children: detail.driver == null
-                    ? const [
-                        AdminDetailRow(
-                          label: 'Assignment',
-                          value: 'Not assigned yet',
-                        ),
-                      ]
-                    : [
-                        AdminDetailRow(
-                          label: 'Name',
-                          value: displayPersonLabel(
-                            detail.driver!.displayName,
-                            detail.driver!.email,
-                          ),
-                        ),
-                        AdminDetailRow(
-                          label: 'Email',
-                          value: detail.driver!.email.isEmpty
-                              ? '—'
-                              : detail.driver!.email,
-                        ),
-                        AdminDetailRow(
-                          label: 'Phone',
-                          value: detail.driver!.phone?.trim().isNotEmpty == true
-                              ? detail.driver!.phone!.trim()
-                              : '—',
-                        ),
-                        if (detail.driver!.acceptedAt != null)
-                          AdminDetailRow(
-                            label: 'Accepted at',
-                            value: formatAdminDateTime(
-                                  detail.driver!.acceptedAt,
-                                ) ??
-                                detail.driver!.acceptedAt!,
-                          ),
-                      ],
-              ),
-              AdminDetailSection(
-                title: 'Pickup info',
-                children: [
-                  AdminDetailRow(
-                    label: 'Supplier',
-                    value: detail.pickup.supplierName?.trim().isNotEmpty == true
-                        ? detail.pickup.supplierName!.trim()
-                        : displayPersonLabel(
-                            detail.supplier.displayName,
-                            detail.supplier.email,
-                          ),
-                  ),
-                  AdminDetailRow(
-                    label: 'Location',
-                    value: _formatLocationDetail(detail.pickup.location),
-                  ),
-                  if (detail.pickup.location.addressLine?.trim().isNotEmpty ==
-                      true)
-                    AdminDetailRow(
-                      label: 'Address',
-                      value: detail.pickup.location.addressLine!.trim(),
-                      muted: true,
-                    ),
-                  if (detail.pickup.pickupWindowStart != null ||
-                      detail.pickup.pickupWindowEnd != null)
-                    AdminDetailRow(
-                      label: 'Pickup window',
-                      value: _formatWindow(
-                        detail.pickup.pickupWindowStart,
-                        detail.pickup.pickupWindowEnd,
-                      ),
-                    ),
-                  if (detail.pickup.supplierNote?.trim().isNotEmpty == true)
-                    AdminDetailRow(
-                      label: 'Supplier note',
-                      value: detail.pickup.supplierNote!.trim(),
-                    ),
-                  if (detail.pickup.arrivedAt != null)
-                    AdminDetailRow(
-                      label: 'Driver arrived',
-                      value: formatAdminDateTime(detail.pickup.arrivedAt) ??
-                          detail.pickup.arrivedAt!,
-                    ),
-                  if (detail.pickup.pickedUpAt != null)
-                    AdminDetailRow(
-                      label: 'Picked up at',
-                      value: formatAdminDateTime(detail.pickup.pickedUpAt) ??
-                          detail.pickup.pickedUpAt!,
-                    ),
-                ],
-              ),
-              AdminDetailSection(
-                title: 'Dropoff info',
-                children: [
-                  AdminDetailRow(
-                    label: 'Learner',
-                    value: detail.dropoff.learnerName?.trim().isNotEmpty == true
-                        ? detail.dropoff.learnerName!.trim()
-                        : displayPersonLabel(
-                            detail.learner.displayName,
-                            detail.learner.email,
-                          ),
-                  ),
-                  AdminDetailRow(
-                    label: 'Location',
-                    value: _formatLocationDetail(detail.dropoff.location),
-                  ),
-                  if (detail.dropoff.location.addressLine?.trim().isNotEmpty ==
-                      true)
-                    AdminDetailRow(
-                      label: 'Address',
-                      value: detail.dropoff.location.addressLine!.trim(),
-                      muted: true,
-                    ),
-                  if (detail.dropoff.deliveryNotes?.trim().isNotEmpty == true)
-                    AdminDetailRow(
-                      label: 'Delivery notes',
-                      value: detail.dropoff.deliveryNotes!.trim(),
-                    ),
-                  if (detail.dropoff.arrivedAt != null)
-                    AdminDetailRow(
-                      label: 'Driver arrived',
-                      value: formatAdminDateTime(detail.dropoff.arrivedAt) ??
-                          detail.dropoff.arrivedAt!,
-                    ),
-                  if (detail.dropoff.deliveredAt != null)
-                    AdminDetailRow(
-                      label: 'Delivered at',
-                      value: formatAdminDateTime(detail.dropoff.deliveredAt) ??
-                          detail.dropoff.deliveredAt!,
-                    ),
-                ],
-              ),
-              AdminDetailSection(
-                title: 'Timeline',
-                children: detail.timeline.isEmpty
-                    ? const [
-                        AdminDetailRow(
-                          label: 'Events',
-                          value: 'No timeline events recorded yet.',
-                        ),
-                      ]
-                    : detail.timeline
-                        .map(
-                          (event) => _TimelineEntry(item: event, palette: palette),
-                        )
-                        .toList(),
-              ),
-              AdminDetailSection(
-                title: 'Route / location history',
-                children: [
-                  AdminDetailRow(
-                    label: 'Recorded pings',
-                    value: detail.locationHistory.count.toString(),
-                  ),
-                  if (detail.locationHistory.items.isEmpty)
-                    const AdminDetailRow(
-                      label: 'Updates',
-                      value: 'No route/location updates recorded yet.',
-                    )
-                  else
-                    ...detail.locationHistory.items.map(
-                      (ping) => _LocationPingEntry(ping: ping, palette: palette),
-                    ),
-                ],
-              ),
-            ],
+class _DeliveryDetailDialogState extends ConsumerState<_DeliveryDetailDialog> {
+  late AdminDeliveryDetail detail;
+  var _isReopening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    detail = widget.detail;
+  }
+
+  Future<void> _reopenDriverAssignment() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AppDialogShell(
+        title: const Text('Reopen to drivers?'),
+        content: const Text(
+          'The current driver will lose this assignment and the delivery will return to the available driver job pool. Reservation details, quantities, fees, and windows will stay unchanged.',
+        ),
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
+            child: const Text('Cancel'),
+          ),
+          primaryAction: FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.warning),
+            child: const Text('Reopen'),
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
+    );
+
+    if (confirmed != true || _isReopening) {
+      return;
+    }
+
+    setState(() => _isReopening = true);
+
+    try {
+      final updated = await ref
+          .read(adminDeliveriesApiProvider)
+          .reopenDriverAssignment(detail.id);
+      if (!mounted) return;
+      setState(() {
+        detail = updated;
+        _isReopening = false;
+      });
+      ref.invalidate(adminDeliveriesListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Delivery reopened to drivers.')),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() => _isReopening = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return AppDialogShell(
+      title: Text(
+        detail.material.title.isEmpty
+            ? 'Delivery details'
+            : detail.material.title,
+      ),
+      maxWidth: 600,
+      closeEnabled: !_isReopening,
+      content: SizedBox(
+        width: 560,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AdminDetailSection(
+              title: 'Delivery summary',
+              children: [
+                AdminDetailRow(
+                  label: 'Status',
+                  value: humanizeEnum(detail.status),
+                ),
+                AdminDetailRow(
+                  label: 'Material',
+                  value: detail.material.title.isEmpty
+                      ? '—'
+                      : detail.material.title,
+                ),
+                AdminDetailRow(
+                  label: 'Reservation',
+                  value: detail.reservation.id.isEmpty
+                      ? '—'
+                      : detail.reservation.id,
+                  muted: true,
+                ),
+                AdminDetailRow(
+                  label: 'Requested at',
+                  value:
+                      formatAdminDateTime(detail.requestedAt) ??
+                      detail.requestedAt,
+                ),
+                if (detail.deliveredAt != null)
+                  AdminDetailRow(
+                    label: 'Delivered at',
+                    value:
+                        formatAdminDateTime(detail.deliveredAt) ??
+                        detail.deliveredAt!,
+                  ),
+                if (detail.cancelledAt != null)
+                  AdminDetailRow(
+                    label: 'Cancelled at',
+                    value:
+                        formatAdminDateTime(detail.cancelledAt) ??
+                        detail.cancelledAt!,
+                  ),
+                if (detail.failedAt != null)
+                  AdminDetailRow(
+                    label: 'Failed at',
+                    value:
+                        formatAdminDateTime(detail.failedAt) ??
+                        detail.failedAt!,
+                  ),
+                if (detail.failureReason != null &&
+                    detail.failureReason!.trim().isNotEmpty)
+                  AdminDetailRow(
+                    label: 'Failure reason',
+                    value: detail.failureReason!.trim(),
+                  ),
+                if (detail.learnerNote != null &&
+                    detail.learnerNote!.trim().isNotEmpty)
+                  AdminDetailRow(
+                    label: 'Learner note',
+                    value: detail.learnerNote!.trim(),
+                  ),
+                if (detail.driverNote != null &&
+                    detail.driverNote!.trim().isNotEmpty)
+                  AdminDetailRow(
+                    label: 'Driver note',
+                    value: detail.driverNote!.trim(),
+                  ),
+              ],
+            ),
+            AdminDetailSection(
+              title: 'Driver',
+              children: detail.driver == null
+                  ? const [
+                      AdminDetailRow(
+                        label: 'Assignment',
+                        value: 'Not assigned yet',
+                      ),
+                    ]
+                  : [
+                      AdminDetailRow(
+                        label: 'Name',
+                        value: displayPersonLabel(
+                          detail.driver!.displayName,
+                          detail.driver!.email,
+                        ),
+                      ),
+                      AdminDetailRow(
+                        label: 'Email',
+                        value: detail.driver!.email.isEmpty
+                            ? '—'
+                            : detail.driver!.email,
+                      ),
+                      AdminDetailRow(
+                        label: 'Phone',
+                        value: detail.driver!.phone?.trim().isNotEmpty == true
+                            ? detail.driver!.phone!.trim()
+                            : '—',
+                      ),
+                      if (detail.driver!.acceptedAt != null)
+                        AdminDetailRow(
+                          label: 'Accepted at',
+                          value:
+                              formatAdminDateTime(detail.driver!.acceptedAt) ??
+                              detail.driver!.acceptedAt!,
+                        ),
+                    ],
+            ),
+            AdminDetailSection(
+              title: 'Pickup info',
+              children: [
+                AdminDetailRow(
+                  label: 'Supplier',
+                  value: detail.pickup.supplierName?.trim().isNotEmpty == true
+                      ? detail.pickup.supplierName!.trim()
+                      : displayPersonLabel(
+                          detail.supplier.displayName,
+                          detail.supplier.email,
+                        ),
+                ),
+                AdminDetailRow(
+                  label: 'Location',
+                  value: _formatLocationDetail(detail.pickup.location),
+                ),
+                if (detail.pickup.location.addressLine?.trim().isNotEmpty ==
+                    true)
+                  AdminDetailRow(
+                    label: 'Address',
+                    value: detail.pickup.location.addressLine!.trim(),
+                    muted: true,
+                  ),
+                if (detail.pickup.pickupWindowStart != null ||
+                    detail.pickup.pickupWindowEnd != null)
+                  AdminDetailRow(
+                    label: 'Pickup window',
+                    value: _formatWindow(
+                      detail.pickup.pickupWindowStart,
+                      detail.pickup.pickupWindowEnd,
+                    ),
+                  ),
+                if (detail.pickup.supplierNote?.trim().isNotEmpty == true)
+                  AdminDetailRow(
+                    label: 'Supplier note',
+                    value: detail.pickup.supplierNote!.trim(),
+                  ),
+                if (detail.pickup.arrivedAt != null)
+                  AdminDetailRow(
+                    label: 'Driver arrived',
+                    value:
+                        formatAdminDateTime(detail.pickup.arrivedAt) ??
+                        detail.pickup.arrivedAt!,
+                  ),
+                if (detail.pickup.pickedUpAt != null)
+                  AdminDetailRow(
+                    label: 'Picked up at',
+                    value:
+                        formatAdminDateTime(detail.pickup.pickedUpAt) ??
+                        detail.pickup.pickedUpAt!,
+                  ),
+              ],
+            ),
+            AdminDetailSection(
+              title: 'Dropoff info',
+              children: [
+                AdminDetailRow(
+                  label: 'Learner',
+                  value: detail.dropoff.learnerName?.trim().isNotEmpty == true
+                      ? detail.dropoff.learnerName!.trim()
+                      : displayPersonLabel(
+                          detail.learner.displayName,
+                          detail.learner.email,
+                        ),
+                ),
+                AdminDetailRow(
+                  label: 'Location',
+                  value: _formatLocationDetail(detail.dropoff.location),
+                ),
+                if (detail.dropoff.location.addressLine?.trim().isNotEmpty ==
+                    true)
+                  AdminDetailRow(
+                    label: 'Address',
+                    value: detail.dropoff.location.addressLine!.trim(),
+                    muted: true,
+                  ),
+                if (detail.dropoff.deliveryNotes?.trim().isNotEmpty == true)
+                  AdminDetailRow(
+                    label: 'Delivery notes',
+                    value: detail.dropoff.deliveryNotes!.trim(),
+                  ),
+                if (detail.dropoff.arrivedAt != null)
+                  AdminDetailRow(
+                    label: 'Driver arrived',
+                    value:
+                        formatAdminDateTime(detail.dropoff.arrivedAt) ??
+                        detail.dropoff.arrivedAt!,
+                  ),
+                if (detail.dropoff.deliveredAt != null)
+                  AdminDetailRow(
+                    label: 'Delivered at',
+                    value:
+                        formatAdminDateTime(detail.dropoff.deliveredAt) ??
+                        detail.dropoff.deliveredAt!,
+                  ),
+              ],
+            ),
+            AdminDetailSection(
+              title: 'Timeline',
+              children: detail.timeline.isEmpty
+                  ? const [
+                      AdminDetailRow(
+                        label: 'Events',
+                        value: 'No timeline events recorded yet.',
+                      ),
+                    ]
+                  : detail.timeline
+                        .map(
+                          (event) =>
+                              _TimelineEntry(item: event, palette: palette),
+                        )
+                        .toList(),
+            ),
+            AdminDetailSection(
+              title: 'Route / location history',
+              children: [
+                AdminDetailRow(
+                  label: 'Recorded pings',
+                  value: detail.locationHistory.count.toString(),
+                ),
+                if (detail.locationHistory.items.isEmpty)
+                  const AdminDetailRow(
+                    label: 'Updates',
+                    value: 'No route/location updates recorded yet.',
+                  )
+                else
+                  ...detail.locationHistory.items.map(
+                    (ping) => _LocationPingEntry(ping: ping, palette: palette),
+                  ),
+              ],
+            ),
+          ],
         ),
-      ],
+      ),
+      footer: detail.canShowReopenDriverAssignmentAction
+          ? AppDialogFooter.form(
+              primaryAction: FilledButton(
+                onPressed: _isReopening ? null : _reopenDriverAssignment,
+                style: AppStatusButtonStyle.filled(
+                  context,
+                  AppStatusTone.warning,
+                ),
+                child: _isReopening
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Reopen to drivers'),
+              ),
+            )
+          : null,
     );
   }
 }
@@ -1130,7 +1254,8 @@ class _TimelineEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final timestamp = formatAdminDateTime(item.timestamp) ?? item.timestamp ?? '—';
+    final timestamp =
+        formatAdminDateTime(item.timestamp) ?? item.timestamp ?? '—';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1145,10 +1270,9 @@ class _TimelineEntry extends StatelessWidget {
           if (item.note != null && item.note!.trim().isNotEmpty)
             Text(
               item.note!.trim(),
-              style: AdminTypography.pageSubtitle(palette).copyWith(
-                color: palette.textMuted,
-                fontSize: 12,
-              ),
+              style: AdminTypography.pageSubtitle(
+                palette,
+              ).copyWith(color: palette.textMuted, fontSize: 12),
             ),
         ],
       ),
@@ -1164,8 +1288,7 @@ class _LocationPingEntry extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final capturedAt =
-        formatAdminDateTime(ping.capturedAt) ?? ping.capturedAt;
+    final capturedAt = formatAdminDateTime(ping.capturedAt) ?? ping.capturedAt;
     final coords = _formatCoords(ping.latitude, ping.longitude);
     final accuracy = ping.accuracyMeters != null
         ? ' · ±${ping.accuracyMeters!.toStringAsFixed(0)} m'
@@ -1179,10 +1302,9 @@ class _LocationPingEntry extends StatelessWidget {
           Text(capturedAt, style: AdminTypography.kpiHelper(palette)),
           Text(
             '$coords$accuracy',
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              color: palette.textMuted,
-              fontSize: 12,
-            ),
+            style: AdminTypography.pageSubtitle(
+              palette,
+            ).copyWith(color: palette.textMuted, fontSize: 12),
           ),
         ],
       ),
@@ -1209,12 +1331,21 @@ class _PaginationRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton(onPressed: onPrevious, child: const Text('Previous')),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: onNext, child: const Text('Next')),
-        const SizedBox(width: 12),
+        OutlinedButton(
+          onPressed: onPrevious,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          child: const Text('Previous'),
+        ),
+        OutlinedButton(
+          onPressed: onNext,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+          child: const Text('Next'),
+        ),
         Text(
           'Page $page of $totalPages · $total total',
           style: AdminTypography.kpiHelper(palette),
