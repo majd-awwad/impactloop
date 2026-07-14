@@ -160,6 +160,16 @@ export const listUsersForAdmin = async (query: AdminPeopleListQuery) => {
   return { total, items };
 };
 
+const toCountMap = <T extends string>(
+  rows: Array<Record<T, string | null> & { _count: { _all: number } }>,
+  key: T,
+) =>
+  new Map(
+    rows
+      .filter((row) => row[key] != null)
+      .map((row) => [row[key]!, row._count._all]),
+  );
+
 export const countVerifiedStrikesForUserIds = async (userIds: string[]) => {
   if (userIds.length === 0) {
     return new Map<string, number>();
@@ -175,11 +185,49 @@ export const countVerifiedStrikesForUserIds = async (userIds: string[]) => {
     _count: { _all: true },
   });
 
-  return new Map(
-    rows
-      .filter((row) => row.targetUserId != null)
-      .map((row) => [row.targetUserId!, row._count._all]),
-  );
+  return toCountMap(rows, 'targetUserId');
+};
+
+export const countMaterialsByOwnerIds = async (userIds: string[]) => {
+  if (userIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.material.groupBy({
+    by: ['ownerId'],
+    where: { ownerId: { in: userIds } },
+    _count: { _all: true },
+  });
+
+  return toCountMap(rows, 'ownerId');
+};
+
+export const countReservationsByRequesterIds = async (userIds: string[]) => {
+  if (userIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.reservation.groupBy({
+    by: ['requesterId'],
+    where: { requesterId: { in: userIds } },
+    _count: { _all: true },
+  });
+
+  return toCountMap(rows, 'requesterId');
+};
+
+export const countReservationsByOwnerIds = async (userIds: string[]) => {
+  if (userIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prisma.reservation.groupBy({
+    by: ['ownerId'],
+    where: { ownerId: { in: userIds } },
+    _count: { _all: true },
+  });
+
+  return toCountMap(rows, 'ownerId');
 };
 
 export const findUserWithRoles = async (userId: string) =>

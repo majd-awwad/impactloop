@@ -20,6 +20,10 @@ type TestContext = {
   supplierId: string;
   learnerId: string;
   userIds: string[];
+  categoryId?: string;
+  locationId?: string;
+  materialIds: string[];
+  reservationIds: string[];
 };
 
 const ctx: TestContext = {
@@ -28,7 +32,73 @@ const ctx: TestContext = {
   supplierId: '',
   learnerId: '',
   userIds: [],
+  materialIds: [],
+  reservationIds: [],
 };
+
+async function createBaseCategoryAndLocation() {
+  const category = await prisma.category.create({
+    data: {
+      nameEn: `${TEST_MARKER} Electronics`,
+      nameAr: `${TEST_MARKER} إلكترونيات`,
+      categoryType: 'MATERIAL',
+      isActive: true,
+    },
+  });
+  ctx.categoryId = category.id;
+
+  const location = await prisma.location.create({
+    data: {
+      country: 'Palestine',
+      city: 'Nablus',
+      area: 'Rafidia',
+      addressLine: 'Test street',
+      isApproximate: true,
+      visibility: 'PRIVATE',
+    },
+  });
+  ctx.locationId = location.id;
+}
+
+async function createMaterial(ownerId: string, titleSuffix: string) {
+  const material = await prisma.material.create({
+    data: {
+      ownerId,
+      categoryId: ctx.categoryId!,
+      locationId: ctx.locationId!,
+      title: `${TEST_MARKER} material ${titleSuffix}`,
+      description: 'test',
+      materialType: 'Resistor',
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      sourceType: 'STUDENT_LEFTOVER',
+      status: 'AVAILABLE',
+      isFree: true,
+    },
+  });
+  ctx.materialIds.push(material.id);
+  return material;
+}
+
+async function createReservation(input: {
+  materialId: string;
+  requesterId: string;
+  ownerId: string;
+}) {
+  const reservation = await prisma.reservation.create({
+    data: {
+      materialId: input.materialId,
+      requesterId: input.requesterId,
+      ownerId: input.ownerId,
+      quantityRequested: 1,
+      status: 'COMPLETED',
+      completedAt: new Date(),
+    },
+  });
+  ctx.reservationIds.push(reservation.id);
+  return reservation;
+}
 
 async function createUser(input: {
   suffix: string;
@@ -62,6 +132,8 @@ async function createUser(input: {
 
 describe('admin people management', () => {
   before(async () => {
+    await createBaseCategoryAndLocation();
+
     const actorAdmin = await createUser({ suffix: 'actor-admin', role: 'ADMIN' });
     const otherAdmin = await createUser({ suffix: 'other-admin', role: 'ADMIN' });
     const supplier = await createUser({ suffix: 'supplier', role: 'SUPPLIER' });
@@ -71,9 +143,25 @@ describe('admin people management', () => {
     ctx.otherAdminId = otherAdmin.id;
     ctx.supplierId = supplier.id;
     ctx.learnerId = learner.id;
+
+    const firstMaterial = await createMaterial(ctx.supplierId, 'a');
+    await createMaterial(ctx.supplierId, 'b');
+    await createReservation({
+      materialId: firstMaterial.id,
+      requesterId: ctx.learnerId,
+      ownerId: ctx.supplierId,
+    });
   });
 
   after(async () => {
+    if (ctx.reservationIds.length > 0) {
+      await prisma.reservation.deleteMany({
+        where: { id: { in: ctx.reservationIds } },
+      });
+    }
+    if (ctx.materialIds.length > 0) {
+      await prisma.material.deleteMany({ where: { id: { in: ctx.materialIds } } });
+    }
     if (ctx.userIds.length > 0) {
       await prisma.adminActivityLog.deleteMany({
         where: {
@@ -84,6 +172,12 @@ describe('admin people management', () => {
         },
       });
       await prisma.user.deleteMany({ where: { id: { in: ctx.userIds } } });
+    }
+    if (ctx.categoryId) {
+      await prisma.category.delete({ where: { id: ctx.categoryId } });
+    }
+    if (ctx.locationId) {
+      await prisma.location.delete({ where: { id: ctx.locationId } });
     }
   });
 
@@ -216,5 +310,32 @@ describe('admin people management', () => {
       assert.equal(item.roles.includes('ADMIN'), false);
       assert.equal(item.isLearnerOnly, true);
     }
+  });
+
+  test('list items include bounded activity metrics with zero defaults', async () => {
+    const result = await listAdminPeople(ctx.actorAdminId, {
+      tab: 'ALL',
+      page: 1,
+      limit: 50,
+    });
+
+    const supplier = result.items.find((item) => item.userId === ctx.supplierId);
+    const learner = result.items.find((item) => item.userId === ctx.learnerId);
+    const admin = result.items.find((item) => item.userId === ctx.otherAdminId);
+
+    assert.ok(supplier);
+    assert.equal(supplier!.materialsCount, 2);
+    assert.equal(supplier!.reservationsAsOwnerCount, 1);
+    assert.equal(supplier!.reservationsAsRequesterCount, 0);
+
+    assert.ok(learner);
+    assert.equal(learner!.materialsCount, 0);
+    assert.equal(learner!.reservationsAsRequesterCount, 1);
+    assert.equal(learner!.reservationsAsOwnerCount, 0);
+
+    assert.ok(admin);
+    assert.equal(admin!.materialsCount, 0);
+    assert.equal(admin!.reservationsAsRequesterCount, 0);
+    assert.equal(admin!.reservationsAsOwnerCount, 0);
   });
 });

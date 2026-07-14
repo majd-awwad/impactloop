@@ -37,10 +37,17 @@ const mapPrimaryRole = (user: UserRecord) => {
   return primary?.role ?? user.roles[0]?.role ?? null;
 };
 
+type AdminPeopleListMetrics = {
+  verifiedStrikeCount?: number;
+  materialsCount?: number;
+  reservationsAsRequesterCount?: number;
+  reservationsAsOwnerCount?: number;
+};
+
 const mapListItem = (
   user: UserRecord,
   actorId: string,
-  verifiedStrikeCount = 0,
+  metrics: AdminPeopleListMetrics = {},
 ) => {
   const flags = buildStatusActionFlags(user, actorId);
   const isLearnerOnly =
@@ -65,7 +72,10 @@ const mapListItem = (
     isLearnerOnly,
     suspensionReasonPreview:
       user.accountStatus === 'SUSPENDED' ? user.suspensionReason : null,
-    verifiedStrikeCount,
+    verifiedStrikeCount: metrics.verifiedStrikeCount ?? 0,
+    materialsCount: metrics.materialsCount ?? 0,
+    reservationsAsRequesterCount: metrics.reservationsAsRequesterCount ?? 0,
+    reservationsAsOwnerCount: metrics.reservationsAsOwnerCount ?? 0,
     ...flags,
   };
 };
@@ -74,7 +84,7 @@ const mapDetail = async (user: UserRecord, actorId: string) => {
   const verifiedStrikeCount = await countVerifiedStrikesForUser(user.id);
 
   return {
-    ...mapListItem(user, actorId, verifiedStrikeCount),
+    ...mapListItem(user, actorId, { verifiedStrikeCount }),
     phone: user.phone,
     emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
     phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? null,
@@ -107,14 +117,29 @@ export const listAdminPeople = async (
   query: AdminPeopleListQuery,
 ) => {
   const result = await repository.listUsersForAdmin(query);
-  const strikeCounts = await repository.countVerifiedStrikesForUserIds(
-    result.items.map((item) => item.id),
-  );
+  const userIds = result.items.map((item) => item.id);
+  const [
+    strikeCounts,
+    materialsCounts,
+    requesterReservationCounts,
+    ownerReservationCounts,
+  ] = await Promise.all([
+    repository.countVerifiedStrikesForUserIds(userIds),
+    repository.countMaterialsByOwnerIds(userIds),
+    repository.countReservationsByRequesterIds(userIds),
+    repository.countReservationsByOwnerIds(userIds),
+  ]);
 
   return {
     summary: await repository.countPeopleSummary(),
     items: result.items.map((item) =>
-      mapListItem(item, actorId, strikeCounts.get(item.id) ?? 0),
+      mapListItem(item, actorId, {
+        verifiedStrikeCount: strikeCounts.get(item.id) ?? 0,
+        materialsCount: materialsCounts.get(item.id) ?? 0,
+        reservationsAsRequesterCount:
+          requesterReservationCounts.get(item.id) ?? 0,
+        reservationsAsOwnerCount: ownerReservationCounts.get(item.id) ?? 0,
+      }),
     ),
     pagination: {
       page: query.page,
