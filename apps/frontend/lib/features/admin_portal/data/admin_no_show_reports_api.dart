@@ -8,6 +8,7 @@ class AdminNoShowReportItem {
   const AdminNoShowReportItem({
     required this.id,
     required this.reservationId,
+    required this.deliveryId,
     required this.status,
     required this.reasonCode,
     required this.note,
@@ -19,10 +20,22 @@ class AdminNoShowReportItem {
     required this.learnerName,
     required this.supplierName,
     required this.reservationStatus,
+    required this.workflowType,
+    required this.availableActions,
+    required this.strikeImpact,
+    required this.operationalState,
+    required this.pickupWindowStart,
+    required this.pickupWindowEnd,
+    required this.reviewedAt,
+    required this.reviewNote,
+    required this.reviewedBy,
+    required this.reviewedByName,
+    required this.pendingReschedule,
   });
 
   final String id;
   final String reservationId;
+  final String? deliveryId;
   final String status;
   final String reasonCode;
   final String? note;
@@ -34,6 +47,17 @@ class AdminNoShowReportItem {
   final String learnerName;
   final String supplierName;
   final String reservationStatus;
+  final String workflowType;
+  final List<String> availableActions;
+  final String strikeImpact;
+  final String operationalState;
+  final DateTime? pickupWindowStart;
+  final DateTime? pickupWindowEnd;
+  final DateTime? reviewedAt;
+  final String? reviewNote;
+  final AdminNoShowReportReviewer? reviewedBy;
+  final String? reviewedByName;
+  final AdminNoShowReportPendingReschedule? pendingReschedule;
 
   factory AdminNoShowReportItem.fromJson(Map<String, dynamic> json) {
     final reporter = json['reporter'];
@@ -42,10 +66,15 @@ class AdminNoShowReportItem {
     final material = reservation is Map ? reservation['material'] : null;
     final requester = reservation is Map ? reservation['requester'] : null;
     final owner = reservation is Map ? reservation['owner'] : null;
+    final reviewedBy = json['reviewedBy'];
+    final pendingReschedule = reservation is Map
+        ? reservation['pendingReschedule']
+        : null;
 
     return AdminNoShowReportItem(
       id: json['id'] as String? ?? '',
       reservationId: json['reservationId'] as String? ?? '',
+      deliveryId: json['deliveryId'] as String?,
       status: json['status'] as String? ?? 'PENDING_REVIEW',
       reasonCode: json['reasonCode'] as String? ?? '',
       note: json['note'] as String?,
@@ -73,6 +102,32 @@ class AdminNoShowReportItem {
       reservationStatus: reservation is Map
           ? reservation['status'] as String? ?? 'PENDING'
           : 'PENDING',
+      workflowType: json['workflowType'] as String? ?? 'ACCOUNTABILITY',
+      availableActions: (json['availableActions'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      strikeImpact: json['strikeImpact'] as String? ?? 'NONE',
+      operationalState: json['operationalState'] as String? ?? 'NOT_REQUIRED',
+      pickupWindowStart:
+          DateTime.tryParse(json['pickupWindowStart'] as String? ?? ''),
+      pickupWindowEnd:
+          DateTime.tryParse(json['pickupWindowEnd'] as String? ?? ''),
+      reviewedAt: DateTime.tryParse(json['reviewedAt'] as String? ?? ''),
+      reviewNote: json['reviewNote'] as String?,
+      reviewedBy: reviewedBy is Map
+          ? AdminNoShowReportReviewer.fromJson(
+              Map<String, dynamic>.from(reviewedBy),
+            )
+          : null,
+      reviewedByName: reviewedBy is Map
+          ? reviewedBy['displayName'] as String?
+          : null,
+      pendingReschedule: pendingReschedule is Map
+          ? AdminNoShowReportPendingReschedule.fromJson(
+              Map<String, dynamic>.from(pendingReschedule),
+            )
+          : null,
     );
   }
 }
@@ -136,6 +191,7 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
   const AdminNoShowReportDetail({
     required super.id,
     required super.reservationId,
+    required super.deliveryId,
     required super.status,
     required super.reasonCode,
     required super.note,
@@ -147,23 +203,41 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
     required super.learnerName,
     required super.supplierName,
     required super.reservationStatus,
+    required super.workflowType,
+    required super.availableActions,
+    required super.strikeImpact,
+    required super.operationalState,
+    required super.pickupWindowStart,
+    required super.pickupWindowEnd,
+    required super.reviewedAt,
+    required super.reviewNote,
+    required super.reviewedBy,
+    required super.reviewedByName,
+    required super.pendingReschedule,
     this.messages = const [],
     this.activityHistory = const [],
+    this.deliveryTimeline = const [],
+    this.quantityStatus,
     this.targetVerifiedNoShowCount,
   });
 
   final List<AdminNoShowReportMessage> messages;
   final List<AdminNoShowReportActivityEntry> activityHistory;
+  final List<AdminNoShowReportActivityEntry> deliveryTimeline;
+  final AdminNoShowReportQuantityStatus? quantityStatus;
   final int? targetVerifiedNoShowCount;
 
   factory AdminNoShowReportDetail.fromJson(Map<String, dynamic> json) {
     final base = AdminNoShowReportItem.fromJson(json);
     final messages = json['messages'];
     final history = json['activityHistory'];
+    final deliveryTimeline = json['deliveryTimeline'];
+    final quantityStatus = json['quantityStatus'];
 
     return AdminNoShowReportDetail(
       id: base.id,
       reservationId: base.reservationId,
+      deliveryId: base.deliveryId,
       status: base.status,
       reasonCode: base.reasonCode,
       note: base.note,
@@ -175,6 +249,17 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
       learnerName: base.learnerName,
       supplierName: base.supplierName,
       reservationStatus: base.reservationStatus,
+      workflowType: base.workflowType,
+      availableActions: base.availableActions,
+      strikeImpact: base.strikeImpact,
+      operationalState: base.operationalState,
+      pickupWindowStart: base.pickupWindowStart,
+      pickupWindowEnd: base.pickupWindowEnd,
+      reviewedAt: base.reviewedAt,
+      reviewNote: base.reviewNote,
+      reviewedBy: base.reviewedBy,
+      reviewedByName: base.reviewedByName,
+      pendingReschedule: base.pendingReschedule,
       messages: messages is List
           ? messages
                 .whereType<Map>()
@@ -185,6 +270,21 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
                 )
                 .toList(growable: false)
           : const [],
+      deliveryTimeline: deliveryTimeline is List
+          ? deliveryTimeline
+                .whereType<Map>()
+                .map(
+                  (item) => AdminNoShowReportActivityEntry.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
+          : const [],
+      quantityStatus: quantityStatus is Map
+          ? AdminNoShowReportQuantityStatus.fromJson(
+              Map<String, dynamic>.from(quantityStatus),
+            )
+          : null,
       activityHistory: history is List
           ? history
                 .whereType<Map>()
@@ -200,6 +300,66 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
           (json['targetVerifiedStrikeCount'] as num?)?.toInt(),
     );
   }
+}
+
+class AdminNoShowReportReviewer {
+  const AdminNoShowReportReviewer({required this.id, required this.displayName});
+
+  final String id;
+  final String displayName;
+
+  factory AdminNoShowReportReviewer.fromJson(Map<String, dynamic> json) =>
+      AdminNoShowReportReviewer(
+        id: json['id'] as String? ?? '',
+        displayName: json['displayName'] as String? ?? '',
+      );
+}
+
+class AdminNoShowReportPendingReschedule {
+  const AdminNoShowReportPendingReschedule({
+    required this.requestedBy,
+    required this.reason,
+    required this.note,
+    required this.proposedPickupWindowStart,
+    required this.proposedPickupWindowEnd,
+  });
+
+  final String? requestedBy;
+  final String? reason;
+  final String? note;
+  final DateTime? proposedPickupWindowStart;
+  final DateTime? proposedPickupWindowEnd;
+
+  factory AdminNoShowReportPendingReschedule.fromJson(
+    Map<String, dynamic> json,
+  ) => AdminNoShowReportPendingReschedule(
+    requestedBy: json['requestedBy'] as String?,
+    reason: json['reason'] as String?,
+    note: json['note'] as String?,
+    proposedPickupWindowStart:
+        DateTime.tryParse(json['proposedPickupWindowStart'] as String? ?? ''),
+    proposedPickupWindowEnd:
+        DateTime.tryParse(json['proposedPickupWindowEnd'] as String? ?? ''),
+  );
+}
+
+class AdminNoShowReportQuantityStatus {
+  const AdminNoShowReportQuantityStatus({
+    required this.materialQuantity,
+    required this.heldQuantity,
+    required this.availableQuantity,
+  });
+
+  final double materialQuantity;
+  final double heldQuantity;
+  final double availableQuantity;
+
+  factory AdminNoShowReportQuantityStatus.fromJson(Map<String, dynamic> json) =>
+      AdminNoShowReportQuantityStatus(
+        materialQuantity: (json['materialQuantity'] as num?)?.toDouble() ?? 0,
+        heldQuantity: (json['heldQuantity'] as num?)?.toDouble() ?? 0,
+        availableQuantity: (json['availableQuantity'] as num?)?.toDouble() ?? 0,
+      );
 }
 
 class AdminNoShowReportMessage {
@@ -229,22 +389,30 @@ class AdminNoShowReportMessage {
 
 class AdminNoShowReportActivityEntry {
   const AdminNoShowReportActivityEntry({
+    required this.id,
+    required this.statusGroup,
     required this.oldStatus,
     required this.newStatus,
     required this.note,
     required this.createdAt,
     required this.changedByName,
+    required this.changedById,
   });
 
+  final String id;
+  final String? statusGroup;
   final String? oldStatus;
   final String newStatus;
   final String? note;
   final DateTime createdAt;
   final String? changedByName;
+  final String? changedById;
 
   factory AdminNoShowReportActivityEntry.fromJson(Map<String, dynamic> json) {
     final changedBy = json['changedBy'];
     return AdminNoShowReportActivityEntry(
+      id: json['id'] as String? ?? '',
+      statusGroup: json['statusGroup'] as String?,
       oldStatus: json['oldStatus'] as String?,
       newStatus: json['newStatus'] as String? ?? '',
       note: json['note'] as String?,
@@ -254,6 +422,7 @@ class AdminNoShowReportActivityEntry {
       changedByName: changedBy is Map
           ? changedBy['displayName'] as String?
           : null,
+      changedById: changedBy is Map ? changedBy['id'] as String? : null,
     );
   }
 }

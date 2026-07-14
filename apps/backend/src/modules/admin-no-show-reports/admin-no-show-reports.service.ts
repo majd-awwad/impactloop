@@ -5,10 +5,10 @@ import { mapPendingRescheduleSummary } from '../reservations/reservation-resched
 import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 import { prisma } from '../../database/prisma.js';
 import * as repository from './admin-no-show-reports.repository.js';
+import { classifyAdminReportContract } from './admin-no-show-reports.classifier.js';
 import {
   cancelAndReleaseHoldForPickupRecoveryReport,
   requestSupplierRescheduleForPickupRecoveryReport,
-  requiresPickupRecoveryOperationalAction,
 } from './admin-delivery-pickup-recovery.repository.js';
 import type {
   AdminNoShowReportsListQuery,
@@ -22,6 +22,17 @@ import {
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
+  ...classifyAdminReportContract({
+    report: {
+      status: report.status,
+      reasonCode: report.reasonCode,
+      targetRole: report.targetRole,
+      targetUserId: report.targetUserId,
+      deliveryId: report.deliveryId,
+    },
+    reservation: report.reservation,
+    delivery: report.delivery,
+  }),
   id: report.id,
   reservationId: report.reservationId,
   deliveryId: report.deliveryId,
@@ -48,6 +59,14 @@ const mapReport = (report: repository.AdminNoShowReportRecord) => ({
     owner: report.reservation.owner,
   },
 });
+
+const throwActionUnavailable = (): never => {
+  throw new AppError(
+    'This report action is not currently available.',
+    409,
+    'REPORT_ACTION_NOT_AVAILABLE',
+  );
+};
 
 export const listAdminNoShowReports = async (query: AdminNoShowReportsListQuery) => {
   const result = await repository.listNoShowReportsForAdmin({
@@ -157,11 +176,7 @@ export const verifyAdminNoShowReport = async (
   }
 
   if (!('report' in result)) {
-    throw new AppError(
-      'Only pending no-show reports can be verified.',
-      409,
-      'CONFLICT',
-    );
+    return throwActionUnavailable();
   }
 
   return {
@@ -182,22 +197,6 @@ export const resolveAdminNoShowReport = async (
   reportId: string,
   reviewNote?: string,
 ) => {
-  const existing = await repository.findNoShowReportByIdForAdmin(reportId);
-
-  if (
-    existing &&
-    requiresPickupRecoveryOperationalAction({
-      report: existing,
-      reservationStatus: existing.reservation.status,
-    })
-  ) {
-    throw new AppError(
-      'Pickup recovery reports require an operational action: ask the supplier for a new pickup window or cancel and release the hold.',
-      409,
-      'OPERATIONAL_ACTION_REQUIRED',
-    );
-  }
-
   const result = await repository.resolveNoShowReportWithoutStrike({
     reportId,
     adminUserId,
@@ -209,11 +208,7 @@ export const resolveAdminNoShowReport = async (
   }
 
   if (!('report' in result)) {
-    throw new AppError(
-      'Only pending reports can be resolved without strike.',
-      409,
-      'CONFLICT',
-    );
+    return throwActionUnavailable();
   }
 
   return mapReport(result.report);
@@ -236,35 +231,11 @@ const mapNoDriverResolutionError = (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if (result.outcome === 'NOT_ELIGIBLE') {
-    throw new AppError(
-      'This action is only available for delivery pickup recovery reports.',
-      409,
-      'NOT_ELIGIBLE',
-    );
+  if (result.outcome === 'ACTION_NOT_AVAILABLE') {
+    return throwActionUnavailable();
   }
 
-  if (result.outcome === 'REPORT_NOT_PENDING') {
-    throw new AppError(
-      'Only pending reports can be resolved with this action.',
-      409,
-      'CONFLICT',
-    );
-  }
-
-  if (result.outcome === 'DRIVER_ASSIGNED') {
-    throw new AppError(
-      'Cannot reopen driver search while a driver is still assigned.',
-      409,
-      'DRIVER_ASSIGNED',
-    );
-  }
-
-  throw new AppError(
-    'Reservation or delivery is not in the expected awaiting-resolution state.',
-    409,
-    'INVALID_STATE',
-  );
+  return throwActionUnavailable();
 };
 
 export const requestSupplierRescheduleAdminNoShowReport = async (
@@ -341,11 +312,7 @@ export const rejectAdminNoShowReport = async (
   }
 
   if (!('report' in result)) {
-    throw new AppError(
-      'Only pending no-show reports can be rejected.',
-      409,
-      'CONFLICT',
-    );
+    return throwActionUnavailable();
   }
 
   return mapReport(result.report);

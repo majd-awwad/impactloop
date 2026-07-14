@@ -264,7 +264,7 @@ describe('admin stale assigned-driver pickup recovery', () => {
     await assert.rejects(
       () => resolveAdminNoShowReport(ctx.adminId, report.id, 'Closed'),
       (error: Error & { code?: string }) => {
-        assert.equal(error.code, 'OPERATIONAL_ACTION_REQUIRED');
+        assert.equal(error.code, 'REPORT_ACTION_NOT_AVAILABLE');
         return true;
       },
     );
@@ -281,7 +281,14 @@ describe('admin stale assigned-driver pickup recovery', () => {
       {},
     );
 
-    assert.equal(mapped.status, 'RESOLVED_NO_STRIKE');
+    assert.equal(mapped.status, 'PENDING_REVIEW');
+    assert.equal(mapped.workflowType, 'ACCOUNTABILITY_AND_RECOVERY');
+    assert.equal(mapped.operationalState, 'RESOLVED');
+    assert.deepEqual(mapped.availableActions, [
+      'VERIFY',
+      'REJECT',
+      'RESOLVE_WITHOUT_STRIKE',
+    ]);
 
     const updatedReservation = await prisma.reservation.findUnique({
       where: { id: reservation.id },
@@ -345,7 +352,8 @@ describe('admin stale assigned-driver pickup recovery', () => {
       {},
     );
 
-    assert.equal(mapped.status, 'RESOLVED_NO_STRIKE');
+    assert.equal(mapped.status, 'PENDING_REVIEW');
+    assert.equal(mapped.operationalState, 'RESOLVED');
 
     const updatedReservation = await prisma.reservation.findUnique({
       where: { id: reservation.id },
@@ -389,7 +397,13 @@ describe('admin stale assigned-driver pickup recovery', () => {
     });
     assert.equal(updatedReservation?.status, 'AWAITING_RESOLUTION');
 
-    await requestSupplierRescheduleAdminNoShowReport(ctx.adminId, report.id, {});
+    const recovered = await requestSupplierRescheduleAdminNoShowReport(
+      ctx.adminId,
+      report.id,
+      {},
+    );
+    assert.equal(recovered.status, 'VERIFIED');
+    assert.equal(recovered.operationalState, 'RESOLVED');
     const afterRequest = await prisma.reservation.findUnique({
       where: { id: report.reservationId },
     });

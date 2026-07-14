@@ -7333,17 +7333,106 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
     });
   }
 
-  const resolvedReservationId = context.reservations.get('r-learner-pvc-resolution');
-  if (resolvedReservationId) {
+  const supplierTargetPickupFailureReservationId = context.reservations.get(
+    'r-learner-pvc-resolution',
+  );
+  if (supplierTargetPickupFailureReservationId) {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: supplierTargetPickupFailureReservationId },
+      select: {
+        ownerId: true,
+        deliveries: { select: { id: true }, take: 1 },
+      },
+    });
+
+    const deliveryId = reservation?.deliveries[0]?.id;
+    if (!reservation || !deliveryId) {
+      throw new Error('Missing delivery context for supplier-target pickup failure seed.');
+    }
+
     await prisma.noShowReport.create({
       data: {
-        reservationId: resolvedReservationId,
+        reservationId: supplierTargetPickupFailureReservationId,
+        deliveryId,
         reporterUserId: driverUserId,
-        targetRole: 'SYSTEM',
+        targetUserId: reservation.ownerId,
+        targetRole: 'SUPPLIER',
         reasonCode: 'PICKUP_FAILED',
-        note: 'Seed incident: pickup failed and delivery moved to admin review.',
+        note: 'Seed incident: supplier-target pickup failure moved to admin review.',
         pickupWindowStart: dateAt(-1, 10),
         pickupWindowEnd: dateAt(-1, 12),
+        status: 'PENDING_REVIEW',
+      },
+    });
+  }
+
+  const systemRecoveryReservationId = context.reservations.get(
+    'r-majd-motors-accepted',
+  );
+  if (systemRecoveryReservationId) {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: systemRecoveryReservationId },
+      select: {
+        requesterId: true,
+        deliveries: { select: { id: true }, take: 1 },
+      },
+    });
+
+    const deliveryId = reservation?.deliveries[0]?.id;
+    if (!reservation || !deliveryId) {
+      throw new Error('Missing delivery context for system recovery seed.');
+    }
+
+    await prisma.deliveryAssignment.updateMany({
+      where: { deliveryId, status: 'ACTIVE' },
+      data: {
+        status: 'RELEASED',
+        releasedAt: dateAt(-1, 13),
+        releaseReason: 'Seeded no-driver recovery scenario.',
+      },
+    });
+    await prisma.delivery.update({
+      where: { id: deliveryId },
+      data: {
+        status: 'AWAITING_RESOLUTION',
+        assignedDriverProfileId: null,
+        assignedAt: null,
+        failedAt: dateAt(-1, 13),
+        failureReason: 'No driver available for the supplier pickup window.',
+      },
+    });
+    await prisma.reservation.update({
+      where: { id: systemRecoveryReservationId },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+
+    await prisma.noShowReport.create({
+      data: {
+        reservationId: systemRecoveryReservationId,
+        deliveryId,
+        reporterUserId: reservation.requesterId,
+        targetRole: 'SYSTEM',
+        reasonCode: 'NO_DRIVER_AVAILABLE',
+        note: 'Seed incident: no driver was available for the pickup window.',
+        pickupWindowStart: dateAt(-1, 10),
+        pickupWindowEnd: dateAt(-1, 12),
+        status: 'PENDING_REVIEW',
+      },
+    });
+  }
+
+  const accountabilityReservationId = context.reservations.get(
+    'r-majd-breadboard-completed',
+  );
+  if (accountabilityReservationId) {
+    await prisma.noShowReport.create({
+      data: {
+        reservationId: accountabilityReservationId,
+        reporterUserId: majdSupplierId,
+        targetUserId: majdLearnerId,
+        targetRole: 'LEARNER',
+        reasonCode: 'REPEATED_DELAY',
+        note: 'Seed incident: repeated pickup coordination delays.',
         status: 'PENDING_REVIEW',
       },
     });

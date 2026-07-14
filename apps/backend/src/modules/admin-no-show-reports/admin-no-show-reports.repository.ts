@@ -1,6 +1,11 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import {
+  classifyAdminReportContract,
+  type AdminReportAction,
+  type AdminReportClassifierContext,
+} from './admin-no-show-reports.classifier.js';
+import {
   countVerifiedStrikesForUser,
   STRIKE_ELIGIBLE_TARGET_ROLES,
   suspendUserForVerifiedStrikes,
@@ -27,6 +32,13 @@ export const reportInclude = {
       owner: { select: { id: true, displayName: true, email: true } },
     },
   },
+  delivery: {
+    select: {
+      id: true,
+      status: true,
+      assignedDriverProfileId: true,
+    },
+  },
   reporter: { select: { id: true, displayName: true, email: true } },
   target: { select: { id: true, displayName: true, email: true } },
   reviewedBy: { select: { id: true, displayName: true } },
@@ -45,6 +57,43 @@ const verifyMutationSelect = {
   targetUserId: true,
   targetRole: true,
 } satisfies Prisma.NoShowReportSelect;
+
+const actionContextInclude = {
+  reservation: {
+    select: {
+      status: true,
+      fulfillmentMethod: true,
+      pendingRescheduleRequestedBy: true,
+      pendingRescheduleReason: true,
+    },
+  },
+  delivery: {
+    select: {
+      id: true,
+      status: true,
+      assignedDriverProfileId: true,
+    },
+  },
+} satisfies Prisma.NoShowReportInclude;
+
+const toActionContext = (
+  report: Prisma.NoShowReportGetPayload<{ include: typeof actionContextInclude }>,
+): AdminReportClassifierContext => ({
+  report: {
+    status: report.status,
+    reasonCode: report.reasonCode,
+    targetRole: report.targetRole,
+    targetUserId: report.targetUserId,
+    deliveryId: report.deliveryId,
+  },
+  reservation: report.reservation,
+  delivery: report.delivery,
+});
+
+const actionIsAvailable = (
+  report: Prisma.NoShowReportGetPayload<{ include: typeof actionContextInclude }>,
+  action: AdminReportAction,
+) => classifyAdminReportContract(toActionContext(report)).availableActions.includes(action);
 
 export const listNoShowReportsForAdmin = async (input: {
   status?: 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'RESOLVED_NO_STRIKE';
@@ -87,14 +136,15 @@ export const verifyNoShowReport = async (input: {
   const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.noShowReport.findUnique({
       where: { id: input.reportId },
+      include: actionContextInclude,
     });
 
     if (!existing) {
       return null;
     }
 
-    if (existing.status !== 'PENDING_REVIEW') {
-      return { conflict: true as const };
+    if (!actionIsAvailable(existing, 'VERIFY')) {
+      return { actionUnavailable: true as const };
     }
 
     const updated = await tx.noShowReport.update({
@@ -138,7 +188,7 @@ export const verifyNoShowReport = async (input: {
     return null;
   }
 
-  if ('conflict' in outcome) {
+  if ('actionUnavailable' in outcome) {
     return outcome;
   }
 
@@ -164,14 +214,15 @@ export const resolveNoShowReportWithoutStrike = async (input: {
   const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.noShowReport.findUnique({
       where: { id: input.reportId },
+      include: actionContextInclude,
     });
 
     if (!existing) {
       return null;
     }
 
-    if (existing.status !== 'PENDING_REVIEW') {
-      return { conflict: true as const };
+    if (!actionIsAvailable(existing, 'RESOLVE_WITHOUT_STRIKE')) {
+      return { actionUnavailable: true as const };
     }
 
     const updated = await tx.noShowReport.update({
@@ -192,7 +243,7 @@ export const resolveNoShowReportWithoutStrike = async (input: {
     return null;
   }
 
-  if ('conflict' in outcome) {
+  if ('actionUnavailable' in outcome) {
     return outcome;
   }
 
@@ -213,14 +264,15 @@ export const rejectNoShowReport = async (input: {
   const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.noShowReport.findUnique({
       where: { id: input.reportId },
+      include: actionContextInclude,
     });
 
     if (!existing) {
       return null;
     }
 
-    if (existing.status !== 'PENDING_REVIEW') {
-      return { conflict: true as const };
+    if (!actionIsAvailable(existing, 'REJECT')) {
+      return { actionUnavailable: true as const };
     }
 
     const updated = await tx.noShowReport.update({
@@ -241,7 +293,7 @@ export const rejectNoShowReport = async (input: {
     return null;
   }
 
-  if ('conflict' in outcome) {
+  if ('actionUnavailable' in outcome) {
     return outcome;
   }
 
