@@ -192,7 +192,7 @@ const selectPrimaryIncident = <T extends ReturnType<typeof mapIncidentContract>>
 };
 
 const mapIncidentSummary = (
-  report: ReturnType<typeof mapIncidentContract> | null,
+  report: ReturnType<typeof mapIncidentContract> | null | undefined,
 ) =>
   report
     ? {
@@ -209,11 +209,19 @@ const mapIncidentSummary = (
 const mapDeliveryContract = (
   delivery: repository.AdminDeliveryListRecord | repository.AdminDeliveryDetailRecord,
   canReopenDriverAssignment: boolean,
+  selectedPrimaryIncident?: repository.AdminDeliveryPrimaryIncident | null,
 ) => {
-  const incidentContracts = delivery.incidentReports.map((report) =>
+  const linkedReports = 'incidentReports' in delivery ? delivery.incidentReports : [];
+  const incidentContracts = linkedReports.map((report) =>
     mapIncidentContract(delivery, report),
   );
-  const primaryIncident = selectPrimaryIncident(incidentContracts);
+  const selectedPrimaryContract = selectedPrimaryIncident
+    ? mapIncidentContract(delivery, selectedPrimaryIncident)
+    : null;
+  const primaryIncident = selectedPrimaryContract ?? selectPrimaryIncident(incidentContracts);
+  if (selectedPrimaryContract && !incidentContracts.some((report) => report.id === selectedPrimaryContract.id)) {
+    incidentContracts.unshift(selectedPrimaryContract);
+  }
   const contract = composeAdminDeliveryContract({
     delivery: {
       id: delivery.id,
@@ -250,7 +258,10 @@ const mapDeliveryContract = (
   return { contract, primaryIncident, incidentContracts };
 };
 
-const mapListItem = (delivery: repository.AdminDeliveryListRecord) => {
+const mapListItem = (
+  delivery: repository.AdminDeliveryListRecord,
+  primaryIncident?: repository.AdminDeliveryPrimaryIncident | null,
+) => {
   const canReopen =
     delivery.status === 'DRIVER_ASSIGNED' &&
     delivery.assignedDriverProfileId != null &&
@@ -260,7 +271,11 @@ const mapListItem = (delivery: repository.AdminDeliveryListRecord) => {
         assignment.status === 'ACTIVE' &&
         assignment.driverProfile.id === delivery.assignedDriverProfileId,
     );
-  const { contract, primaryIncident } = mapDeliveryContract(delivery, canReopen);
+  const { contract, primaryIncident: mappedPrimaryIncident } = mapDeliveryContract(
+    delivery,
+    canReopen,
+    primaryIncident,
+  );
   return {
   id: delivery.id,
   status: delivery.status,
@@ -296,7 +311,7 @@ const mapListItem = (delivery: repository.AdminDeliveryListRecord) => {
   pickupArea: formatLocationLabel(delivery.pickupLocation),
   dropoffArea: formatLocationLabel(delivery.dropoffLocation),
   ...contract,
-  primaryIncidentSummary: mapIncidentSummary(primaryIncident),
+  primaryIncidentSummary: mapIncidentSummary(mappedPrimaryIncident),
   incidentCount: delivery._count.incidentReports,
   hasAdditionalIncidents: delivery._count.incidentReports > 1,
   group: delivery.deliveryGroup
@@ -350,11 +365,15 @@ const canReopenDriverAssignment = (
           reservation.status !== 'ACCEPTED',
       )));
 
-const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
+const mapDetail = (
+  delivery: repository.AdminDeliveryDetailRecord,
+  selectedPrimaryIncident?: repository.AdminDeliveryPrimaryIncident | null,
+) => {
   const canReopen = canReopenDriverAssignment(delivery);
   const { contract, primaryIncident, incidentContracts } = mapDeliveryContract(
     delivery,
     canReopen,
+    selectedPrimaryIncident,
   );
   const locationPings = delivery.locationPings.map((ping) => ({
     id: ping.id,
@@ -481,17 +500,88 @@ const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
   };
 };
 
+const SUMMARY_BATCH_SIZE = 100;
+
+const countFilteredDeliverySummary = async (query: AdminDeliveriesListQuery) => {
+  const summary = {
+    total: 0,
+    waitingForDriver: 0,
+    activeInProgress: 0,
+    needsAdminReview: 0,
+    delivered: 0,
+    failedCancelled: 0,
+  };
+  let cursor: string | undefined;
+
+  do {
+    const deliveries = await repository.listAdminDeliveriesSummaryBatch({
+      query,
+      cursor,
+      take: SUMMARY_BATCH_SIZE,
+    });
+    if (deliveries.length === 0) break;
+
+    const primaryIncidents = await repository.findPrimaryIncidentsForDeliveryIds(
+      deliveries.map((delivery) => delivery.id),
+    );
+    for (const delivery of deliveries) {
+      const canReopen =
+        delivery.status === 'DRIVER_ASSIGNED' &&
+        delivery.assignedDriverProfileId != null &&
+        delivery.deliveryGroupId == null &&
+        delivery.assignments.some(
+          (assignment) =>
+            assignment.status === 'ACTIVE' &&
+            assignment.driverProfile.id === delivery.assignedDriverProfileId,
+        );
+      const { contract } = mapDeliveryContract(
+        delivery,
+        canReopen,
+        primaryIncidents.get(delivery.id),
+      );
+      summary.total += 1;
+      switch (contract.kpiBucket) {
+        case 'WAITING_FOR_DRIVER':
+          summary.waitingForDriver += 1;
+          break;
+        case 'ACTIVE_IN_PROGRESS':
+          summary.activeInProgress += 1;
+          break;
+        case 'NEEDS_ADMIN_REVIEW':
+          summary.needsAdminReview += 1;
+          break;
+        case 'DELIVERED':
+          summary.delivered += 1;
+          break;
+        case 'FAILED_CANCELLED':
+          summary.failedCancelled += 1;
+          break;
+      }
+    }
+    cursor = deliveries.length === SUMMARY_BATCH_SIZE
+      ? deliveries[deliveries.length - 1]?.id
+      : undefined;
+  } while (cursor);
+
+  return summary;
+};
+
 export const listAdminDeliveries = async (query: AdminDeliveriesListQuery) => {
   const [summary, result] = await Promise.all([
-    repository.countAdminDeliveriesSummary(),
+    countFilteredDeliverySummary(query),
     repository.listAdminDeliveries(query),
   ]);
+  const primaryIncidents = await repository.findPrimaryIncidentsForDeliveryIds(
+    result.items.map((delivery) => delivery.id),
+  );
 
   const totalPages = Math.max(1, Math.ceil(result.total / query.limit));
 
   return {
     summary,
-    items: result.items.map(mapListItem),
+    items: result.items.map((delivery) =>
+      mapListItem(delivery, primaryIncidents.get(delivery.id)),
+    ),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -527,7 +617,8 @@ export const getAdminDeliveryById = async (id: string) => {
     throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
   }
 
-  return mapDetail(delivery);
+  const primaryIncidents = await repository.findPrimaryIncidentsForDeliveryIds([id]);
+  return mapDetail(delivery, primaryIncidents.get(id));
 };
 
 export const reopenAdminDeliveryDriverAssignment = async (
@@ -550,7 +641,10 @@ export const reopenAdminDeliveryDriverAssignment = async (
       if (!delivery) {
         throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
       }
-      return mapDetail(delivery);
+      const primaryIncidents = await repository.findPrimaryIncidentsForDeliveryIds([
+        result.deliveryId,
+      ]);
+      return mapDetail(delivery, primaryIncidents.get(result.deliveryId));
     }
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
