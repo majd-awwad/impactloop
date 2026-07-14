@@ -19,6 +19,7 @@ import {
   notifyNoDriverSupplierRescheduleRequested,
   notifyStalePickupSupplierRescheduleRequested,
 } from '../notifications/reservation-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   id: report.id,
@@ -155,7 +156,7 @@ export const verifyAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending no-show reports can be verified.',
       409,
@@ -207,7 +208,7 @@ export const resolveAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending reports can be resolved without strike.',
       409,
@@ -279,6 +280,10 @@ export const requestSupplierRescheduleAdminNoShowReport = async (
 
   switch (result.outcome) {
     case 'REQUESTED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'AWAITING_SUPPLIER_CONFIRMATION',
+      );
       if (result.recoveryKind === 'NO_DRIVER') {
         await notifyNoDriverSupplierRescheduleRequested(
           result.reservationId,
@@ -310,6 +315,10 @@ export const cancelReleaseHoldAdminNoShowReport = async (
 
   switch (result.outcome) {
     case 'CANCELLED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'EXPIRED',
+      );
       return mapReport(result.report);
     default:
       return mapNoDriverResolutionError(result);
@@ -331,7 +340,7 @@ export const rejectAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
+  if (!('report' in result)) {
     throw new AppError(
       'Only pending no-show reports can be rejected.',
       409,

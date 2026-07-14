@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 
 class EmptyActivityCard extends StatelessWidget {
@@ -69,10 +70,9 @@ class EmptyActivityCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             OutlinedButton(
               onPressed: onAction,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: palette.mint,
-                side: BorderSide(color: palette.borderStrong),
-                shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.neutral,
               ),
               child: Text(actionLabel!),
             ),

@@ -8,9 +8,12 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../profile/presentation/widgets/profile_image_picker.dart';
 import '../../application/saved_locations_providers.dart';
@@ -343,6 +346,10 @@ class _SavedLocationCard extends StatelessWidget {
             children: [
               OutlinedButton.icon(
                 onPressed: onEdit,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
                 label: const Text('Edit'),
               ),
@@ -350,6 +357,10 @@ class _SavedLocationCard extends StatelessWidget {
                 onPressed: location.isDefault || _isSettingDefault
                     ? null
                     : onSetDefault,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.primary,
+                ),
                 icon: _isSettingDefault
                     ? const SizedBox(
                         width: 18,
@@ -369,7 +380,7 @@ class _SavedLocationCard extends StatelessWidget {
                       )
                     : const Icon(Icons.delete_outline, size: 18),
                 label: const Text('Delete'),
-                style: TextButton.styleFrom(foregroundColor: colors.danger),
+                style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
               ),
             ],
           ),
@@ -727,143 +738,136 @@ class _SavedLocationFormDialogState
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(_isEditing ? 'Edit saved location' : 'Add saved location'),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AppTextField(
-                  controller: _labelController,
-                  label: 'Label',
-                  hint: 'Home, Workshop, Campus',
-                  textInputAction: TextInputAction.next,
-                  errorText: _labelError,
-                  validator: _required('Label is required'),
-                  onChanged: (_) => _clearServerErrors(),
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _cityController,
-                  label: 'City',
-                  textInputAction: TextInputAction.next,
-                  errorText: _cityError,
-                  validator: _required('City is required'),
-                  onChanged: (_) => _clearServerErrors(),
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _areaController,
-                  label: 'Area',
-                  hint: 'Optional',
-                  textInputAction: TextInputAction.next,
-                  onChanged: (_) => _clearServerErrors(),
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _addressController,
-                  label: 'Exact address',
-                  hint: 'Private, optional',
-                  textInputAction: TextInputAction.next,
-                  onChanged: (_) => _clearServerErrors(),
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _countryController,
-                  label: 'Country',
-                  textInputAction: TextInputAction.next,
-                  validator: _required('Country is required'),
-                  onChanged: (_) => _clearServerErrors(),
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _latitudeController,
-                  label: 'Latitude',
-                  hint: 'Optional exact coordinate',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: true,
-                  ),
-                  textInputAction: TextInputAction.next,
-                  errorText: _latitudeError,
-                  validator: (value) => _validateCoordinate(
-                    value,
-                    min: -90,
-                    max: 90,
-                    missingPairController: _longitudeController,
-                    missingPairMessage: 'Longitude is required with latitude',
-                  ),
-                  onChanged: (_) {
-                    _clearServerErrors();
-                    setState(() {});
-                  },
-                ),
-                const AppFieldGap(),
-                AppTextField(
-                  controller: _longitudeController,
-                  label: 'Longitude',
-                  hint: 'Optional exact coordinate',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                    signed: true,
-                  ),
-                  textInputAction: TextInputAction.done,
-                  errorText: _longitudeError,
-                  validator: (value) => _validateCoordinate(
-                    value,
-                    min: -180,
-                    max: 180,
-                    missingPairController: _latitudeController,
-                    missingPairMessage: 'Latitude is required with longitude',
-                  ),
-                  onFieldSubmitted: (_) => _submit(),
-                  onChanged: (_) {
-                    _clearServerErrors();
-                    setState(() {});
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _SavedLocationMapLauncher(
-                  latitude: _parseOptionalCoordinate(_latitudeController.text),
-                  longitude: _parseOptionalCoordinate(
-                    _longitudeController.text,
-                  ),
-                  isForwardGeocoding: _isForwardGeocoding,
-                  isReverseGeocoding: _isReverseGeocoding,
-                  onFindTypedAddress: _setCoordinatesFromTypedAddress,
-                  onPickMap: _openMapPicker,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _isDefault,
-                  onChanged: (value) {
-                    setState(() => _isDefault = value ?? false);
-                  },
-                  title: const Text('Use as default saved location'),
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-                if (_formError != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  AppInlineError(message: _formError!),
-                ],
-              ],
+      maxWidth: 520,
+      onClose: () => Navigator.of(context).pop(),
+      closeEnabled: !_isSubmitting,
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppTextField(
+              controller: _labelController,
+              label: 'Label',
+              hint: 'Home, Workshop, Campus',
+              textInputAction: TextInputAction.next,
+              errorText: _labelError,
+              validator: _required('Label is required'),
+              onChanged: (_) => _clearServerErrors(),
             ),
-          ),
+            const AppFieldGap(),
+            AppTextField(
+              controller: _cityController,
+              label: 'City',
+              textInputAction: TextInputAction.next,
+              errorText: _cityError,
+              validator: _required('City is required'),
+              onChanged: (_) => _clearServerErrors(),
+            ),
+            const AppFieldGap(),
+            AppTextField(
+              controller: _areaController,
+              label: 'Area',
+              hint: 'Optional',
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearServerErrors(),
+            ),
+            const AppFieldGap(),
+            AppTextField(
+              controller: _addressController,
+              label: 'Exact address',
+              hint: 'Private, optional',
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => _clearServerErrors(),
+            ),
+            const AppFieldGap(),
+            AppTextField(
+              controller: _countryController,
+              label: 'Country',
+              textInputAction: TextInputAction.next,
+              validator: _required('Country is required'),
+              onChanged: (_) => _clearServerErrors(),
+            ),
+            const AppFieldGap(),
+            AppTextField(
+              controller: _latitudeController,
+              label: 'Latitude',
+              hint: 'Optional exact coordinate',
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: true,
+              ),
+              textInputAction: TextInputAction.next,
+              errorText: _latitudeError,
+              validator: (value) => _validateCoordinate(
+                value,
+                min: -90,
+                max: 90,
+                missingPairController: _longitudeController,
+                missingPairMessage: 'Longitude is required with latitude',
+              ),
+              onChanged: (_) {
+                _clearServerErrors();
+                setState(() {});
+              },
+            ),
+            const AppFieldGap(),
+            AppTextField(
+              controller: _longitudeController,
+              label: 'Longitude',
+              hint: 'Optional exact coordinate',
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: true,
+              ),
+              textInputAction: TextInputAction.done,
+              errorText: _longitudeError,
+              validator: (value) => _validateCoordinate(
+                value,
+                min: -180,
+                max: 180,
+                missingPairController: _latitudeController,
+                missingPairMessage: 'Latitude is required with longitude',
+              ),
+              onFieldSubmitted: (_) => _submit(),
+              onChanged: (_) {
+                _clearServerErrors();
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _SavedLocationMapLauncher(
+              latitude: _parseOptionalCoordinate(_latitudeController.text),
+              longitude: _parseOptionalCoordinate(_longitudeController.text),
+              isForwardGeocoding: _isForwardGeocoding,
+              isReverseGeocoding: _isReverseGeocoding,
+              onFindTypedAddress: _setCoordinatesFromTypedAddress,
+              onPickMap: _openMapPicker,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _isDefault,
+              onChanged: (value) {
+                setState(() => _isDefault = value ?? false);
+              },
+              title: const Text('Use as default saved location'),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+            if (_formError != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              AppInlineError(message: _formError!),
+            ],
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: _isSubmitting ? null : _submit,
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
           child: _isSubmitting
               ? const SizedBox(
                   width: 18,
@@ -872,7 +876,7 @@ class _SavedLocationFormDialogState
                 )
               : Text(_isEditing ? 'Save changes' : 'Create location'),
         ),
-      ],
+      ),
     );
   }
 
@@ -1038,50 +1042,35 @@ class _SavedLocationMapDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
-    return Dialog(
-      insetPadding: const EdgeInsets.all(AppSpacing.md),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Pick exact point',
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: colors.textPrimary, fontSize: 22),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Tap the map to set private exact coordinates. The app will reverse-geocode the point into readable fields when possible.',
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: colors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _SavedLocationMapPicker(
-                latitude: latitude,
-                longitude: longitude,
-                city: city,
-                area: area,
-                country: country,
-                isReverseGeocoding: false,
-                onPointSelected: (point) => Navigator.of(context).pop(point),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-              ),
-            ],
+    return AppDialogShell(
+      title: Text(
+        'Pick exact point',
+        style: AppTextStyles.title(
+          context,
+        ).copyWith(color: colors.textPrimary, fontSize: 22),
+      ),
+      maxWidth: 680,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Tap the map to set private exact coordinates. The app will reverse-geocode the point into readable fields when possible.',
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: colors.textSecondary),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+          _SavedLocationMapPicker(
+            latitude: latitude,
+            longitude: longitude,
+            city: city,
+            area: area,
+            country: country,
+            isReverseGeocoding: false,
+            onPointSelected: (point) => Navigator.of(context).pop(point),
+          ),
+        ],
       ),
     );
   }
@@ -1351,6 +1340,7 @@ class _DeleteSavedLocationDialog extends StatelessWidget {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
           child: const Text('Delete'),
         ),
       ],

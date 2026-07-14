@@ -18,6 +18,7 @@ Current Flutter theme inventory and direction. This documents code reality only;
 - `apps/frontend/lib/app/theme/auth_dark_decorations.dart`
 - `apps/frontend/lib/app/theme/auth_dark_text_styles.dart`
 - `apps/frontend/lib/app/theme/landing_colors.dart`
+- `apps/frontend/lib/shared/widgets/app_status_badge.dart`
 - `apps/frontend/lib/shared/widgets/materials/materials_ui_palette.dart`
 - `apps/frontend/lib/features/auth/presentation/widgets/auth_ui_palette.dart`
 - `apps/frontend/lib/features/learning_hub/presentation/theme/learning_ui_palette.dart`
@@ -39,6 +40,7 @@ Current Flutter theme inventory and direction. This documents code reality only;
 | Shared spacing/radius/text/decorations | `app_spacing.dart`, `app_radius.dart`, `app_text_styles.dart`, `app_decorations.dart` | Shared primitives, with some auth-specific values still present. |
 | Legacy dark auth compatibility | `auth_dark_colors.dart`, `auth_dark_decorations.dart`, `auth_dark_text_styles.dart` | Auth entry compatibility layer; comments explicitly direct new theme-aware UI toward `AppThemeColors` or feature palettes. |
 | Landing palette | `landing_colors.dart` | Light/dark landing surface palette derived from `AppThemeColors`. |
+| Shared status presentation | `shared/widgets/app_status_badge.dart` | Theme-aware semantic tones and compact badges for primary, success, warning, danger, info, and neutral meanings. |
 | Materials palette | `shared/widgets/materials/materials_ui_palette.dart` | Shared material-card/discovery bridge palette derived from `AppThemeColors` for cards, badges, and material metadata surfaces. |
 | Auth palette | `features/auth/presentation/widgets/auth_ui_palette.dart` | Auth-scoped bridge palette derived from `AppThemeColors`; feature-specific, not global. |
 | Learning palette | `features/learning_hub/presentation/theme/learning_ui_palette.dart` | Learning Hub bridge palette derived from `AppThemeColors` for project cards, chips, detail widgets, and build panels. |
@@ -105,6 +107,8 @@ When adding a new token, name it by durable role or feature scope. Avoid one-off
 
 `AppThemeColors` is the app-wide semantic color extension. It includes page, surface, panel, card, brand, text, border, shadow, overlay, warning, danger, success, info, hero, fallback, and purple gradient semantics.
 
+Use `AppStatusTone` and `AppStatusBadge` when the same state can appear across roles. Domain presenters may own their status-to-tone mapping, but must preserve common meaning: pending/review is warning; accepted/completed is success; rejected/cancelled/failed is danger; active/available is primary; scheduled/in-progress is info; and non-actionable metadata is neutral.
+
 Preferred usage in reusable or cross-feature widgets:
 
 ```dart
@@ -145,6 +149,8 @@ Treat supplier theme as a scoped compatibility/theme-bridge layer, not an indepe
 ## Practical Rules
 
 - New shared widgets should use `Theme.of(context).textTheme`, `Theme.of(context).colorScheme` where appropriate, `AppThemeColors.of(context)`, `AppSpacing`, and `AppRadius` first.
+- Shared dialogs use `AppDialogShell`, `AppCloseButton`, and `AppDialogFooter` from `shared/widgets/`. Form dialogs use the shell's directional top-end close button and one primary footer action. Decision dialogs retain an explicit secondary Cancel action through `AppDialogFooter.decision`.
+- Dialog and modal placement must use directional alignment and padding (`AlignmentDirectional`, `EdgeInsetsDirectional`) so close controls remain at the logical end in RTL.
 - Prefer existing shared widgets (`AppTextField`, `AppDropdownField`, `AppPrimaryButton`, material cards/badges, snackbar helpers) before custom local styling.
 - New feature-specific palettes may exist only when a feature has enough distinct visual semantics or compatibility needs to justify them.
 - Feature palettes must stay scoped. Do not import auth, supplier, or learning palettes into unrelated features.

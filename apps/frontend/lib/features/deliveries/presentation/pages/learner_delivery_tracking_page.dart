@@ -12,7 +12,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/deliveries_repository.dart';
 import '../../data/models/learner_delivery_tracking.dart';
@@ -307,9 +307,9 @@ class _TrackingContent extends StatelessWidget {
                 runSpacing: AppSpacing.sm,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  MaterialStatusBadge(
+                  AppStatusBadge(
                     label: deliveryStatusLabel(tracking.status),
-                    tone: deliveryStatusTone(tracking.status),
+                    tone: deliveryStatusAppTone(tracking.status),
                   ),
                   if (tracking.driverDisplayName?.trim().isNotEmpty == true)
                     Text(
@@ -435,6 +435,7 @@ class _TrackingContent extends StatelessWidget {
           alignment: AlignmentDirectional.centerStart,
           child: TextButton.icon(
             onPressed: refreshing ? null : onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: refreshing
                 ? const SizedBox(
                     width: 16,
@@ -448,6 +449,7 @@ class _TrackingContent extends StatelessWidget {
         TextButton.icon(
           onPressed: () =>
               context.go('/learner/deliveries/${tracking.deliveryId}'),
+          style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
           icon: const Icon(Icons.assignment_outlined),
           label: const Text('View delivery details'),
         ),
@@ -640,7 +642,14 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),

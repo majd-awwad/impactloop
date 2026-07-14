@@ -9,10 +9,13 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
+import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/learning_project_status_presentation.dart';
 import '../../../materials/data/models/category.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project_draft_component.dart';
@@ -140,6 +143,10 @@ class _SubmissionsContent extends StatelessWidget {
                   ),
                   OutlinedButton.icon(
                     onPressed: () => context.go('/learning/add-draft'),
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
+                    ),
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('Submit new project'),
                   ),
@@ -223,6 +230,8 @@ class LearningProjectSubmissionDetailPage extends ConsumerWidget {
                   subtitle:
                       'This submission may not exist or may belong to another learner.',
                   actionLabel: 'Back to submissions',
+                  actionTone: AppStatusTone.neutral,
+                  actionProminent: false,
                   onAction: () => context.go('/learning/submissions'),
                 ),
                 data: (submission) =>
@@ -262,6 +271,10 @@ class _SubmissionDetailContent extends ConsumerWidget {
                 alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: () => context.popOrGo('/learning/submissions'),
+                  style: AppStatusButtonStyle.text(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   icon: const Icon(Icons.arrow_back_rounded),
                   label: const Text('Back to submissions'),
                 ),
@@ -481,6 +494,8 @@ class _LearningProjectSubmissionEditPageState
                   subtitle:
                       'This submission may not exist or may belong to another learner.',
                   actionLabel: 'Back to submissions',
+                  actionTone: AppStatusTone.neutral,
+                  actionProminent: false,
                   onAction: () => context.go('/learning/submissions'),
                 ),
                 data: (submission) {
@@ -492,6 +507,8 @@ class _LearningProjectSubmissionEditPageState
                       subtitle:
                           'Only drafts, pending review, and projects with requested changes can be edited.',
                       actionLabel: 'View submission',
+                      actionTone: AppStatusTone.neutral,
+                      actionProminent: false,
                       onAction: () =>
                           context.go('/learning/submissions/${submission.id}'),
                     );
@@ -933,10 +950,18 @@ class _EditContent extends StatelessWidget {
                   children: [
                     OutlinedButton(
                       onPressed: isSaving ? null : onCancel,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.warning,
+                      ),
                       child: const Text('Cancel'),
                     ),
                     OutlinedButton.icon(
                       onPressed: isSaving ? null : onSave,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.primary,
+                      ),
                       icon: const Icon(Icons.save_outlined),
                       label: const Text('Save changes'),
                     ),
@@ -1040,12 +1065,14 @@ class _SubmissionActions extends StatelessWidget {
     final actions = <Widget>[
       OutlinedButton(
         onPressed: () => context.go('/learning/submissions/${submission.id}'),
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
         child: const Text('View'),
       ),
       if (submission.availableActions.canEdit)
         FilledButton.icon(
           onPressed: () =>
               context.go('/learning/submissions/${submission.id}/edit'),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
           icon: const Icon(Icons.edit_outlined),
           label: Text(
             submission.availableActions.canResubmit
@@ -1054,8 +1081,9 @@ class _SubmissionActions extends StatelessWidget {
           ),
         ),
       if (submission.availableActions.canViewPublic)
-        FilledButton.icon(
+        OutlinedButton.icon(
           onPressed: () => context.go('/learning/${submission.id}'),
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
           icon: const Icon(Icons.open_in_new_rounded),
           label: const Text('View public project'),
         ),
@@ -1108,24 +1136,10 @@ class _StatusChip extends StatelessWidget {
   final LearningProjectSubmissionStatus status;
 
   @override
-  Widget build(BuildContext context) {
-    final color = _toneColor(context, status);
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.13),
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: color.withValues(alpha: 0.35)),
-      ),
-      child: Text(
-        status.label(),
-        style: AppTextStyles.badgeLabel(context).copyWith(color: color),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: status.label(),
+    tone: learningProjectStatusTone(status.apiValue),
+  );
 }
 
 class _FeedbackPanel extends StatelessWidget {
@@ -1279,6 +1293,7 @@ class _SubmissionsPager extends StatelessWidget {
           onPressed: result.page > 1
               ? () => onPageChanged(result.page - 1)
               : null,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
           child: const Text('Previous'),
         ),
         Padding(
@@ -1291,6 +1306,7 @@ class _SubmissionsPager extends StatelessWidget {
           onPressed: result.page < result.totalPages
               ? () => onPageChanged(result.page + 1)
               : null,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
           child: const Text('Next'),
         ),
       ],
@@ -1305,6 +1321,8 @@ class _StatePanel extends StatelessWidget {
     required this.subtitle,
     required this.actionLabel,
     required this.onAction,
+    this.actionTone = AppStatusTone.primary,
+    this.actionProminent = true,
   });
 
   final IconData icon;
@@ -1312,57 +1330,38 @@ class _StatePanel extends StatelessWidget {
   final String subtitle;
   final String actionLabel;
   final VoidCallback onAction;
+  final AppStatusTone actionTone;
+  final bool actionProminent;
 
   @override
   Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 42, color: palette.textSecondary),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: palette.textPrimary),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              FilledButton(onPressed: onAction, child: Text(actionLabel)),
-            ],
-          ),
+        child: AppEmptyStateCard(
+          icon: icon,
+          title: title,
+          subtitle: subtitle,
+          actions: [
+            FilledButton(
+              onPressed: onAction,
+              style: actionProminent
+                  ? AppStatusButtonStyle.filled(context, actionTone)
+                  : AppStatusButtonStyle.outlined(context, actionTone),
+              child: Text(actionLabel),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-Color _toneColor(BuildContext context, LearningProjectSubmissionStatus status) {
-  final scheme = Theme.of(context).colorScheme;
-  return switch (status) {
-    LearningProjectSubmissionStatus.published => Colors.green.shade700,
-    LearningProjectSubmissionStatus.changesRequested => Colors.amber.shade800,
-    LearningProjectSubmissionStatus.rejected => scheme.error,
-    LearningProjectSubmissionStatus.hidden ||
-    LearningProjectSubmissionStatus.archived => scheme.outline,
-    LearningProjectSubmissionStatus.draft => Colors.blueGrey.shade700,
-    LearningProjectSubmissionStatus.pendingReview => Colors.blue.shade700,
-  };
-}
+Color _toneColor(BuildContext context, LearningProjectSubmissionStatus status) =>
+    AppStatusStyle.of(
+      context,
+      learningProjectStatusTone(status.apiValue),
+    ).foreground;
 
 String _formatDateLabel(DateTime? date, String prefix) {
   if (date == null) {

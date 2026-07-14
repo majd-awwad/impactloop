@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/widgets/app_section_card.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_profile.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'profile_completion_card.dart';
@@ -233,8 +236,13 @@ class SupplierProfileHeader extends StatelessWidget {
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     label: Text(context.s.editSupplierProfile),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(44),
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
+                    ).copyWith(
+                      minimumSize: const WidgetStatePropertyAll(
+                        Size.fromHeight(44),
+                      ),
                     ),
                   ),
                 ],
@@ -361,67 +369,49 @@ class SupplierProfileStatsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.supplierColors;
     final items = [
       _StatItem(
         Icons.inventory_2_outlined,
         'Materials',
         stats.materialsCount,
-        const Color(0xFF475569),
-        const Color(0xFFF1F5F9),
+        AppStatusTone.neutral,
       ),
       _StatItem(
         Icons.people_outline,
         'Followers',
         stats.followersCount,
-        const Color(0xFF1D4ED8),
-        const Color(0xFFEFF6FF),
+        AppStatusTone.info,
         onTap: stats.followersCount > 0 ? onFollowersTap : null,
       ),
       _StatItem(
         Icons.visibility_outlined,
         'Views',
         stats.totalViews,
-        const Color(0xFF0284C7),
-        const Color(0xFFE0F2FE),
+        AppStatusTone.info,
       ),
       _StatItem(
         Icons.favorite_border,
         'Likes',
         stats.totalLikes,
-        const Color(0xFFDB2777),
-        const Color(0xFFFCE7F3),
+        AppStatusTone.info,
       ),
       _StatItem(
         Icons.check_circle_outline,
         'Available',
         stats.availableMaterialsCount,
-        const Color(0xFF16A34A),
-        const Color(0xFFDCFCE7),
+        AppStatusTone.primary,
       ),
       _StatItem(
         Icons.recycling_outlined,
         'Reused',
         stats.reusedMaterialsCount,
-        const Color(0xFF0F766E),
-        const Color(0xFFCCFBF1),
+        AppStatusTone.success,
       ),
     ];
 
-    return Container(
-      width: double.infinity,
+    return AppSectionCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: colors.cardShadow.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      borderRadius: AppRadius.lgAll,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final crossCount = isWide ? 6 : 3;
@@ -449,16 +439,14 @@ class _StatItem {
     this.icon,
     this.label,
     this.value,
-    this.accent,
-    this.background, {
+    this.tone, {
     this.onTap,
   });
 
   final IconData icon;
   final String label;
   final int value;
-  final Color accent;
-  final Color background;
+  final AppStatusTone tone;
   final VoidCallback? onTap;
 }
 
@@ -469,23 +457,21 @@ class _StatCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cell = Container(
+    final statusStyle = AppStatusStyle.of(context, item.tone);
+    final cell = AppSectionCard(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      decoration: BoxDecoration(
-        color: item.background.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: item.accent.withValues(alpha: 0.15)),
-      ),
+      borderRadius: AppRadius.mdAll,
+      tone: item.tone,
       child: Column(
         children: [
-          Icon(item.icon, size: 18, color: item.accent),
+          Icon(item.icon, size: 18, color: statusStyle.foreground),
           const SizedBox(height: 6),
           Text(
             '${item.value}',
             style: context.supplierTitle().copyWith(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
-                  color: item.accent,
+                  color: statusStyle.foreground,
                 ),
           ),
           const SizedBox(height: 2),
@@ -511,7 +497,7 @@ class _StatCell extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: item.onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: AppRadius.mdAll,
         child: cell,
       ),
     );

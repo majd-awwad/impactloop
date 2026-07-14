@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../theme/supplier_theme_extension.dart';
@@ -407,9 +408,9 @@ class _PageHeader extends StatelessWidget {
           onPressed: onAction,
           icon: const Icon(Icons.add_rounded, size: 18),
           label: Text(actionLabel),
-          style: FilledButton.styleFrom(
-            backgroundColor: colors.accent,
-            foregroundColor: colors.textOnAccent,
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.primary,
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.md,

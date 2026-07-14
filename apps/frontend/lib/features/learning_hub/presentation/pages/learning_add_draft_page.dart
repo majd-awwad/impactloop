@@ -14,6 +14,7 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../materials/data/models/category.dart';
@@ -732,6 +733,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                 onPressed: _isSavingDraft || _isSubmitting
                     ? null
                     : _saveLocalDraft,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 icon: _isSavingDraft
                     ? const SizedBox(
                         width: 18,

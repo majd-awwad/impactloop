@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 import 'learning_hub_text.dart';
@@ -105,6 +106,10 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
             const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
               onPressed: () => setState(() => _expanded = !_expanded),
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.neutral,
+              ),
               icon: Icon(
                 _expanded
                     ? Icons.keyboard_arrow_up_rounded

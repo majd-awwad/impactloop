@@ -7,6 +7,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_home_provider.dart';
 import '../../domain/learner_home_models.dart';
@@ -127,6 +128,10 @@ class _LearnerHomeRecommendationsPageState
                 alignment: AlignmentDirectional.centerStart,
                 child: TextButton.icon(
                   onPressed: () => context.go('/home'),
+                  style: AppStatusButtonStyle.text(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   icon: const Icon(Icons.arrow_back_rounded),
                   label: const Text('Back to home'),
                 ),
@@ -220,6 +225,10 @@ class _LearnerHomeRecommendationsPageState
                         )
                       : OutlinedButton(
                           onPressed: () => _loadSection(reset: false),
+                          style: AppStatusButtonStyle.outlined(
+                            context,
+                            AppStatusTone.neutral,
+                          ),
                           child: const Text('Load more'),
                         ),
                 ),

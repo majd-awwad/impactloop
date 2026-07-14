@@ -112,21 +112,33 @@ class AdminDonutChartCard extends StatelessWidget {
                   ),
                   Expanded(
                     flex: 6,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        for (final segment in active)
-                          Padding(
-                            padding:
-                                const EdgeInsetsDirectional.only(bottom: 6),
-                            child: _LegendRow(
-                              color: segment.color,
-                              label: segment.label,
-                              value: segment.value,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                for (final segment in active)
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.only(
+                                      bottom: 6,
+                                    ),
+                                    child: _LegendRow(
+                                      color: segment.color,
+                                      label: segment.label,
+                                      value: segment.value,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ],

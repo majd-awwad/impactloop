@@ -21,6 +21,19 @@ export type LearnerHomeProfiler = {
   report: (context?: { userId?: string; scope?: string }) => void;
 };
 
+const isAggregateTimer = (step: string) => /^total(?:[A-Z_]|$)/.test(step);
+
+/**
+ * Full-operation timers are useful context but cannot identify work to optimize,
+ * because they necessarily include every child timer.
+ */
+export const getSlowestActionableLearnerHomeStep = (
+  timings: ReadonlyMap<string, number>,
+) =>
+  [...timings.entries()]
+    .filter(([step]) => !isAggregateTimer(step))
+    .sort((left, right) => right[1] - left[1])[0];
+
 export const createLearnerHomeProfiler = (
   scope: string,
 ): LearnerHomeProfiler => {
@@ -55,7 +68,7 @@ export const createLearnerHomeProfiler = (
       const entries = [...timings.entries()].sort(
         (left, right) => right[1] - left[1],
       );
-      const slowest = entries[0];
+      const slowest = getSlowestActionableLearnerHomeStep(timings);
       const timingsMs = Object.fromEntries(
         entries.map(([step, durationMs]) => [step, Math.round(durationMs)]),
       );

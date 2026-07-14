@@ -4,6 +4,7 @@ import {
   LEARNING_PROJECT_SUBMIT_SCOPE,
   runIdempotentOperation,
 } from '../../services/idempotency.service.js';
+import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
@@ -48,6 +49,9 @@ type ProjectReviewRecord =
 type ProjectBuildRecord = NonNullable<
   Awaited<ReturnType<typeof learningProjectsRepository.findProjectBuild>>
 >;
+
+const findBuildItem = (build: ProjectBuildRecord | null, itemId: string) =>
+  build?.items.find((item) => item.id === itemId) ?? null;
 
 const EDITABLE_SUBMISSION_STATUSES = new Set([
   'DRAFT',
@@ -761,10 +765,18 @@ export const startProjectBuildById = async (
   id: string,
   userId: string,
 ) => {
+  const existingBuild = await learningProjectsRepository.findProjectBuild(
+    id,
+    userId,
+  );
   const build = await learningProjectsRepository.startProjectBuild(id, userId);
 
   if (!build) {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  if (!existingBuild || existingBuild.items.length !== build.items.length) {
+    invalidateLearnerHomeCache(userId);
   }
 
   return mapProjectBuild(build);
@@ -776,6 +788,10 @@ export const updateProjectBuildItemById = async (
   itemId: string,
   input: UpdateProjectBuildItemInput,
 ) => {
+  const previousItem = findBuildItem(
+    await learningProjectsRepository.findProjectBuild(id, userId),
+    itemId,
+  );
   const build = await learningProjectsRepository.updateProjectBuildItem({
     projectId: id,
     learnerId: userId,
@@ -786,6 +802,10 @@ export const updateProjectBuildItemById = async (
 
   if (!build) {
     throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+  }
+
+  if (previousItem?.status !== findBuildItem(build, itemId)?.status) {
+    invalidateLearnerHomeCache(userId);
   }
 
   return mapProjectBuild(build);
@@ -825,12 +845,24 @@ export const linkBuildItemMaterialById = async (
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
+  const previousItem = findBuildItem(
+    await learningProjectsRepository.findProjectBuild(projectId, userId),
+    itemId,
+  );
+
   const build = await linkBuildItemMaterial({
     projectId,
     learnerId: userId,
     itemId,
     materialId,
   });
+
+  if (
+    previousItem?.linkedMaterialId !==
+    findBuildItem(build, itemId)?.linkedMaterialId
+  ) {
+    invalidateLearnerHomeCache(userId);
+  }
 
   return mapProjectBuild(build);
 };
@@ -848,11 +880,24 @@ export const unlinkBuildItemMaterialById = async (
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
+  const previousItem = findBuildItem(
+    await learningProjectsRepository.findProjectBuild(projectId, userId),
+    itemId,
+  );
+
   const build = await unlinkBuildItemMaterial({
     projectId,
     learnerId: userId,
     itemId,
   });
+
+  const updatedItem = findBuildItem(build, itemId);
+  if (
+    previousItem?.linkedMaterialId !== updatedItem?.linkedMaterialId ||
+    previousItem?.linkedReservationId !== updatedItem?.linkedReservationId
+  ) {
+    invalidateLearnerHomeCache(userId);
+  }
 
   return mapProjectBuild(build);
 };
@@ -871,6 +916,11 @@ export const linkBuildItemReservationById = async (
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
+  const previousItem = findBuildItem(
+    await learningProjectsRepository.findProjectBuild(projectId, userId),
+    itemId,
+  );
+
   const build = await learningProjectsRepository.linkBuildItemReservation({
     projectId,
     learnerId: userId,
@@ -880,6 +930,13 @@ export const linkBuildItemReservationById = async (
 
   if (!build) {
     throw new AppError('Project build not found', 404, 'NOT_FOUND');
+  }
+
+  if (
+    previousItem?.linkedReservationId !==
+    findBuildItem(build, itemId)?.linkedReservationId
+  ) {
+    invalidateLearnerHomeCache(userId);
   }
 
   return mapProjectBuild(build);
@@ -895,6 +952,7 @@ export const likeLearningProjectById = async (id: string, userId: string) => {
   }
 
   await learningProjectsRepository.setProjectLiked(id, userId);
+  invalidateLearnerHomeCache(userId);
   const likesCount = await learningProjectsRepository.countLikesForProject(id);
 
   return {
@@ -914,6 +972,7 @@ export const unlikeLearningProjectById = async (id: string, userId: string) => {
   }
 
   await learningProjectsRepository.unsetProjectLiked(id, userId);
+  invalidateLearnerHomeCache(userId);
   const likesCount = await learningProjectsRepository.countLikesForProject(id);
 
   return {
@@ -933,6 +992,7 @@ export const saveLearningProjectById = async (id: string, userId: string) => {
   }
 
   await learningProjectsRepository.setProjectSaved(id, userId);
+  invalidateLearnerHomeCache(userId);
 
   return {
     projectId: id,
@@ -950,6 +1010,7 @@ export const unsaveLearningProjectById = async (id: string, userId: string) => {
   }
 
   await learningProjectsRepository.unsetProjectSaved(id, userId);
+  invalidateLearnerHomeCache(userId);
 
   return {
     projectId: id,
@@ -967,6 +1028,7 @@ export const followLearningProjectById = async (id: string, userId: string) => {
   }
 
   await learningProjectsRepository.setProjectFollowed(id, userId);
+  invalidateLearnerHomeCache(userId);
   const followersCount =
     await learningProjectsRepository.countFollowsForProject(id);
 
@@ -990,6 +1052,7 @@ export const unfollowLearningProjectById = async (
   }
 
   await learningProjectsRepository.unsetProjectFollowed(id, userId);
+  invalidateLearnerHomeCache(userId);
   const followersCount =
     await learningProjectsRepository.countFollowsForProject(id);
 

@@ -1,22 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_color_tokens.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_incoming_request.dart';
 
 class IncomingRequestStatusStyle {
-  const IncomingRequestStatusStyle({
-    required this.background,
-    required this.border,
-    required this.foreground,
-    required this.selectedBackground,
-    required this.selectedBorder,
-  });
+  const IncomingRequestStatusStyle._(this.tone);
 
-  final Color background;
-  final Color border;
-  final Color foreground;
-  final Color selectedBackground;
-  final Color selectedBorder;
+  final AppStatusTone tone;
+
+  AppStatusStyle resolve(BuildContext context) =>
+      AppStatusStyle.of(context, tone);
 
   static IncomingRequestStatusStyle forStatus(
     SupplierIncomingRequestStatus status,
@@ -38,9 +31,9 @@ class IncomingRequestStatusStyle {
 
   static IncomingRequestStatusStyle forTab(SupplierIncomingRequestTab tab) {
     return switch (tab) {
-      SupplierIncomingRequestTab.all => _pending,
+      SupplierIncomingRequestTab.all => _all,
       SupplierIncomingRequestTab.pending => _pending,
-      SupplierIncomingRequestTab.needsLearner => _accepted,
+      SupplierIncomingRequestTab.needsLearner => _pending,
       SupplierIncomingRequestTab.accepted => _accepted,
       SupplierIncomingRequestTab.declined => _declined,
       SupplierIncomingRequestTab.completed => _completed,
@@ -48,43 +41,10 @@ class IncomingRequestStatusStyle {
     };
   }
 
-  static const _pending = IncomingRequestStatusStyle(
-    background: AppColorTokens.supplierIncomingPendingBackground,
-    border: AppColorTokens.supplierIncomingPendingBorder,
-    foreground: AppColorTokens.supplierDashboardPending,
-    selectedBackground: AppColorTokens.supplierIncomingPendingSelectedBackground,
-    selectedBorder: AppColorTokens.supplierIncomingPendingSelectedBorder,
-  );
-
-  static const _accepted = IncomingRequestStatusStyle(
-    background: AppColorTokens.supplierIncomingAcceptedBackground,
-    border: AppColorTokens.supplierIncomingAcceptedBorder,
-    foreground: AppColorTokens.supplierIncomingAcceptedForeground,
-    selectedBackground: AppColorTokens.supplierIncomingAcceptedSelectedBackground,
-    selectedBorder: AppColorTokens.supplierIncomingAcceptedSelectedBorder,
-  );
-
-  static const _declined = IncomingRequestStatusStyle(
-    background: AppColorTokens.supplierIncomingDeclinedBackground,
-    border: AppColorTokens.supplierIncomingDeclinedBorder,
-    foreground: AppColorTokens.supplierDashboardUnavailable,
-    selectedBackground: AppColorTokens.supplierIncomingDeclinedSelectedBackground,
-    selectedBorder: AppColorTokens.supplierIncomingDeclinedSelectedBorder,
-  );
-
-  static const _completed = IncomingRequestStatusStyle(
-    background: AppColorTokens.supplierIncomingCompletedBackground,
-    border: AppColorTokens.supplierIncomingCompletedBorder,
-    foreground: AppColorTokens.supplierDashboardReserved,
-    selectedBackground: AppColorTokens.supplierIncomingCompletedSelectedBackground,
-    selectedBorder: AppColorTokens.supplierIncomingCompletedSelectedBorder,
-  );
-
-  static const _expired = IncomingRequestStatusStyle(
-    background: AppColorTokens.supplierIncomingCompletedBackground,
-    border: AppColorTokens.supplierIncomingCompletedBorder,
-    foreground: AppColorTokens.supplierDashboardUnavailable,
-    selectedBackground: AppColorTokens.supplierIncomingCompletedSelectedBackground,
-    selectedBorder: AppColorTokens.supplierIncomingCompletedSelectedBorder,
-  );
+  static const _all = IncomingRequestStatusStyle._(AppStatusTone.neutral);
+  static const _pending = IncomingRequestStatusStyle._(AppStatusTone.warning);
+  static const _accepted = IncomingRequestStatusStyle._(AppStatusTone.success);
+  static const _declined = IncomingRequestStatusStyle._(AppStatusTone.danger);
+  static const _completed = IncomingRequestStatusStyle._(AppStatusTone.success);
+  static const _expired = IncomingRequestStatusStyle._(AppStatusTone.danger);
 }

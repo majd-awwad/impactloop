@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_location_input_mode.dart';
 import 'supplier_reverse_geocode_state.dart';
@@ -541,15 +542,13 @@ class _FormActions extends StatelessWidget {
             )
           : const Icon(Icons.save_outlined, size: 18),
       label: Text(isSaving ? l.savingProfile : l.saveProfile),
-      style: FilledButton.styleFrom(
-        backgroundColor: colors.accent,
-        foregroundColor: colors.textOnAccent,
-        disabledBackgroundColor: colors.accentSoft,
+      style: AppStatusButtonStyle.filled(
+        context,
+        AppStatusTone.primary,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
       ),
     );
 

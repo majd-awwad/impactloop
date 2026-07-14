@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
-import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../theme/supplier_theme_extension.dart';
 
 class ReservationFollowUpActions extends StatelessWidget {
@@ -66,7 +67,7 @@ class ReservationFollowUpActions extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final colors = context.supplierColors;
+    final colors = context.supplierColors;
     final l = context.s;
     final showOverdueWarning = pickupHandoverPhase == 'AFTER_ALLOWED';
 
@@ -98,35 +99,40 @@ class ReservationFollowUpActions extends StatelessWidget {
           children: [
             if (canAcceptLearnerReschedule && onAcceptLearnerReschedule != null)
               _ActionChip(
-                label: 'Accept new time',
-                onPressed: onAcceptLearnerReschedule,
+                label: 'Accept new time',
+                onPressed: onAcceptLearnerReschedule,
+                tone: AppStatusTone.success,
               ),
             if (canProposeDifferentTime && onProposeDifferentTime != null)
               _ActionChip(
-                label: 'Propose different time',
-                onPressed: onProposeDifferentTime,
+                label: 'Propose different time',
+                onPressed: onProposeDifferentTime,
+                tone: AppStatusTone.warning,
               ),
             if (pickupHandoverPhase == 'DURING_ALLOWED' &&
                 canMarkCompleted &&
                 onMarkCompleted != null)
               _ActionChip(
-                label: l.markCompleted,
-                onPressed: isBusy ? null : onMarkCompleted,
+                label: l.markCompleted,
+                onPressed: isBusy ? null : onMarkCompleted,
+                tone: AppStatusTone.success,
               ),
             if (pickupHandoverPhase != 'DURING_ALLOWED' &&
                 canRequestReschedule &&
                 onRequestReschedule != null)
               _ActionChip(
-                label: 'Request reschedule',
-                onPressed: onRequestReschedule,
+                label: 'Request reschedule',
+                onPressed: onRequestReschedule,
+                tone: AppStatusTone.warning,
               ),
             if ((pickupHandoverPhase == 'AFTER_ALLOWED' ||
                     canCloseAwaitingLearnerRequest) &&
                 canCloseReservation &&
                 onCloseReservation != null)
               _ActionChip(
-                label: 'Close reservation',
-                onPressed: onCloseReservation,
+                label: 'Close reservation',
+                onPressed: onCloseReservation,
+                tone: AppStatusTone.danger,
               ),
             if ((pickupHandoverPhase == 'AFTER_ALLOWED' ||
                     canReportAwaitingLearnerRequest) &&
@@ -136,19 +142,24 @@ class ReservationFollowUpActions extends StatelessWidget {
                 label: hasAdminReport
                     ? 'Reported to admin'
                     : 'Report to admin',
-                onPressed: hasAdminReport ? null : onReportToAdmin,
+                onPressed: hasAdminReport ? null : onReportToAdmin,
+                tone: AppStatusTone.danger,
               ),
           ],
         ),
       ],
     );
   }
-}
-
+}
 class _ActionChip extends StatelessWidget {
-  const _ActionChip({required this.label, this.onPressed});
+  const _ActionChip({
+    required this.label,
+    required this.tone,
+    this.onPressed,
+  });
 
-  final String label;
+  final String label;
+  final AppStatusTone tone;
   final VoidCallback? onPressed;
 
   @override
@@ -158,8 +169,8 @@ class _ActionChip extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: colors.textPrimary,
-        side: BorderSide(color: colors.border.withValues(alpha: 0.45)),
+        foregroundColor: AppStatusStyle.of(context, tone).foreground,
+        side: BorderSide(color: AppStatusStyle.of(context, tone).border),
         padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.sm,
           vertical: AppSpacing.xs,
@@ -170,9 +181,13 @@ class _ActionChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: context.supplierLabel().copyWith(fontSize: 12.5),
-      ),
-    );
-  }
-}
-
+        style: context.supplierLabel().copyWith(
+          fontSize: 12.5,
+          color: onPressed == null
+              ? colors.textMuted
+              : AppStatusStyle.of(context, tone).foreground,
+        ),
+      ),
+    );
+  }
+}

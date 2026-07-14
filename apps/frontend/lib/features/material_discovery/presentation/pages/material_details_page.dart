@@ -12,7 +12,10 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -104,22 +107,19 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
   void _startReservationPolling() {
     _reservationRefreshTimer?.cancel();
-    _reservationRefreshTimer = Timer.periodic(
-      _reservationRefreshInterval,
-      (_) {
-        if (!mounted) {
-          return;
-        }
+    _reservationRefreshTimer = Timer.periodic(_reservationRefreshInterval, (_) {
+      if (!mounted) {
+        return;
+      }
 
-        final authState = ref.read(authControllerProvider);
-        if (authState.status != AuthStatus.authenticated ||
-            authState.user?.hasRole('LEARNER') != true) {
-          return;
-        }
+      final authState = ref.read(authControllerProvider);
+      if (authState.status != AuthStatus.authenticated ||
+          authState.user?.hasRole('LEARNER') != true) {
+        return;
+      }
 
-        ref.invalidate(myReservationsProvider);
-      },
-    );
+      ref.invalidate(myReservationsProvider);
+    });
   }
 
   @override
@@ -160,8 +160,9 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       if (previous?.status != next.status || previousUserId != nextUserId) {
         setState(() {
           _materialOverride = null;
-          _materialFuture =
-              _activeRepository.getMaterialById(widget.materialId);
+          _materialFuture = _activeRepository.getMaterialById(
+            widget.materialId,
+          );
         });
       }
     });
@@ -225,6 +226,8 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                 ar: 'العودة إلى المواد',
               ),
               primaryActionIcon: Icons.arrow_back_rounded,
+              primaryActionTone: AppStatusTone.neutral,
+              primaryActionProminent: false,
               onPrimaryAction: () => context.go('/materials'),
             ),
           );
@@ -373,10 +376,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
     final returnTo = widget.returnTo?.trim();
     if (returnTo != null && returnTo.isNotEmpty) {
-      showInfoSnackBar(
-        context,
-        'Reservation linked to your build checklist.',
-      );
+      showInfoSnackBar(context, 'Reservation linked to your build checklist.');
       context.go(Uri.decodeComponent(returnTo));
       return;
     }
@@ -440,9 +440,7 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isWide = screenWidth >= 980;
     final showMobileStickyCta =
-        !isWide &&
-        learnerReservation == null &&
-        !showReservationStatusCta;
+        !isWide && learnerReservation == null && !showReservationStatusCta;
 
     final sideColumn = _DetailsSideColumn(
       material: material,
@@ -667,6 +665,8 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
     required this.onPrimaryAction,
     this.secondaryActionLabel,
     this.onSecondaryAction,
+    this.primaryActionTone = AppStatusTone.primary,
+    this.primaryActionProminent = true,
   });
 
   final IconData icon;
@@ -677,6 +677,8 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
   final VoidCallback onPrimaryAction;
   final LocalizedText? secondaryActionLabel;
   final VoidCallback? onSecondaryAction;
+  final AppStatusTone primaryActionTone;
+  final bool primaryActionProminent;
 
   @override
   Widget build(BuildContext context) {
@@ -718,14 +720,33 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              FilledButton.icon(
-                onPressed: onPrimaryAction,
-                icon: Icon(primaryActionIcon),
-                label: Text(primaryActionLabel.resolve(context)),
-              ),
+              if (primaryActionProminent)
+                FilledButton.icon(
+                  onPressed: onPrimaryAction,
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    primaryActionTone,
+                  ),
+                  icon: Icon(primaryActionIcon),
+                  label: Text(primaryActionLabel.resolve(context)),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: onPrimaryAction,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    primaryActionTone,
+                  ),
+                  icon: Icon(primaryActionIcon),
+                  label: Text(primaryActionLabel.resolve(context)),
+                ),
               if (secondaryActionLabel != null && onSecondaryAction != null)
                 OutlinedButton(
                   onPressed: onSecondaryAction,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   child: Text(secondaryActionLabel!.resolve(context)),
                 ),
             ],
@@ -1361,6 +1382,10 @@ class _MaterialProjectHandoffPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
             onPressed: () => _openLearningHub(context),
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.neutral,
+            ),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: Text(
               const LocalizedText(
@@ -1397,8 +1422,7 @@ class _ReservationPanel extends StatelessWidget {
     ar: 'ستختار الكمية في الخطوة التالية.',
   );
 
-  bool get _showQuantityStepHint =>
-      reservationUi.canTapReserve;
+  bool get _showQuantityStepHint => reservationUi.canTapReserve;
 
   @override
   Widget build(BuildContext context) {
@@ -1743,6 +1767,7 @@ class _PostReservationStatusCta extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
             onPressed: () => context.go('/learner/reservations'),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.assignment_turned_in_outlined),
             label: const Text('View all reservations'),
           ),
@@ -1779,15 +1804,18 @@ class _LearnerReservationStateCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MaterialStatusBadge(
+          AppStatusBadge(
             label: _reservationStatusLabel(reservation.status),
-            tone: _reservationStatusTone(reservation.status),
+            tone: learnerReservationStatusTone(
+              reservation.status,
+              incidentReviewStatus: reservation.incidentReviewStatus,
+            ),
           ),
           if (delivery != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            MaterialStatusBadge(
+            AppStatusBadge(
               label: deliveryStatusLabel(delivery!.status),
-              tone: deliveryStatusTone(delivery!.status),
+              tone: deliveryStatusAppTone(delivery!.status),
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
@@ -1807,6 +1835,7 @@ class _LearnerReservationStateCard extends StatelessWidget {
             TextButton.icon(
               onPressed: () =>
                   context.push('/learner/deliveries/${activeDelivery.id}'),
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               icon: const Icon(Icons.local_shipping_outlined),
               label: const Text('View delivery status'),
             )
@@ -1814,6 +1843,7 @@ class _LearnerReservationStateCard extends StatelessWidget {
             TextButton.icon(
               onPressed: () =>
                   context.push('/learner/reservations/${reservation.id}'),
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               icon: const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
                 reservation.isAccepted && deliveryAvailable
@@ -1863,21 +1893,6 @@ String _reservationActionLabel(String status) {
 }
 
 String _reservationStatusLabel(String status) => reservationStatusLabel(status);
-
-MaterialStatusBadgeTone _reservationStatusTone(String status) {
-  switch (status) {
-    case 'PENDING':
-    case 'ACCEPTED':
-      return MaterialStatusBadgeTone.reserved;
-    case 'COMPLETED':
-      return MaterialStatusBadgeTone.reused;
-    case 'REJECTED':
-    case 'CANCELLED':
-    case 'EXPIRED':
-    default:
-      return MaterialStatusBadgeTone.draft;
-  }
-}
 
 String _reservationDetailText(LearnerReservation reservation) {
   if (reservation.isPending) {
@@ -2072,64 +2087,63 @@ class _ReportMaterialSection extends ConsumerWidget {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
+            return AppDialogShell(
               title: Text(
                 const LocalizedText(
                   en: 'Report material',
                   ar: 'الإبلاغ عن المادة',
                 ).resolve(context),
               ),
-              content: SizedBox(
-                width: 420,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedReason,
-                      decoration: const InputDecoration(labelText: 'Reason'),
-                      items: _reasons.entries
-                          .map(
-                            (entry) => DropdownMenuItem(
-                              value: entry.key,
-                              child: Text(entry.value),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => selectedReason = value);
-                      },
+              maxWidth: 420,
+              onClose: () => Navigator.of(dialogContext).pop(false),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedReason,
+                    decoration: const InputDecoration(labelText: 'Reason'),
+                    items: _reasons.entries
+                        .map(
+                          (entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => selectedReason = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: selectedReason == 'OTHER'
+                          ? 'Describe the issue (required)'
+                          : 'Additional note (optional)',
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: noteController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        labelText: selectedReason == 'OTHER'
-                            ? 'Describe the issue (required)'
-                            : 'Additional note (optional)',
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
+              footer: AppDialogFooter.form(
+                primaryAction: FilledButton(
                   onPressed: () {
                     if (selectedReason == 'OTHER' &&
                         noteController.text.trim().isEmpty) {
                       return;
                     }
-                    Navigator.pop(dialogContext, true);
+                    Navigator.of(dialogContext).pop(true);
                   },
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.danger,
+                  ),
                   child: const Text('Submit report'),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -2171,20 +2185,18 @@ class _ReportMaterialSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = MaterialsUiPalette.of(context);
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: TextButton.icon(
         onPressed: () => _openReportDialog(context, ref),
-        icon: Icon(Icons.flag_outlined, color: palette.textSecondary, size: 18),
+        style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+        icon: const Icon(Icons.flag_outlined, size: 18),
         label: Text(
           const LocalizedText(
             en: 'Report material',
             ar: 'الإبلاغ عن المادة',
           ).resolve(context),
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(color: palette.textSecondary),
+          style: AppTextStyles.label(context),
         ),
       ),
     );
@@ -2440,7 +2452,8 @@ class _ReserveMaterialDialog extends ConsumerStatefulWidget {
       _ReserveMaterialDialogState();
 }
 
-class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> {
+class _ReserveMaterialDialogState
+    extends ConsumerState<_ReserveMaterialDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _quantityController;
   final _messageController = TextEditingController();
@@ -2553,8 +2566,9 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
         quantity: quantity,
         fulfillmentMethod: _fulfillmentMethod!,
         dropoffCity: _isDelivery ? _dropoffCityController.text.trim() : null,
-        learnerPreferredDeliveryWindows:
-            _isDelivery ? _deliveryWindowsPayload() : const [],
+        learnerPreferredDeliveryWindows: _isDelivery
+            ? _deliveryWindowsPayload()
+            : const [],
       );
 
       var quote = await repository.fetchReservationQuote(baseRequest);
@@ -2902,8 +2916,7 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
             safeDropoffAllowed: _safeDropoffAllowed,
             deliveryNote: deliveryNote.isEmpty ? null : deliveryNote,
             combineWithDeliveryGroupId:
-                _combineWithGroup &&
-                    _quote?.deliveryGroupCandidate != null
+                _combineWithGroup && _quote?.deliveryGroupCandidate != null
                 ? _quote!.deliveryGroupCandidate!.id
                 : null,
           ),
@@ -3387,40 +3400,11 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
                   AppSpacing.md,
                   AppSpacing.md,
                 ),
-                child: isNarrow
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _ReservationDialogSubmitButton(
-                            isSubmitting: _isSubmitting,
-                            onPressed: _canSubmitReservation ? _submit : null,
-                            fullWidth: true,
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          TextButton(
-                            onPressed: _isSubmitting
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: _isSubmitting
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          _ReservationDialogSubmitButton(
-                            isSubmitting: _isSubmitting,
-                            onPressed: _canSubmitReservation ? _submit : null,
-                          ),
-                        ],
-                      ),
+                child: _ReservationDialogSubmitButton(
+                  isSubmitting: _isSubmitting,
+                  onPressed: _canSubmitReservation ? _submit : null,
+                  fullWidth: true,
+                ),
               ),
             ],
           ),
@@ -3654,9 +3638,9 @@ class _BuildChecklistContextBanner extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     componentLabel,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textSecondary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
                   ),
                 ],
               ],

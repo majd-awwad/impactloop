@@ -522,6 +522,14 @@ export const getInterestSearchTermsForKey = (key: string) => {
   return [...terms].filter((term) => term.length >= 2);
 };
 
+const INTEREST_SEARCH_TERM_CANDIDATES = INTERESTS.flatMap((interest) =>
+  getInterestSearchTermsForKey(interest.key).map((term) => ({
+    key: interest.key,
+    term,
+    specificity: interest.specificity,
+  })),
+);
+
 const haystackIncludesTerm = (haystack: string, term: string) => {
   const normalizedTerm = normalizeInterestToken(term);
   if (normalizedTerm.length < 2) {
@@ -871,26 +879,24 @@ export const resolveTermToInterestKey = (rawTerm: string): string | null => {
   let bestMatch: { key: string; termLength: number; specificity: number } | null =
     null;
 
-  for (const interest of INTERESTS) {
-    for (const term of getInterestSearchTermsForKey(interest.key)) {
-      if (!interestSearchTermMatches(normalized, term)) {
-        continue;
-      }
+  for (const candidate of INTEREST_SEARCH_TERM_CANDIDATES) {
+    if (!interestSearchTermMatches(normalized, candidate.term)) {
+      continue;
+    }
 
-      const candidate = {
-        key: interest.key,
-        termLength: term.length,
-        specificity: interest.specificity,
-      };
+    const match = {
+      key: candidate.key,
+      termLength: candidate.term.length,
+      specificity: candidate.specificity,
+    };
 
-      if (
-        !bestMatch ||
-        candidate.termLength > bestMatch.termLength ||
-        (candidate.termLength === bestMatch.termLength &&
-          candidate.specificity > bestMatch.specificity)
-      ) {
-        bestMatch = candidate;
-      }
+    if (
+      !bestMatch ||
+      match.termLength > bestMatch.termLength ||
+      (match.termLength === bestMatch.termLength &&
+        match.specificity > bestMatch.specificity)
+    ) {
+      bestMatch = match;
     }
   }
 

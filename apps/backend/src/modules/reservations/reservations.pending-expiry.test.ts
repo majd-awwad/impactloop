@@ -4,6 +4,7 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { getMaterialById } from '../materials/materials.service.js';
+import { getLearnerHome } from '../learner-home/learner-home.service.js';
 
 import {
   isPendingReservationExpired,
@@ -355,5 +356,27 @@ describe('reservation pending expiry', () => {
     ctx.createdReservationIds.push(replacement.id);
 
     assert.equal(replacement.status, 'PENDING');
+  });
+
+  test('lazy expiry refreshes learner home even when the replacement request fails', async () => {
+    const { material, reservation } = await createDuePendingReservation(ctx, 1);
+    const cachedHome = await getLearnerHome(ctx.learnerId);
+
+    await assert.rejects(() =>
+      createReservation(
+        ctx.learnerId,
+        pickupReservationPayload(material.id, 1, {
+          buildItemId: `${TEST_MARKER}-missing-build-item-${Date.now()}`,
+        }),
+      ),
+    );
+
+    assert.notStrictEqual(await getLearnerHome(ctx.learnerId), cachedHome);
+
+    const expired = await prisma.reservation.findUnique({
+      where: { id: reservation.id },
+      select: { status: true },
+    });
+    assert.equal(expired?.status, 'EXPIRED');
   });
 });

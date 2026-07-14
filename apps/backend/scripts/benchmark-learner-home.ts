@@ -27,9 +27,9 @@ const profileContext = async () => {
   const [
     rawInterests,
     savedLocation,
-    savedComponents,
-    savedProjectsCount,
+    hasSavedProjects,
     behavior,
+    projects,
   ] = await Promise.all([
     profiler.time('loadLearnerInterests', () =>
       learnerHomeRepository.loadLearnerInterests(user.id),
@@ -37,17 +37,20 @@ const profileContext = async () => {
     profiler.time('loadDefaultSavedLocation', () =>
       learnerHomeRepository.loadDefaultSavedLocation(user.id),
     ),
-    profiler.time('loadSavedProjectComponents', () =>
-      learnerHomeRepository.loadSavedProjectComponents(user.id),
-    ),
-    profiler.time('countSavedProjects', () =>
-      learnerHomeRepository.countSavedProjects(user.id),
+    profiler.time('hasSavedProjects', () =>
+      learnerHomeRepository.hasSavedProjects(user.id),
     ),
     profiler.time('loadLearnerBehaviorContext', () =>
       learnerHomeRepository.loadLearnerBehaviorContext(user.id),
     ),
+    profiler.time('loadProjectCandidates', () =>
+      learnerHomeRepository.loadProjectCandidates(user.id),
+    ),
   ]);
   const interests = normalizeInterests(rawInterests);
+  const savedComponents = behavior.savedProjectComponents ?? [];
+  void hasSavedProjects;
+  void projects;
   profiler.mark('buildBehaviorAffinityProfile', () => {
     buildBehaviorAffinityProfile(behavior);
   });

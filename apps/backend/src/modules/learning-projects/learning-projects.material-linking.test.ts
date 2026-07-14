@@ -4,6 +4,12 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { AppError } from '../../utils/app-error.js';
+import {
+  getOrBuildMaterialFeaturePool,
+  resetMaterialFeaturePoolCacheForTests,
+} from '../learner-home/learner-home.material-features.js';
+import { getLearnerHome } from '../learner-home/learner-home.service.js';
+import type { LearnerHomeMaterialCandidate } from '../learner-home/learner-home.types.js';
 
 import {
   getBuildItemMaterialCandidatesById,
@@ -372,6 +378,75 @@ describe('learning project build material linking', () => {
       unlinkedBuild.items.find((item) => item.id === itemId)?.linkedMaterial,
       null,
     );
+  });
+
+  test('linking and unlinking refresh only the build owner learner home cache', async () => {
+    const learner = await createLearnerUser('cache-owner');
+    const otherLearner = await createLearnerUser('cache-other');
+    const supplier = await createSupplierUser('cache-supplier');
+    const materialCategory = await createMaterialCategory();
+    const projectCategory = await createProjectCategory();
+    const location = await createLocation();
+    const material = await createMaterial({
+      ownerId: supplier.id,
+      categoryId: materialCategory.id,
+      locationId: location.id,
+      title: `${TEST_MARKER} cache material`,
+    });
+    const project = await createPublishedProject({
+      authorId: learner.id,
+      projectCategoryId: projectCategory.id,
+      materialCategoryId: materialCategory.id,
+      componentName: 'Arduino cache board',
+    });
+    const build = await startProjectBuildById(project.id, learner.id);
+    ids.builds.push(build.id);
+    const item = build.items[0];
+    assert.ok(item);
+
+    let learnerHome = await getLearnerHome(learner.id);
+    const otherLearnerHome = await getLearnerHome(otherLearner.id);
+    const featureCandidate: LearnerHomeMaterialCandidate = {
+      id: 'build-link-static-feature',
+      ownerId: supplier.id,
+      title: 'Arduino cache board',
+      description: 'Static material feature cache fixture',
+      materialType: 'Arduino board',
+      categoryId: materialCategory.id,
+      categoryNameEn: 'Electronics',
+      categoryNameAr: 'Electronics',
+      status: 'AVAILABLE',
+      isFree: true,
+      deliveryAllowed: false,
+      pickupAllowed: true,
+      viewsCount: 0,
+      likesCount: 0,
+      city: 'Ramallah',
+      area: null,
+      tags: ['arduino'],
+      createdAt: new Date(),
+      availableQuantity: 1,
+      mapped: {},
+    };
+    resetMaterialFeaturePoolCacheForTests();
+    const sharedFeaturesBefore = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    await linkBuildItemMaterialById(project.id, learner.id, item.id, material.id);
+    assert.strictEqual(
+      getOrBuildMaterialFeaturePool([featureCandidate]).features,
+      sharedFeaturesBefore.features,
+    );
+    const learnerHomeAfterLink = await getLearnerHome(learner.id);
+    assert.notStrictEqual(learnerHomeAfterLink, learnerHome);
+    assert.strictEqual(await getLearnerHome(otherLearner.id), otherLearnerHome);
+
+    learnerHome = learnerHomeAfterLink;
+    await unlinkBuildItemMaterialById(project.id, learner.id, item.id);
+    assert.notStrictEqual(await getLearnerHome(learner.id), learnerHome);
+    assert.strictEqual(await getLearnerHome(otherLearner.id), otherLearnerHome);
+    resetMaterialFeaturePoolCacheForTests();
   });
 
   test('rejects linking own material and unavailable material', async () => {

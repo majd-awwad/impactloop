@@ -8,6 +8,7 @@ import {
 import { NO_DRIVER_AUTO_ESCALATION_HOURS } from './reservation-timing-policy.js';
 import { escalateNoDriverAvailableInTransaction } from './reservations.incidents.repository.js';
 import { runSerializableTransaction } from './reservations.quantity.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const noDriverEscalationSelect = {
   id: true,
@@ -140,9 +141,18 @@ export const escalateStaleNoDriverDeliveriesByIds = async (
     return [];
   }
 
-  return runSerializableTransaction(async (tx) =>
+  const escalatedIds = await runSerializableTransaction(async (tx) =>
     escalateStaleNoDriverDeliveriesInTransaction(tx, candidates),
   );
+
+  if (escalatedIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
+
+  return escalatedIds;
 };
 
 export const escalateStaleNoDriverDeliveriesForRequester = async (
@@ -156,9 +166,18 @@ export const escalateStaleNoDriverDeliveriesForRequester = async (
     return [];
   }
 
-  return runSerializableTransaction(async (tx) =>
+  const escalatedIds = await runSerializableTransaction(async (tx) =>
     escalateStaleNoDriverDeliveriesInTransaction(tx, candidates),
   );
+
+  if (escalatedIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
+
+  return escalatedIds;
 };
 
 export const escalateStaleNoDriverDeliveriesForOwner = async (
@@ -172,7 +191,16 @@ export const escalateStaleNoDriverDeliveriesForOwner = async (
     return [];
   }
 
-  return runSerializableTransaction(async (tx) =>
+  const escalatedIds = await runSerializableTransaction(async (tx) =>
     escalateStaleNoDriverDeliveriesInTransaction(tx, candidates),
   );
+
+  if (escalatedIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
+  }
+
+  return escalatedIds;
 };

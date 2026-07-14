@@ -29,6 +29,7 @@ import {
   toDecimal,
 } from '../reservations/reservations.quantity.js';
 import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
+import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
 
 import * as materialsRepository from './materials.repository.js';
@@ -791,6 +792,7 @@ export const likeMaterialById = async (id: string, userId: string) => {
   }
 
   await materialsRepository.setMaterialLiked(id, userId);
+  invalidateLearnerHomeCache(userId);
   const likesCount = await materialsRepository.countLikesForMaterial(id);
 
   return {
@@ -808,6 +810,7 @@ export const unlikeMaterialById = async (id: string, userId: string) => {
   }
 
   await materialsRepository.unsetMaterialLiked(id, userId);
+  invalidateLearnerHomeCache(userId);
   const likesCount = await materialsRepository.countLikesForMaterial(id);
 
   return {

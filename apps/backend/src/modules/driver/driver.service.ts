@@ -44,6 +44,7 @@ import {
   completeReservationsForDeliveredDelivery,
   syncDeliveryGroupOnDriverAssign,
 } from '../delivery-groups/delivery-group-operations.service.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const terminalStatuses = [
   'DELIVERED',
@@ -608,7 +609,7 @@ export const acceptDelivery = async (
   driverUserId: string,
   deliveryId: string,
 ) => {
-  const delivery = await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
 
     const activeDriverDeliveryCount = await countActiveAssignedDeliveries(
@@ -708,19 +709,17 @@ export const acceptDelivery = async (
       deliveryGroupId: assignedDelivery.deliveryGroupId,
       driverProfileId: profile.id,
     });
+  });
 
-    const delivery = await tx.delivery.findUniqueOrThrow({
-      where: { id: deliveryId },
-      include: driverDeliveryInclude,
-    });
-
-    return mapAssignedDelivery(delivery);
+  const delivery = await prisma.delivery.findUniqueOrThrow({
+    where: { id: deliveryId },
+    include: driverDeliveryInclude,
   });
 
   await notifyDriverPickupTime(deliveryId);
   await clearUnreadNewJobNotificationsForDelivery(deliveryId);
 
-  return delivery;
+  return mapAssignedDelivery(delivery);
 };
 
 export const updateDriverDeliveryStatus = async (
@@ -735,10 +734,24 @@ export const updateDriverDeliveryStatus = async (
         id: deliveryId,
         assignedDriverProfileId: profile.id,
       },
-      include: {
-        reservation: true,
+      select: {
+        id: true,
+        status: true,
+        reservationId: true,
+        deliveryGroupId: true,
+        driverNote: true,
+        reservation: {
+          select: {
+            status: true,
+            materialId: true,
+            quantityRequested: true,
+            supplierPickupWindowStart: true,
+            supplierPickupWindowEnd: true,
+            confirmedDeliveryWindowStart: true,
+            confirmedDeliveryWindowEnd: true,
+          },
+        },
       },
-      // deliveryGroupId is on delivery row
     });
 
     if (!delivery) {
@@ -871,20 +884,24 @@ export const updateDriverDeliveryStatus = async (
       },
     });
 
-    const updatedDelivery = await tx.delivery.findUniqueOrThrow({
-      where: { id: delivery.id },
-      include: driverDeliveryInclude,
-    });
-
-    return { outcome: 'UPDATED' as const, delivery: updatedDelivery };
+    return { outcome: 'UPDATED' as const, deliveryId: delivery.id };
   });
 
   switch (result.outcome) {
-    case 'UPDATED':
+    case 'UPDATED': {
+      const updatedDelivery = await prisma.delivery.findUniqueOrThrow({
+        where: { id: result.deliveryId },
+        include: driverDeliveryInclude,
+      });
+
       if (input.status === 'PICKED_UP') {
         await notifyDriverDropoffTime(deliveryId);
       }
-      return mapAssignedDelivery(result.delivery);
+      if (input.status === 'DELIVERED') {
+        invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
+      }
+      return mapAssignedDelivery(updatedDelivery);
+    }
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
     case 'TERMINAL':

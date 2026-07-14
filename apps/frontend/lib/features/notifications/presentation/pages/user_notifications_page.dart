@@ -7,6 +7,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -14,6 +15,7 @@ import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
 import '../../application/notifications_provider.dart';
 import '../../data/models/app_notification.dart';
+import '../notification_visual_presentation.dart';
 
 class UserNotificationsPage extends ConsumerWidget {
   const UserNotificationsPage({super.key, this.embeddedInShell = false});
@@ -318,6 +320,10 @@ class _NotificationsListView extends StatelessWidget {
                     )
                   : OutlinedButton.icon(
                       onPressed: onLoadMore,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.neutral,
+                      ),
                       icon: const Icon(Icons.expand_more_rounded),
                       label: const Text('Load more'),
                     ),
@@ -416,11 +422,16 @@ class _NotificationsHeaderCard extends StatelessWidget {
           IconButton(
             tooltip: 'Refresh',
             onPressed: onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_rounded),
           ),
           if (unreadCount > 0)
-            FilledButton.tonal(
+            FilledButton(
               onPressed: onMarkAllRead,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.info,
+              ),
               child: const Text('Mark all read'),
             ),
         ],
@@ -477,7 +488,14 @@ class _NotificationsStateCard extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),
@@ -498,7 +516,8 @@ class _NotificationTile extends StatelessWidget {
     final chipLabel = notificationTypeChipLabel(category);
     final actionLabel = notificationActionLabel(notification);
     final hasTarget = notificationHasNavigationTarget(notification);
-    final accent = _accentForCategory(category, palette);
+    final tone = notificationVisualTone(category);
+    final accent = AppStatusStyle.of(context, tone).foreground;
 
     return Material(
       color: notification.isRead ? palette.panelSurface : palette.inputSurface,
@@ -543,23 +562,9 @@ class _NotificationTile extends StatelessWidget {
                       runSpacing: AppSpacing.xs,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.1),
-                            borderRadius: AppRadius.pillAll,
-                          ),
-                          child: Text(
-                            chipLabel,
-                            style: AppTextStyles.label(context).copyWith(
-                              color: accent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                            ),
-                          ),
+                        AppStatusBadge(
+                          label: chipLabel,
+                          tone: tone,
                         ),
                         if (!notification.isRead)
                           Container(
@@ -619,24 +624,6 @@ class _NotificationTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _accentForCategory(
-    NotificationVisualCategory category,
-    MaterialsUiPalette palette,
-  ) {
-    switch (category) {
-      case NotificationVisualCategory.job:
-        return palette.mint;
-      case NotificationVisualCategory.reminder:
-        return Colors.amber.shade700;
-      case NotificationVisualCategory.deliveryUpdate:
-        return Colors.blue.shade600;
-      case NotificationVisualCategory.account:
-        return palette.textSecondary;
-      case NotificationVisualCategory.general:
-        return palette.textMuted;
-    }
   }
 
   IconData _iconForNotification(AppNotification notification) {

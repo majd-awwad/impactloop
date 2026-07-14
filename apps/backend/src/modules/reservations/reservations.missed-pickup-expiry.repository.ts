@@ -7,9 +7,11 @@ import {
 } from './reservation-missed-pickup-expiry.js';
 import { MISSED_PICKUP_EXPIRY_REASON } from './reservation-timing-policy.js';
 import { notifyReservationsExpired } from '../notifications/reservation-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
+  loadReservationIdsWithAnyDelivery,
 } from './reservations.quantity.js';
 import { MISSED_PICKUP_AUTO_CLOSE_GRACE_HOURS } from './reservation-timing-policy.js';
 
@@ -19,11 +21,6 @@ const missedPickupExpirySelect = {
   materialId: true,
   fulfillmentMethod: true,
   pickupWindowEnd: true,
-  _count: {
-    select: {
-      deliveries: true,
-    },
-  },
 } satisfies Prisma.ReservationSelect;
 
 export type MissedPickupExpiryReservationRecord = Prisma.ReservationGetPayload<{
@@ -42,15 +39,23 @@ export const expireStaleMissedPickupsInTransaction = async (
   now: Date = new Date(),
 ): Promise<string[]> => {
   const expiredIds: string[] = [];
+  const reservationIdsWithDeliveries = await loadReservationIdsWithAnyDelivery(
+    tx,
+    reservations.map((reservation) => reservation.id),
+  );
 
   for (const reservation of reservations) {
+    const deliveryCount = reservationIdsWithDeliveries.has(reservation.id)
+      ? 1
+      : 0;
+
     if (
       !isAcceptedMissedPickupExpired(
         {
           status: reservation.status,
           fulfillmentMethod: reservation.fulfillmentMethod,
           pickupWindowEnd: reservation.pickupWindowEnd,
-          deliveryCount: reservation._count.deliveries,
+          deliveryCount,
         },
         now,
       )
@@ -105,9 +110,6 @@ const findMissedPickupExpiryCandidates = async (
         not: null,
         lte: missedPickupExpiryCutoff(now),
       },
-      deliveries: {
-        none: {},
-      },
     },
     select: missedPickupExpirySelect,
   });
@@ -132,6 +134,9 @@ export const expireStaleMissedPickupsByIds = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -157,6 +162,9 @@ export const expireStaleMissedPickupsForMaterialIds = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -178,6 +186,9 @@ export const expireStaleMissedPickupsForOwner = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;
@@ -199,6 +210,9 @@ export const expireStaleMissedPickupsForRequester = async (
     expireStaleMissedPickupsInTransaction(tx, candidates, changedBy),
   );
 
+  if (expiredIds.length > 0) {
+    invalidateLearnerHomeForReservationTransition('ACCEPTED', 'EXPIRED');
+  }
   void notifyReservationsExpired(expiredIds);
 
   return expiredIds;

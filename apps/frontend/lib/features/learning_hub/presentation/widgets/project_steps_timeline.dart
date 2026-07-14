@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 
@@ -83,6 +84,10 @@ class _ProjectStepsTimelineState extends State<ProjectStepsTimeline> {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: () => setState(() => _expanded = !_expanded),
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.neutral,
+              ),
               icon: Icon(
                 _expanded
                     ? Icons.keyboard_arrow_up_rounded

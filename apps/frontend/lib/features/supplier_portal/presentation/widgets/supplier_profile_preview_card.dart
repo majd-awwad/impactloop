@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_section_card.dart';
 import 'supplier_verification_badge.dart';
 
 class SupplierProfilePreviewCard extends StatelessWidget {
@@ -48,10 +49,7 @@ class SupplierProfilePreviewCard extends StatelessWidget {
     final colors = context.supplierColors;
     final locationSummary = _locationSummary(context);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: context.supplierDecorations.profileGlassCard,
+    return AppSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -73,10 +71,7 @@ class SupplierProfilePreviewCard extends StatelessWidget {
             style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.lg),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: context.supplierDecorations.dashboardCard,
+          AppSectionCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

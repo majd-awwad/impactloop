@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/admin_dashboard_models.dart';
 import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
@@ -83,9 +84,14 @@ class AdminReviewSection extends StatelessWidget {
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton(
                         onPressed: () => context.push('/admin/audit-logs'),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          minimumSize: Size.zero,
+                        style: AppStatusButtonStyle.text(
+                          context,
+                          AppStatusTone.neutral,
+                        ).copyWith(
+                          padding: const WidgetStatePropertyAll(
+                            EdgeInsets.symmetric(horizontal: 6),
+                          ),
+                          minimumSize: const WidgetStatePropertyAll(Size.zero),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,
                         ),
@@ -243,9 +249,14 @@ class _SupplierVerificationPreviewRow extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => context.push('/admin/supplier-verification'),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
+            style: AppStatusButtonStyle.text(
+              context,
+              AppStatusTone.warning,
+            ).copyWith(
+              padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 8),
+              ),
+              minimumSize: const WidgetStatePropertyAll(Size.zero),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             child: const Text('Review'),

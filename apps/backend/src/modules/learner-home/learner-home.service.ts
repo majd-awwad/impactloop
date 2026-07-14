@@ -44,9 +44,12 @@ import type {
   LearnerHomeSectionDetails,
   LearnerHomeSectionItem,
   LearnerHomeSectionKey,
+  LearnerHomeSavedProjectComponent,
   LearnerAffinityProfile,
   LearnerBehaviorContext,
 } from './learner-home.types.js';
+import type { ReservationStatus } from '../../generated/prisma/client.js';
+import { isActiveReservationBehaviorStatus } from '../reservations/reservations.quantity.js';
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -65,6 +68,35 @@ const learnerHomeCache = new Map<
   string,
   { expiresAt: number; payload: LearnerHomeResponse }
 >();
+
+export const invalidateLearnerHomeCache = (userId: string): void => {
+  learnerHomeCache.delete(userId);
+};
+
+/** Clears every cached learner-home response after a change to shared material availability. */
+export const invalidateAllLearnerHomeResponseCaches = (): void => {
+  learnerHomeCache.clear();
+};
+
+/**
+ * An active-to-active reservation transition keeps the material hold in place.
+ * Every other transition can change shared availability, so cached home responses
+ * must be rebuilt for all learners.
+ */
+export const invalidateLearnerHomeForReservationTransition = (
+  previousStatus: ReservationStatus | null,
+  nextStatus: ReservationStatus,
+): void => {
+  if (
+    previousStatus != null &&
+    isActiveReservationBehaviorStatus(previousStatus) &&
+    isActiveReservationBehaviorStatus(nextStatus)
+  ) {
+    return;
+  }
+
+  invalidateAllLearnerHomeResponseCaches();
+};
 
 const SECTION_META: Record<
   LearnerHomeSectionKey,
@@ -202,13 +234,11 @@ type LearnerHomeContext = {
   savedLocation: Awaited<
     ReturnType<typeof learnerHomeRepository.loadDefaultSavedLocation>
   >;
-  savedComponents: Awaited<
-    ReturnType<typeof learnerHomeRepository.loadSavedProjectComponents>
-  >;
+  savedComponents: LearnerHomeSavedProjectComponent[];
   materials: Awaited<ReturnType<typeof learnerHomeRepository.loadMaterialCandidates>>;
   projects: Awaited<ReturnType<typeof learnerHomeRepository.loadProjectCandidates>>;
   savedProjectIds: Set<string>;
-  savedProjectsCount: number;
+  hasSavedProjects: boolean;
   behavior: LearnerBehaviorContext;
   behaviorAffinityProfile: LearnerAffinityProfile;
   hasActivity: boolean;
@@ -229,8 +259,7 @@ const loadLearnerHomeContext = async (
   const [
     rawInterests,
     savedLocation,
-    savedComponents,
-    savedProjectsCount,
+    hasSavedProjects,
     behavior,
     projects,
   ] = await Promise.all([
@@ -245,15 +274,10 @@ const loadLearnerHomeContext = async (
         )
       : learnerHomeRepository.loadDefaultSavedLocation(userId),
     profiler
-      ? profiler.time('loadSavedProjectComponents', () =>
-          learnerHomeRepository.loadSavedProjectComponents(userId),
+      ? profiler.time('hasSavedProjects', () =>
+          learnerHomeRepository.hasSavedProjects(userId),
         )
-      : learnerHomeRepository.loadSavedProjectComponents(userId),
-    profiler
-      ? profiler.time('countSavedProjects', () =>
-          learnerHomeRepository.countSavedProjects(userId),
-        )
-      : learnerHomeRepository.countSavedProjects(userId),
+      : learnerHomeRepository.hasSavedProjects(userId),
     profiler
       ? profiler.time('loadLearnerBehaviorContext', () =>
           learnerHomeRepository.loadLearnerBehaviorContext(userId),
@@ -265,6 +289,8 @@ const loadLearnerHomeContext = async (
         )
       : learnerHomeRepository.loadProjectCandidates(userId),
   ]);
+
+  const savedComponents = behavior.savedProjectComponents ?? [];
 
   const interests = normalizeInterests(rawInterests);
   let behaviorAffinityProfile!: LearnerAffinityProfile;
@@ -307,7 +333,7 @@ const loadLearnerHomeContext = async (
     materials,
     projects,
     savedProjectIds,
-    savedProjectsCount,
+    hasSavedProjects,
     behavior,
     behaviorAffinityProfile,
     hasActivity: hasLearnerActivity(behavior),
@@ -902,7 +928,7 @@ export const getLearnerHome = async (userId: string): Promise<LearnerHomeRespons
     hasSavedLocation:
       (context.savedLocation.city?.trim().length ?? 0) > 0 ||
       (context.savedLocation.area?.trim().length ?? 0) > 0,
-    hasSavedProjects: context.savedProjectsCount > 0,
+    hasSavedProjects: context.hasSavedProjects,
     hasActivity: context.hasActivity,
   };
 

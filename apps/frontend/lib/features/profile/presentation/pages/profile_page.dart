@@ -10,7 +10,9 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../shared/widgets/account_status_presentation.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../../auth/presentation/widgets/portal_switch_menu.dart';
@@ -261,7 +263,8 @@ class _ProfileContent extends ConsumerWidget {
       imageUrl: _clean(user.profileImageUrl),
       displayName: _displayName,
       email: user.email,
-      accountStatus: _humanize(user.accountStatus),
+      accountStatus: user.accountStatus,
+      accountStatusLabel: _humanize(user.accountStatus),
       memberSince: _memberSinceLabel(context),
     );
     final learnerSection = _LearnerProfileCard(
@@ -342,6 +345,9 @@ class _ProfileContent extends ConsumerWidget {
               : Icons.mark_email_read_outlined,
           label: 'Email',
           value: user.emailVerifiedAt == null ? 'Not verified' : 'Verified',
+          tone: user.emailVerifiedAt == null
+              ? AppStatusTone.warning
+              : AppStatusTone.success,
           emphasized: user.emailVerifiedAt != null,
         ),
         _ProfileDivider(),
@@ -354,6 +360,11 @@ class _ProfileContent extends ConsumerWidget {
           label: 'Phone',
           value: _phoneStatusValue(user),
           detail: _clean(user.phone).isEmpty ? null : _phoneStatusLabel(user),
+          tone: _clean(user.phone).isEmpty
+              ? AppStatusTone.neutral
+              : (user.phoneVerifiedAt != null
+                    ? AppStatusTone.success
+                    : AppStatusTone.warning),
           emphasized: user.phoneVerifiedAt != null,
         ),
         _ProfileDivider(),
@@ -361,6 +372,7 @@ class _ProfileContent extends ConsumerWidget {
           icon: Icons.verified_user_outlined,
           label: 'Account',
           value: _humanize(user.accountStatus),
+          tone: accountStatusTone(user.accountStatus),
           emphasized: user.accountStatus.toUpperCase() == 'ACTIVE',
         ),
       ],
@@ -368,11 +380,14 @@ class _ProfileContent extends ConsumerWidget {
     const settings = _SettingsSection();
     final logout = OutlinedButton.icon(
       onPressed: () => _logout(context, ref),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: colors.danger,
-        side: BorderSide(color: colors.danger.withValues(alpha: 0.42)),
-        minimumSize: const Size(0, 48),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+      style: AppStatusButtonStyle.outlined(
+        context,
+        AppStatusTone.danger,
+      ).copyWith(
+        minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+        ),
       ),
       icon: const Icon(Icons.logout_rounded),
       label: const Text('Logout'),
@@ -441,6 +456,7 @@ class _ProfileHeaderCard extends StatelessWidget {
     required this.displayName,
     required this.email,
     required this.accountStatus,
+    required this.accountStatusLabel,
     required this.memberSince,
   });
 
@@ -449,6 +465,7 @@ class _ProfileHeaderCard extends StatelessWidget {
   final String displayName;
   final String email;
   final String accountStatus;
+  final String accountStatusLabel;
   final String? memberSince;
 
   @override
@@ -520,7 +537,10 @@ class _ProfileHeaderCard extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     const _RoleChip(label: 'Learner'),
-                    _CompactBadge(label: accountStatus),
+                    AppStatusBadge(
+                      label: accountStatusLabel,
+                      tone: accountStatusTone(accountStatus),
+                    ),
                     if (memberSince != null)
                       Text(
                         memberSince!,
@@ -846,6 +866,7 @@ class _StatusLine extends StatelessWidget {
     required this.label,
     required this.value,
     this.detail,
+    this.tone,
     this.emphasized = false,
   });
 
@@ -853,17 +874,21 @@ class _StatusLine extends StatelessWidget {
   final String label;
   final String value;
   final String? detail;
+  final AppStatusTone? tone;
   final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final accent = tone == null
+        ? (emphasized ? colors.primary : colors.textMuted)
+        : AppStatusStyle.of(context, tone!).foreground;
 
     return Row(
       children: [
         Icon(
           icon,
-          color: emphasized ? colors.primary : colors.textMuted,
+          color: accent,
           size: 18,
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -884,7 +909,7 @@ class _StatusLine extends StatelessWidget {
                 Text(
                   detail!,
                   style: AppTextStyles.label(context).copyWith(
-                    color: emphasized ? colors.primary : colors.textMuted,
+                    color: accent,
                     fontWeight: FontWeight.w700,
                     fontSize: 11,
                     letterSpacing: 0,
@@ -897,7 +922,9 @@ class _StatusLine extends StatelessWidget {
         Text(
           value,
           style: AppTextStyles.label(context).copyWith(
-            color: emphasized ? colors.primary : colors.textPrimary,
+            color: tone == null
+                ? (emphasized ? colors.primary : colors.textPrimary)
+                : accent,
             fontWeight: FontWeight.w800,
             letterSpacing: 0,
           ),
@@ -915,37 +942,6 @@ class _ProfileDivider extends StatelessWidget {
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(vertical: AppSpacing.sm),
       child: Divider(height: 1, thickness: 1, color: colors.borderSubtle),
-    );
-  }
-}
-
-class _CompactBadge extends StatelessWidget {
-  const _CompactBadge({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.primarySoft,
-        borderRadius: AppRadius.pillAll,
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(
-          color: colors.primary,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
-        ),
-      ),
     );
   }
 }

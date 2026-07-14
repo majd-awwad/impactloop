@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../shared/widgets/app_section_card.dart';
+import '../../../../../shared/widgets/app_status_badge.dart';
 import '../../theme/supplier_theme_extension.dart';
-import 'supplier_dashboard_colors.dart';
 
 class SupplierDashboardStatCard extends StatelessWidget {
   const SupplierDashboardStatCard({
@@ -12,7 +13,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
     required this.value,
     required this.helperText,
     required this.icon,
-    required this.accentColor,
+    required this.tone,
     this.highlight = false,
   });
 
@@ -20,21 +21,21 @@ class SupplierDashboardStatCard extends StatelessWidget {
   final String value;
   final String helperText;
   final IconData icon;
-  final Color accentColor;
+  final AppStatusTone tone;
   final bool highlight;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
     final textTheme = Theme.of(context).textTheme;
-    final accent = colors.accent;
+    final statusStyle = AppStatusStyle.of(context, tone);
+    final accent = statusStyle.foreground;
 
-    return Container(
+    return AppSectionCard(
       height: 164,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: highlight
-          ? context.supplierDecorations.highlightedStatCard
-          : context.supplierDecorations.statCard,
+      tone: tone,
+      emphasized: highlight,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -58,10 +59,10 @@ class SupplierDashboardStatCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: colors.accentSoft,
+                  color: statusStyle.background,
                   borderRadius: AppRadius.mdAll,
                   border: Border.all(
-                    color: accent.withValues(alpha: 0.28),
+                    color: statusStyle.border,
                   ),
                 ),
                 child: Icon(icon, color: accent, size: 20),
@@ -74,7 +75,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
                     vertical: 3,
                   ),
                   decoration: BoxDecoration(
-                    color: colors.accentSoft,
+                    color: statusStyle.background,
                     borderRadius: AppRadius.pillAll,
                   ),
                   child: Text(
@@ -146,14 +147,14 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             value: '$activeMaterials',
             helperText: context.s.statHelperVisibleToLearners,
             icon: Icons.inventory_2_outlined,
-            accentColor: SupplierDashboardColors.available,
+            tone: AppStatusTone.primary,
           ),
           SupplierDashboardStatCard(
             label: context.s.statPendingRequests,
             value: '$pendingRequests',
             helperText: context.s.statHelperWaitingResponse,
             icon: Icons.inbox_outlined,
-            accentColor: SupplierDashboardColors.pending,
+            tone: AppStatusTone.warning,
             highlight: pendingRequests > 0,
           ),
           SupplierDashboardStatCard(
@@ -161,14 +162,14 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             value: '$scheduledPickups',
             helperText: context.s.statHelperAcceptedPickups,
             icon: Icons.local_shipping_outlined,
-            accentColor: SupplierDashboardColors.accepted,
+            tone: AppStatusTone.success,
           ),
           SupplierDashboardStatCard(
             label: context.s.statReusedMaterials,
             value: '$reusedMaterials',
             helperText: context.s.statHelperCompletedReuse,
             icon: Icons.recycling_outlined,
-            accentColor: SupplierDashboardColors.reused,
+            tone: AppStatusTone.success,
           ),
         ];
 
@@ -263,23 +264,9 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
       runSpacing: AppSpacing.sm,
       children: metrics
           .map(
-            (metric) => Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: colors.surfaceSolid,
-                borderRadius: AppRadius.mdAll,
-                border: Border.all(color: colors.border),
-                boxShadow: [
-                  BoxShadow(
-                    color: colors.cardShadow.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
+            (metric) => AppSectionCard(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              borderRadius: AppRadius.mdAll,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../data/admin_no_show_reports_api.dart';
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
@@ -24,12 +28,13 @@ enum _ReportQueueTab {
 
 final adminNoShowReportsByStatusProvider = FutureProvider.autoDispose
     .family<AdminNoShowReportsListResponse, String>((ref, status) {
-  return ref.watch(adminNoShowReportsApiProvider).fetchReports(status: status);
-});
+      return ref
+          .watch(adminNoShowReportsApiProvider)
+          .fetchReports(status: status);
+    });
 
 bool isNoDriverAvailableSystemReport(AdminNoShowReportItem report) =>
-    report.targetRole == 'SYSTEM' &&
-    report.reasonCode == 'NO_DRIVER_AVAILABLE';
+    report.targetRole == 'SYSTEM' && report.reasonCode == 'NO_DRIVER_AVAILABLE';
 
 bool isStaleAssignedPickupReport(AdminNoShowReportItem report) =>
     report.reasonCode == 'NO_RESPONSE_AFTER_PICKUP_WINDOW' ||
@@ -66,7 +71,8 @@ class AdminNoShowReportsPage extends ConsumerStatefulWidget {
       _AdminNoShowReportsPageState();
 }
 
-class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage> {
+class _AdminNoShowReportsPageState
+    extends ConsumerState<AdminNoShowReportsPage> {
   _ReportQueueTab _selectedTab = _ReportQueueTab.pending;
   String? _busyReportId;
   String? _busyAction;
@@ -106,44 +112,37 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
 
       await showDialog<void>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
+        builder: (dialogContext) => AppDialogShell(
           title: Text(noShowReportTitle(detail)),
+          maxWidth: 600,
           content: SizedBox(
             width: 560,
-            child: SingleChildScrollView(
-              child: _NoShowReportCard(
-                report: detail,
-                showReviewActions: detail.status == 'PENDING_REVIEW',
-                isBusy: _busyReportId == detail.id,
-                busyAction: _busyAction,
-                onVerify: () => _verify(dialogContext, detail.id),
-                onReject: () => _reject(dialogContext, detail.id),
-                onResolve: () => _resolve(dialogContext, detail.id),
-                onRequestSupplierReschedule: () =>
-                    _requestSupplierReschedule(dialogContext, detail.id),
-                onCancelReleaseHold: () =>
-                    _cancelReleaseHold(dialogContext, detail.id),
-              ),
+            child: _NoShowReportCard(
+              report: detail,
+              showReviewActions: detail.status == 'PENDING_REVIEW',
+              isBusy: _busyReportId == detail.id,
+              busyAction: _busyAction,
+              onVerify: () => _verify(dialogContext, detail.id),
+              onReject: () => _reject(dialogContext, detail.id),
+              onResolve: () => _resolve(dialogContext, detail.id),
+              onRequestSupplierReschedule: () =>
+                  _requestSupplierReschedule(dialogContext, detail.id),
+              onCancelReleaseHold: () =>
+                  _cancelReleaseHold(dialogContext, detail.id),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Close'),
-            ),
-          ],
         ),
       );
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open report.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open report.')));
     }
   }
 
@@ -156,8 +155,9 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final reportsAsync =
-        ref.watch(adminNoShowReportsByStatusProvider(_selectedTab.status));
+    final reportsAsync = ref.watch(
+      adminNoShowReportsByStatusProvider(_selectedTab.status),
+    );
 
     return Padding(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
@@ -202,6 +202,10 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
                   ),
                   TextButton(
                     onPressed: _invalidateQueue,
+                    style: AppStatusButtonStyle.text(
+                      context,
+                      AppStatusTone.primary,
+                    ),
                     child: const Text('Retry'),
                   ),
                 ],
@@ -260,20 +264,24 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
       final message = result.targetSuspended
           ? 'Report verified. Target account was suspended (${result.targetVerifiedNoShowCount} verified strikes).'
           : result.shouldWarnAdmin
-              ? result.adminRecommendation ??
-                  'Report verified. Target now has ${result.targetVerifiedNoShowCount} verified strikes.'
-              : 'Report verified. Target verified strikes: ${result.targetVerifiedNoShowCount}.';
+          ? result.adminRecommendation ??
+                'Report verified. Target now has ${result.targetVerifiedNoShowCount} verified strikes.'
+          : 'Report verified. Target verified strikes: ${result.targetVerifiedNoShowCount}.';
 
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } on ApiException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not verify report. Please try again.')),
+        const SnackBar(
+          content: Text('Could not verify report. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -294,18 +302,20 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
       await ref.read(adminNoShowReportsApiProvider).rejectReport(reportId);
       _invalidateQueue();
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Report rejected.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Report rejected.')));
     } on ApiException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not reject report. Please try again.')),
+        const SnackBar(
+          content: Text('Could not reject report. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -331,13 +341,15 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
       );
     } on ApiException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not resolve report. Please try again.')),
+        const SnackBar(
+          content: Text('Could not resolve report. Please try again.'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -355,21 +367,22 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Ask supplier for new pickup window?'),
         content: const Text(
           'The supplier will choose a new handover window. No pickup or delivery times are set by admin.',
         ),
-        actions: [
-          TextButton(
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          primaryAction: FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.warning),
             child: const Text('Send to supplier'),
           ),
-        ],
+        ),
       ),
     );
     if (confirmed != true) return;
@@ -391,14 +404,16 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
       );
     } on ApiException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Could not request supplier reschedule. Please try again.'),
+          content: Text(
+            'Could not request supplier reschedule. Please try again.',
+          ),
         ),
       );
     } finally {
@@ -414,21 +429,22 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
   Future<void> _cancelReleaseHold(BuildContext context, String reportId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Cancel and release hold?'),
         content: const Text(
           'This will expire the reservation, cancel the delivery, and release the material hold so it can be reserved again.',
         ),
-        actions: [
-          TextButton(
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text('Keep open'),
           ),
-          FilledButton(
+          primaryAction: FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
             child: const Text('Cancel and release'),
           ),
-        ],
+        ),
       ),
     );
     if (confirmed != true) return;
@@ -444,13 +460,15 @@ class _AdminNoShowReportsPageState extends ConsumerState<AdminNoShowReportsPage>
       _invalidateQueue();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reservation cancelled and hold released.')),
+        const SnackBar(
+          content: Text('Reservation cancelled and hold released.'),
+        ),
       );
     } on ApiException catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -511,9 +529,9 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
       setState(() => _detail = detail);
     } on ApiException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.displayMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
     } finally {
       if (mounted) {
         setState(() => _loadingDetail = false);
@@ -529,13 +547,9 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
     final showDriverVerify =
         isPickupRecoveryReport && report.targetRole == 'DRIVER';
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.cardBorder),
-      ),
+    return AppDialogSection(
+      title: 'Report summary',
+      icon: Icons.report_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -551,29 +565,30 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
             ),
           ],
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Status: ${monitoringStatusLabel(report.status)}',
-            style: AdminTypography.pageSubtitle(palette),
+          AppStatusBadge(
+            label: adminIncidentReportStatusLabel(report.status),
+            tone: incidentReportStatusTone(report.status),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Learner: ${report.learnerName} · Supplier: ${report.supplierName}',
-            style: AdminTypography.pageSubtitle(palette),
+          const SizedBox(height: AppSpacing.md),
+          AppDialogInfoRow(label: 'Learner', value: report.learnerName),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(label: 'Supplier', value: report.supplierName),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(
+            label: 'Reservation',
+            value: monitoringStatusLabel(report.reservationStatus),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Reservation: ${monitoringStatusLabel(report.reservationStatus)}',
-            style: AdminTypography.pageSubtitle(palette),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(
+            label: 'Reporter',
+            value:
+                '${report.reporterName} · Target (${humanizeEnum(report.targetRole)}): ${report.targetName}',
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Reporter: ${report.reporterName} · Target (${report.targetRole}): ${report.targetName}',
-            style: AdminTypography.pageSubtitle(palette),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Reason: ${humanizeEnum(report.reasonCode)}${report.note?.trim().isNotEmpty == true ? ' · ${report.note!.trim()}' : ''}',
-            style: AdminTypography.pageSubtitle(palette),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(
+            label: 'Reason',
+            value:
+                '${humanizeEnum(report.reasonCode)}${report.note?.trim().isNotEmpty == true ? ' · ${report.note!.trim()}' : ''}',
           ),
           const SizedBox(height: AppSpacing.sm),
           ExpansionTile(
@@ -655,79 +670,108 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
           ),
           if (widget.showReviewActions) ...[
             const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                if (isPickupRecoveryReport) ...[
-                  FilledButton(
-                    onPressed: widget.isBusy
-                        ? null
-                        : widget.onRequestSupplierReschedule,
-                    child: widget.isBusy &&
-                            widget.busyAction == 'request-reschedule'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Ask supplier for new pickup window'),
-                  ),
-                  OutlinedButton(
-                    onPressed:
-                        widget.isBusy ? null : widget.onCancelReleaseHold,
-                    child: widget.isBusy && widget.busyAction == 'cancel'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Cancel and release hold'),
-                  ),
-                  if (showDriverVerify)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: AppDialogFooter.actions(
+                actions: [
+                  if (isPickupRecoveryReport) ...[
+                    FilledButton(
+                      onPressed: widget.isBusy
+                          ? null
+                          : widget.onRequestSupplierReschedule,
+                      style: AppStatusButtonStyle.filled(
+                        context,
+                        AppStatusTone.warning,
+                      ),
+                      child:
+                          widget.isBusy &&
+                              widget.busyAction == 'request-reschedule'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Ask supplier for new pickup window'),
+                    ),
+                    OutlinedButton(
+                      onPressed: widget.isBusy
+                          ? null
+                          : widget.onCancelReleaseHold,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.danger,
+                      ),
+                      child: widget.isBusy && widget.busyAction == 'cancel'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Cancel and release hold'),
+                    ),
+                    if (showDriverVerify)
+                      FilledButton(
+                        onPressed: widget.isBusy ? null : widget.onVerify,
+                        style: AppStatusButtonStyle.filled(
+                          context,
+                          AppStatusTone.danger,
+                        ),
+                        child: widget.isBusy && widget.busyAction == 'verify'
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Verify driver fault'),
+                      ),
+                  ] else ...[
+                    OutlinedButton(
+                      onPressed: widget.isBusy ? null : widget.onReject,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.danger,
+                      ),
+                      child: widget.isBusy && widget.busyAction == 'reject'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Reject'),
+                    ),
+                    OutlinedButton(
+                      onPressed: widget.isBusy ? null : widget.onResolve,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.success,
+                      ),
+                      child: widget.isBusy && widget.busyAction == 'resolve'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Resolve without strike'),
+                    ),
                     FilledButton(
                       onPressed: widget.isBusy ? null : widget.onVerify,
+                      style: AppStatusButtonStyle.filled(
+                        context,
+                        AppStatusTone.danger,
+                      ),
                       child: widget.isBusy && widget.busyAction == 'verify'
                           ? const SizedBox(
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Verify driver fault'),
+                          : const Text('Verify'),
                     ),
-                ] else ...[
-                  OutlinedButton(
-                    onPressed: widget.isBusy ? null : widget.onReject,
-                    child: widget.isBusy && widget.busyAction == 'reject'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Reject'),
-                  ),
-                  OutlinedButton(
-                    onPressed: widget.isBusy ? null : widget.onResolve,
-                    child: widget.isBusy && widget.busyAction == 'resolve'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Resolve without strike'),
-                  ),
-                  FilledButton(
-                    onPressed: widget.isBusy ? null : widget.onVerify,
-                    child: widget.isBusy && widget.busyAction == 'verify'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Verify'),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ],

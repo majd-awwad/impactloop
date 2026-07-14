@@ -617,6 +617,31 @@ const supplierMaterialListInclude = {
   },
 } satisfies Prisma.MaterialInclude;
 
+const supplierMaterialMutationSelect = {
+  id: true,
+  title: true,
+  description: true,
+  quantity: true,
+  unit: true,
+  condition: true,
+  pickupAllowed: true,
+  deliveryAllowed: true,
+  pickupNotes: true,
+  suggestedUses: true,
+  materialType: true,
+  status: true,
+  isFree: true,
+  price: true,
+  currency: true,
+  viewsCount: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
+export type SupplierOwnedMaterialListRecord = Prisma.MaterialGetPayload<{
+  include: typeof supplierMaterialListInclude;
+}>;
+
 const buildSupplierMaterialsWhere = (
   scope: SupplierMaterialScope,
   query: {
@@ -862,7 +887,7 @@ export const updateSupplierOwnedMaterial = async (
   return prisma.material.update({
     where: { id: materialId },
     data,
-    include: supplierMaterialListInclude,
+    select: supplierMaterialMutationSelect,
   });
 };
 
@@ -1259,6 +1284,12 @@ export const findReservationsForSupplierMaterial = async (
   });
 };
 
+const supplierMaterialStatusMutationSelect = {
+  id: true,
+  status: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
 export const updateSupplierOwnedMaterialStatus = async (
   scope: SupplierMaterialScope,
   materialId: string,
@@ -1287,7 +1318,7 @@ export const updateSupplierOwnedMaterialStatus = async (
           }
         : {}),
     },
-    include: supplierMaterialListInclude,
+    select: supplierMaterialStatusMutationSelect,
   });
 };
 

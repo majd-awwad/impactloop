@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_audit_logs_api.dart';
 import '../../data/models/admin_audit_logs_models.dart';
 import '../theme/admin_decoration_set.dart';
@@ -58,9 +61,12 @@ class _AuditLogFilters {
       targetType: targetType ?? this.targetType,
       actorId: actorId ?? this.actorId,
       timeRange: timeRange ?? this.timeRange,
-      customDateFrom:
-          clearCustomDates ? null : (customDateFrom ?? this.customDateFrom),
-      customDateTo: clearCustomDates ? null : (customDateTo ?? this.customDateTo),
+      customDateFrom: clearCustomDates
+          ? null
+          : (customDateFrom ?? this.customDateFrom),
+      customDateTo: clearCustomDates
+          ? null
+          : (customDateTo ?? this.customDateTo),
     );
   }
 
@@ -75,11 +81,7 @@ class _AuditLogFilters {
 }
 
 class _ResolvedDateRange {
-  const _ResolvedDateRange({
-    this.dateFrom,
-    this.dateTo,
-    this.error,
-  });
+  const _ResolvedDateRange({this.dateFrom, this.dateTo, this.error});
 
   final String? dateFrom;
   final String? dateTo;
@@ -133,26 +135,28 @@ _ResolvedDateRange _resolveDateRange(_AuditLogFilters filters) {
 class _AuditLogFiltersNotifier extends Notifier<_AuditLogFilters> {
   @override
   _AuditLogFilters build() => const _AuditLogFilters(
-        page: 1,
-        search: '',
-        action: 'ALL',
-        targetType: 'ALL',
-        actorId: 'ALL',
-        timeRange: _kTimeRangeAll,
-      );
+    page: 1,
+    search: '',
+    action: 'ALL',
+    targetType: 'ALL',
+    actorId: 'ALL',
+    timeRange: _kTimeRangeAll,
+  );
 
   void setPage(int page) => state = state.copyWith(page: page);
-  void setSearch(String search) => state = state.copyWith(page: 1, search: search);
-  void setAction(String action) => state = state.copyWith(page: 1, action: action);
+  void setSearch(String search) =>
+      state = state.copyWith(page: 1, search: search);
+  void setAction(String action) =>
+      state = state.copyWith(page: 1, action: action);
   void setTargetType(String targetType) =>
       state = state.copyWith(page: 1, targetType: targetType);
   void setActorId(String actorId) =>
       state = state.copyWith(page: 1, actorId: actorId);
   void setTimeRange(String timeRange) => state = state.copyWith(
-        page: 1,
-        timeRange: timeRange,
-        clearCustomDates: timeRange != _kTimeRangeCustom,
-      );
+    page: 1,
+    timeRange: timeRange,
+    clearCustomDates: timeRange != _kTimeRangeCustom,
+  );
   void setCustomDateFrom(String? value) =>
       state = state.copyWith(page: 1, customDateFrom: value);
   void setCustomDateTo(String? value) =>
@@ -162,8 +166,8 @@ class _AuditLogFiltersNotifier extends Notifier<_AuditLogFilters> {
 
 final _auditLogFiltersProvider =
     NotifierProvider<_AuditLogFiltersNotifier, _AuditLogFilters>(
-  _AuditLogFiltersNotifier.new,
-);
+      _AuditLogFiltersNotifier.new,
+    );
 
 final adminAuditLogsListProvider = FutureProvider.autoDispose((ref) async {
   final filters = ref.watch(_auditLogFiltersProvider);
@@ -171,7 +175,9 @@ final adminAuditLogsListProvider = FutureProvider.autoDispose((ref) async {
   final skipDates =
       filters.timeRange == _kTimeRangeCustom && resolved.error != null;
 
-  return ref.read(adminAuditLogsApiProvider).fetchAuditLogs(
+  return ref
+      .read(adminAuditLogsApiProvider)
+      .fetchAuditLogs(
         page: filters.page,
         limit: _AuditLogFilters.limit,
         search: filters.search,
@@ -239,7 +245,9 @@ class _AdminAuditLogsPageState extends ConsumerState<AdminAuditLogsPage> {
   void _refresh() => ref.invalidate(adminAuditLogsListProvider);
 
   void _applySearch() {
-    ref.read(_auditLogFiltersProvider.notifier).setSearch(_searchController.text.trim());
+    ref
+        .read(_auditLogFiltersProvider.notifier)
+        .setSearch(_searchController.text.trim());
   }
 
   Future<void> _showDetails(
@@ -351,10 +359,8 @@ class _AdminAuditLogsPageState extends ConsumerState<AdminAuditLogsPage> {
                       items: data.items,
                       compact: compact,
                       targetTypes: data.filterOptions.targetTypes,
-                      onDetails: (item) => _showDetails(
-                        item,
-                        data.filterOptions.targetTypes,
-                      ),
+                      onDetails: (item) =>
+                          _showDetails(item, data.filterOptions.targetTypes),
                     ),
                     const SizedBox(height: 12),
                     _PaginationRow(
@@ -363,13 +369,13 @@ class _AdminAuditLogsPageState extends ConsumerState<AdminAuditLogsPage> {
                       total: data.pagination.total,
                       onPrevious: data.pagination.page > 1
                           ? () => ref
-                              .read(_auditLogFiltersProvider.notifier)
-                              .setPage(data.pagination.page - 1)
+                                .read(_auditLogFiltersProvider.notifier)
+                                .setPage(data.pagination.page - 1)
                           : null,
                       onNext: data.pagination.page < data.pagination.totalPages
                           ? () => ref
-                              .read(_auditLogFiltersProvider.notifier)
-                              .setPage(data.pagination.page + 1)
+                                .read(_auditLogFiltersProvider.notifier)
+                                .setPage(data.pagination.page + 1)
                           : null,
                     ),
                   ],
@@ -428,8 +434,8 @@ class _SummaryRow extends StatelessWidget {
         final columns = constraints.maxWidth >= 900
             ? 4
             : constraints.maxWidth >= 480
-                ? 2
-                : 1;
+            ? 2
+            : 1;
         return Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -520,42 +526,42 @@ class _CompactDateField extends StatelessWidget {
         : DateFormat.yMMMd().format(DateTime.parse(value!));
 
     final field = InkWell(
-        onTap: () async {
-          final initial = value != null && value!.isNotEmpty
-              ? DateTime.tryParse(value!)
-              : null;
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: initial ?? DateTime.now(),
-            firstDate: DateTime(2020),
-            lastDate: DateTime.now().add(const Duration(days: 1)),
-          );
-          if (picked != null) {
-            onChanged(_formatIsoDate(picked));
-          }
-        },
-        borderRadius: BorderRadius.circular(4),
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-            isDense: true,
-            suffixIcon: value != null && value!.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear, size: 18),
-                    onPressed: () => onChanged(null),
-                    tooltip: 'Clear',
-                  )
-                : const Icon(Icons.calendar_today_outlined, size: 18),
-          ),
-          child: Text(
-            display,
-            style: Theme.of(context).textTheme.bodySmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+      onTap: () async {
+        final initial = value != null && value!.isNotEmpty
+            ? DateTime.tryParse(value!)
+            : null;
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: initial ?? DateTime.now(),
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now().add(const Duration(days: 1)),
+        );
+        if (picked != null) {
+          onChanged(_formatIsoDate(picked));
+        }
+      },
+      borderRadius: BorderRadius.circular(4),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: const OutlineInputBorder(),
+          isDense: true,
+          suffixIcon: value != null && value!.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () => onChanged(null),
+                  tooltip: 'Clear',
+                )
+              : const Icon(Icons.calendar_today_outlined, size: 18),
         ),
-      );
+        child: Text(
+          display,
+          style: Theme.of(context).textTheme.bodySmall,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
 
     if (width == null) return field;
     return SizedBox(width: width, child: field);
@@ -622,10 +628,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
     final actionEntries = [
       const DropdownMenuEntry(value: 'ALL', label: 'All actions'),
       ...widget.filterOptions.actions.map(
-        (option) => DropdownMenuEntry(
-          value: option.value,
-          label: option.label,
-        ),
+        (option) => DropdownMenuEntry(value: option.value, label: option.label),
       ),
     ];
     final timeEntries = const [
@@ -638,19 +641,13 @@ class _FiltersPanelState extends State<_FiltersPanel> {
     final targetEntries = [
       const DropdownMenuEntry(value: 'ALL', label: 'All targets'),
       ...widget.filterOptions.targetTypes.map(
-        (option) => DropdownMenuEntry(
-          value: option.value,
-          label: option.label,
-        ),
+        (option) => DropdownMenuEntry(value: option.value, label: option.label),
       ),
     ];
     final actorEntries = [
       const DropdownMenuEntry(value: 'ALL', label: 'All actors'),
       ...widget.filterOptions.actors.map(
-        (actor) => DropdownMenuEntry(
-          value: actor.id,
-          label: actor.label,
-        ),
+        (actor) => DropdownMenuEntry(value: actor.id, label: actor.label),
       ),
     ];
 
@@ -773,9 +770,9 @@ class _FiltersPanelState extends State<_FiltersPanel> {
               const SizedBox(height: 6),
               Text(
                 widget.dateRangeError!,
-                style: AdminTypography.kpiHelper(palette).copyWith(
-                  color: palette.red,
-                ),
+                style: AdminTypography.kpiHelper(
+                  palette,
+                ).copyWith(color: palette.red),
               ),
             ],
           ],
@@ -789,9 +786,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    _advancedOpen
-                        ? Icons.expand_less
-                        : Icons.expand_more,
+                    _advancedOpen ? Icons.expand_less : Icons.expand_more,
                     size: 20,
                     color: palette.textMuted,
                   ),
@@ -848,6 +843,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                   ),
                   OutlinedButton.icon(
                     onPressed: widget.onReset,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.neutral,
+                    ),
                     icon: const Icon(Icons.filter_alt_off, size: 18),
                     label: const Text('Reset'),
                   ),
@@ -859,6 +858,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                 alignment: AlignmentDirectional.centerStart,
                 child: OutlinedButton.icon(
                   onPressed: widget.onReset,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   icon: const Icon(Icons.filter_alt_off, size: 18),
                   label: const Text('Reset'),
                 ),
@@ -926,8 +929,9 @@ class _AuditLogTable extends StatelessWidget {
               color: palette.isDark
                   ? palette.cardBackground
                   : const Color(0xFFF9FAFB),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
               border: Border(bottom: BorderSide(color: palette.cardBorder)),
             ),
             child: Row(
@@ -997,7 +1001,12 @@ class _AuditLogRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(item.actionLabel, style: AdminTypography.sectionTitle(palette).copyWith(fontSize: 14)),
+              Text(
+                item.actionLabel,
+                style: AdminTypography.sectionTitle(
+                  palette,
+                ).copyWith(fontSize: 14),
+              ),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 6,
@@ -1011,9 +1020,9 @@ class _AuditLogRow extends StatelessWidget {
                   if (_formatDateTime(item.createdAt) != null)
                     Text(
                       _formatDateTime(item.createdAt)!,
-                      style: AdminTypography.kpiHelper(palette).copyWith(
-                        color: palette.textMuted,
-                      ),
+                      style: AdminTypography.kpiHelper(
+                        palette,
+                      ).copyWith(color: palette.textMuted),
                     ),
                 ],
               ),
@@ -1044,6 +1053,7 @@ class _AuditLogRow extends StatelessWidget {
             alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
               onPressed: onDetails,
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               child: const Text('Details'),
             ),
           ),
@@ -1086,11 +1096,17 @@ class _AuditLogDetailDialog extends StatelessWidget {
         ? item.actorEmail
         : '${item.actorName} (${item.actorEmail})';
 
-    return AlertDialog(
-      title: Text(item.actionLabel),
+    return AppDialogShell(
+      title: AppDialogTitleBlock(
+        title: item.actionLabel,
+        icon: Icons.history_outlined,
+      ),
+      maxWidth: 560,
       content: SizedBox(
         width: 520,
-        child: SingleChildScrollView(
+        child: AppDialogSection(
+          title: 'Audit entry',
+          icon: Icons.receipt_long_outlined,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1117,21 +1133,12 @@ class _AuditLogDetailDialog extends StatelessWidget {
                 _DetailRow(label: 'Details', value: 'No extra details')
               else
                 ...metadataRows.map(
-                  (row) => _DetailRow(
-                    label: row.key,
-                    value: row.value,
-                  ),
+                  (row) => _DetailRow(label: row.key, value: row.value),
                 ),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
     );
   }
 }
@@ -1148,25 +1155,10 @@ class _DetailRow extends StatelessWidget {
   final bool muted;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AdminTypography.kpiHelper(palette)),
-          Text(
-            value,
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              color: muted ? palette.textMuted : palette.textPrimary,
-              fontSize: muted ? 12 : 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: AppDialogInfoRow(label: label, value: value, muted: muted),
+  );
 }
 
 class _PaginationRow extends StatelessWidget {
@@ -1187,13 +1179,28 @@ class _PaginationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final buttonStyle = AppStatusButtonStyle.outlined(
+      context,
+      AppStatusTone.neutral,
+    ).copyWith(
+      minimumSize: const WidgetStatePropertyAll(Size(0, 42)),
+    );
 
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        OutlinedButton(onPressed: onPrevious, child: const Text('Previous')),
-        const SizedBox(width: 8),
-        OutlinedButton(onPressed: onNext, child: const Text('Next')),
-        const SizedBox(width: 12),
+        OutlinedButton(
+          onPressed: onPrevious,
+          style: buttonStyle,
+          child: const Text('Previous'),
+        ),
+        OutlinedButton(
+          onPressed: onNext,
+          style: buttonStyle,
+          child: const Text('Next'),
+        ),
         Text(
           'Page $page of $totalPages · $total total',
           style: AdminTypography.kpiHelper(palette),
@@ -1204,11 +1211,7 @@ class _PaginationRow extends StatelessWidget {
 }
 
 class _ErrorPanel extends StatelessWidget {
-  const _ErrorPanel({
-    required this.title,
-    required this.message,
-    this.onRetry,
-  });
+  const _ErrorPanel({required this.title, required this.message, this.onRetry});
 
   final String title;
   final String message;
@@ -1232,7 +1235,14 @@ class _ErrorPanel extends StatelessWidget {
           Text(message, style: AdminTypography.pageSubtitle(palette)),
           if (onRetry != null) ...[
             const SizedBox(height: 12),
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
+            FilledButton(
+              onPressed: onRetry,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: const Text('Retry'),
+            ),
           ],
         ],
       ),

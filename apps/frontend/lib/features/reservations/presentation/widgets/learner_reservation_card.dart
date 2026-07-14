@@ -7,12 +7,16 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
+import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../deliveries/presentation/widgets/request_delivery_dialog.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../application/learner_reservation_cache.dart';
@@ -48,6 +52,7 @@ class LearnerReservationCard extends ConsumerWidget {
     final statusStyle = LearnerReservationStatusStyle.forStatus(
       context,
       reservation.status,
+      incidentReviewStatus: reservation.incidentReviewStatus,
     );
     final compact = MediaQuery.sizeOf(context).width < 720;
     final userId = ref.watch(authControllerProvider).user?.id ?? '';
@@ -266,45 +271,6 @@ class _ReservationMediaTileState extends State<_ReservationMediaTile> {
   }
 }
 
-class _ReservationStatusChip extends StatelessWidget {
-  const _ReservationStatusChip({
-    required this.label,
-    required this.background,
-    required this.foreground,
-    required this.border,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-  final Color border;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 10,
-        vertical: 5,
-      ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
 class _ReservationStatusRow extends StatelessWidget {
   const _ReservationStatusRow({
     required this.reservation,
@@ -323,14 +289,11 @@ class _ReservationStatusRow extends StatelessWidget {
       reservation,
       linkedDeliveryStatus: delivery?.status,
     );
-    final deliveryStyle = chipLabels.secondary != null && delivery != null
-        ? _deliveryStatusStyle(context, delivery!.status)
+    final deliveryTone = chipLabels.secondary != null && delivery != null
+        ? deliveryStatusAppTone(delivery!.status)
         : chipLabels.secondary != null &&
-                reservation.activeDelivery?.status != null
-            ? _deliveryStatusStyle(
-                context,
-                reservation.activeDelivery!.status,
-              )
+              reservation.activeDelivery?.status != null
+        ? deliveryStatusAppTone(reservation.activeDelivery!.status)
         : null;
 
     return Wrap(
@@ -338,18 +301,11 @@ class _ReservationStatusRow extends StatelessWidget {
       runSpacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        _ReservationStatusChip(
-          label: chipLabels.primary,
-          background: statusStyle.chipBackground,
-          foreground: statusStyle.chipForeground,
-          border: statusStyle.chipBorder,
-        ),
+        AppStatusBadge(label: chipLabels.primary, tone: statusStyle.tone),
         if (chipLabels.secondary case final secondaryLabel?)
-          _ReservationStatusChip(
+          AppStatusBadge(
             label: secondaryLabel,
-            background: deliveryStyle?.background ?? statusStyle.chipBackground,
-            foreground: deliveryStyle?.foreground ?? statusStyle.chipForeground,
-            border: deliveryStyle?.border ?? statusStyle.chipBorder,
+            tone: deliveryTone ?? statusStyle.tone,
           ),
         Text(
           formatReservationDate(reservation.createdAt),
@@ -359,48 +315,6 @@ class _ReservationStatusRow extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _DeliveryStatusChipStyle {
-  const _DeliveryStatusChipStyle({
-    required this.background,
-    required this.foreground,
-    required this.border,
-  });
-
-  final Color background;
-  final Color foreground;
-  final Color border;
-}
-
-_DeliveryStatusChipStyle _deliveryStatusStyle(
-  BuildContext context,
-  String status,
-) {
-  final colors = AppThemeColors.of(context);
-
-  switch (status) {
-    case 'DELIVERED':
-      return _DeliveryStatusChipStyle(
-        background: colors.successSoft,
-        foreground: colors.success,
-        border: colors.success.withValues(alpha: 0.35),
-      );
-    case 'CANCELLED':
-    case 'FAILED_PICKUP':
-    case 'FAILED_DELIVERY':
-      return _DeliveryStatusChipStyle(
-        background: colors.dangerSoft,
-        foreground: colors.danger,
-        border: colors.danger.withValues(alpha: 0.35),
-      );
-    default:
-      return _DeliveryStatusChipStyle(
-        background: colors.warningSoft,
-        foreground: colors.warningText,
-        border: colors.warningBorder,
-      );
   }
 }
 
@@ -769,6 +683,7 @@ class _ReservationCardActions extends ConsumerWidget {
       label: 'View material',
       onPressed: () => context.push('/materials/${reservation.material.id}'),
       desktopRail: desktopColumn,
+      tone: AppStatusTone.neutral,
     );
 
     final viewDelivery = _resolveDeliveryAction(
@@ -794,6 +709,7 @@ class _ReservationCardActions extends ConsumerWidget {
               reservation: reservation,
             ),
             desktopRail: desktopColumn,
+            tone: AppStatusTone.primary,
           )
         : null;
 
@@ -805,7 +721,7 @@ class _ReservationCardActions extends ConsumerWidget {
                 : () => _confirmCancel(context, ref),
             desktopRail: desktopColumn,
             loading: isCancelling,
-            danger: true,
+            tone: AppStatusTone.danger,
           )
         : null;
 
@@ -909,6 +825,7 @@ _ReservationActionButton? _resolveDeliveryAction({
     label: delivery?.canTrack == true ? 'Track delivery' : 'View delivery',
     onPressed: () => onNavigate(deliveryId),
     desktopRail: desktopColumn,
+    tone: AppStatusTone.info,
   );
 }
 
@@ -918,33 +835,31 @@ class _ReservationActionButton extends StatelessWidget {
     required this.onPressed,
     this.desktopRail = false,
     this.loading = false,
-    this.danger = false,
+    this.tone = AppStatusTone.neutral,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool desktopRail;
   final bool loading;
-  final bool danger;
+  final AppStatusTone tone;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
+    final statusStyle = AppStatusStyle.of(context, tone);
 
     if (desktopRail) {
-      if (danger) {
+      if (tone == AppStatusTone.danger) {
         return SizedBox(
           height: 34,
           child: TextButton(
             onPressed: onPressed,
-            style: TextButton.styleFrom(
-              foregroundColor: colors.danger,
-              padding: EdgeInsets.zero,
-              minimumSize: Size.zero,
+            style: AppStatusButtonStyle.text(context, tone).copyWith(
+              padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+              minimumSize: const WidgetStatePropertyAll(Size.zero),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+              textStyle: const WidgetStatePropertyAll(
+                TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
               ),
             ),
             child: loading
@@ -953,7 +868,7 @@ class _ReservationActionButton extends StatelessWidget {
                     height: 14,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: colors.danger,
+                      color: statusStyle.foreground,
                     ),
                   )
                 : Text(label),
@@ -966,13 +881,12 @@ class _ReservationActionButton extends StatelessWidget {
         width: double.infinity,
         child: OutlinedButton(
           onPressed: onPressed,
-          style: OutlinedButton.styleFrom(
-            foregroundColor: colors.success,
-            side: BorderSide(color: colors.success.withValues(alpha: 0.45)),
-            padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
-            textStyle: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+          style: AppStatusButtonStyle.outlined(context, tone).copyWith(
+            padding: const WidgetStatePropertyAll(
+              EdgeInsetsDirectional.symmetric(horizontal: 8),
+            ),
+            textStyle: const WidgetStatePropertyAll(
+              TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           child: Text(label),
@@ -980,41 +894,26 @@ class _ReservationActionButton extends StatelessWidget {
       );
     }
 
-    if (danger) {
-      return OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: colors.danger,
-          side: BorderSide(color: colors.danger.withValues(alpha: 0.4)),
-          padding: const EdgeInsetsDirectional.symmetric(
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: AppStatusButtonStyle.outlined(context, tone).copyWith(
+        padding: const WidgetStatePropertyAll(
+          EdgeInsetsDirectional.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
         ),
-        child: loading
-            ? SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colors.danger,
-                ),
-              )
-            : Text(label),
-      );
-    }
-
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: colors.success,
-        side: BorderSide(color: colors.success.withValues(alpha: 0.45)),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
       ),
-      child: Text(label),
+      child: loading
+          ? SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: statusStyle.foreground,
+              ),
+            )
+          : Text(label),
     );
   }
 }
@@ -1058,27 +957,25 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
 
     final keepButton = OutlinedButton(
       onPressed: _isSubmitting ? null : widget.onKeep,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.lg,
-        ),
-        side: BorderSide(color: palette.borderStrong),
-        foregroundColor: palette.textSecondary,
-      ),
+      style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral)
+          .copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.lg),
+            ),
+          ),
       child: const Text('Keep request'),
     );
 
     final cancelButton = FilledButton(
       onPressed: _isSubmitting ? null : _handleCancel,
-      style: FilledButton.styleFrom(
-        backgroundColor: colors.danger,
-        foregroundColor: colors.textOnPrimary,
-        minimumSize: const Size(0, 44),
+      style: AppStatusButtonStyle.filled(
+        context,
+        AppStatusTone.danger,
         padding: const EdgeInsetsDirectional.symmetric(
           horizontal: AppSpacing.md,
         ),
-      ),
+      ).copyWith(minimumSize: const WidgetStatePropertyAll(Size(0, 44))),
       child: _isSubmitting
           ? SizedBox(
               width: 18,
@@ -1294,54 +1191,49 @@ class _LearnerRequestRescheduleButtonState
               });
             }
 
-            return AlertDialog(
+            return AppDialogShell(
               title: const Text('Request reschedule'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: reasonController,
-                      maxLength: 500,
-                      decoration: const InputDecoration(
-                        labelText: 'Reason (required)',
-                      ),
+              onClose: () => Navigator.of(dialogContext).pop(false),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: reasonController,
+                    maxLength: 500,
+                    decoration: const InputDecoration(
+                      labelText: 'Reason (required)',
                     ),
-                    TextField(
-                      controller: noteController,
-                      maxLength: 1000,
-                      decoration: const InputDecoration(
-                        labelText: 'Note (optional)',
-                      ),
+                  ),
+                  TextField(
+                    controller: noteController,
+                    maxLength: 1000,
+                    decoration: const InputDecoration(
+                      labelText: 'Note (optional)',
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    OutlinedButton(
-                      onPressed: pickStart,
-                      child: Text(
-                        start == null
-                            ? 'Pick proposed start'
-                            : 'Start: ${start!.toLocal()}',
-                      ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton(
+                    onPressed: pickStart,
+                    child: Text(
+                      start == null
+                          ? 'Pick proposed start'
+                          : 'Start: ${start!.toLocal()}',
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    OutlinedButton(
-                      onPressed: pickEnd,
-                      child: Text(
-                        end == null
-                            ? 'Pick proposed end'
-                            : 'End: ${end!.toLocal()}',
-                      ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  OutlinedButton(
+                    onPressed: pickEnd,
+                    child: Text(
+                      end == null
+                          ? 'Pick proposed end'
+                          : 'End: ${end!.toLocal()}',
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
+              footer: AppDialogFooter.form(
+                primaryAction: FilledButton(
                   onPressed: () {
                     if (reasonController.text.trim().isEmpty ||
                         start == null ||
@@ -1365,7 +1257,9 @@ class _LearnerRequestRescheduleButtonState
                       return;
                     }
 
-                    if (end!.isBefore(DateTime.now().add(minRemainingPickupWindow))) {
+                    if (end!.isBefore(
+                      DateTime.now().add(minRemainingPickupWindow),
+                    )) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
                         const SnackBar(
                           content: Text(learnerPickupWindowTooCloseMessage),
@@ -1379,9 +1273,13 @@ class _LearnerRequestRescheduleButtonState
                     note = rawNote.isEmpty ? null : rawNote;
                     Navigator.of(dialogContext).pop(true);
                   },
+                  style: AppStatusButtonStyle.filled(
+                    dialogContext,
+                    AppStatusTone.warning,
+                  ),
                   child: const Text('Send request'),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -1435,6 +1333,7 @@ class _LearnerRequestRescheduleButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.warning),
         child: _submitting
             ? const SizedBox(
                 width: 18,
@@ -1475,57 +1374,53 @@ class _LearnerReportSupplierButtonState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+        builder: (context, setState) => AppDialogShell(
           title: const Text('Report supplier issue'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Report a supplier issue for admin review. The reservation will be closed pending review.',
+          onClose: () => Navigator.of(context).pop(false),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Report a supplier issue for admin review. The reservation will be closed pending review.',
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: selectedReason,
+                decoration: const InputDecoration(labelText: 'Reason'),
+                items: _learnerSupplierReportReasons.entries
+                    .map(
+                      (entry) => DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => selectedReason = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                maxLength: 1000,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  labelText: 'Note (optional)',
+                  hintText: 'Describe what happened',
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedReason,
-                  decoration: const InputDecoration(labelText: 'Reason'),
-                  items: _learnerSupplierReportReasons.entries
-                      .map(
-                        (entry) => DropdownMenuItem(
-                          value: entry.key,
-                          child: Text(entry.value),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => selectedReason = value);
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  maxLength: 1000,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Note (optional)',
-                    hintText: 'Describe what happened',
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
+          footer: AppDialogFooter.form(
+            primaryAction: FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
+              style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
               child: const Text('Submit report'),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1566,6 +1461,7 @@ class _LearnerReportSupplierButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
         child: _submitting
             ? const SizedBox(
                 width: 18,
@@ -1596,8 +1492,9 @@ class _LearnerReportNoDriverButtonState
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Report no driver available'),
+        onClose: () => Navigator.of(context).pop(false),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1614,19 +1511,16 @@ class _LearnerReportNoDriverButtonState
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () {
               if (noteController.text.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
             child: const Text('Submit report'),
           ),
-        ],
+        ),
       ),
     );
     final note = noteController.text.trim();
@@ -1665,6 +1559,7 @@ class _LearnerReportNoDriverButtonState
       alignment: Alignment.centerLeft,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
         child: _submitting
             ? const SizedBox(
                 width: 18,

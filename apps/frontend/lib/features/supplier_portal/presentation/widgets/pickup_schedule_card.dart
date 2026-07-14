@@ -4,6 +4,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 import '../../data/pickup_schedule_grouping.dart';
 import '../theme/supplier_theme_extension.dart';
@@ -43,7 +44,12 @@ class PickupScheduleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
     final colors = context.supplierColors;
-    final style = PickupScheduleStatusStyle.forItem(item, groupKind);
+    final dateStyle = PickupScheduleStatusStyle.forGroupKind(
+      groupKind,
+    ).resolve(context);
+    final statusStyle = PickupScheduleStatusStyle.forItem(
+      item,
+    ).resolve(context);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final windowLabel = item.pickupWindow != null
@@ -91,7 +97,7 @@ class PickupScheduleCard extends StatelessWidget {
                       style: context.supplierTitle().copyWith(
                         fontSize: compact ? 13 : 14,
                         fontWeight: FontWeight.w700,
-                        color: style.foreground,
+                        color: dateStyle.foreground,
                         height: 1.25,
                       ),
                     ),
@@ -127,7 +133,10 @@ class PickupScheduleCard extends StatelessWidget {
                               _FollowUpBadge(label: l.overdueBadge),
                               const SizedBox(width: AppSpacing.xs),
                             ],
-                            _StatusBadge(status: item.status, style: style),
+                            _StatusBadge(
+                              status: item.status,
+                              style: statusStyle,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 3),
@@ -347,7 +356,7 @@ class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.status, required this.style});
 
   final SupplierPickupScheduleStatus status;
-  final PickupScheduleStatusStyle style;
+  final AppStatusStyle style;
 
   @override
   Widget build(BuildContext context) {

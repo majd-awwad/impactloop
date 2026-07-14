@@ -47,7 +47,7 @@ Authenticated **LEARNER** reserves an available material from public material de
 - `material_discovery` detail CTA calls `reservationCreateControllerProvider`.
 - `material_discovery` detail reads `myReservationsProvider`; if the learner has a non-terminal reservation for the material, it shows reservation status instead of the normal reserve CTA and links to My Reservations with status-specific copy. Historical `REJECTED`, `CANCELLED`, `EXPIRED`, and `COMPLETED` reservations do not block the normal reserve action when the material is still currently reservable.
 - `features/reservations/data` contains the API/repository and request/response models.
-- `/learner/reservations` lists the learner's reservations with loading, empty, error, manual refresh, and 10-second foreground polling states. Accepted cards choose pickup-only copy, delivery request, or delivery status from `myReservationsProvider` plus `learnerDeliveriesProvider`.
+- `/learner/reservations` lists the learner's reservations with loading, empty, error, manual refresh, and 10-second foreground polling states. Its seven filters are All, Active, Needs action, Pending, Accepted, Completed, and Closed: Active contains all non-terminal states, Needs action is learner-specific, Pending contains `PENDING` and `AWAITING_SUPPLIER_CONFIRMATION` (supplier/system response), and Closed contains every terminal non-completed state. Accepted cards choose pickup-only copy, delivery request, or delivery status from `myReservationsProvider` plus `learnerDeliveriesProvider`.
 - `/learner/deliveries/:id` shows learner-owned delivery status history, material/supplier summary, pickup window, dropoff summary, and assigned driver summary when present.
 - Home links to `/learner/reservations`.
 

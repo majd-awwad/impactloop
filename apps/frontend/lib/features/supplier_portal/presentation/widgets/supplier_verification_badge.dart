@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
+import '../theme/supplier_theme_extension.dart';
 
 class SupplierVerificationBadge extends StatelessWidget {
   const SupplierVerificationBadge({super.key, required this.status});
@@ -8,32 +10,8 @@ class SupplierVerificationBadge extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = context.supplierColors;
-    final decorations = context.supplierDecorations;
-
-    final background = switch (status.toUpperCase()) {
-      'VERIFIED' => colors.accentSoft,
-      'REJECTED' => colors.error.withValues(alpha: 0.18),
-      'CHANGES_REQUESTED' => colors.amberAccent.withValues(alpha: 0.18),
-      'NOT_REQUIRED' => colors.chipUnselected,
-      _ => colors.chipSelected,
-    };
-
-    final foreground = switch (status.toUpperCase()) {
-      'VERIFIED' => colors.accent,
-      'REJECTED' => colors.error,
-      'CHANGES_REQUESTED' => colors.amberAccent,
-      _ => colors.textSecondary,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: decorations.badge(background: background),
-      child: Text(
-        context.s.verificationStatusLabel(status),
-        style: context.supplierChip().copyWith(color: foreground),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: context.s.verificationStatusLabel(status),
+    tone: supplierVerificationStatusTone(status),
+  );
 }

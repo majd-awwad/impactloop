@@ -190,6 +190,56 @@ export type SupplierReservationListRecord = Prisma.ReservationGetPayload<{
   select: typeof supplierReservationListSelect;
 }>;
 
+const reservationMutationSelect = {
+  id: true,
+  status: true,
+} satisfies Prisma.ReservationSelect;
+
+type ReservationMutationResult = Prisma.ReservationGetPayload<{
+  select: typeof reservationMutationSelect;
+}>;
+
+const loadSupplierReservationRecord = async (
+  reservationId: string,
+): Promise<SupplierReservationRecord> => {
+  return prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: reservationInclude,
+  });
+};
+
+const acceptReservationMaterialLocationSelect = {
+  country: true,
+  city: true,
+  area: true,
+  addressLine: true,
+  latitude: true,
+  longitude: true,
+  isApproximate: true,
+} satisfies Prisma.LocationSelect;
+
+const acceptReservationExistingSelect = {
+  id: true,
+  status: true,
+  materialId: true,
+  fulfillmentMethod: true,
+  learnerPreferredPickupWindows: true,
+  learnerPreferredDeliveryWindows: true,
+  requesterId: true,
+  deliveryGroupId: true,
+  deliveryAddressText: true,
+  dropoffCity: true,
+  dropoffArea: true,
+  deliveryNote: true,
+  material: {
+    select: {
+      location: {
+        select: acceptReservationMaterialLocationSelect,
+      },
+    },
+  },
+} satisfies Prisma.ReservationSelect;
+
 export const supplierCanCompleteReservation = (input: {
   status: ReservationStatus;
   fulfillmentMethod: string;
@@ -228,13 +278,12 @@ const acceptPickupReservation = async (
   tx: Prisma.TransactionClient,
   input: {
     reservationId: string;
-    ownerId: string;
     proposedWindow: PreferredWindow;
     supplierNote: string | null;
     learnerPreferredPickupWindows: unknown;
     selectedPreferredWindowIndex?: number;
   },
-) => {
+): Promise<ReservationMutationResult> => {
   const pickupCodeData = await buildSelfPickupCodeData(input.reservationId);
   const learnerWindows = parsePreferredWindowsJson(
     input.learnerPreferredPickupWindows,
@@ -254,7 +303,7 @@ const acceptPickupReservation = async (
         acceptedAt: new Date(),
         ...pickupCodeData.data,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
   }
 
@@ -281,7 +330,7 @@ const acceptPickupReservation = async (
         acceptedAt: new Date(),
         ...pickupCodeData.data,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
   }
 
@@ -299,7 +348,7 @@ const acceptPickupReservation = async (
         acceptedAt: new Date(),
         ...pickupCodeData.data,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
   }
 
@@ -315,7 +364,7 @@ const acceptPickupReservation = async (
       supplierNote: input.supplierNote,
       acceptedAt: new Date(),
     },
-    include: reservationInclude,
+    select: reservationMutationSelect,
   });
 };
 
@@ -349,7 +398,7 @@ const acceptDeliveryWithConfirmedWindow = async (
     earliestDeliveryStart: Date;
   },
 ) => {
-  const reservation = await tx.reservation.update({
+  const updated = await tx.reservation.update({
     where: { id: input.reservation.id },
     data: {
       status: 'ACCEPTED',
@@ -364,7 +413,7 @@ const acceptDeliveryWithConfirmedWindow = async (
       supplierNote: input.supplierNote,
       acceptedAt: new Date(),
     },
-    include: reservationInclude,
+    select: reservationMutationSelect,
   });
 
   await ensureDeliveryForAcceptedReservation(tx, {
@@ -373,10 +422,7 @@ const acceptDeliveryWithConfirmedWindow = async (
     statusHistoryNote: 'Delivery created when supplier accepted reservation',
   });
 
-  return tx.reservation.findFirstOrThrow({
-    where: { id: input.reservation.id },
-    include: reservationInclude,
-  });
+  return updated;
 };
 
 const acceptDeliveryReservation = async (
@@ -409,7 +455,7 @@ const acceptDeliveryReservation = async (
     selectedPreferredWindowIndex?: number;
     proposedDeliveryWindow?: PreferredWindow;
   },
-) => {
+): Promise<ReservationMutationResult> => {
   const learnerWindows = parsePreferredWindowsJson(
     input.learnerPreferredDeliveryWindows,
   );
@@ -437,7 +483,7 @@ const acceptDeliveryReservation = async (
           supplierNote: input.supplierNote,
           acceptedAt: new Date(),
         },
-        include: reservationInclude,
+        select: reservationMutationSelect,
       });
     }
 
@@ -471,7 +517,7 @@ const acceptDeliveryReservation = async (
         supplierNote: input.supplierNote,
         acceptedAt: new Date(),
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
   }
 
@@ -524,7 +570,7 @@ const acceptDeliveryReservation = async (
       supplierNote: input.supplierNote,
       acceptedAt: new Date(),
     },
-    include: reservationInclude,
+    select: reservationMutationSelect,
   });
 };
 
@@ -550,19 +596,13 @@ export const acceptSupplierReservation = async (input: {
   selectedPreferredWindowIndex?: number;
   proposedDeliveryWindow?: PreferredWindow;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
         ownerId: input.ownerId,
       },
-      include: {
-        material: {
-          include: {
-            location: true,
-          },
-        },
-      },
+      select: acceptReservationExistingSelect,
     });
 
     if (!existing) {
@@ -579,7 +619,7 @@ export const acceptSupplierReservation = async (input: {
       end: input.pickupWindowEnd,
     };
 
-    const reservation =
+    const updated =
       existing.fulfillmentMethod === 'DELIVERY'
         ? await acceptDeliveryReservation(tx, {
             reservation: existing,
@@ -593,7 +633,6 @@ export const acceptSupplierReservation = async (input: {
           })
         : await acceptPickupReservation(tx, {
             reservationId: existing.id,
-            ownerId: input.ownerId,
             proposedWindow,
             supplierNote,
             learnerPreferredPickupWindows:
@@ -603,10 +642,10 @@ export const acceptSupplierReservation = async (input: {
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: updated.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'PENDING',
-        newStatus: reservation.status,
+        newStatus: updated.status,
         changedBy: input.ownerId,
         note: supplierNote ?? 'Accepted by supplier',
       },
@@ -614,8 +653,19 @@ export const acceptSupplierReservation = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const, reservationId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if (outcome.conflict) {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+  return { conflict: false as const, reservation };
 };
 
 export const declineSupplierReservation = async (input: {
@@ -623,7 +673,7 @@ export const declineSupplierReservation = async (input: {
   ownerId: string;
   reason?: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -641,19 +691,19 @@ export const declineSupplierReservation = async (input: {
 
     const reason = input.reason?.trim() || null;
 
-    const reservation = await tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'REJECTED',
         rejectionReason: reason,
         rejectedAt: new Date(),
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: updated.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'PENDING',
         newStatus: 'REJECTED',
@@ -664,8 +714,19 @@ export const declineSupplierReservation = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const, reservationId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if (outcome.conflict) {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+  return { conflict: false as const, reservation };
 };
 
 export const completeSupplierReservation = async (input: {
@@ -673,7 +734,7 @@ export const completeSupplierReservation = async (input: {
   ownerId: string;
   confirmationCode: string;
 }) => {
-  return runSerializableTransaction(async (tx) => {
+  const outcome = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -733,18 +794,18 @@ export const completeSupplierReservation = async (input: {
 
     const now = new Date();
 
-    const reservation = await tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'COMPLETED',
         completedAt: now,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: updated.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'ACCEPTED',
         newStatus: 'COMPLETED',
@@ -755,13 +816,36 @@ export const completeSupplierReservation = async (input: {
 
     await applyReservationCompletionToMaterial(tx, {
       materialId: existing.materialId,
-      reservationId: reservation.id,
+      reservationId: updated.id,
       quantityRequested: existing.quantityRequested,
       completedAt: now,
     });
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const, reservationId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if ('conflict' in outcome && outcome.conflict) {
+    return outcome;
+  }
+
+  if ('invalidCode' in outcome && outcome.invalidCode) {
+    return outcome;
+  }
+
+  if ('windowNotStarted' in outcome && outcome.windowNotStarted) {
+    return outcome;
+  }
+
+  if ('windowExpired' in outcome && outcome.windowExpired) {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+  return { conflict: false as const, reservation };
 };
 
 export const rescheduleSupplierReservation = async (input: {
@@ -774,7 +858,7 @@ export const rescheduleSupplierReservation = async (input: {
   reason: string;
   note?: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -810,7 +894,7 @@ export const rescheduleSupplierReservation = async (input: {
     const reason = input.reason.trim();
     const note = input.note?.trim() || null;
 
-    const reservation = await tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'AWAITING_LEARNER_CONFIRMATION',
@@ -823,12 +907,12 @@ export const rescheduleSupplierReservation = async (input: {
         pendingRescheduleNote: note,
         supplierNote,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: updated.id,
         statusGroup: 'RESERVATION',
         oldStatus: existing.status,
         newStatus: 'AWAITING_LEARNER_CONFIRMATION',
@@ -840,22 +924,37 @@ export const rescheduleSupplierReservation = async (input: {
     if (input.followUpMessage?.trim()) {
       await tx.reservationMessage.create({
         data: {
-          reservationId: reservation.id,
+          reservationId: updated.id,
           senderUserId: input.ownerId,
           body: input.followUpMessage.trim(),
         },
       });
     }
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const, reservationId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if ('conflict' in outcome && outcome.conflict) {
+    return outcome;
+  }
+
+  if ('duringHandover' in outcome && outcome.duringHandover) {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+  return { conflict: false as const, reservation };
 };
 
 export const acceptLearnerRescheduleProposal = async (input: {
   reservationId: string;
   ownerId: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -887,7 +986,7 @@ export const acceptLearnerRescheduleProposal = async (input: {
 
     const pickupCodeData = await buildSelfPickupCodeData(existing.id);
 
-    const reservation = await tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'ACCEPTED',
@@ -896,12 +995,12 @@ export const acceptLearnerRescheduleProposal = async (input: {
         ...clearPendingRescheduleFields(),
         ...pickupCodeData.data,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: updated.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
         newStatus: 'ACCEPTED',
@@ -912,8 +1011,23 @@ export const acceptLearnerRescheduleProposal = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const, reservationId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if (
+    ('conflict' in outcome && outcome.conflict) ||
+    ('missingProposal' in outcome && outcome.missingProposal) ||
+    ('windowTooClose' in outcome && outcome.windowTooClose)
+  ) {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+  return { conflict: false as const, reservation };
 };
 
 export const cancelSupplierAcceptedReservation = async (input: {
@@ -921,7 +1035,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
   ownerId: string;
   reason?: string;
 }) => {
-  return runSerializableTransaction(async (tx) => {
+  const outcome = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -943,7 +1057,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
         input.reason?.trim() ||
         'Pickup reservation closed after learner reschedule request';
 
-      const reservation = await tx.reservation.update({
+      const updated = await tx.reservation.update({
         where: { id: existing.id },
         data: {
           status: 'CANCELLED',
@@ -951,12 +1065,12 @@ export const cancelSupplierAcceptedReservation = async (input: {
           rejectionReason: reason,
           ...clearPendingRescheduleFields(),
         },
-        include: reservationInclude,
+        select: reservationMutationSelect,
       });
 
       await tx.reservationStatusHistory.create({
         data: {
-          reservationId: reservation.id,
+          reservationId: updated.id,
           statusGroup: 'RESERVATION',
           oldStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
           newStatus: 'CANCELLED',
@@ -967,7 +1081,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
 
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-      return { conflict: false as const, reservation };
+      return { conflict: false as const, reservationId: updated.id };
     }
 
     if (
@@ -991,19 +1105,19 @@ export const cancelSupplierAcceptedReservation = async (input: {
       input.reason?.trim() ||
       'Pickup reservation cancelled after the window passed';
 
-    const reservation = await tx.reservation.update({
+    const updated = await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'CANCELLED',
         cancelledAt: now,
         rejectionReason: reason,
       },
-      include: reservationInclude,
+      select: reservationMutationSelect,
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: updated.id,
         statusGroup: 'RESERVATION',
         oldStatus: 'ACCEPTED',
         newStatus: 'CANCELLED',
@@ -1014,8 +1128,23 @@ export const cancelSupplierAcceptedReservation = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { conflict: false as const, reservation };
+    return { conflict: false as const, reservationId: updated.id };
   });
+
+  if (!outcome) {
+    return null;
+  }
+
+  if (
+    ('conflict' in outcome && outcome.conflict) ||
+    ('notOverdue' in outcome && outcome.notOverdue) ||
+    ('deliveryBlocked' in outcome && outcome.deliveryBlocked)
+  ) {
+    return outcome;
+  }
+
+  const reservation = await loadSupplierReservationRecord(outcome.reservationId);
+  return { conflict: false as const, reservation };
 };
 
 export const createSupplierNoShowReport = async (input: {
@@ -1030,23 +1159,37 @@ export const createSupplierNoShowReport = async (input: {
         id: input.reservationId,
         ownerId: input.ownerId,
       },
-      include: {
-        deliveries: {
-          select: {
-            id: true,
-            assignedDriverProfileId: true,
-            assignedDriverProfile: {
-              select: { userId: true },
-            },
-          },
-          orderBy: { requestedAt: 'desc' },
-          take: 1,
-        },
+      select: {
+        id: true,
+        status: true,
+        requesterId: true,
+        fulfillmentMethod: true,
+        pickupWindowStart: true,
+        pickupWindowEnd: true,
+        materialId: true,
       },
     });
 
     if (!existing) {
       return null;
+    }
+
+    const latestDelivery = await tx.delivery.findFirst({
+      where: { reservationId: existing.id },
+      select: {
+        id: true,
+        assignedDriverProfileId: true,
+      },
+      orderBy: { requestedAt: 'desc' },
+    });
+
+    let latestDeliveryDriverUserId: string | null = null;
+    if (latestDelivery?.assignedDriverProfileId) {
+      const driverProfile = await tx.driverProfile.findUnique({
+        where: { id: latestDelivery.assignedDriverProfileId },
+        select: { userId: true },
+      });
+      latestDeliveryDriverUserId = driverProfile?.userId ?? null;
     }
 
     if (
@@ -1067,16 +1210,14 @@ export const createSupplierNoShowReport = async (input: {
       return { windowNotEnded: true as const };
     }
 
-    const latestDelivery = existing.deliveries[0] ?? null;
     const isGeneralIncident = isSupplierGeneralIncidentReasonCode(input.reasonCode);
     let targetUserId = existing.requesterId;
     let targetRole: 'LEARNER' | 'DRIVER' = 'LEARNER';
 
     if (!isGeneralIncident) {
       if (latestDelivery) {
-        const driverUserId = latestDelivery?.assignedDriverProfile?.userId;
-        if (driverUserId) {
-          targetUserId = driverUserId;
+        if (latestDeliveryDriverUserId) {
+          targetUserId = latestDeliveryDriverUserId;
           targetRole = 'DRIVER';
         } else if (input.reasonCode === 'DRIVER_DID_NOT_ARRIVE') {
           return { driverNotAssigned: true as const };
@@ -1115,7 +1256,7 @@ export const createSupplierNoShowReport = async (input: {
 
     const isSelfPickupOverdue =
       existing.fulfillmentMethod === 'PICKUP' &&
-      existing.deliveries.length === 0 &&
+      latestDelivery == null &&
       (existing.status === 'AWAITING_SUPPLIER_CONFIRMATION' ||
         (existing.pickupWindowEnd != null &&
           isAfterAllowedEnd(new Date(), existing.pickupWindowEnd)));

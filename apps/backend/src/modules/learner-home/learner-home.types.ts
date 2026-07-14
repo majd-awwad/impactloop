@@ -157,6 +157,8 @@ export type LearnerBehaviorContext = {
   likedMaterials: LearnerBehaviorMaterialSignal[];
   viewedMaterials: LearnerBehaviorMaterialSignal[];
   reservedMaterials: LearnerBehaviorMaterialSignal[];
+  /** Reuses the first 12 ordered saved-project rows already loaded for behavior. */
+  savedProjectComponents?: LearnerHomeSavedProjectComponent[];
   savedProjects: LearnerBehaviorProjectSignal[];
   likedProjects: LearnerBehaviorProjectSignal[];
   followedProjects: LearnerBehaviorProjectSignal[];

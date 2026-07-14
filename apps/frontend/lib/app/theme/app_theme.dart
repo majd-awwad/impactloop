@@ -141,7 +141,7 @@ class AppTheme {
     return FilledButtonThemeData(
       style: ButtonStyle(
         minimumSize: const WidgetStatePropertyAll(
-          Size.fromHeight(AppSpacing.buttonHeight),
+          Size(0, AppSpacing.buttonHeight),
         ),
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(
@@ -232,7 +232,7 @@ class AppTheme {
           EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         ),
         minimumSize: const WidgetStatePropertyAll(
-          Size.fromHeight(AppSpacing.buttonHeight),
+          Size(0, AppSpacing.buttonHeight),
         ),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(borderRadius: AppRadius.mdAll),

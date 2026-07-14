@@ -8,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
@@ -97,15 +98,18 @@ class _WelcomeHero extends StatelessWidget {
         maxWidth: 220,
         child: FilledButton.icon(
           onPressed: () => context.go('/materials'),
-          style: FilledButton.styleFrom(
-            backgroundColor: palette.mint,
-            foregroundColor: palette.ctaForeground,
-            minimumSize: const Size(0, 48),
+          style: AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.primary,
             padding: const EdgeInsetsDirectional.symmetric(
               horizontal: AppSpacing.lg,
               vertical: AppSpacing.sm,
             ),
-            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+          ).copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            ),
           ),
           icon: const Icon(Icons.search_rounded),
           label: const Text('Browse Materials'),
@@ -116,16 +120,23 @@ class _WelcomeHero extends StatelessWidget {
         maxWidth: 248,
         child: OutlinedButton.icon(
           onPressed: () => context.go('/learning'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: palette.textPrimary,
-            backgroundColor: palette.cardSurface.withValues(alpha: 0.7),
-            side: BorderSide(color: palette.borderStrong),
-            minimumSize: const Size(0, 48),
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
+          style: AppStatusButtonStyle.outlined(
+            context,
+            AppStatusTone.neutral,
+          ).copyWith(
+            backgroundColor: WidgetStatePropertyAll(
+              palette.cardSurface.withValues(alpha: 0.7),
             ),
-            shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+            padding: const WidgetStatePropertyAll(
+              EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.sm,
+              ),
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            ),
           ),
           icon: const Icon(Icons.school_outlined),
           label: const Text('Explore Learning Hub'),

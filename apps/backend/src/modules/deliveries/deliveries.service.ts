@@ -183,6 +183,15 @@ export type DeliveryRecord = Prisma.DeliveryGetPayload<{
   select: typeof deliverySelect;
 }>;
 
+const loadDeliveryRecord = async (
+  deliveryId: string,
+): Promise<DeliveryRecord> => {
+  return prisma.delivery.findUniqueOrThrow({
+    where: { id: deliveryId },
+    select: deliverySelect,
+  });
+};
+
 const resolveSupplierDisplayName = (
   owner: DeliveryRecord['reservation']['owner'],
 ) =>
@@ -341,7 +350,7 @@ export const requestDeliveryForReservation = async (
       | 'INVALID_STATUS'
       | 'DELIVERY_NOT_ALLOWED'
       | 'ACTIVE_DELIVERY_EXISTS';
-    delivery?: DeliveryRecord;
+    deliveryId?: string;
   }>>>;
 
   try {
@@ -351,12 +360,11 @@ export const requestDeliveryForReservation = async (
           id: reservationId,
           requesterId: learnerId,
         },
-        include: {
-          material: {
-            include: {
-              location: true,
-            },
-          },
+        select: {
+          id: true,
+          status: true,
+          fulfillmentMethod: true,
+          materialId: true,
         },
       });
 
@@ -372,8 +380,33 @@ export const requestDeliveryForReservation = async (
         return { outcome: 'INVALID_STATUS' as const };
       }
 
-      if (!reservation.material.deliveryAllowed) {
+      const material = await tx.material.findUnique({
+        where: { id: reservation.materialId },
+        select: {
+          deliveryAllowed: true,
+          locationId: true,
+        },
+      });
+
+      if (!material?.deliveryAllowed) {
         return { outcome: 'DELIVERY_NOT_ALLOWED' as const };
+      }
+
+      const materialLocation = await tx.location.findUnique({
+        where: { id: material.locationId },
+        select: {
+          country: true,
+          city: true,
+          area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          isApproximate: true,
+        },
+      });
+
+      if (!materialLocation) {
+        return { outcome: 'NOT_FOUND' as const };
       }
 
       const activeDeliveryCount = await tx.delivery.count({
@@ -389,14 +422,14 @@ export const requestDeliveryForReservation = async (
 
       const pickupLocation = await tx.location.create({
         data: {
-          country: reservation.material.location.country,
-          city: reservation.material.location.city,
-          area: reservation.material.location.area,
-          addressLine: reservation.material.location.addressLine,
-          latitude: reservation.material.location.latitude,
-          longitude: reservation.material.location.longitude,
+          country: materialLocation.country,
+          city: materialLocation.city,
+          area: materialLocation.area,
+          addressLine: materialLocation.addressLine,
+          latitude: materialLocation.latitude,
+          longitude: materialLocation.longitude,
           visibility: 'PRIVATE',
-          isApproximate: reservation.material.location.isApproximate,
+          isApproximate: materialLocation.isApproximate,
           locationType: 'DELIVERY_PICKUP',
         },
       });
@@ -437,10 +470,10 @@ export const requestDeliveryForReservation = async (
             },
           },
         },
-        select: deliverySelect,
+        select: { id: true },
       });
 
-      return { outcome: 'CREATED' as const, delivery };
+      return { outcome: 'CREATED' as const, deliveryId: delivery.id };
     });
   } catch (error) {
     if (isPrismaCode(error, 'P2002')) {
@@ -471,9 +504,10 @@ export const requestDeliveryForReservation = async (
         });
       }
 
-      await notifyNewDriverJob(result.delivery!.id);
+      const delivery = await loadDeliveryRecord(result.deliveryId!);
+      await notifyNewDriverJob(delivery.id);
 
-      return mapLearnerDelivery(result.delivery!);
+      return mapLearnerDelivery(delivery);
     }
     case 'NOT_FOUND':
       throw new AppError('Reservation not found.', 404, 'NOT_FOUND');

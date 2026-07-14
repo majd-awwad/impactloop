@@ -8,10 +8,50 @@ export const isPrismaCode = (error: unknown, code: string) =>
   'code' in error &&
   (error as { code?: unknown }).code === code;
 
-const getErrorMessage = (error: unknown): string => {
+const hasRetryableTransactionMarker = (
+  error: unknown,
+  seen: Set<object> = new Set(),
+): boolean => {
+  if (typeof error !== 'object' || error === null || seen.has(error)) {
+    return false;
+  }
+
+  seen.add(error);
+
+  const candidate = error as {
+    code?: unknown;
+    originalCode?: unknown;
+    kind?: unknown;
+    cause?: unknown;
+  };
+
+  if (
+    candidate.code === 'P2034' ||
+    candidate.code === '40001' ||
+    candidate.originalCode === '40001' ||
+    candidate.kind === 'TransactionWriteConflict'
+  ) {
+    return true;
+  }
+
+  return hasRetryableTransactionMarker(candidate.cause, seen);
+};
+
+const getErrorMessage = (
+  error: unknown,
+  seen: Set<object> = new Set(),
+): string => {
+  if (typeof error === 'object' && error !== null) {
+    if (seen.has(error)) {
+      return '';
+    }
+
+    seen.add(error);
+  }
+
   if (error instanceof Error) {
     const causeMessage =
-      error.cause !== undefined ? getErrorMessage(error.cause) : '';
+      error.cause !== undefined ? getErrorMessage(error.cause, seen) : '';
     return [error.message, causeMessage].filter(Boolean).join(' ');
   }
 
@@ -23,7 +63,7 @@ const getErrorMessage = (error: unknown): string => {
     }
 
     if ('cause' in error) {
-      parts.push(getErrorMessage((error as { cause?: unknown }).cause));
+      parts.push(getErrorMessage((error as { cause?: unknown }).cause, seen));
     }
 
     return parts.filter(Boolean).join(' ');
@@ -33,7 +73,7 @@ const getErrorMessage = (error: unknown): string => {
 };
 
 export const isRetryableSerializableConflict = (error: unknown) => {
-  if (isPrismaCode(error, 'P2034')) {
+  if (hasRetryableTransactionMarker(error)) {
     return true;
   }
 
@@ -48,9 +88,14 @@ const sleep = (milliseconds: number) =>
 
 export const runSerializableTransaction = async <T>(
   operation: (tx: Prisma.TransactionClient) => Promise<T>,
-  options: { maxAttempts?: number } = {},
+  options: {
+    maxAttempts?: number;
+    retryDelayMilliseconds?: (attempt: number) => number;
+  } = {},
 ) => {
   const maxAttempts = options.maxAttempts ?? 12;
+  const retryDelayMilliseconds =
+    options.retryDelayMilliseconds ?? ((attempt: number) => attempt * 50);
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
@@ -59,7 +104,10 @@ export const runSerializableTransaction = async <T>(
       });
     } catch (error) {
       if (attempt < maxAttempts && isRetryableSerializableConflict(error)) {
-        await sleep(attempt * 50);
+        const delay = retryDelayMilliseconds(attempt);
+        if (delay > 0) {
+          await sleep(delay);
+        }
         continue;
       }
 

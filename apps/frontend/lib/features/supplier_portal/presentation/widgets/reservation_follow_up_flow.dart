@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
@@ -16,11 +18,14 @@ const _reportReasons = <String, String>{
   'OTHER': 'Other',
 };
 
-Future<String?> _promptReason(BuildContext context, {required String title}) async {
+Future<String?> _promptReason(
+  BuildContext context, {
+  required String title,
+}) async {
   final controller = TextEditingController();
   final result = await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: Text(title),
       content: TextField(
         controller: controller,
@@ -30,12 +35,8 @@ Future<String?> _promptReason(BuildContext context, {required String title}) asy
           hintText: 'Why are you requesting a new time?',
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.s.cancel),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: () {
             final value = controller.text.trim();
             if (value.isEmpty) return;
@@ -43,7 +44,7 @@ Future<String?> _promptReason(BuildContext context, {required String title}) asy
           },
           child: const Text('Continue'),
         ),
-      ],
+      ),
     ),
   );
   controller.dispose();
@@ -57,10 +58,7 @@ Future<void> handleRequestReschedulePickup(
   required String materialTitle,
   required String learnerName,
 }) async {
-  final reason = await _promptReason(
-    context,
-    title: 'Request reschedule',
-  );
+  final reason = await _promptReason(context, title: 'Request reschedule');
   if (reason == null || !context.mounted) return;
 
   final pickupWindow = await AcceptIncomingRequestDialog.show(
@@ -186,9 +184,7 @@ Future<void> handleCloseOverduePickup(
           TextField(
             controller: noteController,
             maxLength: 1000,
-            decoration: const InputDecoration(
-              labelText: 'Note (optional)',
-            ),
+            decoration: const InputDecoration(labelText: 'Note (optional)'),
           ),
         ],
       ),
@@ -318,12 +314,10 @@ Future<void> handleReschedulePickup(
   required String reservationId,
   required String materialTitle,
   required String learnerName,
-}) =>
-    handleRequestReschedulePickup(
-      context,
-      ref,
-      reservationId: reservationId,
-      materialTitle: materialTitle,
-      learnerName: learnerName,
-    );
-
+}) => handleRequestReschedulePickup(
+  context,
+  ref,
+  reservationId: reservationId,
+  materialTitle: materialTitle,
+  learnerName: learnerName,
+);

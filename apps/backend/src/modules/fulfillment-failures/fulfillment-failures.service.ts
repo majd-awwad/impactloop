@@ -8,6 +8,10 @@ import { mapSupplierReservation } from '../supplier-reservations/supplier-reserv
 import * as supplierReservationsRepository from '../supplier-reservations/supplier-reservations.repository.js';
 import { mapDriverDeliveryForResponse, driverDeliveryInclude } from '../driver/driver.service.js';
 import { prisma } from '../../database/prisma.js';
+import {
+  invalidateLearnerHomeCache,
+  invalidateLearnerHomeForReservationTransition,
+} from '../learner-home/learner-home.service.js';
 
 import * as fulfillmentFailuresRepository from './fulfillment-failures.repository.js';
 import type {
@@ -90,6 +94,7 @@ export const markSupplierLearnerNoShow = async (
         'CONFLICT',
       );
     default:
+      invalidateLearnerHomeForReservationTransition('ACCEPTED', 'NO_SHOW');
       return loadSupplierReservation(ownerId, reservationId);
   }
 };
@@ -132,6 +137,10 @@ export const markSupplierDeliveryPickupExpired = async (
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(supplierPickupWindowNotExpiredMessage());
     default:
+      invalidateLearnerHomeForReservationTransition(
+        'ACCEPTED',
+        'AWAITING_RESOLUTION',
+      );
       return loadSupplierReservation(ownerId, reservationId);
   }
 };
@@ -148,6 +157,10 @@ export const markSupplierDriverNoShow = async (
   });
 
   if (result.outcome === 'UPDATED') {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
     return loadSupplierReservation(ownerId, result.reservation.id);
   }
 
@@ -196,6 +209,10 @@ export const markDriverPickupFailed = async (
   });
 
   if (result.outcome === 'UPDATED') {
+    invalidateLearnerHomeForReservationTransition(
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    );
     return loadDriverDelivery(deliveryId);
   }
 
@@ -240,6 +257,9 @@ export const markDriverDeliveryFailed = async (
   });
 
   if (result.outcome === 'UPDATED') {
+    // FAILED_DELIVERY keeps the material in custody, so the shared hold is
+    // unchanged. Only the affected learner's reservation behavior is freshened.
+    invalidateLearnerHomeCache(result.reservation.requesterId);
     return loadDriverDelivery(deliveryId);
   }
 
@@ -298,6 +318,10 @@ export const markDriverIssueAfterPickup = async (
         'CONFLICT',
       );
     default:
+      invalidateLearnerHomeForReservationTransition(
+        'ACCEPTED',
+        'AWAITING_RESOLUTION',
+      );
       return loadDriverDelivery(result.delivery.id);
   }
 };

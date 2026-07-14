@@ -1662,7 +1662,7 @@ export const updateSupplierMaterial = async (
     );
   }
 
-  const updated = await supplierRepository.updateSupplierOwnedMaterial(
+  const updatedScalars = await supplierRepository.updateSupplierOwnedMaterial(
     scope,
     materialId,
     {
@@ -1678,12 +1678,12 @@ export const updateSupplierMaterial = async (
     },
   );
 
-  if (!updated) {
+  if (!updatedScalars) {
     throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
   return mapSupplierOwnedMaterial(
-    updated,
+    { ...material, ...updatedScalars },
     blockingReservationCount,
     0,
     {},

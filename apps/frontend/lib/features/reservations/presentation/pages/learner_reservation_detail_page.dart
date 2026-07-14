@@ -7,6 +7,7 @@ import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
@@ -129,6 +130,10 @@ class _ReservationDetailContentState
                 children: [
                   TextButton.icon(
                     onPressed: () => context.popOrGo('/learner/reservations'),
+                    style: AppStatusButtonStyle.text(
+                      context,
+                      AppStatusTone.neutral,
+                    ),
                     icon: const Icon(Icons.arrow_back_rounded, size: 18),
                     label: const Text('All reservations'),
                   ),
@@ -144,6 +149,7 @@ class _ReservationDetailContentState
             ),
             TextButton.icon(
               onPressed: _refresh,
+              style: AppStatusButtonStyle.text(context, AppStatusTone.info),
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Refresh'),
             ),
@@ -248,7 +254,14 @@ class _DetailStatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.lg),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),

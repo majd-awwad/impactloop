@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_section_card.dart';
 import '../../data/models/supplier_profile.dart';
 import 'supplier_verification_badge.dart';
 
@@ -20,10 +21,7 @@ class SupplierProfileSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final supplier = profile.supplier;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: context.supplierDecorations.dashboardCard,
+    return AppSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_theme_colors.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 
 class AuthPrimaryButton extends StatelessWidget {
   const AuthPrimaryButton({
@@ -23,13 +24,14 @@ class AuthPrimaryButton extends StatelessWidget {
       width: double.infinity,
       child: FilledButton(
         onPressed: isLoading ? null : onPressed,
+        style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
         child: isLoading
             ? SizedBox(
                 height: AppSpacing.lg,
                 width: AppSpacing.lg,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: colors.primary,
+                  color: colors.textOnPrimary,
                 ),
               )
             : Text(label),
@@ -54,6 +56,7 @@ class AuthOutlinedButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton(
         onPressed: onPressed,
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
         child: Text(label),
       ),
     );

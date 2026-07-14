@@ -4,12 +4,26 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
+import {
+  getOrBuildMaterialFeaturePool,
+  resetMaterialFeaturePoolCacheForTests,
+} from '../learner-home/learner-home.material-features.js';
+import { getLearnerHome } from '../learner-home/learner-home.service.js';
+import type { LearnerHomeMaterialCandidate } from '../learner-home/learner-home.types.js';
 
 import {
+  followLearningProjectById,
   getLearningProjectById,
   getMyLearningProjectSubmissionById,
   getMyLearningProjectSubmissions,
+  likeLearningProjectById,
   resubmitMyLearningProjectSubmissionById,
+  saveLearningProjectById,
+  startProjectBuildById,
+  unfollowLearningProjectById,
+  unlikeLearningProjectById,
+  unsaveLearningProjectById,
+  updateProjectBuildItemById,
   updateMyLearningProjectSubmissionById,
 } from './learning-projects.service.js';
 
@@ -142,6 +156,149 @@ after(async () => {
 });
 
 describe('learner learning project submissions', () => {
+  test('project interactions invalidate only the acting learner home cache', async () => {
+    const owner = await createLearnerUser('interaction-owner');
+    const learnerA = await createLearnerUser('interaction-a');
+    const learnerB = await createLearnerUser('interaction-b');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'PUBLISHED',
+      title: `${TEST_MARKER} interaction project`,
+    });
+    let learnerAHome = await getLearnerHome(learnerA.id);
+    const learnerBHome = await getLearnerHome(learnerB.id);
+    const featureCandidate: LearnerHomeMaterialCandidate = {
+      id: 'project-interaction-feature',
+      ownerId: owner.id,
+      title: 'Arduino feature fixture',
+      description: 'Shared material feature cache fixture',
+      materialType: 'Electronics component',
+      categoryId: projectCategory.id,
+      categoryNameEn: 'Robotics',
+      categoryNameAr: 'Robotics',
+      status: 'AVAILABLE',
+      isFree: true,
+      deliveryAllowed: false,
+      pickupAllowed: true,
+      viewsCount: 0,
+      likesCount: 0,
+      city: 'Nablus',
+      area: null,
+      tags: ['arduino'],
+      createdAt: new Date(),
+      availableQuantity: 1,
+      mapped: {},
+    };
+    resetMaterialFeaturePoolCacheForTests();
+    const sharedFeaturesBefore = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    await saveLearningProjectById(project.id, learnerA.id);
+    const sharedFeaturesAfter = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+    let refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+    assert.strictEqual(sharedFeaturesAfter.features, sharedFeaturesBefore.features);
+
+    learnerAHome = refreshedLearnerAHome;
+    await unsaveLearningProjectById(project.id, learnerA.id);
+    refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+    learnerAHome = refreshedLearnerAHome;
+    await likeLearningProjectById(project.id, learnerA.id);
+    refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+    learnerAHome = refreshedLearnerAHome;
+    await unlikeLearningProjectById(project.id, learnerA.id);
+    refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+    learnerAHome = refreshedLearnerAHome;
+    await followLearningProjectById(project.id, learnerA.id);
+    refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+    learnerAHome = refreshedLearnerAHome;
+    await unfollowLearningProjectById(project.id, learnerA.id);
+    refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+
+    const missingProjectId = `${TEST_MARKER}-missing-interaction-${Date.now()}`;
+    for (const operation of [
+      () => saveLearningProjectById(missingProjectId, learnerA.id),
+      () => unsaveLearningProjectById(missingProjectId, learnerA.id),
+      () => likeLearningProjectById(missingProjectId, learnerA.id),
+      () => unlikeLearningProjectById(missingProjectId, learnerA.id),
+      () => followLearningProjectById(missingProjectId, learnerA.id),
+      () => unfollowLearningProjectById(missingProjectId, learnerA.id),
+    ]) {
+      await assert.rejects(operation);
+    }
+
+    assert.strictEqual(await getLearnerHome(learnerA.id), refreshedLearnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+    resetMaterialFeaturePoolCacheForTests();
+  });
+
+  test('project build start and status changes invalidate only the build owner cache', async () => {
+    const owner = await createLearnerUser('build-cache-owner');
+    const learnerA = await createLearnerUser('build-cache-a');
+    const learnerB = await createLearnerUser('build-cache-b');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'PUBLISHED',
+      title: `${TEST_MARKER} build cache project`,
+    });
+    await createComponent({
+      projectId: project.id,
+      categoryId: projectCategory.id,
+    });
+
+    let learnerAHome = await getLearnerHome(learnerA.id);
+    const learnerBHome = await getLearnerHome(learnerB.id);
+
+    const build = await startProjectBuildById(project.id, learnerA.id);
+    let refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+
+    learnerAHome = refreshedLearnerAHome;
+    const item = build.items[0];
+    assert.ok(item);
+    await updateProjectBuildItemById(project.id, learnerA.id, item.id, {
+      status: 'ALREADY_OWNED',
+      learnerNote: null,
+    });
+    refreshedLearnerAHome = await getLearnerHome(learnerA.id);
+    assert.notStrictEqual(refreshedLearnerAHome, learnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+
+    learnerAHome = refreshedLearnerAHome;
+    await updateProjectBuildItemById(project.id, learnerA.id, item.id, {
+      status: 'ALREADY_OWNED',
+      learnerNote: 'This note does not affect learner home.',
+    });
+    assert.strictEqual(await getLearnerHome(learnerA.id), learnerAHome);
+
+    await assert.rejects(() =>
+      updateProjectBuildItemById(project.id, learnerB.id, item.id, {
+        status: 'MISSING',
+        learnerNote: null,
+      }),
+    );
+    assert.strictEqual(await getLearnerHome(learnerA.id), learnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+  });
+
   test('lists only the current learner submissions', async () => {
     const owner = await createLearnerUser('owner-list');
     const other = await createLearnerUser('other-list');

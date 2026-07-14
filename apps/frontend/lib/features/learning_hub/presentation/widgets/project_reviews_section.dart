@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
@@ -343,6 +344,7 @@ class _ReviewForm extends StatelessWidget {
               children: [
                 FilledButton.icon(
                   onPressed: isSubmitting ? null : onSubmit,
+                  style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
                   icon: isSubmitting
                       ? const SizedBox(
                           width: 16,
@@ -357,6 +359,7 @@ class _ReviewForm extends StatelessWidget {
                 if (onDelete != null)
                   OutlinedButton.icon(
                     onPressed: isDeleting ? null : onDelete,
+                    style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
                     icon: isDeleting
                         ? const SizedBox(
                             width: 16,

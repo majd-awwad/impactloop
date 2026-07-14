@@ -126,7 +126,7 @@ export const createUserWithOnboarding = async (
     ? parsePickupArea(input.supplierProfile.pickupArea)
     : null;
 
-  return prisma.$transaction(async (tx) => {
+  const createdUser = await prisma.$transaction(async (tx) => {
     const activeRole = resolveActiveRoleForRegistration(input.roles);
 
     return tx.user.create({
@@ -177,9 +177,17 @@ export const createUserWithOnboarding = async (
             }
           : {}),
       },
-      include: userWithRolesAndProfilesInclude,
+      select: { id: true },
     });
   });
+
+  const user = await findUserByIdWithRoles(createdUser.id);
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return user;
 };
 
 export const findUserByEmailWithRoles = async (
@@ -193,12 +201,19 @@ export const findUserByEmailWithRoles = async (
 
 export const updateLastLoginAt = async (
   userId: string,
-): Promise<UserWithRolesAndProfiles> => {
-  return prisma.user.update({
+  lastLoginAt: Date,
+): Promise<Date> => {
+  const updated = await prisma.user.update({
     where: { id: userId },
-    data: { lastLoginAt: new Date() },
-    include: userWithRolesAndProfilesInclude,
+    data: { lastLoginAt },
+    select: { lastLoginAt: true },
   });
+
+  if (!updated.lastLoginAt) {
+    throw new Error('User not found');
+  }
+
+  return updated.lastLoginAt;
 };
 
 export const createAuthTokenRecord = async (input: {
@@ -405,12 +420,18 @@ export const changePasswordAndRevokeRefreshTokens = async (input: {
 export const setUserActiveRole = async (
   userId: string,
   activeRole: UserRole,
-): Promise<UserWithRolesAndProfiles> => {
-  return prisma.user.update({
+): Promise<UserRole> => {
+  const updated = await prisma.user.update({
     where: { id: userId },
     data: { activeRole },
-    include: userWithRolesAndProfilesInclude,
+    select: { activeRole: true },
   });
+
+  if (!updated.activeRole) {
+    throw new Error('User not found');
+  }
+
+  return updated.activeRole;
 };
 
 export const ensureUserRole = async (
@@ -439,12 +460,14 @@ export const becomeSupplierForUser = async (
   const parsedPickupArea = parsePickupArea(input.pickupArea);
   const normalizedSupplierType = normalizeSupplierTypeInput(input.supplierType);
 
-  return prisma.$transaction(async (tx) => {
+  const userId = await prisma.$transaction(async (tx) => {
     const existing = await tx.user.findUnique({
       where: { id: input.userId },
-      include: {
-        roles: true,
-        supplierProfile: true,
+      select: {
+        id: true,
+        supplierProfile: {
+          select: { id: true },
+        },
       },
     });
 
@@ -473,11 +496,13 @@ export const becomeSupplierForUser = async (
         update: {},
       });
 
-      return tx.user.update({
+      await tx.user.update({
         where: { id: input.userId },
         data: { activeRole: 'SUPPLIER' },
-        include: userWithRolesAndProfilesInclude,
+        select: { id: true },
       });
+
+      return input.userId;
     }
 
     await tx.userRoleAssignment.upsert({
@@ -518,25 +543,31 @@ export const becomeSupplierForUser = async (
       },
     });
 
-    return tx.user.update({
+    await tx.user.update({
       where: { id: input.userId },
       data: { activeRole: 'SUPPLIER' },
-      include: userWithRolesAndProfilesInclude,
+      select: { id: true },
     });
+
+    return input.userId;
   });
+
+  const user = await findUserByIdWithRoles(userId);
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return user;
 };
 
 export const becomeLearnerForUser = async (
   input: BecomeLearnerInput,
 ): Promise<UserWithRolesAndProfiles> => {
-  return prisma.$transaction(async (tx) => {
+  const userId = await prisma.$transaction(async (tx) => {
     const existing = await tx.user.findUnique({
       where: { id: input.userId },
-      include: {
-        roles: true,
-        learnerProfile: true,
-        supplierProfile: true,
-      },
+      select: { id: true },
     });
 
     if (!existing) {
@@ -568,10 +599,20 @@ export const becomeLearnerForUser = async (
       },
     });
 
-    return tx.user.update({
+    await tx.user.update({
       where: { id: input.userId },
       data: { activeRole: 'LEARNER' },
-      include: userWithRolesAndProfilesInclude,
+      select: { id: true },
     });
+
+    return input.userId;
   });
+
+  const user = await findUserByIdWithRoles(userId);
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  return user;
 };

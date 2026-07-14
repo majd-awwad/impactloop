@@ -67,7 +67,22 @@ const availableMaterialWhere: Prisma.MaterialWhereInput = {
   },
 };
 
-const materialPoolInclude = {
+const materialPoolSelect = {
+  id: true,
+  ownerId: true,
+  title: true,
+  description: true,
+  materialType: true,
+  quantity: true,
+  unit: true,
+  condition: true,
+  status: true,
+  isFree: true,
+  price: true,
+  pickupAllowed: true,
+  deliveryAllowed: true,
+  viewsCount: true,
+  createdAt: true,
   category: {
     select: {
       id: true,
@@ -113,7 +128,7 @@ const materialPoolInclude = {
       likes: true,
     },
   },
-} satisfies Prisma.MaterialInclude;
+} satisfies Prisma.MaterialSelect;
 
 const projectPoolInclude = {
   category: {
@@ -212,7 +227,7 @@ const resolveSupplierName = (material: {
   material.owner.displayName;
 
 const mapMaterialCandidate = (
-  material: Awaited<ReturnType<typeof loadMaterialPool>>[number],
+  material: Awaited<ReturnType<typeof loadMaterialPoolRows>>[number],
   availableQuantity: number,
 ): LearnerHomeMaterialCandidate => {
   const primaryImageUrl = material.images[0]?.imageUrl ?? null;
@@ -302,38 +317,24 @@ export const loadDefaultSavedLocation = async (
   };
 };
 
-export const loadSavedProjectComponents = async (
-  userId: string,
-): Promise<LearnerHomeSavedProjectComponent[]> => {
-  const saves = await prisma.projectSave.findMany({
-    where: {
-      userId,
-      project: publicProjectWhere,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 12,
-    select: {
-      project: {
-        select: {
-          id: true,
-          title: true,
-          requiredComponents: {
-            select: {
-              id: true,
-              categoryId: true,
-              componentName: true,
-              materialType: true,
-              searchKeywords: true,
-            },
-          },
-        },
-      },
-    },
-  });
+type SavedProjectComponentSourceRows = Array<{
+  project: {
+    id: string;
+    title: string;
+    requiredComponents: Array<{
+      id: string;
+      categoryId: string | null;
+      componentName: string;
+      materialType: string;
+      searchKeywords: Prisma.JsonValue | null;
+    }>;
+  };
+}>;
 
-  return saves.flatMap((save) =>
+export const mapSavedProjectComponentsFromBehaviorRows = (
+  saves: SavedProjectComponentSourceRows,
+): LearnerHomeSavedProjectComponent[] =>
+  saves.flatMap((save) =>
     save.project.requiredComponents.map((component) => ({
       projectId: save.project.id,
       projectTitle: save.project.title,
@@ -344,7 +345,6 @@ export const loadSavedProjectComponents = async (
       searchKeywords: parseSearchKeywords(component.searchKeywords),
     })),
   );
-};
 
 const tokenizeCandidateTerm = (value: string) =>
   normalizeInterestToken(value)
@@ -561,9 +561,9 @@ export const mergeMaterialPoolRows = <T extends { id: string }>(
   return [...merged.values()];
 };
 
-type MaterialPoolRow = Awaited<ReturnType<typeof loadMaterialPool>>[number];
+type MaterialPoolRow = Awaited<ReturnType<typeof loadMaterialPoolRows>>[number];
 
-export const loadMaterialPool = async (
+const loadMaterialPoolIds = async (
   take = 160,
   where: Prisma.MaterialWhereInput = availableMaterialWhere,
   orderBy: Prisma.MaterialOrderByWithRelationInput[] = [
@@ -573,10 +573,31 @@ export const loadMaterialPool = async (
 ) =>
   prisma.material.findMany({
     where,
-    include: materialPoolInclude,
     orderBy,
     take,
+    select: { id: true },
   });
+
+const loadMaterialPoolRows = async (materialIds: string[]) => {
+  if (materialIds.length === 0) {
+    return [];
+  }
+
+  const rows = await prisma.material.findMany({
+    where: {
+      id: {
+        in: materialIds,
+      },
+    },
+    select: materialPoolSelect,
+  });
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
+
+  return materialIds.flatMap((materialId) => {
+    const row = rowsById.get(materialId);
+    return row ? [row] : [];
+  });
+};
 
 const mapMaterialPoolRows = async (materials: MaterialPoolRow[]) => {
   const heldByMaterialId = await getHeldQuantitiesByMaterialIds(
@@ -607,7 +628,10 @@ export const loadMaterialCandidatesForLearner = async (
   const availableCount = await countAvailableMaterials();
 
   if (availableCount <= poolCap) {
-    const rows = await loadMaterialPool(poolCap);
+    const materialIds = await loadMaterialPoolIds(poolCap);
+    const rows = await loadMaterialPoolRows(
+      materialIds.map((material) => material.id),
+    );
     return mapMaterialPoolRows(rows);
   }
 
@@ -616,33 +640,37 @@ export const loadMaterialCandidatesForLearner = async (
   const freeTake = Math.min(poolCap, Math.ceil(poolCap * 0.3));
   const relevanceWhere = buildMaterialRelevanceWhere(input);
 
-  const [relevanceRows, popularRows, freeRows] = await Promise.all([
+  const [relevanceIds, popularIds, freeIds] = await Promise.all([
     relevanceWhere
-      ? loadMaterialPool(relevanceTake, relevanceWhere)
-      : Promise.resolve([] as MaterialPoolRow[]),
-    loadMaterialPool(popularTake, availableMaterialWhere),
-    loadMaterialPool(freeTake, {
+      ? loadMaterialPoolIds(relevanceTake, relevanceWhere)
+      : Promise.resolve([] as Array<{ id: string }>),
+    loadMaterialPoolIds(popularTake, availableMaterialWhere),
+    loadMaterialPoolIds(freeTake, {
       AND: [availableMaterialWhere, { isFree: true }],
     }),
   ]);
 
-  let mergedRows = mergeMaterialPoolRows(
-    [relevanceRows, popularRows, freeRows],
+  let mergedIds = mergeMaterialPoolRows(
+    [relevanceIds, popularIds, freeIds],
     poolCap,
   );
 
-  if (mergedRows.length < poolCap) {
-    const fallbackRows = await loadMaterialPool(
-      poolCap - mergedRows.length,
+  if (mergedIds.length < poolCap) {
+    const fallbackIds = await loadMaterialPoolIds(
+      poolCap - mergedIds.length,
       availableMaterialWhere,
     );
-    mergedRows = mergeMaterialPoolRows(
-      [mergedRows, fallbackRows],
+    mergedIds = mergeMaterialPoolRows(
+      [mergedIds, fallbackIds],
       poolCap,
     );
   }
 
-  return mapMaterialPoolRows(mergedRows);
+  const rows = await loadMaterialPoolRows(
+    mergedIds.map((material) => material.id),
+  );
+
+  return mapMaterialPoolRows(rows);
 };
 
 export const loadMaterialCandidates = async () =>
@@ -854,13 +882,16 @@ export const loadInProgressBuilds = async (userId: string, limit = 6) =>
     take: limit,
   });
 
-export const countSavedProjects = async (userId: string) =>
-  prisma.projectSave.count({
+export const hasSavedProjects = async (userId: string) =>
+  Boolean(await prisma.projectSave.findFirst({
     where: {
       userId,
       project: publicProjectWhere,
     },
-  });
+    select: {
+      id: true,
+    },
+  }));
 
 const materialBehaviorSelect = {
   id: true,
@@ -897,8 +928,11 @@ const projectBehaviorSelect = {
   },
   requiredComponents: {
     select: {
+      id: true,
+      categoryId: true,
       componentName: true,
       materialType: true,
+      searchKeywords: true,
       category: {
         select: {
           nameEn: true,
@@ -1087,6 +1121,9 @@ export const loadLearnerBehaviorContext = async (
       mapMaterialBehaviorSignal(row.material),
     ),
     viewedMaterials,
+    savedProjectComponents: mapSavedProjectComponentsFromBehaviorRows(
+      savedProjectRows.slice(0, 12),
+    ),
     reservedMaterials: dedupeMaterialSignals(
       reservedMaterialRows.map((row) => mapMaterialBehaviorSignal(row.material)),
     ),

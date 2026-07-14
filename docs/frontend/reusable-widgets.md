@@ -9,6 +9,7 @@ Current Flutter widget reuse inventory. Prefer documented shared/app widgets bef
 - `apps/frontend/lib/app/widgets/impact_loop_logo.dart`
 - `apps/frontend/lib/app/widgets/nav_pill_menu.dart`
 - `apps/frontend/lib/shared/widgets/app_dropdown_field.dart`
+- `apps/frontend/lib/shared/widgets/app_dialog_detail.dart`
 - `apps/frontend/lib/shared/widgets/app_feedback.dart`
 - `apps/frontend/lib/shared/widgets/app_inline_error.dart`
 - `apps/frontend/lib/shared/widgets/app_link_button.dart`
@@ -40,6 +41,10 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 
 | Widget/helper | File | Current purpose |
 |---------------|------|-----------------|
+| `AppDialogShell` | `app_dialog_shell.dart` | Theme-aware responsive dialog chrome with a directional top-end close button, scrollable body, and optional footer. Use for form and information dialogs. |
+| `AppCloseButton` | `app_close_button.dart` | Localized, semantic close button for dialogs and modal sheets. It uses Flutter's localized close tooltip unless copy is supplied. |
+| `AppDialogFooter` | `app_dialog_footer.dart` | Standard footer layouts: `.form` renders one content-sized, end-aligned primary action; `.decision` retains a secondary action such as Cancel beside the primary action; `.actions` keeps multiple semantic actions content-sized, end-aligned, and naturally wrapping at narrow widths. |
+| `AppDialogTitleBlock` / `AppDialogMetaStrip` / `AppDialogMetaItem` / `AppDialogSection` / `AppDialogInfoRow` / `AppDialogNote` | `app_dialog_detail.dart` | Route-independent detail/review dialog composition: icon-and-badge title blocks, responsive metadata strips, neutral titled section cards, label/value rows with optional badges, and readable note blocks. Pass display-ready values and domain status tones from the owning feature. |
 | `AppTextField` | `app_text_field.dart` | Themed single-line or controlled multiline `TextFormField`; supports validation, forced error text, autofill, submit, change callbacks, and optional `suffixIcon`. |
 | `AppPasswordField` | `app_password_field.dart` | Password variant of `AppTextField` with per-field visibility toggle (or optional shared `obscureOverride` / `onToggleVisibility`), tooltip, and semantic labels. |
 | `AppFieldGap` | `app_text_field.dart` | Standard vertical field gap using `AppSpacing.md`. |
@@ -48,6 +53,18 @@ New reusable UI should prefer `Theme.of(context).textTheme`, `Theme.of(context).
 | `AppPrimaryButton` | `app_primary_button.dart` | Full-width `FilledButton`; disables itself and shows a spinner when `isLoading` is true. |
 | `AppLinkButton` | `app_link_button.dart` | Aligned text button using `AppTextStyles.link`. |
 | `AppInlineError` | `app_inline_error.dart` | Inline body-small error text using `Theme.of(context).colorScheme.error`. |
+| `AppStatusBadge` / `AppStatusTone` / `AppStatusStyle` / `AppStatusButtonStyle` | `app_status_badge.dart` | Theme-aware semantic status presentation and action styles for primary, success, warning, danger, info, and neutral states. |
+| `HandoverConfirmationCodePanel` / `HandoverCodeInputDialog` | `handover_confirmation_code_panel.dart` | Displays a handover code or collects a six-digit confirmation code; input dialogs accept an optional semantic confirmation tone (primary by default). |
+| `incidentReportStatusTone` | `incident_report_status_presentation.dart` | Canonical incident-review mapping: pending review is warning; verified and resolved-without-strike are success; rejected is danger; unknown values are neutral. |
+| `deliveryStatusAppTone` | `delivery_status_presentation.dart` | Canonical delivery lifecycle mapping: waiting/admin review is warning; in-progress delivery is info; delivered is success; cancelled and failed delivery states are danger; unknown values are neutral. |
+| `learnerReservationStatusTone` | `learner_reservation_ui_helpers.dart` | Canonical reservation mapping: pending and confirmation states are warning; accepted/completed are success; rejected, cancelled, expired, no-show, and failed fulfillment are danger; awaiting resolution derives the incident-review tone when available. |
+| `accountStatusTone` | `account_status_presentation.dart` | Canonical account availability mapping: active is primary; suspended is warning; disabled is danger; unknown values are neutral. |
+| `invitationStatusTone` | `invitation_status_presentation.dart` | Canonical invitation lifecycle mapping: pending/sent is warning; accepted/used is success; failed, expired, and revoked are danger; unknown values are neutral. |
+| `reviewStatusTone` | `review_status_presentation.dart` | Canonical generic approval mapping: pending and changes requested are warning; approved is success; rejected is danger; unknown values are neutral. |
+| `learningProjectStatusTone` | `learning_project_status_presentation.dart` | Canonical Learning Project lifecycle mapping: pending review and changes requested are warning; published is success; rejected and hidden are danger; draft and archived are neutral. |
+| `supplierVerificationStatusTone` | `supplier_verification_status_presentation.dart` | Canonical supplier-verification mapping: pending, changes requested, and unverified are warning; approved and verified are success; rejected is danger; not-required is neutral. |
+| `AppSectionCard` | `app_section_card.dart` | Theme-aware, content-agnostic section surface with optional semantic tone and emphasis. |
+| `AppEmptyStateCard` | `app_empty_state_card.dart` | Theme-aware empty/unavailable state surface with an icon, title, supporting copy, optional semantic tone, and display-only actions. |
 | `showErrorSnackBar` | `app_feedback.dart` | Error snackbar using normalized API-friendly message text. |
 | `showInfoSnackBar` | `app_feedback.dart` | Informational snackbar. |
 | `UserAvatar` | `user_avatar.dart` | Circular user avatar from `profileImageUrl` with `ApiConfig.resolveMediaUrl`; falls back to display-name initial on empty URL or image load error. |
@@ -64,7 +81,7 @@ No `showSuccessSnackBar` exists in current code.
 | `ImpactMaterialCompactCard` | `app_material_card.dart` | Mobile-first horizontal public material card. It accepts the same display-ready values as the grid card and uses compact media, metadata, price/status badges, and details affordance for narrow layouts. |
 | `AppMaterialCard` | `app_material_card.dart` | Backward-compatible wrapper around `ImpactMaterialGridCard` for existing discovery-shaped material card call sites. |
 | `AppMaterialCardVariant` | `app_material_card.dart` | `standard` and `compact` card sizing. |
-| `MaterialStatusBadge` / `MaterialStatusBadgeTone` | `material_status_badge.dart` | Available/reserved/reused/draft status badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
+| `MaterialStatusBadge` / `MaterialStatusBadgeTone` / `materialLifecycleStatusTone` | `material_status_badge.dart` | Material lifecycle badge and canonical status mapper: available is primary, reservation states are warning, reused is success, unavailable is danger, and unknown/draft values are neutral. |
 | `MaterialConditionBadge` / `MaterialConditionBadgeTone` | `material_condition_badge.dart` | Like-new/good/fair/mixed condition badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
 | `MaterialPriceBadge` | `material_price_badge.dart` | Free/paid price badge derived from `AppThemeColors`, shared spacing/radius, and text theme. |
 | `MaterialsUiPalette` and material constants | `materials_ui_palette.dart` | Shared material-card/discovery bridge palette and badge/card sizing constants derived from the central app theme. |

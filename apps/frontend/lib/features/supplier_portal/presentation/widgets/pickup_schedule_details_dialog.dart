@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_close_button.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
@@ -129,19 +130,7 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 40,
-                      minHeight: 40,
-                    ),
-                    icon: Icon(
-                      Icons.close_rounded,
-                      color: colors.textSecondary,
-                      size: 22,
-                    ),
-                  ),
+                  AppCloseButton(onPressed: () => Navigator.of(context).pop()),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
@@ -165,10 +154,7 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                         label: l.learnerLabel,
                         value: item.learnerName,
                       ),
-                      _DetailRow(
-                        label: l.quantity,
-                        value: item.quantityLabel,
-                      ),
+                      _DetailRow(label: l.quantity, value: item.quantityLabel),
                       _DetailRow(
                         label: l.pickupTypeLabel,
                         value: item.pickupType,
@@ -197,7 +183,8 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                           value: instructions ?? l.noPickupInstructions,
                           emphasizeValue: instructions != null,
                         ),
-                      ] else if (item.isCompleted && item.completedAt != null) ...[
+                      ] else if (item.isCompleted &&
+                          item.completedAt != null) ...[
                         const _SectionDivider(),
                         _SectionTitle(title: l.pickupWindowSectionTitle),
                         _DetailRow(
@@ -218,7 +205,8 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                           pickupHandoverPhase: item.pickupHandoverPhase,
                           canMarkCompleted: item.canSupplierComplete,
                           canRequestReschedule: item.canSupplierReschedule,
-                          canCloseReservation: item.canSupplierCloseOverduePickup,
+                          canCloseReservation:
+                              item.canSupplierCloseOverduePickup,
                           canReportToAdmin:
                               item.canSupplierReportAndCloseOverduePickup,
                           hasAdminReport: item.noShowReport != null,
@@ -260,41 +248,6 @@ class PickupScheduleDetailsDialog extends ConsumerWidget {
                         ),
                       ],
                     ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: colors.border.withValues(alpha: 0.35),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Align(
-                alignment:
-                    compact ? Alignment.center : Alignment.centerRight,
-                child: SizedBox(
-                  width: compact ? double.infinity : null,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: TextButton.styleFrom(
-                      foregroundColor: colors.textPrimary,
-                      backgroundColor: colors.chipUnselected.withValues(
-                        alpha: colors.isDark ? 0.35 : 0.55,
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg,
-                        vertical: AppSpacing.sm + 2,
-                      ),
-                      minimumSize: Size(compact ? double.infinity : 96, 44),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.mdAll,
-                        side: BorderSide(
-                          color: colors.border.withValues(alpha: 0.45),
-                        ),
-                      ),
-                    ),
-                    child: Text(l.close),
                   ),
                 ),
               ),
@@ -381,9 +334,7 @@ class _DetailRow extends StatelessWidget {
           Text(
             value,
             style: context.supplierBody().copyWith(
-              color: emphasizeValue
-                  ? colors.textPrimary
-                  : colors.textSecondary,
+              color: emphasizeValue ? colors.textPrimary : colors.textSecondary,
               fontSize: 15,
               fontWeight: emphasizeValue ? FontWeight.w600 : FontWeight.w500,
               height: 1.4,

@@ -14,6 +14,9 @@ class AdminPeopleSummary {
     required this.drivers,
     required this.moderators,
     required this.admins,
+    required this.activeUsers,
+    required this.verifiedSuppliers,
+    required this.newThisMonth,
   });
 
   final int total;
@@ -23,6 +26,9 @@ class AdminPeopleSummary {
   final int drivers;
   final int moderators;
   final int admins;
+  final int activeUsers;
+  final int verifiedSuppliers;
+  final int newThisMonth;
 
   factory AdminPeopleSummary.fromJson(Map<String, dynamic> json) {
     return AdminPeopleSummary(
@@ -33,8 +39,52 @@ class AdminPeopleSummary {
       drivers: (json['drivers'] as num?)?.toInt() ?? 0,
       moderators: (json['moderators'] as num?)?.toInt() ?? 0,
       admins: (json['admins'] as num?)?.toInt() ?? 0,
+      activeUsers: (json['activeUsers'] as num?)?.toInt() ?? 0,
+      verifiedSuppliers:
+          (json['verifiedSuppliers'] as num?)?.toInt() ?? 0,
+      newThisMonth: (json['newThisMonth'] as num?)?.toInt() ?? 0,
     );
   }
+}
+
+class AdminPeoplePagination {
+  const AdminPeoplePagination({
+    required this.page,
+    required this.limit,
+    required this.total,
+  });
+
+  final int page;
+  final int limit;
+  final int total;
+
+  int get rangeStart => total == 0 ? 0 : ((page - 1) * limit) + 1;
+
+  int get rangeEnd {
+    if (total == 0) return 0;
+    final end = page * limit;
+    return end > total ? total : end;
+  }
+
+  factory AdminPeoplePagination.fromJson(Map<String, dynamic> json) {
+    return AdminPeoplePagination(
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      limit: (json['limit'] as num?)?.toInt() ?? 50,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class AdminPeopleListResult {
+  const AdminPeopleListResult({
+    required this.items,
+    required this.pagination,
+    this.summary,
+  });
+
+  final List<AdminPeopleListItem> items;
+  final AdminPeoplePagination pagination;
+  final AdminPeopleSummary? summary;
 }
 
 class AdminPeopleListItem {
@@ -56,6 +106,15 @@ class AdminPeopleListItem {
     this.driverStatus,
     this.suspensionReasonPreview,
     this.verifiedStrikeCount = 0,
+    this.materialsCount = 0,
+    this.reservationsAsRequesterCount = 0,
+    this.reservationsAsOwnerCount = 0,
+    this.submittedLearningProjectsCount = 0,
+    this.projectBuildsCount = 0,
+    this.assignedDeliveriesCount = 0,
+    this.locationCity,
+    this.locationArea,
+    this.locationLabel,
   });
 
   final String userId;
@@ -72,6 +131,15 @@ class AdminPeopleListItem {
   final String? driverStatus;
   final String? suspensionReasonPreview;
   final int verifiedStrikeCount;
+  final int materialsCount;
+  final int reservationsAsRequesterCount;
+  final int reservationsAsOwnerCount;
+  final int submittedLearningProjectsCount;
+  final int projectBuildsCount;
+  final int assignedDeliveriesCount;
+  final String? locationCity;
+  final String? locationArea;
+  final String? locationLabel;
   final bool canSuspend;
   final bool canReactivate;
   final bool isProtectedAdmin;
@@ -95,6 +163,19 @@ class AdminPeopleListItem {
       driverStatus: json['driverStatus'] as String?,
       suspensionReasonPreview: json['suspensionReasonPreview'] as String?,
       verifiedStrikeCount: (json['verifiedStrikeCount'] as num?)?.toInt() ?? 0,
+      materialsCount: (json['materialsCount'] as num?)?.toInt() ?? 0,
+      reservationsAsRequesterCount:
+          (json['reservationsAsRequesterCount'] as num?)?.toInt() ?? 0,
+      reservationsAsOwnerCount:
+          (json['reservationsAsOwnerCount'] as num?)?.toInt() ?? 0,
+      submittedLearningProjectsCount:
+          (json['submittedLearningProjectsCount'] as num?)?.toInt() ?? 0,
+      projectBuildsCount: (json['projectBuildsCount'] as num?)?.toInt() ?? 0,
+      assignedDeliveriesCount:
+          (json['assignedDeliveriesCount'] as num?)?.toInt() ?? 0,
+      locationCity: json['locationCity'] as String?,
+      locationArea: json['locationArea'] as String?,
+      locationLabel: json['locationLabel'] as String?,
       canSuspend: json['canSuspend'] as bool? ?? false,
       canReactivate: json['canReactivate'] as bool? ?? false,
       isProtectedAdmin: json['isProtectedAdmin'] as bool? ?? false,
@@ -114,7 +195,7 @@ class AdminPeopleApi {
     );
   }
 
-  Future<List<AdminPeopleListItem>> fetchPeople({
+  Future<AdminPeopleListResult> fetchPeople({
     required String tab,
     String search = '',
     String? status,
@@ -134,13 +215,40 @@ class AdminPeopleApi {
       ),
       (json) {
         final items = json['items'];
-        if (items is! List) return const <AdminPeopleListItem>[];
-        return items
-            .whereType<Map>()
-            .map((item) => AdminPeopleListItem.fromJson(
-                  Map<String, dynamic>.from(item),
-                ))
-            .toList();
+        final parsedItems = items is List
+            ? items
+                .whereType<Map>()
+                .map(
+                  (item) => AdminPeopleListItem.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList()
+            : const <AdminPeopleListItem>[];
+
+        final paginationRaw = json['pagination'];
+        final pagination = paginationRaw is Map
+            ? AdminPeoplePagination.fromJson(
+                Map<String, dynamic>.from(paginationRaw),
+              )
+            : AdminPeoplePagination(
+                page: page,
+                limit: limit,
+                total: parsedItems.length,
+              );
+
+        final summaryRaw = json['summary'];
+        final summary = summaryRaw is Map
+            ? AdminPeopleSummary.fromJson(
+                Map<String, dynamic>.from(summaryRaw),
+              )
+            : null;
+
+        return AdminPeopleListResult(
+          items: parsedItems,
+          pagination: pagination,
+          summary: summary,
+        );
       },
     );
   }
