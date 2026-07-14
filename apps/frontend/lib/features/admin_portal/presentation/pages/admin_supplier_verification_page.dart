@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -12,7 +16,6 @@ import '../../data/admin_supplier_verifications_api.dart';
 import '../../data/models/admin_supplier_verifications_models.dart';
 import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
-import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
 
@@ -758,11 +761,17 @@ class _VerificationDetailsDialogState
     final dateFormat = DateFormat.yMMMd().add_jm();
 
     return AppDialogShell(
-      title: const Text('Supplier verification details'),
-      maxWidth: 600,
+      title: FutureBuilder<AdminSupplierVerificationDetail>(
+        future: _detailFuture,
+        builder: (context, snapshot) => snapshot.hasData
+            ? _VerificationHeader(detail: snapshot.data!)
+            : const Text('Supplier verification details'),
+      ),
+      maxWidth: 880,
+      maxHeightFactor: 0.9,
       closeEnabled: !_isSubmitting,
       content: SizedBox(
-        width: 560,
+        width: 840,
         child: FutureBuilder<AdminSupplierVerificationDetail>(
           future: _detailFuture,
           builder: (context, snapshot) {
@@ -788,66 +797,151 @@ class _VerificationDetailsDialogState
             }
 
             final detail = snapshot.data!;
+            final organizationCard = _VerificationSectionCard(
+              title: 'Organization',
+              icon: Icons.storefront_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    detail.organizationName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppThemeColors.of(context).textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppStatusBadge(
+                    label: _formatSupplierType(detail.supplierType),
+                    tone: AppStatusTone.neutral,
+                  ),
+                  if (detail.description?.trim().isNotEmpty ?? false) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _DetailNote(
+                      title: 'Description',
+                      note: detail.description!,
+                    ),
+                  ],
+                ],
+              ),
+            );
+            final contactCard = _VerificationSectionCard(
+              title: 'Owner & contact',
+              icon: Icons.person_outline,
+              child: Column(
+                children: [
+                  _DetailInfoRow(
+                    icon: Icons.person_outline,
+                    label: 'Owner',
+                    value: detail.owner.displayName,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _DetailInfoRow(
+                    icon: Icons.mail_outline,
+                    label: 'Email',
+                    value: detail.owner.email,
+                  ),
+                  if (detail.owner.phone?.trim().isNotEmpty ?? false) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _DetailInfoRow(
+                      icon: Icons.phone_outlined,
+                      label: 'Phone',
+                      value: detail.owner.phone,
+                    ),
+                  ],
+                ],
+              ),
+            );
+            final locationCard = _VerificationSectionCard(
+              title: 'Location',
+              icon: Icons.location_on_outlined,
+              child: _DetailInfoRow(
+                icon: Icons.place_outlined,
+                label: 'Business location',
+                value: _locationLabel(
+                  detail.location.city,
+                  detail.location.area,
+                  detail.location.addressLine,
+                ),
+              ),
+            );
+            final historyCard = _VerificationSectionCard(
+              title: 'Verification history',
+              icon: Icons.verified_user_outlined,
+              child: _VerificationHistory(
+                detail: detail,
+                dateFormat: dateFormat,
+              ),
+            );
+
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _DetailRow('Organization', detail.organizationName),
-                _DetailRow('Type', _formatSupplierType(detail.supplierType)),
-                _DetailRow('Owner', detail.owner.displayName),
-                _DetailRow('Email', detail.owner.email),
-                if (detail.owner.phone?.isNotEmpty == true)
-                  _DetailRow('Phone', detail.owner.phone!),
-                _DetailRow(
-                  'Location',
-                  _locationLabel(
-                    detail.location.city,
-                    detail.location.area,
-                    detail.location.addressLine,
-                  ),
+                _VerificationMetaStrip(detail: detail, dateFormat: dateFormat),
+                const SizedBox(height: AppSpacing.md),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final left = Column(
+                      children: [
+                        organizationCard,
+                        const SizedBox(height: AppSpacing.md),
+                        contactCard,
+                        if (detail.verificationDocumentUrl?.isNotEmpty ??
+                            false) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _VerificationDocumentCard(
+                            documentUrl: detail.verificationDocumentUrl!,
+                            documentName: detail.verificationDocumentName,
+                          ),
+                        ],
+                      ],
+                    );
+                    final right = Column(
+                      children: [
+                        locationCard,
+                        const SizedBox(height: AppSpacing.md),
+                        historyCard,
+                      ],
+                    );
+
+                    if (constraints.maxWidth < 700) {
+                      return Column(
+                        children: [
+                          left,
+                          const SizedBox(height: AppSpacing.md),
+                          right,
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: left),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: right),
+                      ],
+                    );
+                  },
                 ),
-                if (detail.description?.isNotEmpty == true)
-                  _DetailRow('Description', detail.description!),
-                _DetailRow(
-                  'Status',
-                  _formatStatusLabel(detail.verificationStatus),
-                ),
-                if (detail.submittedAt != null)
-                  _DetailRow(
-                    'Submitted',
-                    dateFormat.format(detail.submittedAt!),
-                  ),
-                if (detail.reviewedAt != null)
-                  _DetailRow('Reviewed', dateFormat.format(detail.reviewedAt!)),
-                if (detail.reviewedByName != null)
-                  _DetailRow(
-                    'Reviewed by',
-                    '${detail.reviewedByName} (${detail.reviewedByEmail ?? ''})',
-                  ),
-                if (detail.adminNote?.isNotEmpty == true)
-                  _DetailRow('Admin note', detail.adminNote!),
-                if (detail.verificationDocumentUrl?.isNotEmpty == true)
-                  _VerificationDocumentCard(
-                    documentUrl: detail.verificationDocumentUrl!,
-                    documentName: detail.verificationDocumentName,
-                  ),
+                const SizedBox(height: AppSpacing.md),
               ],
             );
           },
         ),
       ),
-      footer: Wrap(
-        alignment: WrapAlignment.end,
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          TextButton(
+      footer: AppDialogFooter.actions(
+        actions: [
+          OutlinedButton(
             onPressed: _isSubmitting ? null : _requestChanges,
-            style: AppStatusButtonStyle.text(context, AppStatusTone.warning),
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.warning,
+            ),
             child: const Text('Request changes'),
           ),
-          TextButton(
+          OutlinedButton(
             onPressed: _isSubmitting ? null : _reject,
-            style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+            style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
             child: const Text('Reject'),
           ),
           FilledButton(
@@ -867,25 +961,171 @@ class _VerificationDetailsDialogState
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow(this.label, this.value);
+class _VerificationHeader extends StatelessWidget {
+  const _VerificationHeader({required this.detail});
 
+  final AdminSupplierVerificationDetail detail;
+
+  @override
+  Widget build(BuildContext context) => AppDialogTitleBlock(
+    icon: Icons.storefront_outlined,
+    title: detail.organizationName,
+    badges: [
+      AppStatusBadge(
+        label: _formatStatusLabel(detail.verificationStatus),
+        tone: supplierVerificationStatusTone(detail.verificationStatus),
+      ),
+      AppStatusBadge(
+        label: _formatSupplierType(detail.supplierType),
+        tone: AppStatusTone.neutral,
+      ),
+    ],
+  );
+}
+
+class _VerificationMetaStrip extends StatelessWidget {
+  const _VerificationMetaStrip({
+    required this.detail,
+    required this.dateFormat,
+  });
+
+  final AdminSupplierVerificationDetail detail;
+  final DateFormat dateFormat;
+
+  @override
+  Widget build(BuildContext context) => AppDialogMetaStrip(
+    items: [
+      _MetaItem(
+        icon: Icons.person_outline,
+        label: 'Owner',
+        value: detail.owner.displayName,
+      ),
+      _MetaItem(
+        icon: Icons.mail_outline,
+        label: 'Email',
+        value: detail.owner.email,
+      ),
+      if (detail.submittedAt != null)
+        _MetaItem(
+          icon: Icons.calendar_today_outlined,
+          label: 'Submitted',
+          value: dateFormat.format(detail.submittedAt!),
+        ),
+      if (detail.reviewedAt != null)
+        _MetaItem(
+          icon: Icons.task_alt_outlined,
+          label: 'Reviewed',
+          value: dateFormat.format(detail.reviewedAt!),
+        ),
+    ],
+  );
+}
+
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
   final String label;
   final String value;
 
   @override
+  Widget build(BuildContext context) =>
+      AppDialogMetaItem(icon: icon, label: label, value: value);
+}
+
+class _VerificationSectionCard extends StatelessWidget {
+  const _VerificationSectionCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      AppDialogSection(title: title, icon: icon, child: child);
+}
+
+class _DetailInfoRow extends StatelessWidget {
+  const _DetailInfoRow({required this.label, required this.value, this.icon});
+
+  final String label;
+  final String? value;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) => AppDialogInfoRow(
+    label: label,
+    value: value?.trim().isNotEmpty ?? false ? value! : 'Not provided',
+    icon: icon,
+  );
+}
+
+class _DetailNote extends StatelessWidget {
+  const _DetailNote({required this.title, required this.note});
+
+  final String title;
+  final String note;
+
+  @override
+  Widget build(BuildContext context) => AppDialogNote(title: title, note: note);
+}
+
+class _VerificationHistory extends StatelessWidget {
+  const _VerificationHistory({required this.detail, required this.dateFormat});
+
+  final AdminSupplierVerificationDetail detail;
+  final DateFormat dateFormat;
+
+  @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AdminTypography.kpiHelper(palette)),
-          const SizedBox(height: 2),
-          Text(value, style: AdminTypography.pageSubtitle(palette)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DetailInfoRow(
+          label: 'Current status',
+          value: _formatStatusLabel(detail.verificationStatus),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppStatusBadge(
+          label: _formatStatusLabel(detail.verificationStatus),
+          tone: supplierVerificationStatusTone(detail.verificationStatus),
+        ),
+        if (detail.submittedAt != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailInfoRow(
+            label: 'Submitted',
+            value: dateFormat.format(detail.submittedAt!),
+          ),
         ],
-      ),
+        if (detail.reviewedAt != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailInfoRow(
+            label: 'Reviewed',
+            value: dateFormat.format(detail.reviewedAt!),
+          ),
+        ],
+        if (detail.reviewedByName?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailInfoRow(
+            label: 'Reviewer',
+            value: detail.reviewedByEmail?.trim().isNotEmpty ?? false
+                ? '${detail.reviewedByName} · ${detail.reviewedByEmail}'
+                : detail.reviewedByName,
+          ),
+        ],
+        if (detail.adminNote?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailNote(title: 'Review note', note: detail.adminNote!),
+        ],
+      ],
     );
   }
 }
@@ -1105,109 +1345,95 @@ class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: palette.cardBackground,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: palette.cardBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Verification document',
-              style: AdminTypography.kpiHelper(palette),
-            ),
-            const SizedBox(height: 10),
-            if (_canTryImagePreview)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  _resolvedUrl,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && !_imagePreviewFailed) {
-                        setState(() => _imagePreviewFailed = true);
-                      }
-                    });
-                    return _DocumentTypePreview(
-                      palette: palette,
-                      icon: _typeIcon,
-                      label: _typeLabel,
-                    );
-                  },
-                ),
-              )
-            else
-              _DocumentTypePreview(
-                palette: palette,
-                icon: _typeIcon,
-                label: _typeLabel,
+    return _VerificationSectionCard(
+      title: 'Verification document',
+      icon: Icons.file_present_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_canTryImagePreview)
+            ClipRRect(
+              borderRadius: AppRadius.mdAll,
+              child: Image.network(
+                _resolvedUrl,
+                height: 140,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && !_imagePreviewFailed) {
+                      setState(() => _imagePreviewFailed = true);
+                    }
+                  });
+                  return _DocumentTypePreview(
+                    icon: _typeIcon,
+                    label: _typeLabel,
+                  );
+                },
               ),
-            const SizedBox(height: 10),
-            Text(
-              _displayName,
-              style: AdminTypography.pageSubtitle(palette),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            )
+          else
+            _DocumentTypePreview(icon: _typeIcon, label: _typeLabel),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _displayName,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _openDocument,
-                  icon: Icon(
-                    _isPdf ? Icons.open_in_new : Icons.open_in_full_outlined,
-                  ),
-                  label: Text(_isPdf ? 'Open PDF' : 'Open full image'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _openDocument,
+                icon: Icon(
+                  _isPdf ? Icons.open_in_new : Icons.open_in_full_outlined,
                 ),
-              ],
-            ),
-          ],
-        ),
+                label: Text(_isPdf ? 'Open PDF' : 'Open full image'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
 class _DocumentTypePreview extends StatelessWidget {
-  const _DocumentTypePreview({
-    required this.palette,
-    required this.icon,
-    required this.label,
-  });
+  const _DocumentTypePreview({required this.icon, required this.label});
 
-  final AdminPalette palette;
   final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
     return Container(
       height: 120,
       width: double.infinity,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: palette.cardBorder.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
+        color: colors.surfaceMuted,
+        borderRadius: AppRadius.mdAll,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 40, color: palette.primaryTeal),
-          const SizedBox(height: 8),
-          Text(label, style: AdminTypography.pageSubtitle(palette)),
+          Icon(icon, size: 40, color: colors.primary),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+          ),
         ],
       ),
     );

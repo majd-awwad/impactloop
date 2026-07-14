@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -29,6 +30,16 @@ String _invitationSendSnackMessage(AdminInvitationCreateResult result) {
   }
 
   return 'Email invitation sent successfully.';
+}
+
+String _formatInvitationStatus(String value) {
+  return value
+      .trim()
+      .toLowerCase()
+      .split('_')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }
 
 AdminInvitationItem? _parseExistingInvitation(ApiException error) {
@@ -760,8 +771,10 @@ class _StatusBadge extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) =>
-      AppStatusBadge(label: status, tone: invitationStatusTone(status));
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: _formatInvitationStatus(status),
+    tone: invitationStatusTone(status),
+  );
 }
 
 class _RoleBadge extends StatelessWidget {
@@ -851,72 +864,84 @@ class _InvitationDetailDialogState
     final createdBy = item.createdBy?.label;
 
     return AppDialogShell(
-      title: Text(l.t('Invitation details', 'تفاصيل الدعوة')),
+      title: AppDialogTitleBlock(
+        title: l.t('Invitation details', 'تفاصيل الدعوة'),
+        icon: Icons.mail_outline,
+        badges: [
+          AppStatusBadge(
+            label: _formatInvitationStatus(item.status),
+            tone: invitationStatusTone(item.status),
+          ),
+        ],
+      ),
       maxWidth: 560,
       content: SizedBox(
         width: 520,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _DetailRow(l.t('Email', 'البريد'), item.recipientEmail),
-            _DetailRow(l.t('Role', 'الدور'), item.role),
-            _DetailRow(l.t('Status', 'الحالة'), item.status),
-            _DetailRow(
-              l.t('Created at', 'تاريخ الإنشاء'),
-              _formatDate(item.createdAt),
-            ),
-            _DetailRow(
-              l.t('Expires at', 'تاريخ الانتهاء'),
-              _formatDate(item.expiresAt),
-            ),
-            if (createdBy != null && createdBy.isNotEmpty)
-              _DetailRow(l.t('Created by', 'أنشأها'), createdBy),
-            if (item.acceptedAt != null)
+        child: AppDialogSection(
+          title: l.t('Invitation', 'الدعوة'),
+          icon: Icons.mark_email_read_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DetailRow(l.t('Email', 'البريد'), item.recipientEmail),
+              _DetailRow(l.t('Role', 'الدور'), item.role),
               _DetailRow(
-                l.t('Accepted at', 'تاريخ القبول'),
-                _formatDate(item.acceptedAt),
+                l.t('Created at', 'تاريخ الإنشاء'),
+                _formatDate(item.createdAt),
               ),
-            if (item.revokedAt != null)
               _DetailRow(
-                l.t('Revoked at', 'تاريخ الإلغاء'),
-                _formatDate(item.revokedAt),
+                l.t('Expires at', 'تاريخ الانتهاء'),
+                _formatDate(item.expiresAt),
               ),
-            const SizedBox(height: 12),
-            if (item.isActivePending) ...[
-              if (_invitationUrl != null) ...[
+              if (createdBy != null && createdBy.isNotEmpty)
+                _DetailRow(l.t('Created by', 'أنشأها'), createdBy),
+              if (item.acceptedAt != null)
+                _DetailRow(
+                  l.t('Accepted at', 'تاريخ القبول'),
+                  _formatDate(item.acceptedAt),
+                ),
+              if (item.revokedAt != null)
+                _DetailRow(
+                  l.t('Revoked at', 'تاريخ الإلغاء'),
+                  _formatDate(item.revokedAt),
+                ),
+              const SizedBox(height: 12),
+              if (item.isActivePending) ...[
+                if (_invitationUrl != null) ...[
+                  Text(
+                    l.t('Invitation link', 'رابط الدعوة'),
+                    style: AdminTypography.kpiLabel(palette),
+                  ),
+                  const SizedBox(height: 6),
+                  SelectableText(
+                    _invitationUrl!,
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                FilledButton.icon(
+                  onPressed: _loadingLink ? null : _loadAndCopyLink,
+                  icon: _loadingLink
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.link, size: 18),
+                  label: Text(l.t('Copy link', 'نسخ الرابط')),
+                ),
+              ] else
                 Text(
-                  l.t('Invitation link', 'رابط الدعوة'),
-                  style: AdminTypography.kpiLabel(palette),
+                  l.t(
+                    'This invitation is no longer active.',
+                    'هذه الدعوة لم تعد نشطة.',
+                  ),
+                  style: AdminTypography.kpiHelper(
+                    palette,
+                  ).copyWith(color: palette.amber, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 6),
-                SelectableText(
-                  _invitationUrl!,
-                  style: AdminTypography.kpiHelper(palette),
-                ),
-                const SizedBox(height: 8),
-              ],
-              FilledButton.icon(
-                onPressed: _loadingLink ? null : _loadAndCopyLink,
-                icon: _loadingLink
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.link, size: 18),
-                label: Text(l.t('Copy link', 'نسخ الرابط')),
-              ),
-            ] else
-              Text(
-                l.t(
-                  'This invitation is no longer active.',
-                  'هذه الدعوة لم تعد نشطة.',
-                ),
-                style: AdminTypography.kpiHelper(
-                  palette,
-                ).copyWith(color: palette.amber, fontWeight: FontWeight.w600),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -932,21 +957,9 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (value == null || value!.trim().isEmpty) return const SizedBox.shrink();
-    final palette = context.adminPalette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: RichText(
-        text: TextSpan(
-          style: AdminTypography.pageSubtitle(palette),
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
-      ),
+      child: AppDialogInfoRow(label: label, value: value),
     );
   }
 }

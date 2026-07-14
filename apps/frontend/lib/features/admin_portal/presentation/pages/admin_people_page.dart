@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/account_status_presentation.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -830,72 +831,91 @@ class _PersonDetailDialog extends StatelessWidget {
         .toList();
     final accountStatus = detail['accountStatus'] as String? ?? '';
     final isSuspended = accountStatus == 'SUSPENDED';
+    final displayName = detail['displayName'] as String? ?? 'Account details';
 
     return AppDialogShell(
-      title: Text(detail['displayName'] as String? ?? 'Account details'),
+      title: AppDialogTitleBlock(
+        title: displayName,
+        icon: Icons.person_outline,
+        badges: [
+          AppStatusBadge(
+            label: _formatStatus(accountStatus),
+            tone: accountStatusTone(accountStatus),
+          ),
+        ],
+      ),
       maxWidth: 560,
       content: SizedBox(
         width: 520,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _DetailRow('Email', detail['email']),
-            _DetailRow('Status', _formatStatus(accountStatus)),
-            _DetailRow('Roles', roles.map(_formatRole).join(', ')),
-            _DetailRow('Phone', detail['phone']),
-            _DetailRow('Created', _formatDetailDate(detail['createdAt'])),
-            _DetailRow('Last login', _formatDetailDate(detail['lastLoginAt'])),
-            if (((detail['verifiedStrikeCount'] as num?)?.toInt() ?? 0) > 0)
+        child: AppDialogSection(
+          title: 'Account information',
+          icon: Icons.badge_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DetailRow('Email', detail['email']),
+              _DetailRow('Roles', roles.map(_formatRole).join(', ')),
+              _DetailRow('Phone', detail['phone']),
+              _DetailRow('Created', _formatDetailDate(detail['createdAt'])),
               _DetailRow(
-                'Verified strikes',
-                '${detail['verifiedStrikeCount']}',
+                'Last login',
+                _formatDetailDate(detail['lastLoginAt']),
               ),
-            if (isSuspended) ...[
-              const SizedBox(height: 12),
-              Text('Suspension', style: AdminTypography.sectionTitle(palette)),
-              const SizedBox(height: 6),
-              _DetailRow('Status', 'Suspended'),
-              _AlwaysShowDetailRow(
-                'Reason',
-                _suspensionReasonText(detail['suspensionReason']),
-              ),
-              _DetailRow(
-                'Suspended by',
-                _formatSuspendedBy(detail['suspendedBy']),
-              ),
-              _DetailRow(
-                'Suspended at',
-                _formatDetailDate(detail['suspendedAt']),
-              ),
-              if (detail['reactivatedAt'] != null) ...[
+              if (((detail['verifiedStrikeCount'] as num?)?.toInt() ?? 0) > 0)
                 _DetailRow(
-                  'Last reactivated at',
-                  _formatDetailDate(detail['reactivatedAt']),
+                  'Verified strikes',
+                  '${detail['verifiedStrikeCount']}',
+                ),
+              if (isSuspended) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Suspension',
+                  style: AdminTypography.sectionTitle(palette),
+                ),
+                const SizedBox(height: 6),
+                _DetailRow('Status', 'Suspended'),
+                _AlwaysShowDetailRow(
+                  'Reason',
+                  _suspensionReasonText(detail['suspensionReason']),
                 ),
                 _DetailRow(
-                  'Reactivated by',
-                  _formatSuspendedBy(detail['reactivatedBy']),
+                  'Suspended by',
+                  _formatSuspendedBy(detail['suspendedBy']),
+                ),
+                _DetailRow(
+                  'Suspended at',
+                  _formatDetailDate(detail['suspendedAt']),
+                ),
+                if (detail['reactivatedAt'] != null) ...[
+                  _DetailRow(
+                    'Last reactivated at',
+                    _formatDetailDate(detail['reactivatedAt']),
+                  ),
+                  _DetailRow(
+                    'Reactivated by',
+                    _formatSuspendedBy(detail['reactivatedBy']),
+                  ),
+                ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Suspension blocks important actions but does not delete this account or its data.',
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
                 ),
               ],
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Suspension blocks important actions but does not delete this account or its data.',
-                  style: AdminTypography.kpiHelper(palette),
+              if (detail['isProtectedAdmin'] == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    'This admin account is protected. Status and role changes are not available in People Management.',
+                    style: AdminTypography.kpiHelper(
+                      palette,
+                    ).copyWith(color: palette.amber),
+                  ),
                 ),
-              ),
             ],
-            if (detail['isProtectedAdmin'] == true)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(
-                  'This admin account is protected. Status and role changes are not available in People Management.',
-                  style: AdminTypography.kpiHelper(
-                    palette,
-                  ).copyWith(color: palette.amber),
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -909,24 +929,10 @@ class _AlwaysShowDetailRow extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: RichText(
-        text: TextSpan(
-          style: AdminTypography.pageSubtitle(palette),
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: AppDialogInfoRow(label: label, value: value),
+  );
 }
 
 class _DetailRow extends StatelessWidget {
@@ -937,23 +943,11 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
     final text = value?.toString();
     if (text == null || text.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: RichText(
-        text: TextSpan(
-          style: AdminTypography.pageSubtitle(palette),
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            TextSpan(text: text),
-          ],
-        ),
-      ),
+      child: AppDialogInfoRow(label: label, value: text),
     );
   }
 }

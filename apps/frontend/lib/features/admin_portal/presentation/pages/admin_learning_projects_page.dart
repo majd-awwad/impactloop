@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_close_button.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -921,29 +922,8 @@ class _ProjectReviewMetaItem extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 20, color: palette.textMuted),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label, style: AdminTypography.kpiHelper(palette)),
-            Text(
-              value,
-              style: AdminTypography.pageSubtitle(
-                palette,
-              ).copyWith(fontSize: 13),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppDialogMetaItem(icon: icon, label: label, value: value);
 }
 
 class _ReviewSectionCard extends StatelessWidget {
@@ -958,50 +938,8 @@ class _ReviewSectionCard extends StatelessWidget {
   final IconData? icon;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border.all(color: palette.border),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.shadow.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(icon, size: 17, color: theme.colorScheme.primary),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Text(title, style: AdminTypography.sectionTitle(palette)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppDialogSection(title: title, icon: icon, child: child);
 }
 
 class _ProjectDetailDialog extends ConsumerStatefulWidget {
@@ -1795,292 +1733,208 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
             ],
           ),
         );
-        return Dialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: 1140,
-              maxHeight: MediaQuery.sizeOf(context).height * .9,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
+        return AppDialogShell(
+          title: AppDialogTitleBlock(
+            icon: Icons.auto_awesome_outlined,
+            title: detail.title,
+            badges: [
+              _ProjectStatusBadge(status: detail.status),
+              AppStatusBadge(
+                label: detail.category.nameEn,
+                tone: AppStatusTone.neutral,
+              ),
+              AppStatusBadge(
+                label: humanizeEnum(detail.difficulty),
+                tone: AppStatusTone.neutral,
+              ),
+            ],
+          ),
+          maxWidth: 1140,
+          maxHeightFactor: .9,
+          contentPadding: const EdgeInsets.all(20),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppDialogMetaStrip(
+                items: [
+                  _ProjectReviewMetaItem(
+                    icon: Icons.calendar_today_outlined,
+                    label: 'Submitted',
+                    value:
+                        formatAdminDateTime(
+                          detail.submittedAt ?? detail.createdAt,
+                        ) ??
+                        '—',
+                  ),
+                  _ProjectReviewMetaItem(
+                    icon: Icons.schedule_outlined,
+                    label: 'Estimated time',
+                    value: detail.estimatedDurationMinutes == null
+                        ? 'Not provided'
+                        : '${detail.estimatedDurationMinutes} minutes',
+                  ),
+                  _ProjectReviewMetaItem(
+                    icon: Icons.widgets_outlined,
+                    label: 'Components',
+                    value: '${detail.requiredComponents.length} pieces',
+                  ),
+                  _ProjectReviewMetaItem(
+                    icon: Icons.sell_outlined,
+                    label: 'Keywords',
+                    value: detail.tags.isEmpty
+                        ? '—'
+                        : detail.tags.take(3).join(' · '),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              LayoutBuilder(
+                builder: (context, c) {
+                  final wide = c.maxWidth >= 820;
+                  final main = Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: palette.green.withValues(alpha: .12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          Icons.auto_awesome_outlined,
-                          color: palette.green,
-                        ),
+                      overview,
+                      const SizedBox(height: 14),
+                      card(
+                        'Featured image',
+                        detail.coverImageUrl == null
+                            ? const Text('No image provided')
+                            : ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.network(
+                                  ApiConfig.resolveMediaUrl(
+                                    detail.coverImageUrl!,
+                                  ),
+                                  height: 220,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                      const SizedBox(height: 14),
+                      card(
+                        'Components',
+                        Column(
                           children: [
-                            Text(
-                              detail.title,
-                              style: AdminTypography.pageTitle(palette),
-                            ),
-                            _ProjectStatusBadge(status: detail.status),
-                            Chip(label: Text(detail.category.nameEn)),
-                            Chip(label: Text(humanizeEnum(detail.difficulty))),
+                            for (final component in detail.requiredComponents)
+                              ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(component.name),
+                                subtitle: Text(
+                                  '${component.quantity} ${component.unit} · ${component.category?.nameEn ?? component.materialType}',
+                                ),
+                                trailing:
+                                    detail.allowedActions.canEditComponents
+                                    ? TextButton(
+                                        onPressed: () =>
+                                            _editComponent(detail, component),
+                                        child: const Text('Edit'),
+                                      )
+                                    : null,
+                              ),
                           ],
                         ),
                       ),
-                      AppCloseButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                      const SizedBox(height: 14),
+                      card(
+                        'Links',
+                        Column(
+                          children: [
+                            for (final link in detail.links)
+                              ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.link_outlined),
+                                title: Text(link.title ?? link.linkType),
+                                subtitle: Text(link.url),
+                                trailing: const Icon(
+                                  Icons.open_in_new,
+                                  size: 18,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      card(
+                        'Steps',
+                        Column(
+                          children: [
+                            for (final step in detail.steps)
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: CircleAvatar(
+                                  radius: 14,
+                                  child: Text('${step.stepNumber}'),
+                                ),
+                                title: Text(step.title),
+                                subtitle: Text(step.description),
+                              ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: palette.border),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Wrap(
-                      spacing: 28,
-                      runSpacing: 10,
-                      children: [
-                        _ProjectReviewMetaItem(
-                          icon: Icons.calendar_today_outlined,
-                          label: 'Submitted',
-                          value:
-                              formatAdminDateTime(
-                                detail.submittedAt ?? detail.createdAt,
-                              ) ??
-                              '—',
-                        ),
-                        _ProjectReviewMetaItem(
-                          icon: Icons.schedule_outlined,
-                          label: 'Estimated time',
-                          value: detail.estimatedDurationMinutes == null
-                              ? 'Not provided'
-                              : '${detail.estimatedDurationMinutes} minutes',
-                        ),
-                        _ProjectReviewMetaItem(
-                          icon: Icons.widgets_outlined,
-                          label: 'Components',
-                          value: '${detail.requiredComponents.length} pieces',
-                        ),
-                        _ProjectReviewMetaItem(
-                          icon: Icons.sell_outlined,
-                          label: 'Keywords',
-                          value: detail.tags.isEmpty
-                              ? '—'
-                              : detail.tags.take(3).join(' · '),
-                        ),
+                  );
+                  final side = Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      author,
+                      const SizedBox(height: 14),
+                      history,
+                      if (detail.reviewNote?.isNotEmpty == true) ...[
+                        const SizedBox(height: 14),
+                        card('Admin note', Text(detail.reviewNote!)),
                       ],
-                    ),
-                  ),
-                ),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 44),
-                    child: LayoutBuilder(
-                      builder: (context, c) {
-                        final wide = c.maxWidth >= 820;
-                        final main = Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            overview,
-                            const SizedBox(height: 14),
-                            card(
-                              'Featured image',
-                              detail.coverImageUrl == null
-                                  ? const Text('No image provided')
-                                  : ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: Image.network(
-                                        ApiConfig.resolveMediaUrl(
-                                          detail.coverImageUrl!,
-                                        ),
-                                        height: 220,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                            ),
-                            const SizedBox(height: 14),
-                            card(
-                              'Components',
-                              Column(
-                                children: [
-                                  for (final component
-                                      in detail.requiredComponents)
-                                    ListTile(
-                                      dense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                      title: Text(component.name),
-                                      subtitle: Text(
-                                        '${component.quantity} ${component.unit} · ${component.category?.nameEn ?? component.materialType}',
-                                      ),
-                                      trailing:
-                                          detail
-                                              .allowedActions
-                                              .canEditComponents
-                                          ? TextButton(
-                                              onPressed: () => _editComponent(
-                                                detail,
-                                                component,
-                                              ),
-                                              child: const Text('Edit'),
-                                            )
-                                          : null,
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            card(
-                              'Links',
-                              Column(
-                                children: [
-                                  for (final link in detail.links)
-                                    ListTile(
-                                      dense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: const Icon(Icons.link_outlined),
-                                      title: Text(link.title ?? link.linkType),
-                                      subtitle: Text(link.url),
-                                      trailing: const Icon(
-                                        Icons.open_in_new,
-                                        size: 18,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            card(
-                              'Steps',
-                              Column(
-                                children: [
-                                  for (final step in detail.steps)
-                                    ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: CircleAvatar(
-                                        radius: 14,
-                                        child: Text('${step.stepNumber}'),
-                                      ),
-                                      title: Text(step.title),
-                                      subtitle: Text(step.description),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                        final side = Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            author,
-                            const SizedBox(height: 14),
-                            history,
-                            if (detail.reviewNote?.isNotEmpty == true) ...[
-                              const SizedBox(height: 14),
-                              card('Admin note', Text(detail.reviewNote!)),
-                            ],
-                          ],
-                        );
-                        return wide
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(flex: 2, child: main),
-                                  const SizedBox(width: 16),
-                                  SizedBox(width: 320, child: side),
-                                ],
-                              )
-                            : Column(
-                                children: [
-                                  main,
-                                  const SizedBox(height: 16),
-                                  side,
-                                ],
-                              );
-                      },
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Wrap(
-                    alignment: WrapAlignment.end,
-                    spacing: 10,
-                    runSpacing: 8,
-                    children: [
-                      if (detail.allowedActions.canRequestChanges)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 220),
-                          child: OutlinedButton(
-                            onPressed: () =>
-                                _runAction('request-changes', detail),
-                            style:
-                                AppStatusButtonStyle.outlined(
-                                  context,
-                                  AppStatusTone.warning,
-                                ).copyWith(
-                                  minimumSize: const WidgetStatePropertyAll(
-                                    Size(0, 42),
-                                  ),
-                                ),
-                            child: const Text('Request changes'),
-                          ),
-                        ),
-                      if (detail.allowedActions.canHide)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 220),
-                          child: OutlinedButton(
-                            onPressed: () => _runAction('hide', detail),
-                            style:
-                                AppStatusButtonStyle.outlined(
-                                  context,
-                                  AppStatusTone.danger,
-                                ).copyWith(
-                                  minimumSize: const WidgetStatePropertyAll(
-                                    Size(0, 42),
-                                  ),
-                                ),
-                            child: const Text('Hide / unpublish'),
-                          ),
-                        ),
-                      if (detail.allowedActions.canArchive)
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 220),
-                          child: OutlinedButton(
-                            onPressed: () => _runAction('archive', detail),
-                            style:
-                                AppStatusButtonStyle.outlined(
-                                  context,
-                                  AppStatusTone.danger,
-                                ).copyWith(
-                                  minimumSize: const WidgetStatePropertyAll(
-                                    Size(0, 42),
-                                  ),
-                                ),
-                            child: const Text('Archive project'),
-                          ),
-                        ),
                     ],
+                  );
+                  return wide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 2, child: main),
+                            const SizedBox(width: 16),
+                            SizedBox(width: 320, child: side),
+                          ],
+                        )
+                      : Column(
+                          children: [main, const SizedBox(height: 16), side],
+                        );
+                },
+              ),
+            ],
+          ),
+          footer: AppDialogFooter.actions(
+            actions: [
+              if (detail.allowedActions.canRequestChanges)
+                OutlinedButton(
+                  onPressed: () => _runAction('request-changes', detail),
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.warning,
                   ),
+                  child: const Text('Request changes'),
                 ),
-              ],
-            ),
+              if (detail.allowedActions.canHide)
+                OutlinedButton(
+                  onPressed: () => _runAction('hide', detail),
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.danger,
+                  ),
+                  child: const Text('Hide / unpublish'),
+                ),
+              if (detail.allowedActions.canArchive)
+                OutlinedButton(
+                  onPressed: () => _runAction('archive', detail),
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.danger,
+                  ),
+                  child: const Text('Archive project'),
+                ),
+            ],
           ),
         );
       },

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -547,13 +547,9 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
     final showDriverVerify =
         isPickupRecoveryReport && report.targetRole == 'DRIVER';
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.cardBorder),
-      ),
+    return AppDialogSection(
+      title: 'Report summary',
+      icon: Icons.report_outlined,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -573,25 +569,26 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
             label: adminIncidentReportStatusLabel(report.status),
             tone: incidentReportStatusTone(report.status),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Learner: ${report.learnerName} · Supplier: ${report.supplierName}',
-            style: AdminTypography.pageSubtitle(palette),
+          const SizedBox(height: AppSpacing.md),
+          AppDialogInfoRow(label: 'Learner', value: report.learnerName),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(label: 'Supplier', value: report.supplierName),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(
+            label: 'Reservation',
+            value: monitoringStatusLabel(report.reservationStatus),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Reservation: ${monitoringStatusLabel(report.reservationStatus)}',
-            style: AdminTypography.pageSubtitle(palette),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(
+            label: 'Reporter',
+            value:
+                '${report.reporterName} · Target (${humanizeEnum(report.targetRole)}): ${report.targetName}',
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Reporter: ${report.reporterName} · Target (${report.targetRole}): ${report.targetName}',
-            style: AdminTypography.pageSubtitle(palette),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Reason: ${humanizeEnum(report.reasonCode)}${report.note?.trim().isNotEmpty == true ? ' · ${report.note!.trim()}' : ''}',
-            style: AdminTypography.pageSubtitle(palette),
+          const SizedBox(height: AppSpacing.sm),
+          AppDialogInfoRow(
+            label: 'Reason',
+            value:
+                '${humanizeEnum(report.reasonCode)}${report.note?.trim().isNotEmpty == true ? ' · ${report.note!.trim()}' : ''}',
           ),
           const SizedBox(height: AppSpacing.sm),
           ExpansionTile(
@@ -673,46 +670,91 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
           ),
           if (widget.showReviewActions) ...[
             const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: [
-                if (isPickupRecoveryReport) ...[
-                  FilledButton(
-                    onPressed: widget.isBusy
-                        ? null
-                        : widget.onRequestSupplierReschedule,
-                    style: AppStatusButtonStyle.filled(
-                      context,
-                      AppStatusTone.warning,
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: AppDialogFooter.actions(
+                actions: [
+                  if (isPickupRecoveryReport) ...[
+                    FilledButton(
+                      onPressed: widget.isBusy
+                          ? null
+                          : widget.onRequestSupplierReschedule,
+                      style: AppStatusButtonStyle.filled(
+                        context,
+                        AppStatusTone.warning,
+                      ),
+                      child:
+                          widget.isBusy &&
+                              widget.busyAction == 'request-reschedule'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Ask supplier for new pickup window'),
                     ),
-                    child:
-                        widget.isBusy &&
-                            widget.busyAction == 'request-reschedule'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Ask supplier for new pickup window'),
-                  ),
-                  OutlinedButton(
-                    onPressed: widget.isBusy
-                        ? null
-                        : widget.onCancelReleaseHold,
-                    style: AppStatusButtonStyle.outlined(
-                      context,
-                      AppStatusTone.danger,
+                    OutlinedButton(
+                      onPressed: widget.isBusy
+                          ? null
+                          : widget.onCancelReleaseHold,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.danger,
+                      ),
+                      child: widget.isBusy && widget.busyAction == 'cancel'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Cancel and release hold'),
                     ),
-                    child: widget.isBusy && widget.busyAction == 'cancel'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Cancel and release hold'),
-                  ),
-                  if (showDriverVerify)
+                    if (showDriverVerify)
+                      FilledButton(
+                        onPressed: widget.isBusy ? null : widget.onVerify,
+                        style: AppStatusButtonStyle.filled(
+                          context,
+                          AppStatusTone.danger,
+                        ),
+                        child: widget.isBusy && widget.busyAction == 'verify'
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Verify driver fault'),
+                      ),
+                  ] else ...[
+                    OutlinedButton(
+                      onPressed: widget.isBusy ? null : widget.onReject,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.danger,
+                      ),
+                      child: widget.isBusy && widget.busyAction == 'reject'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Reject'),
+                    ),
+                    OutlinedButton(
+                      onPressed: widget.isBusy ? null : widget.onResolve,
+                      style: AppStatusButtonStyle.outlined(
+                        context,
+                        AppStatusTone.success,
+                      ),
+                      child: widget.isBusy && widget.busyAction == 'resolve'
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Resolve without strike'),
+                    ),
                     FilledButton(
                       onPressed: widget.isBusy ? null : widget.onVerify,
                       style: AppStatusButtonStyle.filled(
@@ -725,53 +767,11 @@ class _NoShowReportCardState extends ConsumerState<_NoShowReportCard> {
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Verify driver fault'),
+                          : const Text('Verify'),
                     ),
-                ] else ...[
-                  OutlinedButton(
-                    onPressed: widget.isBusy ? null : widget.onReject,
-                    style: AppStatusButtonStyle.outlined(
-                      context,
-                      AppStatusTone.danger,
-                    ),
-                    child: widget.isBusy && widget.busyAction == 'reject'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Reject'),
-                  ),
-                  OutlinedButton(
-                    onPressed: widget.isBusy ? null : widget.onResolve,
-                    style: AppStatusButtonStyle.outlined(
-                      context,
-                      AppStatusTone.success,
-                    ),
-                    child: widget.isBusy && widget.busyAction == 'resolve'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Resolve without strike'),
-                  ),
-                  FilledButton(
-                    onPressed: widget.isBusy ? null : widget.onVerify,
-                    style: AppStatusButtonStyle.filled(
-                      context,
-                      AppStatusTone.danger,
-                    ),
-                    child: widget.isBusy && widget.busyAction == 'verify'
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Verify'),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ],

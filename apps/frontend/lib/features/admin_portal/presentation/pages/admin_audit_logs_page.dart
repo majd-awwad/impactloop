@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_audit_logs_api.dart';
@@ -1096,39 +1097,46 @@ class _AuditLogDetailDialog extends StatelessWidget {
         : '${item.actorName} (${item.actorEmail})';
 
     return AppDialogShell(
-      title: Text(item.actionLabel),
+      title: AppDialogTitleBlock(
+        title: item.actionLabel,
+        icon: Icons.history_outlined,
+      ),
       maxWidth: 560,
       content: SizedBox(
         width: 520,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _DetailRow(label: 'Action', value: item.actionLabel),
-            _DetailRow(
-              label: 'Technical action',
-              value: item.action,
-              muted: true,
-            ),
-            _DetailRow(label: 'Actor', value: actorLabel),
-            _DetailRow(label: 'Target type', value: targetTypeLabel),
-            _DetailRow(label: 'Target', value: item.targetLabel),
-            if (item.targetId != null && item.targetId!.isNotEmpty)
+        child: AppDialogSection(
+          title: 'Audit entry',
+          icon: Icons.receipt_long_outlined,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _DetailRow(label: 'Action', value: item.actionLabel),
               _DetailRow(
-                label: 'Target ID',
-                value: item.targetId!,
+                label: 'Technical action',
+                value: item.action,
                 muted: true,
               ),
-            _DetailRow(
-              label: 'Created at',
-              value: _formatDateTime(item.createdAt) ?? item.createdAt,
-            ),
-            if (metadataRows.isEmpty)
-              _DetailRow(label: 'Details', value: 'No extra details')
-            else
-              ...metadataRows.map(
-                (row) => _DetailRow(label: row.key, value: row.value),
+              _DetailRow(label: 'Actor', value: actorLabel),
+              _DetailRow(label: 'Target type', value: targetTypeLabel),
+              _DetailRow(label: 'Target', value: item.targetLabel),
+              if (item.targetId != null && item.targetId!.isNotEmpty)
+                _DetailRow(
+                  label: 'Target ID',
+                  value: item.targetId!,
+                  muted: true,
+                ),
+              _DetailRow(
+                label: 'Created at',
+                value: _formatDateTime(item.createdAt) ?? item.createdAt,
               ),
-          ],
+              if (metadataRows.isEmpty)
+                _DetailRow(label: 'Details', value: 'No extra details')
+              else
+                ...metadataRows.map(
+                  (row) => _DetailRow(label: row.key, value: row.value),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1147,25 +1155,10 @@ class _DetailRow extends StatelessWidget {
   final bool muted;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AdminTypography.kpiHelper(palette)),
-          Text(
-            value,
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              color: muted ? palette.textMuted : palette.textPrimary,
-              fontSize: muted ? 12 : 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: AppDialogInfoRow(label: label, value: value, muted: muted),
+  );
 }
 
 class _PaginationRow extends StatelessWidget {

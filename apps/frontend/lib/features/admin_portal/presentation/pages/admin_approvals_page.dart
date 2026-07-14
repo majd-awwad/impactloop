@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
@@ -777,7 +778,7 @@ class _ApprovalCardHeader extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             AppStatusBadge(
-              label: status.toUpperCase(),
+              label: _formatApprovalStatus(status),
               tone: reviewStatusTone(status),
             ),
           ],
@@ -961,6 +962,16 @@ String _formatQuantity(double value) {
 String _formatCondition(String? value) {
   if (value == null || value.trim().isEmpty) return '—';
   return value.replaceAll('_', ' ');
+}
+
+String _formatApprovalStatus(String value) {
+  return value
+      .trim()
+      .toLowerCase()
+      .split('_')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
 }
 
 Future<void> _quickApproveCategory(
@@ -1589,9 +1600,16 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
           children: [
             Text(item.requestedName, style: AdminTypography.pageTitle(palette)),
             const SizedBox(height: 8),
-            Text(
-              'Status: ${item.status}',
-              style: AdminTypography.pageSubtitle(palette),
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text('Status', style: AdminTypography.kpiHelper(palette)),
+                AppStatusBadge(
+                  label: _formatApprovalStatus(item.status),
+                  tone: reviewStatusTone(item.status),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             _dialogKv('Supplier', supplierLabel),
@@ -1617,14 +1635,11 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
           ],
         ),
       ),
-      footer: Wrap(
-        alignment: WrapAlignment.end,
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          TextButton(
+      footer: AppDialogFooter.actions(
+        actions: [
+          OutlinedButton(
             onPressed: _submitting ? null : _reject,
-            style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+            style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
             child: const Text('Reject'),
           ),
           FilledButton(
@@ -1650,21 +1665,9 @@ class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
   }
 
   Widget _dialogKv(String label, String value) {
-    final palette = context.adminPalette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(label, style: AdminTypography.kpiHelper(palette)),
-          ),
-          Expanded(
-            child: Text(value, style: AdminTypography.pageSubtitle(palette)),
-          ),
-        ],
-      ),
+      child: AppDialogInfoRow(label: label, value: value),
     );
   }
 }
@@ -1836,9 +1839,16 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
               style: AdminTypography.pageTitle(palette),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Status: ${item.status}',
-              style: AdminTypography.pageSubtitle(palette),
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text('Status', style: AdminTypography.kpiHelper(palette)),
+                AppStatusBadge(
+                  label: _formatApprovalStatus(item.status),
+                  tone: reviewStatusTone(item.status),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             _kv(
@@ -1875,14 +1885,11 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
           ],
         ),
       ),
-      footer: Wrap(
-        alignment: WrapAlignment.end,
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          TextButton(
+      footer: AppDialogFooter.actions(
+        actions: [
+          OutlinedButton(
             onPressed: _submitting ? null : _reject,
-            style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+            style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
             child: const Text('Reject'),
           ),
           FilledButton(
@@ -1908,20 +1915,9 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
   }
 
   Widget _kv(String label, String value) {
-    final palette = context.adminPalette;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 130,
-            child: Text(label, style: AdminTypography.kpiHelper(palette)),
-          ),
-          Expanded(
-            child: Text(value, style: AdminTypography.pageSubtitle(palette)),
-          ),
-        ],
-      ),
+      child: AppDialogInfoRow(label: label, value: value),
     );
   }
 }

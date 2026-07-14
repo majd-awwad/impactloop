@@ -9,6 +9,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
@@ -1671,30 +1672,23 @@ class _MaterialDetailDialog extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.lg,
       ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(detail['title'] as String? ?? 'Material details'),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              AppStatusBadge(
-                label: _displayEnum(status),
-                tone: materialLifecycleStatusTone(status).appStatusTone,
-              ),
-              AppStatusBadge(
-                label: isFree ? 'Free' : 'Paid',
-                tone: isFree ? AppStatusTone.success : AppStatusTone.info,
-              ),
-              if ((category['nameEn'] as String?)?.trim().isNotEmpty ?? false)
-                AppStatusBadge(
-                  label: category['nameEn'] as String,
-                  tone: AppStatusTone.neutral,
-                ),
-            ],
+      title: AppDialogTitleBlock(
+        icon: Icons.inventory_2_outlined,
+        title: detail['title'] as String? ?? 'Material details',
+        badges: [
+          AppStatusBadge(
+            label: _displayEnum(status),
+            tone: materialLifecycleStatusTone(status).appStatusTone,
           ),
+          AppStatusBadge(
+            label: isFree ? 'Free' : 'Paid',
+            tone: isFree ? AppStatusTone.success : AppStatusTone.info,
+          ),
+          if ((category['nameEn'] as String?)?.trim().isNotEmpty ?? false)
+            AppStatusBadge(
+              label: category['nameEn'] as String,
+              tone: AppStatusTone.neutral,
+            ),
         ],
       ),
       content: Column(
@@ -1930,11 +1924,8 @@ class _MaterialDetailDialog extends StatelessWidget {
         ],
       ),
       footer: hasModerationActions
-          ? Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              alignment: WrapAlignment.end,
-              children: [
+          ? AppDialogFooter.actions(
+              actions: [
                 if (onHide != null)
                   OutlinedButton(
                     onPressed: onHide,
@@ -1988,38 +1979,8 @@ class _DetailSection extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.cardSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: colors.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 20, color: colors.primary),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: colors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          child,
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppDialogSection(title: title, icon: icon, child: child);
 }
 
 class _DetailEntry {
@@ -2319,44 +2280,12 @@ class _DetailInfoRow extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (icon != null) ...[
-          Icon(icon, size: 18, color: colors.textMuted),
-          const SizedBox(width: AppSpacing.sm),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: Theme.of(
-                  context,
-                ).textTheme.labelMedium?.copyWith(color: colors.textMuted),
-              ),
-              if (value != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  value!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: colors.textPrimary),
-                ),
-              ],
-            ],
-          ),
-        ),
-        if (trailing != null) ...[
-          const SizedBox(width: AppSpacing.sm),
-          trailing!,
-        ],
-      ],
-    );
-  }
+  Widget build(BuildContext context) => AppDialogInfoRow(
+    label: label,
+    value: value,
+    icon: icon,
+    trailing: trailing,
+  );
 }
 
 class _YesNoBadge extends StatelessWidget {
@@ -2378,35 +2307,7 @@ class _DetailNote extends StatelessWidget {
   final String note;
 
   @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: colors.surfaceMuted,
-        borderRadius: AppRadius.smAll,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: colors.textMuted),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            note,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppDialogNote(title: title, note: note);
 }
 
 class _ReportsSummary extends StatelessWidget {
