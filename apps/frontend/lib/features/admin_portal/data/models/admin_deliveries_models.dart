@@ -1,23 +1,123 @@
+enum DeliveryScope { single, grouped, unknown }
+
+enum LifecyclePhase {
+  waitingAssignment,
+  prePickup,
+  inTransit,
+  completed,
+  recoveryRequired,
+  recoveryInProgress,
+  terminalFailure,
+  cancelled,
+  unknown,
+}
+
+enum AdminAttentionState { none, actionRequired, waitingExternalParty, unknown }
+
+enum AssignmentState { unassigned, active, released, historical, unknown }
+
+enum DeliveryKpiBucket {
+  waitingForDriver,
+  activeInProgress,
+  needsAdminReview,
+  delivered,
+  failedCancelled,
+  unknown,
+}
+
+enum IncidentContext {
+  none,
+  accountability,
+  systemRecovery,
+  accountabilityAndRecovery,
+  unknown,
+}
+
+enum DeliveryMutation { reopenDriverAssignment, unknown }
+
+enum DeliveryLink { openIncident, openReservation, openGroup, unknown }
+
+T _enumValue<T>(String? raw, Map<String, T> values, T unknown) =>
+    values[raw] ?? unknown;
+
+DeliveryScope _scope(String? raw) => _enumValue(raw, const {
+  'SINGLE': DeliveryScope.single,
+  'GROUPED': DeliveryScope.grouped,
+}, DeliveryScope.unknown);
+LifecyclePhase _lifecycle(String? raw) => _enumValue(raw, const {
+  'WAITING_ASSIGNMENT': LifecyclePhase.waitingAssignment,
+  'PRE_PICKUP': LifecyclePhase.prePickup,
+  'IN_TRANSIT': LifecyclePhase.inTransit,
+  'COMPLETED': LifecyclePhase.completed,
+  'RECOVERY_REQUIRED': LifecyclePhase.recoveryRequired,
+  'RECOVERY_IN_PROGRESS': LifecyclePhase.recoveryInProgress,
+  'TERMINAL_FAILURE': LifecyclePhase.terminalFailure,
+  'CANCELLED': LifecyclePhase.cancelled,
+}, LifecyclePhase.unknown);
+AdminAttentionState _attention(String? raw) => _enumValue(raw, const {
+  'NONE': AdminAttentionState.none,
+  'ACTION_REQUIRED': AdminAttentionState.actionRequired,
+  'WAITING_EXTERNAL_PARTY': AdminAttentionState.waitingExternalParty,
+}, AdminAttentionState.unknown);
+AssignmentState _assignmentState(String? raw) => _enumValue(raw, const {
+  'UNASSIGNED': AssignmentState.unassigned,
+  'ACTIVE': AssignmentState.active,
+  'RELEASED': AssignmentState.released,
+  'HISTORICAL': AssignmentState.historical,
+}, AssignmentState.unknown);
+DeliveryKpiBucket _kpi(String? raw) => _enumValue(raw, const {
+  'WAITING_FOR_DRIVER': DeliveryKpiBucket.waitingForDriver,
+  'ACTIVE_IN_PROGRESS': DeliveryKpiBucket.activeInProgress,
+  'NEEDS_ADMIN_REVIEW': DeliveryKpiBucket.needsAdminReview,
+  'DELIVERED': DeliveryKpiBucket.delivered,
+  'FAILED_CANCELLED': DeliveryKpiBucket.failedCancelled,
+}, DeliveryKpiBucket.unknown);
+DeliveryMutation _mutation(String raw) => _enumValue(raw, const {
+  'REOPEN_DRIVER_ASSIGNMENT': DeliveryMutation.reopenDriverAssignment,
+}, DeliveryMutation.unknown);
+DeliveryLink _link(String raw) => _enumValue(raw, const {
+  'OPEN_INCIDENT': DeliveryLink.openIncident,
+  'OPEN_RESERVATION': DeliveryLink.openReservation,
+  'OPEN_GROUP': DeliveryLink.openGroup,
+}, DeliveryLink.unknown);
+
+List<String> _strings(Object? value) => (value as List<dynamic>? ?? const [])
+    .map((item) => item.toString())
+    .toList(growable: false);
+
 class AdminDeliveriesSummary {
   const AdminDeliveriesSummary({
     required this.total,
-    required this.pendingUnassigned,
-    required this.assignedInProgress,
+    required this.waitingForDriver,
+    required this.activeInProgress,
+    required this.needsAdminReview,
     required this.delivered,
     required this.failedCancelled,
   });
 
   final int total;
-  final int pendingUnassigned;
-  final int assignedInProgress;
+  final int waitingForDriver;
+  final int activeInProgress;
+  final int needsAdminReview;
   final int delivered;
   final int failedCancelled;
+
+  // Temporary aliases keep existing presentation code compatible.
+  int get pendingUnassigned => waitingForDriver;
+  int get assignedInProgress => activeInProgress;
 
   factory AdminDeliveriesSummary.fromJson(Map<String, dynamic> json) {
     return AdminDeliveriesSummary(
       total: (json['total'] as num?)?.toInt() ?? 0,
-      pendingUnassigned: (json['pendingUnassigned'] as num?)?.toInt() ?? 0,
-      assignedInProgress: (json['assignedInProgress'] as num?)?.toInt() ?? 0,
+      waitingForDriver:
+          (json['waitingForDriver'] as num?)?.toInt() ??
+          (json['pendingUnassigned'] as num?)?.toInt() ??
+          0,
+      activeInProgress:
+          (json['activeInProgress'] as num?)?.toInt() ??
+          (json['assignedInProgress'] as num?)?.toInt() ??
+          0,
+      needsAdminReview: (json['needsAdminReview'] as num?)?.toInt() ?? 0,
       delivered: (json['delivered'] as num?)?.toInt() ?? 0,
       failedCancelled: (json['failedCancelled'] as num?)?.toInt() ?? 0,
     );
@@ -50,6 +150,105 @@ class AdminDeliveryPerson {
   }
 }
 
+class AdminDeliveryIncidentSummary {
+  const AdminDeliveryIncidentSummary({
+    required this.id,
+    required this.status,
+    required this.reasonCode,
+    required this.workflowType,
+    required this.operationalState,
+    required this.availableActions,
+    this.createdAt,
+  });
+  final String id;
+  final String status;
+  final String reasonCode;
+  final String workflowType;
+  final String operationalState;
+  final List<String> availableActions;
+  final String? createdAt;
+  factory AdminDeliveryIncidentSummary.fromJson(Map<String, dynamic> json) =>
+      AdminDeliveryIncidentSummary(
+        id: json['id'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+        reasonCode: json['reasonCode'] as String? ?? '',
+        workflowType: json['workflowType'] as String? ?? '',
+        operationalState: json['operationalState'] as String? ?? '',
+        availableActions: _strings(json['availableActions']),
+        createdAt: json['createdAt'] as String?,
+      );
+}
+
+class AdminDeliveryAssignment {
+  const AdminDeliveryAssignment({
+    required this.id,
+    required this.status,
+    this.driver,
+    this.acceptedAt,
+    this.releasedAt,
+    this.releaseReason,
+  });
+  final String id;
+  final String status;
+  final AdminDeliveryPerson? driver;
+  final String? acceptedAt;
+  final String? releasedAt;
+  final String? releaseReason;
+  factory AdminDeliveryAssignment.fromJson(Map<String, dynamic> json) =>
+      AdminDeliveryAssignment(
+        id: json['id'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+        driver: json['driver'] is Map<String, dynamic>
+            ? AdminDeliveryPerson.fromJson(
+                json['driver'] as Map<String, dynamic>,
+              )
+            : null,
+        acceptedAt: json['acceptedAt'] as String?,
+        releasedAt: json['releasedAt'] as String?,
+        releaseReason: json['releaseReason'] as String?,
+      );
+}
+
+class AdminDeliveryGroupSummary {
+  const AdminDeliveryGroupSummary({
+    required this.id,
+    required this.status,
+    required this.reservationCount,
+    required this.reservations,
+    required this.hasMoreReservations,
+  });
+  final String id;
+  final String status;
+  final int reservationCount;
+  final List<AdminDeliveryReservationPreview> reservations;
+  final bool hasMoreReservations;
+  factory AdminDeliveryGroupSummary.fromJson(Map<String, dynamic> json) =>
+      AdminDeliveryGroupSummary(
+        id: json['id'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+        reservationCount: (json['reservationCount'] as num?)?.toInt() ?? 0,
+        reservations: (json['reservations'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(AdminDeliveryReservationPreview.fromJson)
+            .toList(growable: false),
+        hasMoreReservations: json['hasMoreReservations'] as bool? ?? false,
+      );
+}
+
+class AdminDeliveryReservationPreview {
+  const AdminDeliveryReservationPreview({
+    required this.id,
+    required this.status,
+  });
+  final String id;
+  final String status;
+  factory AdminDeliveryReservationPreview.fromJson(Map<String, dynamic> json) =>
+      AdminDeliveryReservationPreview(
+        id: json['id'] as String? ?? '',
+        status: json['status'] as String? ?? '',
+      );
+}
+
 class AdminDeliveryListItem {
   const AdminDeliveryListItem({
     required this.id,
@@ -65,6 +264,19 @@ class AdminDeliveryListItem {
     this.driver,
     this.pickupArea,
     this.dropoffArea,
+    required this.scope,
+    required this.lifecyclePhase,
+    required this.adminAttentionState,
+    required this.assignmentState,
+    required this.kpiBucket,
+    required this.availableMutations,
+    required this.availableLinks,
+    required this.availableMutationRawValues,
+    required this.availableLinkRawValues,
+    this.primaryIncidentSummary,
+    this.incidentCount = 0,
+    this.hasAdditionalIncidents = false,
+    this.group,
   });
 
   final String id;
@@ -80,9 +292,25 @@ class AdminDeliveryListItem {
   final AdminDeliveryPerson? driver;
   final String? pickupArea;
   final String? dropoffArea;
+  final DeliveryScope scope;
+  final LifecyclePhase lifecyclePhase;
+  final AdminAttentionState adminAttentionState;
+  final AssignmentState assignmentState;
+  final DeliveryKpiBucket kpiBucket;
+  final List<DeliveryMutation> availableMutations;
+  final List<DeliveryLink> availableLinks;
+  final List<String> availableMutationRawValues;
+  final List<String> availableLinkRawValues;
+  final AdminDeliveryIncidentSummary? primaryIncidentSummary;
+  final int incidentCount;
+  final bool hasAdditionalIncidents;
+  final AdminDeliveryGroupSummary? group;
 
   factory AdminDeliveryListItem.fromJson(Map<String, dynamic> json) {
-    final reservation = json['reservation'] as Map<String, dynamic>? ?? const {};
+    final reservation =
+        json['reservation'] as Map<String, dynamic>? ?? const {};
+    final mutationValues = _strings(json['availableMutations']);
+    final linkValues = _strings(json['availableLinks']);
     return AdminDeliveryListItem(
       id: json['id'] as String? ?? '',
       status: json['status'] as String? ?? '',
@@ -101,21 +329,38 @@ class AdminDeliveryListItem {
         json['supplier'] as Map<String, dynamic>? ?? const {},
       ),
       driver: json['driver'] is Map<String, dynamic>
-          ? AdminDeliveryPerson.fromJson(
-              json['driver'] as Map<String, dynamic>,
-            )
+          ? AdminDeliveryPerson.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
       pickupArea: json['pickupArea'] as String?,
       dropoffArea: json['dropoffArea'] as String?,
+      scope: _scope(json['scope'] as String?),
+      lifecyclePhase: _lifecycle(json['lifecyclePhase'] as String?),
+      adminAttentionState: _attention(json['adminAttentionState'] as String?),
+      assignmentState: _assignmentState(json['assignmentState'] as String?),
+      kpiBucket: _kpi(json['kpiBucket'] as String?),
+      availableMutations: mutationValues.map(_mutation).toList(growable: false),
+      availableLinks: linkValues.map(_link).toList(growable: false),
+      availableMutationRawValues: mutationValues,
+      availableLinkRawValues: linkValues,
+      primaryIncidentSummary:
+          json['primaryIncidentSummary'] is Map<String, dynamic>
+          ? AdminDeliveryIncidentSummary.fromJson(
+              json['primaryIncidentSummary'] as Map<String, dynamic>,
+            )
+          : null,
+      incidentCount: (json['incidentCount'] as num?)?.toInt() ?? 0,
+      hasAdditionalIncidents: json['hasAdditionalIncidents'] as bool? ?? false,
+      group: json['group'] is Map<String, dynamic>
+          ? AdminDeliveryGroupSummary.fromJson(
+              json['group'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 }
 
 class AdminDeliveryMaterialSummary {
-  const AdminDeliveryMaterialSummary({
-    required this.id,
-    required this.title,
-  });
+  const AdminDeliveryMaterialSummary({required this.id, required this.title});
 
   final String id;
   final String title;
@@ -258,6 +503,25 @@ class AdminDeliveryDetail {
     this.driverNote,
     this.failureReason,
     this.driver,
+    required this.scope,
+    required this.lifecyclePhase,
+    required this.adminAttentionState,
+    required this.assignmentState,
+    required this.kpiBucket,
+    required this.availableMutations,
+    required this.availableLinks,
+    required this.availableMutationRawValues,
+    required this.availableLinkRawValues,
+    required this.assignmentHistory,
+    this.currentDriver,
+    this.lastAssignedDriver,
+    this.currentAssignment,
+    this.lastAssignment,
+    this.primaryIncident,
+    this.linkedIncidents = const [],
+    this.incidentCount = 0,
+    this.hasMoreLinkedIncidents = false,
+    this.group,
   });
 
   final String id;
@@ -279,6 +543,25 @@ class AdminDeliveryDetail {
   final AdminDeliveryPerson learner;
   final AdminDeliveryPerson supplier;
   final AdminDeliveryPerson? driver;
+  final DeliveryScope scope;
+  final LifecyclePhase lifecyclePhase;
+  final AdminAttentionState adminAttentionState;
+  final AssignmentState assignmentState;
+  final DeliveryKpiBucket kpiBucket;
+  final List<DeliveryMutation> availableMutations;
+  final List<DeliveryLink> availableLinks;
+  final List<String> availableMutationRawValues;
+  final List<String> availableLinkRawValues;
+  final AdminDeliveryPerson? currentDriver;
+  final AdminDeliveryPerson? lastAssignedDriver;
+  final AdminDeliveryAssignment? currentAssignment;
+  final AdminDeliveryAssignment? lastAssignment;
+  final List<AdminDeliveryAssignment> assignmentHistory;
+  final AdminDeliveryIncidentSummary? primaryIncident;
+  final List<AdminDeliveryIncidentSummary> linkedIncidents;
+  final int incidentCount;
+  final bool hasMoreLinkedIncidents;
+  final AdminDeliveryGroupSummary? group;
   final AdminDeliveryPickupDetail pickup;
   final AdminDeliveryDropoffDetail dropoff;
   final List<AdminDeliveryTimelineItem> timeline;
@@ -286,9 +569,13 @@ class AdminDeliveryDetail {
   final bool canReopenDriverAssignment;
 
   bool get canShowReopenDriverAssignmentAction =>
-      canReopenDriverAssignment && status == 'DRIVER_ASSIGNED' && driver != null;
+      canReopenDriverAssignment &&
+      status == 'DRIVER_ASSIGNED' &&
+      driver != null;
 
   factory AdminDeliveryDetail.fromJson(Map<String, dynamic> json) {
+    final mutationValues = _strings(json['availableMutations']);
+    final linkValues = _strings(json['availableLinks']);
     return AdminDeliveryDetail(
       id: json['id'] as String? ?? '',
       status: json['status'] as String? ?? '',
@@ -317,9 +604,7 @@ class AdminDeliveryDetail {
         json['supplier'] as Map<String, dynamic>? ?? const {},
       ),
       driver: json['driver'] is Map<String, dynamic>
-          ? AdminDeliveryPerson.fromJson(
-              json['driver'] as Map<String, dynamic>,
-            )
+          ? AdminDeliveryPerson.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
       pickup: AdminDeliveryPickupDetail.fromJson(
         json['pickup'] as Map<String, dynamic>? ?? const {},
@@ -336,6 +621,56 @@ class AdminDeliveryDetail {
       ),
       canReopenDriverAssignment:
           json['canReopenDriverAssignment'] as bool? ?? false,
+      scope: _scope(json['scope'] as String?),
+      lifecyclePhase: _lifecycle(json['lifecyclePhase'] as String?),
+      adminAttentionState: _attention(json['adminAttentionState'] as String?),
+      assignmentState: _assignmentState(json['assignmentState'] as String?),
+      kpiBucket: _kpi(json['kpiBucket'] as String?),
+      availableMutations: mutationValues.map(_mutation).toList(growable: false),
+      availableLinks: linkValues.map(_link).toList(growable: false),
+      availableMutationRawValues: mutationValues,
+      availableLinkRawValues: linkValues,
+      currentDriver: json['currentDriver'] is Map<String, dynamic>
+          ? AdminDeliveryPerson.fromJson(
+              json['currentDriver'] as Map<String, dynamic>,
+            )
+          : null,
+      lastAssignedDriver: json['lastAssignedDriver'] is Map<String, dynamic>
+          ? AdminDeliveryPerson.fromJson(
+              json['lastAssignedDriver'] as Map<String, dynamic>,
+            )
+          : null,
+      currentAssignment: json['currentAssignment'] is Map<String, dynamic>
+          ? AdminDeliveryAssignment.fromJson(
+              json['currentAssignment'] as Map<String, dynamic>,
+            )
+          : null,
+      lastAssignment: json['lastAssignment'] is Map<String, dynamic>
+          ? AdminDeliveryAssignment.fromJson(
+              json['lastAssignment'] as Map<String, dynamic>,
+            )
+          : null,
+      assignmentHistory:
+          (json['assignmentHistory'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>()
+              .map(AdminDeliveryAssignment.fromJson)
+              .toList(growable: false),
+      primaryIncident: json['primaryIncident'] is Map<String, dynamic>
+          ? AdminDeliveryIncidentSummary.fromJson(
+              json['primaryIncident'] as Map<String, dynamic>,
+            )
+          : null,
+      linkedIncidents: (json['linkedIncidents'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(AdminDeliveryIncidentSummary.fromJson)
+          .toList(growable: false),
+      incidentCount: (json['incidentCount'] as num?)?.toInt() ?? 0,
+      hasMoreLinkedIncidents: json['hasMoreLinkedIncidents'] as bool? ?? false,
+      group: json['group'] is Map<String, dynamic>
+          ? AdminDeliveryGroupSummary.fromJson(
+              json['group'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 }
