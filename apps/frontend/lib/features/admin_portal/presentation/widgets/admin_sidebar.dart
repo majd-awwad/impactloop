@@ -50,7 +50,7 @@ class AdminSidebar extends ConsumerWidget {
         '/admin/reservations',
       ),
       _NavDef(
-        'No-show reports',
+        'Incident Reports',
         Icons.report_outlined,
         '/admin/no-show-reports',
       ),

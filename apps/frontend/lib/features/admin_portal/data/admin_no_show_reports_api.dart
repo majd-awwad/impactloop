@@ -31,6 +31,10 @@ class AdminNoShowReportItem {
     required this.reviewedBy,
     required this.reviewedByName,
     required this.pendingReschedule,
+    this.targetUserId,
+    required this.fulfillmentMethod,
+    required this.assignedDriverName,
+    required this.hasIndividualTarget,
   });
 
   final String id;
@@ -58,6 +62,12 @@ class AdminNoShowReportItem {
   final AdminNoShowReportReviewer? reviewedBy;
   final String? reviewedByName;
   final AdminNoShowReportPendingReschedule? pendingReschedule;
+  final String? targetUserId;
+  /// These optional values are additive contract fields.  The current API
+  /// omits them for some older reports, so presentation must fail closed.
+  final String? fulfillmentMethod;
+  final String? assignedDriverName;
+  final bool hasIndividualTarget;
 
   factory AdminNoShowReportItem.fromJson(Map<String, dynamic> json) {
     final reporter = json['reporter'];
@@ -70,6 +80,9 @@ class AdminNoShowReportItem {
     final pendingReschedule = reservation is Map
         ? reservation['pendingReschedule']
         : null;
+    final assignedDriver = reservation is Map
+        ? reservation['assignedDriver']
+        : json['assignedDriver'];
 
     return AdminNoShowReportItem(
       id: json['id'] as String? ?? '',
@@ -86,10 +99,10 @@ class AdminNoShowReportItem {
           ? reporter['displayName'] as String? ?? 'Supplier'
           : 'Supplier',
       targetName: target is Map
-          ? target['displayName'] as String? ?? 'Target user'
+          ? target['displayName'] as String? ?? 'Target unavailable'
           : json['targetRole'] == 'SYSTEM'
               ? 'System / no driver'
-              : 'Target user',
+              : 'Target unavailable',
       materialTitle: material is Map
           ? material['title'] as String? ?? 'Material'
           : 'Material',
@@ -128,6 +141,16 @@ class AdminNoShowReportItem {
               Map<String, dynamic>.from(pendingReschedule),
             )
           : null,
+      targetUserId: target is Map ? target['id'] as String? : null,
+      fulfillmentMethod: reservation is Map
+          ? reservation['fulfillmentMethod'] as String?
+          : null,
+      assignedDriverName: assignedDriver is Map
+          ? assignedDriver['displayName'] as String?
+          : null,
+      hasIndividualTarget:
+          target is Map &&
+          (target['id'] as String?)?.trim().isNotEmpty == true,
     );
   }
 }
@@ -136,10 +159,16 @@ class AdminNoShowReportsListResponse {
   const AdminNoShowReportsListResponse({
     required this.items,
     required this.total,
+    required this.page,
+    required this.limit,
+    required this.totalPages,
   });
 
   final List<AdminNoShowReportItem> items;
   final int total;
+  final int page;
+  final int limit;
+  final int? totalPages;
 
   factory AdminNoShowReportsListResponse.fromJson(Map<String, dynamic> json) {
     final items = json['items'];
@@ -159,6 +188,16 @@ class AdminNoShowReportsListResponse {
       total: pagination is Map
           ? (pagination['total'] as num?)?.toInt() ?? 0
           : 0,
+      page: pagination is Map
+          ? (pagination['page'] as num?)?.toInt() ?? 1
+          : 1,
+      limit: pagination is Map
+          ? (pagination['limit'] as num?)?.toInt() ?? 50
+          : 50,
+      totalPages: pagination is Map
+          ? (pagination['totalPages'] as num?)?.toInt() ??
+              (pagination['pages'] as num?)?.toInt()
+          : null,
     );
   }
 }
@@ -214,6 +253,9 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
     required super.reviewedBy,
     required super.reviewedByName,
     required super.pendingReschedule,
+    required super.fulfillmentMethod,
+    required super.assignedDriverName,
+    required super.hasIndividualTarget,
     this.messages = const [],
     this.activityHistory = const [],
     this.deliveryTimeline = const [],
@@ -260,6 +302,9 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
       reviewedBy: base.reviewedBy,
       reviewedByName: base.reviewedByName,
       pendingReschedule: base.pendingReschedule,
+      fulfillmentMethod: base.fulfillmentMethod,
+      assignedDriverName: base.assignedDriverName,
+      hasIndividualTarget: base.hasIndividualTarget,
       messages: messages is List
           ? messages
                 .whereType<Map>()
@@ -433,7 +478,7 @@ class AdminNoShowReportsApi {
   final Dio _client;
 
   Future<AdminNoShowReportsListResponse> fetchReports({
-    String status = 'PENDING_REVIEW',
+    String? status,
     int page = 1,
     int limit = 50,
   }) {
@@ -441,7 +486,7 @@ class AdminNoShowReportsApi {
       _client.get<Map<String, dynamic>>(
         '/api/admin/no-show-reports',
         queryParameters: {
-          'status': status,
+          if (status != null && status.trim().isNotEmpty) 'status': status,
           'page': page,
           'limit': limit,
         },
