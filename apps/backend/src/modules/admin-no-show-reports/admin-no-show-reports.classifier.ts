@@ -35,7 +35,10 @@ export type AdminReportClassifierContext = {
     id: string;
     status: string;
     assignedDriverProfileId: string | null;
+    deliveryGroupId?: string | null;
   } | null;
+  isGroupedDelivery?: boolean;
+  isGroupRecoverySupported?: boolean;
 };
 
 export type AdminReportContract = {
@@ -112,6 +115,10 @@ export const classifyStrikeImpact = (
     : 'NONE';
 
 const recoveryActions = (context: AdminReportClassifierContext): AdminReportAction[] => {
+  if (context.isGroupedDelivery && !context.isGroupRecoverySupported) {
+    return [];
+  }
+
   if (
     context.delivery == null ||
     !RECOVERY_DELIVERY_STATUSES.has(context.delivery.status)

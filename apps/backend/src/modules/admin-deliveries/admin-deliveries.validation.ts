@@ -13,12 +13,17 @@ const deliveryStatusSchema = z.enum([
   'CANCELLED',
   'FAILED_PICKUP',
   'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+  'AWAITING_RESOLUTION',
 ]);
 
 export const adminDeliveriesListQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(200).optional(),
   status: deliveryStatusSchema.optional(),
-  assignment: z.enum(['ASSIGNED', 'UNASSIGNED']).optional(),
+  assignment: z.enum(['ASSIGNED', 'UNASSIGNED', 'ACTIVE', 'RELEASED', 'HISTORICAL']).optional(),
+  scope: z.enum(['SINGLE', 'GROUPED']).optional(),
+  incidentState: z.enum(['PENDING_REVIEW', 'VERIFIED', 'REJECTED', 'RESOLVED_NO_STRIKE']).optional(),
   dateFrom: z.string().trim().optional(),
   dateTo: z.string().trim().optional(),
 });

@@ -58,6 +58,10 @@ export const adminDeliveryListInclude = {
   reservation: {
     select: {
       id: true,
+      status: true,
+      fulfillmentMethod: true,
+      pendingRescheduleRequestedBy: true,
+      pendingRescheduleReason: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
       supplierNote: true,
@@ -98,6 +102,49 @@ export const adminDeliveryListInclude = {
       },
     },
   },
+  deliveryGroup: {
+    select: {
+      id: true,
+      status: true,
+      reservations: {
+        orderBy: { createdAt: 'desc' as const },
+        take: 3,
+        select: { id: true, status: true },
+      },
+      _count: { select: { reservations: true } },
+    },
+  },
+  assignments: {
+    orderBy: [{ acceptedAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 2,
+    select: {
+      id: true,
+      status: true,
+      acceptedAt: true,
+      releasedAt: true,
+      driverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+    },
+  },
+  incidentReports: {
+    orderBy: [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 20,
+    select: {
+      id: true,
+      status: true,
+      reasonCode: true,
+      targetRole: true,
+      targetUserId: true,
+      deliveryId: true,
+      createdAt: true,
+    },
+  },
+  _count: { select: { incidentReports: true } },
 } satisfies Prisma.DeliveryInclude;
 
 export const adminDeliveryDetailInclude = {
@@ -105,6 +152,9 @@ export const adminDeliveryDetailInclude = {
     select: {
       id: true,
       status: true,
+      fulfillmentMethod: true,
+      pendingRescheduleRequestedBy: true,
+      pendingRescheduleReason: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
       supplierNote: true,
@@ -146,14 +196,19 @@ export const adminDeliveryDetailInclude = {
   },
   deliveryGroup: {
     select: {
+      id: true,
       status: true,
       assignedDriverProfileId: true,
       reservations: {
+        orderBy: { createdAt: 'desc' as const },
+        take: 50,
         select: {
+          id: true,
           status: true,
           fulfillmentMethod: true,
         },
       },
+      _count: { select: { reservations: true } },
     },
   },
   statusHistory: {
@@ -184,13 +239,40 @@ export const adminDeliveryDetailInclude = {
     },
   },
   assignments: {
-    orderBy: { acceptedAt: 'desc' as const },
-    take: 1,
+    orderBy: [{ acceptedAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 20,
     select: {
+      id: true,
       acceptedAt: true,
+      releasedAt: true,
       status: true,
+      releaseReason: true,
+      driverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
     },
   },
+  incidentReports: {
+    orderBy: [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 20,
+    select: {
+      id: true,
+      status: true,
+      reasonCode: true,
+      targetRole: true,
+      targetUserId: true,
+      deliveryId: true,
+      createdAt: true,
+      note: true,
+      reviewNote: true,
+      reviewedAt: true,
+    },
+  },
+  _count: { select: { incidentReports: true } },
 } satisfies Prisma.DeliveryInclude;
 
 export type AdminDeliveryListRecord = Prisma.DeliveryGetPayload<{
@@ -363,6 +445,8 @@ const buildSearchWhere = (search?: string): Prisma.DeliveryWhereInput | undefine
 
   return {
     OR: [
+      { id: normalized },
+      { reservationId: normalized },
       {
         reservation: {
           material: { title: { contains: normalized, mode: 'insensitive' } },
@@ -420,6 +504,33 @@ export const buildAdminDeliveriesWhere = (
     and.push({ assignedDriverProfileId: { not: null } });
   } else if (query.assignment === 'UNASSIGNED') {
     and.push({ assignedDriverProfileId: null });
+  } else if (query.assignment === 'ACTIVE') {
+    and.push({
+      assignments: {
+        some: { status: 'ACTIVE' },
+      },
+      assignedDriverProfileId: { not: null },
+    });
+  } else if (query.assignment === 'RELEASED') {
+    and.push({
+      assignedDriverProfileId: null,
+      assignments: { some: { status: 'RELEASED' } },
+    });
+  } else if (query.assignment === 'HISTORICAL') {
+    and.push({
+      assignments: { some: {} },
+      status: { in: ['DELIVERED', 'CANCELLED', 'FAILED_PICKUP', 'FAILED_DELIVERY', 'DRIVER_NO_SHOW', 'LEARNER_NO_SHOW'] },
+    });
+  }
+
+  if (query.scope === 'GROUPED') {
+    and.push({ deliveryGroupId: { not: null } });
+  } else if (query.scope === 'SINGLE') {
+    and.push({ deliveryGroupId: null });
+  }
+
+  if (query.incidentState) {
+    and.push({ incidentReports: { some: { status: query.incidentState } } });
   }
 
   const requestedAt = buildDateRange(query.dateFrom, query.dateTo);

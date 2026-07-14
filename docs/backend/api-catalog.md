@@ -353,6 +353,10 @@ Saved locations are private to the authenticated user. Response rows include `la
 
 **Admin learning project detail:** `GET .../:id` includes `componentQuality` (project-level hard/soft warnings) and per-component `quality` warnings. `canEditComponents` is true only when status is `PENDING_REVIEW` or `CHANGES_REQUESTED`.
 
+**Admin delivery monitor contract:** `GET /api/admin/deliveries` accepts `search`, every persisted delivery `status`, legacy `assignment` (`ASSIGNED` | `UNASSIGNED`), contract assignment states (`ACTIVE` | `RELEASED` | `HISTORICAL`), `scope` (`SINGLE` | `GROUPED`), bounded `incidentState`, `dateFrom`, `dateTo`, `page`, and `limit`. Each item and detail expose an exclusive `kpiBucket`, `lifecyclePhase`, `adminAttentionState`, `assignmentState`, `scope`, `availableMutations`, and navigation-only `availableLinks`. Details also return bounded assignment and incident histories, plus a deterministic primary incident (operational recovery first, then pending accountability, then terminal; newest `createdAt`, then id).
+
+**Admin delivery incident safety:** grouped deliveries deliberately expose no recovery mutations until group-level recovery semantics are implemented. Direct recovery endpoints reclassify their transaction context and return `409 REPORT_ACTION_NOT_AVAILABLE` when that action is unavailable.
+
 **Admin component enrichment PATCH:** Partial body may include `componentName`, `quantity`, `unit`, `componentRole`, `categoryId`, `materialType`, `searchKeywords`, `alternativeKeywords`, `canBeSubstituted`, `isRequired`, `notes`, `reviewStatus`. Rejected when project is `PUBLISHED`, `HIDDEN`, `ARCHIVED`, or `REJECTED`. Validates active `MATERIAL`/`BOTH` categories, keyword limits, and case-insensitive duplicate names within the project. On success sets `confirmedByUser=true`, defaults `reviewStatus` to `ACCEPTED`, logs `LEARNING_PROJECT_COMPONENT_ENRICHED`.
 
 **Admin approve:** `PATCH .../approve` blocks on hard component quality issues (`COMPONENT_QUALITY_HARD_ISSUES`); soft warnings are returned in detail for frontend confirmation but do not block approve.

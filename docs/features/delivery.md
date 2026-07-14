@@ -113,6 +113,8 @@ Failure and recovery:
 - Admin can verify/reject/resolve incident reports. For pickup-recovery reports (`NO_DRIVER_AVAILABLE`, `NO_RESPONSE_AFTER_PICKUP_WINDOW`, `DRIVER_DID_NOT_ARRIVE`, `PICKUP_FAILED`), generic resolve is blocked until admin chooses an operational action.
 - Admin **Ask supplier for new pickup window** moves the reservation to `AWAITING_SUPPLIER_CONFIRMATION`, releases active delivery assignments, and notifies the supplier. Supplier `submit-no-driver-pickup-window` then sets the reservation back to `ACCEPTED`, reopens the delivery as `WAITING_FOR_DRIVER`, and notifies eligible drivers.
 - Admin **Cancel and release hold** is implemented only for pickup-recovery incident reports. It sets the reservation to `EXPIRED`, cancels the delivery, releases the assignment, and recomputes material availability without decrementing stock.
+- Admin delivery monitor reads use one shared contract for lifecycle, exclusive KPI bucket, attention state, scope, assignment state, mutations, and links. `OPEN_INCIDENT`, `OPEN_RESERVATION`, and `OPEN_GROUP` are navigation links, not admin attention actions.
+- Grouped-delivery pickup recovery is fail-closed: until group-level recovery transitions are explicitly supported, reschedule and cancel/release-hold are omitted from the canonical incident action contract and direct calls return a conflict.
 - General learner/supplier/admin delivery cancellation and selected-driver reassignment are not implemented. Incident recovery and admin pre-pickup unassignment reopen jobs to the driver pool instead of assigning a specific replacement driver.
 
 Notifications:

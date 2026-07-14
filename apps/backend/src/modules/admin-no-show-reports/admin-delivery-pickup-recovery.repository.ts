@@ -42,6 +42,7 @@ const pickupRecoveryDeliverySelect = {
   id: true,
   status: true,
   assignedDriverProfileId: true,
+  deliveryGroupId: true,
   reservationId: true,
 } satisfies Prisma.DeliverySelect;
 
@@ -138,6 +139,8 @@ const validatePickupRecoveryContext = (
     report,
     reservation,
     delivery,
+    isGroupedDelivery: delivery?.deliveryGroupId != null,
+    isGroupRecoverySupported: false,
   });
 
   if (!contract.availableActions.includes(action)) {
@@ -212,6 +215,14 @@ export const requestSupplierRescheduleForPickupRecoveryReport = async (input: {
         status: 'RELEASED',
         releasedAt: new Date(),
         releaseReason: 'Admin requested supplier pickup reschedule',
+      },
+    });
+
+    await tx.delivery.update({
+      where: { id: delivery.id },
+      data: {
+        assignedDriverProfileId: null,
+        assignedAt: null,
       },
     });
 

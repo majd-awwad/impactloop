@@ -4,6 +4,11 @@ import { AppError } from '../../utils/app-error.js';
 import * as repository from './admin-deliveries.repository.js';
 import type { AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
 import { notifyDriverDeliveryUnassignedByAdmin } from '../notifications/driver-notification-events.service.js';
+import { classifyAdminReportContract } from '../admin-no-show-reports/admin-no-show-reports.classifier.js';
+import {
+  composeAdminDeliveryContract,
+  type DeliveryIncidentContract,
+} from './admin-deliveries.classifier.js';
 
 type OwnerWithSupplier = {
   id: string;
@@ -129,7 +134,134 @@ const buildTimelineEvents = (
     });
 };
 
-const mapListItem = (delivery: repository.AdminDeliveryListRecord) => ({
+type IncidentRecord = {
+  id: string;
+  status: string;
+  reasonCode: string;
+  targetRole: string;
+  targetUserId: string | null;
+  deliveryId: string | null;
+  createdAt: Date;
+  note?: string | null;
+  reviewNote?: string | null;
+  reviewedAt?: Date | null;
+};
+
+const mapIncidentContract = (
+  delivery: {
+    id: string;
+    status: string;
+    deliveryGroupId: string | null;
+    assignedDriverProfileId: string | null;
+    reservation: {
+      status: string;
+      fulfillmentMethod: string;
+      pendingRescheduleRequestedBy: string | null;
+      pendingRescheduleReason: string | null;
+    };
+  },
+  report: IncidentRecord,
+): DeliveryIncidentContract & { createdAt: Date; status: string; reasonCode: string } => {
+  const contract = classifyAdminReportContract({
+    report,
+    reservation: delivery.reservation,
+    delivery: {
+      id: delivery.id,
+      status: delivery.status,
+      assignedDriverProfileId: delivery.assignedDriverProfileId,
+      deliveryGroupId: delivery.deliveryGroupId,
+    },
+    isGroupedDelivery: delivery.deliveryGroupId != null,
+    isGroupRecoverySupported: false,
+  });
+  return { id: report.id, ...contract, createdAt: report.createdAt, status: report.status, reasonCode: report.reasonCode };
+};
+
+const selectPrimaryIncident = <T extends ReturnType<typeof mapIncidentContract>>(
+  reports: T[],
+): T | null => {
+  const ordered = [...reports].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id),
+  );
+  return (
+    ordered.find((report) => report.operationalState === 'REQUIRES_RESOLUTION') ??
+    ordered.find((report) => report.status === 'PENDING_REVIEW') ??
+    ordered[0] ??
+    null
+  );
+};
+
+const mapIncidentSummary = (
+  report: ReturnType<typeof mapIncidentContract> | null,
+) =>
+  report
+    ? {
+        id: report.id,
+        status: report.status,
+        reasonCode: report.reasonCode,
+        workflowType: report.workflowType,
+        operationalState: report.operationalState,
+        availableActions: report.availableActions,
+        createdAt: report.createdAt.toISOString(),
+      }
+    : null;
+
+const mapDeliveryContract = (
+  delivery: repository.AdminDeliveryListRecord | repository.AdminDeliveryDetailRecord,
+  canReopenDriverAssignment: boolean,
+) => {
+  const incidentContracts = delivery.incidentReports.map((report) =>
+    mapIncidentContract(delivery, report),
+  );
+  const primaryIncident = selectPrimaryIncident(incidentContracts);
+  const contract = composeAdminDeliveryContract({
+    delivery: {
+      id: delivery.id,
+      status: delivery.status,
+      deliveryGroupId: delivery.deliveryGroupId,
+      assignedDriverProfileId: delivery.assignedDriverProfileId,
+    },
+    reservation: {
+      id: delivery.reservation.id,
+      status: delivery.reservation.status,
+      pendingRescheduleRequestedBy: delivery.reservation.pendingRescheduleRequestedBy,
+      pendingRescheduleReason: delivery.reservation.pendingRescheduleReason,
+    },
+    primaryIncident,
+    hasExpectedRecoveryIncident:
+      !['AWAITING_RESOLUTION', 'DRIVER_NO_SHOW', 'FAILED_PICKUP'].includes(delivery.status) ||
+      delivery._count.incidentReports > 0,
+    canReopenDriverAssignment,
+    assignments: delivery.assignments.map((assignment) => ({
+      id: assignment.id,
+      status: assignment.status,
+      acceptedAt: assignment.acceptedAt,
+      releasedAt: assignment.releasedAt,
+      driver: assignment.driverProfile
+        ? {
+            id: assignment.driverProfile.id,
+            displayName: assignment.driverProfile.displayName,
+            email: assignment.driverProfile.user.email,
+          }
+        : null,
+    })),
+  });
+
+  return { contract, primaryIncident, incidentContracts };
+};
+
+const mapListItem = (delivery: repository.AdminDeliveryListRecord) => {
+  const canReopen =
+    delivery.status === 'DRIVER_ASSIGNED' &&
+    delivery.assignedDriverProfileId != null &&
+    delivery.deliveryGroupId == null &&
+    delivery.assignments.some(
+      (assignment) =>
+        assignment.status === 'ACTIVE' &&
+        assignment.driverProfile.id === delivery.assignedDriverProfileId,
+    );
+  const { contract, primaryIncident } = mapDeliveryContract(delivery, canReopen);
+  return {
   id: delivery.id,
   status: delivery.status,
   requestedAt: delivery.requestedAt.toISOString(),
@@ -163,7 +295,21 @@ const mapListItem = (delivery: repository.AdminDeliveryListRecord) => ({
     : null,
   pickupArea: formatLocationLabel(delivery.pickupLocation),
   dropoffArea: formatLocationLabel(delivery.dropoffLocation),
-});
+  ...contract,
+  primaryIncidentSummary: mapIncidentSummary(primaryIncident),
+  incidentCount: delivery._count.incidentReports,
+  hasAdditionalIncidents: delivery._count.incidentReports > 1,
+  group: delivery.deliveryGroup
+    ? {
+        id: delivery.deliveryGroup.id,
+        status: delivery.deliveryGroup.status,
+        reservationCount: delivery.deliveryGroup._count.reservations,
+        reservations: delivery.deliveryGroup.reservations,
+        hasMoreReservations: delivery.deliveryGroup._count.reservations > delivery.deliveryGroup.reservations.length,
+      }
+    : null,
+  };
+};
 
 const decimalToNumber = (value: unknown): number | null => {
   if (value == null) return null;
@@ -205,6 +351,11 @@ const canReopenDriverAssignment = (
       )));
 
 const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
+  const canReopen = canReopenDriverAssignment(delivery);
+  const { contract, primaryIncident, incidentContracts } = mapDeliveryContract(
+    delivery,
+    canReopen,
+  );
   const locationPings = delivery.locationPings.map((ping) => ({
     id: ping.id,
     capturedAt: ping.capturedAt.toISOString(),
@@ -228,7 +379,8 @@ const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
     learnerNote: delivery.learnerNote,
     driverNote: delivery.driverNote,
     failureReason: delivery.failureReason,
-    canReopenDriverAssignment: canReopenDriverAssignment(delivery),
+    canReopenDriverAssignment: canReopen,
+    ...contract,
     reservation: {
       id: delivery.reservation.id,
       status: delivery.reservation.status,
@@ -262,7 +414,11 @@ const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
           email: delivery.assignedDriverProfile.user.email,
           phone: delivery.assignedDriverProfile.phone,
           acceptedAt:
-            delivery.assignments[0]?.acceptedAt?.toISOString() ?? null,
+            delivery.assignments.find(
+              (assignment) =>
+                assignment.status === 'ACTIVE' &&
+                assignment.driverProfile.id === delivery.assignedDriverProfile?.id,
+            )?.acceptedAt?.toISOString() ?? null,
         }
       : null,
     pickup: {
@@ -288,6 +444,40 @@ const mapDetail = (delivery: repository.AdminDeliveryDetailRecord) => {
       count: locationPings.length,
       items: locationPings,
     },
+    currentDriver: contract.assignmentState === 'ACTIVE' && delivery.assignedDriverProfile
+      ? {
+          id: delivery.assignedDriverProfile.id,
+          displayName: delivery.assignedDriverProfile.displayName,
+          email: delivery.assignedDriverProfile.user.email,
+        }
+      : null,
+    lastAssignedDriver: delivery.assignments[0]?.driverProfile
+      ? {
+          id: delivery.assignments[0].driverProfile.id,
+          displayName: delivery.assignments[0].driverProfile.displayName,
+          email: delivery.assignments[0].driverProfile.user.email,
+        }
+      : null,
+    currentAssignment: contract.assignmentState === 'ACTIVE'
+      ? delivery.assignments.find((assignment) => assignment.status === 'ACTIVE')
+      : null,
+    lastAssignment: delivery.assignments[0] ?? null,
+    assignmentHistory: delivery.assignments,
+    primaryIncident: mapIncidentSummary(primaryIncident),
+    incidentCount: delivery._count.incidentReports,
+    linkedIncidents: incidentContracts.map(mapIncidentSummary),
+    hasMoreLinkedIncidents: delivery._count.incidentReports > incidentContracts.length,
+    group: delivery.deliveryGroup
+      ? {
+          id: delivery.deliveryGroup.id,
+          status: delivery.deliveryGroup.status,
+          reservationCount: delivery.deliveryGroup._count.reservations,
+          reservations: delivery.deliveryGroup.reservations,
+          hasMoreReservations:
+            delivery.deliveryGroup._count.reservations >
+            delivery.deliveryGroup.reservations.length,
+        }
+      : null,
   };
 };
 
@@ -320,7 +510,13 @@ export const listAdminDeliveries = async (query: AdminDeliveriesListQuery) => {
         'CANCELLED',
         'FAILED_PICKUP',
         'FAILED_DELIVERY',
+        'DRIVER_NO_SHOW',
+        'LEARNER_NO_SHOW',
+        'AWAITING_RESOLUTION',
       ],
+      assignmentStates: ['UNASSIGNED', 'ACTIVE', 'RELEASED', 'HISTORICAL'],
+      scopes: ['SINGLE', 'GROUPED'],
+      incidentStates: ['PENDING_REVIEW', 'VERIFIED', 'REJECTED', 'RESOLVED_NO_STRIKE'],
     },
   };
 };

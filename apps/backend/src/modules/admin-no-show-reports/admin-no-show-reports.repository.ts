@@ -37,6 +37,7 @@ export const reportInclude = {
       id: true,
       status: true,
       assignedDriverProfileId: true,
+      deliveryGroupId: true,
     },
   },
   reporter: { select: { id: true, displayName: true, email: true } },
@@ -72,6 +73,7 @@ const actionContextInclude = {
       id: true,
       status: true,
       assignedDriverProfileId: true,
+      deliveryGroupId: true,
     },
   },
 } satisfies Prisma.NoShowReportInclude;
@@ -88,6 +90,9 @@ const toActionContext = (
   },
   reservation: report.reservation,
   delivery: report.delivery,
+  isGroupedDelivery: report.delivery?.deliveryGroupId != null,
+  // Group-level recovery mutations are intentionally not implemented yet.
+  isGroupRecoverySupported: false,
 });
 
 const actionIsAvailable = (

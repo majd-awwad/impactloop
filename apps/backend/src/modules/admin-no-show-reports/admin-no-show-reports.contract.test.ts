@@ -122,3 +122,21 @@ test('fails closed for an individual recovery target with no target user', () =>
   assert.equal(afterRecovery.operationalState, 'RESOLVED');
   assert.deepEqual(afterRecovery.availableActions, ['RESOLVE_WITHOUT_STRIKE']);
 });
+
+test('suppresses unsafe grouped recovery mutations at the canonical contract', () => {
+  const context = baseContext();
+  context.report.reasonCode = 'NO_DRIVER_AVAILABLE';
+  context.report.targetRole = 'SYSTEM';
+  context.report.deliveryId = 'delivery-1';
+  context.reservation.status = 'AWAITING_RESOLUTION';
+  context.reservation.fulfillmentMethod = 'DELIVERY';
+  context.delivery = {
+    id: 'delivery-1',
+    status: 'AWAITING_RESOLUTION',
+    assignedDriverProfileId: null,
+  };
+  context.isGroupedDelivery = true;
+  context.isGroupRecoverySupported = false;
+
+  assert.deepEqual(classifyAdminReportContract(context).availableActions, []);
+});
