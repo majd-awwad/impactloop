@@ -18,11 +18,11 @@ Switch tabs: pending / needs learner / needs supplier / accepted / declined / co
 
 ### Frontend path
 
-`SupplierIncomingRequestsPage` → `supplier_requests_providers.dart` → `SupplierRequestsApi.fetchIncomingRequests(tab)` → `GET /api/supplier/reservations?status=<tab>`.
+`SupplierIncomingRequestsPage` → `supplier_requests_providers.dart` → `SupplierRequestsApi.fetchIncomingRequests(tab)` → `GET /api/supplier/reservations?status=<tab>`. The current Flutter page continues to read the compatibility `data.reservations` array.
 
 ### Backend path
 
-`listSupplierReservations` maps tabs to reservation statuses: `pending` -> `PENDING`, `needs_learner` -> `AWAITING_LEARNER_CONFIRMATION`, `needs_supplier` -> `AWAITING_SUPPLIER_CONFIRMATION`, `accepted` -> `ACCEPTED`, `declined` -> `REJECTED`, `completed` -> `COMPLETED`, and `cancelled` -> `CANCELLED` + `EXPIRED`.
+`listSupplierReservationsPage` maps tabs to reservation statuses: `pending` -> `PENDING`, `needs_learner` -> `AWAITING_LEARNER_CONFIRMATION`, `needs_supplier` -> `AWAITING_SUPPLIER_CONFIRMATION`, `accepted` -> `ACCEPTED`, `declined` -> `REJECTED`, `completed` -> `COMPLETED`, and `cancelled` -> `CANCELLED` + `EXPIRED`. The full raw set is `PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `AWAITING_SUPPLIER_CONFIRMATION`, `ACCEPTED`, `AWAITING_RESOLUTION`, `REJECTED`, `CANCELLED`, `COMPLETED`, `EXPIRED`, `NO_SHOW`, and `FULFILLMENT_FAILED`; `EXPIRED` is distinct from `CANCELLED`. The backend also accepts raw statuses and supports paging, search, fulfillment/history/date/material filters, and computed attention-state filtering. It returns a canonical state (`workflowPhase`, `attentionState`, `nextActor`, `summaryBucket`, `availableActions`) alongside legacy card fields; all filtering precedes paging.
 
 ### Database changes
 
@@ -31,6 +31,10 @@ Read-only.
 ### Success state
 
 List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `fulfillmentMethod`, `fulfillmentLabel`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
+
+### Detail-route migration note
+
+`GET /api/supplier/reservations/:id` is available for a future supplier reservation-detail route. It is supplier-owner scoped and supplies the request, schedule, bounded message/history context, delivery/group state, and incident summary without exact locations. The current `focus` query remains compatible as a no-op until the Flutter detail page explicitly adopts this route.
 
 ### Error states
 

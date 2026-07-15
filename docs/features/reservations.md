@@ -37,7 +37,7 @@ Reservation is the booking layer. Learning Hub build checklist items can link re
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
 | Learner reserve UI | **Implemented** | Material detail quantity + explicit pickup/delivery fulfillment dialog |
 | Learner “My Reservations” UI | **Partial** | Rich list cards + `/learner/reservations/:id` detail route with 10-second polling; list cards link to detail |
-| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup + delivery scheduling), `needs_learner` tab, handover-code complete, overdue close/report/reschedule, learner-reschedule accept, delivery handover code, incident reports including **`mark-delivery-pickup-expired` UI** |
+| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup + delivery scheduling), paginated/filterable supplier list contract with canonical attention/action state, owner-scoped reservation detail read, `needs_learner` tab, handover-code complete, overdue close/report/reschedule, learner-reschedule accept, delivery handover code, incident reports including **`mark-delivery-pickup-expired` UI** |
 | Delivery learner UI | **Partial** | Request/status/tracking summary + polling map marker on delivery detail; not on self-pickup reservation cards |
 | Admin incident queue | **Implemented** | `/admin/no-show-reports` verify/reject/resolve |
 

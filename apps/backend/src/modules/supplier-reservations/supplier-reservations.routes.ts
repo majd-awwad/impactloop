@@ -16,6 +16,7 @@ import {
   completeSupplierReservationHandler,
   createSupplierReservationMessageHandler,
   declineSupplierReservationHandler,
+  getSupplierReservationHandler,
   listSupplierReservationMessagesHandler,
   listSupplierReservationsHandler,
   rescheduleSupplierReservationHandler,
@@ -46,6 +47,14 @@ supplierReservationsRouter.get(
   requireRoles('SUPPLIER'),
   validate(listSupplierReservationsQuerySchema, 'query'),
   asyncHandler(listSupplierReservationsHandler),
+);
+
+supplierReservationsRouter.get(
+  '/:id',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(getSupplierReservationHandler),
 );
 
 supplierReservationsRouter.get(
