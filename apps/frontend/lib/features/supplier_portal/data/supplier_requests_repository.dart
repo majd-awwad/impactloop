@@ -7,6 +7,8 @@ abstract class SupplierRequestsRepository {
     SupplierIncomingRequestTab status,
   );
 
+  Future<SupplierReservationDetail> fetchReservationDetail(String requestId);
+
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,

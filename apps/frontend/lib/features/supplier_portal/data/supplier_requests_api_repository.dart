@@ -31,6 +31,11 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
+  Future<SupplierReservationDetail> fetchReservationDetail(String requestId) {
+    return _api.fetchReservationDetail(requestId);
+  }
+
+  @override
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,
     SupplierPickupWindow pickupWindow,
@@ -51,10 +56,7 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
     String requestId, {
     required String confirmationCode,
   }) {
-    return _api.completeRequest(
-      requestId,
-      confirmationCode: confirmationCode,
-    );
+    return _api.completeRequest(requestId, confirmationCode: confirmationCode);
   }
 
   @override

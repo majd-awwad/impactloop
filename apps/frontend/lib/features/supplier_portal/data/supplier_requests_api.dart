@@ -11,6 +11,10 @@ class SupplierRequestsApi {
 
   Future<List<SupplierIncomingRequest>> fetchIncomingRequests(
     SupplierIncomingRequestTab status,
+  ) async => (await fetchIncomingRequestsResponse(status)).items;
+
+  Future<SupplierReservationListResponse> fetchIncomingRequestsResponse(
+    SupplierIncomingRequestTab status,
   ) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
@@ -31,19 +35,39 @@ class SupplierRequestsApi {
         throw const ApiException(message: 'Unexpected reservations response');
       }
 
-      final reservations = data['reservations'];
-      if (reservations is! List) {
-        throw const ApiException(message: 'Unexpected reservations response');
-      }
+      return SupplierReservationListResponse.fromData(
+        Map<String, dynamic>.from(data),
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
 
-      return reservations
-          .whereType<Map>()
-          .map(
-            (item) => SupplierIncomingRequest.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
-          .toList();
+  Future<SupplierReservationDetail> fetchReservationDetail(
+    String reservationId,
+  ) async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/supplier/reservations/$reservationId',
+      );
+      final body = response.data;
+      if (body == null || body['success'] != true) {
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Could not load reservation',
+          statusCode: response.statusCode,
+        );
+      }
+      final data = body['data'];
+      if (data is! Map) {
+        throw const ApiException(
+          message: 'Unexpected reservation detail response',
+        );
+      }
+      return SupplierReservationDetail.fromJson(
+        Map<String, dynamic>.from(data),
+      );
     } on ApiException {
       rethrow;
     } on DioException catch (error) {
@@ -177,7 +201,8 @@ class SupplierRequestsApi {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/cancel',
         data: {
-          if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
         },
       );
 
@@ -197,10 +222,7 @@ class SupplierRequestsApi {
     try {
       final response = await _client.post<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/no-show-report',
-        data: {
-          'reasonCode': reasonCode,
-          'note': note?.trim() ?? '',
-        },
+        data: {'reasonCode': reasonCode, 'note': note?.trim() ?? ''},
       );
 
       final body = response.data;
