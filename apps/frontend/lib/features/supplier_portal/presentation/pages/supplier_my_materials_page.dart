@@ -126,7 +126,6 @@ class _SupplierMyMaterialsPageState
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final colors = context.supplierColors;
     final materialsAsync = ref.watch(supplierMyMaterialsProvider);
     final query = ref.watch(supplierMyMaterialsQueryProvider);
 
@@ -173,12 +172,10 @@ class _SupplierMyMaterialsPageState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _PageHeader(
-                    title: l.myMaterialsTitle,
-                    subtitle: l.myMaterialsSubtitle,
                     actionLabel: l.navAddMaterial,
                     onAction: () => context.push('/supplier/materials/new'),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.md),
                   materialsAsync.when(
                     loading: () {
                       if (kDebugMode) {
@@ -209,74 +206,55 @@ class _SupplierMyMaterialsPageState
                         );
                       }
                       final categories = result.categories;
+                      final selectedCategory = categories
+                          .cast<SupplierMyMaterialsCategoryOption?>()
+                          .firstWhere(
+                            (category) => category?.id == query.categoryId,
+                            orElse: () => null,
+                          );
+                      final activeFilterLabels = <String>[
+                        if (query.search.trim().isNotEmpty) query.search.trim(),
+                        if (statusFilter != SupplierMaterialStatusFilter.all)
+                          statusFilter.label(l),
+                        if (priceFilter != SupplierMaterialPriceFilter.all)
+                          priceFilter.label(l),
+                        if (selectedCategory != null)
+                          l.isArabic
+                              ? selectedCategory.nameAr
+                              : selectedCategory.nameEn,
+                      ];
 
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           SupplierMaterialsSummaryRow(summary: result.summary),
                           const SizedBox(height: AppSpacing.md),
-                          TextField(
-                            controller: _searchController,
-                            onChanged: _updateSearch,
-                            style: context.supplierBody().copyWith(
-                              color: colors.textPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: l.myMaterialsSearchHint,
-                              hintStyle: context.supplierBody().copyWith(
-                                color: colors.textMuted,
-                              ),
-                              prefixIcon: Icon(
-                                Icons.search,
-                                color: colors.accent,
-                              ),
-                              filled: true,
-                              fillColor: colors.surfaceSolid,
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: 14,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: AppRadius.lgAll,
-                                borderSide: BorderSide(color: colors.border),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: AppRadius.lgAll,
-                                borderSide: BorderSide(color: colors.border),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: AppRadius.lgAll,
-                                borderSide: BorderSide(
-                                  color: colors.borderFocused,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          SupplierMaterialFilterChips(
+                          _FilterToolbar(
+                            searchController: _searchController,
+                            searchHint: l.myMaterialsSearchHint,
                             statusFilter: statusFilter,
                             priceFilter: priceFilter,
+                            categories: categories,
+                            selectedCategoryId: query.categoryId,
+                            filtersActive: query.search.trim().isNotEmpty ||
+                                query.status != null ||
+                                query.isFree != null ||
+                                query.categoryId != null,
+                            onSearchChanged: _updateSearch,
                             onStatusSelected: _updateStatusFilter,
                             onPriceSelected: _updatePriceFilter,
+                            onCategorySelected: _updateCategory,
+                            onReset: _clearFilters,
                           ),
-                          if (categories.isNotEmpty) ...[
-                            const SizedBox(height: AppSpacing.sm),
-                            SupplierMaterialCategoryFilter(
-                              categories: categories,
-                              selectedCategoryId: query.categoryId,
-                              totalCount: result.summary.total,
-                              onSelected: _updateCategory,
-                            ),
-                          ],
                           const SizedBox(height: AppSpacing.md),
-                          Text(
-                            l.materialsResultCount(result.items.length),
-                            style: context.supplierBody().copyWith(
-                              color: colors.textMuted,
-                            ),
+                          _ResultsHeader(
+                            shownCount: result.items.length,
+                            totalCount: result.pagination.totalItems,
+                            activeFilterLabels: activeFilterLabels,
+                            onClearFilters:
+                                activeFilterLabels.isEmpty ? null : _clearFilters,
                           ),
-                          const SizedBox(height: AppSpacing.sm),
+                          const SizedBox(height: AppSpacing.md),
                           if (result.pagination.totalItems == 0)
                             _EmptyState(
                               onAdd: () =>
@@ -334,6 +312,8 @@ class _SupplierMyMaterialsPageState
                             _PaginationBar(
                               page: query.page,
                               totalPages: result.pagination.totalPages,
+                              totalItems: result.pagination.totalItems,
+                              pageSize: query.limit,
                               compact: isCompact,
                               onPrevious: query.page > 1
                                   ? () => _applyQuery(
@@ -363,61 +343,305 @@ class _SupplierMyMaterialsPageState
 
 class _PageHeader extends StatelessWidget {
   const _PageHeader({
-    required this.title,
-    required this.subtitle,
     required this.actionLabel,
     required this.onAction,
   });
 
-  final String title;
-  final String subtitle;
   final String actionLabel;
   final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
-
-    final textColumn = Column(
+    final text = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title,
+          'Inventory overview',
           style: context.supplierSectionTitle().copyWith(
-            fontSize: 18,
-            color: colors.textPrimary,
-          ),
+                color: colors.textPrimary,
+                fontSize: 18,
+              ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Text(
-          subtitle,
-          style: context.supplierBody().copyWith(
-            color: colors.textMuted,
-            fontSize: 14,
-          ),
+          'Monitor your material availability, requests, and listing status.',
+          style: context.supplierBody().copyWith(color: colors.textMuted),
         ),
       ],
     );
+    final action = FilledButton.icon(
+      onPressed: onAction,
+      icon: const Icon(Icons.add_rounded, size: 18),
+      label: Text(actionLabel),
+      style: AppStatusButtonStyle.filled(
+        context,
+        AppStatusTone.primary,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+      ),
+    );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        textColumn,
-        const SizedBox(height: AppSpacing.md),
-        FilledButton.icon(
-          onPressed: onAction,
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: Text(actionLabel),
-          style: AppStatusButtonStyle.filled(
-            context,
-            AppStatusTone.primary,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 560) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [text, const SizedBox(height: AppSpacing.sm), action],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: text),
+            const SizedBox(width: AppSpacing.lg),
+            action,
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _FilterToolbar extends StatelessWidget {
+  const _FilterToolbar({
+    required this.searchController,
+    required this.searchHint,
+    required this.statusFilter,
+    required this.priceFilter,
+    required this.categories,
+    required this.selectedCategoryId,
+    required this.filtersActive,
+    required this.onSearchChanged,
+    required this.onStatusSelected,
+    required this.onPriceSelected,
+    required this.onCategorySelected,
+    required this.onReset,
+  });
+
+  final TextEditingController searchController;
+  final String searchHint;
+  final SupplierMaterialStatusFilter statusFilter;
+  final SupplierMaterialPriceFilter priceFilter;
+  final List<SupplierMyMaterialsCategoryOption> categories;
+  final String? selectedCategoryId;
+  final bool filtersActive;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<SupplierMaterialStatusFilter> onStatusSelected;
+  final ValueChanged<SupplierMaterialPriceFilter> onPriceSelected;
+  final ValueChanged<String?> onCategorySelected;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceSolid,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: colors.border),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 1120;
+          final medium = constraints.maxWidth >= 620;
+          final search = ValueListenableBuilder<TextEditingValue>(
+            valueListenable: searchController,
+            builder: (context, value, _) => TextField(
+              controller: searchController,
+              onChanged: onSearchChanged,
+              style: context.supplierBody().copyWith(color: colors.textPrimary),
+              decoration: InputDecoration(
+                hintText: searchHint,
+                hintStyle: context.supplierBody().copyWith(color: colors.textMuted),
+                prefixIcon: Icon(Icons.search, color: colors.accent),
+                suffixIcon: value.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        onPressed: () {
+                          searchController.clear();
+                          onSearchChanged('');
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                filled: true,
+                fillColor: colors.surfaceSolid,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: 14,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: AppRadius.lgAll,
+                  borderSide: BorderSide(color: colors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.lgAll,
+                  borderSide: BorderSide(color: colors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: AppRadius.lgAll,
+                  borderSide: BorderSide(color: colors.borderFocused, width: 1.5),
+                ),
+              ),
             ),
-          ),
+          );
+          final filters = SupplierMaterialFilterChips(
+            statusFilter: statusFilter,
+            priceFilter: priceFilter,
+            onStatusSelected: onStatusSelected,
+            onPriceSelected: onPriceSelected,
+          );
+          final category = SupplierMaterialCategoryFilter(
+            categories: categories,
+            selectedCategoryId: selectedCategoryId,
+            onSelected: onCategorySelected,
+          );
+          final reset = Tooltip(
+            message: 'Reset filters',
+            child: OutlinedButton.icon(
+              onPressed: filtersActive ? onReset : null,
+              icon: const Icon(Icons.restart_alt_rounded, size: 18),
+              label: const Text('Reset'),
+            ),
+          );
+
+          if (wide) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: search),
+                const SizedBox(width: AppSpacing.sm),
+                SizedBox(width: 344, child: filters),
+                if (categories.isNotEmpty) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(flex: 2, child: category),
+                ],
+                const SizedBox(width: AppSpacing.sm),
+                Padding(padding: const EdgeInsets.only(top: 5), child: reset),
+              ],
+            );
+          }
+
+          return Column(
+            children: [
+              if (medium)
+                ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 3, child: search),
+                      if (categories.isNotEmpty) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(flex: 2, child: category),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 344, child: filters),
+                      const SizedBox(width: AppSpacing.sm),
+                      Padding(padding: const EdgeInsets.only(top: 5), child: reset),
+                    ],
+                  ),
+                ]
+              else ...[
+                search,
+                const SizedBox(height: AppSpacing.sm),
+                filters,
+                if (categories.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  category,
+                ],
+                const SizedBox(height: AppSpacing.sm),
+                Align(alignment: AlignmentDirectional.centerEnd, child: reset),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ResultsHeader extends StatelessWidget {
+  const _ResultsHeader({
+    required this.shownCount,
+    required this.totalCount,
+    required this.activeFilterLabels,
+    this.onClearFilters,
+  });
+
+  final int shownCount;
+  final int totalCount;
+  final List<String> activeFilterLabels;
+  final VoidCallback? onClearFilters;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final label = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Materials',
+          style: context.supplierSectionTitle().copyWith(
+                color: colors.textPrimary,
+                fontSize: 17,
+              ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          '$shownCount shown of $totalCount',
+          style: context.supplierBody().copyWith(color: colors.textMuted),
         ),
       ],
+    );
+    final activeFilters = Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final filter in activeFilterLabels)
+          Container(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: colors.accentSoft,
+              borderRadius: AppRadius.pillAll,
+            ),
+            child: Text(
+              filter,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colors.accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+        if (onClearFilters != null)
+          TextButton(onPressed: onClearFilters, child: const Text('Clear all')),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (activeFilterLabels.isEmpty) return label;
+        if (constraints.maxWidth < 720) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [label, const SizedBox(height: AppSpacing.sm), activeFilters],
+          );
+        }
+        return Row(
+          children: [label, const Spacer(), Flexible(child: activeFilters)],
+        );
+      },
     );
   }
 }
@@ -429,18 +653,43 @@ class _LoadingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: 88,
-          child: Center(
-            child: CircularProgressIndicator(
-              color: context.supplierColors.accent,
-            ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 1000 ? 5 : compact ? 2 : 3;
+            final width = (constraints.maxWidth - (columns - 1) * AppSpacing.sm) /
+                columns;
+            return Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: List.generate(
+                5,
+                (_) => Container(
+                  width: width,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    color: colors.surfaceSolid,
+                    borderRadius: AppRadius.lgAll,
+                    border: Border.all(color: colors.border),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: colors.surfaceSolid,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: colors.border),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
         SupplierMaterialsGrid(
           itemCount: compact ? 1 : 3,
           itemBuilder: (_, _) => const SupplierMaterialCardSkeleton(),
@@ -454,6 +703,8 @@ class _PaginationBar extends StatelessWidget {
   const _PaginationBar({
     required this.page,
     required this.totalPages,
+    required this.totalItems,
+    required this.pageSize,
     required this.compact,
     required this.onPrevious,
     required this.onNext,
@@ -461,6 +712,8 @@ class _PaginationBar extends StatelessWidget {
 
   final int page;
   final int totalPages;
+  final int totalItems;
+  final int pageSize;
   final bool compact;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
@@ -469,47 +722,48 @@ class _PaginationBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
 
+    final first = totalItems == 0 ? 0 : ((page - 1) * pageSize) + 1;
+    final last = totalItems == 0 ? 0 : (first + pageSize - 1).clamp(0, totalItems);
+    final countLabel = '$first–$last / $totalItems';
+
+    final controls = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        OutlinedButton(onPressed: onPrevious, child: Text(l.previousPage)),
+        const SizedBox(width: AppSpacing.sm),
+        Text(l.paginationLabel(page, totalPages), style: context.supplierBody()),
+        const SizedBox(width: AppSpacing.sm),
+        OutlinedButton(onPressed: onNext, child: Text(l.nextPage)),
+      ],
+    );
+
     if (compact) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            l.paginationLabel(page, totalPages),
+            countLabel,
             textAlign: TextAlign.center,
-            style: context.supplierBody(),
+            style: context.supplierBody().copyWith(
+              color: context.supplierColors.textMuted,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onPrevious,
-                  child: Text(l.previousPage),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onNext,
-                  child: Text(l.nextPage),
-                ),
-              ),
-            ],
-          ),
+          Align(alignment: Alignment.center, child: controls),
         ],
       );
     }
 
     return Row(
       children: [
-        OutlinedButton(onPressed: onPrevious, child: Text(l.previousPage)),
-        const Spacer(),
         Text(
-          l.paginationLabel(page, totalPages),
-          style: context.supplierBody(),
+          countLabel,
+          style: context.supplierBody().copyWith(
+            color: context.supplierColors.textMuted,
+          ),
         ),
         const Spacer(),
-        OutlinedButton(onPressed: onNext, child: Text(l.nextPage)),
+        controls,
       ],
     );
   }
