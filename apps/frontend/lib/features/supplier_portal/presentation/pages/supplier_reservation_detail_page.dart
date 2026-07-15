@@ -1,0 +1,1726 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../../app/router/navigation_extensions.dart';
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_section_card.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../data/models/supplier_incoming_request.dart';
+import '../controllers/supplier_requests_providers.dart';
+import '../theme/supplier_theme_extension.dart';
+import '../widgets/accept_incoming_request_dialog.dart';
+import '../widgets/complete_pickup_dialog.dart';
+import '../widgets/decline_incoming_request_dialog.dart';
+import '../widgets/reservation_follow_up_flow.dart';
+import '../widgets/supplier_delivery_incident_flow.dart';
+import '../widgets/supplier_feedback.dart';
+
+class SupplierReservationDetailPage extends ConsumerStatefulWidget {
+  const SupplierReservationDetailPage({
+    super.key,
+    required this.reservationId,
+  });
+
+  final String reservationId;
+
+  @override
+  ConsumerState<SupplierReservationDetailPage> createState() =>
+      _SupplierReservationDetailPageState();
+}
+
+class _SupplierReservationDetailPageState
+    extends ConsumerState<SupplierReservationDetailPage> {
+  final _messageController = TextEditingController();
+  final _messageFocusNode = FocusNode();
+  final _messageScrollKey = GlobalKey();
+  final _localMessages = <SupplierReservationMessageSummary>[];
+  String? _busyAction;
+  String? _actionError;
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _messageFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _back() => context.popOrGo('/supplier/reservations');
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 1100;
+    final detailAsync = ref.watch(
+      supplierReservationDetailProvider(widget.reservationId),
+    );
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1440),
+        child: SingleChildScrollView(
+          padding: context.supplierDecorations.pagePadding(compact: compact),
+          child: Material(
+            type: MaterialType.transparency,
+            child: detailAsync.when(
+              loading: () => const _DetailSkeleton(),
+              error: (error, _) => _DetailError(
+                notFound: _isNotFound(error),
+                onBack: _back,
+                onRetry: () => ref.invalidate(
+                  supplierReservationDetailProvider(widget.reservationId),
+                ),
+              ),
+              data: (detail) => _workspace(context, detail),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _workspace(
+    BuildContext context,
+    SupplierReservationDetail detail,
+  ) {
+    final reservation = detail.reservation;
+    final executableActions = reservation.availableActions
+        .where((action) => action.isExecutable)
+        .map((action) => action.value)
+        .where((action) => action != SupplierReservationAction.unknown)
+        .toList(growable: false);
+    final width = MediaQuery.sizeOf(context).width;
+    final desktop = width >= 1100;
+    final learnerName = _learnerName(detail);
+    final materialTitle = _materialTitle(detail);
+
+    final header = _HeaderCard(
+      reservation: reservation,
+      materialTitle: materialTitle,
+      learnerName: learnerName,
+      onBack: _back,
+      actions: executableActions,
+      busyAction: _busyAction,
+      onAction: (action) => _runAction(detail, action),
+    );
+    final stateStrip = _StateStrip(detail: detail);
+    final actions = _ActionPanel(
+      actions: executableActions,
+      busyAction: _busyAction,
+      error: _actionError,
+      onAction: (action) => _runAction(detail, action),
+    );
+    final summary = _RequestSummaryCard(
+      detail: detail,
+      materialTitle: materialTitle,
+      learnerName: learnerName,
+    );
+    final schedule = _ScheduleCard(detail: detail);
+    final fulfillment = _FulfillmentCard(detail: detail);
+    final incident = detail.incident == null
+        ? null
+        : _IncidentCard(incident: detail.incident!);
+    final group = detail.group == null ? null : _GroupCard(group: detail.group!);
+    final messages = _MessagesCard(
+      key: _messageScrollKey,
+      detail: detail,
+      learnerName: learnerName,
+      controller: _messageController,
+      focusNode: _messageFocusNode,
+      localMessages: _localMessages,
+      onSend: () => _sendMessage(detail),
+      sending: _busyAction == 'SEND_MESSAGE',
+    );
+    final history = _HistoryCard(history: detail.history);
+    final attention = _AttentionCard(reservation: reservation);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        const SizedBox(height: AppSpacing.md),
+        stateStrip,
+        if (!desktop) ...[
+          const SizedBox(height: AppSpacing.md),
+          if (executableActions.isNotEmpty) actions,
+          const SizedBox(height: AppSpacing.md),
+          summary,
+          const SizedBox(height: AppSpacing.md),
+          schedule,
+          const SizedBox(height: AppSpacing.md),
+          fulfillment,
+          if (incident != null) ...[const SizedBox(height: AppSpacing.md), incident],
+          if (group != null) ...[const SizedBox(height: AppSpacing.md), group],
+          const SizedBox(height: AppSpacing.md),
+          messages,
+          const SizedBox(height: AppSpacing.md),
+          history,
+        ] else ...[
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 7,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    summary,
+                    const SizedBox(height: AppSpacing.md),
+                    schedule,
+                    const SizedBox(height: AppSpacing.md),
+                    messages,
+                    const SizedBox(height: AppSpacing.md),
+                    history,
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    attention,
+                    const SizedBox(height: AppSpacing.md),
+                    fulfillment,
+                    if (incident != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      incident,
+                    ],
+                    if (group != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      group,
+                    ],
+                    if (executableActions.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      actions,
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _runAction(
+    SupplierReservationDetail detail,
+    SupplierReservationAction action,
+  ) async {
+    if (_busyAction != null) return;
+    if (action == SupplierReservationAction.sendMessage) {
+      _messageFocusNode.requestFocus();
+      return;
+    }
+
+    setState(() {
+      _busyAction = action.name;
+      _actionError = null;
+    });
+    final reservation = detail.reservation;
+    try {
+      switch (action) {
+        case SupplierReservationAction.accept:
+          final window = await AcceptIncomingRequestDialog.show(
+            context,
+            request: reservation,
+          );
+          if (window != null && mounted) {
+            await acceptIncomingRequest(
+              ref,
+              requestId: reservation.id,
+              pickupWindow: window,
+            );
+            if (mounted) showSupplierInfoSnackBar(context, context.s.requestAccepted);
+          }
+        case SupplierReservationAction.decline:
+          final result = await DeclineIncomingRequestDialog.show(
+            context,
+            materialTitle: reservation.materialTitle,
+            learnerName: reservation.learnerName,
+          );
+          if (result?.result == DeclineIncomingRequestResult.declined && mounted) {
+            await declineIncomingRequest(
+              ref,
+              requestId: reservation.id,
+              reason: result!.reason,
+            );
+            if (mounted) showSupplierInfoSnackBar(context, context.s.requestDeclined);
+          }
+        case SupplierReservationAction.completeSelfPickup:
+          final code = await CompletePickupDialog.show(context);
+          if (code != null && code.trim().isNotEmpty && mounted) {
+            await completeIncomingRequest(
+              ref,
+              requestId: reservation.id,
+              confirmationCode: code.trim(),
+            );
+            if (mounted) showSupplierInfoSnackBar(context, context.s.pickupCompleted);
+          }
+        case SupplierReservationAction.acceptLearnerReschedule:
+          await handleAcceptLearnerReschedule(
+            context,
+            ref,
+            reservationId: reservation.id,
+          );
+        case SupplierReservationAction.proposeReschedule:
+          await handleRequestReschedulePickup(
+            context,
+            ref,
+            reservationId: reservation.id,
+            materialTitle: reservation.materialTitle,
+            learnerName: reservation.learnerName,
+          );
+        case SupplierReservationAction.submitRecoveryPickupWindow:
+          await handleSubmitNoDriverPickupWindow(
+            context,
+            ref,
+            reservationId: reservation.id,
+            materialTitle: reservation.materialTitle,
+            learnerName: reservation.learnerName,
+          );
+        case SupplierReservationAction.closeReservation:
+          await handleCloseOverduePickup(
+            context,
+            ref,
+            reservationId: reservation.id,
+          );
+        case SupplierReservationAction.reportIncident:
+          await handleReportToAdminAndClose(
+            context,
+            ref,
+            reservationId: reservation.id,
+          );
+        case SupplierReservationAction.reportNoDriver:
+          await handleReportNoDriverAvailable(
+            context,
+            ref,
+            reservationId: reservation.id,
+          );
+        case SupplierReservationAction.markDeliveryPickupExpired:
+          await handleMarkDeliveryPickupExpired(
+            context,
+            ref,
+            reservationId: reservation.id,
+          );
+        case SupplierReservationAction.reportDriverNoShow:
+          final deliveryId = reservation.activeDelivery?.id;
+          if (deliveryId != null) {
+            await handleReportDriverNoShow(
+              context,
+              ref,
+              deliveryId: deliveryId,
+            );
+          }
+        case SupplierReservationAction.markLearnerNoShow:
+          final confirmed = await _confirm(
+            title: 'Mark learner as no-show?',
+            message: 'This will record the learner no-show for this reservation.',
+            confirmLabel: 'Mark no-show',
+          );
+          if (confirmed && mounted) {
+            await markLearnerNoShowForRequest(ref, requestId: reservation.id);
+          }
+        case SupplierReservationAction.sendMessage:
+        case SupplierReservationAction.unknown:
+          break;
+      }
+      if (mounted) {
+        ref.invalidate(supplierReservationDetailProvider(widget.reservationId));
+      }
+    } catch (error) {
+      if (mounted) {
+        final message = error is ApiException
+            ? error.displayMessage
+            : 'Could not update this request.';
+        setState(() => _actionError = message);
+        showSupplierErrorSnackBar(context, message);
+      }
+    } finally {
+      if (mounted) setState(() => _busyAction = null);
+    }
+  }
+
+  Future<void> _sendMessage(SupplierReservationDetail detail) async {
+    final body = _messageController.text.trim();
+    if (body.isEmpty || _busyAction != null ||
+        !detail.reservation.availableActions.any(
+          (action) => action.value == SupplierReservationAction.sendMessage,
+        )) {
+      return;
+    }
+    setState(() {
+      _busyAction = 'SEND_MESSAGE';
+      _actionError = null;
+    });
+    try {
+      final message = await ref
+          .read(supplierRequestsRepositoryProvider)
+          .sendReservationMessage(detail.reservation.id, body);
+      if (!mounted) return;
+      setState(() {
+        _localMessages.add(
+          SupplierReservationMessageSummary(
+            id: message.id,
+            senderRole: 'SUPPLIER',
+            senderId: message.sender.id,
+            body: message.body,
+            createdAt: message.createdAt,
+          ),
+        );
+        _messageController.clear();
+      });
+      ref.invalidate(supplierReservationDetailProvider(widget.reservationId));
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is ApiException
+          ? error.displayMessage
+          : 'Could not send the message.';
+      setState(() => _actionError = message);
+      showSupplierErrorSnackBar(context, message);
+    } finally {
+      if (mounted) setState(() => _busyAction = null);
+    }
+  }
+
+  Future<bool> _confirm({
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(title),
+            content: Text(message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(context.s.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(confirmLabel),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+}
+
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard({
+    required this.reservation,
+    required this.materialTitle,
+    required this.learnerName,
+    required this.onBack,
+    required this.actions,
+    required this.busyAction,
+    required this.onAction,
+  });
+
+  final SupplierIncomingRequest reservation;
+  final String materialTitle;
+  final String learnerName;
+  final VoidCallback onBack;
+  final List<SupplierReservationAction> actions;
+  final String? busyAction;
+  final ValueChanged<SupplierReservationAction> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final image = reservation.materialImageUrl;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final items = [
+              IconButton(
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back to Incoming Requests',
+              ),
+              Text(
+                'Incoming Requests',
+                style: context.supplierBody().copyWith(color: colors.textSecondary),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                child: Icon(Icons.chevron_right, color: colors.textMuted),
+              ),
+              Text('Request Details', style: context.supplierLabel()),
+            ];
+            final backButton = OutlinedButton.icon(
+              onPressed: onBack,
+              icon: const Icon(Icons.arrow_back, size: 17),
+              label: const Text('Back'),
+            );
+            if (constraints.maxWidth < 560) {
+              return Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: [...items, backButton],
+              );
+            }
+            return Row(children: [...items, const Spacer(), backButton]);
+          },
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppSectionCard(
+          emphasized: true,
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 980;
+              final identity = Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _MaterialImage(url: image, size: narrow ? 76 : 112),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(materialTitle, style: context.supplierTitle()),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          '$learnerName  ·  ${_shortId(reservation.id)}',
+                          style: context.supplierBody().copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children: [
+                            AppStatusBadge(
+                              label: reservation.status.label,
+                              tone: _statusTone(reservation.status),
+                            ),
+                            if (reservation.workflowPhase != null)
+                              AppStatusBadge(
+                                label: _workflowLabel(
+                                  reservation.workflowPhase!.value,
+                                ),
+                                tone: AppStatusTone.info,
+                              ),
+                            if (reservation.attentionState != null)
+                              AppStatusBadge(
+                                label: _attentionLabel(
+                                  reservation.attentionState!.value,
+                                ),
+                                tone: _attentionTone(
+                                  reservation.attentionState!.value,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          '${_quantity(reservation.quantityRequested)} ${reservation.unit}  ·  ${_fulfillmentLabel(reservation)}  ·  Created ${_date(reservation.requestedAt)}',
+                          style: context.supplierLabel().copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+              return narrow
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        identity,
+                        if (actions.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _HeaderActions(
+                            actions: actions,
+                            busyAction: busyAction,
+                            onAction: onAction,
+                          ),
+                        ],
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: identity),
+                        if (actions.isNotEmpty) ...[
+                          const SizedBox(width: AppSpacing.md),
+                          _HeaderActions(
+                            actions: actions,
+                            busyAction: busyAction,
+                            onAction: onAction,
+                          ),
+                        ],
+                      ],
+                    );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderActions extends StatelessWidget {
+  const _HeaderActions({
+    required this.actions,
+    required this.busyAction,
+    required this.onAction,
+  });
+
+  final List<SupplierReservationAction> actions;
+  final String? busyAction;
+  final ValueChanged<SupplierReservationAction> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = actions.first;
+    final busy = busyAction != null;
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        FilledButton.icon(
+          onPressed: busy ? null : () => onAction(primary),
+          icon: busy && busyAction == primary.name
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.check_circle_outline, size: 17),
+          label: Text(_actionLabel(primary)),
+        ),
+        if (actions.length > 1)
+          PopupMenuButton<SupplierReservationAction>(
+            tooltip: 'Available actions',
+            onSelected: busy ? null : onAction,
+            itemBuilder: (context) => actions
+                .skip(1)
+                .map(
+                  (action) => PopupMenuItem(
+                    value: action,
+                    child: Text(_actionLabel(action)),
+                  ),
+                )
+                .toList(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                border: Border.all(color: context.supplierColors.border),
+                borderRadius: AppRadius.mdAll,
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.more_horiz, size: 18),
+                  SizedBox(width: AppSpacing.xs),
+                  Text('More'),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StateStrip extends StatelessWidget {
+  const _StateStrip({required this.detail});
+  final SupplierReservationDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final reservation = detail.reservation;
+    final terminal = _isTerminalReservation(detail);
+    final facts = terminal
+        ? _terminalStateFacts(detail)
+        : _activeStateFacts(
+            detail,
+            detail.schedule?.summary ?? reservation.scheduleSummary,
+          );
+
+    return AppSectionCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 720;
+          if (narrow) {
+            final itemWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
+            return Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.md,
+              children: facts
+                  .map(
+                    (fact) => SizedBox(
+                      width: itemWidth,
+                      child: _StateItem(fact: fact),
+                    ),
+                  )
+                  .toList(),
+            );
+          }
+
+          return Row(
+            children: facts
+                .map(
+                  (fact) => Expanded(
+                    child: _StateItem(fact: fact),
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StateItem extends StatelessWidget {
+  const _StateItem({required this.fact});
+  final _StateFact fact;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(fact.label, style: context.supplierLabel().copyWith(fontSize: 11)),
+            const SizedBox(height: 2),
+            Text(fact.value, style: context.supplierBody().copyWith(fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+}
+
+class _StateFact {
+  const _StateFact(this.label, this.value);
+
+  final String label;
+  final String value;
+}
+
+List<_StateFact> _activeStateFacts(
+  SupplierReservationDetail detail,
+  SupplierScheduleSummary? summary,
+) {
+  final reservation = detail.reservation;
+  final facts = <_StateFact>[];
+  final workflow = _workflowLabel(reservation.workflowPhase?.value);
+  final attention = _attentionLabel(reservation.attentionState?.value);
+  final actor = reservation.nextActor?.value;
+  final schedule = _effectiveScheduleWindow(summary);
+
+  if (workflow != '—') facts.add(_StateFact('Workflow', workflow));
+  if (attention != '—') facts.add(_StateFact('Attention', attention));
+  if (actor != null && actor != SupplierNextActor.none && actor != SupplierNextActor.unknown) {
+    facts.add(_StateFact('Next actor', _actorLabel(actor)));
+  }
+  facts.add(_StateFact('Fulfillment', _stateFulfillmentLabel(reservation)));
+  if (schedule != null) {
+    facts.add(_StateFact('Schedule', _window(schedule)));
+  }
+  return facts;
+}
+
+List<_StateFact> _terminalStateFacts(SupplierReservationDetail detail) {
+  final identity = detail.identity;
+  final reservation = detail.reservation;
+  final facts = <_StateFact>[
+    _StateFact('Outcome', _terminalOutcomeLabel(reservation)),
+    _StateFact('Fulfillment', _stateFulfillmentLabel(reservation)),
+  ];
+  final created = identity?.createdAt ?? reservation.requestedAt;
+  final updated = identity?.updatedAt;
+  facts.add(_StateFact('Created', _date(created)));
+  if (updated != null) facts.add(_StateFact('Updated', _date(updated)));
+  return facts.take(4).toList(growable: false);
+}
+
+class _ActionPanel extends StatelessWidget {
+  const _ActionPanel({
+    required this.actions,
+    required this.busyAction,
+    required this.error,
+    required this.onAction,
+  });
+
+  final List<SupplierReservationAction> actions;
+  final String? busyAction;
+  final String? error;
+  final ValueChanged<SupplierReservationAction> onAction;
+
+  @override
+  Widget build(BuildContext context) => AppSectionCard(
+        tone: AppStatusTone.warning,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Available actions', style: context.supplierSectionTitle()),
+            const SizedBox(height: AppSpacing.md),
+            ...actions.map(
+              (action) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: OutlinedButton.icon(
+                  onPressed: busyAction == null ? () => onAction(action) : null,
+                  icon: Icon(_actionIcon(action), size: 18),
+                  label: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(_actionLabel(action)),
+                  ),
+                ),
+              ),
+            ),
+            if (error != null)
+              Text(error!, style: context.supplierBody().copyWith(color: context.supplierColors.error)),
+          ],
+        ),
+      );
+}
+
+class _RequestSummaryCard extends StatelessWidget {
+  const _RequestSummaryCard({
+    required this.detail,
+    required this.materialTitle,
+    required this.learnerName,
+  });
+
+  final SupplierReservationDetail detail;
+  final String materialTitle;
+  final String learnerName;
+
+  @override
+  Widget build(BuildContext context) {
+    final reservation = detail.reservation;
+    final request = detail.request;
+    final identity = detail.identity;
+    final note = request?.originalLearnerNote ?? reservation.learnerNote;
+    final material = detail.identity?.material;
+    final learner = detail.identity?.learner;
+    return AppSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TitleRow(icon: Icons.assignment_outlined, title: 'Request summary'),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MaterialImage(
+                url: _string(material, 'imageUrl') ?? reservation.materialImageUrl,
+                size: 74,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(materialTitle, style: context.supplierBody().copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text('Learner: $learnerName', style: context.supplierBody()),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _InfoGrid(rows: [
+            ('Quantity', '${_quantity(identity?.quantityRequested ?? reservation.quantityRequested)} ${reservation.unit}'),
+            ('Fulfillment', _fulfillmentLabel(reservation)),
+            ('Created', _date(identity?.createdAt ?? reservation.requestedAt)),
+            ('Updated', _date(identity?.updatedAt)),
+            if (_string(learner, 'email') != null) ('Learner email', _string(learner, 'email')!),
+          ]),
+          if (note != null && note.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _NoteBlock(label: 'Original learner note', text: note),
+          ],
+          if (request?.deliveryAddressText != null && request!.deliveryAddressText!.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _NoteBlock(label: 'Delivery address', text: request.deliveryAddressText!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleCard extends StatelessWidget {
+  const _ScheduleCard({required this.detail});
+  final SupplierReservationDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isTerminalReservation(detail)) {
+      return _TerminalScheduleCard(detail: detail);
+    }
+
+    final schedule = detail.schedule;
+    final summary = schedule?.summary ?? detail.reservation.scheduleSummary;
+    final delivery = detail.reservation.isDeliveryFulfillment;
+    final supplierProposal = _completeWindow(schedule?.supplierProposal);
+    final learnerProposal = _completeWindow(schedule?.learnerProposal);
+    final confirmedPickup = _completeWindow(schedule?.confirmedPickupWindow);
+    final supplierDeliveryPickup =
+        _completeWindow(schedule?.supplierDeliveryPickupWindow);
+    final confirmedDelivery = _completeWindow(schedule?.confirmedDeliveryWindow);
+    final pendingReschedule = summary?.pendingReschedule;
+    final pendingWindow = _completeWindow(pendingReschedule?.proposedPickupWindow);
+    final windows = <_WindowRow>[
+      if (!delivery && detail.request?.learnerPreferredPickupWindows
+              .any(_hasPreferredWindow) ==
+          true)
+        _WindowRow(
+          label: 'Learner preferred pickup windows',
+          windows: detail.request!.learnerPreferredPickupWindows
+              .map((window) => SupplierScheduleWindow(start: window.start, end: window.end))
+              .where(_hasCompleteScheduleWindow)
+              .toList(),
+        ),
+      if (delivery && detail.request?.learnerPreferredDeliveryWindows
+              .any(_hasPreferredWindow) ==
+          true)
+        _WindowRow(
+          label: 'Learner preferred delivery windows',
+          windows: detail.request!.learnerPreferredDeliveryWindows
+              .map((window) => SupplierScheduleWindow(start: window.start, end: window.end))
+              .where(_hasCompleteScheduleWindow)
+              .toList(),
+        ),
+      if (supplierProposal != null)
+        _WindowRow(label: 'Supplier proposal', windows: [supplierProposal]),
+      if (learnerProposal != null)
+        _WindowRow(label: 'Learner proposal', windows: [learnerProposal]),
+      if (!delivery && confirmedPickup != null)
+        _WindowRow(label: 'Confirmed pickup window', windows: [confirmedPickup]),
+      if (delivery && supplierDeliveryPickup != null)
+        _WindowRow(
+          label: 'Supplier delivery pickup window',
+          windows: [supplierDeliveryPickup],
+        ),
+      if (delivery && confirmedDelivery != null)
+        _WindowRow(
+          label: 'Confirmed delivery window',
+          windows: [confirmedDelivery],
+        ),
+      if (pendingReschedule != null && pendingWindow != null)
+        _WindowRow(
+          label: '${_actorLabel(pendingReschedule.requestedBy.value)} requested reschedule',
+          windows: [pendingWindow],
+        ),
+    ];
+    final recovery = summary?.recoveryContext;
+    final showRecovery = recovery != null &&
+        (_nonEmpty(recovery.note) != null || _nonEmpty(recovery.reason) != null);
+    final pending = summary?.pendingReschedule;
+    final showPending = pending != null &&
+        (_hasCompleteScheduleWindow(pending.proposedPickupWindow) ||
+            _nonEmpty(pending.note) != null ||
+            _nonEmpty(pending.reason) != null);
+
+    return AppSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TitleRow(icon: Icons.calendar_month_outlined, title: 'Schedule & negotiation'),
+          const SizedBox(height: AppSpacing.sm),
+          if (showRecovery)
+            _ContextBanner(
+              label: 'Admin-initiated recovery',
+              value: _nonEmpty(recovery.note) ?? _nonEmpty(recovery.reason)!,
+              tone: AppStatusTone.warning,
+            ),
+          if (showPending) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _ContextBanner(
+              label: 'Pending reschedule',
+              value: _nonEmpty(pending.note) ??
+                  _nonEmpty(pending.reason) ??
+                  'A new window is awaiting the next response.',
+              tone: AppStatusTone.info,
+            ),
+          ],
+          if (windows.isEmpty)
+            const _EmptyLine(text: 'No pickup or delivery window is currently proposed.'),
+          ...windows.map((row) => _WindowSection(row: row)),
+          if (_nonEmpty(summary?.schedulingConflictReason) != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _ContextBanner(label: 'Scheduling context', value: _nonEmpty(summary!.schedulingConflictReason)!, tone: AppStatusTone.warning),
+          ],
+          if (summary?.earliestDeliveryStart != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text('Earliest feasible delivery: ${_date(summary!.earliestDeliveryStart)}', style: context.supplierLabel()),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TerminalScheduleCard extends StatelessWidget {
+  const _TerminalScheduleCard({required this.detail});
+
+  final SupplierReservationDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final schedule = detail.schedule;
+    final delivery = detail.reservation.isDeliveryFulfillment;
+    final confirmedPickup = _completeWindow(schedule?.confirmedPickupWindow);
+    final supplierDeliveryPickup =
+        _completeWindow(schedule?.supplierDeliveryPickupWindow);
+    final confirmedDelivery = _completeWindow(schedule?.confirmedDeliveryWindow);
+    final historicalWindows = <_WindowRow>[
+      if (!delivery && confirmedPickup != null)
+        _WindowRow(
+          label: 'Confirmed pickup window',
+          windows: [confirmedPickup],
+        ),
+      if (delivery && supplierDeliveryPickup != null)
+        _WindowRow(
+          label: 'Supplier delivery pickup window',
+          windows: [supplierDeliveryPickup],
+        ),
+      if (delivery && confirmedDelivery != null)
+        _WindowRow(
+          label: 'Confirmed delivery window',
+          windows: [confirmedDelivery],
+        ),
+    ];
+    final emptyMessage = delivery
+        ? 'No pickup or delivery window was confirmed for this request.'
+        : 'No pickup window was confirmed before this request was ${_terminalVerb(detail.reservation)}.';
+
+    return AppSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TitleRow(icon: Icons.history_outlined, title: 'Schedule history'),
+          const SizedBox(height: AppSpacing.sm),
+          if (historicalWindows.isEmpty)
+            _EmptyLine(text: emptyMessage)
+          else ...[
+            ...historicalWindows.map((row) => _WindowSection(row: row)),
+            const SizedBox(height: AppSpacing.sm),
+            _InfoGrid(rows: [
+              ('Outcome', _terminalScheduleOutcome(detail.reservation)),
+            ]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FulfillmentCard extends StatelessWidget {
+  const _FulfillmentCard({required this.detail});
+  final SupplierReservationDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final reservation = detail.reservation;
+    final delivery = detail.delivery ?? reservation.deliverySummary;
+    final driver = delivery?.driver;
+    final fulfillment = detail.request?.fulfillmentMethod ?? reservation.fulfillmentMethod;
+    return AppSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TitleRow(icon: Icons.local_shipping_outlined, title: 'Fulfillment & delivery'),
+          const SizedBox(height: AppSpacing.md),
+          _InfoGrid(rows: [
+            ('Method', _fulfillmentLabel(reservation)),
+            ('Delivery status', delivery?.status == null ? 'Not selected' : _deliveryStatusLabel(delivery!.status!)),
+            if (driver?.displayName != null) ('Driver', driver!.displayName!),
+            if (detail.group?.groupId != null) ('Group', _shortId(detail.group!.groupId!)),
+            if (reservation.supplierHandoverCode != null) ('Handover', 'Code available'),
+          ]),
+          if (delivery?.failureReason != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _ContextBanner(label: 'Failure / recovery', value: delivery!.failureReason!, tone: AppStatusTone.danger),
+          ],
+          if (detail.request?.deliveryNote != null && detail.request!.deliveryNote!.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _NoteBlock(label: 'Delivery note', text: detail.request!.deliveryNote!),
+          ],
+          if (fulfillment.toUpperCase() == 'DELIVERY' && delivery == null)
+            _EmptyLine(text: 'Delivery has not been selected or created for this reservation.'),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttentionCard extends StatelessWidget {
+  const _AttentionCard({required this.reservation});
+  final SupplierIncomingRequest reservation;
+
+  @override
+  Widget build(BuildContext context) => AppSectionCard(
+        tone: _attentionTone(reservation.attentionState?.value),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TitleRow(icon: Icons.priority_high_outlined, title: 'Attention'),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              _attentionLabel(reservation.attentionState?.value),
+              style: context.supplierTitle().copyWith(fontSize: 18),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Next actor: ${_actorLabel(reservation.nextActor?.value)}',
+              style: context.supplierBody().copyWith(color: context.supplierColors.textSecondary),
+            ),
+            if (reservation.attentionState?.value == SupplierAttentionState.adminReviewRequired) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text('This request is awaiting admin resolution. Supplier controls are read-only unless an available action is provided.', style: context.supplierBody()),
+            ],
+          ],
+        ),
+      );
+}
+
+class _IncidentCard extends StatelessWidget {
+  const _IncidentCard({required this.incident});
+  final SupplierIncidentSummary incident;
+
+  @override
+  Widget build(BuildContext context) => AppSectionCard(
+        tone: AppStatusTone.info,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TitleRow(icon: Icons.shield_outlined, title: 'Incident / admin review'),
+            const SizedBox(height: AppSpacing.md),
+            _InfoGrid(rows: [
+              if (incident.id != null) ('Report ID', _shortId(incident.id!)),
+              if (incident.reasonCode != null) ('Reason', _reasonLabel(incident.reasonCode!)),
+              if (incident.status != null) ('Status', _reasonLabel(incident.status!)),
+              if (incident.workflowType != null) ('Workflow', _reasonLabel(incident.workflowType!)),
+              if (incident.operationalState != null) ('Operational state', _reasonLabel(incident.operationalState!)),
+            ]),
+            if (incident.note != null && incident.note!.trim().isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              _NoteBlock(label: 'Supplier explanation', text: incident.note!),
+            ],
+            if (incident.reviewNote != null && incident.reviewNote!.trim().isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              _NoteBlock(label: 'Admin review note', text: incident.reviewNote!),
+            ],
+          ],
+        ),
+      );
+}
+
+class _GroupCard extends StatelessWidget {
+  const _GroupCard({required this.group});
+  final SupplierGroupSummary group;
+
+  @override
+  Widget build(BuildContext context) => AppSectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TitleRow(icon: Icons.account_tree_outlined, title: 'Group context'),
+            const SizedBox(height: AppSpacing.md),
+            _InfoGrid(rows: [
+              if (group.groupId != null) ('Group ID', _shortId(group.groupId!)),
+              if (group.status != null) ('Status', _reasonLabel(group.status!)),
+              if (group.itemCount != null) ('Items', '${group.itemCount}'),
+              if (group.driver?.displayName != null) ('Driver', group.driver!.displayName!),
+            ]),
+            if (group.items.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text('Items in group', style: context.supplierLabel()),
+              const SizedBox(height: AppSpacing.xs),
+              ...group.items.take(3).map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 3),
+                    child: Text(_string(item, 'materialTitle') ?? _string(item, 'title') ?? 'Grouped reservation item', style: context.supplierBody()),
+                  )),
+              if (group.hasMoreItems == true) Text('More items are available in the group.', style: context.supplierLabel()),
+            ],
+          ],
+        ),
+      );
+}
+
+class _MessagesCard extends StatelessWidget {
+  const _MessagesCard({
+    super.key,
+    required this.detail,
+    required this.learnerName,
+    required this.controller,
+    required this.focusNode,
+    required this.localMessages,
+    required this.onSend,
+    required this.sending,
+  });
+
+  final SupplierReservationDetail detail;
+  final String learnerName;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final List<SupplierReservationMessageSummary> localMessages;
+  final VoidCallback onSend;
+  final bool sending;
+
+  @override
+  Widget build(BuildContext context) {
+    final original = detail.request?.originalLearnerNote?.trim();
+    final messages = [
+      ...detail.messages,
+      ...localMessages,
+    ].where((message) {
+      if (original == null || detail.reservation.messageSummary?.matchesOriginalLearnerNote != true) return true;
+      return message.body?.trim() != original;
+    }).toList();
+    messages.sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
+    final canSend = detail.reservation.availableActions.any((action) => action.value == SupplierReservationAction.sendMessage);
+
+    return AppSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _TitleRow(
+            icon: Icons.chat_bubble_outline,
+            title: 'Messages${messages.isEmpty ? '' : ' (${messages.length})'}',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (messages.isEmpty)
+            _EmptyLine(text: 'No messages yet.')
+          else
+            ...messages.map(
+              (message) => _MessageBubble(
+                message: message,
+                learnerName: learnerName,
+              ),
+            ),
+          if (canSend) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    maxLines: 3,
+                    minLines: 1,
+                    maxLength: 1000,
+                    decoration: const InputDecoration(hintText: 'Type a message…'),
+                    onSubmitted: (_) => onSend(),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                IconButton.filled(
+                  onPressed: sending ? null : onSend,
+                  tooltip: 'Send message',
+                  icon: sending
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.send_outlined),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  const _MessageBubble({required this.message, required this.learnerName});
+  final SupplierReservationMessageSummary message;
+  final String learnerName;
+
+  @override
+  Widget build(BuildContext context) {
+    final learner = message.senderRole?.toUpperCase() == 'LEARNER';
+    final sender = learner ? learnerName : 'You';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: learner
+              ? context.supplierColors.surface
+              : context.supplierColors.accentSoft.withValues(alpha: .35),
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: context.supplierColors.border.withValues(alpha: .6)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.sm,
+              runSpacing: 2,
+              children: [
+                Text(sender, style: context.supplierLabel().copyWith(fontWeight: FontWeight.w700)),
+                Text(learner ? 'Learner' : 'Supplier', style: context.supplierLabel().copyWith(color: context.supplierColors.textSecondary)),
+                Text(_date(message.createdAt), style: context.supplierLabel().copyWith(color: context.supplierColors.textMuted)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(message.body ?? '', style: context.supplierBody()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({required this.history});
+  final List<SupplierReservationHistoryEntry> history;
+
+  @override
+  Widget build(BuildContext context) => AppSectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TitleRow(icon: Icons.history_outlined, title: 'Reservation history'),
+            const SizedBox(height: AppSpacing.md),
+            if (history.isEmpty)
+              _EmptyLine(text: 'No history events were returned.')
+            else
+              ...history.map((event) => _HistoryEvent(event: event)),
+          ],
+        ),
+      );
+}
+
+class _HistoryEvent extends StatelessWidget {
+  const _HistoryEvent({required this.event});
+  final SupplierReservationHistoryEntry event;
+
+  @override
+  Widget build(BuildContext context) {
+    final actor = _string(event.actor, 'displayName') ?? _actorLabel(null);
+    final role = _string(event.actor, 'role');
+    final transition = event.newStatus == null
+        ? 'Reservation updated'
+        : '${_reasonLabel(event.oldStatus ?? 'Request')} → ${_reasonLabel(event.newStatus!)}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.radio_button_checked, size: 16, color: context.supplierColors.accent),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(transition, style: context.supplierBody().copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text('$actor${role == null ? '' : ' · ${_reasonLabel(role)}'} · ${_date(event.createdAt)}', style: context.supplierLabel().copyWith(color: context.supplierColors.textSecondary)),
+                if (event.note != null && event.note!.trim().isNotEmpty) Text(event.note!, style: context.supplierLabel()),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TitleRow extends StatelessWidget {
+  const _TitleRow({required this.icon, required this.title});
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Icon(icon, size: 21, color: context.supplierColors.accent),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: Text(title, style: context.supplierSectionTitle())),
+        ],
+      );
+}
+
+class _InfoGrid extends StatelessWidget {
+  const _InfoGrid({required this.rows});
+  final List<(String, String)> rows;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: rows
+            .map(
+              (row) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 132, child: Text(row.$1, style: context.supplierLabel().copyWith(color: context.supplierColors.textSecondary))),
+                    Expanded(child: Text(row.$2, style: context.supplierBody().copyWith(fontWeight: FontWeight.w600))),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
+      );
+}
+
+class _NoteBlock extends StatelessWidget {
+  const _NoteBlock({required this.label, required this.text});
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: context.supplierColors.surface,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: context.supplierColors.border.withValues(alpha: .55)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: context.supplierLabel().copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppSpacing.xs),
+            Text(text, style: context.supplierBody()),
+          ],
+        ),
+      );
+}
+
+class _ContextBanner extends StatelessWidget {
+  const _ContextBanner({required this.label, required this.value, required this.tone});
+  final String label;
+  final String value;
+  final AppStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppStatusStyle.of(context, tone);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(color: style.background, borderRadius: AppRadius.mdAll, border: Border.all(color: style.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: context.supplierLabel().copyWith(color: style.foreground, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 3),
+        Text(value, style: context.supplierBody()),
+      ]),
+    );
+  }
+}
+
+class _WindowRow {
+  const _WindowRow({required this.label, required this.windows});
+  final String label;
+  final List<SupplierScheduleWindow> windows;
+}
+
+class _WindowSection extends StatelessWidget {
+  const _WindowSection({required this.row});
+  final _WindowRow row;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.sm),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(color: context.supplierColors.surface, borderRadius: AppRadius.mdAll),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(row.label, style: context.supplierLabel().copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppSpacing.xs),
+            ...row.windows.where((window) => window.start != null || window.end != null).map((window) => Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(_window(window), style: context.supplierBody()),
+                )),
+          ]),
+        ),
+      );
+}
+
+class _EmptyLine extends StatelessWidget {
+  const _EmptyLine({required this.text});
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(text, style: context.supplierBody().copyWith(color: context.supplierColors.textSecondary));
+}
+
+class _MaterialImage extends StatelessWidget {
+  const _MaterialImage({required this.url, required this.size});
+  final String? url;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = url?.trim();
+    return ClipRRect(
+      borderRadius: AppRadius.mdAll,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: imageUrl == null || imageUrl.isEmpty
+            ? ColoredBox(color: context.supplierColors.surface, child: Icon(Icons.inventory_2_outlined, color: context.supplierColors.textMuted, size: size * .38))
+            : Image.network(ApiConfig.resolveMediaUrl(imageUrl), fit: BoxFit.cover, errorBuilder: (_, _, _) => ColoredBox(color: context.supplierColors.surface, child: Icon(Icons.inventory_2_outlined, color: context.supplierColors.textMuted, size: size * .38))),
+      ),
+    );
+  }
+}
+
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+  @override
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const SizedBox(height: 48),
+        _SkeletonBox(height: 140),
+        const SizedBox(height: AppSpacing.md),
+        _SkeletonBox(height: 60),
+        const SizedBox(height: AppSpacing.lg),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: Column(children: [const _SkeletonBox(height: 220), const SizedBox(height: AppSpacing.md), const _SkeletonBox(height: 280)])),
+          const SizedBox(width: AppSpacing.md),
+          const Expanded(child: _SkeletonBox(height: 420)),
+        ]),
+      ]);
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({required this.height});
+  final double height;
+  @override
+  Widget build(BuildContext context) => AppSectionCard(child: SizedBox(height: height, child: const Center(child: CircularProgressIndicator())));
+}
+
+class _DetailError extends StatelessWidget {
+  const _DetailError({required this.notFound, required this.onBack, required this.onRetry});
+  final bool notFound;
+  final VoidCallback onBack;
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) => AppSectionCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Icon(notFound ? Icons.search_off_outlined : Icons.cloud_off_outlined, size: 40, color: context.supplierColors.textSecondary),
+          const SizedBox(height: AppSpacing.md),
+          Text(notFound ? 'Request not found' : 'Could not load request', textAlign: TextAlign.center, style: context.supplierTitle()),
+          const SizedBox(height: AppSpacing.xs),
+          Text(notFound ? 'This request is unavailable.' : 'We could not load this request. Please try again.', textAlign: TextAlign.center, style: context.supplierBody()),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(alignment: WrapAlignment.center, spacing: AppSpacing.sm, children: [
+            OutlinedButton(onPressed: onBack, child: const Text('Back to Incoming Requests')),
+            if (!notFound) FilledButton(onPressed: onRetry, child: const Text('Retry')),
+          ]),
+        ]),
+      );
+}
+
+bool _isNotFound(Object error) => error is ApiException && (error.statusCode == 403 || error.statusCode == 404);
+
+String _materialTitle(SupplierReservationDetail detail) =>
+    _string(detail.identity?.material, 'title') ??
+    _string(detail.identity?.material, 'name') ??
+    detail.reservation.materialTitle;
+
+String _learnerName(SupplierReservationDetail detail) =>
+    _string(detail.identity?.learner, 'displayName') ??
+    _string(detail.identity?.learner, 'name') ??
+    detail.reservation.learnerName;
+
+String? _string(Map<String, dynamic>? map, String key) => map?[key] as String?;
+
+String? _nonEmpty(String? value) => value == null || value.trim().isEmpty ? null : value.trim();
+
+String _shortId(String id) => id.length <= 10 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();
+
+String _quantity(double value) => value == value.roundToDouble() ? value.toInt().toString() : value.toStringAsFixed(2);
+
+String _date(DateTime? value) => value == null ? '—' : DateFormat('MMM d, yyyy · HH:mm').format(value.toLocal());
+
+String _window(SupplierScheduleWindow window) {
+  final start = window.start;
+  final end = window.end;
+  if (start == null && end == null) return 'Not proposed';
+  if (start == null) return 'Until ${DateFormat('MMM d, yyyy · HH:mm').format(end!.toLocal())}';
+  if (end == null) return 'From ${DateFormat('MMM d, yyyy · HH:mm').format(start.toLocal())}';
+  final day = DateFormat('MMM d, yyyy').format(start.toLocal());
+  final sameDay = DateUtils.isSameDay(start, end);
+  return sameDay
+      ? '$day · ${DateFormat('HH:mm').format(start.toLocal())} – ${DateFormat('HH:mm').format(end.toLocal())}'
+      : '${DateFormat('MMM d, yyyy · HH:mm').format(start.toLocal())} – ${DateFormat('MMM d, yyyy · HH:mm').format(end.toLocal())}';
+}
+
+String _fulfillmentLabel(SupplierIncomingRequest reservation) =>
+    reservation.fulfillmentContract?.label ??
+    reservation.fulfillmentLabel ??
+    (reservation.isDeliveryFulfillment ? 'Delivery' : 'Self pickup');
+
+String _stateFulfillmentLabel(SupplierIncomingRequest reservation) =>
+    reservation.isDeliveryFulfillment ? 'Delivery' : 'Self pickup';
+
+bool _isTerminalReservation(SupplierReservationDetail detail) {
+  final reservation = detail.reservation;
+  return reservation.attentionState?.value == SupplierAttentionState.terminal ||
+      reservation.workflowPhase?.value == SupplierWorkflowPhase.completed ||
+      reservation.workflowPhase?.value == SupplierWorkflowPhase.closed;
+}
+
+SupplierScheduleWindow? _effectiveScheduleWindow(
+  SupplierScheduleSummary? summary,
+) {
+  if (_hasCompleteScheduleWindow(summary?.effectiveWindow)) {
+    return summary!.effectiveWindow;
+  }
+  final pending = summary?.pendingReschedule?.proposedPickupWindow;
+  return _hasCompleteScheduleWindow(pending) ? pending : null;
+}
+
+bool _hasCompleteScheduleWindow(SupplierScheduleWindow? window) =>
+    window?.start != null && window?.end != null;
+
+SupplierScheduleWindow? _completeWindow(SupplierScheduleWindow? window) =>
+    _hasCompleteScheduleWindow(window) ? window : null;
+
+bool _hasPreferredWindow(dynamic window) =>
+    window.start != null && window.end != null;
+
+String _terminalOutcomeLabel(SupplierIncomingRequest reservation) =>
+    switch (reservation.status) {
+      SupplierIncomingRequestStatus.completed => 'Completed successfully',
+      SupplierIncomingRequestStatus.cancelled => 'Cancelled',
+      SupplierIncomingRequestStatus.expired => 'Expired',
+      SupplierIncomingRequestStatus.noShow => 'Learner no-show',
+      SupplierIncomingRequestStatus.declined => 'Declined',
+      SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
+      _ => reservation.status.label,
+    };
+
+String _terminalScheduleOutcome(SupplierIncomingRequest reservation) =>
+    switch (reservation.status) {
+      SupplierIncomingRequestStatus.completed => 'Completed successfully',
+      SupplierIncomingRequestStatus.cancelled => 'Cancelled before fulfillment',
+      SupplierIncomingRequestStatus.expired => 'Expired before fulfillment',
+      SupplierIncomingRequestStatus.noShow => 'Learner no-show',
+      _ => _terminalOutcomeLabel(reservation),
+    };
+
+String _terminalVerb(SupplierIncomingRequest reservation) =>
+    switch (reservation.status) {
+      SupplierIncomingRequestStatus.cancelled => 'cancelled',
+      SupplierIncomingRequestStatus.expired => 'expired',
+      SupplierIncomingRequestStatus.completed => 'completed',
+      _ => 'closed',
+    };
+
+String _workflowLabel(SupplierWorkflowPhase? phase) => switch (phase) {
+      SupplierWorkflowPhase.initialDecision => 'Initial decision',
+      SupplierWorkflowPhase.scheduling => 'Scheduling',
+      SupplierWorkflowPhase.selfPickup => 'Self pickup',
+      SupplierWorkflowPhase.delivery => 'Delivery',
+      SupplierWorkflowPhase.recovery => 'Recovery',
+      SupplierWorkflowPhase.completed => 'Completed',
+      SupplierWorkflowPhase.closed => 'Closed',
+      SupplierWorkflowPhase.unknown || null => '—',
+    };
+
+String _attentionLabel(SupplierAttentionState? attention) => switch (attention) {
+      SupplierAttentionState.supplierActionRequired => 'Supplier action required',
+      SupplierAttentionState.waitingForLearner => 'Waiting for learner',
+      SupplierAttentionState.fulfillmentInProgress => 'Fulfillment in progress',
+      SupplierAttentionState.adminReviewRequired => 'Admin review required',
+      SupplierAttentionState.terminal => 'No further action',
+      SupplierAttentionState.unknown || null => '—',
+    };
+
+String _actorLabel(SupplierNextActor? actor) => switch (actor) {
+      SupplierNextActor.supplier => 'Supplier',
+      SupplierNextActor.learner => 'Learner',
+      SupplierNextActor.driver => 'Driver',
+      SupplierNextActor.admin => 'Admin',
+      SupplierNextActor.system => 'System',
+      SupplierNextActor.none => 'No actor',
+      SupplierNextActor.unknown || null => '—',
+    };
+
+String _reasonLabel(String raw) => raw
+    .toLowerCase()
+    .split('_')
+    .where((part) => part.isNotEmpty)
+    .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+    .join(' ');
+
+String _deliveryStatusLabel(String raw) => switch (raw.toUpperCase()) {
+      'WAITING_FOR_DRIVER' => 'Waiting for driver',
+      'DRIVER_ASSIGNED' || 'ARRIVED_PICKUP' => 'Driver assigned',
+      'PICKED_UP' => 'Picked up by driver',
+      'ON_THE_WAY' || 'ARRIVED_DROPOFF' => 'On the way',
+      'DELIVERED' => 'Delivered',
+      'CANCELLED' => 'Delivery cancelled',
+      'FAILED_PICKUP' || 'FAILED_DELIVERY' => 'Delivery failed',
+      'DRIVER_NO_SHOW' => 'Driver no-show',
+      'LEARNER_NO_SHOW' => 'Learner no-show',
+      'AWAITING_RESOLUTION' => 'Needs admin review',
+      _ => 'Delivery requested',
+    };
+
+AppStatusTone _statusTone(SupplierIncomingRequestStatus status) => switch (status) {
+      SupplierIncomingRequestStatus.completed || SupplierIncomingRequestStatus.accepted => AppStatusTone.success,
+      SupplierIncomingRequestStatus.declined || SupplierIncomingRequestStatus.cancelled || SupplierIncomingRequestStatus.expired || SupplierIncomingRequestStatus.noShow || SupplierIncomingRequestStatus.fulfillmentFailed => AppStatusTone.danger,
+      SupplierIncomingRequestStatus.needsResolution => AppStatusTone.info,
+      _ => AppStatusTone.warning,
+    };
+
+AppStatusTone _attentionTone(SupplierAttentionState? attention) => switch (attention) {
+      SupplierAttentionState.adminReviewRequired => AppStatusTone.info,
+      SupplierAttentionState.supplierActionRequired => AppStatusTone.warning,
+      SupplierAttentionState.fulfillmentInProgress => AppStatusTone.primary,
+      SupplierAttentionState.terminal => AppStatusTone.success,
+      _ => AppStatusTone.neutral,
+    };
+
+String _actionLabel(SupplierReservationAction action) => switch (action) {
+      SupplierReservationAction.accept => 'Accept learner time',
+      SupplierReservationAction.decline => 'Decline request',
+      SupplierReservationAction.sendMessage => 'Send message',
+      SupplierReservationAction.completeSelfPickup => 'Complete self pickup',
+      SupplierReservationAction.proposeReschedule => 'Propose different time',
+      SupplierReservationAction.acceptLearnerReschedule => 'Accept learner time',
+      SupplierReservationAction.closeReservation => 'Close reservation',
+      SupplierReservationAction.markLearnerNoShow => 'Mark learner no-show',
+      SupplierReservationAction.reportIncident => 'Report incident',
+      SupplierReservationAction.reportNoDriver => 'Report no driver',
+      SupplierReservationAction.markDeliveryPickupExpired => 'Mark pickup expired',
+      SupplierReservationAction.reportDriverNoShow => 'Report driver no-show',
+      SupplierReservationAction.submitRecoveryPickupWindow => 'Submit recovery pickup window',
+      SupplierReservationAction.unknown => 'Review request',
+    };
+
+IconData _actionIcon(SupplierReservationAction action) => switch (action) {
+      SupplierReservationAction.accept || SupplierReservationAction.acceptLearnerReschedule => Icons.check_circle_outline,
+      SupplierReservationAction.decline => Icons.close,
+      SupplierReservationAction.sendMessage => Icons.chat_bubble_outline,
+      SupplierReservationAction.completeSelfPickup => Icons.task_alt,
+      SupplierReservationAction.proposeReschedule || SupplierReservationAction.submitRecoveryPickupWindow => Icons.schedule_outlined,
+      SupplierReservationAction.closeReservation => Icons.archive_outlined,
+      SupplierReservationAction.markLearnerNoShow || SupplierReservationAction.reportDriverNoShow => Icons.person_off_outlined,
+      SupplierReservationAction.reportIncident || SupplierReservationAction.reportNoDriver => Icons.warning_amber_outlined,
+      SupplierReservationAction.markDeliveryPickupExpired => Icons.timer_off_outlined,
+      SupplierReservationAction.unknown => Icons.more_horiz,
+    };

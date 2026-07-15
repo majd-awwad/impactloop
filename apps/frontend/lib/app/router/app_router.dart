@@ -50,6 +50,7 @@ import '../../features/supplier_portal/presentation/pages/supplier_edit_material
 import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_owned_material_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_reservation_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_notifications_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedule_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
@@ -785,6 +786,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => SupplierIncomingRequestsPage(
               initialTab: state.uri.queryParameters['tab'],
               focusReservationId: state.uri.queryParameters['focus'],
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/reservations/:reservationId',
+            builder: (context, state) => SupplierReservationDetailPage(
+              reservationId: state.pathParameters['reservationId']!,
             ),
           ),
           GoRoute(

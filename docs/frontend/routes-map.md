@@ -108,6 +108,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/supplier/materials/:id` | `SupplierOwnedMaterialDetailPage` | supplier | Redirects `id=new` → `/supplier/materials/new` |
 | `/supplier/materials` | `SupplierMyMaterialsPage` | supplier | |
 | `/supplier/reservations` | `SupplierIncomingRequestsPage` | supplier | Query: `tab`, `focus` |
+| `/supplier/reservations/:reservationId` | `SupplierReservationDetailPage` | supplier | Owner-scoped adaptive request workspace; direct deep links and refresh are supported; back fallback returns to Incoming Requests |
 | `/supplier/pickup-schedule` | `SupplierPickupSchedulePage` | supplier | |
 | `/supplier/notifications` | `SupplierNotificationsPage` | supplier | |
 | `/supplier/profile` | `SupplierProfilePage` | supplier | |
@@ -187,12 +188,13 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | `/learning` | `q` | Optional initial search term, used by material detail project handoff |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
+| `/supplier/reservations/:reservationId` | `reservationId` | Owner-scoped Supplier request detail; loads independently of Inbox state |
 
 ## Navigation stack behavior
 
 Primary app navigation replaces the current route with `context.go(...)`: entry nav links, mobile bottom tabs, supplier/admin sidebars, portal switchers, auth redirects, and direct filter-reset URL updates.
 
-Page-level drill-ins preserve the previous page with `context.push(...)`: material/project/reservation/delivery detail opens, profile subpages, supplier material add/edit/detail flows, notification deep links, dashboard shortcut cards, and admin overview shortcut cards.
+Page-level drill-ins preserve the previous page with `context.push(...)`: material/project/reservation/delivery detail opens, Supplier request detail, profile subpages, supplier material add/edit/detail flows, notification deep links, dashboard shortcut cards, and admin overview shortcut cards.
 
 Back/save/delete completion paths use `context.popOrGo(<fallback>)` from `app/router/navigation_extensions.dart` when a page must return to the caller if history exists, while still supporting direct web URL entry with a stable fallback route.
 

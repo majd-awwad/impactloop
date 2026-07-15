@@ -116,6 +116,14 @@ final incomingRequestsProvider =
           );
     });
 
+final supplierReservationDetailProvider = FutureProvider.autoDispose
+    .family<SupplierReservationDetail, String>((ref, reservationId) async {
+  watchSupplierPortalSessionFromRef(ref);
+  return ref
+      .read(supplierRequestsRepositoryProvider)
+      .fetchReservationDetail(reservationId);
+});
+
 Future<SupplierIncomingRequest> acceptIncomingRequest(
   WidgetRef ref, {
   required String requestId,

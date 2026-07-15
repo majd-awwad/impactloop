@@ -1,6 +1,6 @@
 # Supplier Reservation Flow
 
-**Sources inspected:** `supplier_incoming_requests_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.*`
+**Sources inspected:** `supplier_incoming_requests_page.dart`, `supplier_reservation_detail_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.*`
 
 ## Trigger
 
@@ -32,9 +32,11 @@ Read-only.
 
 List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `fulfillmentMethod`, `fulfillmentLabel`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
 
-### Detail-route migration note
+### Detail workspace
 
-`GET /api/supplier/reservations/:id` is available for a future supplier reservation-detail route. It is supplier-owner scoped and supplies the request, schedule, bounded message/history context, delivery/group state, and incident summary without exact locations. The current `focus` query remains compatible as a no-op until the Flutter detail page explicitly adopts this route.
+The Inbox opens `/supplier/reservations/:reservationId` with `context.push(...)`; the Inbox presentation remains unchanged apart from that navigation callback. `SupplierReservationDetailPage` loads independently through the owner-scoped `GET /api/supplier/reservations/:id` contract, so browser refresh/direct URLs do not depend on Inbox state. It renders one adaptive workspace for all workflow phases: request identity and canonical state strip, request facts, authoritative schedule negotiation, bounded chronological messages, fulfillment/delivery, conditional incident/group context, and bounded status history.
+
+The detail page renders only executable `availableActions`, delegates mutations to the existing Supplier dialogs/flows, prevents duplicate submissions while a mutation is active, invalidates the detail provider after successful API calls, and keeps errors scoped to the workspace. Mobile orders actions before request facts and messages; desktop uses a main/side workspace split. Missing or non-owned requests use a safe not-found state and a back fallback to Incoming Requests.
 
 ### Error states
 
