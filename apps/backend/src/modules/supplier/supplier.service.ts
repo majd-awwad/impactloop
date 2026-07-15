@@ -20,6 +20,7 @@ import { AppError } from "../../utils/app-error.js";
 import { env } from "../../config/env.js";
 import { prisma } from "../../database/prisma.js";
 import { decimalToNumber } from "../../utils/decimal.js";
+import { createNotification } from "../notifications/notifications.repository.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import * as categoriesRepository from "../categories/categories.repository.js";
 import * as categoryRequestsRepository from "../category-requests/category-requests.repository.js";
@@ -821,7 +822,7 @@ export const createSupplierMaterialIdempotent = async (
   input: CreateSupplierMaterialInput,
   idempotencyKey: string,
 ) => {
-  return runIdempotentOperation<CreatedSupplierMaterialDto>({
+  const created = await runIdempotentOperation<CreatedSupplierMaterialDto>({
     userId,
     scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
     key: idempotencyKey,
@@ -830,6 +831,48 @@ export const createSupplierMaterialIdempotent = async (
     getResourceId: (material) => material.id,
     handler: (tx) => createSupplierMaterial(userId, input, tx),
   });
+  const createdMaterial = created.response;
+
+  const publishNotifications: Promise<unknown>[] = [];
+  if (input.sourceCategoryRequestId) {
+    publishNotifications.push(
+      createNotification({
+          userId,
+          notificationType: "CATEGORY_REQUEST_UPDATE",
+          title: "Listing published",
+          body: `${createdMaterial.title} was published from the approved category review.`,
+          relatedEntityType: "CATEGORY_REQUEST",
+          relatedEntityId: input.sourceCategoryRequestId,
+          eventKey: `listing-published:category:${input.sourceCategoryRequestId}:${createdMaterial.id}`,
+          entityType: "CATEGORY_REQUEST",
+          entityId: input.sourceCategoryRequestId,
+          actionType: "NONE",
+          resolvedAt: new Date(),
+          metadata: { publishedMaterialId: createdMaterial.id },
+        }),
+    );
+  }
+  if (input.sourcePriceRuleRequestId) {
+    publishNotifications.push(
+      createNotification({
+          userId,
+          notificationType: "PRICE_REQUEST_UPDATE",
+          title: "Listing published",
+          body: `${createdMaterial.title} was published from the approved price review.`,
+          relatedEntityType: "PRICE_RULE_REQUEST",
+          relatedEntityId: input.sourcePriceRuleRequestId,
+          eventKey: `listing-published:price:${input.sourcePriceRuleRequestId}:${createdMaterial.id}`,
+          entityType: "PRICE_RULE_REQUEST",
+          entityId: input.sourcePriceRuleRequestId,
+          actionType: "NONE",
+          resolvedAt: new Date(),
+          metadata: { publishedMaterialId: createdMaterial.id },
+        }),
+    );
+  }
+
+  await Promise.all(publishNotifications);
+  return created;
 };
 
 export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({

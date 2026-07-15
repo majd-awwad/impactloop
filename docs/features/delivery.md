@@ -120,7 +120,7 @@ Failure and recovery:
 Notifications:
 
 - Driver notifications are intentionally limited to `DRIVER_NEW_JOB`, `DRIVER_PICKUP_TIME`, `DRIVER_DROPOFF_TIME`, and `DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN`.
-- Supplier notifications exist for admin no-driver/stale-pickup reschedule requests.
+- Supplier notifications persist deterministic `NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED` and `STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED` events. The supplier inbox classifies these as delivery recovery and exposes `CHOOSE_PICKUP_WINDOW` only after revalidating the reservation's current available action.
 - Existing reservation notifications still cover only part of the lifecycle. No delivery-completed, delivery-failed, learner tracking, admin-review, or replacement-driver notification event was found.
 
 ## Routes

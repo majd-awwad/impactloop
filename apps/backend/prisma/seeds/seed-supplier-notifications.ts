@@ -19,7 +19,7 @@ const baseDraft = (input: {
 }) => ({
   materialName: input.materialName,
   title: input.title,
-  description: `${SEED_NOTIFICATION_PREFIX} ${input.title} listing draft.`,
+  description: `${input.title} listing draft.`,
   requestedCategoryName: input.requestedCategoryName,
   categoryId: input.categoryId ?? null,
   condition: 'GOOD',
@@ -34,6 +34,7 @@ const baseDraft = (input: {
   pickupNotes: 'Available weekdays after 3 PM.',
   suggestedUses: 'Workshop and classroom projects.',
   imageUrls: [] as string[],
+  _seedMarker: SEED_NOTIFICATION_PREFIX,
 });
 
 export async function seedSupplierNotifications(prisma: PrismaClient) {
@@ -62,7 +63,10 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
   const existing = await prisma.categoryRequest.count({
     where: {
       requestedByUserId: supplier.id,
-      requestedName: { startsWith: SEED_NOTIFICATION_PREFIX },
+      OR: [
+        { requestedName: { startsWith: SEED_NOTIFICATION_PREFIX } },
+        { listingDraftJson: { path: ['_seedMarker'], equals: SEED_NOTIFICATION_PREFIX } },
+      ],
     },
   });
 
@@ -76,13 +80,19 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
     await prisma.categoryRequest.deleteMany({
       where: {
         requestedByUserId: supplier.id,
-        requestedName: { startsWith: SEED_NOTIFICATION_PREFIX },
+        OR: [
+          { requestedName: { startsWith: SEED_NOTIFICATION_PREFIX } },
+          { listingDraftJson: { path: ['_seedMarker'], equals: SEED_NOTIFICATION_PREFIX } },
+        ],
       },
     });
     await prisma.priceRuleRequest.deleteMany({
       where: {
         requestedByUserId: supplier.id,
-        materialName: { startsWith: SEED_NOTIFICATION_PREFIX },
+        OR: [
+          { materialName: { startsWith: SEED_NOTIFICATION_PREFIX } },
+          { listingDraftJson: { path: ['_seedMarker'], equals: SEED_NOTIFICATION_PREFIX } },
+        ],
       },
     });
   }
@@ -108,10 +118,8 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
 
   await prisma.categoryRequest.create({
     data: {
-      requestedName: `${SEED_NOTIFICATION_PREFIX} Arduino parts`,
-      normalizedRequestedName: normalizeSearchText(
-        `${SEED_NOTIFICATION_PREFIX} Arduino parts`,
-      ),
+      requestedName: 'Arduino parts',
+      normalizedRequestedName: normalizeSearchText('Arduino parts'),
       requestedByUserId: supplier.id,
       status: 'APPROVED',
       approvedCategoryId: electronics.id,
@@ -129,10 +137,8 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
 
   await prisma.categoryRequest.create({
     data: {
-      requestedName: `${SEED_NOTIFICATION_PREFIX} Robot stuff`,
-      normalizedRequestedName: normalizeSearchText(
-        `${SEED_NOTIFICATION_PREFIX} Robot stuff`,
-      ),
+      requestedName: 'Robot stuff',
+      normalizedRequestedName: normalizeSearchText('Robot stuff'),
       requestedByUserId: supplier.id,
       status: 'APPROVED',
       approvedCategoryId: electronics.id,
@@ -150,10 +156,8 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
 
   await prisma.categoryRequest.create({
     data: {
-      requestedName: `${SEED_NOTIFICATION_PREFIX} Random items`,
-      normalizedRequestedName: normalizeSearchText(
-        `${SEED_NOTIFICATION_PREFIX} Random items`,
-      ),
+      requestedName: 'Random items',
+      normalizedRequestedName: normalizeSearchText('Random items'),
       requestedByUserId: supplier.id,
       status: 'REJECTED',
       moderatorNote: 'Please choose a more specific existing category.',
@@ -170,10 +174,8 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
 
   await prisma.priceRuleRequest.create({
     data: {
-      materialName: `${SEED_NOTIFICATION_PREFIX} Arduino Uno`,
-      normalizedMaterialName: normalizeSearchText(
-        `${SEED_NOTIFICATION_PREFIX} Arduino Uno`,
-      ),
+      materialName: 'Arduino Uno',
+      normalizedMaterialName: normalizeSearchText('Arduino Uno'),
       categoryId: electronics.id,
       unit: 'piece',
       condition: 'GOOD',
@@ -198,10 +200,8 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
 
   await prisma.priceRuleRequest.create({
     data: {
-      materialName: `${SEED_NOTIFICATION_PREFIX} Epoxy resin bottle`,
-      normalizedMaterialName: normalizeSearchText(
-        `${SEED_NOTIFICATION_PREFIX} Epoxy resin bottle`,
-      ),
+      materialName: 'Epoxy resin bottle',
+      normalizedMaterialName: normalizeSearchText('Epoxy resin bottle'),
       categoryId: electronics.id,
       unit: 'bottle',
       condition: 'NEW',
@@ -230,7 +230,7 @@ export async function seedSupplierNotifications(prisma: PrismaClient) {
   console.log('[seed] Supplier notification samples created.');
 }
 
-const PUBLISHED_SAMPLE_NAME = `${SEED_NOTIFICATION_PREFIX} Published listing`;
+const PUBLISHED_SAMPLE_NAME = 'Published listing';
 
 async function ensurePublishedNotificationSample(
   prisma: PrismaClient,

@@ -25,16 +25,13 @@ class _SupplierNotificationsPageState
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ref.invalidate(supplierNotificationsProvider);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(supplierNotificationFilterProvider);
-    final notificationsAsync = ref.watch(supplierNotificationsProvider);
+    final query = const SupplierNotificationsQuery().forFilter(filter);
+    final notificationsAsync = ref.watch(supplierNotificationsProvider(query));
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final l = context.s;
@@ -61,6 +58,13 @@ class _SupplierNotificationsPageState
                   color: colors.textPrimary,
                 ),
               ),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: TextButton(
+                  onPressed: () => _markAllRead(context, ref, query),
+                  child: Text(l.t('Mark all as read', 'وضع الكل كمقروء')),
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 l.subtitleNotifications,
@@ -80,12 +84,7 @@ class _SupplierNotificationsPageState
               const SizedBox(height: AppSpacing.md),
               notificationsAsync.when(
                 data: (result) {
-                  final filtered = result.notifications
-                      .where(
-                        (item) =>
-                            matchesSupplierNotificationFilter(item, filter),
-                      )
-                      .toList();
+                  final filtered = result.items;
 
                   if (filtered.isEmpty) {
                     return _EmptyState(filter: filter);
@@ -97,11 +96,14 @@ class _SupplierNotificationsPageState
                         if (i > 0) const SizedBox(height: AppSpacing.sm),
                         SupplierNotificationCard(
                           notification: filtered[i],
-                          onAction:
-                              filtered[i].actionLabel == null ||
-                                  filtered[i].isCompleted
+                          onAction: !filtered[i].action.canNavigate
                               ? null
-                              : () => _handleAction(context, ref, filtered[i]),
+                              : () => _handleAction(
+                                  context,
+                                  ref,
+                                  filtered[i],
+                                  query,
+                                ),
                         ),
                       ],
                     ],
@@ -123,43 +125,41 @@ class _SupplierNotificationsPageState
     BuildContext context,
     WidgetRef ref,
     SupplierActionNotification notification,
+    SupplierNotificationsQuery query,
   ) {
-    final l = context.s;
+    () async {
+      try {
+        await markSupplierNotificationRead(ref, notification, query: query);
+        if (!context.mounted) return;
+        final l = context.s;
+        final route = notification.destinationRoute;
+        if (route == null) {
+          showSupplierInfoSnackBar(context, l.noActionAvailable);
+          return;
+        }
+        context.push(route);
+      } catch (_) {
+        if (context.mounted) {
+          showSupplierErrorSnackBar(context, context.s.notificationsLoadError);
+        }
+      }
+    }();
+  }
 
-    switch (notification.actionType) {
-      case SupplierActionNotificationActionType.continueListing:
-        if (notification.priceRuleRequestId != null) {
-          context.push(
-            '/supplier/materials/new?priceRuleRequestId=${notification.priceRuleRequestId}',
-          );
-          return;
+  void _markAllRead(
+    BuildContext context,
+    WidgetRef ref,
+    SupplierNotificationsQuery query,
+  ) {
+    () async {
+      try {
+        await markAllSupplierNotificationsRead(ref, query: query);
+      } catch (_) {
+        if (context.mounted) {
+          showSupplierErrorSnackBar(context, context.s.notificationsLoadError);
         }
-        if (notification.categoryRequestId != null) {
-          context.push(
-            '/supplier/materials/new?categoryRequestId=${notification.categoryRequestId}',
-          );
-          return;
-        }
-        showSupplierErrorSnackBar(context, l.couldNotOpenListing);
-        return;
-      case SupplierActionNotificationActionType.editListing:
-        final id = notification.categoryRequestId;
-        if (id == null) return;
-        context.push('/supplier/materials/new?categoryRequestId=$id');
-        return;
-      case SupplierActionNotificationActionType.editPrice:
-        final id = notification.priceRuleRequestId;
-        if (id == null) return;
-        context.push('/supplier/materials/new?priceRuleRequestId=$id');
-        return;
-      case SupplierActionNotificationActionType.reviewRequest:
-        final id = notification.reservationId;
-        final query = id == null ? 'tab=pending' : 'tab=pending&focus=$id';
-        context.push('/supplier/reservations?$query');
-        return;
-      case null:
-        showSupplierInfoSnackBar(context, l.noActionAvailable);
-    }
+      }
+    }();
   }
 }
 
@@ -179,12 +179,12 @@ class _SummaryRow extends StatelessWidget {
       children: [
         _SummaryItem(
           label: l.actionNeeded,
-          count: summary.actionNeededCount,
+          count: summary.canonicalNeedsAction,
           color: colors.amberAccent,
         ),
         _SummaryItem(
           label: l.filterReservations,
-          count: summary.reservationCount,
+          count: summary.canonicalReservations,
           color: colors.blueAccent,
         ),
       ],

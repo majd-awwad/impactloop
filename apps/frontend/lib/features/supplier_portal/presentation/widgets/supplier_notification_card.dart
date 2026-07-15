@@ -23,14 +23,18 @@ class SupplierNotificationCard extends StatelessWidget {
     final style = SupplierNotificationStyle.forKind(
       context,
       notification.kind,
-      isCompleted: notification.isCompleted,
+      isCompleted:
+          notification.state == SupplierNotificationState.resolved ||
+          (notification.state == SupplierNotificationState.unknown &&
+              notification.isCompleted),
     );
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final showAction = notification.actionLabel != null &&
-        onAction != null &&
-        !notification.isCompleted;
-    final muted = notification.isCompleted;
+    final showAction = notification.action.canNavigate && onAction != null;
+    final muted =
+        notification.state == SupplierNotificationState.resolved ||
+        (notification.state == SupplierNotificationState.unknown &&
+            notification.isCompleted);
     final borderColor = colors.border.withValues(
       alpha: colors.isDark ? 0.35 : 0.9,
     );
@@ -40,9 +44,7 @@ class SupplierNotificationCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: muted
-              ? colors.backgroundElevated
-              : colors.surfaceSolid,
+          color: muted ? colors.backgroundElevated : colors.surfaceSolid,
           borderRadius: AppRadius.lgAll,
           border: Border.all(color: borderColor),
           boxShadow: muted
@@ -86,7 +88,7 @@ class SupplierNotificationCard extends StatelessWidget {
                               borderRadius: AppRadius.mdAll,
                             ),
                             child: Icon(
-                              style.icon,
+                              _iconFor(notification, style.icon),
                               color: style.accent,
                               size: 15,
                             ),
@@ -108,7 +110,10 @@ class SupplierNotificationCard extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  _formatTimestamp(context, notification.createdAt),
+                                  _formatTimestamp(
+                                    context,
+                                    notification.createdAt,
+                                  ),
                                   style: context.supplierBody().copyWith(
                                     fontSize: 11,
                                     color: colors.textMuted,
@@ -126,7 +131,10 @@ class SupplierNotificationCard extends StatelessWidget {
                         spacing: AppSpacing.xs,
                         runSpacing: AppSpacing.xs,
                         children: [
-                          _TypeBadge(label: style.typeLabel, muted: muted),
+                          _TypeBadge(
+                            label: _categoryLabel(context, notification, style),
+                            muted: muted,
+                          ),
                           if (notification.maxAllowedUnitPriceNis != null &&
                               notification.unit != null)
                             _TypeBadge(
@@ -156,11 +164,14 @@ class SupplierNotificationCard extends StatelessWidget {
                           child: TextButton(
                             onPressed: onAction,
                             style: TextButton.styleFrom(
-                              backgroundColor:
-                                  style.accent.withValues(alpha: 0.16),
+                              backgroundColor: style.accent.withValues(
+                                alpha: 0.16,
+                              ),
                               foregroundColor: style.accent,
-                              minimumSize:
-                                  Size(compact ? double.infinity : 0, 36),
+                              minimumSize: Size(
+                                compact ? double.infinity : 0,
+                                36,
+                              ),
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: AppSpacing.md,
@@ -174,9 +185,9 @@ class SupplierNotificationCard extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              l.notificationActionLabel(
-                                notification.actionType,
-                                fallback: notification.actionLabel,
+                              l.supplierNotificationActionLabel(
+                                notification.action.type,
+                                labelKey: notification.action.labelKey,
                               ),
                               style: const TextStyle(
                                 fontSize: 13,
@@ -197,6 +208,44 @@ class SupplierNotificationCard extends StatelessWidget {
     );
   }
 
+  IconData _iconFor(
+    SupplierActionNotification notification,
+    IconData fallback,
+  ) {
+    if (notification.isUnknown) return Icons.info_outline;
+    return switch (notification.category) {
+      SupplierNotificationCategory.reservation => Icons.inbox_outlined,
+      SupplierNotificationCategory.materialReview => Icons.category_outlined,
+      SupplierNotificationCategory.deliveryRecovery =>
+        Icons.local_shipping_outlined,
+      SupplierNotificationCategory.account => Icons.person_outline,
+      SupplierNotificationCategory.system => Icons.info_outline,
+      SupplierNotificationCategory.unknown => fallback,
+    };
+  }
+
+  String _categoryLabel(
+    BuildContext context,
+    SupplierActionNotification notification,
+    SupplierNotificationStyle style,
+  ) {
+    if (notification.isUnknown) return context.s.t('Notification', 'إشعار');
+    return switch (notification.category) {
+      SupplierNotificationCategory.reservation => context.s.filterReservations,
+      SupplierNotificationCategory.materialReview => context.s.t(
+        'Material review',
+        'مراجعة المواد',
+      ),
+      SupplierNotificationCategory.deliveryRecovery => context.s.t(
+        'Delivery recovery',
+        'معالجة التوصيل',
+      ),
+      SupplierNotificationCategory.account => context.s.t('Account', 'الحساب'),
+      SupplierNotificationCategory.system => context.s.t('System', 'النظام'),
+      SupplierNotificationCategory.unknown => style.typeLabel,
+    };
+  }
+
   String _formatTimestamp(BuildContext context, DateTime value) {
     final local = value.toLocal();
     final l = context.s;
@@ -207,8 +256,18 @@ class SupplierNotificationCard extends StatelessWidget {
     }
 
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final month = months[local.month - 1];
     final hour = local.hour.toString().padLeft(2, '0');
@@ -258,7 +317,11 @@ class _StatusBadge extends StatelessWidget {
     final l = context.s;
     final colors = context.supplierColors;
 
-    if (notification.isCompleted) {
+    final resolved =
+        notification.state == SupplierNotificationState.resolved ||
+        (notification.state == SupplierNotificationState.unknown &&
+            notification.isCompleted);
+    if (resolved) {
       return _PillBadge(
         label: l.notificationCompleted,
         color: colors.textMuted,
@@ -266,11 +329,19 @@ class _StatusBadge extends StatelessWidget {
       );
     }
 
-    final label = l.notificationStatusLabel(notification.status);
-    final color = switch (notification.status) {
-      SupplierActionNotificationStatus.approved => colors.accentMuted,
-      SupplierActionNotificationStatus.rejected => colors.redAccent,
-      SupplierActionNotificationStatus.pending => colors.textSecondary,
+    final label = switch (notification.state) {
+      SupplierNotificationState.needsAction => l.actionNeeded,
+      SupplierNotificationState.waiting => context.s.t('Waiting', 'بانتظار'),
+      SupplierNotificationState.update => context.s.t('Update', 'تحديث'),
+      SupplierNotificationState.resolved => l.notificationCompleted,
+      SupplierNotificationState.unknown => context.s.t('Notification', 'إشعار'),
+    };
+    final color = switch (notification.state) {
+      SupplierNotificationState.needsAction => colors.amberAccent,
+      SupplierNotificationState.waiting => colors.textSecondary,
+      SupplierNotificationState.update => colors.accentMuted,
+      SupplierNotificationState.resolved => colors.textMuted,
+      SupplierNotificationState.unknown => colors.textSecondary,
     };
 
     return _PillBadge(

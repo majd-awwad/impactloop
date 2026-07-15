@@ -68,9 +68,22 @@ Validation schemas: `auth/auth.validation.ts`
 
 `GET /api/notifications` query: `page`, `limit`, optional `isRead=true|false`. Returns `{ items[], unreadCount, pagination }` where each item includes `id`, `notificationType`, `title`, `body`, `relatedEntityType`, `relatedEntityId`, `isRead`, `createdAt`. Legacy disallowed driver types (including `DRIVER_DELIVERY_AVAILABLE` / “New delivery job available”) are filtered from responses. `GET /api/notifications` may run an idempotent due-only reminder sync for assigned drivers (`DRIVER_PICKUP_TIME`, `DRIVER_DROPOFF_TIME` only — never `DRIVER_NEW_JOB`). `GET /api/driver/deliveries/available` and `GET /api/driver/deliveries/active` do not create notifications.
 
-Reservation lifecycle writes persisted rows for supplier/learner recipients (`RESERVATION_REQUESTED`, `RESERVATION_ACCEPTED`, `RESERVATION_SCHEDULING_PROPOSAL`, `RESERVATION_DECLINED`, `RESERVATION_CANCELLED`, `RESERVATION_EXPIRED`). Driver notifications are limited to: `DRIVER_NEW_JOB` (once per eligible driver when a delivery is created in `WAITING_FOR_DRIVER`), `DRIVER_PICKUP_TIME` (assigned driver, pickup window due within 15 minutes), and `DRIVER_DROPOFF_TIME` (assigned driver after pickup, when `confirmedDeliveryWindowStart` is due within 15 minutes). `DELIVERY_DRIVER_ASSIGNED` is still written for learner/supplier on accept. `GET /api/driver/deliveries/available` queries deliveries directly (not notifications). Unread `DRIVER_NEW_JOB` rows for a delivery are cleared when any driver accepts it. Reminder rows are idempotent via `createNotificationIfMissing` (`userId` + `notificationType` + `relatedEntityType` + `relatedEntityId`). `relatedEntityType` is `DELIVERY`; `relatedEntityId` is the delivery id.
+Reservation lifecycle writes persisted rows for supplier/learner recipients (`RESERVATION_REQUESTED`, `RESERVATION_ACCEPTED`, `RESERVATION_SCHEDULING_PROPOSAL`, `RESERVATION_DECLINED`, `RESERVATION_CANCELLED`, `RESERVATION_EXPIRED`). Driver notifications are limited to: `DRIVER_NEW_JOB` (once per eligible driver when a delivery is created in `WAITING_FOR_DRIVER`), `DRIVER_PICKUP_TIME` (assigned driver, pickup window due within 15 minutes), and `DRIVER_DROPOFF_TIME` (assigned driver after pickup, when `confirmedDeliveryWindowStart` is due within 15 minutes). No current Supplier-relevant producer for `DELIVERY_DRIVER_ASSIGNED` was found, so the Supplier contract does not claim that event. `GET /api/driver/deliveries/available` queries deliveries directly (not notifications). Unread `DRIVER_NEW_JOB` rows for a delivery are cleared when any driver accepts it. Reminder rows are idempotent via `createNotificationIfMissing` (`userId` + `notificationType` + `relatedEntityType` + `relatedEntityId`). `relatedEntityType` is `DELIVERY`; `relatedEntityId` is the delivery id.
 
-Supplier **derived action inbox** remains at `GET /api/supplier/notifications` (category/price/reservation review cards). Generic `/api/notifications` covers persisted table rows for any authenticated user.
+Supplier notifications are persisted `Notification` rows and are the canonical source for `GET /api/supplier/notifications` and its unread/read routes. The endpoint does not concatenate the older computed category/price/reservation feed. A temporary `notifications` response alias is generated from the same persisted `items` for the current Flutter client.
+
+Supplier notification endpoints:
+
+| Method | Path | Query/body |
+|--------|------|------------|
+| GET | `/api/supplier/notifications` | Query: `page`, `limit`, optional `state`, `category`, `isRead`, `search`, `dateFrom`, `dateTo`, `entityType` |
+| PATCH | `/api/supplier/notifications/:id/read` | none |
+| PATCH | `/api/supplier/notifications/read-all` | none |
+| GET | `/api/supplier/notifications/unread-count` | none |
+
+The list response is `{ items, pagination, summary }` plus the compatibility `notifications` alias. Canonical items expose `id`, `rawType`, mutually exclusive `category` (`RESERVATION`, `MATERIAL_REVIEW`, `DELIVERY_RECOVERY`, `ACCOUNT`, `SYSTEM`, `UNKNOWN`), mutually exclusive `state` (`NEEDS_ACTION`, `WAITING`, `UPDATE`, `RESOLVED`, `UNKNOWN`), safe title/message, `createdAt`, `isRead`, `readAt`, semantic `iconKey`, entity summary, semantic action descriptor (`type`, allow-listed `destination`, and target IDs), `waitingOn`, `resolvedAt`, and safely derived `priority`. Unknown events and missing targets fail closed to non-actionable `UNKNOWN`.
+
+`summary` counts the full filtered scope, not just the returned page: `total`, `unread`, `needsAction`, `waiting`, `updates`, `resolved`, `unknownState`, `reservations`, `materials`, `deliveryRecovery`, `account`, `system`, and `unknownCategory`. State/category counts reconcile to `total`; `unread` is orthogonal. Mark-read writes both `isRead = true` and `readAt`.
 
 ## Profile — `/api/profile`
 

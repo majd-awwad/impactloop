@@ -1,6 +1,7 @@
 import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
+import { createNotification } from '../notifications/notifications.repository.js';
 import type {
   AdminMaterialReportsListQuery,
   AdminMaterialsListQuery,
@@ -239,16 +240,21 @@ export const createMaterialModerationNotification = async (input: {
   title: string;
   body: string;
   materialId: string;
+  eventKey?: string;
+  actorId?: string | null;
 }) => {
-  return prisma.notification.create({
-    data: {
+  return createNotification({
       userId: input.userId,
       notificationType: 'MATERIAL_MODERATION_UPDATE',
       title: input.title,
       body: input.body,
       relatedEntityType: 'MATERIAL',
       relatedEntityId: input.materialId,
-    },
+      eventKey: input.eventKey ?? `material-moderation:${input.materialId}:${input.title.trim()}`,
+      entityType: 'MATERIAL',
+      entityId: input.materialId,
+      actionType: 'OPEN_MATERIAL',
+      actorId: input.actorId ?? null,
   });
 };
 

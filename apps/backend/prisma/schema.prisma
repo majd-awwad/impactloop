@@ -1301,11 +1301,21 @@ model Notification {
   body              String
   relatedEntityType String?  @map("related_entity_type")
   relatedEntityId   String?  @map("related_entity_id")
+  readAt            DateTime? @map("read_at")
+  eventKey          String?  @unique @map("event_key")
+  entityType        String?  @map("entity_type")
+  entityId          String?  @map("entity_id")
+  actionType        String?  @map("action_type")
+  metadata          Json?
+  resolvedAt        DateTime? @map("resolved_at")
+  actorId           String?  @map("actor_id")
   isRead            Boolean  @default(false) @map("is_read")
   createdAt         DateTime @default(now()) @map("created_at")
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([userId, entityType, entityId])
   @@map("notifications")
 }
 

@@ -7,6 +7,7 @@ import {
 import { AppError } from '../../utils/app-error.js';
 import { prisma } from '../../database/prisma.js';
 import { decimalToNumber } from '../../utils/decimal.js';
+import { createNotification } from '../notifications/notifications.repository.js';
 
 import {
   ADMIN_ACTIVITY_ACTIONS,
@@ -266,15 +267,18 @@ export const approveCategoryRequest = async (
     adminNote,
   });
 
-  await prisma.notification.create({
-    data: {
+  await createNotification({
       userId: existing.requestedByUserId,
       notificationType: 'CATEGORY_REQUEST_UPDATE',
       title: 'Category request approved',
       body: `Your category request "${existing.requestedName}" was approved.`,
       relatedEntityType: 'CATEGORY_REQUEST',
       relatedEntityId: existing.id,
-    },
+      eventKey: `material-review:category:${existing.id}:APPROVED`,
+      entityType: 'CATEGORY_REQUEST',
+      entityId: existing.id,
+      actionType: 'CONTINUE_LISTING',
+      actorId: adminId,
   });
 
   await logAdminActivity({
@@ -362,15 +366,18 @@ export const rejectCategoryRequest = async (
     ? `Your category request "${existing.requestedName}" was rejected. Suggested category: ${suggestedCategoryName ?? 'Unknown category'}. Reason: ${input.adminNote.trim()}`
     : `Your category request "${existing.requestedName}" was rejected. Reason: ${input.adminNote.trim()}`;
 
-  await prisma.notification.create({
-    data: {
+  await createNotification({
       userId: existing.requestedByUserId,
       notificationType: 'CATEGORY_REQUEST_UPDATE',
       title: 'Category request rejected',
       body: readableBody,
       relatedEntityType: 'CATEGORY_REQUEST',
       relatedEntityId: existing.id,
-    },
+      eventKey: `material-review:category:${existing.id}:REJECTED`,
+      entityType: 'CATEGORY_REQUEST',
+      entityId: existing.id,
+      actionType: 'EDIT_LISTING',
+      actorId: adminId,
   });
 
   await logAdminActivity({
@@ -543,15 +550,18 @@ export const approvePriceRequest = async (
     approvedMaxAllowedUnitPriceNis: approvedMax,
   });
 
-  await prisma.notification.create({
-    data: {
+  await createNotification({
       userId: requesterId,
       notificationType: 'PRICE_REQUEST_UPDATE',
       title: 'Price request approved',
       body: 'Your requested price was approved.',
       relatedEntityType: 'PRICE_RULE_REQUEST',
       relatedEntityId: existing.id,
-    },
+      eventKey: `material-review:price:${existing.id}:APPROVED`,
+      entityType: 'PRICE_RULE_REQUEST',
+      entityId: existing.id,
+      actionType: 'CONTINUE_LISTING',
+      actorId: adminId,
   });
 
   const priceTargetLabel =
@@ -591,15 +601,18 @@ export const rejectPriceRequest = async (
     approvedMaxAllowedUnitPriceNis: maxAllowed,
   });
 
-  await prisma.notification.create({
-    data: {
+  await createNotification({
       userId: requesterId,
       notificationType: 'PRICE_REQUEST_UPDATE',
       title: 'Price request rejected',
       body: `Your requested price was rejected. Maximum allowed price: ${maxAllowed} NIS. Reason: ${note}`,
       relatedEntityType: 'PRICE_RULE_REQUEST',
       relatedEntityId: existing.id,
-    },
+      eventKey: `material-review:price:${existing.id}:REJECTED`,
+      entityType: 'PRICE_RULE_REQUEST',
+      entityId: existing.id,
+      actionType: 'EDIT_LISTING',
+      actorId: adminId,
   });
 
   const priceTargetLabel =

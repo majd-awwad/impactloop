@@ -387,6 +387,18 @@ export const findSupplierReservations = async (
   });
 };
 
+export const findSupplierReservationsByIds = async (
+  ownerId: string,
+  reservationIds: string[],
+) => {
+  if (reservationIds.length === 0) return [];
+
+  return prisma.reservation.findMany({
+    where: { ownerId, id: { in: reservationIds } },
+    select: supplierReservationListSelect,
+  });
+};
+
 const ACTIVE_RESERVATION_STATUSES: ReservationStatus[] = [
   'PENDING',
   'AWAITING_LEARNER_CONFIRMATION',

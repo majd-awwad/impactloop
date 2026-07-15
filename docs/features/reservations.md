@@ -107,7 +107,7 @@ Backend re-reservation after terminal states is allowed by the active-hold guard
 Verified against code (2026-07-10):
 
 - Reservation create has duplicate active-reservation protection, but no idempotency key or retry-safe "same request returns same reservation" behavior.
-- Notification coverage is partial. Persisted notifications exist for create, supplier accept/proposal, decline, learner cancel, expiry, and admin reschedule requests. No notification call was found for learner accepting a supplier proposal, learner submitting a delivery window, supplier accepting learner reschedule, supplier cancellation, supplier completion, or driver delivery completion.
+- Supplier notification coverage now persists canonical event rows for reservation request/cancel/expiry and delivery recovery reschedule requests. Supplier inbox reads revalidate the current reservation state and fail closed when the target is missing. Other learner/driver lifecycle gaps remain outside the Supplier Notifications contract.
 - Reservation-related reviews after completion are not implemented beyond the `Review` table and dashboard aggregation hooks.
 - Live delivery tracking stream, ETA, delivery cancellation/retry, and payment remain delivery-domain gaps.
 - Automated cleanup/backfill for stale legacy reservation quantities is not implemented; use the manual cleanup guidance below for shared dev databases.

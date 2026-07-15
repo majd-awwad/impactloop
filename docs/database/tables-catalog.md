@@ -568,9 +568,16 @@ No new PostGIS geography column is used for pings in Stage 1.
 | notificationType | String | |
 | title, body | String | |
 | relatedEntityType, relatedEntityId | String? | |
+| readAt | DateTime? | Set together with `isRead` by mark-read routes; legacy read rows may remain null |
+| eventKey | String? unique | Deterministic producer idempotency key; nullable for legacy rows |
+| entityType, entityId | String? | Canonical semantic target, retained alongside legacy related fields |
+| actionType | String? | Persisted producer hint; supplier read-time classifier revalidates it |
+| metadata | Json? | Structured non-route event context |
+| resolvedAt | DateTime? | Explicit producer resolution timestamp |
+| actorId | String? | Optional actor identifier |
 | isRead | Boolean | default false |
 
-**No general notifications API** — **Updated:** generic authenticated API at `/api/notifications`; supplier derived inbox remains separate.
+Generic authenticated API remains at `/api/notifications` for backwards compatibility and other roles. Supplier inbox routes are under `/api/supplier/notifications` and use the persisted rows as their canonical source.
 
 ---
 

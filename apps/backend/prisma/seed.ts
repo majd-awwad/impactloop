@@ -7262,22 +7262,23 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
 
   await prisma.categoryRequest.create({
     data: {
-      requestedName: `${SEED_MARKER} Lab Glassware`,
-      normalizedRequestedName: normalizeSearchText(`${SEED_MARKER} Lab Glassware`),
+      requestedName: 'Lab Glassware',
+      normalizedRequestedName: normalizeSearchText('Lab Glassware'),
       requestedByUserId: majdSupplierId,
       status: 'PENDING',
       listingDraftJson: {
         title: 'Reusable lab glassware set',
         requestedCategoryName: 'Lab Glassware',
         imageUrls: ['https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=1200&q=80'],
+        _seedMarker: SEED_MARKER,
       },
     },
   });
 
   await prisma.categoryRequest.create({
     data: {
-      requestedName: `${SEED_MARKER} Random paid mystery box`,
-      normalizedRequestedName: normalizeSearchText(`${SEED_MARKER} Random paid mystery box`),
+      requestedName: 'Random paid mystery box',
+      normalizedRequestedName: normalizeSearchText('Random paid mystery box'),
       requestedByUserId: israaSupplierId,
       status: 'REJECTED',
       moderatorNote: 'Paid materials should use a clear existing category instead of Other.',
@@ -7287,8 +7288,8 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
 
   await prisma.priceRuleRequest.create({
     data: {
-      materialName: `${SEED_MARKER} Solar panel scraps`,
-      normalizedMaterialName: normalizeSearchText(`${SEED_MARKER} Solar panel scraps`),
+      materialName: 'Solar panel scraps',
+      normalizedMaterialName: normalizeSearchText('Solar panel scraps'),
       categoryId: electronicsCategoryId ?? null,
       unit: 'piece',
       condition: 'USED',
@@ -7301,6 +7302,7 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
       aiSuggestedMaxTotalPriceNis: 135,
       aiResultJson: {
         source: 'seed',
+        seedMarker: SEED_MARKER,
         note: 'Pending admin review for a material type not yet in approved taxonomy.',
       },
     },
@@ -7455,10 +7457,10 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
   const notifications = [
     {
       userId: majdSupplierId,
-      type: 'RESERVATION_CREATED',
+      type: 'RESERVATION_REQUESTED',
       title: 'New Arduino reservation',
       body: 'Majd Learner requested Arduino Uno R3 Boards for a robotics project.',
-      entityType: 'reservation',
+      entityType: 'RESERVATION',
       entityKey: 'r-majd-arduino-pending',
     },
     {
@@ -7466,7 +7468,7 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
       type: 'DELIVERY_WAITING_FOR_DRIVER',
       title: 'Delivery request opened',
       body: 'Your Arduino delivery is waiting for an available driver.',
-      entityType: 'delivery',
+      entityType: 'DELIVERY',
       entityKey: null,
     },
     {
@@ -7474,7 +7476,7 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
       type: 'ADMIN_REVIEW_REQUIRED',
       title: 'Delivery moved to admin review',
       body: 'A PVC pipe delivery needs admin resolution after a pickup issue.',
-      entityType: 'reservation',
+      entityType: 'RESERVATION',
       entityKey: 'r-learner-pvc-resolution',
     },
     {
@@ -7482,7 +7484,7 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
       type: 'DRIVER_ASSIGNMENT_AVAILABLE',
       title: 'Open delivery nearby',
       body: 'A learner delivery request is waiting for a driver in your area.',
-      entityType: 'delivery',
+      entityType: 'DELIVERY',
       entityKey: null,
     },
   ];
@@ -7498,6 +7500,14 @@ const createAdminAndNotificationData = async (context: SeedContext) => {
         relatedEntityId: notification.entityKey
           ? context.reservations.get(notification.entityKey) ?? null
           : null,
+        entityType: notification.entityType,
+        entityId: notification.entityKey
+          ? context.reservations.get(notification.entityKey) ?? null
+          : null,
+        eventKey: notification.entityKey
+          ? `seed:${notification.type}:${notification.userId}:${context.reservations.get(notification.entityKey) ?? notification.entityKey}`
+          : null,
+        actionType: notification.type === 'RESERVATION_REQUESTED' ? 'REVIEW_RESERVATION' : null,
         isRead: false,
       },
     });

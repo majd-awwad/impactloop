@@ -30,7 +30,10 @@ apps/frontend/lib/generated/
 **/*.mocks.dart
 
 # Usually not useful for agent context unless explicitly needed
-apps/backend/prisma/migrations/
+!apps/backend/prisma/migrations/
+apps/backend/prisma/migrations/*
+!apps/backend/prisma/migrations/20260715120000_supplier_notification_contract/
+!apps/backend/prisma/migrations/20260715120000_supplier_notification_contract/migration.sql
 apps/frontend/pubspec.lock
 apps/backend/package-lock.json
 apps/backend/pnpm-lock.yaml

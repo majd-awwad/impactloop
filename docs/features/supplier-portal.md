@@ -88,7 +88,7 @@ All under `/api/supplier` require JWT + **SUPPLIER** role unless noted.
 | Category requests | `POST/GET /category-requests`, `GET /category-requests/:id/draft` |
 | Price rule requests | `GET /price-rule-requests`, `GET /price-rule-requests/:id/draft` |
 | Reservations | `GET /reservations`, `PATCH /reservations/:id/accept|decline|complete` |
-| Notifications | `GET /notifications` |
+| Notifications | `GET /notifications`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`, `GET /notifications/unread-count` |
 | Supporting | `POST /api/uploads/material-images`, `POST /api/materials/price-check`, `POST /api/price-rule-requests`, `POST /api/locations/reverse-geocode`, `GET /api/categories`, `GET /api/material-types` |
 
 Static images: `GET /uploads/materials/*`
@@ -121,3 +121,7 @@ Static images: `GET /uploads/materials/*`
 - `POST /api/price-rule-requests` has auth but no `SUPPLIER` role guard in route file.
 - Supplier followers, follower impact, saves/likes analytics, category demand insights, and "related projects for this material" are planned/future.
 - Supplier owned material detail shows backend-computed demand metrics: active demand (unfinished reservations only), lifetime `demandScorePercent` (views, likes, active reservations, completed reuses), and reuse history (`completedReservationsCount`, `reusedCount`, `lastCompletedAt`).
+
+### Supplier notification contract
+
+The supplier inbox is backed by persisted `notifications` rows. Producers use deterministic `eventKey` values for reservation lifecycle/recovery events, category and price review decisions, moderation updates, supplier verification decisions, and listing publication. The classifier revalidates the current reservation/request/material/profile in bounded batches at read time; missing or unknown targets are returned as non-actionable `UNKNOWN` rather than guessed routes. The old computed feed is retained only as unused compatibility code, and the endpoint does not read it. Flutter bell migration remains a separate follow-up; this backend verification does not change Flutter files.

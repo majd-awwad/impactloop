@@ -54,6 +54,10 @@ export const notifyReservationCreated = async (reservationId: string) =>
       body: `${learnerLabel(reservation)} requested ${materialLabel(reservation)}.`,
       relatedEntityType: 'RESERVATION',
       relatedEntityId: reservation.id,
+      eventKey: `reservation:requested:${reservation.id}:${reservation.ownerId}`,
+      entityType: 'RESERVATION',
+      entityId: reservation.id,
+      actionType: 'REVIEW_RESERVATION',
     });
   });
 
@@ -80,6 +84,10 @@ export const notifyReservationAccepted = async (reservationId: string) =>
         : `${materialLabel(reservation)} was accepted. Check your pickup or delivery details.`,
       relatedEntityType: 'RESERVATION',
       relatedEntityId: reservation.id,
+      eventKey: `reservation:${awaitingConfirmation ? 'scheduling-proposal' : 'accepted'}:${reservation.id}:${reservation.requesterId}`,
+      entityType: 'RESERVATION',
+      entityId: reservation.id,
+      actionType: 'OPEN_RESERVATION',
     });
   });
 
@@ -97,6 +105,9 @@ export const notifyReservationDeclined = async (reservationId: string) =>
       body: `Your request for ${materialLabel(reservation)} was declined.`,
       relatedEntityType: 'RESERVATION',
       relatedEntityId: reservation.id,
+      eventKey: `reservation:declined:${reservation.id}:${reservation.requesterId}`,
+      entityType: 'RESERVATION',
+      entityId: reservation.id,
     });
   });
 
@@ -116,6 +127,9 @@ export const notifyReservationCancelledByLearner = async (
       body: `${learnerLabel(reservation)} cancelled the request for ${materialLabel(reservation)}.`,
       relatedEntityType: 'RESERVATION',
       relatedEntityId: reservation.id,
+      eventKey: `reservation:cancelled:${reservation.id}:${reservation.ownerId}`,
+      entityType: 'RESERVATION',
+      entityId: reservation.id,
     });
   });
 
@@ -139,6 +153,9 @@ export const notifyReservationsExpired = async (reservationIds: string[]) => {
           body: `Your request for ${materialLabel(reservation)} expired before the supplier responded.`,
           relatedEntityType: 'RESERVATION',
           relatedEntityId: reservation.id,
+          eventKey: `reservation:expired:${reservation.id}:${reservation.requesterId}`,
+          entityType: 'RESERVATION',
+          entityId: reservation.id,
         }),
         createNotification({
           userId: reservation.ownerId,
@@ -147,6 +164,9 @@ export const notifyReservationsExpired = async (reservationIds: string[]) => {
           body: `The pending request from ${learnerLabel(reservation)} for ${materialLabel(reservation)} expired.`,
           relatedEntityType: 'RESERVATION',
           relatedEntityId: reservation.id,
+          eventKey: `reservation:expired:${reservation.id}:${reservation.ownerId}`,
+          entityType: 'RESERVATION',
+          entityId: reservation.id,
         }),
       ]),
     );
@@ -176,6 +196,10 @@ export const notifyNoDriverSupplierRescheduleRequested = async (
         + noteSuffix,
       relatedEntityType: 'RESERVATION',
       relatedEntityId: reservation.id,
+      eventKey: `delivery-recovery:no-driver:${reservation.id}:${reservation.ownerId}`,
+      entityType: 'RESERVATION',
+      entityId: reservation.id,
+      actionType: 'CHOOSE_PICKUP_WINDOW',
     });
   });
 
@@ -202,5 +226,9 @@ export const notifyStalePickupSupplierRescheduleRequested = async (
         + noteSuffix,
       relatedEntityType: 'RESERVATION',
       relatedEntityId: reservation.id,
+      eventKey: `delivery-recovery:stale-pickup:${reservation.id}:${reservation.ownerId}`,
+      entityType: 'RESERVATION',
+      entityId: reservation.id,
+      actionType: 'CHOOSE_PICKUP_WINDOW',
     });
   });
