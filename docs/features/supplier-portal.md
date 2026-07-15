@@ -19,7 +19,7 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 | Delete material | **Implemented** | `DELETE /api/supplier/materials/:id`; same eligibility as edit |
 | Add material | **Implemented** | Create + required image upload + price check + category/price-rule requests |
 | Incoming reservations | **Partial** | Supplier accept/decline/self-pickup complete; delivery reservations complete through driver backend flow; supplier UI shows delivery status instead of manual complete |
-| Pickup schedule | **Implemented** | Additive API-backed schedule projection at `GET /api/supplier/reservations/schedule`; Flutter compatibility binding remains supported |
+| Pickup schedule | **Implemented** | API-backed schedule workspace at `GET /api/supplier/reservations/schedule`; server categories, summary counts, effective windows, grouped entries, filters, and pagination are rendered directly, and row actions navigate to Request Details |
 | Mock repositories | **Not used** | `MockSupplier*Repository` files exist; providers wire API impl |
 
 ## Main user flow
@@ -38,7 +38,7 @@ Supplier API calls use the shared authenticated Dio client. When the access toke
 
 The schedule read is distinct from Incoming Requests. It returns deduplicated Supplier handover entries with stable schedule ordering, entry-based pagination, mutually exclusive categories (`UNSCHEDULED_ACTION`, `ADMIN_REVIEW`, `OVERDUE`, `IN_PROGRESS`, `TODAY`, `UPCOMING`, `COMPLETED`, `CLOSED`), and an overlapping `needsAttention` flag. Active reads use client-provided absolute `dayStart`/`dayEnd` instants and bounded optional ranges.
 
-The canonical appointment is the confirmed self-pickup window for self pickup or the Supplier-to-driver pickup window for delivery. Learner delivery/drop-off windows and delivery `deliveredAt` are not Supplier schedule appointments. Grouped deliveries are one schedule entry before totals and pagination; grouped entries expose bounded context and no unsafe group-wide mutation actions.
+The canonical appointment is the confirmed self-pickup window for self pickup or the Supplier-to-driver pickup window for delivery. Learner delivery/drop-off windows and delivery `deliveredAt` are not Supplier schedule appointments. Grouped deliveries are one schedule entry before totals and pagination; grouped entries expose bounded context and no unsafe group-wide mutation actions. The Flutter workspace uses the returned category, summary, effective window, next actor, and available actions without local category inference or the retired schedule-details dialog; `View` opens `/supplier/reservations/:reservationId`.
 
 Add-material uses category-scoped material type/name autocomplete backed by `GET /api/material-types?categoryId=&q=`. Suppliers can still type a custom `materialName`; selecting a reviewed type sends `materialTypeId` to price check only, while create continues to send `materialName` for backend material type/alias matching. `Listing title` remains display-only. The UI no longer asks for source type; backend derives `materials.sourceType` from `supplierProfile.supplierType` (`WORKSHOP` → `WORKSHOP_SURPLUS`, `FACTORY` → `FACTORY_SURPLUS`, `EDUCATIONAL_INSTITUTION` → `EDUCATIONAL_INSTITUTION`, `INDIVIDUAL_SUPPLIER` → `STUDENT_LEFTOVER`). The individual mapping is an MVP fallback and may need a more precise enum later.
 
