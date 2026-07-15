@@ -623,7 +623,7 @@ const resolveSupplierReservationStatuses = (status?: string) => {
   return [status as ReservationStatus];
 };
 
-const runSupplierReservationLazyCleanup = async (ownerId: string) => {
+export const runSupplierReservationLazyCleanup = async (ownerId: string) => {
   await expireStalePendingReservationsForOwner(ownerId);
   await expireStaleMissedPickupsForOwner(ownerId);
   await escalateStaleNoDriverDeliveriesForOwner(ownerId);

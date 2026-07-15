@@ -270,6 +270,8 @@ describe('supplier reservations persisted contract', () => {
       await createReservation(key, { status, materialId: secondaryMaterial.id, createdAtOffset: -8 });
     }
 
+    const groupWindowStart = at(120);
+    const groupWindowEnd = at(180);
     const group = await prisma.deliveryGroup.create({
       data: {
         learnerId: learner.id,
@@ -278,12 +280,12 @@ describe('supplier reservations persisted contract', () => {
         deliveryFee: 0,
         deliveryZone: 'SAME_CITY',
         status: 'ASSIGNED',
-        windowStart: at(120),
-        windowEnd: at(180),
+        windowStart: groupWindowStart,
+        windowEnd: groupWindowEnd,
       },
     });
-    const groupPrimary = await createReservation('groupPrimary', { status: 'ACCEPTED', fulfillmentMethod: 'DELIVERY', createdAtOffset: -7 });
-    const groupSecondary = await createReservation('groupSecondary', { status: 'ACCEPTED', fulfillmentMethod: 'DELIVERY', createdAtOffset: -6 });
+    const groupPrimary = await createReservation('groupPrimary', { status: 'ACCEPTED', fulfillmentMethod: 'DELIVERY', supplierPickupWindowStart: groupWindowStart, supplierPickupWindowEnd: groupWindowEnd, createdAtOffset: -7 });
+    const groupSecondary = await createReservation('groupSecondary', { status: 'ACCEPTED', fulfillmentMethod: 'DELIVERY', supplierPickupWindowStart: groupWindowStart, supplierPickupWindowEnd: groupWindowEnd, createdAtOffset: -6 });
     await prisma.reservation.updateMany({ where: { id: { in: [groupPrimary.id, groupSecondary.id] } }, data: { deliveryGroupId: group.id } });
     await createDelivery(groupPrimary.id, 'DRIVER_ASSIGNED', { assigned: true, groupId: group.id });
     await prisma.reservationMessage.createMany({
@@ -447,5 +449,40 @@ describe('supplier reservations persisted contract', () => {
     const single = await getSupplierReservationDetail(fixture.supplierId, fixture.ids.deliveryWaiting);
     assert.equal(single.groupSummary, null);
     assert.equal(single.groupedDelivery, false);
+  });
+
+  test('serves grouped Supplier schedule entries after deduplication', async () => {
+    const supplierToken = signAccessToken({ sub: fixture.supplierId, roles: ['SUPPLIER'] });
+    const start = new Date(now());
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    const response = await http(
+      `/api/supplier/reservations/schedule?scope=ALL&dayStart=${encodeURIComponent(start.toISOString())}&dayEnd=${encodeURIComponent(end.toISOString())}&limit=100`,
+      supplierToken,
+    );
+    assert.equal(response.response.status, 200);
+    const data = response.body.data as Record<string, any>;
+    assert.ok(Array.isArray(data.items));
+    assert.equal(data.pagination.total, data.items.length);
+    const summary = data.summary as Record<string, number>;
+    assert.equal(
+      summary.unscheduledAction +
+        summary.adminReview +
+        summary.overdue +
+        summary.inProgress +
+        summary.today +
+        summary.upcoming +
+        summary.completed +
+        summary.closed,
+      summary.total,
+    );
+    const grouped = data.items.filter(
+      (item: Record<string, any>) =>
+        item.group?.grouped === true &&
+        item.reservationIds.includes(fixture.ids.groupPrimary) &&
+        item.reservationIds.includes(fixture.ids.groupSecondary),
+    );
+    assert.equal(grouped.length, 1);
+    assert.equal(grouped[0].group.itemCount, 2);
   });
 });

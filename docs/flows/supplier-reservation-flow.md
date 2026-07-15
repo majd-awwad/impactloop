@@ -189,3 +189,9 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 ### Files involved
 
 `supplier_incoming_requests_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.service.ts`, `supplier-reservations.repository.ts`, `pickup_schedule_*`
+
+## Supplier Pickup Schedule read contract
+
+The additive `GET /api/supplier/reservations/schedule` read is separate from Incoming Requests pagination and filtering. It projects Supplier handover entries after DeliveryGroup deduplication, so its `pagination.total` and `summary` describe schedule entries rather than reservations. Active queries must provide absolute ISO `dayStart` and `dayEnd` boundaries; optional ranges use canonical window overlap and are bounded to 31 days.
+
+The schedule selects `CONFIRMED_PICKUP` for self pickup and `SUPPLIER_DELIVERY_PICKUP` for delivery. Pending learner/supplier proposals without a confirmed Supplier window stay out of normal appointments. Supplier-authorized recovery actions without a confirmed window appear as `UNSCHEDULED_ACTION`; unresolved admin-owned recovery appears as `ADMIN_REVIEW`. Category precedence is terminal completion, closed outcome, admin review, unscheduled Supplier action, overdue, in progress, today, and upcoming. `needsAttention` is an overlapping flag, not another category.

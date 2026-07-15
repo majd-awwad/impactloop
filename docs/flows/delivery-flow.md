@@ -157,6 +157,12 @@ Admin driver-assignment reopen:
 - Pickup/dropoff time reminders are created only when their windows are due and are idempotent.
 - Admin pre-pickup driver-assignment reopen notifies the removed driver with `DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN`.
 - Admin request-supplier-reschedule creates supplier notifications for no-driver or stale-pickup recovery.
+
+## Supplier schedule distinction
+
+The Supplier Pickup Schedule uses the delivery-side Supplier-to-driver pickup window (`SUPPLIER_DELIVERY_PICKUP`) as its appointment. It never treats the learner drop-off/confirmed delivery window or `deliveredAt` as a Supplier pickup time. For completed delivery history, the schedule timestamp is `pickedUpAt`; delivery completion remains a separate learner handover event.
+
+`GET /api/supplier/reservations/schedule` deduplicates grouped deliveries before pagination and returns one representative Supplier handover entry per DeliveryGroup, with bounded member IDs and group context. Waiting-for-driver, assigned, arrived, picked-up, and on-the-way states are classified from delivery operational state without changing delivery mutations.
 - Delivery accepted/completed/failed/admin-review notifications are not broadly implemented for learners, suppliers, or admins.
 
 ## Verified Coverage
