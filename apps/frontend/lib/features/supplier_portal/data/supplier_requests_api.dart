@@ -9,17 +9,46 @@ class SupplierRequestsApi {
 
   final Dio _client;
 
-  Future<List<SupplierIncomingRequest>> fetchIncomingRequests(
-    SupplierIncomingRequestTab status,
-  ) async => (await fetchIncomingRequestsResponse(status)).items;
-
   Future<SupplierReservationListResponse> fetchIncomingRequestsResponse(
-    SupplierIncomingRequestTab status,
+    {
+    String? status,
+    String? search,
+    String? attentionState,
+    String? fulfillmentMethod,
+    String? historyScope,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    required int page,
+    required int limit,
+  }
   ) async {
     try {
+      final queryParameters = <String, dynamic>{
+        'page': page,
+        'limit': limit,
+      };
+      if (status != null) queryParameters['status'] = status;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParameters['search'] = search.trim();
+      }
+      if (attentionState != null) {
+        queryParameters['attentionState'] = attentionState;
+      }
+      if (fulfillmentMethod != null) {
+        queryParameters['fulfillmentMethod'] = fulfillmentMethod;
+      }
+      if (historyScope != null) {
+        queryParameters['historyScope'] = historyScope;
+      }
+      if (dateFrom != null) {
+        queryParameters['dateFrom'] = dateFrom.toUtc().toIso8601String();
+      }
+      if (dateTo != null) {
+        queryParameters['dateTo'] = dateTo.toUtc().toIso8601String();
+      }
       final response = await _client.get<Map<String, dynamic>>(
         '/api/supplier/reservations',
-        queryParameters: {'status': status.apiQueryValue},
+        queryParameters: queryParameters,
       );
 
       final body = response.data;

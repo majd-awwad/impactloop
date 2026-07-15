@@ -24,10 +24,28 @@ class ApiSupplierRequestsRepository implements SupplierRequestsRepository {
   final SupplierRequestsApi _api;
 
   @override
-  Future<List<SupplierIncomingRequest>> fetchIncomingRequests(
-    SupplierIncomingRequestTab status,
-  ) {
-    return _api.fetchIncomingRequests(status);
+  Future<SupplierReservationListResponse> fetchIncomingRequests({
+    String? status,
+    String? search,
+    String? attentionState,
+    String? fulfillmentMethod,
+    String? historyScope,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    required int page,
+    required int limit,
+  }) {
+    return _api.fetchIncomingRequestsResponse(
+      status: status,
+      search: search,
+      attentionState: attentionState,
+      fulfillmentMethod: fulfillmentMethod,
+      historyScope: historyScope,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      page: page,
+      limit: limit,
+    );
   }
 
   @override

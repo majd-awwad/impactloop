@@ -14,11 +14,11 @@ Supplier opens **Incoming requests** (`/supplier/reservations`) or arrives via n
 
 ### User path
 
-Switch tabs: pending / needs learner / needs supplier / accepted / declined / completed / cancelled (wording per UI). See cards with learner info, material summary, quantity, message, scheduling state, and delivery state when present.
+Use the Incoming Requests inbox to triage requests. The page shows four server-backed operational metrics (needs supplier response, waiting for learner, fulfillment in progress, and admin review), quieter completed/closed history metrics, and server-side search, attention, fulfillment, status, history, and date-range filters. The structured desktop rows separate request identity, canonical schedule/fulfillment, raw reservation state, backend-classified attention/next actor, and a single state-aware action. At narrower widths the same content becomes vertically ordered cards; no client-side filtering or inferred action ownership is used.
 
 ### Frontend path
 
-`SupplierIncomingRequestsPage` → `supplier_requests_providers.dart` → `SupplierRequestsApi.fetchIncomingRequests(tab)` → `GET /api/supplier/reservations?status=<tab>`. The current Flutter page continues to read the compatibility `data.reservations` array.
+`SupplierIncomingRequestsPage` → `supplier_requests_providers.dart` → `SupplierRequestsApi.fetchIncomingRequestsResponse(...)` → `GET /api/supplier/reservations`. Query parameters map directly to the validated API contract: `search`, `attentionState`, `fulfillmentMethod`, `status`, `historyScope`, `dateFrom`, `dateTo`, `page`, and `limit`. Flutter reads the canonical `items`, `pagination`, and `summary` response fields.
 
 ### Backend path
 
