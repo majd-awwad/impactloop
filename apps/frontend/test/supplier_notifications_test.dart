@@ -3,10 +3,13 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 
+import 'package:frontend/app/theme/app_theme_colors.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_action_notification.dart';
 import 'package:frontend/features/supplier_portal/data/supplier_notifications_api.dart';
+import 'package:frontend/features/supplier_portal/presentation/widgets/supplier_notification_style.dart';
 import 'package:frontend/shared/widgets/notification_bell_button.dart';
 
 void main() {
@@ -33,6 +36,69 @@ void main() {
     expect(notification.maxAllowedUnitPriceNis, 20);
     expect(notification.unit, 'piece');
     expect(notification.supplierRequestedUnitPriceNis, 35);
+  });
+
+  testWidgets('supplier notification colors follow semantic state tokens', (
+    tester,
+  ) async {
+    late SupplierNotificationStyle needsAction;
+    late SupplierNotificationStyle waiting;
+    late SupplierNotificationStyle update;
+    late SupplierNotificationStyle unknown;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData(extensions: const [AppThemeColors.light]),
+        home: Builder(
+          builder: (context) {
+            SupplierActionNotification notification(String state) {
+              return SupplierActionNotification.fromJson({
+                'id': state,
+                'category': 'RESERVATION',
+                'state': state,
+                'title': 'Notification',
+                'message': 'Message',
+                'createdAt': '2026-06-17T10:00:00.000Z',
+                'isRead': false,
+              });
+            }
+
+            needsAction = SupplierNotificationStyle.forNotification(
+              context,
+              notification('NEEDS_ACTION'),
+            );
+            waiting = SupplierNotificationStyle.forNotification(
+              context,
+              notification('WAITING'),
+            );
+            update = SupplierNotificationStyle.forNotification(
+              context,
+              notification('UPDATE'),
+            );
+            unknown = SupplierNotificationStyle.forNotification(
+              context,
+              notification('FUTURE_STATE'),
+            );
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+
+    expect(
+      needsAction.badgeForeground,
+      AppThemeColors.light.accentAmber,
+    );
+    expect(waiting.badgeForeground, AppThemeColors.light.info);
+    expect(update.badgeForeground, AppThemeColors.light.accentMint);
+    expect(unknown.badgeForeground, AppThemeColors.light.textSecondary);
+    expect(
+      SupplierNotificationStyle.filterSelectedColor(
+        tester.element(find.byType(SizedBox)),
+        SupplierNotificationFilter.completed,
+      ),
+      AppThemeColors.light.primary,
+    );
   });
 
   test('notification JSON maps price approved body with per-unit wording', () {

@@ -20,13 +20,9 @@ class SupplierNotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
     final l = context.s;
-    final style = SupplierNotificationStyle.forKind(
+    final style = SupplierNotificationStyle.forNotification(
       context,
-      notification.kind,
-      isCompleted:
-          notification.state == SupplierNotificationState.resolved ||
-          (notification.state == SupplierNotificationState.unknown &&
-              notification.isCompleted),
+      notification,
     );
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
@@ -39,23 +35,19 @@ class SupplierNotificationCard extends StatelessWidget {
       alpha: colors.isDark ? 0.35 : 0.9,
     );
 
-    return Opacity(
-      opacity: muted ? 0.72 : 1,
-      child: Container(
+    return Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: muted ? colors.backgroundElevated : colors.surfaceSolid,
+          color: colors.surfaceSolid,
           borderRadius: AppRadius.lgAll,
           border: Border.all(color: borderColor),
-          boxShadow: muted
-              ? null
-              : [
-                  BoxShadow(
-                    color: colors.cardShadow,
-                    blurRadius: colors.isDark ? 12 : 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          boxShadow: [
+            BoxShadow(
+              color: colors.cardShadow,
+              blurRadius: colors.isDark ? 12 : 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         clipBehavior: Clip.antiAlias,
         child: IntrinsicHeight(
@@ -84,7 +76,7 @@ class SupplierNotificationCard extends StatelessWidget {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: style.accent.withValues(alpha: 0.16),
+                              color: style.badgeBackground,
                               borderRadius: AppRadius.mdAll,
                             ),
                             child: Icon(
@@ -98,15 +90,34 @@ class SupplierNotificationCard extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  notification.title,
-                                  style: context.supplierTitle().copyWith(
-                                    fontSize: compact ? 14 : 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: muted
-                                        ? colors.textSecondary
-                                        : colors.textPrimary,
-                                  ),
+                                Row(
+                                  children: [
+                                    if (!notification.isRead) ...[
+                                      Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: colors.accent,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.xs),
+                                    ],
+                                    Flexible(
+                                      child: Text(
+                                        notification.title,
+                                        style: context.supplierTitle().copyWith(
+                                          fontSize: compact ? 14 : 15,
+                                          fontWeight: notification.isRead
+                                              ? FontWeight.w600
+                                              : FontWeight.w700,
+                                          color: muted
+                                              ? colors.textSecondary
+                                              : colors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -123,7 +134,10 @@ class SupplierNotificationCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.xs),
-                          _StatusBadge(notification: notification),
+                          _StatusBadge(
+                            notification: notification,
+                            style: style,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -134,6 +148,7 @@ class SupplierNotificationCard extends StatelessWidget {
                           _TypeBadge(
                             label: _categoryLabel(context, notification, style),
                             muted: muted,
+                            style: style,
                           ),
                           if (notification.maxAllowedUnitPriceNis != null &&
                               notification.unit != null)
@@ -164,10 +179,18 @@ class SupplierNotificationCard extends StatelessWidget {
                           child: TextButton(
                             onPressed: onAction,
                             style: TextButton.styleFrom(
-                              backgroundColor: style.accent.withValues(
-                                alpha: 0.16,
-                              ),
-                              foregroundColor: style.accent,
+                              backgroundColor:
+                                  notification.action.type ==
+                                      SupplierNotificationActionType
+                                          .reviewReservation
+                                  ? colors.accent
+                                  : colors.surfaceSolid,
+                              foregroundColor:
+                                  notification.action.type ==
+                                      SupplierNotificationActionType
+                                          .reviewReservation
+                                  ? colors.textOnAccent
+                                  : colors.accent,
                               minimumSize: Size(
                                 compact ? double.infinity : 0,
                                 36,
@@ -180,7 +203,7 @@ class SupplierNotificationCard extends StatelessWidget {
                               shape: RoundedRectangleBorder(
                                 borderRadius: AppRadius.mdAll,
                                 side: BorderSide(
-                                  color: style.accent.withValues(alpha: 0.45),
+                                  color: colors.accent.withValues(alpha: 0.55),
                                 ),
                               ),
                             ),
@@ -204,8 +227,7 @@ class SupplierNotificationCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   IconData _iconFor(
@@ -277,10 +299,11 @@ class SupplierNotificationCard extends StatelessWidget {
 }
 
 class _TypeBadge extends StatelessWidget {
-  const _TypeBadge({required this.label, this.muted = false});
+  const _TypeBadge({required this.label, this.muted = false, this.style});
 
   final String label;
   final bool muted;
+  final SupplierNotificationStyle? style;
 
   @override
   Widget build(BuildContext context) {
@@ -289,17 +312,21 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: colors.chipUnselected,
+        color: style?.categoryBackground ?? colors.chipUnselected,
         borderRadius: AppRadius.pillAll,
         border: Border.all(
-          color: colors.border.withValues(alpha: colors.isDark ? 0.35 : 0.65),
+          color:
+              style?.categoryBorder ??
+              colors.border.withValues(alpha: colors.isDark ? 0.35 : 0.65),
         ),
       ),
       child: Text(
         label,
         style: context.supplierChip().copyWith(
           fontSize: 10,
-          color: muted ? colors.textMuted : colors.textSecondary,
+          color: muted
+              ? colors.textMuted
+              : style?.categoryForeground ?? colors.textSecondary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -308,15 +335,14 @@ class _TypeBadge extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.notification});
+  const _StatusBadge({required this.notification, required this.style});
 
   final SupplierActionNotification notification;
+  final SupplierNotificationStyle style;
 
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final colors = context.supplierColors;
-
     final resolved =
         notification.state == SupplierNotificationState.resolved ||
         (notification.state == SupplierNotificationState.unknown &&
@@ -324,8 +350,9 @@ class _StatusBadge extends StatelessWidget {
     if (resolved) {
       return _PillBadge(
         label: l.notificationCompleted,
-        color: colors.textMuted,
-        background: colors.chipUnselected,
+        color: style.badgeForeground,
+        background: style.badgeBackground,
+        border: style.badgeBorder,
       );
     }
 
@@ -336,18 +363,11 @@ class _StatusBadge extends StatelessWidget {
       SupplierNotificationState.resolved => l.notificationCompleted,
       SupplierNotificationState.unknown => context.s.t('Notification', 'إشعار'),
     };
-    final color = switch (notification.state) {
-      SupplierNotificationState.needsAction => colors.amberAccent,
-      SupplierNotificationState.waiting => colors.textSecondary,
-      SupplierNotificationState.update => colors.accentMuted,
-      SupplierNotificationState.resolved => colors.textMuted,
-      SupplierNotificationState.unknown => colors.textSecondary,
-    };
-
     return _PillBadge(
       label: label,
-      color: color,
-      background: color.withValues(alpha: 0.14),
+      color: style.badgeForeground,
+      background: style.badgeBackground,
+      border: style.badgeBorder,
     );
   }
 }
@@ -357,11 +377,13 @@ class _PillBadge extends StatelessWidget {
     required this.label,
     required this.color,
     required this.background,
+    required this.border,
   });
 
   final String label;
   final Color color;
   final Color background;
+  final Color border;
 
   @override
   Widget build(BuildContext context) {
@@ -370,6 +392,7 @@ class _PillBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: AppRadius.pillAll,
+        border: Border.all(color: border),
       ),
       child: Text(
         label,
