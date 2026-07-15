@@ -8,6 +8,8 @@ Store and use **pickup/business locations** for suppliers/materials, plus authen
 
 Supplier pickup/business locations are **created/updated inline** through supplier profile PATCH and referenced when creating materials. User saved locations are private rows owned by the authenticated user and are not exposed through public discovery DTOs.
 
+`GET /api/supplier/profile/manage` is the owner-only management read for the Supplier default pickup location. It may return exact address and coordinates after strict Supplier authentication. This does not change public Materials Discovery redaction: public list/detail responses continue to omit exact address/latitude/longitude and expose only city/area plus privacy-safe approximate list pins where applicable. Preserve `visibility` as `PUBLIC`, `ORDER_ONLY`, or `PRIVATE`, and keep `isApproximate` separate; `PUBLIC_APPROXIMATE` is presentation meaning, not persisted data.
+
 ## Current status
 
 | Area | Status | Notes |
@@ -17,7 +19,7 @@ Supplier pickup/business locations are **created/updated inline** through suppli
 | Forward geocode API | **Implemented** | `POST /api/locations/geocode` resolves typed city/area/address into coordinates for authenticated private location forms |
 | Saved locations CRUD API | **Implemented** | `GET/POST/PATCH/DELETE /api/locations/saved`; private to authenticated owner |
 | Saved locations management UI | **Implemented** | Authenticated `/profile/locations` screen lists, creates, edits, deletes, sets default saved locations, geocodes typed addresses, and lets users pick exact coordinates on a map |
-| Supplier profile location | **Implemented** | `defaultPickupLocation` on `PATCH /api/supplier/profile` |
+| Supplier profile location | **Implemented** | `defaultPickupLocation` on `PATCH /api/supplier/profile`; exact owner read on `GET /api/supplier/profile/manage` |
 | Material create location | **Implemented** | Copies profile default or optional per-material override (individual/student only); never reuses profile row |
 | Public discovery location fields | **Implemented** | List returns `city`, `area`, privacy-safe `approximateLatitude`/`approximateLongitude`, and `approximateDistanceKm` when available; detail returns `city` + `area` only — no exact lat/lng/address or `pickupNotes` |
 | Public nearest-first sorting | **Implemented** | `GET /api/materials?sort=nearest` accepts viewer lat/lng or authenticated `savedLocationId`; distance is computed server-side |

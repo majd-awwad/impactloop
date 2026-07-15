@@ -7,6 +7,7 @@ import type {
   SupplierProfileDetailsDto,
   SupplierProfileLocationDto,
   SupplierProfileResponseDto,
+  SupplierProfileManagementResponseDto,
 } from "./dto/supplier-profile.dto.js";
 
 import {
@@ -15,6 +16,12 @@ import {
   normalizeVerificationStatus,
 } from "./dto/supplier-dashboard.dto.js";
 import { getSupplierProjectSupportSummary } from "./supplier-project-impact.js";
+import {
+  buildSupplierManagementVerification,
+  calculateSupplierEssentialsCompletion,
+  normalizeWorkingDays,
+  normalizeWorkingHours,
+} from './supplier-profile-management.js';
 
 import { AppError } from "../../utils/app-error.js";
 import { env } from "../../config/env.js";
@@ -1186,6 +1193,51 @@ export const getSupplierProfile = async (
     latestFollowers: latestFollowersDto,
     materialsPreview: materialsPreviewDto,
   });
+};
+
+export const getSupplierProfileManagement = async (
+  userId: string,
+): Promise<SupplierProfileManagementResponseDto> => {
+  const record =
+    await supplierRepository.findSupplierProfileManagementByUserId(userId);
+
+  return {
+    hasSupplierProfile: record !== null,
+    identity: record
+      ? {
+          supplierProfileId: record.id,
+          publicName: record.publicName ?? '',
+          supplierType: record.supplierType ?? '',
+          description: record.description,
+          avatarImageUrl: record.avatarImageUrl,
+          coverImageUrl: record.coverImageUrl,
+        }
+      : null,
+    pickupLocation: record ? mapLocation(record.defaultPickupLocation) : null,
+    organization: record?.organizationProfile
+      ? {
+          id: record.organizationProfile.id,
+          organizationName: record.organizationProfile.organizationName,
+          organizationType: record.organizationProfile.organizationType,
+          contactPersonName: record.organizationProfile.contactPersonName,
+          workingDays: normalizeWorkingDays(record.organizationProfile.workingDays),
+          workingHours: normalizeWorkingHours(record.organizationProfile.workingHours),
+        }
+      : null,
+    verification: buildSupplierManagementVerification({
+      rawStatus: record?.verificationStatus ?? 'NOT_REQUIRED',
+      supplierType: record?.supplierType,
+      adminNote: record?.verificationAdminNote,
+      submittedAt: record?.verificationSubmittedAt,
+      reviewedAt: record?.verificationReviewedAt,
+    }),
+    completion: calculateSupplierEssentialsCompletion({
+      publicName: record?.publicName,
+      supplierType: record?.supplierType,
+      description: record?.description,
+      pickupLocation: record?.defaultPickupLocation,
+    }),
+  };
 };
 
 export const getSupplierProfileFollowers = async (

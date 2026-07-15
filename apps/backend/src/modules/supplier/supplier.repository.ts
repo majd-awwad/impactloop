@@ -82,6 +82,48 @@ export const findSupplierProfileDetailsByUserId = async (userId: string) => {
   });
 };
 
+export const findSupplierProfileManagementByUserId = async (userId: string) => {
+  return prisma.supplierProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      publicName: true,
+      supplierType: true,
+      description: true,
+      avatarImageUrl: true,
+      coverImageUrl: true,
+      verificationStatus: true,
+      verificationSubmittedAt: true,
+      verificationReviewedAt: true,
+      verificationAdminNote: true,
+      defaultPickupLocation: {
+        select: {
+          id: true,
+          country: true,
+          city: true,
+          area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          visibility: true,
+          isApproximate: true,
+          locationType: true,
+        },
+      },
+      organizationProfile: {
+        select: {
+          id: true,
+          organizationName: true,
+          organizationType: true,
+          contactPersonName: true,
+          workingDays: true,
+          workingHours: true,
+        },
+      },
+    },
+  });
+};
+
 export const countSupplierFollowers = async (supplierProfileId: string) => {
   return prisma.supplierFollower.count({
     where: { supplierProfileId },

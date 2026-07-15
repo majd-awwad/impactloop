@@ -32,6 +32,14 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 6. **Delete material:** from My Materials or detail when `canDelete`.
 7. **Profile:** `PATCH /api/supplier/profile`, reverse geocode for location, change password via auth API.
 
+### Private Supplier Profile Management contract
+
+`GET /api/supplier/profile/manage` is the canonical private management read. It is authenticated and Supplier-owned, returns exact owner-visible pickup location (`addressLine`, `latitude`, `longitude`) plus separate raw `visibility` (`PUBLIC`, `ORDER_ONLY`, `PRIVATE`) and `isApproximate`, and never uses `PUBLIC_APPROXIMATE` as a stored value.
+
+The response owns Supplier identity, avatar/cover URLs, type, description, pickup location, optional organization details, informational working days/hours, verification summary/actions, and server-derived **essentials completion**. Essentials are public name, Supplier type, description, pickup country + city, and location visibility. Images are uploaded through `POST /api/uploads/profile-image` and stored under `/uploads/profiles`; the material-image endpoint is not a Supplier profile-image path. Existing legacy material-upload URLs remain readable but cannot be assigned by the new image patch validation.
+
+The canonical response intentionally excludes account email/phone, metrics, followers/follower emails, latest materials, material reservation/likes/views, and Material-level `pickupAllowed`, `deliveryAllowed`, and `pickupNotes`. Working schedule data is optional and informational; it does not affect reservation validation or availability. The public Supplier Profile endpoint is deferred. The old mixed profile response remains temporarily for Flutter migration and is planned for deprecation after the redesigned Profile stops consuming its legacy fields. Followers remain incomplete and require a separate privacy/product decision; they should not be a main Profile tab.
+
 Supplier API calls use the shared authenticated Dio client. When the access token expires, eligible Supplier JSON requests now refresh the token centrally through the auth/network layer and retry once. Material image uploads are not auto-retried because replaying multipart request bodies is unsafe; expired sessions during upload surface as an auth/API error.
 
 ### Pickup Schedule backend contract
@@ -83,7 +91,7 @@ All under `/api/supplier` require JWT + **SUPPLIER** role unless noted.
 | Area | Endpoints |
 |------|-----------|
 | Dashboard | `GET /dashboard` |
-| Profile | `GET /profile`, `PATCH /profile` |
+| Profile | `GET /profile/manage` (canonical private read), `GET /profile`, `PATCH /profile` (legacy compatibility) |
 | Materials | `GET /materials`, `GET /materials/:id`, `PATCH /materials/:id`, `POST /materials`, `DELETE /materials/:id` |
 | Category requests | `POST/GET /category-requests`, `GET /category-requests/:id/draft` |
 | Price rule requests | `GET /price-rule-requests`, `GET /price-rule-requests/:id/draft` |

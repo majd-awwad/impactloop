@@ -476,12 +476,19 @@ All routes below require Bearer JWT + `SUPPLIER` role unless noted. Source: `sup
 
 **`GET /api/supplier/dashboard` response extras:** `stats.engagement` (`totalViews`, `totalLikes`, `followersCount` from `MaterialView`, `MaterialLike`, and `SupplierFollower` counts scoped to the supplier), `stats.operational` (`scheduledPickups`, `activeMaterials`), `mostViewedMaterial` (highest `MaterialView` count; null when `totalViews` is 0), `highDemandMaterials` (top 3 by pending+accepted reservations). `recentReservationRequests` is always an empty array (not shown on overview UI). Engagement view counts use the `MaterialView` table consistently (not cached `material.viewsCount` alone). `projectSupport` reports derived Learning Hub impact from completed build-linked reservations only: `projectsSupported`, `projectComponentsSupported`, `learnerBuildsHelped`, `completedLinkedReservations`, and up to 3 privacy-safe `latestSupportedProjects` entries (`projectId`, `title`, `categoryName`, `completedAt` — no learner identity).
 | GET | `/api/supplier/profile` | `supplier/supplier.routes.ts` |
+| GET | `/api/supplier/profile/manage` | `supplier/supplier.routes.ts` |
 | PATCH | `/api/supplier/profile` | `supplier/supplier.routes.ts` |
 | GET | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
 | GET | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
 | PATCH | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
 | POST | `/api/supplier/materials` | `supplier/supplier.routes.ts` |
 | DELETE | `/api/supplier/materials/:id` | `supplier/supplier.routes.ts` |
+
+`GET /api/supplier/profile/manage` is the canonical authenticated private Supplier Profile Management read. It returns only `identity`, exact owner-visible `pickupLocation`, optional `organization`, `verification`, and server-derived `completion` (`completedCount`, `totalCount=5`, `percentage`, and stable missing keys). It does not return account email/phone, followers, metrics, latest materials, material fulfillment fields, or public/shared-cache data. Exact pickup address and coordinates are permitted only on this owner-scoped route.
+
+Essentials are `PUBLIC_NAME`, `SUPPLIER_TYPE`, `DESCRIPTION`, `PICKUP_LOCATION` (country + city), and `LOCATION_VISIBILITY`. Working days/hours are informational metadata only. The legacy mixed `GET/PATCH /profile` contract remains temporarily for Flutter compatibility while Flutter migrates; its metrics/followers/material-preview fields are not concatenated into the canonical response.
+
+Supplier avatar/cover files use `POST /api/uploads/profile-image` (`image`, JPG/JPEG/PNG/WebP, max 5 MB), whose returned `/uploads/profiles/...` URL is accepted by `PATCH /api/supplier/profile/images`. New material-upload URLs, HTTP URLs, and unrelated local paths are rejected; legacy stored values remain readable. Public Supplier Profile is deferred pending a redacted DTO, approximate-location rules, public material visibility, and a follower product decision.
 
 ### Supplier verification — `/api/supplier/verification`
 

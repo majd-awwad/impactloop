@@ -10,6 +10,7 @@ import {
   getSupplierMaterial,
   getSupplierMaterials,
   getSupplierProfile,
+  getSupplierProfileManagement,
   getSupplierProfileFollowers,
   updateSupplierMaterial,
   updateSupplierProfile,
@@ -46,6 +47,16 @@ export const getProfile = async (
   const profile = await getSupplierProfile(req.auth!.sub);
 
   res.json(successResponse("Supplier profile loaded", profile));
+};
+
+export const getProfileManagement = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  setSupplierPrivateCacheHeaders(res);
+  const profile = await getSupplierProfileManagement(req.auth!.sub);
+
+  res.json(successResponse("Supplier profile management loaded", profile));
 };
 
 export const getProfileFollowers = async (
