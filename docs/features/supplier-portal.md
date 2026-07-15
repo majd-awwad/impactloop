@@ -26,7 +26,7 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 
 1. Supplier logs in → redirect `/supplier` (dashboard).
 2. Navigate via shell: materials, add material, reservations, pickup schedule, notifications, profile.
-3. **Add material:** choose category → category-scoped material type/name autocomplete → price check → at least one image → pickup/delivery options → `POST /api/supplier/materials` with `Idempotency-Key`.
+3. **Add material:** follow the four-section guided form (basic information, quantity/pricing, pickup/delivery, photos); choose category → category-scoped material type/name autocomplete → price check → at least one image → pickup/delivery options → `POST /api/supplier/materials` with `Idempotency-Key`. The live preview and completion checklist are presentation-only and do not replace validation.
 4. **Reservations:** review pending → accept with pickup window / decline / mark complete after self-pickup. Delivery reservations show driver-delivery status and are completed by the driver flow.
 5. **Edit material:** `/supplier/materials/:id/edit` → safe fields only when `canEdit`; price/category/images/location read-only.
 6. **Delete material:** from My Materials or detail when `canDelete`.

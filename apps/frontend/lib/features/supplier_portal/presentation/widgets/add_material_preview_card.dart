@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
@@ -18,29 +20,35 @@ class AddMaterialPreviewCard extends StatelessWidget {
     super.key,
     required this.materialName,
     required this.title,
+    required this.description,
     required this.category,
     required this.condition,
     required this.quantity,
     required this.unit,
     required this.isFree,
+    required this.pickupAllowed,
     required this.deliveryAllowed,
     this.price,
     this.pickupLabel,
     this.coverImageUrl,
+    this.coverImageBytes,
     this.priceStatus,
   });
 
   final String materialName;
   final String title;
+  final String description;
   final MaterialCategory? category;
   final String condition;
   final String quantity;
   final String unit;
   final bool isFree;
+  final bool pickupAllowed;
   final bool deliveryAllowed;
   final String? price;
   final String? pickupLabel;
   final String? coverImageUrl;
+  final Uint8List? coverImageBytes;
   final AddMaterialPreviewPriceStatus? priceStatus;
 
   @override
@@ -54,57 +62,36 @@ class AddMaterialPreviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.s.listingPreview, style: context.supplierTitle()),
-          const SizedBox(height: AppSpacing.lg),
-          if (coverImageUrl != null && coverImageUrl!.isNotEmpty) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                ApiConfig.resolveMediaUrl(coverImageUrl!),
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  height: 160,
-                  color: colors.surfaceSolid,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.broken_image_outlined),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
+          Row(children: [
+            Icon(Icons.visibility_outlined, size: 20, color: colors.accent),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Text(context.s.listingPreview, style: context.supplierTitle())),
+          ]),
+          const SizedBox(height: AppSpacing.xs),
+          Text('This is how your material will appear to learners.', style: context.supplierBody().copyWith(color: colors.textMuted)),
+          const SizedBox(height: AppSpacing.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(height: 168, width: double.infinity, child: _coverImage(context)),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
+            _PreviewBadge(label: category?.nameEn ?? 'Category'),
+            _PreviewBadge(label: context.s.conditionLabel(condition)),
+            _PreviewBadge(label: isFree ? context.s.free : '₪${price?.isEmpty ?? true ? '—' : price}'),
+          ]),
+          const SizedBox(height: AppSpacing.md),
           Text(
-            title.isEmpty ? context.s.listingTitle : title,
+            title.isEmpty ? 'Material title will appear here' : title,
             style: context.supplierSectionTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
-          _PreviewRow(
-            label: context.s.materialName,
-            value: materialName.isEmpty ? '—' : materialName,
-          ),
-          _PreviewRow(
-            label: context.s.categorySectionTitle,
-            value: category?.nameEn ?? '—',
-          ),
-          _PreviewRow(
-            label: context.s.condition,
-            value: context.s.conditionLabel(condition),
-          ),
-          _PreviewRow(
-            label: context.s.quantity,
-            value: '$quantity $unit',
-          ),
-          _PreviewRow(
-            label: context.s.price,
-            value: isFree ? context.s.free : '₪${price ?? '—'}',
-          ),
-          if (pickupLabel != null && pickupLabel!.isNotEmpty)
-            _PreviewRow(label: context.s.pickupSectionTitle, value: pickupLabel!),
-          _PreviewRow(
-            label: context.s.deliveryAllowed,
-            value: deliveryAllowed ? context.s.yes : context.s.no,
-          ),
+          Text(description.isEmpty ? 'Short description of your material will appear here.' : description, maxLines: 3, overflow: TextOverflow.ellipsis, style: context.supplierBody().copyWith(color: colors.textMuted)),
+          const SizedBox(height: AppSpacing.md),
+          _PreviewMetadata(icon: Icons.grid_view_outlined, value: quantity.isEmpty || unit.isEmpty ? 'Quantity will appear here' : '$quantity $unit'),
+          _PreviewMetadata(icon: Icons.location_on_outlined, value: pickupLabel?.isNotEmpty == true ? pickupLabel! : 'Pickup location will appear here'),
+          _PreviewMetadata(icon: Icons.inventory_2_outlined, value: pickupAllowed ? 'Pickup available' : 'Pickup unavailable'),
+          _PreviewMetadata(icon: Icons.local_shipping_outlined, value: deliveryAllowed ? 'Internal delivery available' : 'Delivery unavailable'),
           if (!isFree && priceStatus != null) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
@@ -126,6 +113,25 @@ class AddMaterialPreviewCard extends StatelessWidget {
     );
   }
 
+  Widget _coverImage(BuildContext context) {
+    if (coverImageBytes != null) return Image.memory(coverImageBytes!, fit: BoxFit.cover);
+    if (coverImageUrl != null && coverImageUrl!.isNotEmpty) {
+      return Image.network(ApiConfig.resolveMediaUrl(coverImageUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => _emptyImage(context));
+    }
+    return _emptyImage(context);
+  }
+
+  Widget _emptyImage(BuildContext context) => Container(
+    color: context.supplierColors.surfaceSolid,
+    alignment: Alignment.center,
+    child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Icon(Icons.image_outlined, color: context.supplierColors.textSecondary, size: 34),
+      const SizedBox(height: AppSpacing.xs),
+      Text('No image yet', style: context.supplierLabel()),
+      Text('Add photos to see preview', style: context.supplierBody().copyWith(color: context.supplierColors.textMuted)),
+    ]),
+  );
+
   String _priceStatusMessage(
     BuildContext context,
     AddMaterialPreviewPriceStatus status,
@@ -143,33 +149,37 @@ class AddMaterialPreviewCard extends StatelessWidget {
   }
 }
 
-class _PreviewRow extends StatelessWidget {
-  const _PreviewRow({required this.label, required this.value});
+class _PreviewMetadata extends StatelessWidget {
+  const _PreviewMetadata({required this.icon, required this.value});
 
-  final String label;
+  final IconData icon;
   final String value;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: context.supplierBody().copyWith(
-                color: context.supplierColors.textMuted,
-              ),
-            ),
-          ),
+          Icon(icon, size: 17, color: context.supplierColors.textSecondary),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(value, style: context.supplierBody()),
+            child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.supplierBody()),
           ),
         ],
       ),
     );
   }
+}
+
+class _PreviewBadge extends StatelessWidget {
+  const _PreviewBadge({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+    decoration: context.supplierDecorations.profileSectionPanel,
+    child: Text(label, style: context.supplierChip()),
+  );
 }

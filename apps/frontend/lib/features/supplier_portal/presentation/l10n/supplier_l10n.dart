@@ -724,8 +724,8 @@ class SupplierL10n {
   String get chooseSupplierType =>
       t('Choose supplier type', 'اختر نوع المورد');
   String get dragPhotosHint => t(
-        'Drag photos here or choose from your device',
-        'اسحب الصور هنا أو اختر من جهازك',
+        'Choose photos from your device',
+        'اختر الصور من جهازك',
       );
   String get materialCouldNotBeListed => t(
         'Material could not be listed.',
