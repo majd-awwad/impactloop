@@ -284,4 +284,118 @@ void main() {
       hasLength(1),
     );
   });
+
+  test('canonical schedule response parses categories, types, and summary', () {
+    final page = SupplierSchedulePage.fromJson({
+      'items': [
+        {
+          'id': 'schedule-1',
+          'type': 'GROUPED_DRIVER_PICKUP',
+          'category': 'TODAY',
+          'needsAttention': true,
+          'representativeReservationId': 'reservation-1',
+          'reservationIds': ['reservation-1', 'reservation-2'],
+          'group': {
+            'groupId': 'group-1',
+            'grouped': true,
+            'itemCount': 2,
+            'status': 'ASSIGNED',
+            'hasMoreItems': false,
+          },
+          'material': {'id': 'material-1', 'title': 'Wood'},
+          'learner': {'id': 'learner-1', 'displayName': 'Lina'},
+          'quantity': {'value': 2, 'unit': 'kg'},
+          'fulfillmentMethod': 'DELIVERY',
+          'effectiveWindow': {
+            'start': _todayStart,
+            'end': _todayEnd,
+            'type': 'SUPPLIER_DELIVERY_PICKUP',
+          },
+          'workflowPhase': 'DELIVERY',
+          'attentionState': 'SUPPLIER_ACTION_REQUIRED',
+          'nextActor': 'SUPPLIER',
+          'reservationStatus': 'ACCEPTED',
+          'availableActions': ['REPORT_NO_DRIVER', 'UNKNOWN_ACTION'],
+          'projectionInconsistent': false,
+        },
+      ],
+      'pagination': {'page': 1, 'limit': 20, 'total': 1, 'totalPages': 1},
+      'summary': {
+        'total': 1,
+        'unscheduledAction': 0,
+        'adminReview': 0,
+        'overdue': 0,
+        'inProgress': 0,
+        'today': 1,
+        'upcoming': 0,
+        'completed': 0,
+        'closed': 0,
+        'needsAttention': 1,
+      },
+    });
+
+    final entry = page.items.single;
+    expect(entry.type.value, SupplierScheduleEntryType.groupedDriverPickup);
+    expect(entry.category.value, SupplierScheduleCategory.today);
+    expect(entry.category.rawValue, 'TODAY');
+    expect(entry.group?.itemCount, 2);
+    expect(entry.reservationIds, hasLength(2));
+    expect(entry.effectiveWindow?.type, 'SUPPLIER_DELIVERY_PICKUP');
+    expect(entry.availableActions.first.isExecutable, isTrue);
+    expect(entry.availableActions.last.isExecutable, isFalse);
+    expect(page.summary.isReconciled, isTrue);
+    expect(page.compatibilityItems.single.grouped, isTrue);
+  });
+
+  test('future enum values remain raw and non-actionable', () {
+    final type = SupplierScheduleEntryTypeValue.fromJson('FUTURE_TYPE');
+    final category = SupplierScheduleCategoryValue.fromJson('FUTURE_CATEGORY');
+    final action = SupplierAvailableAction.fromJson('FUTURE_ACTION');
+
+    expect(type.value, SupplierScheduleEntryType.unknown);
+    expect(type.rawValue, 'FUTURE_TYPE');
+    expect(category.value, SupplierScheduleCategory.unknown);
+    expect(category.rawValue, 'FUTURE_CATEGORY');
+    expect(action.isExecutable, isFalse);
+  });
+
+  test('filter queries use server categories and absolute local boundaries', () {
+    final selected = DateTime(2026, 7, 15, 9);
+    final today = SupplierScheduleQuery.forFilter(
+      SupplierPickupScheduleFilter.today,
+      selectedDay: selected,
+    );
+    final params = today.toQueryParameters();
+
+    expect(params['scope'], 'ACTIVE');
+    expect(params['category'], 'TODAY');
+    expect(params['dayStart'], isA<String>());
+    expect(params['dayEnd'], isA<String>());
+    expect(
+      DateTime.parse(params['dayEnd'] as String).isAfter(
+        DateTime.parse(params['dayStart'] as String),
+      ),
+      isTrue,
+    );
+
+    final changed = today.copyWith(page: 4, filter: SupplierPickupScheduleFilter.upcoming);
+    expect(changed.page, 1);
+    expect(changed.filter, SupplierPickupScheduleFilter.upcoming);
+    expect(
+      SupplierScheduleQuery.forFilter(SupplierPickupScheduleFilter.completed)
+          .scope,
+      'HISTORY',
+    );
+  });
+
+  test('invalid effective windows are not fabricated', () {
+    expect(
+      SupplierScheduleEffectiveWindow.tryFromJson({
+        'start': null,
+        'end': null,
+        'type': 'CONFIRMED_PICKUP',
+      }),
+      isNull,
+    );
+  });
 }

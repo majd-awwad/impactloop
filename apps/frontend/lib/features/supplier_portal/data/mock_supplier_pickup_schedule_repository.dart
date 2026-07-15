@@ -4,7 +4,7 @@ import 'pickup_schedule_filters.dart';
 import 'supplier_pickup_schedule_repository.dart';
 
 class MockSupplierPickupScheduleRepository
-    implements SupplierPickupScheduleRepository {
+    extends SupplierPickupScheduleRepository {
   MockSupplierPickupScheduleRepository() : _items = List.of(_buildSeedItems());
 
   final List<SupplierPickupScheduleItem> _items;

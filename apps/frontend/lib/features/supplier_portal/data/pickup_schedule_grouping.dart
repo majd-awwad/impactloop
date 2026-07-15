@@ -88,11 +88,15 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
   final today = pickupScheduleDateOnly(now ?? DateTime.now());
   final tomorrow = today.add(const Duration(days: 1));
   final byDate = <DateTime, List<SupplierPickupScheduleItem>>{};
+  final undated = <SupplierPickupScheduleItem>[];
 
   for (final item in accepted) {
-    final date = pickupScheduleDateOnly(
-      item.pickupWindow?.start ?? item.scheduleDate!,
-    );
+    final scheduleDate = item.pickupWindow?.start ?? item.scheduleDate;
+    if (scheduleDate == null) {
+      undated.add(item);
+      continue;
+    }
+    final date = pickupScheduleDateOnly(scheduleDate);
     byDate.putIfAbsent(date, () => []).add(item);
   }
 
@@ -112,6 +116,16 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
         label: formatScheduleDateLabel(date),
         date: date,
         items: groupItems,
+      ),
+    );
+  }
+
+  if (undated.isNotEmpty) {
+    groups.add(
+      PickupScheduleDateGroup(
+        kind: PickupScheduleGroupKind.date,
+        label: 'Needs attention',
+        items: undated,
       ),
     );
   }
