@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/supplier_pickup_schedule_item.dart';
+import '../../data/models/supplier_incoming_request.dart';
+import '../../data/pickup_schedule_filters.dart';
 import '../../data/supplier_pickup_schedule_api_repository.dart';
 import '../../application/supplier_portal_session.dart';
 
@@ -23,13 +25,25 @@ final pickupScheduleFilterProvider =
       SupplierPickupScheduleFilter
     >(PickupScheduleFilterNotifier.new);
 
+/// One bounded canonical query shared by the list, summary, retry, and refresh
+/// consumers. Filter tabs are projections over this loaded response.
+final pickupScheduleCanonicalProvider =
+    FutureProvider.autoDispose<SupplierScheduleQueryResult>((ref) async {
+      watchSupplierPortalSessionFromRef(ref);
+      final repository = ref.read(supplierPickupScheduleRepositoryProvider);
+      final raw = await repository.fetchPickupSchedule(
+        SupplierPickupScheduleFilter.all,
+      );
+      return raw is SupplierScheduleQueryResult
+          ? raw
+          : SupplierScheduleQueryResult.fromLegacyItems(raw);
+    });
+
 final pickupScheduleProvider =
     FutureProvider.autoDispose<List<SupplierPickupScheduleItem>>((ref) async {
-      watchSupplierPortalSessionFromRef(ref);
       final filter = ref.watch(pickupScheduleFilterProvider);
-      return ref
-          .read(supplierPickupScheduleRepositoryProvider)
-          .fetchPickupSchedule(filter);
+      final result = await ref.watch(pickupScheduleCanonicalProvider.future);
+      return filterPickupScheduleItems(result, filter);
     });
 
 class PickupScheduleSummary {
@@ -37,26 +51,40 @@ class PickupScheduleSummary {
     required this.todayCount,
     required this.upcomingCount,
     required this.completedCount,
+    this.serverSummary,
+    this.pagination,
   });
 
   final int todayCount;
   final int upcomingCount;
   final int completedCount;
+  final SupplierReservationSummary? serverSummary;
+  final SupplierReservationPagination? pagination;
 }
 
 final pickupScheduleSummaryProvider =
     FutureProvider.autoDispose<PickupScheduleSummary>((ref) async {
-      watchSupplierPortalSessionFromRef(ref);
-      final repository = ref.read(supplierPickupScheduleRepositoryProvider);
-      final results = await Future.wait([
-        repository.fetchPickupSchedule(SupplierPickupScheduleFilter.today),
-        repository.fetchPickupSchedule(SupplierPickupScheduleFilter.upcoming),
-        repository.fetchPickupSchedule(SupplierPickupScheduleFilter.completed),
-      ]);
-
+      final result = await ref.watch(pickupScheduleCanonicalProvider.future);
+      final items = result.toList(growable: false);
+      final today = filterPickupScheduleItems(
+        items,
+        SupplierPickupScheduleFilter.today,
+      );
+      final upcoming = filterPickupScheduleItems(
+        items,
+        SupplierPickupScheduleFilter.upcoming,
+      );
+      final completed = filterPickupScheduleItems(
+        items,
+        SupplierPickupScheduleFilter.completed,
+      );
       return PickupScheduleSummary(
-        todayCount: results[0].length,
-        upcomingCount: results[1].length,
-        completedCount: results[2].length,
+        // These are explicitly compatibility counts over the bounded loaded
+        // page. The authoritative server operational summary is retained.
+        todayCount: today.length,
+        upcomingCount: upcoming.length,
+        completedCount: completed.length,
+        serverSummary: result.summary,
+        pagination: result.pagination,
       );
     });

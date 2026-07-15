@@ -1,15 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_client.dart';
 import 'models/supplier_pickup_schedule_item.dart';
-import 'pickup_schedule_filters.dart';
 import 'supplier_pickup_schedule_api.dart';
+import 'supplier_requests_api_repository.dart';
 import 'supplier_pickup_schedule_repository.dart';
 
 final supplierPickupScheduleApiProvider = Provider<SupplierPickupScheduleApi>((
   ref,
 ) {
-  return SupplierPickupScheduleApi(ref.watch(apiClientProvider));
+  return SupplierPickupScheduleApi(ref.watch(supplierRequestsApiProvider));
 });
 
 final supplierPickupScheduleRepositoryProvider =
@@ -29,21 +28,9 @@ class ApiSupplierPickupScheduleRepository
   Future<List<SupplierPickupScheduleItem>> fetchPickupSchedule(
     SupplierPickupScheduleFilter filter,
   ) async {
-    switch (filter) {
-      case SupplierPickupScheduleFilter.today:
-      case SupplierPickupScheduleFilter.upcoming:
-        final accepted = await _api.fetchAcceptedReservations();
-        return filterPickupScheduleItems(accepted, filter);
-      case SupplierPickupScheduleFilter.completed:
-        final completed = await _api.fetchCompletedReservations();
-        return filterPickupScheduleItems(completed, filter);
-      case SupplierPickupScheduleFilter.all:
-        final results = await Future.wait([
-          _api.fetchAcceptedReservations(),
-          _api.fetchCompletedReservations(),
-        ]);
-        final merged = [...results[0], ...results[1]];
-        return filterPickupScheduleItems(merged, filter);
-    }
+    // The legacy repository interface returns a List for the existing page.
+    // This immutable ListBase also carries pagination and the server summary;
+    // the provider reads those fields without issuing another request.
+    return projectSupplierReservations(await _api.fetchReservations());
   }
 }

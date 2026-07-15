@@ -1,5 +1,6 @@
 import 'models/supplier_pickup_schedule_item.dart';
 import 'models/supplier_incoming_request.dart' show SupplierPickupWindow;
+import 'pickup_schedule_filters.dart';
 
 String formatPickupTimeRange(SupplierPickupWindow window) {
   final start = window.start.toLocal();
@@ -17,7 +18,7 @@ String formatPickupScheduleCardWindow(SupplierPickupWindow window) {
 
 String formatScheduleDateLabel(DateTime date) {
   final local = DateTime(date.year, date.month, date.day);
-  final today = _dateOnly(DateTime.now());
+  final today = pickupScheduleDateOnly(DateTime.now());
   final tomorrow = today.add(const Duration(days: 1));
 
   if (local == today) {
@@ -48,11 +49,6 @@ String _monthLabel(int month) {
   return labels[month - 1];
 }
 
-DateTime _dateOnly(DateTime value) {
-  final local = value.toLocal();
-  return DateTime(local.year, local.month, local.day);
-}
-
 int _groupSortOrder(PickupScheduleGroupKind kind) {
   return switch (kind) {
     PickupScheduleGroupKind.today => 0,
@@ -64,8 +60,9 @@ int _groupSortOrder(PickupScheduleGroupKind kind) {
 
 List<PickupScheduleDateGroup> groupPickupScheduleItems(
   List<SupplierPickupScheduleItem> items,
-  SupplierPickupScheduleFilter filter,
-) {
+  SupplierPickupScheduleFilter filter, {
+  DateTime? now,
+}) {
   if (items.isEmpty) {
     return const [];
   }
@@ -88,12 +85,14 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
     return groups;
   }
 
-  final today = _dateOnly(DateTime.now());
+  final today = pickupScheduleDateOnly(now ?? DateTime.now());
   final tomorrow = today.add(const Duration(days: 1));
   final byDate = <DateTime, List<SupplierPickupScheduleItem>>{};
 
   for (final item in accepted) {
-    final date = _dateOnly(item.pickupWindow?.start ?? item.scheduleDate!);
+    final date = pickupScheduleDateOnly(
+      item.pickupWindow?.start ?? item.scheduleDate!,
+    );
     byDate.putIfAbsent(date, () => []).add(item);
   }
 

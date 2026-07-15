@@ -874,6 +874,8 @@ class SupplierIncomingRequest {
     required this.unit,
     required this.status,
     required this.requestedAt,
+    this.statusRaw,
+    this.completedAt,
     this.fulfillmentMethod = 'PICKUP',
     this.fulfillmentLabel,
     this.learnerPreferredPickupWindows = const [],
@@ -938,7 +940,11 @@ class SupplierIncomingRequest {
   final double quantityRequested;
   final String unit;
   final SupplierIncomingRequestStatus status;
+
+  /// Retains the backend value so new states are not coerced downstream.
+  final String? statusRaw;
   final DateTime requestedAt;
+  final DateTime? completedAt;
   final String fulfillmentMethod;
   final String? fulfillmentLabel;
   final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
@@ -1091,6 +1097,8 @@ class SupplierIncomingRequest {
 
   SupplierIncomingRequest copyWith({
     SupplierIncomingRequestStatus? status,
+    String? statusRaw,
+    DateTime? completedAt,
     SupplierPickupWindow? pickupWindow,
     bool? canSupplierComplete,
     String? declineReason,
@@ -1113,7 +1121,9 @@ class SupplierIncomingRequest {
       quantityRequested: quantityRequested,
       unit: unit,
       status: status ?? this.status,
+      statusRaw: statusRaw ?? this.statusRaw,
       requestedAt: requestedAt,
+      completedAt: completedAt ?? this.completedAt,
       activeDelivery: activeDelivery,
       canSupplierComplete: canSupplierComplete ?? this.canSupplierComplete,
       learnerNote: learnerNote,
@@ -1214,9 +1224,8 @@ class SupplierIncomingRequest {
       return SupplierPickupWindow(start: parsedStart, end: parsedEnd);
     }
 
-    final status = SupplierIncomingRequestStatusLabels.fromApiValue(
-      json['status'] as String? ?? 'PENDING',
-    );
+    final statusRaw = json['status'] as String? ?? 'PENDING';
+    final status = SupplierIncomingRequestStatusLabels.fromApiValue(statusRaw);
     final canSupplierComplete =
         json['canSupplierComplete'] as bool? ??
         (status == SupplierIncomingRequestStatus.accepted &&
@@ -1253,9 +1262,11 @@ class SupplierIncomingRequest {
       quantityRequested: (json['quantityRequested'] as num?)?.toDouble() ?? 0,
       unit: material?['unit'] as String? ?? json['unit'] as String? ?? 'piece',
       status: status,
+      statusRaw: statusRaw,
       requestedAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
+      completedAt: _jsonDate(json['completedAt']),
       fulfillmentMethod: fulfillmentMethod,
       fulfillmentLabel: fulfillmentLabel,
       learnerPreferredPickupWindows: parsePreferredWindows(
