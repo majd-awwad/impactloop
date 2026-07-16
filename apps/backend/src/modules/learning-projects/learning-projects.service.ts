@@ -761,6 +761,25 @@ export const getMyProjectBuildById = async (
   return build ? mapProjectBuild(build) : null;
 };
 
+export const getOwnedProjectBuildByBuildId = async (
+  buildId: string,
+  userId: string,
+) => {
+  const build = await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+    buildId,
+    userId,
+  );
+
+  return build ? mapProjectBuild(build) : null;
+};
+
+export const listActiveProjectBuildsForLearner = async (userId: string) => {
+  const builds =
+    await learningProjectsRepository.findActiveProjectBuildsForLearner(userId);
+
+  return builds.map((build) => mapProjectBuild(build));
+};
+
 export const startProjectBuildById = async (
   id: string,
   userId: string,

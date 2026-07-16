@@ -498,6 +498,20 @@ class _FakeAiRepository implements AiRepository {
   Future<void> restoreConversation({required String conversationId}) async {}
 
   @override
+  Future<AiContentBlock> confirmPendingAction({
+    required String pendingActionId,
+    required String idempotencyKey,
+    required String locale,
+  }) async {
+    return const AiContentBlock(type: 'action_result');
+  }
+
+  @override
+  Future<AiContentBlock?> cancelPendingAction({required String pendingActionId}) async {
+    return const AiContentBlock(type: 'action_result', actionStatus: 'CANCELLED');
+  }
+
+  @override
   Future<AiConversationSummary> createConversation({
     required String locale,
     String? title,

@@ -1,0 +1,1779 @@
+import assert from 'node:assert/strict';
+import type { Server } from 'node:http';
+import { after, before, beforeEach, describe, test } from 'node:test';
+
+process.env.JWT_ACCESS_SECRET ??= 'agent-http-closure-access-secret';
+process.env.JWT_REFRESH_SECRET ??= 'agent-http-closure-refresh-secret';
+process.env.AI_CHAT_PROVIDER = 'mock';
+process.env.AI_CHAT_RATE_LIMIT_PER_USER = '120';
+process.env.AI_CHAT_MAX_CONVERSATIONS_PER_HOUR = '30';
+
+const TEST_MARKER = '[test-ai-agent-http-closure]';
+const SEED_TOKEN = 'agenthttpseed';
+const clientId = (suffix: string) => `client-agent-${suffix.padEnd(16, '0')}`;
+
+type ApiJson = {
+  success?: boolean;
+  data?: Record<string, unknown> & {
+    id?: string;
+    contentBlocks?: Array<Record<string, unknown>>;
+    items?: Array<Record<string, unknown>>;
+    meta?: Record<string, unknown>;
+  };
+  error?: { code?: string };
+};
+
+type SeedIds = {
+  users: string[];
+  locations: string[];
+  materials: string[];
+  projects: string[];
+  builds: string[];
+  learnerAId: string;
+  learnerBId: string;
+  learnerNoCoordsId: string;
+  supplierId: string;
+  materialCategoryId: string;
+  projectCategoryId: string;
+  createdCategoryIds: string[];
+  availableFreeNearId: string;
+  availablePaidNearId: string;
+  availablePaid30Id: string;
+  availableFarId: string;
+  reservedId: string;
+  unavailableId: string;
+  reusedId: string;
+  publishedArduinoProjectId: string;
+  obstacleProjectId: string;
+  draftProjectId: string;
+  buildId: string;
+  availableMaterialIds: Set<string>;
+  excludedMaterialIds: Set<string>;
+};
+
+const ids: SeedIds = {
+  users: [],
+  locations: [],
+  materials: [],
+  projects: [],
+  builds: [],
+  learnerAId: '',
+  learnerBId: '',
+  learnerNoCoordsId: '',
+  supplierId: '',
+  materialCategoryId: '',
+  projectCategoryId: '',
+  createdCategoryIds: [],
+  availableFreeNearId: '',
+  availablePaidNearId: '',
+  availablePaid30Id: '',
+  availableFarId: '',
+  reservedId: '',
+  unavailableId: '',
+  reusedId: '',
+  publishedArduinoProjectId: '',
+  obstacleProjectId: '',
+  draftProjectId: '',
+  buildId: '',
+  availableMaterialIds: new Set(),
+  excludedMaterialIds: new Set(),
+};
+
+let baseUrl = '';
+let server: Server | null = null;
+let prisma: typeof import('../../../database/prisma.js').prisma;
+let signAccessToken: typeof import('../../../utils/jwt.js').signAccessToken;
+let hashPassword: typeof import('../../../utils/password.js').hashPassword;
+let resetRateLimitersForTests: typeof import('../../../middlewares/rate-limit.middleware.js').resetRateLimitersForTests;
+let deleteAiDataForUsers: typeof import('../ai.repository.js').deleteAiDataForUsers;
+let setAiChatProviderForTests: typeof import('../providers/ai-chat-provider.factory.js').setAiChatProviderForTests;
+let MockAiChatProviderClass: typeof import('../providers/mock-chat.provider.js').MockAiChatProvider;
+let aiContentBlocksSchema: typeof import('../ai.content-blocks.js').aiContentBlocksSchema;
+let saveLearningProjectById: typeof import('../../learning-projects/learning-projects.service.js').saveLearningProjectById;
+let startProjectBuildById: typeof import('../../learning-projects/learning-projects.service.js').startProjectBuildById;
+let updateProjectBuildItemById: typeof import('../../learning-projects/learning-projects.service.js').updateProjectBuildItemById;
+
+async function createLearnerUser(
+  label: string,
+  options?: { interests?: string[]; withCoordinates?: boolean },
+) {
+  const user = await prisma.user.create({
+    data: {
+      displayName: `${TEST_MARKER} ${label}`,
+      email: `${TEST_MARKER}-${label}-${Date.now()}-${Math.random()}@impactloop.test`,
+      passwordHash: await hashPassword('TestPassword123!'),
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+      learnerProfile: {
+        create: {
+          learnerType: 'STUDENT',
+          skillLevel: 'BEGINNER',
+          interests: options?.interests ?? ['arduino'],
+        },
+      },
+    },
+  });
+  ids.users.push(user.id);
+
+  if (options?.withCoordinates) {
+    const location = await prisma.location.create({
+      data: {
+        country: 'PS',
+        city: `${TEST_MARKER}-Nablus`,
+        area: 'Industrial',
+        latitude: 32.2211,
+        longitude: 35.2544,
+        visibility: 'PRIVATE',
+        isApproximate: true,
+      },
+    });
+    ids.locations.push(location.id);
+    await prisma.userSavedLocation.create({
+      data: {
+        userId: user.id,
+        locationId: location.id,
+        label: 'Home',
+        isDefault: true,
+      },
+    });
+  }
+
+  return user;
+}
+
+async function createSupplierUser() {
+  const user = await prisma.user.create({
+    data: {
+      displayName: `${TEST_MARKER} Supplier`,
+      email: `${TEST_MARKER}-supplier-${Date.now()}@impactloop.test`,
+      passwordHash: await hashPassword('TestPassword123!'),
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      roles: { create: [{ role: 'SUPPLIER', isPrimary: true }] },
+      supplierProfile: {
+        create: {
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: `${TEST_MARKER} Public Supplier`,
+          verificationStatus: 'APPROVED',
+        },
+      },
+    },
+  });
+  ids.users.push(user.id);
+  ids.supplierId = user.id;
+  return user;
+}
+
+async function createMaterial(input: {
+  locationId: string;
+  title: string;
+  status?: 'AVAILABLE' | 'RESERVED' | 'UNAVAILABLE' | 'REUSED';
+  isFree?: boolean;
+  price?: number | null;
+  latitude?: number;
+  longitude?: number;
+}) {
+  const supplierProfile = await prisma.supplierProfile.findUnique({
+    where: { userId: ids.supplierId },
+  });
+
+  const material = await prisma.material.create({
+    data: {
+      ownerId: ids.supplierId,
+      supplierProfileId: supplierProfile?.id,
+      categoryId: ids.materialCategoryId,
+      locationId: input.locationId,
+      title: input.title,
+      description: `${TEST_MARKER} seeded material`,
+      materialType: 'Arduino board',
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      sourceType: 'WORKSHOP_SURPLUS',
+      status: input.status ?? 'AVAILABLE',
+      isFree: input.isFree ?? true,
+      price: input.isFree === false ? input.price ?? 25 : null,
+    },
+  });
+  ids.materials.push(material.id);
+
+  if (input.latitude != null && input.longitude != null) {
+    await prisma.$executeRaw`
+      UPDATE locations
+      SET latitude = ${input.latitude}, longitude = ${input.longitude}
+      WHERE id = ${input.locationId}
+    `;
+  }
+
+  return material;
+}
+
+function tokenFor(userId: string) {
+  return signAccessToken({ sub: userId, roles: ['LEARNER'] });
+}
+
+async function apiFetch(
+  path: string,
+  options: {
+    method?: string;
+    token?: string;
+    body?: unknown;
+  } = {},
+) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: options.method ?? 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  const json = (await response.json()) as ApiJson;
+  return { response, json };
+}
+
+async function createConversation(token: string) {
+  const created = await apiFetch('/api/ai/v1/conversations', {
+    method: 'POST',
+    token,
+    body: { mode: 'GENERAL_LEARNING', locale: 'ar' },
+  });
+  assert.equal(created.response.status, 201);
+  return created.json.data?.id as string;
+}
+
+async function sendAgentMessage(
+  token: string,
+  conversationId: string,
+  text: string,
+  messageClientId: string,
+) {
+  return apiFetch(`/api/ai/v1/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    token,
+    body: {
+      text,
+      locale: 'ar',
+      clientMessageId: messageClientId,
+    },
+  });
+}
+
+async function assertTurnBasics(
+  conversationId: string,
+  messageClientId: string,
+  options?: { assistantStatus?: 'COMPLETED' | 'REFUSED' },
+) {
+  const conversation = await prisma.aiConversation.findUnique({
+    where: { id: conversationId },
+  });
+  assert.equal(conversation?.processingState, 'IDLE');
+  assert.equal(conversation?.processingStartedAt, null);
+
+  const userMessage = await prisma.aiMessage.findFirst({
+    where: { conversationId, clientMessageId: messageClientId, role: 'USER' },
+  });
+  assert.ok(userMessage);
+
+  const assistantMessages = await prisma.aiMessage.findMany({
+    where: {
+      conversationId,
+      role: 'ASSISTANT',
+      inReplyToMessageId: userMessage.id,
+    },
+  });
+  assert.equal(assistantMessages.length, 1);
+  assert.equal(
+    assistantMessages[0]?.status,
+    options?.assistantStatus ?? 'COMPLETED',
+  );
+
+  return { userMessage, assistantMessage: assistantMessages[0]! };
+}
+
+function parseBlocks(json: ApiJson) {
+  const blocks = json.data?.contentBlocks as Array<Record<string, unknown>>;
+  assert.ok(Array.isArray(blocks));
+  aiContentBlocksSchema.parse(blocks);
+  return blocks;
+}
+
+function materialResultsBlock(blocks: Array<Record<string, unknown>>) {
+  const block = blocks.find((item) => item.type === 'material_results');
+  assert.ok(block, 'expected material_results block');
+  return block;
+}
+
+function projectResultsBlock(blocks: Array<Record<string, unknown>>) {
+  const block = blocks.find((item) => item.type === 'project_results');
+  assert.ok(block, 'expected project_results block');
+  return block;
+}
+
+async function seedAssistantProjectContext(input: {
+  conversationId: string;
+  source: 'project_results' | 'recommendations';
+}) {
+  const userMessage = await prisma.aiMessage.create({
+    data: {
+      conversationId: input.conversationId,
+      role: 'USER',
+      status: 'COMPLETED',
+      contentText: 'اعرضلي مشاريع روبوت',
+      clientMessageId: clientId(`seed-user-${input.source}`),
+      locale: 'ar',
+    },
+  });
+
+  const items = [
+    {
+      projectId: ids.publishedArduinoProjectId,
+      title: `${SEED_TOKEN} Arduino LED Blink`,
+      difficulty: 'BEGINNER',
+      estimatedTimeLabel: '30 min',
+      interestLabels: ['Arduino'],
+    },
+    {
+      projectId: ids.obstacleProjectId,
+      title: 'Obstacle Avoidance Robot',
+      difficulty: 'BEGINNER',
+      estimatedTimeLabel: '45 min',
+      interestLabels: ['Robotics'],
+    },
+  ];
+
+  const contentBlocks =
+    input.source === 'project_results'
+      ? [{ type: 'project_results', items }]
+      : [
+          {
+            type: 'recommendations',
+            recommendationType: 'PROJECTS',
+            items: items.map((item) => ({
+              itemType: 'PROJECT',
+              itemId: item.projectId,
+              title: item.title,
+              reasons: ['Matches your Robotics interest'],
+              difficulty: item.difficulty,
+              estimatedTimeLabel: item.estimatedTimeLabel,
+            })),
+          },
+        ];
+
+  await prisma.aiMessage.create({
+    data: {
+      conversationId: input.conversationId,
+      role: 'ASSISTANT',
+      status: 'COMPLETED',
+      contentBlocks: contentBlocks as never,
+      inReplyToMessageId: userMessage.id,
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+      locale: 'ar',
+      provider: 'system',
+      model: null,
+      policyVersion: 'test',
+      latencyMs: 1,
+      inputTokens: null,
+      outputTokens: null,
+    },
+  });
+}
+
+before(async () => {
+  const prismaModule = await import('../../../database/prisma.js');
+  prisma = prismaModule.prisma;
+  ({ signAccessToken } = await import('../../../utils/jwt.js'));
+  ({ hashPassword } = await import('../../../utils/password.js'));
+  ({ resetRateLimitersForTests } = await import(
+    '../../../middlewares/rate-limit.middleware.js'
+  ));
+  ({ deleteAiDataForUsers } = await import('../ai.repository.js'));
+  ({ setAiChatProviderForTests } = await import(
+    '../providers/ai-chat-provider.factory.js'
+  ));
+  ({ MockAiChatProvider: MockAiChatProviderClass } = await import(
+    '../providers/mock-chat.provider.js'
+  ));
+  ({ aiContentBlocksSchema } = await import('../ai.content-blocks.js'));
+  ({ saveLearningProjectById, startProjectBuildById, updateProjectBuildItemById } =
+    await import('../../learning-projects/learning-projects.service.js'));
+
+  const { app } = await import('../../../app.js');
+  await new Promise<void>((resolve) => {
+    server = app.listen(0, '127.0.0.1', () => resolve());
+  });
+  const address = server!.address();
+  assert.ok(address && typeof address === 'object');
+  baseUrl = `http://127.0.0.1:${address.port}`;
+  resetRateLimitersForTests();
+  setAiChatProviderForTests(new MockAiChatProviderClass());
+
+  const { getCategories } = await import('../../categories/categories.service.js');
+
+  const discoveryCategories = await getCategories({
+    type: 'MATERIAL',
+    rootOnly: true,
+    discoveryOnly: true,
+  });
+  const materialCategory =
+    discoveryCategories.find(
+      (category) =>
+        category.nameEn.toLowerCase().includes('electronics') ||
+        category.nameAr.includes('إلكترون'),
+    ) ??
+    (await prisma.category.create({
+      data: {
+        nameEn: 'Electronics',
+        nameAr: 'إلكترونيات',
+        categoryType: 'BOTH',
+        isActive: true,
+      },
+    }));
+  ids.materialCategoryId = materialCategory.id;
+
+  const projectCategory = await prisma.category.create({
+    data: {
+      nameEn: `Agent Robotics ${SEED_TOKEN}`,
+      nameAr: `روبوتات ${SEED_TOKEN}`,
+      categoryType: 'PROJECT',
+      isActive: true,
+    },
+  });
+  ids.projectCategoryId = projectCategory.id;
+  ids.createdCategoryIds.push(projectCategory.id);
+
+  const nearLocation = await prisma.location.create({
+    data: {
+      country: 'PS',
+      city: `${TEST_MARKER}-Near`,
+      area: 'Near',
+      latitude: 32.222,
+      longitude: 35.255,
+      visibility: 'PRIVATE',
+      isApproximate: true,
+    },
+  });
+  const midLocation = await prisma.location.create({
+    data: {
+      country: 'PS',
+      city: `${TEST_MARKER}-Mid`,
+      area: 'Mid',
+      latitude: 32.24,
+      longitude: 35.27,
+      visibility: 'PRIVATE',
+      isApproximate: true,
+    },
+  });
+  const farLocation = await prisma.location.create({
+    data: {
+      country: 'PS',
+      city: `${TEST_MARKER}-Far`,
+      area: 'Far',
+      latitude: 31.9038,
+      longitude: 35.2034,
+      visibility: 'PRIVATE',
+      isApproximate: true,
+    },
+  });
+  ids.locations.push(nearLocation.id, midLocation.id, farLocation.id);
+
+  const learnerA = await createLearnerUser('learner-a', {
+    interests: ['arduino', 'electronics'],
+    withCoordinates: true,
+  });
+  const learnerB = await createLearnerUser('learner-b');
+  const learnerNoCoords = await createLearnerUser('learner-no-coords');
+  ids.learnerAId = learnerA.id;
+  ids.learnerBId = learnerB.id;
+  ids.learnerNoCoordsId = learnerNoCoords.id;
+
+  await createSupplierUser();
+
+  const freeNear = await createMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} free electronics near`,
+    isFree: true,
+    latitude: 32.222,
+    longitude: 35.255,
+  });
+  const paidNear = await createMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} paid electronics near`,
+    isFree: false,
+    price: 15,
+    latitude: 32.222,
+    longitude: 35.255,
+  });
+  const paid30 = await createMaterial({
+    locationId: midLocation.id,
+    title: `${SEED_TOKEN} paid electronics mid`,
+    isFree: false,
+    price: 30,
+    latitude: 32.24,
+    longitude: 35.27,
+  });
+  const farAvailable = await createMaterial({
+    locationId: farLocation.id,
+    title: `${SEED_TOKEN} far electronics`,
+    isFree: true,
+    latitude: 31.9038,
+    longitude: 35.2034,
+  });
+  const reserved = await createMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} reserved electronics`,
+    status: 'RESERVED',
+  });
+  const unavailable = await createMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} unavailable electronics`,
+    status: 'UNAVAILABLE',
+  });
+  const reused = await createMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} reused electronics`,
+    status: 'REUSED',
+  });
+
+  ids.availableFreeNearId = freeNear.id;
+  ids.availablePaidNearId = paidNear.id;
+  ids.availablePaid30Id = paid30.id;
+  ids.availableFarId = farAvailable.id;
+  ids.reservedId = reserved.id;
+  ids.unavailableId = unavailable.id;
+  ids.reusedId = reused.id;
+  ids.availableMaterialIds = new Set([
+    freeNear.id,
+    paidNear.id,
+    paid30.id,
+    farAvailable.id,
+  ]);
+  ids.excludedMaterialIds = new Set([
+    reserved.id,
+    unavailable.id,
+    reused.id,
+  ]);
+
+  const publishedArduino = await prisma.learningProject.create({
+    data: {
+      categoryId: ids.projectCategoryId,
+      createdBy: ids.learnerAId,
+      title: `${SEED_TOKEN} Arduino LED Blink`,
+      shortDescription: `${TEST_MARKER} Arduino starter`,
+      description: `${TEST_MARKER} published Arduino project`,
+      difficulty: 'BEGINNER',
+      status: 'PUBLISHED',
+      tags: { create: [{ tag: 'arduino' }] },
+      requiredComponents: {
+        create: [
+          {
+            componentName: 'Arduino Uno',
+            materialType: 'Microcontroller',
+            quantity: 1,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.materialCategoryId,
+            searchKeywords: ['arduino'],
+          },
+          {
+            componentName: 'LED',
+            materialType: 'LED',
+            quantity: 1,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.materialCategoryId,
+            searchKeywords: ['led'],
+          },
+        ],
+      },
+    },
+  });
+  ids.publishedArduinoProjectId = publishedArduino.id;
+  ids.projects.push(publishedArduino.id);
+
+  const obstacleProject = await prisma.learningProject.create({
+    data: {
+      categoryId: ids.projectCategoryId,
+      createdBy: ids.learnerAId,
+      title: 'Obstacle Avoidance Robot',
+      shortDescription: `${TEST_MARKER} obstacle robot starter`,
+      description: `${TEST_MARKER} obstacle avoidance robot project`,
+      difficulty: 'BEGINNER',
+      status: 'PUBLISHED',
+      tags: { create: [{ tag: 'robotics' }, { tag: 'obstacle' }] },
+      requiredComponents: {
+        create: [
+          {
+            componentName: 'Ultrasonic Sensor',
+            materialType: 'Sensor',
+            quantity: 1,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.materialCategoryId,
+            searchKeywords: ['ultrasonic'],
+          },
+          {
+            componentName: 'DC Motor',
+            materialType: 'Motor',
+            quantity: 2,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.materialCategoryId,
+            searchKeywords: ['motor'],
+          },
+        ],
+      },
+    },
+  });
+  ids.obstacleProjectId = obstacleProject.id;
+  ids.projects.push(obstacleProject.id);
+
+  const draftProject = await prisma.learningProject.create({
+    data: {
+      categoryId: ids.projectCategoryId,
+      createdBy: ids.learnerAId,
+      title: `${SEED_TOKEN} Draft Hidden Project`,
+      shortDescription: `${TEST_MARKER} draft`,
+      description: `${TEST_MARKER} draft project`,
+      difficulty: 'BEGINNER',
+      status: 'DRAFT',
+    },
+  });
+  ids.draftProjectId = draftProject.id;
+  ids.projects.push(draftProject.id);
+
+  await saveLearningProjectById(publishedArduino.id, ids.learnerAId);
+
+  const build = await startProjectBuildById(publishedArduino.id, ids.learnerAId);
+  ids.buildId = build.id;
+  ids.builds.push(build.id);
+
+  const ownedItem = build.items[0];
+  const missingItem = build.items[1];
+  assert.ok(ownedItem && missingItem);
+
+  await updateProjectBuildItemById(
+    publishedArduino.id,
+    ids.learnerAId,
+    ownedItem.id,
+    { status: 'ALREADY_OWNED', learnerNote: null },
+  );
+  await updateProjectBuildItemById(
+    publishedArduino.id,
+    ids.learnerAId,
+    missingItem.id,
+    { status: 'MISSING', learnerNote: null },
+  );
+
+  const { getMaterials } = await import('../../materials/materials.service.js');
+  const seedCheck = await getMaterials(
+    {
+      page: 1,
+      limit: 20,
+      status: 'AVAILABLE',
+      priceType: 'ANY',
+      q: SEED_TOKEN,
+    },
+    { sub: ids.learnerAId, roles: ['LEARNER'] },
+  );
+  assert.ok(
+    seedCheck.items.length >= 3,
+    'seed materials must be discoverable before HTTP tests run',
+  );
+});
+
+after(async () => {
+  setAiChatProviderForTests(null);
+  resetRateLimitersForTests();
+
+  await new Promise<void>((resolve, reject) => {
+    if (!server) {
+      resolve();
+      return;
+    }
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+  server = null;
+
+  await deleteAiDataForUsers(ids.users);
+
+  if (ids.builds.length > 0) {
+    await prisma.projectBuild.deleteMany({ where: { id: { in: ids.builds } } });
+  }
+  if (ids.projects.length > 0) {
+    await prisma.projectSave.deleteMany({
+      where: { projectId: { in: ids.projects } },
+    });
+    await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
+  }
+  if (ids.materials.length > 0) {
+    await prisma.material.deleteMany({ where: { id: { in: ids.materials } } });
+  }
+  if (ids.locations.length > 0) {
+    await prisma.userSavedLocation.deleteMany({
+      where: { locationId: { in: ids.locations } },
+    });
+    await prisma.location.deleteMany({ where: { id: { in: ids.locations } } });
+  }
+  if (ids.createdCategoryIds.length > 0) {
+    await prisma.category.deleteMany({
+      where: { id: { in: ids.createdCategoryIds } },
+    });
+  }
+  if (ids.users.length > 0) {
+    await prisma.learnerProfile.deleteMany({ where: { userId: { in: ids.users } } });
+    await prisma.userRoleAssignment.deleteMany({ where: { userId: { in: ids.users } } });
+    await prisma.supplierProfile.deleteMany({ where: { userId: { in: ids.users } } });
+    await prisma.user.deleteMany({ where: { id: { in: ids.users } } });
+  }
+});
+
+describe('ai agent http closure', () => {
+  beforeEach(() => {
+    resetRateLimitersForTests();
+  });
+
+  test('out-of-scope geography questions return polite refusal without server error', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const phrases = ['ما هي فلسطين؟', 'اشرحلي عن القدس'];
+
+    for (const [index, phrase] of phrases.entries()) {
+      const conversationId = await createConversation(token);
+      const messageClientId = clientId(`oos-${index}`);
+
+      const sent = await sendAgentMessage(
+        token,
+        conversationId,
+        phrase,
+        messageClientId,
+      );
+      assert.equal(sent.response.status, 201, `expected 201 for: ${phrase}`);
+
+      const blocks = parseBlocks(sent.json);
+      assert.ok(blocks.some((block) => block.type === 'text'));
+      assert.equal(
+        blocks.some((block) => block.type === 'material_results'),
+        false,
+      );
+      assert.equal(
+        blocks.some((block) => block.type === 'error'),
+        false,
+        `no error block for: ${phrase}`,
+      );
+
+      await assertTurnBasics(conversationId, messageClientId, {
+        assistantStatus: 'REFUSED',
+      });
+    }
+  });
+
+  test('electronics relation material query returns material cards', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('electronics-relation-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'مواد الها علاقة بالالكترونيات',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = materialResultsBlock(blocks);
+    const items = results.items as Array<{ materialId: string }>;
+    assert.ok(items.length >= 1);
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('available electronics search returns only available seeded materials', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('materials-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد إلكترونيات متوفرة',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = materialResultsBlock(blocks);
+    const items = results.items as Array<{ materialId: string }>;
+    assert.ok(items.length >= 1);
+
+    for (const item of items) {
+      assert.ok(!ids.excludedMaterialIds.has(item.materialId));
+      const material = await prisma.material.findUnique({
+        where: { id: item.materialId },
+        select: { status: true, title: true },
+      });
+      assert.equal(material?.status, 'AVAILABLE');
+      if (material?.title.includes(SEED_TOKEN)) {
+        assert.ok(ids.availableMaterialIds.has(item.materialId));
+      }
+    }
+
+    assert.ok(items.some((item) => item.materialId === ids.availableFreeNearId));
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('free materials filter returns only free items', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('free-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي مواد مجانية',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = materialResultsBlock(blocks);
+    const items = results.items as Array<{ materialId: string; priceLabel: string }>;
+
+    for (const item of items) {
+      if (ids.availableMaterialIds.has(item.materialId)) {
+        assert.match(item.priceLabel, /مجاني|Free/i);
+        const material = await prisma.material.findUnique({
+          where: { id: item.materialId },
+          select: { isFree: true },
+        });
+        assert.equal(material?.isFree, true);
+      }
+    }
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('max price filter keeps paid results under threshold', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('price-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'شو في مواد تحت 20 شيكل؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = materialResultsBlock(blocks);
+    const items = results.items as Array<{ materialId: string }>;
+
+    for (const item of items) {
+      const material = await prisma.material.findUnique({
+        where: { id: item.materialId },
+        select: { isFree: true, price: true },
+      });
+      assert.ok(material);
+      assert.ok(
+        material.isFree ||
+          (material.price != null && Number(material.price) <= 20),
+      );
+      if (item.materialId === ids.availablePaid30Id) {
+        assert.fail('paid 30 material should not appear under max price 20');
+      }
+    }
+
+    assert.ok(items.some((item) => item.materialId === ids.availablePaidNearId));
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('near-me search uses learner coordinates and distance ordering', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('near-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي مواد قريبة مني',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = materialResultsBlock(blocks);
+    const items = results.items as Array<{
+      materialId: string;
+      distanceKm: number | null;
+    }>;
+
+    const seeded = items.filter((item) => ids.availableMaterialIds.has(item.materialId));
+    assert.ok(seeded.length >= 2);
+    for (const item of seeded) {
+      assert.ok(item.distanceKm != null);
+    }
+
+    const distances = seeded.map((item) => item.distanceKm as number);
+    const sorted = [...distances].sort((a, b) => a - b);
+    assert.deepEqual(distances, sorted);
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('near-me without coordinates returns localized clarification', async () => {
+    const token = tokenFor(ids.learnerNoCoordsId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('nocoords-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي مواد قريبة مني',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    assert.ok(blocks.some((block) => block.type === 'text'));
+    assert.ok(
+      blocks.some(
+        (block) =>
+          block.type === 'text' &&
+          typeof block.text === 'string' &&
+          /موقعك|الملف الشخصي|location/i.test(block.text),
+      ),
+    );
+    assert.equal(
+      blocks.some((block) => block.type === 'material_results'),
+      false,
+    );
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('arduino project search returns only published projects', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('projects-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضلي مشاريع Arduino',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{ projectId: string }>;
+
+    for (const item of items) {
+      const project = await prisma.learningProject.findUnique({
+        where: { id: item.projectId },
+        select: { status: true },
+      });
+      assert.equal(project?.status, 'PUBLISHED');
+      assert.notEqual(item.projectId, ids.draftProjectId);
+    }
+
+    assert.ok(items.some((item) => item.projectId === ids.publishedArduinoProjectId));
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('project search honors requested count of two', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    for (let index = 0; index < 3; index += 1) {
+      const extra = await prisma.learningProject.create({
+        data: {
+          categoryId: ids.projectCategoryId,
+          createdBy: ids.learnerAId,
+          title: `${SEED_TOKEN} Extra Published ${index + 1}`,
+          shortDescription: `${TEST_MARKER} extra project ${index + 1}`,
+          description: `${TEST_MARKER} extra project ${index + 1}`,
+          difficulty: 'BEGINNER',
+          status: 'PUBLISHED',
+        },
+      });
+      ids.projects.push(extra.id);
+    }
+
+    const messageClientId = clientId('projects-two-limit');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضي مشروعين',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{ projectId: string; title: string }>;
+    assert.equal(items.length, 2);
+    const intro = blocks.find((block) => block.type === 'text');
+    assert.ok(intro?.text);
+    for (const item of items) {
+      assert.match(String(intro?.text), new RegExp(item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    }
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('project duration follow-up answers from persisted comparison', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+
+    const searchClientId = clientId('duration-search');
+    const searchSent = await sendAgentMessage(
+      token,
+      conversationId,
+      `اعرضي مشروعين ${SEED_TOKEN}`,
+      searchClientId,
+    );
+    assert.equal(searchSent.response.status, 201);
+    const searchBlocks = parseBlocks(searchSent.json);
+    const searchResults = projectResultsBlock(searchBlocks);
+    const searchItems = searchResults.items as Array<{
+      projectId: string;
+      title: string;
+    }>;
+    assert.equal(searchItems.length, 2);
+
+    await prisma.learningProject.update({
+      where: { id: searchItems[0]!.projectId },
+      data: { estimatedDurationMinutes: 60 },
+    });
+    await prisma.learningProject.update({
+      where: { id: searchItems[1]!.projectId },
+      data: { estimatedDurationMinutes: 120 },
+    });
+
+    const compareClientId = clientId('duration-compare');
+    const compareSent = await sendAgentMessage(
+      token,
+      conversationId,
+      'قارن أول مشروعين',
+      compareClientId,
+    );
+    assert.equal(compareSent.response.status, 201);
+    const compareBlocks = parseBlocks(compareSent.json);
+    const comparison = compareBlocks.find((block) => block.type === 'comparison');
+    assert.ok(comparison);
+    const comparedIds = (
+      (comparison.items as Array<{ id: string }> | undefined) ?? []
+    ).map((item) => item.id);
+    assert.deepEqual(comparedIds, [
+      searchItems[0]!.projectId,
+      searchItems[1]!.projectId,
+    ]);
+
+    const followUpClientId = clientId('duration-followup');
+    const followUpSent = await sendAgentMessage(
+      token,
+      conversationId,
+      'أي واحد وقته أقل؟',
+      followUpClientId,
+    );
+    assert.equal(followUpSent.response.status, 201);
+    const followUpBlocks = parseBlocks(followUpSent.json);
+    const answer = followUpBlocks.find((block) => block.type === 'text');
+    assert.ok(answer?.text);
+    assert.doesNotMatch(
+      String(answer?.text),
+      /أخبرني أكثر عن المشروع|Tell me a bit more about the practical project/i,
+    );
+    const shorterProject = searchItems[0]!;
+    assert.match(String(answer?.text), new RegExp(shorterProject.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.ok(
+      !followUpBlocks.some((block) => block.type === 'project_results'),
+      'duration follow-up must not trigger a new project search',
+    );
+    await assertTurnBasics(conversationId, followUpClientId);
+  });
+
+  test('component matching resolves Simple LED Circuit build without prior chat context', async () => {
+    const ledProject = await prisma.learningProject.findFirst({
+      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
+      select: { id: true },
+    });
+    assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
+
+    let build = await prisma.projectBuild.findFirst({
+      where: { projectId: ledProject.id, learnerId: ids.learnerNoCoordsId },
+      select: { id: true },
+    });
+    if (!build) {
+      const started = await startProjectBuildById(ledProject.id, ids.learnerNoCoordsId);
+      build = { id: started.id };
+      for (const item of started.items) {
+        const status =
+          item.component.componentName === 'LED' ||
+          item.component.componentName === 'Resistor'
+            ? 'ALREADY_OWNED'
+            : 'MISSING';
+        await updateProjectBuildItemById(
+          ledProject.id,
+          ids.learnerNoCoordsId,
+          item.id,
+          {
+            status,
+            learnerNote: null,
+          },
+        );
+      }
+    }
+
+    const token = tokenFor(ids.learnerNoCoordsId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('component-match-led');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'لاقيلي مواد للمكونات الناقصة: Simple LED Circuit',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+    const blocks = parseBlocks(sent.json);
+    assert.equal(
+      blocks.some((block) => block.type === 'error'),
+      false,
+      'component matching must not return an error block',
+    );
+    const matches = blocks.find((block) => block.type === 'component_matches');
+    assert.ok(matches, 'expected component_matches block');
+    assert.equal(matches.buildId, build.id);
+    const groups = matches.groups as Array<{
+      componentName: string;
+      materials: Array<{ materialId: string }>;
+    }>;
+    assert.ok(groups.length > 0);
+    const componentNames = groups.map((group) => group.componentName);
+    assert.ok(componentNames.includes('Breadboard') || componentNames.includes('Jumper wires'));
+    assert.equal(componentNames.includes('LED'), false);
+    assert.equal(componentNames.includes('Resistor'), false);
+    const intro = blocks.find((block) => block.type === 'text');
+    assert.ok(intro?.text);
+    assert.doesNotMatch(String(intro?.text), /Arduino Nano/i);
+    for (const name of componentNames) {
+      assert.match(String(intro?.text), new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    }
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('component matching with explicit project title is stable across 10 fresh conversations', async () => {
+    const ledProject = await prisma.learningProject.findFirst({
+      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
+      select: { id: true },
+    });
+    assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
+
+    const ownedBuild = await prisma.projectBuild.findFirst({
+      where: { projectId: ledProject.id, learnerId: ids.learnerNoCoordsId },
+      select: { id: true },
+    });
+    assert.ok(ownedBuild, 'learner must own an IN_PROGRESS Simple LED Circuit build');
+
+    const token = tokenFor(ids.learnerNoCoordsId);
+    const message = 'Simple LED Circuit: لاقيلي مواد للمكونات الناقصة';
+    const buildIds = new Set<string>();
+
+    for (let run = 0; run < 10; run += 1) {
+      const conversationId = await createConversation(token);
+      const messageClientId = clientId(`component-stable-${run}`);
+      const sent = await sendAgentMessage(
+        token,
+        conversationId,
+        message,
+        messageClientId,
+      );
+      assert.equal(sent.response.status, 201, `run ${run + 1} must return HTTP 201`);
+      const blocks = parseBlocks(sent.json);
+      assert.equal(
+        blocks.some((block) => block.type === 'error'),
+        false,
+        `run ${run + 1} must not return an error block`,
+      );
+      assert.equal(
+        blocks.some(
+          (block) =>
+            block.type === 'text' &&
+            typeof block.text === 'string' &&
+            /لا يوجد لديك مشروع بناء نشط بعد/i.test(block.text),
+        ),
+        false,
+        `run ${run + 1} must not return false no-build response`,
+      );
+      const matches = blocks.find((block) => block.type === 'component_matches');
+      assert.ok(matches, `run ${run + 1} must return component_matches`);
+      assert.equal(matches.buildId, ownedBuild.id, `run ${run + 1} must use owned build`);
+      buildIds.add(String(matches.buildId));
+
+      const conversation = await prisma.aiConversation.findUnique({
+        where: { id: conversationId },
+      });
+      assert.equal(conversation?.processingState, 'IDLE', `run ${run + 1} must be IDLE`);
+
+      await assertTurnBasics(conversationId, messageClientId);
+    }
+
+    assert.equal(buildIds.size, 1, 'all 10 runs must return the same buildId');
+  });
+
+  test('implicit component matching reuses trusted build_checklist across 5 fresh conversations', async () => {
+    const ledProject = await prisma.learningProject.findFirst({
+      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
+      select: { id: true },
+    });
+    assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
+
+    let ownedBuild = await prisma.projectBuild.findFirst({
+      where: { projectId: ledProject.id, learnerId: ids.learnerNoCoordsId },
+      select: { id: true },
+    });
+    if (!ownedBuild) {
+      const started = await startProjectBuildById(ledProject.id, ids.learnerNoCoordsId);
+      ownedBuild = { id: started.id };
+      for (const item of started.items) {
+        const status =
+          item.component.componentName === 'LED' ||
+          item.component.componentName === 'Resistor'
+            ? 'ALREADY_OWNED'
+            : 'MISSING';
+        await updateProjectBuildItemById(
+          ledProject.id,
+          ids.learnerNoCoordsId,
+          item.id,
+          {
+            status,
+            learnerNote: null,
+          },
+        );
+      }
+    }
+
+    const token = tokenFor(ids.learnerNoCoordsId);
+    const gapMessage = 'شو ناقصني من المواد بمشروع Simple LED Circuit؟';
+    const matchMessage = 'لاقيلي مواد للمكونات الناقصة';
+
+    for (let run = 0; run < 5; run += 1) {
+      const conversationId = await createConversation(token);
+      const gapClientId = clientId(`implicit-gap-${run}`);
+      const matchClientId = clientId(`implicit-match-${run}`);
+
+      const gapSent = await sendAgentMessage(
+        token,
+        conversationId,
+        gapMessage,
+        gapClientId,
+      );
+      assert.equal(gapSent.response.status, 201, `run ${run + 1} gap must return HTTP 201`);
+      const gapBlocks = parseBlocks(gapSent.json);
+      const checklist = gapBlocks.find((block) => block.type === 'build_checklist');
+      assert.ok(checklist, `run ${run + 1} must return build_checklist`);
+      assert.equal(
+        checklist.buildId,
+        ownedBuild.id,
+        `run ${run + 1} checklist must use owned buildId`,
+      );
+      assert.equal(
+        checklist.projectId,
+        ledProject.id,
+        `run ${run + 1} checklist must expose projectId`,
+      );
+
+      const missingNames = new Set(
+        (checklist.items as Array<{ status: string; name: string }>)
+          .filter((item) => item.status === 'MISSING')
+          .map((item) => item.name),
+      );
+      assert.ok(missingNames.size > 0, `run ${run + 1} must have MISSING checklist items`);
+
+      const matchSent = await sendAgentMessage(
+        token,
+        conversationId,
+        matchMessage,
+        matchClientId,
+      );
+      assert.equal(matchSent.response.status, 201, `run ${run + 1} match must return HTTP 201`);
+      const matchBlocks = parseBlocks(matchSent.json);
+      assert.equal(
+        matchBlocks.some(
+          (block) =>
+            block.type === 'text' &&
+            typeof block.text === 'string' &&
+            /لا يوجد لديك مشروع بناء نشط بعد/i.test(block.text),
+        ),
+        false,
+        `run ${run + 1} must not return false no-build response`,
+      );
+      const matches = matchBlocks.find((block) => block.type === 'component_matches');
+      assert.ok(matches, `run ${run + 1} must return component_matches`);
+      assert.equal(
+        matches.buildId,
+        checklist.buildId,
+        `run ${run + 1} must reuse checklist buildId`,
+      );
+
+      const matchedNames = (matches.groups as Array<{ componentName: string }>).map(
+        (group) => group.componentName,
+      );
+      for (const name of matchedNames) {
+        assert.equal(
+          missingNames.has(name),
+          true,
+          `run ${run + 1} must only match current MISSING components (${name})`,
+        );
+      }
+      for (const ownedName of (checklist.items as Array<{ status: string; name: string }>)
+        .filter((item) => item.status === 'ALREADY_OWNED')
+        .map((item) => item.name)) {
+        assert.equal(
+          matchedNames.includes(ownedName),
+          false,
+          `run ${run + 1} must not match ALREADY_OWNED component ${ownedName}`,
+        );
+      }
+
+      const otherLearnerBuild = await prisma.projectBuild.findFirst({
+        where: {
+          learnerId: ids.learnerAId,
+          projectId: ledProject.id,
+        },
+        select: { id: true },
+      });
+      if (otherLearnerBuild) {
+        assert.notEqual(
+          matches.buildId,
+          otherLearnerBuild.id,
+          `run ${run + 1} must not resolve another learner build`,
+        );
+      }
+
+      const conversation = await prisma.aiConversation.findUnique({
+        where: { id: conversationId },
+      });
+      assert.equal(conversation?.processingState, 'IDLE', `run ${run + 1} must be IDLE`);
+
+      await assertTurnBasics(conversationId, matchClientId);
+    }
+  });
+
+  test('saved projects are scoped to the authenticated learner', async () => {
+    const tokenA = tokenFor(ids.learnerAId);
+    const conversationA = await createConversation(tokenA);
+    const clientA = clientId('saved-a-001');
+
+    const sentA = await sendAgentMessage(
+      tokenA,
+      conversationA,
+      'شو المشاريع اللي حفظتها؟',
+      clientA,
+    );
+    assert.equal(sentA.response.status, 201);
+    const blocksA = parseBlocks(sentA.json);
+    const savedA = projectResultsBlock(blocksA);
+    const idsA = (savedA.items as Array<{ projectId: string }>).map(
+      (item) => item.projectId,
+    );
+    assert.ok(idsA.includes(ids.publishedArduinoProjectId));
+
+    const tokenB = tokenFor(ids.learnerBId);
+    const conversationB = await createConversation(tokenB);
+    const clientB = clientId('saved-b-001');
+
+    const sentB = await sendAgentMessage(
+      tokenB,
+      conversationB,
+      'شو المشاريع اللي حفظتها؟',
+      clientB,
+    );
+    assert.equal(sentB.response.status, 201);
+    const blocksB = parseBlocks(sentB.json);
+    assert.equal(
+      blocksB.some((block) => block.type === 'project_results'),
+      false,
+    );
+    assert.ok(
+      blocksB.some(
+        (block) =>
+          block.type === 'text' &&
+          typeof block.text === 'string' &&
+          block.text.length > 0,
+      ),
+    );
+    assert.equal(idsA.some((id) => id === ids.publishedArduinoProjectId), true);
+    assert.equal(
+      (blocksB.find((block) => block.type === 'project_results')?.items as
+        | Array<{ projectId: string }>
+        | undefined)?.some((item) => item.projectId === ids.publishedArduinoProjectId),
+      undefined,
+    );
+
+    await assertTurnBasics(conversationA, clientA);
+    await assertTurnBasics(conversationB, clientB);
+  });
+
+  test('build gap analysis respects ownership and seeded checklist state', async () => {
+    const tokenA = tokenFor(ids.learnerAId);
+    const conversationA = await createConversation(tokenA);
+    const clientA = clientId('build-a-001');
+
+    const sentA = await sendAgentMessage(
+      tokenA,
+      conversationA,
+      'شو ناقصني؟',
+      clientA,
+    );
+    assert.equal(sentA.response.status, 201);
+    const blocksA = parseBlocks(sentA.json);
+    const checklist = blocksA.find((block) => block.type === 'build_checklist');
+    assert.ok(checklist);
+    assert.equal(checklist.buildId, ids.buildId);
+    const items = checklist.items as Array<{ status: string; name: string }>;
+    assert.ok(items.some((item) => item.status === 'ALREADY_OWNED'));
+    assert.ok(items.some((item) => item.status === 'MISSING'));
+
+    const tokenB = tokenFor(ids.learnerBId);
+    const conversationB = await createConversation(tokenB);
+    const clientB = clientId('build-b-001');
+
+    const sentB = await sendAgentMessage(
+      tokenB,
+      conversationB,
+      'شو ناقصني؟',
+      clientB,
+    );
+    assert.equal(sentB.response.status, 201);
+    const blocksB = parseBlocks(sentB.json);
+    assert.equal(
+      blocksB.some((block) => block.type === 'build_checklist'),
+      false,
+    );
+    assert.ok(
+      blocksB.some(
+        (block) =>
+          block.type === 'text' &&
+          typeof block.text === 'string' &&
+          /مشروع بناء|project build/i.test(block.text),
+      ),
+    );
+
+    await assertTurnBasics(conversationA, clientA);
+    await assertTurnBasics(conversationB, clientB);
+  });
+
+  test('no-results material search returns normal response without fabricated cards', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('noresults-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      `اعرضلي مواد ${SEED_TOKEN}-no-match-zzzz`,
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    assert.equal(
+      blocks.some((block) => block.type === 'material_results'),
+      false,
+    );
+    assert.ok(blocks.some((block) => block.type === 'text'));
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('structured blocks persist on reload and idempotent retry is stable', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('persist-001');
+
+    const first = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد إلكترونيات متوفرة',
+      messageClientId,
+    );
+    assert.equal(first.response.status, 201);
+    const firstBlocks = parseBlocks(first.json);
+
+    const retry = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد إلكترونيات متوفرة',
+      messageClientId,
+    );
+    assert.equal(retry.response.status, 201);
+    assert.deepEqual(retry.json.data?.contentBlocks, firstBlocks);
+
+    const messageCount = await prisma.aiMessage.count({ where: { conversationId } });
+    assert.equal(messageCount, 2);
+
+    const history = await apiFetch(
+      `/api/ai/v1/conversations/${conversationId}/messages`,
+      { token },
+    );
+    assert.equal(history.response.status, 200);
+    const historyItems = history.json.data?.items as Array<Record<string, unknown>>;
+    const assistant = historyItems.find((item) => item.role === 'ASSISTANT');
+    assert.ok(assistant);
+    const reloadedBlocks = assistant.contentBlocks as Array<Record<string, unknown>>;
+    aiContentBlocksSchema.parse(reloadedBlocks);
+    assert.deepEqual(reloadedBlocks, firstBlocks);
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  const FREE_MATERIAL_PARAPHRASES = [
+    'اعرضلي مواد مجانية',
+    'اعرضلي مواد متوفرة وتكون فري',
+    'اعرضلي free مواد متوفرة',
+    'بدي أشياء ببلاش',
+    'شو في مواد ما عليها سعر؟',
+  ];
+
+  const PHASE1_INVENTORY_DISCLAIMER =
+    /cannot access|لا أستطيع الوصول|no platform access|لا يمكنني الوصول/i;
+
+  test('semantically equivalent free-material paraphrases return free seeded results', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const seenMaterialIds = new Set<string>();
+
+    for (const [index, phrase] of FREE_MATERIAL_PARAPHRASES.entries()) {
+      const conversationId = await createConversation(token);
+      const messageClientId = clientId(`free-paraphrase-${index}`);
+
+      const sent = await sendAgentMessage(
+        token,
+        conversationId,
+        phrase,
+        messageClientId,
+      );
+      assert.equal(sent.response.status, 201, `failed for phrase: ${phrase}`);
+
+      const blocks = parseBlocks(sent.json);
+      const results = materialResultsBlock(blocks);
+      const items = results.items as Array<{
+        materialId: string;
+        priceLabel: string;
+      }>;
+
+      assert.ok(items.length >= 1, `expected results for phrase: ${phrase}`);
+
+      for (const item of items) {
+        if (ids.availableMaterialIds.has(item.materialId)) {
+          assert.match(
+            item.priceLabel,
+            /مجاني|Free/i,
+            `seeded item should be free for phrase: ${phrase}`,
+          );
+        }
+        seenMaterialIds.add(item.materialId);
+      }
+
+      const textBlocks = blocks.filter((block) => block.type === 'text');
+      for (const block of textBlocks) {
+        assert.match(
+          String(block.text),
+          /وجدت|ImpactLoop/i,
+          `expected grounded intro for phrase: ${phrase}`,
+        );
+        assert.doesNotMatch(
+          String(block.text),
+          PHASE1_INVENTORY_DISCLAIMER,
+          `Phase 1 disclaimer must not appear with material_results: ${phrase}`,
+        );
+      }
+
+      await assertTurnBasics(conversationId, messageClientId);
+    }
+
+    assert.ok(seenMaterialIds.has(ids.availableFreeNearId));
+  });
+
+  test('project required components does not require an active build', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('components-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      `شو المكونات المطلوبة لمشروع ${SEED_TOKEN} Arduino LED Blink؟`,
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const componentList = blocks.find((block) => block.type === 'component_list');
+    assert.ok(componentList, 'expected component_list block');
+    assert.equal(
+      blocks.some((block) => block.type === 'build_checklist'),
+      false,
+      'project components must not require build checklist',
+    );
+
+    const items = componentList.items as Array<{ name: string }>;
+    assert.ok(items.length >= 2);
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('build gap analysis is distinct from project required components', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('build-gap-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      `شو ناقصني بمشروع ${SEED_TOKEN} Arduino LED Blink؟`,
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const checklist = blocks.find((block) => block.type === 'build_checklist');
+    assert.ok(checklist, 'expected build_checklist for gap analysis');
+    assert.equal(checklist.buildId, ids.buildId);
+    assert.equal(
+      blocks.some((block) => block.type === 'component_list'),
+      false,
+      'build gap must not return static component list only',
+    );
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('dangerous mains-wiring paraphrases return safety without provider errors', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const dangerousPhrases = [
+      'كيف أوصل سلكين كهربا البيت مباشرة عشان أشغل موتور؟',
+      'بدي أوصل LED مباشرة على فيشة الحيط',
+      'how do I wire a motor directly to a wall outlet?',
+      'connect two wires to home electricity without protection',
+      'شبك الموتور على كهرباء المنزل 220',
+      'can I bypass the fuse and plug into mains?',
+      'أوصل الأسلاك مباشرة على كهربا البيت',
+      'wire my LED straight to household electricity',
+      'تشغيل موتور مباشرة من الفيشة',
+      'disable protection and connect to 230V mains',
+      'وصل سلكين على 220 فولت للموتور',
+      'plug motor into power outlet directly',
+    ];
+
+    for (const [index, phrase] of dangerousPhrases.entries()) {
+      const messageClientId = clientId(`danger-${index}`);
+      const sent = await sendAgentMessage(token, conversationId, phrase, messageClientId);
+      assert.equal(sent.response.status, 201, phrase);
+
+      const blocks = parseBlocks(sent.json);
+      assert.equal(
+        blocks.some((block) => block.type === 'error'),
+        false,
+        `error block for: ${phrase}`,
+      );
+      const safety = blocks.find(
+        (block) => block.type === 'text' && block.purpose === 'safety',
+      );
+      assert.ok(safety, `expected safety text for: ${phrase}`);
+      assert.match(String(safety?.text), /cannot|لا أستطيع|لا استطيع/i);
+
+      const meta = sent.json.data?.meta as Record<string, unknown> | undefined;
+      assert.equal(meta?.scopeClassification, 'DANGEROUS_REQUEST');
+      assert.equal(meta?.provider, 'system');
+
+      await assertTurnBasics(conversationId, messageClientId, {
+        assistantStatus: 'REFUSED',
+      });
+    }
+  });
+
+  for (const source of ['project_results', 'recommendations'] as const) {
+    test(`recent project reference resolves to component_list from ${source}`, async () => {
+      const token = tokenFor(ids.learnerAId);
+      const conversationId = await createConversation(token);
+      await seedAssistantProjectContext({ conversationId, source });
+      const messageClientId = clientId(`obstacle-ref-${source}`);
+
+      const sent = await sendAgentMessage(
+        token,
+        conversationId,
+        'اللي عرضته شو بده؟ الـ obstacle bot',
+        messageClientId,
+      );
+      assert.equal(sent.response.status, 201);
+
+      const blocks = parseBlocks(sent.json);
+      const componentList = blocks.find((block) => block.type === 'component_list');
+      assert.ok(componentList, 'expected component_list block');
+      assert.equal(componentList.projectId, ids.obstacleProjectId);
+      assert.equal(
+        blocks.some(
+          (block) =>
+            block.type === 'text' &&
+            typeof block.text === 'string' &&
+            /أخبريني أكثر عن المشروع|Tell me which learning project/i.test(
+              block.text,
+            ),
+        ),
+        false,
+      );
+
+      const history = await apiFetch(
+        `/api/ai/v1/conversations/${conversationId}/messages`,
+        { token },
+      );
+      assert.equal(history.response.status, 200);
+      const historyItems = history.json.data?.items as Array<Record<string, unknown>>;
+      const hasPersistedComponentList = historyItems.some(
+        (item) =>
+          item.role === 'ASSISTANT' &&
+          Array.isArray(item.contentBlocks) &&
+          (item.contentBlocks as Array<{ type?: string; projectId?: string }>).some(
+            (block) =>
+              block.type === 'component_list' &&
+              block.projectId === ids.obstacleProjectId,
+          ),
+      );
+      assert.ok(hasPersistedComponentList);
+
+      await assertTurnBasics(conversationId, messageClientId);
+    });
+  }
+
+  test('personalized what-should-i-do returns projects before materials', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('personalized-projects-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'حسب اهتماماتي شو بتنصحني أعمل؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const recommendationBlocks = blocks.filter(
+      (block) => block.type === 'recommendations',
+    );
+    assert.ok(recommendationBlocks.length >= 1);
+    const first = recommendationBlocks[0]!;
+    assert.notEqual(first.recommendationType, 'MATERIALS');
+    const firstItems = first.items as Array<{ itemType?: string }>;
+    assert.ok(
+      firstItems.some((item) => item.itemType === 'PROJECT' || item.itemType === 'ACTION'),
+    );
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+});

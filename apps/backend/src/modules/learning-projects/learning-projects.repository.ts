@@ -502,6 +502,33 @@ export const findProjectBuild = async (
   });
 };
 
+export const findOwnedProjectBuildByBuildId = async (
+  buildId: string,
+  learnerId: string,
+) => {
+  return prisma.projectBuild.findFirst({
+    where: {
+      id: buildId,
+      learnerId,
+    },
+    include: projectBuildInclude,
+  });
+};
+
+export const findActiveProjectBuildsForLearner = async (learnerId: string) => {
+  return prisma.projectBuild.findMany({
+    where: {
+      learnerId,
+      status: 'IN_PROGRESS',
+    },
+    include: projectBuildInclude,
+    orderBy: {
+      updatedAt: 'desc',
+    },
+    take: 10,
+  });
+};
+
 export const startProjectBuild = async (
   projectId: string,
   learnerId: string,

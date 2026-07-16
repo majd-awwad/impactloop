@@ -1,26 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
-import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../application/ai_chat_controller.dart';
 import '../../domain/ai_models.dart';
-import '../l10n/ai_l10n.dart';
+import 'ai_content_blocks.dart';
 
-class AiMessageBubble extends StatelessWidget {
+class AiMessageBubble extends ConsumerWidget {
   const AiMessageBubble({
     super.key,
     required this.message,
+    required this.locale,
   });
 
   final AiMessageItem message;
+  final String locale;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
     final colors = AppThemeColors.of(context);
+    final chatState = ref.watch(aiAssistantControllerProvider);
+    final controller = ref.read(aiAssistantControllerProvider.notifier);
     final isUser = message.role == 'USER';
 
     return Align(
@@ -73,11 +78,45 @@ class AiMessageBubble extends StatelessWidget {
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final block in message.contentBlocks)
-                              if (block.type == 'text')
-                                _AssistantTextBlock(block: block)
-                              else if (block.type == 'error')
-                                _AssistantErrorBlock(block: block),
+                            for (var index = 0;
+                                index < message.contentBlocks.length;
+                                index += 1)
+                              AiContentBlockView(
+                                block: message.contentBlocks[index],
+                                messageBlocks: message.contentBlocks,
+                                blockIndex: index,
+                                pendingActionBusyId:
+                                    chatState.pendingActionBusyId,
+                                actionErrorMessage: message
+                                            .contentBlocks[index]
+                                            .pendingActionId ==
+                                        null
+                                    ? null
+                                    : chatState.actionErrors[message
+                                            .contentBlocks[index]
+                                            .pendingActionId!]
+                                        ?.message,
+                                onConfirmAction: message
+                                            .contentBlocks[index]
+                                            .pendingActionId ==
+                                        null
+                                    ? null
+                                    : () => controller.confirmPendingAction(
+                                          pendingActionId: message
+                                              .contentBlocks[index]
+                                              .pendingActionId!,
+                                          locale: locale,
+                                        ),
+                                onCancelAction: message
+                                            .contentBlocks[index]
+                                            .pendingActionId ==
+                                        null
+                                    ? null
+                                    : () => controller.cancelPendingAction(
+                                          message.contentBlocks[index]
+                                              .pendingActionId!,
+                                        ),
+                              ),
                             if (message.contentBlocks.isEmpty &&
                                 (message.contentText?.isNotEmpty ?? false))
                               Text(
@@ -96,75 +135,6 @@ class AiMessageBubble extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AssistantTextBlock extends StatelessWidget {
-  const _AssistantTextBlock({required this.block});
-
-  final AiContentBlock block;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final purpose = block.purpose ?? 'answer';
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (purpose == 'safety')
-            Padding(
-              padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
-              child: Text(
-                AiL10n.purposeLabel(context, purpose),
-                style: AppTextStyles.label(context).copyWith(
-                  color: _purposeColor(palette, purpose),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          Text(
-            block.text ?? '',
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textPrimary,
-              height: 1.45,
-            ),
-            textAlign: TextAlign.start,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _purposeColor(MaterialsUiPalette palette, String purpose) {
-    switch (purpose) {
-      case 'refusal':
-        return materialWarning;
-      case 'safety':
-        return palette.mint;
-      default:
-        return palette.textMuted;
-    }
-  }
-}
-
-class _AssistantErrorBlock extends StatelessWidget {
-  const _AssistantErrorBlock({required this.block});
-
-  final AiContentBlock block;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      block.message ?? AiL10n.genericFailure.resolve(context),
-      style: AppTextStyles.body(context).copyWith(
-        color: materialWarning,
-        height: 1.45,
-      ),
-      textAlign: TextAlign.start,
     );
   }
 }

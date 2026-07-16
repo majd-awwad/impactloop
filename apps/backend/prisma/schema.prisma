@@ -294,6 +294,29 @@ enum AiScopeClassification {
   MIXED
 }
 
+enum AiPendingActionStatus {
+  PENDING
+  CONFIRMED
+  EXECUTING
+  EXECUTED
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
+enum AiPendingActionType {
+  SAVE_MATERIAL
+  UNSAVE_MATERIAL
+  SAVE_PROJECT
+  UNSAVE_PROJECT
+  START_PROJECT_BUILD
+  LINK_MATERIAL_TO_BUILD_COMPONENT
+  UNLINK_MATERIAL_FROM_BUILD_COMPONENT
+  PREPARE_MATERIAL_RESERVATION
+  CONFIRM_MATERIAL_RESERVATION
+  CANCEL_PENDING_AI_ACTION
+}
+
 enum ProjectDifficulty {
   BEGINNER
   INTERMEDIATE
@@ -413,6 +436,7 @@ model User {
   accountsReactivated           User[]                     @relation("UserReactivatedBy")
   adminActivityLogs             AdminActivityLog[]
   aiConversations               AiConversation[]
+  aiPendingActions              AiPendingAction[]
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -1520,6 +1544,7 @@ model AiConversation {
   updatedAt           DateTime                      @updatedAt @map("updated_at")
   user                User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages            AiMessage[]
+  pendingActions      AiPendingAction[]
 
   @@index([userId, status, lastMessageAt(sort: Desc)])
   @@index([userId, updatedAt(sort: Desc)])
@@ -1553,4 +1578,30 @@ model AiMessage {
   @@index([conversationId, createdAt])
   @@index([inReplyToMessageId])
   @@map("ai_messages")
+}
+
+model AiPendingAction {
+  id              String                @id @default(cuid())
+  userId          String                @map("user_id")
+  conversationId  String                @map("conversation_id")
+  sourceMessageId String?               @map("source_message_id")
+  actionType      AiPendingActionType   @map("action_type")
+  status          AiPendingActionStatus @default(PENDING)
+  payload         Json
+  displaySnapshot Json                  @map("display_snapshot")
+  idempotencyKey  String                @map("idempotency_key")
+  expiresAt       DateTime              @map("expires_at")
+  confirmedAt     DateTime?             @map("confirmed_at")
+  executedAt      DateTime?             @map("executed_at")
+  result          Json?
+  errorCode       String?               @map("error_code")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation    AiConversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([conversationId, status])
+  @@index([expiresAt])
+  @@map("ai_pending_actions")
 }

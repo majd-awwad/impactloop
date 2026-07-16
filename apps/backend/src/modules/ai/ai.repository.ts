@@ -1,13 +1,14 @@
 import { prisma } from '../../database/prisma.js';
 import type {
   AiConversationMode,
-  AiMessageRole,
   AiMessageStatus,
   AiScopeClassification,
   Prisma,
 } from '../../generated/prisma/client.js';
 
 import type { AiContentBlock } from './ai.content-blocks.js';
+import { aiContentBlocksSchema } from './ai.content-blocks.js';
+import { parseStoredContentBlocks } from './ai-context-builder.js';
 
 export const findOwnedConversation = async (input: {
   conversationId: string;
@@ -271,4 +272,54 @@ export const deleteAiDataForUsers = async (userIds: string[]) => {
   await prisma.aiConversation.deleteMany({
     where: { userId: { in: userIds } },
   });
+};
+
+export const appendActionResultToAssistantMessage = async (input: {
+  conversationId: string;
+  pendingActionId: string;
+  resultBlock: AiContentBlock;
+}) => {
+  const messages = await prisma.aiMessage.findMany({
+    where: {
+      conversationId: input.conversationId,
+      role: 'ASSISTANT',
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 24,
+  });
+
+  for (const message of messages) {
+    const blocks = parseStoredContentBlocks(message.contentBlocks);
+    const hasConfirmation = blocks.some(
+      (block) =>
+        block.type === 'action_confirmation' &&
+        block.pendingActionId === input.pendingActionId,
+    );
+    const hasResult = blocks.some(
+      (block) =>
+        block.type === 'action_result' &&
+        block.actionType === input.resultBlock.actionType &&
+        block.status === input.resultBlock.status,
+    );
+
+    if (!hasConfirmation || hasResult) {
+      continue;
+    }
+
+    const updatedBlocks = aiContentBlocksSchema.parse([
+      ...blocks,
+      input.resultBlock,
+    ]);
+
+    await prisma.aiMessage.update({
+      where: { id: message.id },
+      data: {
+        contentBlocks: updatedBlocks as Prisma.InputJsonValue,
+      },
+    });
+
+    return message.id;
+  }
+
+  return null;
 };

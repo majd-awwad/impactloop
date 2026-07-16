@@ -130,13 +130,13 @@ describe('GeminiAiChatProvider model fallback', () => {
           const model = request.model ?? 'unknown';
           attemptedModels.push(model);
 
-          if (model === 'gemini-2.5-flash') {
+          if (model === 'gemini-3.1-flash-lite') {
             throw new Error(
               JSON.stringify({
                 error: {
                   code: 404,
                   message:
-                    'This model models/gemini-2.5-flash is no longer available to new users.',
+                    'This model models/gemini-3.1-flash-lite is no longer available to new users.',
                   status: 'NOT_FOUND',
                 },
               }),
@@ -163,7 +163,7 @@ describe('GeminiAiChatProvider model fallback', () => {
       },
     }));
 
-    process.env.AI_CHAT_MODEL = 'gemini-2.5-flash';
+    process.env.AI_CHAT_MODEL = 'gemini-3.1-flash-lite';
 
     const provider = new GeminiAiChatProvider();
     const result = await provider.generateGeneralLearningAnswer({
@@ -174,13 +174,13 @@ describe('GeminiAiChatProvider model fallback', () => {
     });
 
     assert.deepEqual(attemptedModels.slice(0, 2), [
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-2.0-flash-lite',
     ]);
-    assert.equal(result.model, 'gemini-2.5-flash-lite');
+    assert.equal(result.model, 'gemini-2.0-flash-lite');
   });
 
-  test('does not fall back to another model on RESOURCE_EXHAUSTED', async () => {
+  test('tries fallback models before surfacing RESOURCE_EXHAUSTED', async () => {
     const attemptedModels: string[] = [];
 
     setGeminiChatClientFactoryForTests(() => ({
@@ -218,7 +218,7 @@ describe('GeminiAiChatProvider model fallback', () => {
     }));
 
     delete process.env.AI_CHAT_MODEL;
-    process.env.AI_CHAT_MODEL = 'gemini-2.5-flash-lite';
+    process.env.AI_CHAT_MODEL = 'gemini-3.1-flash-lite';
 
     const provider = new GeminiAiChatProvider();
 
@@ -245,6 +245,10 @@ describe('GeminiAiChatProvider model fallback', () => {
       },
     );
 
-    assert.deepEqual(attemptedModels, ['gemini-2.5-flash-lite']);
+    assert.deepEqual(attemptedModels, [
+      'gemini-3.1-flash-lite',
+      'gemini-2.0-flash-lite',
+      'gemini-2.0-flash',
+    ]);
   });
 });

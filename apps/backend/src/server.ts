@@ -1,13 +1,16 @@
+import './config/env.js';
 import { app } from './app.js';
 import {
   env,
   getResolvedEmailProvider,
+  logAiPlatformDiagnostics,
   logAiPriceSuggestionStartupConfig,
   logEmailInvitationStartupConfig,
 } from './config/env.js';
 import { verifySmtpInvitationTransport } from './modules/invitations/email/smtp-email-invitation-provider.js';
 
 logAiPriceSuggestionStartupConfig();
+logAiPlatformDiagnostics();
 logEmailInvitationStartupConfig();
 
 if (getResolvedEmailProvider() === 'smtp') {

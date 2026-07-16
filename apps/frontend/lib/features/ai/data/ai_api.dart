@@ -94,4 +94,38 @@ class AiApi {
       ),
     );
   }
+
+  Future<AiContentBlock> confirmPendingAction({
+    required String pendingActionId,
+    required String idempotencyKey,
+    required String locale,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/ai/v1/actions/$pendingActionId/confirm',
+        data: {
+          'idempotencyKey': idempotencyKey,
+          'locale': locale,
+        },
+      ),
+      (json) => AiContentBlock.fromJson(
+        Map<String, dynamic>.from(json['block'] as Map? ?? json),
+      ),
+    );
+  }
+
+  Future<AiContentBlock?> cancelPendingAction({required String pendingActionId}) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/ai/v1/actions/$pendingActionId/cancel',
+      ),
+      (json) {
+        final blockJson = json['block'];
+        if (blockJson is! Map) {
+          return null;
+        }
+        return AiContentBlock.fromJson(Map<String, dynamic>.from(blockJson));
+      },
+    );
+  }
 }

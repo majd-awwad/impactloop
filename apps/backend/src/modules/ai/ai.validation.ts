@@ -47,3 +47,12 @@ export type CreateAiConversationInput = z.infer<
   typeof createAiConversationSchema
 >;
 export type SendAiMessageInput = z.infer<typeof sendAiMessageSchema>;
+
+export const aiPendingActionIdParamSchema = z.object({
+  pendingActionId: z.string().trim().min(1),
+});
+
+export const confirmAiPendingActionSchema = z.object({
+  idempotencyKey: z.string().trim().min(8).max(128),
+  locale: aiLocaleSchema.default('en'),
+});

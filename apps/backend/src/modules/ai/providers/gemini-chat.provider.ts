@@ -320,7 +320,17 @@ const generateContentWithModelFallback = async <
       lastError = error;
 
       if (isGeminiQuotaOrRateLimitError(error)) {
-        throw error;
+        logger.warn(
+          {
+            requestId: getRequestId(),
+            provider: 'gemini',
+            operation,
+            model,
+            safeMessage: parseGeminiApiError(error).safeMessage,
+          },
+          'Gemini chat model quota or rate limit reached, trying fallback model',
+        );
+        continue;
       }
 
       if (!isGeminiModelUnavailableError(error)) {

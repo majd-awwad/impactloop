@@ -94,3 +94,100 @@ List<AiMessageItem> mergeTurnIntoMessages({
 
   return [...preserved, userMessage, assistantMessage];
 }
+
+AiContentBlock? findActionResultForConfirmation(
+  List<AiContentBlock> blocks,
+  int confirmationIndex,
+) {
+  for (var index = confirmationIndex + 1; index < blocks.length; index += 1) {
+    final block = blocks[index];
+    if (block.type == 'action_result') {
+      return block;
+    }
+    if (block.type == 'action_confirmation') {
+      break;
+    }
+  }
+  return null;
+}
+
+bool isActionConfirmationExpired(AiContentBlock block) {
+  final expiresAt = block.expiresAt;
+  if (expiresAt == null) {
+    return false;
+  }
+  return DateTime.now().toUtc().isAfter(expiresAt.toUtc());
+}
+
+class AiActionConfirmationUiState {
+  const AiActionConfirmationUiState({
+    required this.isBusy,
+    required this.isDisabled,
+    this.errorMessage,
+    this.resolvedStatus,
+  });
+
+  final bool isBusy;
+  final bool isDisabled;
+  final String? errorMessage;
+  final String? resolvedStatus;
+}
+
+AiActionConfirmationUiState resolveActionConfirmationUiState({
+  required AiContentBlock block,
+  required List<AiContentBlock> messageBlocks,
+  required int blockIndex,
+  required String? pendingActionBusyId,
+  required String? actionErrorMessage,
+}) {
+  final result = findActionResultForConfirmation(messageBlocks, blockIndex);
+  final resolvedStatus = result?.actionStatus;
+  final isExpired =
+      resolvedStatus == null && isActionConfirmationExpired(block);
+  final isBusy = pendingActionBusyId == block.pendingActionId;
+  final isResolved = resolvedStatus == 'EXECUTED' ||
+      resolvedStatus == 'CANCELLED' ||
+      resolvedStatus == 'FAILED';
+  final isDisabled = isBusy || isResolved || isExpired;
+
+  return AiActionConfirmationUiState(
+    isBusy: isBusy,
+    isDisabled: isDisabled,
+    errorMessage: isResolved || isBusy ? null : actionErrorMessage,
+    resolvedStatus: resolvedStatus ?? (isExpired ? 'EXPIRED' : null),
+  );
+}
+
+List<AiMessageItem> appendActionResultToMessages({
+  required List<AiMessageItem> messages,
+  required String pendingActionId,
+  required AiContentBlock resultBlock,
+}) {
+  return messages
+      .map((message) {
+        final confirmIndex = message.contentBlocks.indexWhere(
+          (block) => block.pendingActionId == pendingActionId,
+        );
+        if (confirmIndex < 0) {
+          return message;
+        }
+
+        final existingResult = findActionResultForConfirmation(
+          message.contentBlocks,
+          confirmIndex,
+        );
+        if (existingResult != null) {
+          return message;
+        }
+
+        return AiMessageItem(
+          id: message.id,
+          role: message.role,
+          status: message.status,
+          contentText: message.contentText,
+          contentBlocks: [...message.contentBlocks, resultBlock],
+          createdAt: message.createdAt,
+        );
+      })
+      .toList(growable: false);
+}

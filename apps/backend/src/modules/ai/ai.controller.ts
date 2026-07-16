@@ -15,10 +15,16 @@ import {
   sendGeneralLearningMessageForUser,
 } from './ai.service.js';
 import {
+  cancelAiPendingAction,
+  confirmAiPendingAction,
+} from './ai-action.service.js';
+import {
   conversationIdParamSchema,
+  confirmAiPendingActionSchema,
   createAiConversationSchema,
   listAiConversationsQuerySchema,
   listAiMessagesQuerySchema,
+  aiPendingActionIdParamSchema,
   sendAiMessageSchema,
 } from './ai.validation.js';
 
@@ -116,4 +122,37 @@ export const restoreAiConversationHandler = async (
   );
 
   res.json(successResponse('Conversation restored.', data));
+};
+
+export const confirmAiPendingActionHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const params = readValidatedParams<
+    ReturnType<typeof aiPendingActionIdParamSchema.parse>
+  >(req);
+  const body = confirmAiPendingActionSchema.parse(req.body);
+  const data = await confirmAiPendingAction({
+    userId: req.auth!.sub,
+    pendingActionId: params.pendingActionId,
+    idempotencyKey: body.idempotencyKey,
+    locale: body.locale,
+  });
+
+  res.status(201).json(successResponse('Action confirmed.', data));
+};
+
+export const cancelAiPendingActionHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const params = readValidatedParams<
+    ReturnType<typeof aiPendingActionIdParamSchema.parse>
+  >(req);
+  const data = await cancelAiPendingAction({
+    userId: req.auth!.sub,
+    pendingActionId: params.pendingActionId,
+  });
+
+  res.json(successResponse('Action cancelled.', data));
 };

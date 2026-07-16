@@ -130,6 +130,142 @@ class AiL10n {
     ar: 'محادثة جديدة',
   );
 
+  static const materialsSection = LocalizedText(
+    en: 'Materials',
+    ar: 'المواد',
+  );
+
+  static const materialDetailsSection = LocalizedText(
+    en: 'Material details',
+    ar: 'تفاصيل المادة',
+  );
+
+  static const projectsSection = LocalizedText(
+    en: 'Projects',
+    ar: 'المشاريع',
+  );
+
+  static const projectDetailsSection = LocalizedText(
+    en: 'Project details',
+    ar: 'تفاصيل المشروع',
+  );
+
+  static const componentsSection = LocalizedText(
+    en: 'Components',
+    ar: 'المكونات',
+  );
+
+  static const buildChecklistSection = LocalizedText(
+    en: 'Build checklist',
+    ar: 'قائمة البناء',
+  );
+
+  static const componentMatchesSection = LocalizedText(
+    en: 'Matching materials',
+    ar: 'مواد مطابقة',
+  );
+
+  static const materialComparisonSection = LocalizedText(
+    en: 'Material comparison',
+    ar: 'مقارنة المواد',
+  );
+
+  static const projectComparisonSection = LocalizedText(
+    en: 'Project comparison',
+    ar: 'مقارنة المشاريع',
+  );
+
+  static const recommendedMaterialsSection = LocalizedText(
+    en: 'Recommended materials',
+    ar: 'مواد مقترحة',
+  );
+
+  static const recommendedProjectsSection = LocalizedText(
+    en: 'Recommended projects',
+    ar: 'مشاريع مقترحة',
+  );
+
+  static const recommendedActionsSection = LocalizedText(
+    en: 'Suggested next steps',
+    ar: 'خطوات مقترحة لك',
+  );
+
+  static const recommendationReasonFallback = LocalizedText(
+    en: 'Recommended for you',
+    ar: 'موصى به لك',
+  );
+
+  static const actionConfirmationSection = LocalizedText(
+    en: 'Confirm action',
+    ar: 'تأكيد الإجراء',
+  );
+
+  static const actionResultSection = LocalizedText(
+    en: 'Action result',
+    ar: 'نتيجة الإجراء',
+  );
+
+  static const externalSourcesSection = LocalizedText(
+    en: 'Sources',
+    ar: 'المصادر',
+  );
+
+  static const availableLabel = LocalizedText(
+    en: 'Available',
+    ar: 'متاح',
+  );
+
+  static const pickupOnly = LocalizedText(
+    en: 'Pickup only',
+    ar: 'استلام فقط',
+  );
+
+  static const deliveryOnly = LocalizedText(
+    en: 'Delivery available',
+    ar: 'توصيل متاح',
+  );
+
+  static const pickupAndDelivery = LocalizedText(
+    en: 'Pickup & delivery',
+    ar: 'استلام وتوصيل',
+  );
+
+  static const viewProject = LocalizedText(
+    en: 'View project',
+    ar: 'عرض المشروع',
+  );
+
+  static const viewBuild = LocalizedText(
+    en: 'View build',
+    ar: 'عرض البناء',
+  );
+
+  static const confirmAction = LocalizedText(
+    en: 'Confirm',
+    ar: 'تأكيد',
+  );
+
+  static const cancelAction = LocalizedText(
+    en: 'Cancel',
+    ar: 'إلغاء',
+  );
+
+  static const actionExpired = LocalizedText(
+    en: 'This confirmation has expired.',
+    ar: 'انتهت صلاحية هذا التأكيد.',
+  );
+
+  static String checklistProgress(
+    BuildContext context,
+    int ready,
+    int total,
+  ) {
+    return LocalizedText(
+      en: '$ready of $total ready',
+      ar: '$ready من $total جاهز',
+    ).resolve(context);
+  }
+
   static const suggestedQuestions = [
     LocalizedText(
       en: 'Explain Arduino Uno simply',

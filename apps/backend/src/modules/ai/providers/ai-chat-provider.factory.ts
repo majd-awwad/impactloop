@@ -1,6 +1,11 @@
-import { isAiChatProviderOperational, resolveAiChatProvider } from '../../../config/env.js';
+import {
+  isAiChatDevMockFallbackEnabled,
+  isAiChatProviderOperational,
+  resolveAiChatProvider,
+} from '../../../config/env.js';
 import { logger } from '../../../observability/logger.js';
 import type { AiChatProvider } from './ai-chat-provider.types.js';
+import { DevFallbackAiChatProvider } from './dev-fallback-chat.provider.js';
 import { DisabledAiChatProvider } from './disabled-chat.provider.js';
 import { GeminiAiChatProvider } from './gemini-chat.provider.js';
 import { MockAiChatProvider } from './mock-chat.provider.js';
@@ -43,7 +48,11 @@ export const getAiChatProvider = (): AiChatProvider => {
   }
 
   if (providerName === 'gemini') {
-    return new GeminiAiChatProvider();
+    const gemini = new GeminiAiChatProvider();
+    if (isAiChatDevMockFallbackEnabled()) {
+      return new DevFallbackAiChatProvider(gemini, new MockAiChatProvider());
+    }
+    return gemini;
   }
 
   return new DisabledAiChatProvider();

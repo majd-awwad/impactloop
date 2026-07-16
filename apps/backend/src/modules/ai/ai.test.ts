@@ -200,6 +200,72 @@ describe('ai scope guard', () => {
     );
     assert.equal(result.classification, 'DOMAIN_KNOWLEDGE');
   });
+
+  test('Arabic safe candle craft question', () => {
+    const result = classifyScopeDeterministic('كيف أصنع شمعة بطريقة آمنة؟');
+    assert.equal(result.classification, 'DOMAIN_KNOWLEDGE');
+    assert.ok(result.matchedRules.includes('art_crafts'));
+  });
+
+  test('Arabic wax craft question', () => {
+    const result = classifyScopeDeterministic('كيف أصنع الشمع؟');
+    assert.equal(result.classification, 'DOMAIN_KNOWLEDGE');
+    assert.ok(result.matchedRules.includes('art_crafts'));
+  });
+
+  test('Arabic robot project question remains in scope', () => {
+    const result = classifyScopeDeterministic('كيف أعمل مشروع روبوت؟');
+    assert.equal(result.classification, 'DOMAIN_KNOWLEDGE');
+    assert.ok(result.matchedRules.includes('robotics'));
+  });
+
+  test('Arabic weather question remains out of scope', () => {
+    const result = classifyScopeDeterministic('شو حالة الطقس اليوم؟');
+    assert.equal(result.classification, 'OUT_OF_SCOPE');
+  });
+
+  test('dangerous mains motor wiring request remains blocked', () => {
+    const result = classifyScopeDeterministic(
+      'كيف أوصل موتور مباشرة بكهرباء البيت؟',
+    );
+    assert.equal(result.classification, 'DANGEROUS_REQUEST');
+  });
+});
+
+describe('ai scope classifier schema', () => {
+  test('accepts numeric confidence encoded as a JSON string', () => {
+    const parsed = aiScopeClassifierSchema.parse({
+      classification: 'DOMAIN_KNOWLEDGE',
+      confidence: '0.95',
+      reason: 'craft activity',
+    });
+
+    assert.equal(parsed.confidence, 0.95);
+    assert.equal(parsed.classification, 'DOMAIN_KNOWLEDGE');
+  });
+
+  test('rejects invalid confidence values', () => {
+    const invalidCases = [
+      { confidence: '' },
+      { confidence: 'high' },
+      { confidence: '1.5' },
+      { confidence: null },
+      { confidence: true },
+      { confidence: '-0.2' },
+      { confidence: 'NaN' },
+      { confidence: 'Infinity' },
+    ] as const;
+
+    for (const { confidence } of invalidCases) {
+      assert.throws(() =>
+        aiScopeClassifierSchema.parse({
+          classification: 'DOMAIN_KNOWLEDGE',
+          confidence,
+          reason: 'craft activity',
+        }),
+      );
+    }
+  });
 });
 
 describe('ai general learning conversations', () => {

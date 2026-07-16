@@ -32,6 +32,14 @@ abstract class AiRepository {
   Future<void> archiveConversation({required String conversationId});
 
   Future<void> restoreConversation({required String conversationId});
+
+  Future<AiContentBlock> confirmPendingAction({
+    required String pendingActionId,
+    required String idempotencyKey,
+    required String locale,
+  });
+
+  Future<AiContentBlock?> cancelPendingAction({required String pendingActionId});
 }
 
 class ApiAiRepository implements AiRepository {
@@ -96,6 +104,24 @@ class ApiAiRepository implements AiRepository {
   @override
   Future<void> restoreConversation({required String conversationId}) {
     return _api.restoreConversation(conversationId: conversationId);
+  }
+
+  @override
+  Future<AiContentBlock> confirmPendingAction({
+    required String pendingActionId,
+    required String idempotencyKey,
+    required String locale,
+  }) {
+    return _api.confirmPendingAction(
+      pendingActionId: pendingActionId,
+      idempotencyKey: idempotencyKey,
+      locale: locale,
+    );
+  }
+
+  @override
+  Future<AiContentBlock?> cancelPendingAction({required String pendingActionId}) {
+    return _api.cancelPendingAction(pendingActionId: pendingActionId);
   }
 }
 

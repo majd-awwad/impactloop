@@ -9,7 +9,9 @@ const backendRoot = path.resolve(
   '../..',
 );
 
-const envFilePath = path.join(backendRoot, '.env');
+const envFilePath = process.env.IMPACTLOOP_BACKEND_ENV_FILE_PATH?.trim()
+  ? path.resolve(process.env.IMPACTLOOP_BACKEND_ENV_FILE_PATH)
+  : path.join(backendRoot, '.env');
 const invitationsEnvFilePath = path.join(backendRoot, 'config/invitations.env');
 
 const SENSITIVE_ENV_KEYS = new Set(['GEMINI_API_KEY', 'OPENAI_API_KEY']);
@@ -43,8 +45,6 @@ const snapshotTrackedAiEnv = (): Record<string, string | null> => {
   return snapshot;
 };
 
-const beforeEnvLoadSnapshot = snapshotTrackedAiEnv();
-
 const stripEmptyEnvOverrides = (parsed: dotenv.DotenvParseOutput | undefined): void => {
   if (!parsed) {
     return;
@@ -68,15 +68,35 @@ const digestEnvFile = (filePath: string): string | null => {
   }
 };
 
-dotenv.config({ path: envFilePath, override: true });
-lastBackendEnvDigest = digestEnvFile(envFilePath) ?? '';
+const resolveNodeEnv = (): string => process.env.NODE_ENV?.trim() || 'development';
+
+export const shouldOverrideProcessEnvFromLocalFiles = (): boolean =>
+  resolveNodeEnv() !== 'production';
+
+export const bootstrapBackendEnvironment = (): void => {
+  const override = shouldOverrideProcessEnvFromLocalFiles();
+
+  const backendEnvResult = dotenv.config({
+    path: envFilePath,
+    override,
+    quiet: true,
+  });
+  stripEmptyEnvOverrides(backendEnvResult.parsed);
+
+  const invitationsEnvResult = dotenv.config({
+    path: invitationsEnvFilePath,
+    override,
+    quiet: true,
+  });
+  stripEmptyEnvOverrides(invitationsEnvResult.parsed);
+
+  lastBackendEnvDigest = digestEnvFile(envFilePath) ?? '';
+};
+
+const beforeEnvLoadSnapshot = snapshotTrackedAiEnv();
+bootstrapBackendEnvironment();
 const afterBackendEnvSnapshot = snapshotTrackedAiEnv();
-const invitationsEnvResult = dotenv.config({
-  path: invitationsEnvFilePath,
-  override: true,
-});
 const afterInvitationsEnvSnapshot = snapshotTrackedAiEnv();
-stripEmptyEnvOverrides(invitationsEnvResult.parsed);
 
 export const backendEnvFilePath = envFilePath;
 export const invitationsEnvFilePathExported = invitationsEnvFilePath;
@@ -186,7 +206,33 @@ export const isUsableOpenAiApiKey = (
   return true;
 };
 
-export const getConfiguredGeminiApiKey = (): string | null => readGeminiApiKey();
+export const getConfiguredGeminiApiKey = (): string | null => {
+  reloadDevEnvFromDisk();
+  return readGeminiApiKey();
+};
+
+export const getGeminiApiKeyLast4 = (): string | null => {
+  const key = readGeminiApiKey();
+  if (!key) {
+    return null;
+  }
+
+  return key.slice(-4);
+};
+
+export const getGeminiApiKeyFingerprint = (): string | null => {
+  const key = readGeminiApiKey();
+  if (!key) {
+    return null;
+  }
+
+  return createHash('sha256').update(key).digest('hex').slice(0, 8);
+};
+
+export const isAiChatDevMockFallbackEnabled = (): boolean => {
+  reloadDevEnvFromDisk();
+  return parseBoolean(process.env.AI_CHAT_DEV_MOCK_FALLBACK_ENABLED, false);
+};
 
 const readOpenAiApiKey = (): string | null => {
   const raw = process.env.OPENAI_API_KEY?.trim();
@@ -196,8 +242,8 @@ const readOpenAiApiKey = (): string | null => {
 export const getConfiguredOpenAiApiKey = (): string | null => readOpenAiApiKey();
 
 export const GEMINI_CHAT_MODEL_FALLBACKS = [
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash',
 ] as const;
 
 const reloadDevEnvFromDisk = (): void => {
@@ -210,21 +256,7 @@ const reloadDevEnvFromDisk = (): void => {
     return;
   }
 
-  const backendEnvResult = dotenv.config({
-    path: envFilePath,
-    override: true,
-    quiet: true,
-  });
-  stripEmptyEnvOverrides(backendEnvResult.parsed);
-
-  const invitationsEnvResult = dotenv.config({
-    path: invitationsEnvFilePath,
-    override: true,
-    quiet: true,
-  });
-  stripEmptyEnvOverrides(invitationsEnvResult.parsed);
-
-  lastBackendEnvDigest = digest;
+  bootstrapBackendEnvironment();
 };
 
 const readAiChatModel = (provider: AiChatProviderName): string => {
@@ -470,6 +502,16 @@ export const env = {
   aiChatClassifierConfidenceThreshold: Number(
     process.env.AI_CHAT_CLASSIFIER_CONFIDENCE_THRESHOLD ?? '0.7',
   ),
+  aiWebSearchEnabled: parseBoolean(process.env.AI_WEB_SEARCH_ENABLED, false),
+  aiWebSearchProvider:
+    process.env.AI_WEB_SEARCH_PROVIDER?.trim().toLowerCase() || 'mock',
+  aiWebSearchModel:
+    process.env.AI_WEB_SEARCH_MODEL?.trim() || 'gemini-2.0-flash',
+  aiWebSearchMaxResults: parsePositiveInt(process.env.AI_WEB_SEARCH_MAX_RESULTS, 5),
+  aiWebSearchTimeoutMs: parsePositiveInt(
+    process.env.AI_WEB_SEARCH_TIMEOUT_MS,
+    8_000,
+  ),
   nominatimBaseUrl:
     process.env.NOMINATIM_BASE_URL?.trim() ||
     'https://nominatim.openstreetmap.org',
@@ -520,6 +562,8 @@ export const getAiChatDebugInfo = () => {
     openaiApiKeyConfigured: Boolean(env.openaiApiKey),
     openaiModel: env.openaiModel,
     geminiApiKeyConfigured: Boolean(getConfiguredGeminiApiKey()),
+    geminiApiKeyFingerprint: getGeminiApiKeyFingerprint(),
+    devMockFallbackEnabled: isAiChatDevMockFallbackEnabled(),
     geminiModel: env.geminiModel,
     operational: isAiChatProviderOperational(aiChatProvider),
     maxHistoryMessages: env.aiChatMaxHistoryMessages,
@@ -589,7 +633,13 @@ const collectAiConfigurationWarnings = (): string[] => {
 
   if (process.env.AI_CHAT_MODEL?.trim() === 'gemini-2.5-flash') {
     warnings.push(
-      'AI_CHAT_MODEL=gemini-2.5-flash is unavailable for many Google AI accounts. Prefer AI_CHAT_MODEL=gemini-2.5-flash-lite for chat.',
+      'AI_CHAT_MODEL=gemini-2.5-flash is unavailable for many Google AI accounts. Prefer AI_CHAT_MODEL=gemini-3.1-flash-lite for chat.',
+    );
+  }
+
+  if (process.env.AI_CHAT_MODEL?.trim() === 'gemini-2.5-flash-lite') {
+    warnings.push(
+      'AI_CHAT_MODEL=gemini-2.5-flash-lite is unavailable for many new Google AI accounts. Prefer AI_CHAT_MODEL=gemini-3.1-flash-lite for chat.',
     );
   }
 
@@ -640,6 +690,39 @@ export const getAiPriceSuggestionDebugInfo = () => {
   };
 };
 
+export const getAiPlatformDiagnostics = () => {
+  const chatProvider = resolveAiChatProvider();
+  const explicitChatProvider = process.env.AI_CHAT_PROVIDER?.trim() ?? chatProvider;
+  const explicitChatModel =
+    process.env.AI_CHAT_MODEL?.trim() ?? readAiChatModel(chatProvider);
+
+  return {
+    AI_CHAT_PROVIDER: explicitChatProvider,
+    AI_CHAT_MODEL: explicitChatModel,
+    chatProvider,
+    chatModel: readAiChatModel(chatProvider),
+    devMockFallbackEnabled: isAiChatDevMockFallbackEnabled(),
+    geminiKeyLoaded: Boolean(getConfiguredGeminiApiKey()),
+    geminiKeyLast4: getGeminiApiKeyLast4(),
+    geminiKeyFingerprint: getGeminiApiKeyFingerprint(),
+    envPath: backendEnvFilePath,
+    webSearchEnabled: env.aiWebSearchEnabled,
+    webSearchProvider: env.aiWebSearchProvider,
+    webSearchModel: env.aiWebSearchModel,
+    priceSuggestionProvider: env.aiProvider,
+    priceSuggestionModel: env.geminiModel,
+  };
+};
+
+export const logAiPlatformDiagnostics = (): void => {
+  if (env.nodeEnv === 'production') {
+    return;
+  }
+
+  const diagnostics = getAiPlatformDiagnostics();
+  console.log('[AI platform diagnostics]', JSON.stringify(diagnostics));
+};
+
 export const logAiPriceSuggestionStartupConfig = (): void => {
   if (env.nodeEnv === 'production') {
     return;
@@ -668,7 +751,11 @@ export const logAiPriceSuggestionStartupConfig = (): void => {
     console.log(`  AI_CHAT_PROVIDER env: ${chatDebug.explicitChatProvider}`);
   }
   console.log(`  AI chat model: ${chatDebug.aiChatModel}`);
-  console.log(`  Gemini key configured: ${chatDebug.geminiApiKeyConfigured}`);
+  console.log(`  devMockFallbackEnabled: ${chatDebug.devMockFallbackEnabled}`);
+  console.log(`  geminiKeyLoaded: ${chatDebug.geminiApiKeyConfigured}`);
+  if (chatDebug.geminiApiKeyFingerprint) {
+    console.log(`  geminiKeyFingerprint: ${chatDebug.geminiApiKeyFingerprint}`);
+  }
   console.log(`  OpenAI key configured: ${chatDebug.openaiApiKeyConfigured}`);
   console.log(`  AI chat operational: ${chatDebug.operational}`);
 

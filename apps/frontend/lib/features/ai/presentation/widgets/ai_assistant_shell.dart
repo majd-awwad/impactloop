@@ -349,7 +349,10 @@ class _AssistantPanel extends StatelessWidget {
                         return const _AssistantLoadingPlaceholder();
                       }
 
-                      return AiMessageBubble(message: messages[index]);
+                      return AiMessageBubble(
+                        message: messages[index],
+                        locale: resolveAiLocale(context),
+                      );
                     },
                   ),
           ),

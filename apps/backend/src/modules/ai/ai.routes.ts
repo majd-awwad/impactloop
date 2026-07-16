@@ -7,6 +7,8 @@ import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   archiveAiConversationHandler,
+  cancelAiPendingActionHandler,
+  confirmAiPendingActionHandler,
   createAiConversationHandler,
   listAiConversationMessagesHandler,
   listAiConversationsHandler,
@@ -19,9 +21,11 @@ import {
 } from './ai.rate-limit.js';
 import {
   conversationIdParamSchema,
+  confirmAiPendingActionSchema,
   createAiConversationSchema,
   listAiConversationsQuerySchema,
   listAiMessagesQuerySchema,
+  aiPendingActionIdParamSchema,
   sendAiMessageSchema,
 } from './ai.validation.js';
 
@@ -67,4 +71,17 @@ aiRouter.post(
   '/conversations/:conversationId/restore',
   validate(conversationIdParamSchema, 'params'),
   asyncHandler(restoreAiConversationHandler),
+);
+
+aiRouter.post(
+  '/actions/:pendingActionId/confirm',
+  validate(aiPendingActionIdParamSchema, 'params'),
+  validate(confirmAiPendingActionSchema),
+  asyncHandler(confirmAiPendingActionHandler),
+);
+
+aiRouter.post(
+  '/actions/:pendingActionId/cancel',
+  validate(aiPendingActionIdParamSchema, 'params'),
+  asyncHandler(cancelAiPendingActionHandler),
 );

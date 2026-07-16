@@ -306,11 +306,20 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 5),
-                          _CompactLocationLine(
-                            label: locationLabel.isNotEmpty
-                                ? locationLabel
-                                : quantityLabel,
-                          ),
+                          if (locationLabel.isNotEmpty)
+                            _CompactLocationLine(label: locationLabel)
+                          else if (quantityLabel.isNotEmpty)
+                            Text(
+                              quantityLabel,
+                              style: textTheme.labelMedium?.copyWith(
+                                color: palette.textSecondary,
+                                fontWeight: FontWeight.w500,
+                                height: 1.2,
+                              ),
+                              textAlign: TextAlign.start,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           const Spacer(),
                           Row(
                             children: [

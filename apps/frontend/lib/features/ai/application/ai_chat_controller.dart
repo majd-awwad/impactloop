@@ -28,6 +28,8 @@ class AiChatState {
     this.pendingSend,
     this.sendError,
     this.disabledByProvider = false,
+    this.pendingActionBusyId,
+    this.actionErrors = const {},
   });
 
   final String? conversationId;
@@ -37,6 +39,8 @@ class AiChatState {
   final AiPendingSend? pendingSend;
   final ApiException? sendError;
   final bool disabledByProvider;
+  final String? pendingActionBusyId;
+  final Map<String, ApiException> actionErrors;
 
   bool get canSend => !isSending && !disabledByProvider;
 
@@ -51,6 +55,10 @@ class AiChatState {
     bool? disabledByProvider,
     bool clearPendingSend = false,
     bool clearConversationId = false,
+    String? pendingActionBusyId,
+    bool clearPendingActionBusyId = false,
+    Map<String, ApiException>? actionErrors,
+    bool clearActionErrors = false,
   }) {
     return AiChatState(
       conversationId:
@@ -61,6 +69,12 @@ class AiChatState {
       pendingSend: clearPendingSend ? null : pendingSend ?? this.pendingSend,
       sendError: clearSendError ? null : sendError ?? this.sendError,
       disabledByProvider: disabledByProvider ?? this.disabledByProvider,
+      pendingActionBusyId: clearPendingActionBusyId
+          ? null
+          : pendingActionBusyId ?? this.pendingActionBusyId,
+      actionErrors: clearActionErrors
+          ? const {}
+          : actionErrors ?? this.actionErrors,
     );
   }
 }
@@ -280,6 +294,110 @@ class AiAssistantController extends Notifier<AiChatState> {
     ref.invalidate(aiActiveConversationsProvider);
     ref.invalidate(aiArchivedConversationsProvider);
     await openConversation(conversationId);
+  }
+
+  Future<void> confirmPendingAction({
+    required String pendingActionId,
+    required String locale,
+  }) async {
+    if (state.pendingActionBusyId != null || state.conversationId == null) {
+      return;
+    }
+
+    final updatedErrors = Map<String, ApiException>.from(state.actionErrors)
+      ..remove(pendingActionId);
+
+    state = state.copyWith(
+      pendingActionBusyId: pendingActionId,
+      actionErrors: updatedErrors,
+      clearSendError: true,
+    );
+
+    try {
+      final resultBlock = await _repository.confirmPendingAction(
+        pendingActionId: pendingActionId,
+        idempotencyKey: 'confirm-$pendingActionId',
+        locale: locale,
+      );
+
+      final optimisticMessages = appendActionResultToMessages(
+        messages: state.messages,
+        pendingActionId: pendingActionId,
+        resultBlock: resultBlock,
+      );
+
+      state = state.copyWith(
+        messages: optimisticMessages,
+        clearPendingActionBusyId: true,
+      );
+
+      final page = await _repository.listMessages(
+        conversationId: state.conversationId!,
+      );
+      state = state.copyWith(
+        messages: page.items,
+        clearPendingActionBusyId: true,
+      );
+    } on ApiException catch (error) {
+      state = state.copyWith(
+        clearPendingActionBusyId: true,
+        actionErrors: {
+          ...state.actionErrors,
+          pendingActionId: error,
+        },
+      );
+    } on Object catch (_) {
+      state = state.copyWith(
+        clearPendingActionBusyId: true,
+        actionErrors: {
+          ...state.actionErrors,
+          pendingActionId: const ApiException(
+            message: 'Action confirmation failed.',
+            code: 'AI_ACTION_EXECUTION_FAILED',
+          ),
+        },
+      );
+    }
+  }
+
+  Future<void> cancelPendingAction(String pendingActionId) async {
+    if (state.pendingActionBusyId != null || state.conversationId == null) {
+      return;
+    }
+
+    state = state.copyWith(
+      pendingActionBusyId: pendingActionId,
+      clearSendError: true,
+    );
+
+    try {
+      final resultBlock = await _repository.cancelPendingAction(
+        pendingActionId: pendingActionId,
+      );
+
+      var messages = state.messages;
+      if (resultBlock != null) {
+        messages = appendActionResultToMessages(
+          messages: messages,
+          pendingActionId: pendingActionId,
+          resultBlock: resultBlock,
+        );
+        state = state.copyWith(
+          messages: messages,
+          clearPendingActionBusyId: true,
+        );
+      }
+
+      final page = await _repository.listMessages(
+        conversationId: state.conversationId!,
+      );
+      state = state.copyWith(
+        messages: page.items,
+        clearPendingActionBusyId: true,
+      );
+    } on Object {
+      state = state.copyWith(clearPendingActionBusyId: true);
+    }
   }
 }
 

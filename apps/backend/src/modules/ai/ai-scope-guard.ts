@@ -1,6 +1,7 @@
 import type { AiScopeClassification } from '../../generated/prisma/client.js';
 
 import { aiScopeClassifierSchema } from './ai.content-blocks.js';
+import { assessDangerousRequest } from './agent/ai-agent-safety-guard.service.js';
 
 export type ScopeGuardResult = {
   classification: AiScopeClassification;
@@ -23,6 +24,16 @@ const OUT_OF_SCOPE_PATTERNS: Array<{ id: string; pattern: RegExp }> = [
   { id: 'restaurant', pattern: /(restaurant|best restaurant|مطعم|مطاعم)/u },
   { id: 'recipe', pattern: /(recipe|cook|ingredients for|وصفة|مقلوبة)/u },
   { id: 'poetry', pattern: /(poetry|poem|write me a poem|شعر|اكتبلي شعر|اكتب(?:لي)?\s+شعر)/u },
+  {
+    id: 'geography_history',
+    pattern:
+      /(فلسطين|القدس|jerusalem|palestine|غزة|gaza|what is palestine|ما هي فلسطين|اشرحلي عن القدس|explain jerusalem|tell me about jerusalem)/u,
+  },
+  {
+    id: 'general_unrelated',
+    pattern:
+      /(مين فاز|who won the|what is the capital of|من هو رئيس|تاريخ الدولة|political party)/u,
+  },
 ];
 
 const DOMAIN_PATTERNS: Array<{ id: string; pattern: RegExp }> = [
@@ -32,28 +43,20 @@ const DOMAIN_PATTERNS: Array<{ id: string; pattern: RegExp }> = [
   { id: 'sensors', pattern: /(sensor|ultrasonic|temperature sensor|حساس)/u },
   { id: 'woodworking', pattern: /(wood|woodworking|plywood|saw|lumber|خشب|نجارة)/u },
   { id: 'fabric', pattern: /(fabric|textile|sewing|cotton|قماش|خياطة)/u },
+  {
+    id: 'art_crafts',
+    pattern:
+      /(شمع|شمعة|شموع|صناعة\s*الشمع|قوالب\s*الشمع|أشغال\s*يدوية|اشغال\s*يدوية|حرف\s*يدوية|صناعة\s*يدوية|candle|candles|wax|craft|crafts|handicraft|handmade\s*project)/u,
+  },
   { id: 'diy', pattern: /(diy|project idea|recycling|reuse|upcycle|مشروع|اعادة استخدام|إعادة استخدام)/u },
   { id: 'tools', pattern: /(solder|soldering iron|drill|tool safety|لحام|كاوية|كاويه|ادوات|أدوات)/u },
   { id: 'materials', pattern: /(material|component|alternative|substitute|مواد|بديل)/u },
   { id: 'safety', pattern: /(safety|precaution|safe|احتياط|احتياطات|سلامة|بأمان)/u },
 ];
 
-const DANGEROUS_PATTERNS: Array<{ id: string; pattern: RegExp }> = [
-  {
-    id: 'bypass_protection',
-    pattern:
-      /(bypass|remove|disable|الغ(?:ي|اء)|ازل|أزل).{0,40}(protection|fuse|breaker|ground|earthing|حماية|قاطع|وسائل|وسيلة)/u,
-  },
-  {
-    id: 'unsafe_mains',
-    pattern:
-      /(connect|wire|plug|attach|اوصل|أوصل).{0,40}(direct(?:ly)?|without|مباشرة|مباشر).{0,40}(mains|220|230|240|home electricity|كهرباء|الكهرباء)/u,
-  },
-];
+const DANGEROUS_PATTERNS: Array<{ id: string; pattern: RegExp }> = [];
 
-const LEGITIMATE_SAFETY_PATTERNS: RegExp[] = [
-  /(safety precaution|safe way|how to safely|احتياطات|بأمان|سلامة)/u,
-];
+const LEGITIMATE_SAFETY_PATTERNS: RegExp[] = [];
 
 const matchPatterns = (
   normalized: string,
@@ -62,9 +65,12 @@ const matchPatterns = (
 
 export const classifyScopeDeterministic = (text: string): ScopeGuardResult => {
   const normalized = normalizeForMatch(text);
+  const dangerousAssessment = assessDangerousRequest(text);
   const outOfScope = matchPatterns(normalized, OUT_OF_SCOPE_PATTERNS);
   const domain = matchPatterns(normalized, DOMAIN_PATTERNS);
-  const dangerous = matchPatterns(normalized, DANGEROUS_PATTERNS);
+  const dangerous = dangerousAssessment.isDangerous
+    ? dangerousAssessment.matchedRules
+    : matchPatterns(normalized, DANGEROUS_PATTERNS);
   const legitimateSafety = LEGITIMATE_SAFETY_PATTERNS.some((pattern) =>
     pattern.test(normalized),
   );
@@ -147,6 +153,4 @@ export const shouldSkipAnswerProvider = (
 export const shouldUseAnswerProvider = (
   classification: AiScopeClassification,
 ): boolean =>
-  classification === 'DOMAIN_KNOWLEDGE' ||
-  classification === 'MIXED' ||
-  classification === 'DANGEROUS_REQUEST';
+  classification === 'DOMAIN_KNOWLEDGE' || classification === 'MIXED';
