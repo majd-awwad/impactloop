@@ -171,6 +171,19 @@ const parseBoolean = (value: string | undefined, fallback = false): boolean => {
   return normalized === '1' || normalized === 'true' || normalized === 'yes';
 };
 
+const parseBoundedInteger = (
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+  return Math.min(maximum, Math.max(minimum, parsed));
+};
+
 const LOG_LEVELS = new Set(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']);
 
 const parseLogLevel = (value: string | undefined, nodeEnv: string): string => {
@@ -228,6 +241,34 @@ export const env = {
   aiProvider: resolveAiProvider(),
   geminiApiKey: readGeminiApiKey(),
   geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
+  recommendationOutboxWorkerEnabled: parseBoolean(
+    process.env.RECOMMENDATION_OUTBOX_WORKER_ENABLED,
+    false,
+  ),
+  recommendationOutboxPollIntervalMs: parseBoundedInteger(
+    process.env.RECOMMENDATION_OUTBOX_POLL_INTERVAL_MS,
+    2_000,
+    250,
+    60_000,
+  ),
+  recommendationOutboxBatchSize: parseBoundedInteger(
+    process.env.RECOMMENDATION_OUTBOX_BATCH_SIZE,
+    10,
+    1,
+    100,
+  ),
+  recommendationOutboxMaxAttempts: parseBoundedInteger(
+    process.env.RECOMMENDATION_OUTBOX_MAX_ATTEMPTS,
+    5,
+    1,
+    20,
+  ),
+  recommendationOutboxLeaseMs: parseBoundedInteger(
+    process.env.RECOMMENDATION_OUTBOX_LEASE_MS,
+    30_000,
+    1_000,
+    300_000,
+  ),
   nominatimBaseUrl:
     process.env.NOMINATIM_BASE_URL?.trim() ||
     'https://nominatim.openstreetmap.org',

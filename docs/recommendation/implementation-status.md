@@ -128,21 +128,46 @@ Reason:
 - the request path must not await generation/request/impression/action materialization;
 - all active synchronous runtime wiring was removed.
 
-Next:
-- evaluate a durable outbox or another bounded asynchronous delivery strategy;
+Historical next step:
+- evaluate a durable outbox or another bounded asynchronous delivery strategy. This was addressed by Phase 1B below.
 - action attribution remains deferred until impressions are persisted reliably.
 
-Current runtime contract:
-- Learner Home and section requests perform zero recommendation-event writes;
-- cache hits perform zero recommendation-event writes;
-- responses contain no recommendation impression identifiers;
+Historical synchronous contract:
+- Learner Home and section requests performed zero normalized recommendation-event writes;
+- cache hits performed zero normalized recommendation-event writes;
+- responses contained no recommendation impression identifiers;
 - action controllers do not inspect recommendation attribution headers;
 - the recommendation attribution headers are not enabled through CORS.
 
 Scope limitations retained in the domain:
 - project views and supplier-side reservation lifecycle transitions remain unsupported for live attribution;
 - no ranking, candidate, section, cache-content, or Learner Home UI behavior changes are active;
-- no queue, worker, outbox, dashboard, taxonomy, or learned recommender is implemented.
+- no action-attribution delivery, dashboard, taxonomy, or learned recommender is implemented.
+
+### Phase 1B — Durable outbox delivery
+
+Status: ADOPT_WITH_CONDITIONS
+
+Implemented within the scoped production files:
+- `RecommendationEventOutbox` enum/table migration with unique deduplication key and status/lease/availability indexes;
+- bounded generation and exposure payload builders using `recommendation-generation-outbox-v1` and `recommendation-exposure-outbox-v1`;
+- one request-path `createMany` enqueue operation per HTTP caller, with no per-item writes and non-fatal telemetry failure handling;
+- opt-in worker with `SKIP LOCKED` claims, generation-before-exposure ordering, lease recovery, bounded retry/dead-letter state, payload validation, and idempotent short materialization transactions;
+- Learner Home full and section exposure envelopes, cache/single-flight semantics, fresh exposure/impression IDs, and additive response fields outside the cache envelope.
+
+Validation:
+- Prisma schema validation, client generation, and local migration deployment passed;
+- focused recommendation event/outbox tests: 11 worker tests passed, with retained event-domain coverage;
+- Learner Home outbox runtime test: 1 passed;
+- local outbox benchmark covered five misses, ten hits, same-learner ×10, five distinct learners, and ten distinct learners with zero telemetry errors;
+- final acceptance evidence is recorded in `phase-1b-final-acceptance.md`;
+- global typecheck remains blocked only by the pre-existing `admin-people.service.ts` nullability error.
+
+Conditions:
+- worker enablement remains disabled by default and requires migration review, queue-depth/dead-letter monitoring, and production-like tail-latency/drain measurements;
+- query-event counts were not independently captured in the clean benchmark harness;
+- action attribution, recommendation headers/CORS, project views, and supplier-side reservation lifecycle actions remain unsupported;
+- no production migration application or commit was performed.
 
 ### Slice 6: Request-scoped database fan-out limiter
 

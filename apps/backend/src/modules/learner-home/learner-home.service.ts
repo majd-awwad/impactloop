@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import * as learnerHomeRepository from './learner-home.repository.js';
 import {
   BROWSE_MATERIAL_POOL_CAP,
@@ -50,6 +52,17 @@ import type {
 } from './learner-home.types.js';
 import type { ReservationStatus } from '../../generated/prisma/client.js';
 import { isActiveReservationBehaviorStatus } from '../reservations/reservations.quantity.js';
+import { getRequestId } from '../../observability/request-context.js';
+import {
+  RECOMMENDATION_ALGORITHM_NAME,
+  RECOMMENDATION_ALGORITHM_VERSION,
+  RECOMMENDATION_POLICY_VERSION,
+  attachRecommendationImpressionIds,
+  enqueueRecommendationExposure,
+  toRecommendationExposureItems,
+  type RecommendationCandidateTraceInput,
+  type RecommendationGenerationMetadata,
+} from '../recommendation-events/recommendation-events.service.js';
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -65,17 +78,20 @@ const RANK_POOL_SIZE = 48;
 
 const LEARNER_HOME_CACHE_TTL_MS = 45_000;
 
-type LearnerHomeCacheLoader = (
-  userId: string,
-) => Promise<LearnerHomeResponse>;
+type LearnerHomeCacheLoader<T> = (userId: string) => Promise<T>;
 
-type LearnerHomeCacheEntry = {
+type LearnerHomeCacheEntry<T> = {
   expiresAt: number;
-  payload: LearnerHomeResponse;
+  payload: T;
 };
 
-type LearnerHomeInFlightEntry = {
-  promise: Promise<LearnerHomeResponse>;
+type LearnerHomeInFlightEntry<T> = {
+  promise: Promise<T>;
+};
+
+type LearnerHomeCacheRead<T> = {
+  payload: T;
+  state: 'MISS' | 'HIT' | 'SINGLE_FLIGHT';
 };
 
 type LearnerHomeCacheDiagnostics = {
@@ -85,19 +101,20 @@ type LearnerHomeCacheDiagnostics = {
   cacheWriteCount: number;
 };
 
-type LearnerHomeCacheController = {
-  get: (userId: string) => Promise<LearnerHomeResponse>;
+type LearnerHomeCacheController<T> = {
+  get: (userId: string) => Promise<T>;
+  getWithState: (userId: string) => Promise<LearnerHomeCacheRead<T>>;
   invalidate: (userId: string) => void;
   invalidateAll: () => void;
   getDiagnostics: () => LearnerHomeCacheDiagnostics;
 };
 
-const createLearnerHomeCache = (
-  load: LearnerHomeCacheLoader,
+const createLearnerHomeCache = <T>(
+  load: LearnerHomeCacheLoader<T>,
   now: () => number = Date.now,
-): LearnerHomeCacheController => {
-  const cache = new Map<string, LearnerHomeCacheEntry>();
-  const inFlight = new Map<string, LearnerHomeInFlightEntry>();
+): LearnerHomeCacheController<T> => {
+  const cache = new Map<string, LearnerHomeCacheEntry<T>>();
+  const inFlight = new Map<string, LearnerHomeInFlightEntry<T>>();
 
   // Generation metadata is retained only for keys with active work. This
   // keeps invalidation-race protection bounded by the in-flight map size.
@@ -107,10 +124,10 @@ const createLearnerHomeCache = (
   const currentGeneration = (userId: string): number =>
     generationByKey.get(userId) ?? 0;
 
-  const get = async (userId: string): Promise<LearnerHomeResponse> => {
+  const getWithState = async (userId: string): Promise<LearnerHomeCacheRead<T>> => {
     const cached = cache.get(userId);
     if (cached && cached.expiresAt > now()) {
-      return cached.payload;
+      return { payload: cached.payload, state: 'HIT' };
     }
 
     if (cached) {
@@ -119,11 +136,11 @@ const createLearnerHomeCache = (
 
     const existing = inFlight.get(userId);
     if (existing) {
-      return await existing.promise;
+      return { payload: await existing.promise, state: 'SINGLE_FLIGHT' };
     }
 
     const generationAtStart = currentGeneration(userId);
-    let promise!: Promise<LearnerHomeResponse>;
+    let promise!: Promise<T>;
 
     // Queue the loader behind the map insertion so no asynchronous database
     // work can begin before concurrent callers can observe the flight.
@@ -148,7 +165,7 @@ const createLearnerHomeCache = (
     inFlight.set(userId, { promise });
 
     try {
-      return await promise;
+      return { payload: await promise, state: 'MISS' };
     } finally {
       if (inFlight.get(userId)?.promise === promise) {
         inFlight.delete(userId);
@@ -156,6 +173,9 @@ const createLearnerHomeCache = (
       }
     }
   };
+
+  const get = async (userId: string): Promise<T> =>
+    (await getWithState(userId)).payload;
 
   const invalidate = (userId: string): void => {
     cache.delete(userId);
@@ -177,6 +197,7 @@ const createLearnerHomeCache = (
 
   return {
     get,
+    getWithState,
     invalidate,
     invalidateAll,
     getDiagnostics: () => ({
@@ -190,9 +211,10 @@ const createLearnerHomeCache = (
 
 /** @internal Test-only factory for deterministic cache-coordination tests. */
 export const createLearnerHomeCacheForTests = (
-  load: LearnerHomeCacheLoader,
+  load: LearnerHomeCacheLoader<LearnerHomeResponse>,
   now: () => number = Date.now,
-): LearnerHomeCacheController => createLearnerHomeCache(load, now);
+): LearnerHomeCacheController<LearnerHomeResponse> =>
+  createLearnerHomeCache(load, now);
 
 export const invalidateLearnerHomeCache = (userId: string): void => {
   learnerHomeCache.invalidate(userId);
@@ -372,6 +394,89 @@ type LearnerHomeContext = {
   behavior: LearnerBehaviorContext;
   behaviorAffinityProfile: LearnerAffinityProfile;
   hasActivity: boolean;
+};
+
+type LearnerHomeCachedEnvelope = {
+  response: LearnerHomeResponse;
+  generation: RecommendationGenerationMetadata;
+};
+
+const buildCandidateTraces = (
+  context: LearnerHomeContext,
+  response: { sections: LearnerHomeSection[] },
+  surface = 'LEARNER_HOME',
+): RecommendationCandidateTraceInput[] => {
+  const exposures = toRecommendationExposureItems(response);
+  const selectedByEntity = new Map<string, (typeof exposures)[number]>();
+
+  for (const exposure of exposures) {
+    const key = `${exposure.entityType}:${exposure.entityId}`;
+    if (!selectedByEntity.has(key)) {
+      selectedByEntity.set(key, exposure);
+    }
+  }
+
+  const traces: RecommendationCandidateTraceInput[] = [];
+  const addTrace = (
+    entityType: 'MATERIAL' | 'PROJECT',
+    entityId: string,
+    source: string,
+    selected?: (typeof exposures)[number],
+  ) => {
+    const isEligible = entityType === 'MATERIAL'
+      ? context.materials.some(
+          (material) =>
+            material.id === entityId &&
+            material.status === 'AVAILABLE' &&
+            material.availableQuantity > 0,
+        )
+      : context.projects.some((project) => project.id === entityId);
+
+    traces.push({
+      entityType,
+      entityId,
+      surface,
+      sectionKey: selected?.sectionKey,
+      candidateSource: source,
+      eligibilityResult: isEligible ? 'ELIGIBLE' : 'EXCLUDED',
+      rankBeforeSelection: selected?.position ?? null,
+      finalScore: selected?.score ?? null,
+      exclusionReason: isEligible ? null : 'not_eligible_at_generation',
+      selected: Boolean(selected),
+    });
+  };
+
+  for (const material of context.materials) {
+    addTrace(
+      'MATERIAL',
+      material.id,
+      'learner_home_material_pool',
+      selectedByEntity.get(`MATERIAL:${material.id}`),
+    );
+  }
+
+  for (const project of context.projects) {
+    addTrace(
+      'PROJECT',
+      project.id,
+      'learner_home_project_pool',
+      selectedByEntity.get(`PROJECT:${project.id}`),
+    );
+  }
+
+  for (const build of context.inProgressBuilds) {
+    const selected = selectedByEntity.get(`PROJECT:${build.projectId}`);
+    if (selected) {
+      addTrace(
+        'PROJECT',
+        build.projectId,
+        'learner_home_continue_project_pool',
+        selected,
+      );
+    }
+  }
+
+  return traces;
 };
 
 type LearnerHomeLoadOptions = {
@@ -1028,7 +1133,7 @@ export const getLearnerHomeSection = async (
   profiler.record('totalGetLearnerHomeSection', performance.now() - startedAt);
   profiler.report({ userId, scope: 'getLearnerHomeSection' });
 
-  return {
+  const sectionResponse = {
     key: sectionKey,
     title: built.title,
     subtitle: built.subtitle,
@@ -1038,11 +1143,50 @@ export const getLearnerHomeSection = async (
     nextOffset: built.nextOffset,
     hasMore: built.hasMore,
   };
+
+  const correlationId = getRequestId();
+  if (!correlationId) {
+    return sectionResponse;
+  }
+
+  const generation: RecommendationGenerationMetadata = {
+    generationKey: randomUUID(),
+    learnerId: userId,
+    surface: 'LEARNER_HOME_SECTION',
+    algorithmName: RECOMMENDATION_ALGORITHM_NAME,
+    algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
+    policyVersion: RECOMMENDATION_POLICY_VERSION,
+    generatedAt: new Date(),
+    candidateCount: context.materials.length + context.projects.length,
+    shownItemCount: sectionResponse.items.length,
+    generationDurationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+    generationCacheState: 'UNCACHED',
+    candidateTraces: buildCandidateTraces(
+      context,
+      { sections: [sectionResponse] },
+      'LEARNER_HOME_SECTION',
+    ),
+  };
+  const enqueue = await enqueueRecommendationExposure({
+    generation,
+    cacheState: 'UNCACHED',
+    correlationId,
+    items: toRecommendationExposureItems({ sections: [sectionResponse] }),
+    includeGeneration: true,
+  });
+  if (enqueue.enqueued) {
+    attachRecommendationImpressionIds(
+      { sections: [sectionResponse] },
+      enqueue.impressionIds,
+    );
+  }
+
+  return sectionResponse;
 };
 
 async function loadLearnerHomeUncached(
   userId: string,
-): Promise<LearnerHomeResponse> {
+): Promise<LearnerHomeCachedEnvelope> {
   const profiler = createLearnerHomeProfiler('getLearnerHome');
   const startedAt = performance.now();
   const context = await profiler.time('loadLearnerHomeContext', () =>
@@ -1137,16 +1281,56 @@ async function loadLearnerHomeUncached(
     },
   ];
 
-  const response = {
+  const response: LearnerHomeResponse = {
     profileCompletion,
     sections,
   };
 
-  return response;
+  return {
+    response,
+    generation: {
+      generationKey: randomUUID(),
+      learnerId: userId,
+      surface: 'LEARNER_HOME',
+      algorithmName: RECOMMENDATION_ALGORITHM_NAME,
+      algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
+      policyVersion: RECOMMENDATION_POLICY_VERSION,
+      generatedAt: new Date(),
+      candidateCount: context.materials.length + context.projects.length,
+      shownItemCount: toRecommendationExposureItems(response).length,
+      generationDurationMs: Math.max(
+        0,
+        Math.round(performance.now() - startedAt),
+      ),
+      generationCacheState: 'MISS',
+      candidateTraces: buildCandidateTraces(context, response),
+    },
+  };
 }
 
 const learnerHomeCache = createLearnerHomeCache(loadLearnerHomeUncached);
 
 export const getLearnerHome = async (
   userId: string,
-): Promise<LearnerHomeResponse> => learnerHomeCache.get(userId);
+): Promise<LearnerHomeResponse> => {
+  const cacheRead = await learnerHomeCache.getWithState(userId);
+  const correlationId = getRequestId();
+  if (!correlationId) {
+    return cacheRead.payload.response;
+  }
+
+  const response = structuredClone(cacheRead.payload.response);
+  const enqueue = await enqueueRecommendationExposure({
+    generation: cacheRead.payload.generation,
+    cacheState: cacheRead.state,
+    correlationId,
+    items: toRecommendationExposureItems(response),
+    includeGeneration: cacheRead.state === 'MISS',
+  });
+
+  if (enqueue.enqueued) {
+    attachRecommendationImpressionIds(response, enqueue.impressionIds);
+  }
+
+  return response;
+};

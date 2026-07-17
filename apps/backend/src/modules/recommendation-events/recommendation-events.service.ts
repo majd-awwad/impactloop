@@ -9,6 +9,7 @@ import type {
   RecommendationEntityType,
   RecommendationEligibilityResult,
   RecommendationEventSource,
+  RecommendationOutboxEventKind,
 } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
@@ -19,6 +20,12 @@ export const RECOMMENDATION_IMPRESSION_HEADER =
 export const RECOMMENDATION_SURFACE_HEADER = 'x-recommendation-surface';
 export const RECOMMENDATION_ATTRIBUTION_WINDOW_MS = 24 * 60 * 60 * 1000;
 export const MAX_RECOMMENDATION_TRACE_ROWS = 512;
+export const MAX_RECOMMENDATION_SCORE_COMPONENTS = 12;
+export const MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES = 256 * 1024;
+export const RECOMMENDATION_GENERATION_OUTBOX_SCHEMA_VERSION =
+  'recommendation-generation-outbox-v1';
+export const RECOMMENDATION_EXPOSURE_OUTBOX_SCHEMA_VERSION =
+  'recommendation-exposure-outbox-v1';
 
 export const RECOMMENDATION_ALGORITHM_NAME = 'deterministic-hybrid';
 export const RECOMMENDATION_ALGORITHM_VERSION = 'learner-home-v1';
@@ -83,6 +90,75 @@ export type RecommendationActionInput = {
   sourceOperationId?: string;
   correlationId?: string;
   eventSource?: EventSource;
+};
+
+export type RecommendationOutboxTrace = {
+  entityType: EntityType;
+  entityId: string;
+  surface: string;
+  sectionKey: string | null;
+  candidateSource: string;
+  eligibilityResult: RecommendationEligibilityResult;
+  rankBeforeSelection: number | null;
+  finalScore: number | null;
+  scoreComponents?: Record<string, unknown>;
+  exclusionReason: string | null;
+  selected: boolean;
+  eventSource: EventSource;
+};
+
+export type RecommendationGenerationOutboxPayload = {
+  schemaVersion: typeof RECOMMENDATION_GENERATION_OUTBOX_SCHEMA_VERSION;
+  generationId: string;
+  learnerId: string;
+  surface: string;
+  algorithmName: string;
+  algorithmVersion: string;
+  policyVersion: string;
+  generatedAt: string;
+  cacheState: CacheState;
+  candidateCount: number;
+  shownItemCount: number;
+  generationDurationMs: number;
+  persistedTraceCount: number;
+  traceTruncated: boolean;
+  candidateTraces: RecommendationOutboxTrace[];
+  eventSource: EventSource;
+};
+
+export type RecommendationExposureOutboxImpression = {
+  impressionId: string;
+  entityType: EntityType;
+  entityId: string;
+  sectionKey: string;
+  position: number;
+  score: number;
+  reasonCode: string;
+};
+
+export type RecommendationExposureOutboxPayload = {
+  schemaVersion: typeof RECOMMENDATION_EXPOSURE_OUTBOX_SCHEMA_VERSION;
+  exposureId: string;
+  generationId: string;
+  learnerId: string;
+  surface: string;
+  cacheState: CacheState;
+  correlationId: string | null;
+  exposedAt: string;
+  candidateCount: number;
+  shownItemCount: number;
+  generationDurationMs: number;
+  algorithmName: string;
+  algorithmVersion: string;
+  policyVersion: string;
+  impressions: RecommendationExposureOutboxImpression[];
+  eventSource: EventSource;
+};
+
+export type RecommendationOutboxEnqueueResult = {
+  enqueued: boolean;
+  exposureId?: string;
+  impressionIds: Map<string, string>;
 };
 
 export type RecommendationAttributionHeaders = {
@@ -230,6 +306,154 @@ const prepareExposureItems = (items: RecommendationExposureItem[]) =>
     ];
   });
 
+const prepareScoreComponents = (
+  scoreComponents: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | undefined => {
+  if (!scoreComponents) {
+    return undefined;
+  }
+
+  const bounded: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(scoreComponents)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .slice(0, MAX_RECOMMENDATION_SCORE_COMPONENTS)) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      bounded[key.slice(0, 64)] = value;
+    } else if (
+      typeof value === 'string' ||
+      typeof value === 'boolean' ||
+      value === null
+    ) {
+      bounded[key.slice(0, 64)] = value;
+    }
+  }
+
+  return Object.keys(bounded).length > 0 ? bounded : undefined;
+};
+
+const outboxTraceFor = (
+  trace: RecommendationCandidateTraceInput,
+): RecommendationOutboxTrace | null => {
+  if (!validTrace(trace)) {
+    return null;
+  }
+
+  const scoreComponents = prepareScoreComponents(trace.scoreComponents);
+
+  return {
+    entityType: trace.entityType,
+    entityId: trace.entityId.trim(),
+    surface: trace.surface.trim(),
+    sectionKey: boundedString(trace.sectionKey, 100) ?? null,
+    candidateSource: trace.candidateSource.trim(),
+    eligibilityResult: trace.eligibilityResult,
+    rankBeforeSelection: trace.rankBeforeSelection ?? null,
+    finalScore: trace.finalScore ?? null,
+    ...(scoreComponents ? { scoreComponents } : {}),
+    exclusionReason: boundedString(trace.exclusionReason, 191) ?? null,
+    selected: trace.selected === true,
+    eventSource: trace.eventSource ?? 'REAL',
+  };
+};
+
+const payloadByteLength = (payload: unknown): number =>
+  Buffer.byteLength(JSON.stringify(payload));
+
+const buildGenerationOutboxPayload = (
+  generation: RecommendationGenerationMetadata,
+): RecommendationGenerationOutboxPayload | null => {
+  const sourceTraces = generation.candidateTraces;
+  const traces = sourceTraces
+    .map(outboxTraceFor)
+    .filter((trace): trace is RecommendationOutboxTrace => trace !== null)
+    .slice(0, MAX_RECOMMENDATION_TRACE_ROWS);
+  const traceTruncated = traces.length !== sourceTraces.length;
+  const payload: RecommendationGenerationOutboxPayload = {
+    schemaVersion: RECOMMENDATION_GENERATION_OUTBOX_SCHEMA_VERSION,
+    generationId: generation.generationKey,
+    learnerId: generation.learnerId,
+    surface: generation.surface,
+    algorithmName: generation.algorithmName,
+    algorithmVersion: generation.algorithmVersion,
+    policyVersion: generation.policyVersion,
+    generatedAt: generation.generatedAt.toISOString(),
+    cacheState: generation.generationCacheState,
+    candidateCount: Math.max(0, Math.trunc(generation.candidateCount)),
+    shownItemCount: Math.max(0, Math.trunc(generation.shownItemCount)),
+    generationDurationMs: Math.max(0, Math.trunc(generation.generationDurationMs)),
+    persistedTraceCount: traces.length,
+    traceTruncated,
+    candidateTraces: traces,
+    eventSource: generation.eventSource ?? 'REAL',
+  };
+
+  while (
+    payloadByteLength(payload) > MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES &&
+    payload.candidateTraces.length > 0
+  ) {
+    payload.candidateTraces.pop();
+    payload.persistedTraceCount = payload.candidateTraces.length;
+    payload.traceTruncated = true;
+  }
+
+  return payloadByteLength(payload) <= MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES
+    ? payload
+    : null;
+};
+
+const buildExposureOutboxPayload = (input: {
+  generation: RecommendationGenerationMetadata;
+  cacheState: CacheState;
+  correlationId?: string;
+  items: RecommendationExposureItem[];
+}): {
+  payload: RecommendationExposureOutboxPayload;
+  impressionIds: Map<string, string>;
+} => {
+  const exposureId = randomUUID();
+  const impressionIds = new Map<string, string>();
+  const items = prepareExposureItems(input.items);
+  const impressions = items.map((item) => {
+    const key = `${item.entityType}:${item.entityId}:${item.sectionKey}:${item.position}`;
+    const impressionId = randomUUID();
+    impressionIds.set(key, impressionId);
+    return {
+      impressionId,
+      entityType: item.entityType,
+      entityId: item.entityId,
+      sectionKey: item.sectionKey,
+      position: item.position,
+      score: item.score,
+      reasonCode: item.reasonCode,
+    };
+  });
+
+  return {
+    payload: {
+      schemaVersion: RECOMMENDATION_EXPOSURE_OUTBOX_SCHEMA_VERSION,
+      exposureId,
+      generationId: input.generation.generationKey,
+      learnerId: input.generation.learnerId,
+      surface: input.generation.surface,
+      cacheState: input.cacheState,
+      correlationId: boundedString(input.correlationId, 191) ?? null,
+      exposedAt: new Date().toISOString(),
+      candidateCount: Math.max(0, Math.trunc(input.generation.candidateCount)),
+      shownItemCount: impressions.length,
+      generationDurationMs: Math.max(
+        0,
+        Math.trunc(input.generation.generationDurationMs),
+      ),
+      algorithmName: input.generation.algorithmName,
+      algorithmVersion: input.generation.algorithmVersion,
+      policyVersion: input.generation.policyVersion,
+      impressions,
+      eventSource: input.generation.eventSource ?? 'REAL',
+    },
+    impressionIds,
+  };
+};
+
 const writeFailureContext = (input: {
   learnerId?: string;
   correlationId?: string;
@@ -248,6 +472,91 @@ const isUniqueConstraintError = (error: unknown): boolean =>
       'code' in error &&
       error.code === 'P2002',
   );
+
+export const enqueueRecommendationExposure = async (input: {
+  generation: RecommendationGenerationMetadata;
+  cacheState: CacheState;
+  correlationId?: string;
+  items: RecommendationExposureItem[];
+  includeGeneration: boolean;
+}): Promise<RecommendationOutboxEnqueueResult> => {
+  try {
+    const exposure = buildExposureOutboxPayload(input);
+    const generation = input.includeGeneration
+      ? buildGenerationOutboxPayload(input.generation)
+      : null;
+
+  if (input.includeGeneration && !generation) {
+    logger.warn(
+      writeFailureContext({
+        learnerId: input.generation.learnerId,
+        correlationId: input.correlationId,
+        phase: 'recommendation-outbox-payload',
+      }),
+      'Recommendation generation outbox payload exceeded its bounded size',
+    );
+    return { enqueued: false, impressionIds: new Map() };
+  }
+
+  if (
+    payloadByteLength(exposure.payload) >
+    MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES
+  ) {
+    logger.warn(
+      writeFailureContext({
+        learnerId: input.generation.learnerId,
+        correlationId: input.correlationId,
+        phase: 'recommendation-outbox-payload',
+      }),
+      'Recommendation exposure outbox payload exceeded its bounded size',
+    );
+    return { enqueued: false, impressionIds: new Map() };
+  }
+
+  const rows = [
+    ...(generation
+      ? [
+          {
+            eventKind:
+              'RECOMMENDATION_GENERATION' as RecommendationOutboxEventKind,
+            schemaVersion: generation.schemaVersion,
+            deduplicationKey: `generation:${generation.generationId}`,
+            payload: generation as unknown as Prisma.InputJsonValue,
+          },
+        ]
+      : []),
+    {
+      eventKind: 'RECOMMENDATION_EXPOSURE' as RecommendationOutboxEventKind,
+      schemaVersion: exposure.payload.schemaVersion,
+      deduplicationKey: `exposure:${exposure.payload.exposureId}`,
+      payload: exposure.payload as unknown as Prisma.InputJsonValue,
+    },
+  ];
+
+    await prisma.recommendationEventOutbox.createMany({
+      data: rows,
+      skipDuplicates: true,
+    });
+
+    return {
+      enqueued: true,
+      exposureId: exposure.payload.exposureId,
+      impressionIds: exposure.impressionIds,
+    };
+  } catch (error) {
+    logger.warn(
+      writeFailureContext({
+        learnerId: input.generation.learnerId,
+        correlationId: input.correlationId,
+        phase: 'recommendation-outbox-enqueue',
+      }),
+      error instanceof Error
+        ? error.message.slice(0, 191)
+        : 'Recommendation outbox enqueue failed',
+    );
+    return { enqueued: false, impressionIds: new Map() };
+  }
+};
 
 export const persistRecommendationExposure = async (input: {
   generation: RecommendationGenerationMetadata;

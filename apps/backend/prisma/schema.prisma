@@ -350,6 +350,19 @@ enum RecommendationEligibilityResult {
   EXCLUDED
 }
 
+enum RecommendationOutboxEventKind {
+  RECOMMENDATION_GENERATION
+  RECOMMENDATION_EXPOSURE
+}
+
+enum RecommendationOutboxStatus {
+  PENDING
+  PROCESSING
+  RETRY
+  PROCESSED
+  DEAD
+}
+
 model User {
   id                            String                     @id @default(cuid())
   displayName                   String                     @map("display_name")
@@ -1642,4 +1655,28 @@ model RecommendationAction {
   @@index([entityType, entityId, actionType, actionAt(sort: Desc)])
   @@index([sourceOperationId])
   @@map("recommendation_actions")
+}
+
+model RecommendationEventOutbox {
+  id                String                       @id @default(cuid())
+  eventKind         RecommendationOutboxEventKind @map("event_kind")
+  schemaVersion     String                       @map("schema_version")
+  deduplicationKey  String                       @unique @map("deduplication_key")
+  payload           Json
+  status            RecommendationOutboxStatus   @default(PENDING)
+  attemptCount      Int                          @default(0) @map("attempt_count")
+  availableAt       DateTime                     @default(now()) @map("available_at")
+  lockedAt          DateTime?                    @map("locked_at")
+  lockToken         String?                      @map("lock_token")
+  processedAt       DateTime?                    @map("processed_at")
+  lastErrorCode     String?                      @map("last_error_code")
+  lastErrorSummary  String?                      @map("last_error_summary")
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  updatedAt         DateTime                     @updatedAt @map("updated_at")
+
+  @@index([status, availableAt, createdAt])
+  @@index([lockedAt])
+  @@index([processedAt])
+  @@index([createdAt])
+  @@map("recommendation_event_outbox")
 }

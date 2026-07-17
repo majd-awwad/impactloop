@@ -47,7 +47,7 @@ The recommendation system must optimize for useful and feasible material reuse, 
 
 ## Phase 1 Observability Domain
 
-Recommendation generation, HTTP exposure, bounded candidate trace, impression, and attributed-action models remain available in normalized PostgreSQL tables, together with their domain service and tests. The awaited synchronous request-path integration was rejected and removed; the event tables may remain empty until a durable asynchronous delivery strategy is accepted. See `events.md` and `version-registry.md` for the retained domain contract and current baseline version.
+Recommendation generation, HTTP exposure, bounded candidate trace, impression, and attributed-action models remain available in normalized PostgreSQL tables. Learner Home and section requests now enqueue bounded generation/exposure envelopes through `RecommendationEventOutbox`; an opt-in worker materializes the retained generation/request/trace/impression rows with at-least-once idempotent delivery. The awaited synchronous request-path integration remains rejected. Action attribution, headers, and CORS changes remain inactive. See `events.md`, `outbox.md`, and `version-registry.md` for the delivery contract and baseline versions.
 
 ## Required Reading Rules
 

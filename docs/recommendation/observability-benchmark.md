@@ -1,38 +1,35 @@
-# Phase 1 Observability Benchmark
+# Phase 1B Recommendation Outbox Benchmark
 
-Date: 2026-07-17  
-Environment: local Windows development database, existing seeded learner dataset  
-Instrumentation: temporary Prisma query-event hook and temporary structured-log sink; both were removed after the run.
+Date: 2026-07-17
+Environment: local Windows development database, existing seeded learner dataset
+Baseline: preserved Phase 0/Phase 1 synchronous measurements, not rerun in this pass
+After harness: temporary direct-service runner, removed after the run; no production query hook was retained.
 
-## Comparison
+## Before/after comparison
 
-The before values are the preserved Phase 0 measurements. Phase 0 did not have recommendation event tables, so event rows, bulk-write count, telemetry errors, and generation/write timing were not available before this phase.
+The earlier synchronous integration is the rejected “before” implementation. The current “after” path enqueues outbox envelopes and does not await normalized generation/request/impression writes. The after latency values are one local run and include warm-up variance.
 
-| Scenario | Before latency (ms) | After latency (ms) | After response bytes | After query events | After event rows (G/R/I/T) | Logical bulk writes | Telemetry errors |
+| Scenario | Before latency evidence (ms) | After latency (ms) | After response bytes | After query events | After outbox rows (generation/exposure) | Request-path bulk enqueue calls | Telemetry errors |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Five misses | 1,485 / 1,671 / 1,621 / 1,666 / 3,346 | 2,567 / 662 / 515 / 540 / 530 | 23,917 | 71/request | 875 (5/5/115/750) | 20 | 0 |
-| Ten hits | 6–13 | 25–47 | 23,917 | 7/request | 391 (1/10/230/150) | 20 | 0 |
-| Same learner ×10 | not captured | 463–1,109 | 23,917 | overlapping concurrent hook; not de-overlapped per caller | 391 (1/10/230/150) | 22 | 0 |
-| Five distinct learners | not captured | 2,789–2,933 | 14,831–23,917 | overlapping concurrent hook; not de-overlapped per caller | 832 (5/5/101/721) | 20 | 0 |
-| Ten distinct learners | not captured | 3,381–3,744 | 14,778–23,917 | overlapping concurrent hook; not de-overlapped per caller | 1,573 (10/10/181/1,372) | 40 | 0 |
+| Five misses | 1,485 / 1,671 / 1,621 / 1,666 / 3,346 | 1,976 batch | 14,831–23,917 | not captured | 5 / 5 | 5 | 0 |
+| Ten hits | 25–47 synchronous | 41 batch | 23,917 | not captured | 1 warm-up / 11 total exposures | 11 | 0 |
+| Same learner ×10 | 463–1,109 synchronous | 219 batch | 23,917 | not captured | 1 / 10 | 10 | 0 |
+| Five distinct learners | 2,789–2,933 synchronous | 929 batch | 14,831–23,917 | not captured | 5 / 5 | 5 | 0 |
+| Ten distinct learners | 3,381–3,744 synchronous | 1,319 batch | 14,778–23,917 | not captured | 10 / 10 | 10 | 0 |
 
-`G/R/I/T` means generation, request, impression, and candidate-trace rows. Logical bulk writes count the awaited `create/upsert` or `createMany` operations in the bounded telemetry transaction; it is not a count of individual rows.
+The ten-hit row includes one cache-miss warm-up used to establish the cached envelope; the measured ten callers were hits. The outbox row total therefore includes one generation and one warm-up exposure plus ten measured exposures. “Outbox rows” counts delivery envelopes, not materialized generation/request/impression/trace rows. Each enqueue call uses one bulk `createMany`, never one insert per returned item. Concurrent callers overlap, so batch latency is not a per-caller p95 claim.
 
-The first miss includes local process/database warm-up variance. The same-learner run is the important correctness check: all ten callers shared one generation and each received a separate request plus fresh impressions. A concurrent upsert race found during the first benchmark was fixed with a concurrency-safe upsert retry and rerun with zero telemetry errors.
+The payload carried generation duration metadata of approximately 174–1,956 ms for the five-miss run, 174 ms for same-learner ×10, 623–896 ms for five distinct learners, and 906–1,305 ms for ten distinct learners. These are ranking-computation timings copied into bounded envelopes, not outbox write timings. The clean harness measured zero enqueue telemetry errors.
 
-Generation/write timing from the final sequential run, measured as recommendation-table write query duration, was 36–170 ms for five misses and 5–24 ms for ten hits. Concurrent write timings overlap and are not used as per-caller latency claims.
+## Evidence limits and gates
 
-## Gates and interpretation
-
-- Event persistence was non-fatal in the experiment: the final required scenarios recorded zero telemetry errors.
-- Candidate traces stayed bounded at 512 per generation; the observed trace rows are lower because the candidate pools are smaller.
-- The benchmark response-size increase was caused by the experimental impression IDs, which are no longer part of the active response contract.
+- Query-event counts were not captured because the clean benchmark process used the production Prisma singleton without temporary query-event hooks. The report therefore makes no claim about query-count neutrality; the implementation contains no ranking, candidate, cache-content, section-order, or extra per-item query logic.
+- Response bytes stayed at the existing service output sizes in the measured runs; the optional impression IDs are additive and are attached only to the response clone, never to the cached envelope.
+- Same-learner correctness passed: ten callers shared one generation and received ten fresh exposure/impression envelopes. The focused runtime and worker tests passed with zero failures.
+- The request-path latency gate is evaluated against the rejected synchronous implementation only as context. The asynchronous delivery path removes the awaited domain transaction from the caller critical path, but production tail latency and worker drain time still require production-like observation.
 
 ## Conclusion
 
-- Failed gates: the five-miss sample had an observed p95 of 2,567 ms, above the provisional noncached Learner Home p95 gate of 700 ms; the synchronous recommendation write path also added 71 query events per miss and one awaited telemetry transaction per exposure. The event-write query duration was 36–170 ms for misses and 5–24 ms for hits.
-- Cache behavior: cache hits did not fail the warm-home 500 ms gate, but regressed from the Phase 0 6–13 ms range to 25–47 ms; misses remained the dominant performance failure.
-- Added work: each synchronous exposure materialized generation/request/impression/trace rows in the request path, using bounded bulk writes inside an awaited transaction.
-- Rejection reason: the rejected component is synchronous request-path materialization, not the recommendation schema or event-domain model. The request path must not await this work until a durable asynchronous delivery strategy is accepted.
+The synchronous integration remains `REJECT`. The durable outbox implementation passes the local correctness, bounded-payload, one-bulk-enqueue, non-fatal-failure, cache/single-flight, and idempotent-worker gates. Adoption is conditional on production-like latency/tail measurements, pending/retry/dead monitoring, and a controlled worker enablement after migration review.
 
 No temporary benchmark files or production query hooks remain, and no production migration application or commit was performed.
