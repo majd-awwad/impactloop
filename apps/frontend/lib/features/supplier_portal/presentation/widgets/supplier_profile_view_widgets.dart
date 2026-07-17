@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
-import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_profile.dart';
 import '../theme/supplier_theme_extension.dart';
-import 'profile_completion_card.dart';
-import 'profile_material_preview_card.dart';
-import 'materials/supplier_materials_grid.dart';
 import 'supplier_location_privacy_card.dart';
 import 'supplier_pickup_map.dart';
 import 'supplier_verification_badge.dart';
@@ -25,7 +20,7 @@ class SupplierProfileHeader extends StatelessWidget {
     this.isUploadingCover = false,
   });
 
-  final SupplierProfileResponse profile;
+  final SupplierProfileManagement profile;
   final VoidCallback onEdit;
   final VoidCallback? onChangeAvatar;
   final VoidCallback? onChangeCover;
@@ -34,25 +29,15 @@ class SupplierProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final supplier = profile.supplier;
+    final identity = profile.identity;
+    final location = profile.pickupLocation;
     final colors = context.supplierColors;
-    final title = (supplier?.publicName ?? '').trim().isNotEmpty
-        ? supplier!.publicName
-        : profile.user.displayName;
-    final coverUrl = supplier?.coverImageUrl;
-    final avatarUrl = supplier?.avatarImageUrl ?? profile.user.profileImageUrl;
-    final resolvedCover = (coverUrl != null && coverUrl.trim().isNotEmpty)
-        ? ApiConfig.resolveMediaUrl(coverUrl)
-        : null;
-    final resolvedAvatar = (avatarUrl != null && avatarUrl.trim().isNotEmpty)
-        ? ApiConfig.resolveMediaUrl(avatarUrl)
-        : null;
-    final pickup = supplier?.defaultPickupLocation;
-    final city = (pickup?.city ?? '').trim();
-    final area = (pickup?.area ?? '').trim();
-    final location = [
-      if (city.isNotEmpty) city,
-      if (area.isNotEmpty) area,
+    final title = identity?.publicName.trim() ?? '';
+    final resolvedCover = _mediaUrl(identity?.coverImageUrl);
+    final resolvedAvatar = _mediaUrl(identity?.avatarImageUrl);
+    final locationLabel = [
+      if ((location?.city ?? '').trim().isNotEmpty) location!.city,
+      if ((location?.area ?? '').trim().isNotEmpty) location!.area!,
     ].join(', ');
 
     return ClipRRect(
@@ -81,7 +66,7 @@ class SupplierProfileHeader extends StatelessWidget {
                       right: 12,
                       child: _ImageActionButton(
                         icon: Icons.photo_camera_outlined,
-                        label: 'Cover',
+                        label: context.s.coverPhoto,
                         isLoading: isUploadingCover,
                         onPressed: onChangeCover!,
                       ),
@@ -107,19 +92,24 @@ class SupplierProfileHeader extends StatelessWidget {
                               Container(
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: colors.surface, width: 4),
+                                  border: Border.all(
+                                    color: colors.surface,
+                                    width: 4,
+                                  ),
                                 ),
                                 child: CircleAvatar(
                                   radius: 40,
-                                  backgroundColor:
-                                      colors.accent.withValues(alpha: 0.12),
+                                  backgroundColor: colors.accent.withValues(
+                                    alpha: 0.12,
+                                  ),
                                   foregroundImage: resolvedAvatar == null
                                       ? null
                                       : NetworkImage(resolvedAvatar),
                                   child: resolvedAvatar == null
                                       ? Text(
                                           title.isNotEmpty
-                                              ? title.characters.first.toUpperCase()
+                                              ? title.characters.first
+                                                    .toUpperCase()
                                               : 'S',
                                           style: TextStyle(
                                             fontSize: 28,
@@ -128,14 +118,14 @@ class SupplierProfileHeader extends StatelessWidget {
                                           ),
                                         )
                                       : isUploadingAvatar
-                                          ? const SizedBox(
-                                              width: 24,
-                                              height: 24,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : null,
+                                      ? const SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : null,
                                 ),
                               ),
                               if (onChangeAvatar != null && !isUploadingAvatar)
@@ -172,15 +162,17 @@ class SupplierProfileHeader extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                title,
+                                title.isEmpty
+                                    ? context.s.supplierFallbackName
+                                    : title,
                                 style: context.supplierTitle().copyWith(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w800,
-                                    ),
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
+                                ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (location.isNotEmpty) ...[
+                              if (locationLabel.isNotEmpty) ...[
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
@@ -192,7 +184,7 @@ class SupplierProfileHeader extends StatelessWidget {
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
-                                        location,
+                                        locationLabel,
                                         style: context.supplierBody(),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -212,20 +204,24 @@ class SupplierProfileHeader extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      if ((supplier?.supplierType ?? '').trim().isNotEmpty)
+                      if ((identity?.supplierType ?? '').trim().isNotEmpty)
                         _HeaderChip(
-                          label: supplier!.supplierType.replaceAll('_', ' '),
+                          label: context.s.supplierTypeLabel(
+                            identity!.supplierType,
+                          ),
                           icon: Icons.storefront_outlined,
                         ),
                       SupplierVerificationBadge(
-                        status: supplier?.verificationStatus ?? 'UNVERIFIED',
+                        status: _presentationVerificationStatus(
+                          profile.verification.status,
+                        ),
                       ),
                     ],
                   ),
-                  if ((supplier?.description ?? '').trim().isNotEmpty) ...[
+                  if ((identity?.description ?? '').trim().isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
-                      supplier!.description!,
+                      identity!.description!,
                       style: context.supplierBody(),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -236,14 +232,15 @@ class SupplierProfileHeader extends StatelessWidget {
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit_outlined, size: 18),
                     label: Text(context.s.editSupplierProfile),
-                    style: AppStatusButtonStyle.filled(
-                      context,
-                      AppStatusTone.primary,
-                    ).copyWith(
-                      minimumSize: const WidgetStatePropertyAll(
-                        Size.fromHeight(44),
-                      ),
-                    ),
+                    style:
+                        AppStatusButtonStyle.filled(
+                          context,
+                          AppStatusTone.primary,
+                        ).copyWith(
+                          minimumSize: const WidgetStatePropertyAll(
+                            Size.fromHeight(44),
+                          ),
+                        ),
                   ),
                 ],
               ),
@@ -355,448 +352,117 @@ class _ImageActionButton extends StatelessWidget {
   }
 }
 
-class SupplierProfileStatsBar extends StatelessWidget {
-  const SupplierProfileStatsBar({
-    super.key,
-    required this.stats,
-    required this.isWide,
-    this.onFollowersTap,
-  });
-
-  final SupplierProfileStats stats;
-  final bool isWide;
-  final VoidCallback? onFollowersTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      _StatItem(
-        Icons.inventory_2_outlined,
-        'Materials',
-        stats.materialsCount,
-        AppStatusTone.neutral,
-      ),
-      _StatItem(
-        Icons.people_outline,
-        'Followers',
-        stats.followersCount,
-        AppStatusTone.info,
-        onTap: stats.followersCount > 0 ? onFollowersTap : null,
-      ),
-      _StatItem(
-        Icons.visibility_outlined,
-        'Views',
-        stats.totalViews,
-        AppStatusTone.info,
-      ),
-      _StatItem(
-        Icons.favorite_border,
-        'Likes',
-        stats.totalLikes,
-        AppStatusTone.info,
-      ),
-      _StatItem(
-        Icons.check_circle_outline,
-        'Available',
-        stats.availableMaterialsCount,
-        AppStatusTone.primary,
-      ),
-      _StatItem(
-        Icons.recycling_outlined,
-        'Reused',
-        stats.reusedMaterialsCount,
-        AppStatusTone.success,
-      ),
-    ];
-
-    return AppSectionCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      borderRadius: AppRadius.lgAll,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final crossCount = isWide ? 6 : 3;
-          final itemWidth = (constraints.maxWidth - (crossCount - 1) * 8) / crossCount;
-          return Wrap(
-            spacing: 8,
-            runSpacing: 12,
-            children: items
-                .map(
-                  (item) => SizedBox(
-                    width: itemWidth,
-                    child: _StatCell(item: item),
-                  ),
-                )
-                .toList(),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _StatItem {
-  const _StatItem(
-    this.icon,
-    this.label,
-    this.value,
-    this.tone, {
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final int value;
-  final AppStatusTone tone;
-  final VoidCallback? onTap;
-}
-
-class _StatCell extends StatelessWidget {
-  const _StatCell({required this.item});
-
-  final _StatItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final statusStyle = AppStatusStyle.of(context, item.tone);
-    final cell = AppSectionCard(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      borderRadius: AppRadius.mdAll,
-      tone: item.tone,
-      child: Column(
-        children: [
-          Icon(item.icon, size: 18, color: statusStyle.foreground),
-          const SizedBox(height: 6),
-          Text(
-            '${item.value}',
-            style: context.supplierTitle().copyWith(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: statusStyle.foreground,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            item.label,
-            style: context.supplierBody().copyWith(
-                  fontSize: 11,
-                  color: context.supplierColors.textMuted,
-                ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-
-    if (item.onTap == null) {
-      return cell;
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: item.onTap,
-        borderRadius: AppRadius.mdAll,
-        child: cell,
-      ),
-    );
-  }
-}
-
-class ProfileViewBody extends StatelessWidget {
-  const ProfileViewBody({
-    super.key,
-    required this.profile,
-    required this.onViewAllMaterials,
-    required this.onAddMaterial,
-  });
-
-  final SupplierProfileResponse profile;
-  final VoidCallback onViewAllMaterials;
-  final VoidCallback onAddMaterial;
-
-  @override
-  Widget build(BuildContext context) {
-    final previewMaterials = profile.materialsPreview.take(4).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _SectionCard(
-          title: 'Latest materials',
-          actionLabel: 'View all',
-          onAction: onViewAllMaterials,
-          child: previewMaterials.isEmpty
-              ? _EmptyHint(
-                  message: 'No materials added yet.',
-                  actionLabel: 'Add material',
-                  onAction: onAddMaterial,
-                )
-              : ProfileMaterialGrid(materials: previewMaterials),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Align(
-          alignment: Alignment.centerRight,
-          child: OutlinedButton(
-            onPressed: onViewAllMaterials,
-            child: const Text('View all materials'),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class SupplierProfileTabBar extends StatelessWidget {
-  const SupplierProfileTabBar({
-    super.key,
-    required this.selectedIndex,
-    required this.onSelected,
-  });
-
-  final int selectedIndex;
-  final ValueChanged<int> onSelected;
-
-  static const _tabs = ['Overview', 'Followers', 'Detail'];
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.supplierColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Container(
-        width: double.infinity,
-        clipBehavior: Clip.none,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: colors.backgroundElevated,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.border.withValues(alpha: 0.35)),
-        ),
-        child: Row(
-          children: List.generate(_tabs.length, (index) {
-            final selected = index == selectedIndex;
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Material(
-                  color: selected ? colors.surface : Colors.transparent,
-                  elevation: selected ? 1 : 0,
-                  shadowColor: colors.cardShadow.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () => onSelected(index),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        _tabs[index],
-                        textAlign: TextAlign.center,
-                        style: context.supplierLabel().copyWith(
-                              color:
-                                  selected ? colors.accent : colors.textMuted,
-                              fontWeight: selected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
-                            ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-}
-
-class ProfileOverviewTab extends StatelessWidget {
-  const ProfileOverviewTab({
-    super.key,
-    required this.profile,
-    required this.onViewAllMaterials,
-    required this.onAddMaterial,
-  });
-
-  final SupplierProfileResponse profile;
-  final VoidCallback onViewAllMaterials;
-  final VoidCallback onAddMaterial;
-
-  @override
-  Widget build(BuildContext context) {
-    return ProfileViewBody(
-      profile: profile,
-      onViewAllMaterials: onViewAllMaterials,
-      onAddMaterial: onAddMaterial,
-    );
-  }
-}
-
-class ProfileFollowersTab extends StatelessWidget {
-  const ProfileFollowersTab({
-    super.key,
-    required this.followersCount,
-    required this.followers,
-    this.onViewAll,
-  });
-
-  final int followersCount;
-  final List<SupplierFollowerPreviewItem> followers;
-  final VoidCallback? onViewAll;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      title: 'Followers ($followersCount)',
-      actionLabel: followersCount > 0 ? 'View all' : null,
-      onAction: onViewAll,
-      child: followers.isEmpty
-          ? Text(
-              'No followers yet.',
-              style: context.supplierBody().copyWith(
-                    color: context.supplierColors.textMuted,
-                  ),
-            )
-          : Column(
-              children: [
-                for (final follower in followers) _FollowerRow(follower: follower),
-              ],
-            ),
-    );
-  }
-}
-
 class ProfileDetailsSection extends StatelessWidget {
-  const ProfileDetailsSection({super.key, required this.profile});
+  const ProfileDetailsSection({
+    super.key,
+    required this.profile,
+    this.onVerificationAction,
+  });
 
-  final SupplierProfileResponse profile;
-
-  String _displayValue(String? value) {
-    final trimmed = value?.trim() ?? '';
-    return trimmed.isEmpty ? 'Not provided yet.' : trimmed;
-  }
-
-  String _formatReviewedAt(DateTime? reviewedAt) {
-    if (reviewedAt == null || reviewedAt.millisecondsSinceEpoch <= 0) {
-      return 'Not provided yet.';
-    }
-
-    final month = reviewedAt.month.toString().padLeft(2, '0');
-    final day = reviewedAt.day.toString().padLeft(2, '0');
-    return '${reviewedAt.year}-$month-$day';
-  }
+  final SupplierProfileManagement profile;
+  final VoidCallback? onVerificationAction;
 
   @override
   Widget build(BuildContext context) {
-    final supplier = profile.supplier;
-    final location = supplier?.defaultPickupLocation;
-    final organization = supplier?.organizationProfile;
-    final workingHours = organization?.workingHours;
+    final identity = profile.identity;
+    final location = profile.pickupLocation;
+    final organization = profile.organization;
+    final hours = organization?.workingHours;
     final hoursLabel = [
-      if (workingHours?['from'] != null) workingHours!['from'],
-      if (workingHours?['to'] != null) workingHours!['to'],
-    ].join(' – ');
+      hours?['from'] ?? hours?['start'],
+      hours?['to'] ?? hours?['end'],
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' – ');
     final pickupArea = [
       location?.city,
       location?.area,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
     final pickupSummary = [
-      if ((location?.addressLine ?? '').trim().isNotEmpty) location!.addressLine,
-      if ((location?.country ?? '').trim().isNotEmpty) location?.country,
+      location?.addressLine,
+      location?.country,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ProfileCompletionCard(profile: profile),
+        _ManagementCompletionCard(completion: profile.completion),
         const SizedBox(height: AppSpacing.lg),
         _SectionCard(
-          title: 'Supplier information',
+          title: context.s.supplierProfileLabel,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _DetailRow(
                 icon: Icons.storefront_outlined,
-                label: 'Public supplier name',
-                value: _displayValue(supplier?.publicName),
+                label: context.s.publicName,
+                value: _valueOrDash(identity?.publicName),
               ),
               _DetailRow(
                 icon: Icons.category_outlined,
-                label: 'Supplier type',
-                value: _displayValue(
-                  supplier?.supplierType.replaceAll('_', ' '),
-                ),
+                label: context.s.supplierType,
+                value: identity == null || identity.supplierType.isEmpty
+                    ? '—'
+                    : context.s.supplierTypeLabel(identity.supplierType),
               ),
               _DetailRow(
                 icon: Icons.info_outline,
-                label: 'About',
-                value: _displayValue(supplier?.description),
+                label: context.s.description,
+                value: _valueOrDash(identity?.description),
               ),
               const SizedBox(height: AppSpacing.sm),
               SupplierVerificationBadge(
-                status: supplier?.verificationStatus ?? 'UNVERIFIED',
+                status: _presentationVerificationStatus(
+                  profile.verification.status,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
         _SectionCard(
-          title: 'Pickup information',
+          title: context.s.pickupLocation,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _DetailRow(
                 icon: Icons.location_city_outlined,
-                label: 'City / area',
+                label: '${context.s.city} / ${context.s.area}',
                 value: pickupArea.isEmpty
-                    ? 'Not provided yet.'
+                    ? context.s.pickupAreaNotSet
                     : pickupArea,
               ),
               _DetailRow(
                 icon: Icons.location_on_outlined,
-                label: 'Pickup location summary',
+                label: context.s.pickupCountryCity,
                 value: pickupSummary.isEmpty
-                    ? 'Not provided yet.'
+                    ? context.s.pickupAreaNotSet
                     : pickupSummary,
               ),
               _DetailRow(
-                icon: Icons.notes_outlined,
-                label: 'Pickup notes',
-                value: 'Not provided yet.',
-              ),
-              _DetailRow(
-                icon: Icons.local_shipping_outlined,
-                label: 'Pickup & delivery',
-                value: 'Not provided yet.',
-              ),
-              _DetailRow(
                 icon: Icons.calendar_today_outlined,
-                label: 'Working days',
-                value: (organization?.workingDays ?? []).isEmpty
-                    ? 'Not provided yet.'
-                    : organization!.workingDays!.join(', '),
+                label: context.s.workingDays,
+                value: organization?.workingDays?.isNotEmpty == true
+                    ? organization!.workingDays!.join(', ')
+                    : '—',
               ),
               _DetailRow(
                 icon: Icons.schedule_outlined,
-                label: 'Working hours',
-                value: hoursLabel.isEmpty ? 'Not provided yet.' : hoursLabel,
+                label: '${context.s.openFrom} / ${context.s.openUntil}',
+                value: hoursLabel.isEmpty ? '—' : hoursLabel,
               ),
-              if (location?.latitude != null && location?.longitude != null) ...[
+              if (location?.latitude != null &&
+                  location?.longitude != null) ...[
                 const SizedBox(height: AppSpacing.sm),
                 SizedBox(
                   height: 180,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: SupplierPickupMap(
-                      latitude: location?.latitude,
-                      longitude: location?.longitude,
-                      fallbackCity: location?.city,
-                      fallbackArea: location?.area,
-                      fallbackCountry: location?.country,
-                      visibility: location?.visibility,
+                      latitude: location!.latitude,
+                      longitude: location.longitude,
+                      fallbackCity: location.city,
+                      fallbackArea: location.area,
+                      fallbackCountry: location.country,
+                      visibility: location.visibility,
                     ),
                   ),
                 ),
@@ -806,16 +472,14 @@ class ProfileDetailsSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         _SectionCard(
-          title: 'Privacy / visibility',
+          title: context.s.locationPrivacy,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _DetailRow(
                 icon: Icons.visibility_outlined,
-                label: 'Location privacy status',
-                value: _displayValue(
-                  location?.visibility?.replaceAll('_', ' '),
-                ),
+                label: context.s.locationVisibility,
+                value: _visibilityLabel(context, location?.visibility),
               ),
               const SizedBox(height: AppSpacing.sm),
               SupplierLocationPrivacyCard(visibility: location?.visibility),
@@ -824,23 +488,43 @@ class ProfileDetailsSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         _SectionCard(
-          title: 'Verification',
+          title: context.s.verification,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SupplierVerificationBadge(
-                status: supplier?.verificationStatus ?? 'UNVERIFIED',
+                status: _presentationVerificationStatus(
+                  profile.verification.status,
+                ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              _DetailRow(
-                icon: Icons.feedback_outlined,
-                label: 'Admin note',
-                value: _displayValue(supplier?.verificationAdminNote),
-              ),
-              _DetailRow(
-                icon: Icons.event_outlined,
-                label: 'Reviewed date',
-                value: _formatReviewedAt(supplier?.verificationReviewedAt),
+              if ((profile.verification.adminNote ?? '').trim().isNotEmpty)
+                _DetailRow(
+                  icon: Icons.feedback_outlined,
+                  label: context.s.verificationAdminNoteLabel,
+                  value: profile.verification.adminNote!,
+                ),
+              if (profile.verification.reviewedAt != null)
+                _DetailRow(
+                  icon: Icons.event_outlined,
+                  label: context.s.dateLabel,
+                  value: _formatDate(profile.verification.reviewedAt),
+                ),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  if (onVerificationAction != null)
+                    OutlinedButton.icon(
+                      onPressed: onVerificationAction,
+                      icon: const Icon(Icons.open_in_new_outlined, size: 16),
+                      label: Text(context.s.verification),
+                    ),
+                  if (onVerificationAction == null &&
+                      (profile.verification.canSubmit ||
+                          profile.verification.canResubmit))
+                    _ReadOnlyFlag(label: context.s.verificationReadOnlyNote),
+                ],
               ),
             ],
           ),
@@ -850,37 +534,67 @@ class ProfileDetailsSection extends StatelessWidget {
   }
 }
 
-class ProfileMaterialGrid extends StatelessWidget {
-  const ProfileMaterialGrid({
-    super.key,
-    required this.materials,
-  });
+class _ManagementCompletionCard extends StatelessWidget {
+  const _ManagementCompletionCard({required this.completion});
 
-  final List<SupplierMaterialPreviewItem> materials;
+  final SupplierProfileManagementCompletion completion;
 
   @override
   Widget build(BuildContext context) {
-    return SupplierMaterialsGrid(
-      itemCount: materials.length,
-      itemBuilder: (context, index) => ProfileMaterialPreviewCard(
-        material: materials[index],
+    final total = completion.totalCount;
+    final percentage = completion.percentage.clamp(0, 100).toDouble();
+    final knownMissing = completion.missingFields
+        .map((key) => _completionLabel(context, key))
+        .whereType<String>()
+        .toList(growable: false);
+
+    return _SectionCard(
+      title: context.s.profileCompletion,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.s.essentialsComplete(completion.completedCount, total),
+            style: context.supplierLabel(),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          LinearProgressIndicator(value: percentage / 100),
+          if (knownMissing.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              knownMissing.join(', '),
+              style: context.supplierBody().copyWith(
+                color: context.supplierColors.textMuted,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ReadOnlyFlag extends StatelessWidget {
+  const _ReadOnlyFlag({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: context.supplierBody().copyWith(
+        color: context.supplierColors.textMuted,
       ),
     );
   }
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.child,
-    this.actionLabel,
-    this.onAction,
-  });
+  const _SectionCard({required this.title, required this.child});
 
   final String title;
   final Widget child;
-  final String? actionLabel;
-  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -902,67 +616,9 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(title, style: context.supplierSectionTitle()),
-              ),
-              if (actionLabel != null && onAction != null)
-                TextButton(onPressed: onAction, child: Text(actionLabel!)),
-            ],
-          ),
+          Text(title, style: context.supplierSectionTitle()),
           const SizedBox(height: AppSpacing.sm),
           child,
-        ],
-      ),
-    );
-  }
-}
-
-class _FollowerRow extends StatelessWidget {
-  const _FollowerRow({required this.follower});
-
-  final SupplierFollowerPreviewItem follower;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.supplierColors;
-    final name = follower.displayName.trim().isNotEmpty
-        ? follower.displayName
-        : follower.email;
-    final resolved = (follower.profileImageUrl != null &&
-            follower.profileImageUrl!.trim().isNotEmpty)
-        ? ApiConfig.resolveMediaUrl(follower.profileImageUrl!)
-        : null;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: colors.accent.withValues(alpha: 0.12),
-            foregroundImage: resolved == null ? null : NetworkImage(resolved),
-            child: resolved == null
-                ? Text(
-                    name.characters.first.toUpperCase(),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: colors.accent,
-                      fontSize: 12,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              name,
-              style: context.supplierLabel(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
         ],
       ),
     );
@@ -997,14 +653,11 @@ class _DetailRow extends StatelessWidget {
                 Text(
                   label,
                   style: context.supplierBody().copyWith(
-                        fontSize: 12,
-                        color: colors.textMuted,
-                      ),
+                    fontSize: 12,
+                    color: colors.textMuted,
+                  ),
                 ),
-                Text(
-                  value.isEmpty ? 'Not provided yet.' : value,
-                  style: context.supplierLabel(),
-                ),
+                Text(value, style: context.supplierLabel()),
               ],
             ),
           ),
@@ -1014,30 +667,45 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
-class _EmptyHint extends StatelessWidget {
-  const _EmptyHint({
-    required this.message,
-    required this.actionLabel,
-    required this.onAction,
-  });
+String? _mediaUrl(String? value) {
+  if (value == null || value.trim().isEmpty) return null;
+  return ApiConfig.resolveMediaUrl(value);
+}
 
-  final String message;
-  final String actionLabel;
-  final VoidCallback onAction;
+String _presentationVerificationStatus(String status) {
+  return status.trim().toUpperCase() == 'APPROVED' ? 'VERIFIED' : status;
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.supplierColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          message,
-          style: context.supplierBody().copyWith(color: colors.textMuted),
-        ),
-        const SizedBox(height: 8),
-        TextButton(onPressed: onAction, child: Text(actionLabel)),
-      ],
-    );
-  }
+String _visibilityLabel(BuildContext context, String? value) {
+  if (value == null || value.trim().isEmpty) return '—';
+  final normalized = value.trim().toUpperCase();
+  return switch (normalized) {
+    'PUBLIC' => context.s.visibilityPublic,
+    'ORDER_ONLY' => context.s.visibilityOrderOnly,
+    'PRIVATE' => context.s.visibilityPrivate,
+    _ => context.s.locationVisibility,
+  };
+}
+
+String? _completionLabel(BuildContext context, String key) {
+  return switch (key.trim().toUpperCase()) {
+    'PUBLIC_NAME' => context.s.publicName,
+    'SUPPLIER_TYPE' => context.s.supplierType,
+    'DESCRIPTION' => context.s.description,
+    'PICKUP_LOCATION' => context.s.pickupCountryCity,
+    'LOCATION_VISIBILITY' => context.s.locationVisibility,
+    _ => null,
+  };
+}
+
+String _valueOrDash(String? value) {
+  final trimmed = value?.trim() ?? '';
+  return trimmed.isEmpty ? '—' : trimmed;
+}
+
+String _formatDate(DateTime? value) {
+  if (value == null) return '—';
+  final month = value.month.toString().padLeft(2, '0');
+  final day = value.day.toString().padLeft(2, '0');
+  return '${value.year}-$month-$day';
 }

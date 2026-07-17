@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
-import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_section_card.dart';
+import '../../../profile/application/profile_providers.dart';
+import '../../application/supplier_verification_access.dart'
+    show supplierVerificationPendingRoute, supplierVerificationStatusRoute;
 import '../../data/supplier_location_service.dart';
 import '../../data/models/reverse_geocode_result.dart';
 import '../../data/models/supplier_profile.dart';
@@ -20,7 +22,6 @@ import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_location_input_mode.dart';
 import '../widgets/supplier_profile_edit_settings.dart';
 import '../widgets/supplier_profile_form.dart';
-import '../../../materials/data/material_listing_data_providers.dart';
 import '../widgets/supplier_pickup_map.dart';
 import '../widgets/supplier_profile_view_widgets.dart';
 import '../widgets/supplier_reverse_geocode_state.dart';
@@ -31,7 +32,7 @@ class SupplierProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(supplierProfileProvider);
+    final profile = ref.watch(supplierProfileManagementProvider);
 
     return profile.when(
       data: (data) => _SupplierProfileContent(profile: data),
@@ -48,7 +49,7 @@ class SupplierProfilePage extends ConsumerWidget {
 class _SupplierProfileContent extends ConsumerStatefulWidget {
   const _SupplierProfileContent({required this.profile});
 
-  final SupplierProfileResponse profile;
+  final SupplierProfileManagement profile;
 
   @override
   ConsumerState<_SupplierProfileContent> createState() =>
@@ -81,7 +82,6 @@ class _SupplierProfileContentState
   bool _isSaving = false;
   bool _isUploadingAvatar = false;
   bool _isUploadingCover = false;
-  int _profileTabIndex = 0;
   int _draftTick = 0;
   double? _latitude;
   double? _longitude;
@@ -133,23 +133,20 @@ class _SupplierProfileContentState
   }
 
   void _restoreManualAddressFromProfile() {
-    final location = widget.profile.supplier?.defaultPickupLocation;
+    final location = widget.profile.pickupLocation;
     _countryController.text = location?.country ?? '';
     _cityController.text = location?.city ?? '';
     _areaController.text = location?.area ?? '';
     _addressLineController.text = location?.addressLine ?? '';
   }
 
-  void _applyProfile(SupplierProfileResponse profile) {
-    final supplier = profile.supplier;
-    final location = supplier?.defaultPickupLocation;
-    final organization = supplier?.organizationProfile;
-    final businessLocation = organization?.businessLocation;
+  void _applyProfile(SupplierProfileManagement profile) {
+    final identity = profile.identity;
+    final location = profile.pickupLocation;
+    final organization = profile.organization;
 
-    _publicNameController.text = supplier?.publicName.isNotEmpty == true
-        ? supplier!.publicName
-        : profile.user.displayName;
-    _descriptionController.text = supplier?.description ?? '';
+    _publicNameController.text = identity?.publicName ?? '';
+    _descriptionController.text = identity?.description ?? '';
     _countryController.text = location?.country ?? '';
     _cityController.text = location?.city ?? '';
     _areaController.text = location?.area ?? '';
@@ -158,19 +155,26 @@ class _SupplierProfileContentState
     _contactPersonController.text = organization?.contactPersonName ?? '';
     _workingDaysController.text = organization?.workingDays?.join(', ') ?? '';
     _workingFromController.text =
-        organization?.workingHours?['from']?.toString() ?? '';
+        organization?.workingHours?['from']?.toString() ??
+        organization?.workingHours?['start']?.toString() ??
+        '';
     _workingToController.text =
-        organization?.workingHours?['to']?.toString() ?? '';
-    _businessCountryController.text = businessLocation?.country ?? '';
-    _businessCityController.text = businessLocation?.city ?? '';
-    _businessAreaController.text = businessLocation?.area ?? '';
-    _businessAddressLineController.text = businessLocation?.addressLine ?? '';
-    _supplierType = supplierTypeValues.contains(supplier?.supplierType)
-        ? supplier!.supplierType
+        organization?.workingHours?['to']?.toString() ??
+        organization?.workingHours?['end']?.toString() ??
+        '';
+    _businessCountryController.clear();
+    _businessCityController.clear();
+    _businessAreaController.clear();
+    _businessAddressLineController.clear();
+    _supplierType = supplierTypeValues.contains(identity?.supplierType)
+        ? identity!.supplierType
         : 'INDIVIDUAL_SUPPLIER';
-    _visibility = location?.visibility ?? 'ORDER_ONLY';
+    final visibility = location?.visibility?.trim().toUpperCase();
+    _visibility = const {'PUBLIC', 'ORDER_ONLY', 'PRIVATE'}.contains(visibility)
+        ? visibility!
+        : 'ORDER_ONLY';
     _isApproximate = location?.isApproximate ?? true;
-    _useSeparateBusinessLocation = businessLocation != null;
+    _useSeparateBusinessLocation = false;
     _latitude = location?.latitude;
     _longitude = location?.longitude;
     _locationInputMode = SupplierLocationInputMode.manual;
@@ -332,7 +336,7 @@ class _SupplierProfileContentState
       _reverseGeocodeState = SupplierReverseGeocodeState.idle;
       _locationButtonState = SupplierLocationButtonState.idle;
       if (_latitude == null && _longitude == null) {
-        final savedLocation = widget.profile.supplier?.defaultPickupLocation;
+        final savedLocation = widget.profile.pickupLocation;
         _latitude = savedLocation?.latitude;
         _longitude = savedLocation?.longitude;
       }
@@ -400,10 +404,14 @@ class _SupplierProfileContentState
     try {
       final helper = SupplierProfileImageHelper(
         ref.read(supplierProfileRepositoryProvider),
-        ref.read(materialListingRepositoryProvider),
+        ref.read(profileRepositoryProvider),
       );
       await helper.pickUploadAndSave(kind);
-      final _ = await ref.refresh(supplierProfileProvider.future);
+      ref.invalidate(supplierProfileManagementProvider);
+      await ref.read(supplierProfileManagementProvider.future);
+      if (kind == SupplierProfileImageKind.avatar) {
+        ref.invalidate(supplierProfileProvider);
+      }
       if (!mounted) {
         return;
       }
@@ -436,6 +444,11 @@ class _SupplierProfileContentState
     final l = context.s;
     final profile = widget.profile;
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
+    final verificationAction = profile.verification.canResubmit
+        ? () => context.go(supplierVerificationStatusRoute)
+        : profile.verification.canSubmit
+        ? () => context.go(supplierVerificationPendingRoute)
+        : null;
 
     if (_isEditing) {
       return SingleChildScrollView(
@@ -617,76 +630,12 @@ class _SupplierProfileContentState
             isUploadingCover: _isUploadingCover,
           ),
           const SizedBox(height: AppSpacing.lg),
-          SupplierProfileStatsBar(
-            stats: profile.stats,
-            isWide: isWide,
-            onFollowersTap: profile.stats.followersCount > 0
-                ? () => _showFollowersDialog(context, profile)
-                : null,
-          ),
           const SizedBox(height: AppSpacing.xl),
-          SupplierProfileTabBar(
-            selectedIndex: _profileTabIndex,
-            onSelected: (index) => setState(() => _profileTabIndex = index),
+          ProfileDetailsSection(
+            profile: profile,
+            onVerificationAction: verificationAction,
           ),
-          const SizedBox(height: AppSpacing.xl),
-          switch (_profileTabIndex) {
-            0 => ProfileOverviewTab(
-              profile: profile,
-              onViewAllMaterials: () => context.push('/supplier/materials'),
-              onAddMaterial: () => context.push('/supplier/materials/new'),
-            ),
-            1 => ProfileFollowersTab(
-              followersCount: profile.stats.followersCount,
-              followers: profile.latestFollowers,
-              onViewAll: profile.stats.followersCount > 0
-                  ? () => _showFollowersDialog(context, profile)
-                  : null,
-            ),
-            2 => ProfileDetailsSection(profile: profile),
-            _ => const SizedBox.shrink(),
-          },
         ],
-      ),
-    );
-  }
-
-  void _showFollowersDialog(
-    BuildContext context,
-    SupplierProfileResponse profile,
-  ) {
-    final followers = profile.latestFollowers;
-    showDialog<void>(
-      context: context,
-      builder: (context) => AppDialogShell(
-        title: Text('Followers (${profile.stats.followersCount})'),
-        content: followers.isEmpty
-            ? const Text('No followers yet.')
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final follower in followers)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        child: Text(
-                          (follower.displayName.isNotEmpty
-                                  ? follower.displayName
-                                  : follower.email)
-                              .characters
-                              .first
-                              .toUpperCase(),
-                        ),
-                      ),
-                      title: Text(
-                        follower.displayName.isNotEmpty
-                            ? follower.displayName
-                            : follower.email,
-                      ),
-                      subtitle: Text(follower.email),
-                    ),
-                ],
-              ),
       ),
     );
   }
@@ -732,7 +681,9 @@ class _SupplierProfileContentState
         );
       }
       await ref.read(supplierProfileRepositoryProvider).updateProfile(request);
-      final refreshed = await ref.refresh(supplierProfileProvider.future);
+      final refreshed = await ref.refresh(
+        supplierProfileManagementProvider.future,
+      );
       ref.invalidate(supplierDashboardProvider);
       if (!mounted) {
         return;
@@ -861,7 +812,8 @@ class _SupplierProfileError extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               OutlinedButton.icon(
-                onPressed: () => ref.invalidate(supplierProfileProvider),
+                onPressed: () =>
+                    ref.invalidate(supplierProfileManagementProvider),
                 icon: const Icon(Icons.refresh),
                 label: Text(l.tryAgain),
               ),
