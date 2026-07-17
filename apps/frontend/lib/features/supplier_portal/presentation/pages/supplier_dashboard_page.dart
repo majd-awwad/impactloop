@@ -68,9 +68,13 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
       builder: (context, constraints) {
         final compact =
             constraints.maxWidth < AppSpacing.supplierLayoutBreakpoint;
+        final phone = constraints.maxWidth < 600;
+        final pagePadding = phone
+            ? const EdgeInsets.all(AppSpacing.sm + AppSpacing.xs)
+            : context.supplierDecorations.pagePadding(compact: compact);
 
         return SingleChildScrollView(
-          padding: context.supplierDecorations.pagePadding(compact: compact),
+          padding: pagePadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -118,15 +122,16 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                 SupplierDashboardHero(
                   supplier: widget.dashboard.supplier!,
                   compact: compact,
+                  mobile: phone,
                 ),
-              const SizedBox(height: AppSpacing.lg),
+              SizedBox(height: phone ? AppSpacing.sm : AppSpacing.lg),
               SupplierDashboardMainStatGrid(
                 activeMaterials: stats.materials.available,
                 pendingRequests: stats.reservations.pending,
                 scheduledPickups: scheduledPickups,
                 reusedMaterials: stats.materials.reused,
               ),
-              const SizedBox(height: AppSpacing.sm),
+              SizedBox(height: phone ? AppSpacing.xs : AppSpacing.sm),
               SupplierDashboardSecondaryMetricsRow(
                 totalMaterials: stats.materials.total,
                 availableMaterials: stats.materials.available,
@@ -135,10 +140,13 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                 totalLikes: stats.engagement.totalLikes,
                 followersCount: stats.engagement.followersCount,
               ),
-              const SizedBox(height: AppSpacing.xl),
+              SizedBox(height: phone ? AppSpacing.md : AppSpacing.xl),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final operations = _OperationsSnapshotPanel(stats: stats);
+                  final operations = _OperationsSnapshotPanel(
+                    stats: stats,
+                    mobile: phone,
+                  );
                   final impact = SupplierProjectImpactPanel(
                     projectSupport: widget.dashboard.projectSupport,
                   );
@@ -171,7 +179,7 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                     children: [
                       operations,
                       if (widget.dashboard.hasSupplierProfile) ...[
-                        const SizedBox(height: AppSpacing.lg),
+                        SizedBox(height: phone ? AppSpacing.md : AppSpacing.lg),
                         impact,
                         const SizedBox(height: AppSpacing.lg),
                         engagement,
@@ -266,15 +274,17 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
 }
 
 class _OperationsSnapshotPanel extends StatelessWidget {
-  const _OperationsSnapshotPanel({required this.stats});
+  const _OperationsSnapshotPanel({required this.stats, required this.mobile});
 
   final SupplierDashboardStats stats;
+  final bool mobile;
 
   @override
   Widget build(BuildContext context) {
     final reservationChart = SupplierDashboardChartCard(
       title: context.s.reservationStatus,
       subtitle: context.s.chartReservationSubtitle,
+      compact: mobile,
       child: SupplierReservationStatusChart(
         pending: stats.reservations.pending,
         accepted: stats.reservations.accepted,
@@ -284,18 +294,20 @@ class _OperationsSnapshotPanel extends StatelessWidget {
     final materialsChart = SupplierDashboardChartCard(
       title: context.s.materialsStatus,
       subtitle: context.s.chartMaterialsSubtitle,
+      compact: mobile,
       child: SupplierMaterialsStatusChart(
         available: stats.materials.available,
         reservedOrPending:
             stats.materials.reserved + stats.materials.pendingReservation,
         reused: stats.materials.reused,
         unavailable: stats.materials.unavailable,
+        compact: mobile,
       ),
     );
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(mobile ? AppSpacing.md : AppSpacing.lg),
       decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +316,7 @@ class _OperationsSnapshotPanel extends StatelessWidget {
             context.s.operationsSnapshot,
             style: context.supplierSectionTitle(),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: mobile ? AppSpacing.sm : AppSpacing.md),
           LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth >= 680) {
@@ -320,7 +332,7 @@ class _OperationsSnapshotPanel extends StatelessWidget {
               return Column(
                 children: [
                   reservationChart,
-                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(height: mobile ? AppSpacing.sm : AppSpacing.md),
                   materialsChart,
                 ],
               );

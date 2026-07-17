@@ -17,6 +17,9 @@ import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/supplier_feedback.dart';
 
 const _contentMaxWidth = 1440.0;
+const _supplierPhoneBreakpoint = 600.0;
+const _mobileSummaryGridGap = AppSpacing.sm + AppSpacing.xs;
+const _mobileSummaryCardAspectRatio = 1.55;
 const _deliveryHandledCompleteMessage =
     'This reservation is handled by delivery. The driver will mark it completed.';
 
@@ -405,7 +408,10 @@ class _OperationalSummary extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 1120
+            final mobile = constraints.maxWidth < _supplierPhoneBreakpoint;
+            final columns = mobile
+                ? 2
+                : constraints.maxWidth >= 1120
                 ? 4
                 : constraints.maxWidth >= 420
                 ? 2
@@ -413,12 +419,19 @@ class _OperationalSummary extends StatelessWidget {
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                crossAxisSpacing: AppSpacing.md,
-                mainAxisSpacing: AppSpacing.md,
-                mainAxisExtent: 82,
-              ),
+              gridDelegate: mobile
+                  ? const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: _mobileSummaryGridGap,
+                      mainAxisSpacing: _mobileSummaryGridGap,
+                      childAspectRatio: _mobileSummaryCardAspectRatio,
+                    )
+                  : SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: AppSpacing.md,
+                      mainAxisSpacing: AppSpacing.md,
+                      mainAxisExtent: 82,
+                    ),
               itemCount: cards.length,
               itemBuilder: (context, index) {
                 final item = cards[index];
@@ -427,6 +440,7 @@ class _OperationalSummary extends StatelessWidget {
                   label: item.$2,
                   count: item.$3,
                   tone: item.$4,
+                  compact: mobile,
                 );
               },
             );
@@ -440,11 +454,18 @@ class _OperationalSummary extends StatelessWidget {
 enum _SummaryTone { action, waiting, progress, review }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.icon, required this.label, required this.count, required this.tone});
+  const _SummaryCard({
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.tone,
+    this.compact = false,
+  });
   final IconData icon;
   final String label;
   final int count;
   final _SummaryTone tone;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -457,7 +478,10 @@ class _SummaryCard extends StatelessWidget {
     };
     final emphasized = count > 0;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+      padding: EdgeInsetsDirectional.symmetric(
+        horizontal: compact ? AppSpacing.sm + 2 : AppSpacing.md,
+        vertical: compact ? AppSpacing.sm : 12,
+      ),
       decoration: BoxDecoration(
         color: colors.surfaceSolid,
         border: Border.all(color: colors.border.withValues(alpha: .5)),
@@ -466,11 +490,15 @@ class _SummaryCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            width: 38,
-            height: 38,
+            padding: EdgeInsets.all(compact ? AppSpacing.xs + 2 : 8),
+            width: compact ? 32 : 38,
+            height: compact ? 32 : 38,
             decoration: BoxDecoration(color: semantic.withValues(alpha: emphasized ? .13 : .06), borderRadius: AppRadius.mdAll),
-            child: Icon(icon, color: semantic.withValues(alpha: emphasized ? 1 : .55), size: 20),
+            child: Icon(
+              icon,
+              color: semantic.withValues(alpha: emphasized ? 1 : .55),
+              size: compact ? 18 : 20,
+            ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(child: Column(
@@ -479,7 +507,15 @@ class _SummaryCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text('$count', style: context.supplierSectionTitle().copyWith(fontSize: 19, color: emphasized ? semantic : colors.textPrimary)),
-                Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.supplierBody().copyWith(fontSize: 12, color: colors.textSecondary)),
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.supplierBody().copyWith(
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),

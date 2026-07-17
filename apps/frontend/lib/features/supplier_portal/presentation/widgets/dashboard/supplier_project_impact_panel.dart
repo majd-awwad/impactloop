@@ -14,6 +14,7 @@ class SupplierProjectImpactPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final mobile = MediaQuery.sizeOf(context).width < 600;
     final metrics = [
       _ImpactMetric(
         label: context.s.projectImpactProjectsSupported,
@@ -37,7 +38,7 @@ class SupplierProjectImpactPanel extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(mobile ? AppSpacing.md : AppSpacing.lg),
       decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,7 +47,7 @@ class SupplierProjectImpactPanel extends StatelessWidget {
             context.s.projectImpactTitle,
             style: context.supplierSectionTitle(),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: mobile ? AppSpacing.xs : AppSpacing.sm),
           Text(
             projectSupport.hasImpact
                 ? context.s.projectImpactDescription
@@ -59,7 +60,7 @@ class SupplierProjectImpactPanel extends StatelessWidget {
               height: 1.35,
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: mobile ? AppSpacing.md : AppSpacing.lg),
           LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth >= 360) {
@@ -67,7 +68,8 @@ class SupplierProjectImpactPanel extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     for (var index = 0; index < metrics.length; index++) ...[
-                      if (index > 0) const SizedBox(width: AppSpacing.md),
+                      if (index > 0)
+                        SizedBox(width: mobile ? AppSpacing.sm : AppSpacing.md),
                       Expanded(
                         child: _ImpactMetricItem(metric: metrics[index]),
                       ),
@@ -79,7 +81,8 @@ class SupplierProjectImpactPanel extends StatelessWidget {
               return Column(
                 children: [
                   for (var index = 0; index < metrics.length; index++) ...[
-                    if (index > 0) const SizedBox(height: AppSpacing.md),
+                    if (index > 0)
+                      SizedBox(height: mobile ? AppSpacing.sm : AppSpacing.md),
                     _ImpactMetricItem(metric: metrics[index]),
                   ],
                 ],
@@ -114,10 +117,13 @@ class _ImpactMetricItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
+    final mobile = MediaQuery.sizeOf(context).width < 600;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.all(
+        MediaQuery.sizeOf(context).width < 600 ? 10 : AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: colors.backgroundElevated.withValues(alpha: 0.34),
         borderRadius: AppRadius.mdAll,
@@ -127,19 +133,25 @@ class _ImpactMetricItem extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: mobile ? 32 : 36,
+            height: mobile ? 32 : 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: metric.accentColor.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(metric.icon, color: metric.accentColor, size: 18),
+            child: Icon(
+              metric.icon,
+              color: metric.accentColor,
+              size: mobile ? 16 : 18,
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          SizedBox(height: mobile ? AppSpacing.sm : AppSpacing.md),
           Text(
             metric.value,
-            style: context.supplierSectionTitle().copyWith(fontSize: 22),
+            style: context.supplierSectionTitle().copyWith(
+              fontSize: mobile ? 20 : 22,
+            ),
           ),
           const SizedBox(height: 2),
           Text(

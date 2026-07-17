@@ -14,6 +14,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
     required this.helperText,
     required this.icon,
     required this.tone,
+    this.mobile = false,
     this.highlight = false,
   });
 
@@ -22,6 +23,7 @@ class SupplierDashboardStatCard extends StatelessWidget {
   final String helperText;
   final IconData icon;
   final AppStatusTone tone;
+  final bool mobile;
   final bool highlight;
 
   @override
@@ -31,25 +33,29 @@ class SupplierDashboardStatCard extends StatelessWidget {
     final statusStyle = AppStatusStyle.of(context, tone);
 
     return AppSectionCard(
-      height: 136,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      height: mobile ? 108 : 136,
+      padding: EdgeInsets.all(mobile ? AppSpacing.md : AppSpacing.lg),
       tone: tone,
       emphasized: highlight,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: mobile ? 36 : 40,
+            height: mobile ? 36 : 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: statusStyle.background,
               borderRadius: AppRadius.mdAll,
               border: Border.all(color: statusStyle.border),
             ),
-            child: Icon(icon, color: statusStyle.foreground, size: 21),
+            child: Icon(
+              icon,
+              color: statusStyle.foreground,
+              size: mobile ? 19 : 21,
+            ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          SizedBox(width: mobile ? AppSpacing.xs : AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +136,10 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1180
+        final mobile = constraints.maxWidth < 600;
+        final columns = mobile
+            ? 1
+            : constraints.maxWidth >= 1180
             ? 4
             : constraints.maxWidth >= 520
             ? 2
@@ -144,6 +153,7 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             helperText: context.s.statHelperVisibleToLearners,
             icon: Icons.inventory_2_outlined,
             tone: AppStatusTone.success,
+            mobile: mobile,
           ),
           SupplierDashboardStatCard(
             label: context.s.statPendingRequests,
@@ -151,6 +161,7 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             helperText: context.s.statHelperWaitingResponse,
             icon: Icons.inbox_outlined,
             tone: AppStatusTone.warning,
+            mobile: mobile,
             highlight: pendingRequests > 0,
           ),
           SupplierDashboardStatCard(
@@ -159,6 +170,7 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             helperText: context.s.statHelperAcceptedPickups,
             icon: Icons.local_shipping_outlined,
             tone: AppStatusTone.info,
+            mobile: mobile,
           ),
           SupplierDashboardStatCard(
             label: context.s.statReusedMaterials,
@@ -166,12 +178,13 @@ class SupplierDashboardMainStatGrid extends StatelessWidget {
             helperText: context.s.statHelperCompletedReuse,
             icon: Icons.recycling_outlined,
             tone: AppStatusTone.primary,
+            mobile: mobile,
           ),
         ];
 
         return Wrap(
-          spacing: AppSpacing.lg,
-          runSpacing: AppSpacing.lg,
+          spacing: mobile ? AppSpacing.sm : AppSpacing.lg,
+          runSpacing: mobile ? AppSpacing.sm : AppSpacing.lg,
           children: [
             for (final card in cards) SizedBox(width: cardWidth, child: card),
           ],
@@ -240,14 +253,17 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
       ),
     ];
 
+    final mobile = MediaQuery.sizeOf(context).width < 600;
+
     return AppSectionCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: mobile ? AppSpacing.sm : AppSpacing.md,
+        vertical: mobile ? AppSpacing.sm : AppSpacing.md,
       ),
       borderRadius: AppRadius.mdAll,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final mobile = constraints.maxWidth < 600;
           final columns = constraints.maxWidth >= 1180
               ? 6
               : constraints.maxWidth >= 640
@@ -260,8 +276,8 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
               columns;
 
           return Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
+            spacing: mobile ? AppSpacing.sm : AppSpacing.md,
+            runSpacing: mobile ? AppSpacing.sm : AppSpacing.md,
             children: [
               for (var index = 0; index < metrics.length; index++)
                 SizedBox(
@@ -269,6 +285,7 @@ class SupplierDashboardSecondaryMetricsRow extends StatelessWidget {
                   child: _SecondaryMetricItem(
                     metric: metrics[index],
                     showDivider: columns == 6 && index < metrics.length - 1,
+                    mobile: mobile,
                   ),
                 ),
             ],
@@ -294,10 +311,15 @@ class _SecondaryMetric {
 }
 
 class _SecondaryMetricItem extends StatelessWidget {
-  const _SecondaryMetricItem({required this.metric, required this.showDivider});
+  const _SecondaryMetricItem({
+    required this.metric,
+    required this.showDivider,
+    required this.mobile,
+  });
 
   final _SecondaryMetric metric;
   final bool showDivider;
+  final bool mobile;
 
   @override
   Widget build(BuildContext context) {
@@ -305,8 +327,10 @@ class _SecondaryMetricItem extends StatelessWidget {
     final statusStyle = AppStatusStyle.of(context, metric.tone);
 
     return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      height: mobile ? 56 : 70,
+      padding: EdgeInsets.symmetric(
+        horizontal: mobile ? AppSpacing.sm : AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         border: showDivider
             ? BorderDirectional(
@@ -316,8 +340,12 @@ class _SecondaryMetricItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(metric.icon, size: 18, color: statusStyle.foreground),
-          const SizedBox(width: AppSpacing.md),
+          Icon(
+            metric.icon,
+            size: mobile ? 16 : 18,
+            color: statusStyle.foreground,
+          ),
+          SizedBox(width: mobile ? AppSpacing.sm : AppSpacing.md),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

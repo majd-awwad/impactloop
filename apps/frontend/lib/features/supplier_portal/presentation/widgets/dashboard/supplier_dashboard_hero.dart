@@ -12,10 +12,12 @@ class SupplierDashboardHero extends StatelessWidget {
     super.key,
     required this.supplier,
     required this.compact,
+    required this.mobile,
   });
 
   final SupplierDashboardProfile supplier;
   final bool compact;
+  final bool mobile;
 
   @override
   Widget build(BuildContext context) {
@@ -24,12 +26,18 @@ class SupplierDashboardHero extends StatelessWidget {
         ? supplier.publicName.trim()
         : context.s.supplierFallbackName;
 
-    final content = _HeroContent(name: name);
+    final content = _HeroContent(name: name, mobile: mobile);
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 252),
-      padding: EdgeInsets.all(compact ? AppSpacing.lg : AppSpacing.xl),
+      constraints: BoxConstraints(minHeight: mobile ? 0 : 252),
+      padding: EdgeInsets.all(
+        mobile
+            ? AppSpacing.md
+            : compact
+            ? AppSpacing.lg
+            : AppSpacing.xl,
+      ),
       decoration: context.supplierDecorations.heroPanel,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -65,9 +73,10 @@ class SupplierDashboardHero extends StatelessWidget {
 }
 
 class _HeroContent extends StatelessWidget {
-  const _HeroContent({required this.name});
+  const _HeroContent({required this.name, required this.mobile});
 
   final String name;
+  final bool mobile;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +94,7 @@ class _HeroContent extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        SizedBox(height: mobile ? AppSpacing.xs : AppSpacing.sm),
         Text(
           context.s.dashboardWelcomeName(name),
           maxLines: 2,
@@ -95,45 +104,48 @@ class _HeroContent extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        SizedBox(height: mobile ? AppSpacing.xs : AppSpacing.sm),
         Text(
           context.s.dashboardHeroSubtitle,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: context.supplierBody().copyWith(color: colors.textSecondary),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: mobile ? AppSpacing.md : AppSpacing.lg),
         Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
+          spacing: mobile ? AppSpacing.xs : AppSpacing.sm,
+          runSpacing: mobile ? AppSpacing.xs : AppSpacing.sm,
           children: [
             _HeroChip(
               label: context.s.heroChipSupplierActive,
               icon: Icons.verified_outlined,
+              compact: mobile,
             ),
             _HeroChip(
               label: context.s.heroChipPickupEnabled,
               icon: Icons.local_shipping_outlined,
+              compact: mobile,
             ),
             _HeroChip(
               label: context.s.heroChipNisListings,
               icon: Icons.payments_outlined,
+              compact: mobile,
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        SizedBox(height: mobile ? AppSpacing.md : AppSpacing.lg),
         Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
+          spacing: mobile ? AppSpacing.xs : AppSpacing.sm,
+          runSpacing: mobile ? AppSpacing.xs : AppSpacing.sm,
           children: [
             FilledButton.icon(
               onPressed: () => context.push('/supplier/materials/new'),
               style: AppStatusButtonStyle.filled(
                 context,
                 AppStatusTone.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.md,
+                padding: EdgeInsets.symmetric(
+                  horizontal: mobile ? AppSpacing.md : AppSpacing.lg,
+                  vertical: mobile ? AppSpacing.sm : AppSpacing.md,
                 ),
               ),
               icon: const Icon(Icons.add_rounded, size: 18),
@@ -147,9 +159,9 @@ class _HeroContent extends StatelessWidget {
                   color: colors.borderFocused.withValues(alpha: 0.55),
                 ),
                 shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.md,
+                padding: EdgeInsets.symmetric(
+                  horizontal: mobile ? AppSpacing.md : AppSpacing.lg,
+                  vertical: mobile ? AppSpacing.sm : AppSpacing.md,
                 ),
               ),
               icon: const Icon(Icons.inbox_outlined, size: 18),
@@ -163,19 +175,24 @@ class _HeroContent extends StatelessWidget {
 }
 
 class _HeroChip extends StatelessWidget {
-  const _HeroChip({required this.label, required this.icon});
+  const _HeroChip({
+    required this.label,
+    required this.icon,
+    required this.compact,
+  });
 
   final String label;
   final IconData icon;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? AppSpacing.xs + 2 : AppSpacing.sm,
+        vertical: compact ? 2 : AppSpacing.xs,
       ),
       decoration: context.supplierDecorations.badge(
         background: colors.chipUnselected.withValues(alpha: 0.85),
@@ -183,8 +200,8 @@ class _HeroChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: colors.accent),
-          const SizedBox(width: 6),
+          Icon(icon, size: compact ? 13 : 14, color: colors.accent),
+          SizedBox(width: compact ? AppSpacing.xs : 6),
           Text(label, style: context.supplierChip()),
         ],
       ),
