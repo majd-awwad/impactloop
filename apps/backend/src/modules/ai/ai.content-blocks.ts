@@ -156,6 +156,29 @@ export const aiRecommendationsBlockSchema = z.object({
     .max(10),
 });
 
+export const aiBuildStepGuideBlockSchema = z.object({
+  type: z.literal('build_step_guide'),
+  projectBuildId: z.string().trim().min(1),
+  projectId: z.string().trim().min(1),
+  projectTitle: z.string().trim().min(1),
+  projectStepId: z.string().trim().min(1),
+  stepNumber: z.number().int().positive(),
+  totalSteps: z.number().int().nonnegative(),
+  title: z.string().trim().min(1),
+  description: z.string().trim().min(1),
+  imageUrl: z.string().url().nullable().optional(),
+  progressPercent: z.number().int().min(0).max(100),
+  completedSteps: z.number().int().nonnegative(),
+  materialReadiness: z.object({
+    ready: z.number().int().nonnegative(),
+    linked: z.number().int().nonnegative(),
+    reserved: z.number().int().nonnegative(),
+    missing: z.number().int().nonnegative(),
+    total: z.number().int().nonnegative(),
+  }),
+  stepStatus: z.literal('CURRENT'),
+});
+
 export const aiActionConfirmationBlockSchema = z.object({
   type: z.literal('action_confirmation'),
   pendingActionId: z.string().trim().min(1),
@@ -222,6 +245,7 @@ export const aiContentBlockSchema = z.discriminatedUnion('type', [
   aiComponentMatchesBlockSchema,
   aiComparisonBlockSchema,
   aiRecommendationsBlockSchema,
+  aiBuildStepGuideBlockSchema,
   aiActionConfirmationBlockSchema,
   aiActionResultBlockSchema,
   aiExternalSourcesBlockSchema,

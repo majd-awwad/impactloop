@@ -259,6 +259,29 @@ void main() {
       expect(block.expiresAt, isNotNull);
     });
 
+    test('parses grouped build ownership confirmation block', () {
+      final block = AiContentBlock.fromJson({
+        'type': 'action_confirmation',
+        'pendingActionId': 'pending-build-1',
+        'actionType': 'UPDATE_BUILD_COMPONENT_STATUSES',
+        'title': 'Mark components as already owned?',
+        'summary':
+            'I will mark these components as already owned:\n- LED\n- Resistor',
+        'target': {
+          'type': 'BUILD',
+          'id': 'build-1',
+          'title': 'Solar night light',
+        },
+        'confirmLabel': 'Confirm',
+        'cancelLabel': 'Cancel',
+      });
+
+      expect(block.actionType, 'UPDATE_BUILD_COMPONENT_STATUSES');
+      expect(block.actionSummary, contains('LED'));
+      expect(block.actionSummary, contains('Resistor'));
+      expect(block.actionTarget?.type, 'BUILD');
+    });
+
     test('parses action_result block', () {
       final block = AiContentBlock.fromJson({
         'type': 'action_result',

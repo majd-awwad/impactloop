@@ -26,6 +26,7 @@ export const createConversation = async (input: {
   mode: AiConversationMode;
   locale: string;
   title?: string | null;
+  projectBuildId?: string | null;
 }) =>
   prisma.aiConversation.create({
     data: {
@@ -33,6 +34,7 @@ export const createConversation = async (input: {
       mode: input.mode,
       locale: input.locale,
       title: input.title ?? null,
+      projectBuildId: input.projectBuildId ?? null,
     },
   });
 
@@ -49,6 +51,7 @@ export const listConversationsForUser = async (input: {
         userId: input.userId,
         status,
         mode: 'GENERAL_LEARNING',
+        projectBuildId: null,
       },
       orderBy: [{ lastMessageAt: 'desc' }, { updatedAt: 'desc' }],
       skip: input.offset,
@@ -65,6 +68,7 @@ export const listConversationsForUser = async (input: {
         userId: input.userId,
         status,
         mode: 'GENERAL_LEARNING',
+        projectBuildId: null,
       },
     }),
   ]);
@@ -322,4 +326,37 @@ export const appendActionResultToAssistantMessage = async (input: {
   }
 
   return null;
+};
+
+export const getOrCreateBuildGuideConversation = async (input: {
+  userId: string;
+  projectBuildId: string;
+  locale?: string;
+  projectTitle?: string | null;
+}) => {
+  const existing = await prisma.aiConversation.findFirst({
+    where: {
+      userId: input.userId,
+      projectBuildId: input.projectBuildId,
+    },
+  });
+
+  if (existing) {
+    if (existing.status === 'ARCHIVED') {
+      return prisma.aiConversation.update({
+        where: { id: existing.id },
+        data: { status: 'ACTIVE' },
+      });
+    }
+
+    return existing;
+  }
+
+  return createConversation({
+    userId: input.userId,
+    mode: 'GENERAL_LEARNING',
+    locale: input.locale ?? 'en',
+    title: input.projectTitle ? `Build guide: ${input.projectTitle}` : 'Build guide',
+    projectBuildId: input.projectBuildId,
+  });
 };

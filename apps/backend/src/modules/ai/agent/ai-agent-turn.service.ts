@@ -1,4 +1,5 @@
 import { env, isAiChatProviderOperational } from '../../../config/env.js';
+import { prisma } from '../../../database/prisma.js';
 import { AppError } from '../../../utils/app-error.js';
 import { logger } from '../../../observability/logger.js';
 import {
@@ -22,7 +23,9 @@ import {
 } from './ai-agent-safety-guard.service.js';
 import { getAiChatProvider } from '../providers/ai-chat-provider.factory.js';
 import type { AiLocale } from '../ai.types.js';
-import { prepareAiPendingAction, buildMaterialSavePayload, buildProjectSavePayload, buildStartBuildPayload, buildLinkMaterialPayload, buildUnsaveMaterialPayload, buildUnsaveProjectPayload, buildUnlinkMaterialPayload, buildReservationPayload, saveReservationDraft, cancelReservationDraft, findActiveReservationDraft } from '../ai-action.service.js';
+import { prepareAiPendingAction, buildMaterialSavePayload, buildProjectSavePayload, buildStartBuildPayload, buildLinkMaterialPayload, buildUnsaveMaterialPayload, buildUnsaveProjectPayload, buildUnlinkMaterialPayload, buildReservationPayload, buildUpdateBuildComponentStatusesPayload, saveReservationDraft, cancelReservationDraft, findActiveReservationDraft } from '../ai-action.service.js';
+import * as learningProjectsRepository from '../../learning-projects/learning-projects.repository.js';
+import { normalizeArabicVariants } from './ai-agent-filter-extractor.service.js';
 import { prepareMaterialReservationPayloadSchema } from '../ai-action.payloads.js';
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import type { AiPendingActionType } from '../../../generated/prisma/client.js';
@@ -36,6 +39,10 @@ import { resolveAgentExecutionPlan } from './ai-agent-plan-resolver.service.js';
 import { resolveAgentRoute } from './ai-agent-router.service.js';
 import {
   resolveConversationReferences,
+  resolveBuildGuideReservationTarget,
+  resolveBuildGuideUnlinkTarget,
+  resolveBuildItemIdForLinkedMaterial,
+  detectBuildGuideLinkAction,
   resolveBuildIdForUserMessage,
   resolveLatestBuildId,
   resolveLinkActionTargets,
@@ -49,11 +56,13 @@ import {
 import { detectComparisonFollowUpIntent, extractProjectTitleQuery } from './ai-agent-filter-extractor.service.js';
 import type { AiAgentRouteType, AiToolExecutionContext } from './ai-agent.types.js';
 import { AiToolExecutor } from './ai-tool-executor.service.js';
-import { mergeAgentBlocks } from './ai-tool-mappers.js';
+import { mergeAgentBlocks, buildComponentMatchesIntro } from './ai-tool-mappers.js';
 import {
   buildExternalSourcesBlock,
   searchExternalDomainKnowledge,
 } from '../ai-external-knowledge.service.js';
+import { tryHandleBuildGuideMaterialTurn } from './ai-build-guide-material-turn.service.js';
+import { tryHandleBuildGuideStepTurn } from './ai-build-guide-step-turn.service.js';
 
 const resolveActionFromMessage = (
   userMessage: string,
@@ -77,6 +86,13 @@ const resolveActionFromMessage = (
     return 'START_PROJECT_BUILD';
   }
   if (
+    /(فك الربط|فك ربط|الغ.? الربط|شيل المادة المربوطة|افصل المادة عن المكون|unlink it|remove the linked material)/i.test(
+      text,
+    )
+  ) {
+    return 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT';
+  }
+  if (
     (/(فك الربط|فك ربط|unlink)/i.test(text) && /(مكون|component|هالمكون|هالكومبوننت)/i.test(text)) ||
     (/(الغ|إلغاء|unlink).*(ربط|link)/i.test(text) && /(مادة|material|مكون|component)/i.test(text))
   ) {
@@ -85,7 +101,7 @@ const resolveActionFromMessage = (
   if (/\bunlink\b/i.test(text) && /\b(material|component)\b/i.test(text)) {
     return 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT';
   }
-  if (/(اربط|link).*(مادة|material)/i.test(text) && !/\bunlink\b/i.test(text)) {
+  if (detectBuildGuideLinkAction(userMessage) && !/\bunlink\b/i.test(text)) {
     return 'LINK_MATERIAL_TO_BUILD_COMPONENT';
   }
   if (/(احفظ|save)/i.test(text) && (/(مشروع|project)/i.test(text) || /(أسهل|اسهل|easier)/i.test(text))) {
@@ -106,6 +122,530 @@ const resolveActionFromMessage = (
     return 'UNSAVE_PROJECT';
   }
   return null;
+};
+
+type BuildComponentOwnershipDirection = 'ALREADY_OWNED' | 'MISSING';
+
+const normalizeComponentReference = (value: string) =>
+  normalizeArabicVariants(
+    value
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+  );
+
+const parseSearchKeywords = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => normalizeComponentReference(entry))
+    .filter((entry) => entry.length > 0);
+};
+
+const detectBuildComponentOwnershipDirection = (
+  message: string,
+): BuildComponentOwnershipDirection | null => {
+  const text = message.trim();
+  if (
+    /(?:فكرت|thought).*(?:مش\s+موجود|not\s+(?:there|available)|missing)/i.test(text) ||
+    /(?:مش\s+موجود|not\s+(?:there|available)).*(?:بس|but)/i.test(text)
+  ) {
+    return 'MISSING';
+  }
+
+  if (
+    /(?:ما\s+عندي|مش\s+عندي|مش\s+موجودة?\s+عندي|طلع\s+ما\s+عندي|don't\s+have|do\s+not\s+have|i\s+don't\s+have|mark.*missing)/i.test(
+      text,
+    )
+  ) {
+    return 'MISSING';
+  }
+
+  if (
+    /(?:عندي|موجود\s+عندي|بملك|already\s+have|i\s+have|already\s+owned|mark.*already\s+owned)/i.test(
+      text,
+    )
+  ) {
+    return 'ALREADY_OWNED';
+  }
+
+  return null;
+};
+
+const isAllMaterialsPhrase = (message: string) =>
+  /(?:كل\s*المواد|all\s+(?:the\s+)?materials)/i.test(message);
+
+// Safe explicit separators only — Arabic و after whitespace requires candidate-aware validation.
+const EXPLICIT_COMPONENT_REFERENCE_SEPARATORS =
+  /\s+and\s+|,\s*|،\s*|\s+و\s+|(?<=[A-Za-z0-9])(?:\s*)و(?=\S)/iu;
+
+const getUniqueComponentMatch = (
+  reference: string,
+  candidates: BuildComponentReferenceCandidate[],
+): BuildComponentReferenceCandidate | null => {
+  const scored = candidates
+    .map((candidate) => ({
+      candidate,
+      score: scoreComponentReferenceMatch(reference, candidate),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((left, right) => right.score - left.score);
+
+  if (scored.length === 0) {
+    return null;
+  }
+
+  const topScore = scored[0]!.score;
+  const topMatches = scored.filter((entry) => entry.score === topScore);
+  if (topMatches.length > 1) {
+    return null;
+  }
+
+  return scored[0]!.candidate;
+};
+
+const splitSegmentWithCandidateAwareness = (
+  segment: string,
+  candidates: BuildComponentReferenceCandidate[],
+): string[] => {
+  const trimmed = segment.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  if (getUniqueComponentMatch(trimmed, candidates)) {
+    return [trimmed];
+  }
+
+  const positions: number[] = [];
+  const conjunctionPattern = /\s+و(?=\S)/gu;
+  let match: RegExpExecArray | null;
+  while ((match = conjunctionPattern.exec(trimmed)) !== null) {
+    positions.push(match.index);
+  }
+
+  const validSplits: string[][] = [];
+  for (const position of positions) {
+    const left = trimmed.slice(0, position).trim();
+    const rightPart = trimmed.slice(position).trim();
+    const right = rightPart.replace(/^و\s*/, '').trim();
+    if (!left || !right) {
+      continue;
+    }
+
+    const leftMatch = getUniqueComponentMatch(left, candidates);
+    const rightMatch = getUniqueComponentMatch(right, candidates);
+    if (
+      leftMatch &&
+      rightMatch &&
+      leftMatch.buildItemId !== rightMatch.buildItemId
+    ) {
+      validSplits.push([left, right]);
+    }
+  }
+
+  if (validSplits.length === 1) {
+    return validSplits[0]!;
+  }
+
+  return [trimmed];
+};
+
+export type BuildComponentReferenceCandidate = {
+  buildItemId: string;
+  requiredComponentId: string;
+  componentName: string;
+  status: string;
+  aliases: string[];
+};
+
+export const extractComponentReferencePhrases = (
+  message: string,
+  candidates: BuildComponentReferenceCandidate[] = [],
+) => {
+  let text = message.trim();
+  text = text
+    .replace(
+      /^(?:please\s+)?(?:mark\s+(?:the\s+)?|سجل\s+|حدّد\s+)/i,
+      '',
+    )
+    .replace(/(?:as\s+)?(?:already\s+owned|missing)\.?$/i, '')
+    .replace(
+      /(?:ما\s+عندي|مش\s+عندي|مش\s+موجودة?\s+عندي|طلع\s+ما\s+عندي|don't\s+have|do\s+not\s+have|i\s+don't\s+have|already\s+have|i\s+have|already\s+owned|عندي|موجود\s+عندي|بملك)/gi,
+      ' ',
+    )
+    .replace(/(?:كل\s*المواد|all\s+(?:the\s+)?materials)/gi, ' ')
+    .trim();
+
+  if (!text) {
+    return [] as string[];
+  }
+
+  const explicitSegments = text
+    .split(EXPLICIT_COMPONENT_REFERENCE_SEPARATORS)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+
+  if (candidates.length === 0) {
+    return explicitSegments;
+  }
+
+  return explicitSegments.flatMap((segment) =>
+    splitSegmentWithCandidateAwareness(segment, candidates),
+  );
+};
+
+type BuildComponentCandidate = BuildComponentReferenceCandidate;
+
+export const toBuildComponentCandidates = (
+  build: NonNullable<
+    Awaited<ReturnType<typeof learningProjectsRepository.findOwnedProjectBuildByBuildId>>
+  >,
+): BuildComponentCandidate[] =>
+  build.items.map((item) => ({
+    buildItemId: item.id,
+    requiredComponentId: item.requiredComponentId,
+    componentName: item.requiredComponent.componentName,
+    status: item.status,
+    aliases: [
+      normalizeComponentReference(item.requiredComponent.componentName),
+      normalizeComponentReference(item.requiredComponent.materialType),
+      ...parseSearchKeywords(item.requiredComponent.searchKeywords),
+      ...parseSearchKeywords(item.requiredComponent.alternativeKeywords),
+    ].filter((alias, index, all) => alias.length > 0 && all.indexOf(alias) === index),
+  }));
+
+const scoreComponentReferenceMatch = (
+  reference: string,
+  candidate: BuildComponentCandidate,
+) => {
+  const normalizedReference = normalizeComponentReference(reference);
+  if (!normalizedReference) {
+    return 0;
+  }
+
+  if (candidate.aliases.includes(normalizedReference)) {
+    return 100;
+  }
+
+  const exactName = normalizeComponentReference(candidate.componentName);
+  if (
+    exactName === normalizedReference ||
+    exactName.includes(normalizedReference) ||
+    normalizedReference.includes(exactName)
+  ) {
+    return 90;
+  }
+
+  for (const alias of candidate.aliases) {
+    if (alias.includes(normalizedReference) || normalizedReference.includes(alias)) {
+      return 75;
+    }
+  }
+
+  return 0;
+};
+
+export const resolveBuildComponentReferences = (input: {
+  references: string[];
+  candidates: BuildComponentCandidate[];
+}) => {
+  const matched = new Map<string, BuildComponentCandidate>();
+  const unknown: string[] = [];
+  const ambiguous: Array<{ reference: string; options: string[] }> = [];
+
+  for (const reference of input.references) {
+    const scored = input.candidates
+      .map((candidate) => ({
+        candidate,
+        score: scoreComponentReferenceMatch(reference, candidate),
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => right.score - left.score);
+
+    if (scored.length === 0) {
+      unknown.push(reference);
+      continue;
+    }
+
+    const topScore = scored[0]!.score;
+    const topMatches = scored.filter((entry) => entry.score === topScore);
+    if (topMatches.length > 1) {
+      ambiguous.push({
+        reference,
+        options: topMatches.map((entry) => entry.candidate.componentName),
+      });
+      continue;
+    }
+
+    matched.set(scored[0]!.candidate.buildItemId, scored[0]!.candidate);
+  }
+
+  return {
+    matched: [...matched.values()],
+    unknown,
+    ambiguous,
+  };
+};
+
+const buildComponentClarificationText = (input: {
+  locale: AiLocale;
+  unknown: string[];
+  ambiguous: Array<{ reference: string; options: string[] }>;
+  mixedKnown?: string[];
+}) => {
+  const lines: string[] = [];
+
+  if (input.unknown.length > 0) {
+    lines.push(
+      input.locale === 'ar'
+        ? `هذه المكونات ليست جزءاً من مشروع البناء الحالي: ${input.unknown.join('، ')}.`
+        : `These components are not part of the current build: ${input.unknown.join(', ')}.`,
+    );
+  }
+
+  if (input.mixedKnown && input.mixedKnown.length > 0) {
+    lines.push(
+      input.locale === 'ar'
+        ? `المكونات المعروفة: ${input.mixedKnown.join('، ')}.`
+        : `Recognized components: ${input.mixedKnown.join(', ')}.`,
+    );
+  }
+
+  for (const entry of input.ambiguous) {
+    lines.push(
+      input.locale === 'ar'
+        ? `"${entry.reference}" يطابق أكثر من مكوّن: ${entry.options.join('، ')}. حدّد الاسم الدقيق.`
+        : `"${entry.reference}" matches more than one component: ${entry.options.join(', ')}. Reply with the exact option.`,
+    );
+  }
+
+  return lines.join('\n');
+};
+
+const tryHandleBuildGuideComponentOwnershipTurn = async (input: {
+  userMessage: string;
+  locale: AiLocale;
+  conversationId: string;
+  authenticatedUserId: string;
+  clientMessageId: string;
+  projectBuildId: string;
+}): Promise<AgentTurnExecutionResult | null> => {
+  const direction = detectBuildComponentOwnershipDirection(input.userMessage);
+  if (!direction) {
+    return null;
+  }
+
+  const rawBuild = await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+    input.projectBuildId,
+    input.authenticatedUserId,
+  );
+
+  if (!rawBuild) {
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? 'لا يمكن الوصول إلى مشروع البناء المرتبط بهذه المحادثة.'
+            : 'The build linked to this conversation is not accessible.',
+          'clarification',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'ACTION_REQUEST',
+    };
+  }
+
+  if (rawBuild.status === 'ARCHIVED') {
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? 'لا يمكن تعديل قائمة مواد هذا البناء.'
+            : 'This build checklist can no longer be edited.',
+          'clarification',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'ACTION_REQUEST',
+    };
+  }
+
+  const candidates = toBuildComponentCandidates(rawBuild);
+  const targetStatus = direction;
+  let selectedCandidates: BuildComponentCandidate[] = [];
+
+  if (direction === 'ALREADY_OWNED' && isAllMaterialsPhrase(input.userMessage)) {
+    selectedCandidates = candidates.filter(
+      (candidate) => candidate.status !== 'ALREADY_OWNED',
+    );
+
+    if (selectedCandidates.length === 0) {
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? 'جميع المواد المطلوبة محددة مسبقاً كموجودة لديك.'
+              : 'All required materials are already marked as already owned.',
+            'answer',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+  } else {
+    const references = extractComponentReferencePhrases(input.userMessage, candidates);
+    if (references.length === 0) {
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? 'حدّد المكوّن أو المكوّنات التي تريد تحديثها.'
+              : 'Specify which component or components you want to update.',
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    const resolution = resolveBuildComponentReferences({
+      references,
+      candidates,
+    });
+
+    if (resolution.unknown.length > 0 || resolution.ambiguous.length > 0) {
+      return {
+        blocks: [
+          textBlock(
+            buildComponentClarificationText({
+              locale: input.locale,
+              unknown: resolution.unknown,
+              ambiguous: resolution.ambiguous,
+              mixedKnown: resolution.matched.map((item) => item.componentName),
+            }),
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    selectedCandidates = resolution.matched;
+  }
+
+  const changingCandidates = selectedCandidates.filter(
+    (candidate) => candidate.status !== targetStatus,
+  );
+  const alreadyCorrect = selectedCandidates.filter(
+    (candidate) => candidate.status === targetStatus,
+  );
+
+  if (changingCandidates.length === 0) {
+    const names = selectedCandidates.map((item) => item.componentName).join(
+      input.locale === 'ar' ? '، ' : ', ',
+    );
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? `${names} ${targetStatus === 'ALREADY_OWNED' ? 'محددة مسبقاً كموجودة لديك.' : 'محددة مسبقاً كغير موجودة.'}`
+            : `${names} ${targetStatus === 'ALREADY_OWNED' ? 'is already marked as already owned.' : 'is already marked as missing.'}`,
+          'answer',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'ACTION_REQUEST',
+    };
+  }
+
+  const payload = buildUpdateBuildComponentStatusesPayload({
+    projectId: rawBuild.projectId,
+    buildId: rawBuild.id,
+    projectTitle: rawBuild.project.title,
+    targetStatus,
+    items: changingCandidates.map((candidate) => ({
+      buildItemId: candidate.buildItemId,
+      requiredComponentId: candidate.requiredComponentId,
+      componentName: candidate.componentName,
+      previousStatus: candidate.status as
+        | 'MISSING'
+        | 'ALREADY_OWNED'
+        | 'AVAILABLE'
+        | 'RESERVED'
+        | 'ALTERNATIVE',
+    })),
+  });
+
+  const prepared = await prepareAiPendingAction({
+    userId: input.authenticatedUserId,
+    conversationId: input.conversationId,
+    actionType: 'UPDATE_BUILD_COMPONENT_STATUSES',
+    payload,
+    idempotencyKey: `${input.clientMessageId}:UPDATE_BUILD_COMPONENT_STATUSES:${rawBuild.id}:${changingCandidates
+      .map((item) => item.buildItemId)
+      .sort()
+      .join(',')}:${targetStatus}`,
+    locale: input.locale,
+  });
+
+  const intro =
+    input.locale === 'ar'
+      ? alreadyCorrect.length > 0
+        ? `سأحدّث المكوّنات التالية. ${alreadyCorrect.map((item) => item.componentName).join('، ')} محددة مسبقاً كما طلبت.\n`
+        : 'راجع التفاصيل ثم أكّد التحديث:'
+      : alreadyCorrect.length > 0
+        ? `I will update the components below. ${alreadyCorrect.map((item) => item.componentName).join(', ')} is already in the requested state.\n`
+        : 'Review the details, then confirm the update:';
+
+  return {
+    blocks: mergeAgentBlocks(intro, [prepared.block]),
+    usedProvider: false,
+    providerName: 'system',
+    model: null,
+    latencyMs: null,
+    inputTokens: null,
+    outputTokens: null,
+    route: 'ACTION_REQUEST',
+  };
 };
 
 const futurePickupWindow = (hoursFromNow = 48, durationHours = 2) => {
@@ -280,6 +820,7 @@ const buildActionPayload = async (input: {
   userMessage: string;
   conversationId: string;
   authenticatedUserId: string;
+  trustedProjectBuildId?: string;
 }) => {
   const viewer = { sub: input.authenticatedUserId, roles: ['LEARNER'] as const };
 
@@ -329,7 +870,7 @@ const buildActionPayload = async (input: {
   }
 
   if (input.actionType === 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT') {
-    let buildId = await resolveLatestBuildId(input.conversationId);
+    let buildId = input.trustedProjectBuildId ?? await resolveLatestBuildId(input.conversationId);
     if (!buildId) {
       const builds = await listActiveProjectBuildsForLearner(input.authenticatedUserId);
       buildId = builds[0]?.id ?? null;
@@ -440,6 +981,19 @@ const reservationClarification = (
     ? 'أكمل تفاصيل الحجز قبل التأكيد.'
     : 'Complete the reservation details before confirming.';
 };
+
+const reservationPayloadWithBuildItem = (input: {
+  materialId: string;
+  buildItemId?: string | null;
+  parameters: Parameters<typeof buildReservationPayload>[0]['parameters'];
+  displaySnapshot: { title: string; summary: string };
+}) =>
+  buildReservationPayload({
+    materialId: input.materialId,
+    buildItemId: input.buildItemId ?? undefined,
+    parameters: input.parameters,
+    displaySnapshot: input.displaySnapshot,
+  });
 
 const handleReservationDraftContinuation = async (input: {
   userMessage: string;
@@ -589,12 +1143,24 @@ const handleReservationDraftContinuation = async (input: {
 
   const viewer = { sub: input.authenticatedUserId, roles: ['LEARNER'] as const };
   const material = await getMaterialById(draftPayload.target.materialId, viewer);
+  const conversation = await prisma.aiConversation.findUnique({
+    where: { id: input.conversationId },
+    select: { projectBuildId: true },
+  });
+  const buildItemId = conversation?.projectBuildId
+    ? await resolveBuildItemIdForLinkedMaterial({
+        trustedProjectBuildId: conversation.projectBuildId,
+        materialId: material.id,
+        authenticatedUserId: input.authenticatedUserId,
+      })
+    : null;
   const prepared = await prepareAiPendingAction({
     userId: input.authenticatedUserId,
     conversationId: input.conversationId,
     actionType: 'CONFIRM_MATERIAL_RESERVATION',
-    payload: buildReservationPayload({
+    payload: reservationPayloadWithBuildItem({
       materialId: material.id,
+      buildItemId,
       parameters: {
         quantityRequested: merged.quantityRequested!,
         fulfillmentMethod: merged.fulfillmentMethod!,
@@ -626,12 +1192,35 @@ const handleReservationDraftContinuation = async (input: {
   };
 };
 
+const buildLinkedItemsClarification = (
+  locale: AiLocale,
+  items: Array<{ componentName: string; materialTitle: string }>,
+): string => {
+  const lines = items
+    .map((item) => `- ${item.componentName}: ${item.materialTitle}`)
+    .join('\n');
+
+  return locale === 'ar'
+    ? `أي مادة مربوطة تقصد؟\n${lines}`
+    : `Which linked material do you mean?\n${lines}`;
+};
+
+const buildUnlinkConfirmationSnapshot = (target: {
+  projectTitle: string;
+  componentName: string;
+  materialTitle: string;
+}) => ({
+  title: target.projectTitle,
+  summary: `${target.componentName} — ${target.materialTitle}`,
+});
+
 const handleActionRequestTurn = async (input: {
   userMessage: string;
   locale: AiLocale;
   conversationId: string;
   authenticatedUserId: string;
   clientMessageId: string;
+  trustedProjectBuildId?: string;
 }): Promise<AgentTurnExecutionResult | null> => {
   const actionType = resolveActionFromMessage(input.userMessage);
   if (!actionType) {
@@ -655,6 +1244,83 @@ const handleActionRequestTurn = async (input: {
   }
 
   if (actionType === 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT') {
+    if (input.trustedProjectBuildId) {
+      const resolution = await resolveBuildGuideUnlinkTarget({
+        conversationId: input.conversationId,
+        userMessage: input.userMessage,
+        trustedProjectBuildId: input.trustedProjectBuildId,
+        authenticatedUserId: input.authenticatedUserId,
+      });
+
+      if (resolution.kind === 'ambiguous') {
+        return {
+          blocks: [
+            textBlock(
+              buildLinkedItemsClarification(input.locale, resolution.items),
+              'clarification',
+            ),
+          ],
+          usedProvider: false,
+          providerName: 'system',
+          model: null,
+          latencyMs: null,
+          inputTokens: null,
+          outputTokens: null,
+          route: 'ACTION_REQUEST',
+        };
+      }
+
+      if (resolution.kind === 'not_found') {
+        return {
+          blocks: [
+            textBlock(
+              input.locale === 'ar'
+                ? 'لم أجد رابطاً حالياً لإلغائه.'
+                : 'I could not find a current link to remove.',
+              'clarification',
+            ),
+          ],
+          usedProvider: false,
+          providerName: 'system',
+          model: null,
+          latencyMs: null,
+          inputTokens: null,
+          outputTokens: null,
+          route: 'ACTION_REQUEST',
+        };
+      }
+
+      const prepared = await prepareAiPendingAction({
+        userId: input.authenticatedUserId,
+        conversationId: input.conversationId,
+        actionType,
+        payload: buildUnlinkMaterialPayload({
+          projectId: resolution.target.projectId,
+          buildId: resolution.target.buildId,
+          buildItemId: resolution.target.buildItemId,
+          displaySnapshot: buildUnlinkConfirmationSnapshot(resolution.target),
+        }),
+        idempotencyKey: `${input.clientMessageId}:${actionType}:${resolution.target.buildItemId}`,
+        locale: input.locale,
+      });
+
+      return {
+        blocks: mergeAgentBlocks(
+          input.locale === 'ar'
+            ? 'راجع التفاصيل ثم أكّد الإجراء:'
+            : 'Review the details, then confirm:',
+          [prepared.block],
+        ),
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
     const built = await buildActionPayload({
       actionType,
       targetId: '',
@@ -662,6 +1328,7 @@ const handleActionRequestTurn = async (input: {
       userMessage: input.userMessage,
       conversationId: input.conversationId,
       authenticatedUserId: input.authenticatedUserId,
+      trustedProjectBuildId: input.trustedProjectBuildId,
     });
 
     if (built && 'error' in built) {
@@ -738,6 +1405,7 @@ const handleActionRequestTurn = async (input: {
     }
 
     const buildId =
+      input.trustedProjectBuildId ??
       (await resolveLatestBuildId(input.conversationId)) ??
       (
         await resolveBuildIdForUserMessage({
@@ -830,6 +1498,194 @@ const handleActionRequestTurn = async (input: {
         displaySnapshot: { title: material.title, summary: material.title },
       }),
       idempotencyKey: `${input.clientMessageId}:${actionType}:${material.id}:${missingItem.id}`,
+      locale: input.locale,
+    });
+
+    return {
+      blocks: mergeAgentBlocks(
+        input.locale === 'ar'
+          ? 'راجع التفاصيل ثم أكّد الإجراء:'
+          : 'Review the details, then confirm:',
+        [prepared.block],
+      ),
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'ACTION_REQUEST',
+    };
+  }
+
+  if (
+    actionType === 'PREPARE_MATERIAL_RESERVATION' &&
+    input.trustedProjectBuildId
+  ) {
+    const resolution = await resolveBuildGuideReservationTarget({
+      conversationId: input.conversationId,
+      userMessage: input.userMessage,
+      trustedProjectBuildId: input.trustedProjectBuildId,
+      authenticatedUserId: input.authenticatedUserId,
+    });
+
+    if (resolution.kind === 'ambiguous') {
+      return {
+        blocks: [
+          textBlock(
+            buildLinkedItemsClarification(input.locale, resolution.items),
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    if (resolution.kind === 'active_reservation') {
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? `يوجد حجز نشط بالفعل لـ ${resolution.target.materialTitle} (${resolution.target.componentName}): ${resolution.reservationStatusLabel}.`
+              : `There is already an active reservation for ${resolution.target.materialTitle} (${resolution.target.componentName}): ${resolution.reservationStatusLabel}.`,
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    if (resolution.kind === 'not_eligible') {
+      const message =
+        resolution.reason === 'material_unavailable'
+          ? input.locale === 'ar'
+            ? 'المادة المربوطة لم تعد متاحة للحجز.'
+            : 'The linked material is no longer available to reserve.'
+          : input.locale === 'ar'
+            ? 'المادة لم تعد مربوطة بهذا المكوّن.'
+            : 'The material is no longer linked to that component.';
+      return {
+        blocks: [textBlock(message, 'clarification')],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    if (resolution.kind === 'not_found') {
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? 'لم أجد مادة مربوطة يمكن حجزها. اربط مادة أولاً أو حدّد المكوّن.'
+              : 'I could not find a linked material to reserve. Link a material first or specify the component.',
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    const built = await buildActionPayload({
+      actionType,
+      targetId: resolution.target.materialId,
+      referenceKind: 'MATERIAL',
+      userMessage: input.userMessage,
+      conversationId: input.conversationId,
+      authenticatedUserId: input.authenticatedUserId,
+      trustedProjectBuildId: input.trustedProjectBuildId,
+    });
+
+    if (built && 'missing' in built) {
+      await saveReservationDraft({
+        userId: input.authenticatedUserId,
+        conversationId: input.conversationId,
+        materialId: resolution.target.materialId,
+        parameters: {},
+        locale: input.locale,
+      });
+
+      return {
+        blocks: [
+          textBlock(reservationClarification(input.locale, built.missing), 'clarification'),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    if (!built || 'error' in built) {
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? 'تعذّر تجهيز الحجز للمادة المربوطة.'
+              : 'Could not prepare a reservation for the linked material.',
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    const prepared = await prepareAiPendingAction({
+      userId: input.authenticatedUserId,
+      conversationId: input.conversationId,
+      actionType: built.actionType,
+      payload:
+        built.actionType === 'CONFIRM_MATERIAL_RESERVATION'
+          ? reservationPayloadWithBuildItem({
+              materialId: resolution.target.materialId,
+              buildItemId: resolution.target.buildItemId,
+              parameters: (
+                built.payload as {
+                  parameters: Parameters<
+                    typeof buildReservationPayload
+                  >[0]['parameters'];
+                  displaySnapshot: { title: string; summary: string };
+                }
+              ).parameters,
+              displaySnapshot: (
+                built.payload as {
+                  displaySnapshot: { title: string; summary: string };
+                }
+              ).displaySnapshot,
+            })
+          : built.payload,
+      idempotencyKey: `${input.clientMessageId}:${built.actionType}:${resolution.target.materialId}`,
       locale: input.locale,
     });
 
@@ -1162,40 +2018,6 @@ const buildProjectComponentsIntro = (locale: AiLocale, projectTitle?: string): s
     : projectTitle
       ? `Here are the required components for ${projectTitle}.`
       : 'Here are the required components for the selected project.';
-
-const formatComponentNameList = (names: string[], locale: AiLocale): string => {
-  if (names.length <= 1) {
-    return names[0] ?? '';
-  }
-
-  if (locale === 'ar') {
-    return `${names.slice(0, -1).join(' و')}${names.length > 1 ? ' و' : ''}${names[names.length - 1]}`;
-  }
-
-  if (names.length === 2) {
-    return `${names[0]} and ${names[1]}`;
-  }
-
-  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
-};
-
-export const buildComponentMatchesIntro = (
-  trustedBlocks: AiContentBlock[],
-  locale: AiLocale,
-): string => {
-  const matchBlock = trustedBlocks.find((block) => block.type === 'component_matches');
-  if (matchBlock?.type !== 'component_matches') {
-    return locale === 'ar'
-      ? 'هذه مواد مطابقة من ImpactLoop:'
-      : 'Here are matching materials from ImpactLoop:';
-  }
-
-  const componentNames = matchBlock.groups.map((group) => group.componentName).filter(Boolean);
-  const joined = formatComponentNameList(componentNames, locale);
-  return locale === 'ar'
-    ? `وجدت مواد مطابقة للمكونات الناقصة: ${joined}.`
-    : `I found matching materials for missing components: ${joined}.`;
-};
 
 const buildPersonalizedRecommendationIntro = (
   trustedBlocks: AiContentBlock[],
@@ -1533,6 +2355,30 @@ export const executeLearnerAgentPlatformTurn = async (input: {
 }): Promise<AgentTurnExecutionResult | null> => {
   const responseLocale = detectResponseLocale(input.userMessage, input.locale);
 
+  const conversation = await prisma.aiConversation.findFirst({
+    where: {
+      id: input.conversationId,
+      userId: input.authenticatedUserId,
+    },
+    select: {
+      projectBuildId: true,
+    },
+  });
+
+  if (conversation?.projectBuildId) {
+    const ownershipTurn = await tryHandleBuildGuideComponentOwnershipTurn({
+      userMessage: input.userMessage,
+      locale: responseLocale,
+      conversationId: input.conversationId,
+      authenticatedUserId: input.authenticatedUserId,
+      clientMessageId: input.clientMessageId,
+      projectBuildId: conversation.projectBuildId,
+    });
+    if (ownershipTurn) {
+      return ownershipTurn;
+    }
+  }
+
   const reservationContinuation = await handleReservationDraftContinuation({
     userMessage: input.userMessage,
     locale: responseLocale,
@@ -1542,6 +2388,33 @@ export const executeLearnerAgentPlatformTurn = async (input: {
   });
   if (reservationContinuation) {
     return reservationContinuation;
+  }
+
+  if (conversation?.projectBuildId) {
+    const materialTurn = await tryHandleBuildGuideMaterialTurn({
+      userMessage: input.userMessage,
+      locale: responseLocale,
+      conversationId: input.conversationId,
+      authenticatedUserId: input.authenticatedUserId,
+      clientMessageId: input.clientMessageId,
+      projectBuildId: conversation.projectBuildId,
+      handleActionRequest: handleActionRequestTurn,
+    });
+    if (materialTurn) {
+      return materialTurn;
+    }
+
+    const stepTurn = await tryHandleBuildGuideStepTurn({
+      userMessage: input.userMessage,
+      locale: responseLocale,
+      conversationId: input.conversationId,
+      authenticatedUserId: input.authenticatedUserId,
+      clientMessageId: input.clientMessageId,
+      projectBuildId: conversation.projectBuildId,
+    });
+    if (stepTurn) {
+      return stepTurn;
+    }
   }
 
   const initialRoute = resolveAgentRoute({
@@ -1582,6 +2455,7 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       conversationId: input.conversationId,
       authenticatedUserId: input.authenticatedUserId,
       clientMessageId: input.clientMessageId,
+      trustedProjectBuildId: conversation?.projectBuildId ?? undefined,
     });
   }
 

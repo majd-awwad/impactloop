@@ -150,6 +150,19 @@ class _BuildPanelRepository implements LearningProjectRepository {
         shortDescription: 'Build a station',
       ),
       progress: const ProjectBuildProgress(total: 2, ready: 1, percent: 50),
+      materialReadiness: const ProjectBuildMaterialReadiness(
+        ready: 1,
+        linked: 0,
+        reserved: 0,
+        missing: 1,
+        total: 2,
+      ),
+      stepProgress: const ProjectBuildStepProgress(
+        completed: 0,
+        total: 0,
+        percent: 0,
+        steps: [],
+      ),
       items: const [],
     );
   }
@@ -188,6 +201,18 @@ class _BuildPanelRepository implements LearningProjectRepository {
 
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  ) {
     throw UnimplementedError();
   }
 

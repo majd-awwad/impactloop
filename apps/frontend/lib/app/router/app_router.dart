@@ -25,6 +25,8 @@ import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
+import '../../features/learning_hub/domain/models/project_build.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_build_guide_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_build_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
@@ -625,6 +627,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => LearningProjectSubmissionDetailPage(
           submissionId: state.pathParameters['id']!,
         ),
+      ),
+      GoRoute(
+        path: '/learning/:id/build/guide',
+        builder: (context, state) {
+          final projectId = state.pathParameters['id']!;
+          final conversationId =
+              state.uri.queryParameters['conversationId']?.trim() ?? '';
+          final buildContext = state.extra is BuildGuideContext
+              ? state.extra! as BuildGuideContext
+              : null;
+
+          return LearningProjectBuildGuidePage(
+            projectId: projectId,
+            conversationId: conversationId,
+            buildContext: buildContext,
+          );
+        },
       ),
       GoRoute(
         path: '/learning/:id/build',

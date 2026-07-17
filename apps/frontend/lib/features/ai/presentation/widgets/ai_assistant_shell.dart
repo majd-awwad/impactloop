@@ -11,6 +11,7 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/ai_assistant_shell_provider.dart';
 import '../../application/ai_chat_controller.dart';
 import '../../domain/ai_helpers.dart';
+import '../../../learning_hub/domain/models/project_build.dart';
 import '../l10n/ai_l10n.dart';
 import 'ai_chat_empty_state.dart';
 import 'ai_history_panel.dart';
@@ -144,6 +145,7 @@ class _AiAssistantShellOverlayState
       onToggleExpanded: () =>
           ref.read(aiAssistantShellProvider.notifier).toggleExpanded(),
       onNewChat: () {
+        ref.read(aiAssistantShellProvider.notifier).clearBuildGuideContext();
         ref.read(aiAssistantControllerProvider.notifier).startNewChat();
         _inputController.clear();
       },
@@ -164,6 +166,7 @@ class _AiAssistantShellOverlayState
       },
       onInputChanged: () => setState(() {}),
       onConversationSelected: (conversationId) {
+        ref.read(aiAssistantShellProvider.notifier).clearBuildGuideContext();
         ref
             .read(aiAssistantControllerProvider.notifier)
             .openConversation(conversationId);
@@ -328,6 +331,10 @@ class _AssistantPanel extends StatelessWidget {
 
     return Column(
       children: [
+        if (shellState.buildGuideContext != null)
+          AiBuildGuideContextBanner(
+            buildContext: shellState.buildGuideContext!,
+          ),
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: onScrollNotification,
@@ -726,6 +733,312 @@ class _ChatComposer extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class AiBuildGuideContextBanner extends StatelessWidget {
+  const AiBuildGuideContextBanner({super.key, required this.buildContext});
+
+  final BuildGuideContext buildContext;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final readiness = buildContext.materialReadiness;
+    final currentStepLabel = buildContext.currentStep == null
+        ? 'Preparing materials'
+        : 'Step ${buildContext.currentStep!.stepNumber}: ${buildContext.currentStep!.title}';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        0,
+      ),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            buildContext.projectTitle,
+            style: AppTextStyles.subtitle(context).copyWith(
+              color: palette.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Materials: ${readiness.ready}/${readiness.total} ready',
+            style: AppTextStyles.body(context).copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            currentStepLabel,
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AiEmbeddedAssistantChat extends ConsumerStatefulWidget {
+  const AiEmbeddedAssistantChat({super.key});
+
+  @override
+  ConsumerState<AiEmbeddedAssistantChat> createState() =>
+      _AiEmbeddedAssistantChatState();
+}
+
+class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantChat> {
+  final _inputController = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _shouldAutoScroll = true;
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendMessage({String? text}) async {
+    final locale = resolveAiLocale(context);
+    final message = text ?? _inputController.text;
+    final trimmed = message.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+
+    await ref.read(aiAssistantControllerProvider.notifier).sendMessage(
+          text: trimmed,
+          locale: locale,
+          onAccepted: text == null ? _inputController.clear : null,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    _shouldAutoScroll = true;
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    if (!_shouldAutoScroll) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) {
+        return;
+      }
+
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shellState = ref.watch(aiAssistantShellProvider);
+    final chatState = ref.watch(aiAssistantControllerProvider);
+    final canSend = chatState.canSend;
+    final isOverLimit = _inputController.text.length > aiMaxMessageLength;
+
+    ref.listen(aiAssistantControllerProvider, (previous, next) {
+      if ((next.messages.length) > (previous?.messages.length ?? 0)) {
+        _scrollToBottom();
+      }
+    });
+
+    if (chatState.loadStatus == AiChatLoadStatus.loading &&
+        chatState.messages.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              AiL10n.loading.resolve(context),
+              style: AppTextStyles.body(context),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (chatState.disabledByProvider) {
+      return _InlineStatus(
+        icon: Icons.smart_toy_outlined,
+        message: AiL10n.aiDisabled.resolve(context),
+      );
+    }
+
+    final messages = chatState.messages;
+    final showEmpty = messages.isEmpty && !chatState.isSending;
+
+    return Column(
+      children: [
+        if (shellState.buildGuideContext != null)
+          AiBuildGuideContextBanner(
+            buildContext: shellState.buildGuideContext!,
+          ),
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollUpdateNotification &&
+                  notification.metrics.maxScrollExtent > 0) {
+                final distanceFromBottom = notification.metrics.maxScrollExtent -
+                    notification.metrics.pixels;
+                _shouldAutoScroll = distanceFromBottom < 96;
+              }
+              return false;
+            },
+            child: showEmpty
+                ? AiChatEmptyState(
+                    onSuggestedQuestionTap: (question) => _sendMessage(text: question),
+                  )
+                : ListView.separated(
+                    controller: _scrollController,
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                    ),
+                    itemCount: messages.length + (chatState.isSending ? 1 : 0),
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, index) {
+                      if (index >= messages.length) {
+                        return const _AssistantLoadingPlaceholder();
+                      }
+
+                      return AiMessageBubble(
+                        message: messages[index],
+                        locale: resolveAiLocale(context),
+                      );
+                    },
+                  ),
+          ),
+        ),
+        if (chatState.sendError != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
+            child: _SendErrorBanner(
+              error: chatState.sendError!,
+              isSending: chatState.isSending,
+              onRetry: isRetryableAiError(chatState.sendError!.code)
+                  ? () => ref
+                      .read(aiAssistantControllerProvider.notifier)
+                      .retryPendingSend()
+                  : null,
+            ),
+          ),
+        _ChatComposer(
+          controller: _inputController,
+          canSend: canSend && !isOverLimit,
+          isSending: chatState.isSending,
+          isDisabled: chatState.disabledByProvider,
+          isOverLimit: isOverLimit,
+          onChanged: (_) => setState(() {}),
+          onSend: () => _sendMessage(),
+        ),
+      ],
+    );
+  }
+}
+
+class AiBuildGuideSidePanel extends StatelessWidget {
+  const AiBuildGuideSidePanel({
+    super.key,
+    required this.width,
+    required this.onClose,
+  });
+
+  final double width;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Material(
+      color: palette.cardSurface,
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          border: BorderDirectional(
+            start: BorderSide(color: palette.borderSubtle),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.xs,
+                AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      const LocalizedText(
+                        en: 'Build assistant',
+                        ar: 'مساعد البناء',
+                      ).resolve(context),
+                      style: AppTextStyles.subtitle(context).copyWith(
+                        color: palette.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: const LocalizedText(
+                      en: 'Close',
+                      ar: 'إغلاق',
+                    ).resolve(context),
+                    onPressed: onClose,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Expanded(
+              child: AiEmbeddedAssistantChat(),
+            ),
+          ],
         ),
       ),
     );

@@ -11,10 +11,12 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   deleteLearningProjectReview,
   followLearningProject,
+  completeProjectBuildStep,
   getBuildItemMaterialCandidates,
   getLearningProject,
   getMyLearningProjectSubmission,
   getMyProjectBuild,
+  getOrCreateBuildGuideConversation,
   likeLearningProject,
   linkBuildItemMaterial,
   linkBuildItemReservation,
@@ -40,6 +42,8 @@ import {
   linkBuildItemMaterialSchema,
   linkBuildItemReservationSchema,
   projectBuildItemParamSchema,
+  projectBuildStepParamSchema,
+  buildGuideConversationSchema,
   projectReviewSchema,
   myLearningProjectsQuerySchema,
   submitLearningProjectSchema,
@@ -119,6 +123,23 @@ learningProjectsRouter.get(
   requireRoles('LEARNER'),
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(getMyProjectBuild),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/guide-conversation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(buildGuideConversationSchema),
+  asyncHandler(getOrCreateBuildGuideConversation),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/steps/:stepId/complete',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildStepParamSchema, 'params'),
+  asyncHandler(completeProjectBuildStep),
 );
 
 learningProjectsRouter.post(

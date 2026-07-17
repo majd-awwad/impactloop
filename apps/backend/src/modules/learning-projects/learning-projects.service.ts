@@ -6,6 +6,8 @@ import {
 } from '../../services/idempotency.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 
+import { getOrCreateBuildGuideConversation } from '../ai/ai.repository.js';
+
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
   getBuildItemMaterialCandidates,
@@ -13,6 +15,7 @@ import {
   mapLinkedMaterialSummary,
   mapLinkedReservationSummary,
   resolveBuildItemReadiness,
+  resolveBuildItemStepUnlockReadiness,
   unlinkBuildItemMaterial,
 } from './learning-projects.build-material-linking.js';
 import type {
@@ -309,6 +312,141 @@ const mapLearningProjectDetail = (
   createdAt: project.createdAt.toISOString(),
 });
 
+const summarizeMaterialReadiness = (
+  items: Array<{
+    isReadyForBuild: boolean;
+    status: string;
+    linkedMaterial: unknown;
+    linkedReservation: unknown;
+  }>,
+) => {
+  let ready = 0;
+  let linked = 0;
+  let reserved = 0;
+  let missing = 0;
+
+  for (const item of items) {
+    if (item.isReadyForBuild) {
+      ready += 1;
+      continue;
+    }
+
+    if (item.linkedReservation != null || item.status === 'RESERVED') {
+      reserved += 1;
+      continue;
+    }
+
+    if (item.linkedMaterial != null) {
+      linked += 1;
+      continue;
+    }
+
+    missing += 1;
+  }
+
+  return {
+    ready,
+    linked,
+    reserved,
+    missing,
+    total: items.length,
+  };
+};
+
+type DerivedBuildStepState = 'LOCKED' | 'CURRENT' | 'COMPLETED';
+
+const deriveBuildStepViews = (input: {
+  projectSteps: ProjectBuildRecord['project']['steps'];
+  stepProgress: ProjectBuildRecord['stepProgress'];
+  allMaterialsReady: boolean;
+  buildStatus: ProjectBuildRecord['status'];
+}) => {
+  const completedAtByStepId = new Map(
+    input.stepProgress
+      .filter((row) => row.completedAt != null)
+      .map((row) => [row.projectStepId, row.completedAt!.toISOString()]),
+  );
+  const total = input.projectSteps.length;
+  const completed = input.projectSteps.filter((step) =>
+    completedAtByStepId.has(step.id),
+  ).length;
+  const firstIncomplete = input.projectSteps.find(
+    (step) => !completedAtByStepId.has(step.id),
+  );
+
+  if (!input.allMaterialsReady || total === 0) {
+    return {
+      steps: input.projectSteps.map((step) => ({
+        stepId: step.id,
+        stepNumber: step.stepNumber,
+        title: step.title,
+        description: step.description,
+        imageUrl: step.imageUrl,
+        state: (completedAtByStepId.has(step.id)
+          ? 'COMPLETED'
+          : 'LOCKED') as DerivedBuildStepState,
+        completedAt: completedAtByStepId.get(step.id) ?? null,
+      })),
+      currentStep: null,
+      completed,
+      total,
+      percent: 0,
+      nextAction: total === 0 ? null : ('PREPARE_MATERIALS' as const),
+    };
+  }
+
+  if (input.buildStatus === 'COMPLETED' || !firstIncomplete) {
+    return {
+      steps: input.projectSteps.map((step) => ({
+        stepId: step.id,
+        stepNumber: step.stepNumber,
+        title: step.title,
+        description: step.description,
+        imageUrl: step.imageUrl,
+        state: 'COMPLETED' as DerivedBuildStepState,
+        completedAt: completedAtByStepId.get(step.id) ?? null,
+      })),
+      currentStep: null,
+      completed: total,
+      total,
+      percent: 100,
+      nextAction: 'BUILD_COMPLETED' as const,
+    };
+  }
+
+  return {
+    steps: input.projectSteps.map((step) => {
+      const completedAt = completedAtByStepId.get(step.id) ?? null;
+      let state: DerivedBuildStepState = 'LOCKED';
+
+      if (completedAt) {
+        state = 'COMPLETED';
+      } else if (step.id === firstIncomplete.id) {
+        state = 'CURRENT';
+      }
+
+      return {
+        stepId: step.id,
+        stepNumber: step.stepNumber,
+        title: step.title,
+        description: step.description,
+        imageUrl: step.imageUrl,
+        state,
+        completedAt,
+      };
+    }),
+    currentStep: {
+      stepId: firstIncomplete.id,
+      stepNumber: firstIncomplete.stepNumber,
+      title: firstIncomplete.title,
+    },
+    completed,
+    total,
+    percent: Math.round((completed / total) * 100),
+    nextAction: 'COMPLETE_CURRENT_STEP' as const,
+  };
+};
+
 const mapProjectBuildItem = (
   item: ProjectBuildRecord['items'][number],
 ) => {
@@ -351,6 +489,22 @@ const mapProjectBuild = (build: ProjectBuildRecord) => {
   const mappedItems = build.items.map((item) => mapProjectBuildItem(item));
   const readyItems = mappedItems.filter((item) => item.isReadyForBuild);
   const totalItems = mappedItems.length;
+  const allMaterialsReadyForSteps =
+    totalItems > 0 &&
+    build.items.every((item) =>
+      resolveBuildItemStepUnlockReadiness({
+        status: item.status,
+        linkedReservation: item.linkedReservation,
+        linkedMaterial: item.linkedMaterial,
+      }).isReadyForStepUnlock,
+    );
+  const materialReadiness = summarizeMaterialReadiness(mappedItems);
+  const stepViews = deriveBuildStepViews({
+    projectSteps: build.project.steps,
+    stepProgress: build.stepProgress,
+    allMaterialsReady: allMaterialsReadyForSteps,
+    buildStatus: build.status,
+  });
 
   return {
     id: build.id,
@@ -373,7 +527,32 @@ const mapProjectBuild = (build: ProjectBuildRecord) => {
       percent:
         totalItems === 0 ? 0 : Math.round((readyItems.length / totalItems) * 100),
     },
+    materialReadiness,
+    stepProgress: {
+      completed: stepViews.completed,
+      total: stepViews.total,
+      percent: stepViews.percent,
+      currentStep: stepViews.currentStep,
+      nextAction: stepViews.nextAction,
+      steps: stepViews.steps,
+    },
     items: mappedItems,
+  };
+};
+
+const hydrateLearnerProjectBuild = async (
+  build: ProjectBuildRecord,
+  learnerId: string,
+) => {
+  const guideConversation =
+    await learningProjectsRepository.findGuideConversationIdForBuild(
+      learnerId,
+      build.id,
+    );
+
+  return {
+    ...mapProjectBuild(build),
+    guideConversationId: guideConversation?.id ?? null,
   };
 };
 
@@ -758,7 +937,7 @@ export const getMyProjectBuildById = async (
 
   const build = await learningProjectsRepository.findProjectBuild(id, userId);
 
-  return build ? mapProjectBuild(build) : null;
+  return build ? hydrateLearnerProjectBuild(build, userId) : null;
 };
 
 export const getOwnedProjectBuildByBuildId = async (
@@ -798,7 +977,7 @@ export const startProjectBuildById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const updateProjectBuildItemById = async (
@@ -827,7 +1006,7 @@ export const updateProjectBuildItemById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const getBuildItemMaterialCandidatesById = async (
@@ -883,7 +1062,7 @@ export const linkBuildItemMaterialById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const unlinkBuildItemMaterialById = async (
@@ -918,7 +1097,7 @@ export const unlinkBuildItemMaterialById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const linkBuildItemReservationById = async (
@@ -958,7 +1137,7 @@ export const linkBuildItemReservationById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const likeLearningProjectById = async (id: string, userId: string) => {
@@ -1223,4 +1402,80 @@ export const submitLearningProjectForReview = async (
       };
     },
   });
+};
+
+export const completeProjectBuildStepById = async (
+  projectId: string,
+  userId: string,
+  stepId: string,
+) => {
+  const result = await learningProjectsRepository.completeProjectBuildStep({
+    projectId,
+    learnerId: userId,
+    stepId,
+  });
+
+  const build = await learningProjectsRepository.findProjectBuild(
+    projectId,
+    userId,
+  );
+
+  if (!build) {
+    throw new AppError('Project build not found', 404, 'BUILD_NOT_FOUND');
+  }
+
+  if (!result.noOp) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return hydrateLearnerProjectBuild(build, userId);
+};
+
+export const getOrCreateBuildGuideConversationByProjectId = async (
+  projectId: string,
+  userId: string,
+  locale = 'en',
+) => {
+  const build = await learningProjectsRepository.findProjectBuild(
+    projectId,
+    userId,
+  );
+
+  if (!build) {
+    throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+  }
+
+  const mappedBuild = mapProjectBuild(build);
+  const conversation = await getOrCreateBuildGuideConversation({
+    userId,
+    projectBuildId: build.id,
+    locale,
+    projectTitle: build.project.title,
+  });
+
+  return {
+    conversation: {
+      id: conversation.id,
+      kind: 'BUILD_GUIDE' as const,
+      locale: conversation.locale,
+      title: conversation.title,
+      status: conversation.status,
+      lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
+      createdAt: conversation.createdAt.toISOString(),
+      updatedAt: conversation.updatedAt.toISOString(),
+    },
+    buildContext: {
+      buildId: build.id,
+      projectId: build.projectId,
+      projectTitle: build.project.title,
+      buildStatus: build.status,
+      materialReadiness: mappedBuild.materialReadiness,
+      currentStep: mappedBuild.stepProgress.currentStep,
+      stepProgress: {
+        completed: mappedBuild.stepProgress.completed,
+        total: mappedBuild.stepProgress.total,
+        percent: mappedBuild.stepProgress.percent,
+      },
+    },
+  };
 };

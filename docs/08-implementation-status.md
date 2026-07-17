@@ -68,7 +68,7 @@ For aspirational MVP scope see [01-requirements.md](01-requirements.md) and [05-
 | `notifications`                | **Implemented** | Generic persisted inbox API + partial reservation lifecycle writes (create, supplier accept/proposal, decline, learner cancel, expiry, admin reschedule requests) + limited driver delivery notifications (`DRIVER_NEW_JOB`, `DRIVER_PICKUP_TIME`, `DRIVER_DROPOFF_TIME`, `DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN`) |
 | `saved-dropoff-addresses`      | **Implemented** | Learner CRUD at `/api/learner/saved-dropoff-addresses`; delivery request accepts `savedDropoffAddressId` or inline `dropoffLocation` with optional `saveDropoffAddressLabel`                                                                                |
 | `supplier-verification`        | **Implemented** | Supplier verification submit/status support for organization suppliers                                                                                                                                                                                    |
-| `ai`                           | **Implemented (Phase 1.1)** | `/api/ai/v1` ImpactLoop Assistant: unified learner shell, conversation history/archive/restore, `LEARNER_ASSISTANT` API alias; Phase 1 scope guard, mock/gemini/disabled, idempotency, lock; no domain tools |
+| `ai`                           | **Partial**     | `/api/ai/v1` ImpactLoop Assistant + learner agent tools; trusted `BUILD_GUIDE` conversations (`conversation.projectBuildId`) support Wave 2 material actions and Wave 3 current-step guide/explanation/progress plus confirmed `COMPLETE_CURRENT_BUILD_STEP` |
 
 ### Backend **not implemented** as modules
 

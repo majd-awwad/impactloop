@@ -13,11 +13,16 @@ import {
   unlinkBuildItemMaterialById,
   unsaveLearningProjectById,
   getOwnedProjectBuildByBuildId,
+  completeProjectBuildStepById,
 } from '../learning-projects/learning-projects.service.js';
+import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { createReservation } from '../reservations/reservations.service.js';
 import type { CreateReservationInput } from '../reservations/reservations.validation.js';
 import * as learningProjectsRepository from '../learning-projects/learning-projects.repository.js';
-import type { AiContentBlock } from './ai.content-blocks.js';
+import {
+  aiActionConfirmationBlockSchema,
+  type AiContentBlock,
+} from './ai.content-blocks.js';
 import type { AiPendingActionType, Prisma } from '../../generated/prisma/client.js';
 import {
   appendActionResultToAssistantMessage,
@@ -35,6 +40,8 @@ import {
   unlinkMaterialFromBuildPayloadSchema,
   unsaveMaterialPayloadSchema,
   unsaveProjectPayloadSchema,
+  updateBuildComponentStatusesPayloadSchema,
+  completeCurrentBuildStepPayloadSchema,
   type VersionedActionPayload,
 } from './ai-action.payloads.js';
 
@@ -53,6 +60,21 @@ const assertOwnedConversation = async (conversationId: string, userId: string) =
     throw new AppError('Conversation not found.', 404, 'AI_CONVERSATION_NOT_FOUND');
   }
   return conversation;
+};
+
+export const customizeActionConfirmationLabels = (
+  block: AiContentBlock,
+  labels: { confirmLabel: string; cancelLabel: string },
+): AiContentBlock => {
+  if (block.type !== 'action_confirmation') {
+    throw new AppError('Expected action_confirmation block.', 500, 'AI_RESPONSE_INVALID');
+  }
+
+  return aiActionConfirmationBlockSchema.parse({
+    ...block,
+    confirmLabel: labels.confirmLabel,
+    cancelLabel: labels.cancelLabel,
+  });
 };
 
 const buildConfirmationBlock = (input: {
@@ -266,6 +288,72 @@ const loadPreparedDisplay = async (
         targetTitle: payload.displaySnapshot.title,
         targetType: 'COMPONENT' as const,
         targetId: payload.target.buildItemId,
+        displaySnapshot: payload.displaySnapshot,
+      };
+    }
+    case 'UPDATE_BUILD_COMPONENT_STATUSES': {
+      const payload = updateBuildComponentStatusesPayloadSchema.parse(rawPayload);
+      const statusLabel =
+        payload.parameters.targetStatus === 'ALREADY_OWNED'
+          ? locale === 'ar'
+            ? 'موجودة لديك'
+            : 'Already owned'
+          : locale === 'ar'
+            ? 'غير موجودة'
+            : 'Missing';
+      const componentLines = payload.parameters.items
+        .map((item) => `- ${item.componentName}`)
+        .join('\n');
+      return {
+        title:
+          payload.parameters.targetStatus === 'ALREADY_OWNED'
+            ? locale === 'ar'
+              ? 'تحديد المكونات كموجودة لديك؟'
+              : 'Mark components as already owned?'
+            : locale === 'ar'
+              ? 'تحديد المكونات كغير موجودة؟'
+              : 'Mark components as missing?',
+        summary:
+          locale === 'ar'
+            ? `سيتم تحديد المكونات التالية كـ${statusLabel}:\n${componentLines}`
+            : `I will mark these components as ${statusLabel.toLowerCase()}:\n${componentLines}`,
+        targetTitle: payload.displaySnapshot.title,
+        targetType: 'BUILD' as const,
+        targetId: payload.target.buildId,
+        displaySnapshot: payload.displaySnapshot,
+      };
+    }
+    case 'COMPLETE_CURRENT_BUILD_STEP': {
+      const payload = completeCurrentBuildStepPayloadSchema.parse(rawPayload);
+      const build = await getOwnedProjectBuildByBuildId(
+        payload.target.buildId,
+        viewer.sub,
+      );
+      if (!build) {
+        throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+      }
+      const remainingAfter =
+        build.stepProgress.total - build.stepProgress.completed - 1;
+      const nextHint =
+        remainingAfter > 0
+          ? locale === 'ar'
+            ? ' بعد التأكيد ستفتح الخطوة التالية.'
+            : ' The next step will open after confirmation.'
+          : locale === 'ar'
+            ? ' هذه هي الخطوة الأخيرة.'
+            : ' This is the final step.';
+      return {
+        title:
+          locale === 'ar'
+            ? `هل أنهيت الخطوة ${payload.parameters.stepNumber}: ${payload.parameters.stepTitle}؟`
+            : `Did you finish Step ${payload.parameters.stepNumber}: ${payload.parameters.stepTitle}?`,
+        summary:
+          locale === 'ar'
+            ? `التقدم الحالي: ${build.stepProgress.percent}%.${nextHint}`
+            : `Current progress: ${build.stepProgress.percent}%.${nextHint}`,
+        targetTitle: build.project.title,
+        targetType: 'BUILD' as const,
+        targetId: payload.target.buildId,
         displaySnapshot: payload.displaySnapshot,
       };
     }
@@ -633,6 +721,148 @@ const executeConfirmedAction = async (input: {
         navigation: { route: 'reservation', id: reservation.id },
       });
     }
+    case 'UPDATE_BUILD_COMPONENT_STATUSES': {
+      const payload = updateBuildComponentStatusesPayloadSchema.parse(input.payload);
+      await learningProjectsRepository.updateOwnedProjectBuildItemsStatusBatch({
+        projectId: payload.target.projectId,
+        buildId: payload.target.buildId,
+        learnerId: input.userId,
+        targetStatus: payload.parameters.targetStatus,
+        items: payload.parameters.items.map((item) => ({
+          buildItemId: item.buildItemId,
+          previousStatus: item.previousStatus,
+        })),
+      });
+      invalidateLearnerHomeCache(input.userId);
+      const build = await getOwnedProjectBuildByBuildId(
+        payload.target.buildId,
+        input.userId,
+      );
+      if (!build) {
+        throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+      }
+
+      const changedNames = payload.parameters.items.map((item) => item.componentName);
+      const changedList = changedNames.join(
+        input.locale === 'ar' ? ' و' : ', ',
+      );
+      const readinessSummary =
+        input.locale === 'ar'
+          ? `أصبحت جاهزية المواد ${build.progress.ready} من ${build.progress.total}.`
+          : `Material readiness is now ${build.progress.ready} of ${build.progress.total}.`;
+      let summary =
+        payload.parameters.targetStatus === 'ALREADY_OWNED'
+          ? input.locale === 'ar'
+            ? `تم تحديد ${changedList} كموجودة لديك. ${readinessSummary}`
+            : `Marked ${changedList} as already owned. ${readinessSummary}`
+          : input.locale === 'ar'
+            ? `تم تحديد ${changedList} كغير موجودة. ${readinessSummary}`
+            : `Marked ${changedList} as missing. ${readinessSummary}`;
+
+      if (build.stepProgress.nextAction === 'COMPLETE_CURRENT_STEP') {
+        summary +=
+          input.locale === 'ar'
+            ? ' يمكنك الآن بدء الخطوة الأولى.'
+            : ' You can now start Step 1.';
+      }
+
+      return buildResultBlock({
+        actionType: input.actionType,
+        status: 'EXECUTED',
+        title:
+          input.locale === 'ar'
+            ? 'تم تحديث حالة المكونات'
+            : 'Component status updated',
+        summary,
+        target: {
+          type: 'BUILD',
+          id: build.id,
+          title: build.project.title,
+        },
+        navigation: { route: 'project_build', id: payload.target.projectId },
+      });
+    }
+    case 'COMPLETE_CURRENT_BUILD_STEP': {
+      const payload = completeCurrentBuildStepPayloadSchema.parse(input.payload);
+      const buildBefore = await getOwnedProjectBuildByBuildId(
+        payload.target.buildId,
+        input.userId,
+      );
+      if (!buildBefore) {
+        throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+      }
+      if (buildBefore.status !== 'IN_PROGRESS') {
+        throw new AppError('Build is not editable.', 409, 'AI_ACTION_CONFLICT');
+      }
+      if (
+        !buildBefore.stepProgress.currentStep ||
+        buildBefore.stepProgress.currentStep.stepId !== payload.target.projectStepId
+      ) {
+        return buildResultBlock({
+          actionType: input.actionType,
+          status: 'FAILED',
+          title:
+            input.locale === 'ar'
+              ? 'الخطوة لم تعد حالية'
+              : 'Step is no longer current',
+          summary:
+            input.locale === 'ar'
+              ? 'تم تحديث التقدم من مكان آخر. راجع الخطوة الحالية في صفحة البناء.'
+              : 'Progress was updated elsewhere. Check the current step on the build page.',
+          target: {
+            type: 'BUILD',
+            id: payload.target.buildId,
+            title: buildBefore.project.title,
+          },
+          navigation: { route: 'project_build', id: payload.target.projectId },
+        });
+      }
+
+      const updated = await completeProjectBuildStepById(
+        payload.target.projectId,
+        input.userId,
+        payload.target.projectStepId,
+      );
+
+      if (
+        updated.status === 'COMPLETED' ||
+        updated.stepProgress.nextAction === 'BUILD_COMPLETED'
+      ) {
+        return buildResultBlock({
+          actionType: input.actionType,
+          status: 'EXECUTED',
+          title:
+            input.locale === 'ar' ? 'اكتمل المشروع' : 'Project build completed',
+          summary:
+            input.locale === 'ar'
+              ? `تم إكمال الخطوة ${payload.parameters.stepNumber}: ${payload.parameters.stepTitle}. أصبح تقدمك 100%.`
+              : `Completed Step ${payload.parameters.stepNumber}: ${payload.parameters.stepTitle}. Progress is now 100%.`,
+          target: {
+            type: 'BUILD',
+            id: updated.id,
+            title: updated.project.title,
+          },
+          navigation: { route: 'project_build', id: payload.target.projectId },
+        });
+      }
+
+      const nextStep = updated.stepProgress.currentStep;
+      return buildResultBlock({
+        actionType: input.actionType,
+        status: 'EXECUTED',
+        title: input.locale === 'ar' ? 'تم إكمال الخطوة' : 'Step completed',
+        summary:
+          input.locale === 'ar'
+            ? `تم إكمال الخطوة ${payload.parameters.stepNumber}: ${payload.parameters.stepTitle}. أصبح تقدمك ${updated.stepProgress.percent}%. الخطوة الحالية الآن: ${nextStep?.title ?? ''}.`
+            : `Completed Step ${payload.parameters.stepNumber}: ${payload.parameters.stepTitle}. Progress is now ${updated.stepProgress.percent}%. Current step: ${nextStep?.title ?? ''}.`,
+        target: {
+          type: 'BUILD',
+          id: updated.id,
+          title: updated.project.title,
+        },
+        navigation: { route: 'project_build', id: payload.target.projectId },
+      });
+    }
     default:
       throw new AppError('Action is not supported.', 400, 'AI_ACTION_NOT_SUPPORTED');
   }
@@ -868,6 +1098,45 @@ export const buildUnlinkMaterialPayload = (input: {
     parameters: {},
     displaySnapshot: input.displaySnapshot,
   }) as VersionedActionPayload;
+
+export const buildUpdateBuildComponentStatusesPayload = (input: {
+  projectId: string;
+  buildId: string;
+  projectTitle: string;
+  targetStatus: 'ALREADY_OWNED' | 'MISSING';
+  items: Array<{
+    buildItemId: string;
+    requiredComponentId: string;
+    componentName: string;
+    previousStatus:
+      | 'MISSING'
+      | 'ALREADY_OWNED'
+      | 'AVAILABLE'
+      | 'RESERVED'
+      | 'ALTERNATIVE';
+  }>;
+}): VersionedActionPayload => {
+  const statusLabel =
+    input.targetStatus === 'ALREADY_OWNED' ? 'Already owned' : 'Missing';
+  const componentLines = input.items.map((item) => `- ${item.componentName}`).join('\n');
+
+  return {
+    schemaVersion: 1,
+    actionType: 'UPDATE_BUILD_COMPONENT_STATUSES',
+    target: {
+      projectId: input.projectId,
+      buildId: input.buildId,
+    },
+    parameters: {
+      targetStatus: input.targetStatus,
+      items: input.items,
+    },
+    displaySnapshot: {
+      title: input.projectTitle,
+      summary: `${statusLabel}\n${componentLines}`,
+    },
+  } as VersionedActionPayload;
+};
 
 export const buildReservationPayload = (input: {
   materialId: string;

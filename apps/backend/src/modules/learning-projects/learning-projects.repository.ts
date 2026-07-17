@@ -11,6 +11,7 @@ import {
   setBuildItemLinkedReservationId,
   validateBuildItemForReservationLink,
 } from './learning-projects.build-reservation-linking.js';
+import { resolveBuildItemStepUnlockReadiness } from './learning-projects.build-material-linking.js';
 import {
   mapNormalizedComponentToCreateData,
   type NormalizedSubmitComponent,
@@ -248,6 +249,31 @@ const projectBuildInclude = {
       title: true,
       shortDescription: true,
       coverImageUrl: true,
+      steps: {
+        select: {
+          id: true,
+          stepNumber: true,
+          title: true,
+          description: true,
+          imageUrl: true,
+        },
+        orderBy: {
+          stepNumber: 'asc' as const,
+        },
+      },
+    },
+  },
+  stepProgress: {
+    select: {
+      id: true,
+      projectStepId: true,
+      startedAt: true,
+      completedAt: true,
+    },
+    orderBy: {
+      projectStep: {
+        stepNumber: 'asc' as const,
+      },
     },
   },
   items: {
@@ -1504,3 +1530,235 @@ export const findMaterialCategoriesForSubmit = async (categoryIds: string[]) => 
     select: { id: true },
   });
 };
+
+export const completeProjectBuildStep = async (input: {
+  projectId: string;
+  learnerId: string;
+  stepId: string;
+}): Promise<{ buildId: string; noOp: boolean }> => {
+  return prisma.$transaction(async (tx) => {
+    const build = await tx.projectBuild.findUnique({
+      where: {
+        projectId_learnerId: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        items: {
+          select: {
+            status: true,
+            linkedMaterialId: true,
+            linkedReservation: {
+              select: {
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!build) {
+      throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+    }
+
+    const projectSteps = await tx.projectStep.findMany({
+      where: { projectId: input.projectId },
+      orderBy: { stepNumber: 'asc' },
+      select: { id: true, stepNumber: true },
+    });
+
+    const targetStep = projectSteps.find((step) => step.id === input.stepId);
+    if (!targetStep) {
+      throw new AppError('Project step not found.', 404, 'NOT_FOUND');
+    }
+
+    const progressRows = await tx.projectBuildStepProgress.findMany({
+      where: { buildId: build.id },
+      select: {
+        projectStepId: true,
+        completedAt: true,
+      },
+    });
+
+    const completedStepIds = new Set(
+      progressRows
+        .filter((row) => row.completedAt != null)
+        .map((row) => row.projectStepId),
+    );
+
+    if (completedStepIds.has(input.stepId)) {
+      return { buildId: build.id, noOp: true };
+    }
+
+    const allMaterialsReady = build.items.every((item) =>
+      resolveBuildItemStepUnlockReadiness({
+        status: item.status,
+        linkedMaterial: item.linkedMaterial,
+        linkedReservation: item.linkedReservation,
+      }).isReadyForStepUnlock,
+    );
+
+    if (!allMaterialsReady) {
+      throw new AppError(
+        'All required materials must be ready before completing build steps.',
+        409,
+        'BUILD_MATERIALS_NOT_READY',
+      );
+    }
+
+    const firstIncompleteStep = projectSteps.find(
+      (step) => !completedStepIds.has(step.id),
+    );
+
+    if (!firstIncompleteStep || firstIncompleteStep.id !== input.stepId) {
+      throw new AppError(
+        'Only the current build step can be completed.',
+        409,
+        'BUILD_STEP_LOCKED',
+      );
+    }
+
+    const completedAt = new Date();
+    await tx.projectBuildStepProgress.upsert({
+      where: {
+        buildId_projectStepId: {
+          buildId: build.id,
+          projectStepId: input.stepId,
+        },
+      },
+      create: {
+        buildId: build.id,
+        projectStepId: input.stepId,
+        startedAt: completedAt,
+        completedAt,
+      },
+      update: {
+        completedAt,
+      },
+    });
+
+    const completedAfter = new Set([...completedStepIds, input.stepId]);
+    const allStepsCompleted =
+      projectSteps.length > 0 &&
+      projectSteps.every((step) => completedAfter.has(step.id));
+
+    if (allStepsCompleted) {
+      await tx.projectBuild.update({
+        where: { id: build.id },
+        data: {
+          status: 'COMPLETED',
+          completedAt,
+        },
+      });
+    }
+
+    return { buildId: build.id, noOp: false };
+  });
+};
+
+export const updateOwnedProjectBuildItemsStatusBatch = async (input: {
+  projectId: string;
+  buildId: string;
+  learnerId: string;
+  targetStatus: 'ALREADY_OWNED' | 'MISSING';
+  items: Array<{
+    buildItemId: string;
+    previousStatus: string;
+  }>;
+}) => {
+  if (input.items.length === 0) {
+    throw new AppError('No build items selected for update.', 400, 'VALIDATION_ERROR');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const build = await tx.projectBuild.findFirst({
+      where: {
+        id: input.buildId,
+        learnerId: input.learnerId,
+        projectId: input.projectId,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!build) {
+      throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+    }
+
+    if (build.status === 'ARCHIVED') {
+      throw new AppError('Project build is not editable.', 409, 'BUILD_NOT_EDITABLE');
+    }
+
+    const itemIds = [...new Set(input.items.map((item) => item.buildItemId))];
+    const existingItems = await tx.projectBuildItem.findMany({
+      where: {
+        buildId: input.buildId,
+        id: { in: itemIds },
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (existingItems.length !== itemIds.length) {
+      throw new AppError(
+        'One or more build items are no longer part of this build.',
+        409,
+        'AI_ACTION_CONFLICT',
+      );
+    }
+
+    const existingById = new Map(existingItems.map((item) => [item.id, item]));
+
+    for (const item of input.items) {
+      const current = existingById.get(item.buildItemId);
+      if (!current) {
+        throw new AppError(
+          'One or more build items are no longer part of this build.',
+          409,
+          'AI_ACTION_CONFLICT',
+        );
+      }
+
+      if (current.status !== item.previousStatus) {
+        throw new AppError(
+          'Build item state changed before the action could be confirmed.',
+          409,
+          'AI_ACTION_CONFLICT',
+        );
+      }
+
+      if (current.status === input.targetStatus) {
+        continue;
+      }
+
+      await tx.projectBuildItem.update({
+        where: { id: item.buildItemId },
+        data: { status: input.targetStatus },
+      });
+    }
+
+    return { buildId: build.id };
+  });
+};
+
+export const findGuideConversationIdForBuild = async (
+  userId: string,
+  buildId: string,
+) =>
+  prisma.aiConversation.findFirst({
+    where: {
+      userId,
+      projectBuildId: buildId,
+    },
+    select: {
+      id: true,
+    },
+  });

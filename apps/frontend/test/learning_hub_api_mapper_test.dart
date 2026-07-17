@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/learning_hub/data/learning_hub_api_mapper.dart';
+import 'package:frontend/features/learning_hub/domain/models/project_build.dart';
 
 void main() {
   group('LearningHubApiMapper', () {
@@ -210,6 +211,62 @@ void main() {
       ]);
       expect(submission.steps.single.title, 'Wire board');
       expect(submission.links.single.url, 'https://example.com');
+    });
+
+    test('maps build step progress and guide conversation fields', () {
+      final build = LearningHubApiMapper.fromBuildJson({
+        'id': 'build-1',
+        'projectId': 'project-1',
+        'status': 'IN_PROGRESS',
+        'guideConversationId': 'conv-1',
+        'project': {
+          'id': 'project-1',
+          'title': 'LED build',
+          'shortDescription': 'Short',
+        },
+        'progress': {'total': 2, 'ready': 2, 'percent': 100},
+        'materialReadiness': {
+          'ready': 2,
+          'linked': 0,
+          'reserved': 0,
+          'missing': 0,
+          'total': 2,
+        },
+        'stepProgress': {
+          'completed': 0,
+          'total': 2,
+          'percent': 0,
+          'nextAction': 'COMPLETE_CURRENT_STEP',
+          'currentStep': {
+            'stepId': 'step-1',
+            'stepNumber': 1,
+            'title': 'Place the LED',
+          },
+          'steps': [
+            {
+              'stepId': 'step-1',
+              'stepNumber': 1,
+              'title': 'Place the LED',
+              'description': 'Insert LED',
+              'state': 'CURRENT',
+            },
+            {
+              'stepId': 'step-2',
+              'stepNumber': 2,
+              'title': 'Add resistor',
+              'description': 'Wire resistor',
+              'state': 'LOCKED',
+            },
+          ],
+        },
+        'items': [],
+      });
+
+      expect(build.guideConversationId, 'conv-1');
+      expect(build.stepProgress.currentStep?.title, 'Place the LED');
+      expect(build.stepProgress.nextAction, ProjectBuildNextAction.completeCurrentStep);
+      expect(build.stepProgress.steps.first.state, ProjectBuildStepState.current);
+      expect(build.stepProgress.steps.last.state, ProjectBuildStepState.locked);
     });
   });
 }

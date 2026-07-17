@@ -214,6 +214,28 @@ const BUILD_ITEM_READY_STATUSES = new Set([
   'ALTERNATIVE',
 ]);
 
+export const resolveBuildItemStepUnlockReadiness = (input: {
+  status: string;
+  linkedReservation?: LinkedReservationRecord | null;
+  linkedMaterial?: LinkedMaterialRecord | null;
+}) => {
+  if (input.linkedReservation?.status === 'COMPLETED') {
+    return {
+      isReadyForStepUnlock: true,
+    };
+  }
+
+  if (input.status === 'ALREADY_OWNED') {
+    return {
+      isReadyForStepUnlock: true,
+    };
+  }
+
+  return {
+    isReadyForStepUnlock: false,
+  };
+};
+
 export const resolveBuildItemReadiness = (input: {
   status: string;
   linkedReservation?: LinkedReservationRecord | null;

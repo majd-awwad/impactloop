@@ -324,6 +324,19 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
         shortDescription: '',
       ),
       progress: const ProjectBuildProgress(total: 0, ready: 0, percent: 0),
+      materialReadiness: const ProjectBuildMaterialReadiness(
+        ready: 0,
+        linked: 0,
+        reserved: 0,
+        missing: 0,
+        total: 0,
+      ),
+      stepProgress: const ProjectBuildStepProgress(
+        completed: 0,
+        total: 0,
+        percent: 0,
+        steps: [],
+      ),
       items: const [],
     );
   }
@@ -363,6 +376,38 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) async {
     return startBuild(projectId);
+  }
+
+  @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  ) async {
+    return BuildGuideConversationResult(
+      conversationId: 'guide-conversation',
+      buildContext: BuildGuideContext(
+        buildId: 'test-build',
+        projectId: projectId,
+        projectTitle: 'Test project',
+        buildStatus: ProjectBuildStatus.inProgress,
+        materialReadiness: const ProjectBuildMaterialReadiness(
+          ready: 0,
+          linked: 0,
+          reserved: 0,
+          missing: 0,
+          total: 0,
+        ),
+        stepProgress: const ProjectBuildStepProgressSummary(
+          completed: 0,
+          total: 0,
+          percent: 0,
+        ),
+      ),
+    );
   }
 
   @override

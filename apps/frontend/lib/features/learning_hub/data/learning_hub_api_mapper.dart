@@ -19,6 +19,10 @@ class LearningHubApiMapper {
   static ProjectBuild fromBuildJson(Map<String, dynamic> json) {
     final projectJson = _asMap(json['project']) ?? const <String, dynamic>{};
     final progressJson = _asMap(json['progress']) ?? const <String, dynamic>{};
+    final materialReadinessJson =
+        _asMap(json['materialReadiness']) ?? const <String, dynamic>{};
+    final stepProgressJson =
+        _asMap(json['stepProgress']) ?? const <String, dynamic>{};
     final itemsJson = json['items'];
 
     return ProjectBuild(
@@ -28,6 +32,7 @@ class LearningHubApiMapper {
       startedAt: _dateTimeFromDynamic(json['startedAt']),
       completedAt: _dateTimeFromDynamic(json['completedAt']),
       updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+      guideConversationId: _nullableString(json['guideConversationId']),
       project: ProjectBuildProject(
         id: _stringOrFallback(projectJson['id'], fallback: ''),
         title: _stringOrFallback(projectJson['title'], fallback: 'Project'),
@@ -45,6 +50,15 @@ class LearningHubApiMapper {
             0,
         percent: _intFromDynamic(progressJson['percent']) ?? 0,
       ),
+      materialReadiness: ProjectBuildMaterialReadiness(
+        ready: _intFromDynamic(materialReadinessJson['ready']) ?? 0,
+        linked: _intFromDynamic(materialReadinessJson['linked']) ?? 0,
+        reserved: _intFromDynamic(materialReadinessJson['reserved']) ?? 0,
+        missing: _intFromDynamic(materialReadinessJson['missing']) ?? 0,
+        total: _intFromDynamic(materialReadinessJson['total']) ??
+            (_intFromDynamic(progressJson['total']) ?? 0),
+      ),
+      stepProgress: _mapBuildStepProgress(stepProgressJson),
       items: itemsJson is List
           ? itemsJson
                 .whereType<Map>()
@@ -52,6 +66,113 @@ class LearningHubApiMapper {
                 .toList(growable: false)
           : const <ProjectBuildItem>[],
     );
+  }
+
+  static BuildGuideConversationResult fromBuildGuideConversationJson(
+    Map<String, dynamic> json,
+  ) {
+    final conversationJson =
+        _asMap(json['conversation']) ?? const <String, dynamic>{};
+    final buildContextJson =
+        _asMap(json['buildContext']) ?? const <String, dynamic>{};
+    final materialReadinessJson =
+        _asMap(buildContextJson['materialReadiness']) ??
+        const <String, dynamic>{};
+    final stepProgressJson =
+        _asMap(buildContextJson['stepProgress']) ?? const <String, dynamic>{};
+    final currentStepJson = _asMap(buildContextJson['currentStep']);
+
+    return BuildGuideConversationResult(
+      conversationId: _stringOrFallback(conversationJson['id'], fallback: ''),
+      buildContext: BuildGuideContext(
+        buildId: _stringOrFallback(buildContextJson['buildId'], fallback: ''),
+        projectId:
+            _stringOrFallback(buildContextJson['projectId'], fallback: ''),
+        projectTitle:
+            _stringOrFallback(buildContextJson['projectTitle'], fallback: ''),
+        buildStatus: _mapBuildStatus(buildContextJson['buildStatus']),
+        materialReadiness: ProjectBuildMaterialReadiness(
+          ready: _intFromDynamic(materialReadinessJson['ready']) ?? 0,
+          linked: _intFromDynamic(materialReadinessJson['linked']) ?? 0,
+          reserved: _intFromDynamic(materialReadinessJson['reserved']) ?? 0,
+          missing: _intFromDynamic(materialReadinessJson['missing']) ?? 0,
+          total: _intFromDynamic(materialReadinessJson['total']) ?? 0,
+        ),
+        currentStep: currentStepJson == null
+            ? null
+            : ProjectBuildCurrentStep(
+                stepId: _stringOrFallback(
+                  currentStepJson['stepId'],
+                  fallback: '',
+                ),
+                stepNumber: _intFromDynamic(currentStepJson['stepNumber']) ?? 0,
+                title: _stringOrFallback(currentStepJson['title'], fallback: ''),
+              ),
+        stepProgress: ProjectBuildStepProgressSummary(
+          completed: _intFromDynamic(stepProgressJson['completed']) ?? 0,
+          total: _intFromDynamic(stepProgressJson['total']) ?? 0,
+          percent: _intFromDynamic(stepProgressJson['percent']) ?? 0,
+        ),
+      ),
+    );
+  }
+
+  static ProjectBuildStepProgress _mapBuildStepProgress(
+    Map<String, dynamic> json,
+  ) {
+    final stepsJson = json['steps'];
+    final currentStepJson = _asMap(json['currentStep']);
+
+    return ProjectBuildStepProgress(
+      completed: _intFromDynamic(json['completed']) ?? 0,
+      total: _intFromDynamic(json['total']) ?? 0,
+      percent: _intFromDynamic(json['percent']) ?? 0,
+      nextAction: _mapBuildNextAction(json['nextAction']),
+      currentStep: currentStepJson == null
+          ? null
+          : ProjectBuildCurrentStep(
+              stepId: _stringOrFallback(currentStepJson['stepId'], fallback: ''),
+              stepNumber: _intFromDynamic(currentStepJson['stepNumber']) ?? 0,
+              title: _stringOrFallback(currentStepJson['title'], fallback: ''),
+            ),
+      steps: stepsJson is List
+          ? stepsJson
+                .whereType<Map>()
+                .map(
+                  (step) => _mapBuildStepView(Map<String, dynamic>.from(step)),
+                )
+                .toList(growable: false)
+          : const <ProjectBuildStepView>[],
+    );
+  }
+
+  static ProjectBuildStepView _mapBuildStepView(Map<String, dynamic> json) {
+    return ProjectBuildStepView(
+      stepId: _stringOrFallback(json['stepId'], fallback: ''),
+      stepNumber: _intFromDynamic(json['stepNumber']) ?? 0,
+      title: _stringOrFallback(json['title'], fallback: ''),
+      description: _stringOrFallback(json['description'], fallback: ''),
+      imageUrl: _nullableString(json['imageUrl']),
+      completedAt: _dateTimeFromDynamic(json['completedAt']),
+      state: _mapBuildStepState(json['state']),
+    );
+  }
+
+  static ProjectBuildStepState _mapBuildStepState(Object? value) {
+    return switch (_stringOrFallback(value, fallback: 'LOCKED').toUpperCase()) {
+      'CURRENT' => ProjectBuildStepState.current,
+      'COMPLETED' => ProjectBuildStepState.completed,
+      _ => ProjectBuildStepState.locked,
+    };
+  }
+
+  static ProjectBuildNextAction? _mapBuildNextAction(Object? value) {
+    return switch (_stringOrFallback(value, fallback: '').toUpperCase()) {
+      'PREPARE_MATERIALS' => ProjectBuildNextAction.prepareMaterials,
+      'COMPLETE_CURRENT_STEP' => ProjectBuildNextAction.completeCurrentStep,
+      'BUILD_COMPLETED' => ProjectBuildNextAction.buildCompleted,
+      _ => null,
+    };
   }
 
   static LearningProjectSubmission submissionFromJson(

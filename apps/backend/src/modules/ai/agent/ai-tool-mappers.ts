@@ -1,5 +1,6 @@
 import type { AiContentBlock } from '../ai.content-blocks.js';
 import type { AiLocale } from '../ai.types.js';
+import { resolveBuildItemStepUnlockReadiness } from '../../learning-projects/learning-projects.build-material-linking.js';
 
 const DEFAULT_CURRENCY_SYMBOL = '₪';
 
@@ -222,6 +223,29 @@ export const toComponentListBlock = (
   })),
 });
 
+export type BuildGuideReadinessItem = {
+  status: string;
+  linkedMaterial?: { id: string } | null;
+  linkedReservation?: { id: string; status: string } | null;
+};
+
+export const isGenuinelyReadyForStepUnlock = (item: BuildGuideReadinessItem): boolean =>
+  resolveBuildItemStepUnlockReadiness({
+    status: item.status,
+    linkedMaterial: item.linkedMaterial as Parameters<
+      typeof resolveBuildItemStepUnlockReadiness
+    >[0]['linkedMaterial'],
+    linkedReservation: item.linkedReservation as Parameters<
+      typeof resolveBuildItemStepUnlockReadiness
+    >[0]['linkedReservation'],
+  }).isReadyForStepUnlock;
+
+export const filterGenuinelyMissingBuildItems = <
+  T extends BuildGuideReadinessItem,
+>(
+  items: T[],
+): T[] => items.filter((item) => !isGenuinelyReadyForStepUnlock(item));
+
 export const toBuildChecklistBlock = (
   build: {
     id: string;
@@ -252,6 +276,41 @@ export const toBuildChecklistBlock = (
     linkedReservationId: item.linkedReservation?.id ?? null,
   })),
 });
+
+export const toMissingBuildChecklistBlock = (
+  build: {
+    id: string;
+    projectId: string;
+    progress: { ready: number; total: number };
+    items: Array<{
+      id: string;
+      requiredComponentId: string;
+      status: string;
+      readinessLabel: string;
+      linkedMaterial?: { id: string } | null;
+      linkedReservation?: { id: string; status: string } | null;
+      component: { componentName: string };
+    }>;
+  },
+): AiContentBlock => {
+  const notReadyItems = filterGenuinelyMissingBuildItems(build.items);
+
+  return {
+    type: 'build_checklist',
+    buildId: build.id,
+    projectId: build.projectId,
+    readyCount: build.progress.ready,
+    totalRequired: build.progress.total,
+    items: notReadyItems.map((item) => ({
+      componentId: item.requiredComponentId,
+      name: item.component.componentName,
+      status: item.status,
+      readinessLabel: item.readinessLabel,
+      linkedMaterialId: item.linkedMaterial?.id ?? null,
+      linkedReservationId: item.linkedReservation?.id ?? null,
+    })),
+  };
+};
 
 export const toComponentMatchesBlock = (
   groups: Array<{
@@ -301,6 +360,40 @@ export const toRecommendationsBlock = (
   recommendationType,
   items,
 });
+
+const formatComponentNameList = (names: string[], locale: AiLocale): string => {
+  if (names.length <= 1) {
+    return names[0] ?? '';
+  }
+
+  if (locale === 'ar') {
+    return `${names.slice(0, -1).join(' و')}${names.length > 1 ? ' و' : ''}${names[names.length - 1]}`;
+  }
+
+  if (names.length === 2) {
+    return `${names[0]} and ${names[1]}`;
+  }
+
+  return `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+};
+
+export const buildComponentMatchesIntro = (
+  trustedBlocks: AiContentBlock[],
+  locale: AiLocale,
+): string => {
+  const matchBlock = trustedBlocks.find((block) => block.type === 'component_matches');
+  if (matchBlock?.type !== 'component_matches') {
+    return locale === 'ar'
+      ? 'هذه مواد مطابقة من ImpactLoop:'
+      : 'Here are matching materials from ImpactLoop:';
+  }
+
+  const componentNames = matchBlock.groups.map((group) => group.componentName).filter(Boolean);
+  const joined = formatComponentNameList(componentNames, locale);
+  return locale === 'ar'
+    ? `وجدت مواد مطابقة للمكونات الناقصة: ${joined}.`
+    : `I found matching materials for missing components: ${joined}.`;
+};
 
 export const mergeAgentBlocks = (
   text: string,

@@ -73,6 +73,7 @@ class AiContentBlockView extends ConsumerWidget {
             totalRequired: block.totalRequired,
             items: block.checklistItems,
           ),
+        'build_step_guide' => _AiBuildStepGuideBlock(block: block),
         'component_matches' => _AiComponentMatchesBlock(
             buildId: block.buildId,
             groups: block.matchGroups,
@@ -646,6 +647,66 @@ class _AiComponentListBlock extends StatelessWidget {
               child: TextButton(
                 onPressed: () => context.push('/learning/$projectId'),
                 child: Text(AiL10n.viewProject.resolve(context)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiBuildStepGuideBlock extends StatelessWidget {
+  const _AiBuildStepGuideBlock({required this.block});
+
+  final AiContentBlock block;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final stepNumber = block.stepNumber;
+    final totalSteps = block.totalSteps;
+    final title = block.guideTitle;
+    final description = block.guideDescription;
+
+    if (title == null || title.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final header = stepNumber != null && totalSteps != null
+        ? isAr
+            ? 'الخطوة $stepNumber من $totalSteps'
+            : 'Step $stepNumber of $totalSteps'
+        : null;
+    final progressLabel = block.progressPercent != null &&
+            block.completedSteps != null &&
+            totalSteps != null
+        ? isAr
+            ? 'التقدم: ${block.completedSteps} من $totalSteps (${block.progressPercent}%)'
+            : 'Progress: ${block.completedSteps} of $totalSteps (${block.progressPercent}%)'
+        : null;
+
+    return _AiBlockSection(
+      title: title,
+      subtitle: header,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (progressLabel != null) ...[
+            Text(
+              progressLabel,
+              style: AppTextStyles.label(context).copyWith(
+                color: palette.textMuted,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          if (description != null && description.isNotEmpty)
+            Text(
+              description,
+              style: AppTextStyles.body(context).copyWith(
+                color: palette.textPrimary,
+                height: 1.45,
               ),
             ),
         ],

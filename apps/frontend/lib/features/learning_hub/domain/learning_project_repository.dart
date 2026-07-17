@@ -59,6 +59,12 @@ abstract class LearningProjectRepository {
 
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId);
 
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId);
+
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  );
+
   Future<List<MaterialCategory>> fetchProjectCategories();
 
   Future<List<MaterialCategory>> fetchMaterialCategories();

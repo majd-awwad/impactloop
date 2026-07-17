@@ -16,6 +16,8 @@ import {
   getLearningProjects,
   getMyLearningProjectSubmissionById,
   getMyLearningProjectSubmissions,
+  completeProjectBuildStepById,
+  getOrCreateBuildGuideConversationByProjectId,
   getMyProjectBuildById,
   getSavedLearningProjects,
   likeLearningProjectById,
@@ -41,6 +43,7 @@ import type {
   UpdateMyLearningProjectSubmissionInput,
   UpdateProjectBuildItemInput,
 } from './learning-projects.validation.js';
+import { buildGuideConversationSchema } from './learning-projects.validation.js';
 
 export const listLearningProjects = async (
   req: Request,
@@ -157,6 +160,33 @@ export const getMyProjectBuild = async (
   const build = await getMyProjectBuildById(id, req.auth!.sub);
 
   res.json(successResponse('Project build fetched successfully', build));
+};
+
+export const completeProjectBuildStep = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, stepId } = readValidatedParams<{ id: string; stepId: string }>(
+    req,
+  );
+  const build = await completeProjectBuildStepById(id, req.auth!.sub, stepId);
+
+  res.json(successResponse('Build step completed successfully', build));
+};
+
+export const getOrCreateBuildGuideConversation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const body = buildGuideConversationSchema.parse(req.body ?? {});
+  const payload = await getOrCreateBuildGuideConversationByProjectId(
+    id,
+    req.auth!.sub,
+    body.locale ?? 'en',
+  );
+
+  res.json(successResponse('Build guide conversation ready', payload));
 };
 
 export const startProjectBuild = async (

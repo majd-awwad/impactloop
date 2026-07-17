@@ -48,6 +48,14 @@ export const projectBuildItemParamSchema = learningProjectIdParamSchema.extend({
   itemId: z.string().trim().min(1),
 });
 
+export const projectBuildStepParamSchema = learningProjectIdParamSchema.extend({
+  stepId: z.string().trim().uuid(),
+});
+
+export const buildGuideConversationSchema = z.object({
+  locale: z.enum(['en', 'ar']).optional(),
+});
+
 export const projectReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z

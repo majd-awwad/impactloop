@@ -371,6 +371,14 @@ class AiContentBlock {
     this.cancelLabel,
     this.actionStatus,
     this.externalSources = const [],
+    this.guideProjectStepId,
+    this.stepNumber,
+    this.totalSteps,
+    this.guideTitle,
+    this.guideDescription,
+    this.guideImageUrl,
+    this.progressPercent,
+    this.completedSteps,
   });
 
   factory AiContentBlock.fromJson(Map<String, dynamic> json) {
@@ -496,6 +504,28 @@ class AiContentBlock {
                 )
               : null,
         );
+      case 'build_step_guide':
+        final readinessJson = json['materialReadiness'];
+        return AiContentBlock(
+          type: type,
+          buildId: json['projectBuildId'] as String?,
+          projectId: json['projectId'] as String?,
+          actionTitle: json['projectTitle'] as String?,
+          guideProjectStepId: json['projectStepId'] as String?,
+          stepNumber: (json['stepNumber'] as num?)?.toInt(),
+          totalSteps: (json['totalSteps'] as num?)?.toInt(),
+          guideTitle: json['title'] as String?,
+          guideDescription: json['description'] as String?,
+          guideImageUrl: json['imageUrl'] as String?,
+          progressPercent: (json['progressPercent'] as num?)?.toInt(),
+          completedSteps: (json['completedSteps'] as num?)?.toInt(),
+          readyCount: readinessJson is Map
+              ? (readinessJson['ready'] as num?)?.toInt()
+              : null,
+          totalRequired: readinessJson is Map
+              ? (readinessJson['total'] as num?)?.toInt()
+              : null,
+        );
       case 'external_sources':
         return AiContentBlock(
           type: type,
@@ -540,6 +570,14 @@ class AiContentBlock {
   final String? cancelLabel;
   final String? actionStatus;
   final List<AiExternalSourceItem> externalSources;
+  final String? guideProjectStepId;
+  final int? stepNumber;
+  final int? totalSteps;
+  final String? guideTitle;
+  final String? guideDescription;
+  final String? guideImageUrl;
+  final int? progressPercent;
+  final int? completedSteps;
 }
 
 enum AiConversationStatus {

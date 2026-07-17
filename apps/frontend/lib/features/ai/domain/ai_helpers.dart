@@ -158,6 +158,160 @@ AiActionConfirmationUiState resolveActionConfirmationUiState({
   );
 }
 
+bool isOptimisticAiMessageId(String messageId) {
+  return messageId.startsWith('optimistic-');
+}
+
+bool messageHasPendingActionConfirmation(AiMessageItem message) {
+  for (var index = 0; index < message.contentBlocks.length; index += 1) {
+    final block = message.contentBlocks[index];
+    if (block.type != 'action_confirmation' || block.pendingActionId == null) {
+      continue;
+    }
+    if (isActionConfirmationExpired(block)) {
+      continue;
+    }
+    if (findActionResultForConfirmation(message.contentBlocks, index) != null) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+List<AiContentBlock> reconcileMessageContentBlocks({
+  required List<AiContentBlock> localBlocks,
+  required List<AiContentBlock> incomingBlocks,
+}) {
+  if (incomingBlocks.isEmpty) {
+    return localBlocks;
+  }
+
+  final incomingHasActionResult =
+      incomingBlocks.any((block) => block.type == 'action_result');
+  if (incomingHasActionResult) {
+    return incomingBlocks;
+  }
+
+  final merged = List<AiContentBlock>.from(incomingBlocks);
+  final incomingPendingIds = merged
+      .where((block) => block.type == 'action_confirmation')
+      .map((block) => block.pendingActionId)
+      .whereType<String>()
+      .toSet();
+
+  for (var index = 0; index < localBlocks.length; index += 1) {
+    final localBlock = localBlocks[index];
+    if (localBlock.type == 'action_result') {
+      final hasSameResult = merged.any(
+        (block) =>
+            block.type == 'action_result' &&
+            block.actionType == localBlock.actionType &&
+            block.actionStatus == localBlock.actionStatus,
+      );
+      if (!hasSameResult) {
+        merged.add(localBlock);
+      }
+      continue;
+    }
+
+    if (localBlock.type != 'action_confirmation') {
+      continue;
+    }
+
+    final pendingId = localBlock.pendingActionId;
+    if (pendingId == null || incomingPendingIds.contains(pendingId)) {
+      continue;
+    }
+
+    final existingResult =
+        findActionResultForConfirmation(localBlocks, index);
+    if (existingResult != null) {
+      continue;
+    }
+
+    if (isActionConfirmationExpired(localBlock)) {
+      continue;
+    }
+
+    merged.add(localBlock);
+  }
+
+  return merged;
+}
+
+AiMessageItem reconcileMessageItem({
+  required AiMessageItem local,
+  required AiMessageItem incoming,
+}) {
+  return AiMessageItem(
+    id: incoming.id,
+    role: incoming.role,
+    status: incoming.status,
+    contentText: incoming.contentText ?? local.contentText,
+    contentBlocks: reconcileMessageContentBlocks(
+      localBlocks: local.contentBlocks,
+      incomingBlocks: incoming.contentBlocks,
+    ),
+    createdAt: incoming.createdAt,
+  );
+}
+
+List<AiMessageItem> reconcileConversationMessages({
+  required List<AiMessageItem> current,
+  required List<AiMessageItem> incoming,
+}) {
+  if (incoming.isEmpty) {
+    return current;
+  }
+
+  final currentById = <String, AiMessageItem>{
+    for (final message in current) message.id: message,
+  };
+  final incomingIds = <String>{};
+
+  final reconciled = <AiMessageItem>[
+    for (final incomingMessage in incoming)
+      ...() {
+        incomingIds.add(incomingMessage.id);
+        final local = currentById[incomingMessage.id];
+        if (local == null) {
+          return [incomingMessage];
+        }
+        return [reconcileMessageItem(local: local, incoming: incomingMessage)];
+      }(),
+  ];
+
+  final latestIncomingAt = incoming
+      .map((message) => message.createdAt)
+      .fold<DateTime?>(
+        null,
+        (latest, createdAt) =>
+            latest == null || createdAt.isAfter(latest) ? createdAt : latest,
+      );
+
+  final localOnly = current
+      .where((message) => !incomingIds.contains(message.id))
+      .where((message) => !isOptimisticAiMessageId(message.id))
+      .where((message) {
+        if (messageHasPendingActionConfirmation(message)) {
+          return true;
+        }
+        if (latestIncomingAt == null) {
+          return false;
+        }
+        return message.createdAt.isAfter(latestIncomingAt);
+      })
+      .toList(growable: false);
+
+  if (localOnly.isEmpty) {
+    return reconciled;
+  }
+
+  return [...reconciled, ...localOnly]
+    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+}
+
 List<AiMessageItem> appendActionResultToMessages({
   required List<AiMessageItem> messages,
   required String pendingActionId,

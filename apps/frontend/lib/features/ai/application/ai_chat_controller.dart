@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/errors/api_exception.dart';
+import '../../learning_hub/application/learning_hub_providers.dart';
 import '../data/ai_repository.dart';
 import '../domain/ai_helpers.dart';
 import '../domain/ai_models.dart';
+import 'ai_assistant_shell_provider.dart';
 
 enum AiChatLoadStatus { idle, loading, ready, error }
 
@@ -89,9 +91,37 @@ final aiGeneralLearningChatProvider = aiAssistantControllerProvider;
 
 class AiAssistantController extends Notifier<AiChatState> {
   AiRepository get _repository => ref.read(aiRepositoryProvider);
+  int _messageReloadGeneration = 0;
 
   @override
   AiChatState build() => const AiChatState();
+
+  Future<void> _reloadConversationMessages(String conversationId) async {
+    final generation = ++_messageReloadGeneration;
+
+    try {
+      final page =
+          await _repository.listMessages(conversationId: conversationId);
+      if (generation != _messageReloadGeneration) {
+        return;
+      }
+      if (state.conversationId != conversationId) {
+        return;
+      }
+      if (page.items.isEmpty) {
+        return;
+      }
+
+      state = state.copyWith(
+        messages: reconcileConversationMessages(
+          current: state.messages,
+          incoming: page.items,
+        ),
+      );
+    } on Object {
+      // Keep merged turn messages when background reload fails.
+    }
+  }
 
   void resetForSignOut() {
     state = const AiChatState();
@@ -102,19 +132,33 @@ class AiAssistantController extends Notifier<AiChatState> {
   }
 
   Future<void> openConversation(String conversationId) async {
+    final generation = ++_messageReloadGeneration;
+    final isSameConversation = state.conversationId == conversationId;
+
     state = state.copyWith(
       conversationId: conversationId,
       loadStatus: AiChatLoadStatus.loading,
       clearSendError: true,
       clearPendingSend: true,
       disabledByProvider: false,
+      messages: isSameConversation ? state.messages : const [],
     );
 
     try {
       final page = await _repository.listMessages(conversationId: conversationId);
+      if (generation != _messageReloadGeneration) {
+        return;
+      }
+      if (state.conversationId != conversationId) {
+        return;
+      }
+
       state = state.copyWith(
         conversationId: conversationId,
-        messages: page.items,
+        messages: reconcileConversationMessages(
+          current: state.messages,
+          incoming: page.items,
+        ),
         loadStatus: AiChatLoadStatus.ready,
       );
     } on ApiException catch (error) {
@@ -227,15 +271,7 @@ class AiAssistantController extends Notifier<AiChatState> {
       ref.invalidate(aiActiveConversationsProvider);
       ref.invalidate(aiArchivedConversationsProvider);
 
-      try {
-        final page =
-            await _repository.listMessages(conversationId: conversationId);
-        if (page.items.isNotEmpty) {
-          state = state.copyWith(messages: page.items);
-        }
-      } on Object {
-        // Keep merged turn messages when background reload fails.
-      }
+      await _reloadConversationMessages(conversationId);
     } on ApiException catch (error) {
       if (error.code == 'AI_DISABLED') {
         state = state.copyWith(
@@ -331,13 +367,22 @@ class AiAssistantController extends Notifier<AiChatState> {
         clearPendingActionBusyId: true,
       );
 
-      final page = await _repository.listMessages(
-        conversationId: state.conversationId!,
-      );
-      state = state.copyWith(
-        messages: page.items,
-        clearPendingActionBusyId: true,
-      );
+      await _reloadConversationMessages(state.conversationId!);
+      state = state.copyWith(clearPendingActionBusyId: true);
+
+      if (_shouldRefreshBuildGuideAfterAction(resultBlock)) {
+        final buildGuideContext =
+            ref.read(aiAssistantShellProvider).buildGuideContext;
+        if (buildGuideContext != null) {
+          ref.invalidate(projectBuildProvider(buildGuideContext.projectId));
+          await ref.refresh(
+            projectBuildProvider(buildGuideContext.projectId).future,
+          );
+          await ref
+              .read(aiAssistantShellProvider.notifier)
+              .refreshBuildGuideContext();
+        }
+      }
     } on ApiException catch (error) {
       state = state.copyWith(
         clearPendingActionBusyId: true,
@@ -388,16 +433,28 @@ class AiAssistantController extends Notifier<AiChatState> {
         );
       }
 
-      final page = await _repository.listMessages(
-        conversationId: state.conversationId!,
-      );
-      state = state.copyWith(
-        messages: page.items,
-        clearPendingActionBusyId: true,
-      );
+      await _reloadConversationMessages(state.conversationId!);
+      state = state.copyWith(clearPendingActionBusyId: true);
     } on Object {
       state = state.copyWith(clearPendingActionBusyId: true);
     }
+  }
+}
+
+bool _shouldRefreshBuildGuideAfterAction(AiContentBlock resultBlock) {
+  if (resultBlock.actionStatus != 'EXECUTED') {
+    return false;
+  }
+
+  switch (resultBlock.actionType) {
+    case 'UPDATE_BUILD_COMPONENT_STATUSES':
+    case 'LINK_MATERIAL_TO_BUILD_COMPONENT':
+    case 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT':
+    case 'CONFIRM_MATERIAL_RESERVATION':
+    case 'COMPLETE_CURRENT_BUILD_STEP':
+      return true;
+    default:
+      return false;
   }
 }
 

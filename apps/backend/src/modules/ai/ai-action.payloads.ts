@@ -107,6 +107,45 @@ export const reservationPayloadSchema = basePayloadSchema.extend({
   }),
 });
 
+const buildComponentStatusItemSchema = z.object({
+  buildItemId: cuidLike,
+  requiredComponentId: cuidLike,
+  componentName: boundedText,
+  previousStatus: z.enum([
+    'MISSING',
+    'ALREADY_OWNED',
+    'AVAILABLE',
+    'RESERVED',
+    'ALTERNATIVE',
+  ]),
+});
+
+export const updateBuildComponentStatusesPayloadSchema = basePayloadSchema.extend({
+  actionType: z.literal('UPDATE_BUILD_COMPONENT_STATUSES'),
+  target: z.object({
+    projectId: cuidLike,
+    buildId: cuidLike,
+  }),
+  parameters: z.object({
+    targetStatus: z.enum(['ALREADY_OWNED', 'MISSING']),
+    items: z.array(buildComponentStatusItemSchema).min(1).max(50),
+  }),
+});
+
+export const completeCurrentBuildStepPayloadSchema = basePayloadSchema.extend({
+  actionType: z.literal('COMPLETE_CURRENT_BUILD_STEP'),
+  target: z.object({
+    projectId: cuidLike,
+    buildId: cuidLike,
+    projectStepId: cuidLike,
+  }),
+  parameters: z.object({
+    stepNumber: z.number().int().positive(),
+    stepTitle: boundedText,
+    expectedBuildStatus: z.literal('IN_PROGRESS'),
+  }),
+});
+
 export const prepareMaterialReservationPayloadSchema = basePayloadSchema.extend({
   actionType: z.literal('PREPARE_MATERIAL_RESERVATION'),
   target: z.object({ materialId: cuidLike }),
@@ -138,7 +177,9 @@ export type VersionedActionPayload =
   | z.infer<typeof linkMaterialToBuildPayloadSchema>
   | z.infer<typeof unlinkMaterialFromBuildPayloadSchema>
   | z.infer<typeof prepareMaterialReservationPayloadSchema>
-  | z.infer<typeof reservationPayloadSchema>;
+  | z.infer<typeof reservationPayloadSchema>
+  | z.infer<typeof updateBuildComponentStatusesPayloadSchema>
+  | z.infer<typeof completeCurrentBuildStepPayloadSchema>;
 
 const payloadSchemaByType: Record<
   AiPendingActionType,
@@ -153,6 +194,8 @@ const payloadSchemaByType: Record<
   UNLINK_MATERIAL_FROM_BUILD_COMPONENT: unlinkMaterialFromBuildPayloadSchema,
   PREPARE_MATERIAL_RESERVATION: prepareMaterialReservationPayloadSchema,
   CONFIRM_MATERIAL_RESERVATION: reservationPayloadSchema,
+  UPDATE_BUILD_COMPONENT_STATUSES: updateBuildComponentStatusesPayloadSchema,
+  COMPLETE_CURRENT_BUILD_STEP: completeCurrentBuildStepPayloadSchema,
   CANCEL_PENDING_AI_ACTION: null,
 };
 

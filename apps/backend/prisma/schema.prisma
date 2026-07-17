@@ -314,6 +314,8 @@ enum AiPendingActionType {
   UNLINK_MATERIAL_FROM_BUILD_COMPONENT
   PREPARE_MATERIAL_RESERVATION
   CONFIRM_MATERIAL_RESERVATION
+  UPDATE_BUILD_COMPONENT_STATUSES
+  COMPLETE_CURRENT_BUILD_STEP
   CANCEL_PENDING_AI_ACTION
 }
 
@@ -793,8 +795,9 @@ model ProjectStep {
   reviewStatus   ProjectReviewStatus @default(PENDING_REVIEW) @map("review_status")
   createdAt      DateTime            @default(now()) @map("created_at")
   updatedAt      DateTime            @updatedAt @map("updated_at")
-  project        LearningProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  approvedByUser User?               @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+  project        LearningProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvedByUser User?                      @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+  buildProgress  ProjectBuildStepProgress[]
 
   @@unique([projectId, stepNumber])
   @@index([projectId])
@@ -891,23 +894,42 @@ model ProjectUserReview {
 }
 
 model ProjectBuild {
-  id          String             @id @default(cuid())
-  projectId   String             @map("project_id")
-  learnerId   String             @map("learner_id")
-  status      ProjectBuildStatus @default(IN_PROGRESS)
-  startedAt   DateTime           @default(now()) @map("started_at")
-  completedAt DateTime?          @map("completed_at")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  project     LearningProject    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  learner     User               @relation("ProjectBuildLearner", fields: [learnerId], references: [id], onDelete: Cascade)
-  items       ProjectBuildItem[]
+  id              String                    @id @default(cuid())
+  projectId       String                    @map("project_id")
+  learnerId       String                    @map("learner_id")
+  status          ProjectBuildStatus        @default(IN_PROGRESS)
+  startedAt       DateTime                  @default(now()) @map("started_at")
+  completedAt     DateTime?                 @map("completed_at")
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  project         LearningProject           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  learner         User                      @relation("ProjectBuildLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  items           ProjectBuildItem[]
+  stepProgress    ProjectBuildStepProgress[]
+  guideConversations AiConversation[]       @relation("BuildGuideConversation")
 
   @@unique([projectId, learnerId])
   @@index([learnerId])
   @@index([projectId])
   @@index([status])
   @@map("project_builds")
+}
+
+model ProjectBuildStepProgress {
+  id            String       @id @default(cuid())
+  buildId       String       @map("build_id")
+  projectStepId String       @map("project_step_id")
+  startedAt     DateTime     @default(now()) @map("started_at")
+  completedAt   DateTime?    @map("completed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  build         ProjectBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  projectStep   ProjectStep  @relation(fields: [projectStepId], references: [id], onDelete: Cascade)
+
+  @@unique([buildId, projectStepId])
+  @@index([buildId])
+  @@index([projectStepId])
+  @@map("project_build_step_progress")
 }
 
 model ProjectBuildItem {
@@ -1536,6 +1558,7 @@ model AiConversation {
   mode                AiConversationMode
   locale              String                        @default("en")
   title               String?
+  projectBuildId      String?                       @map("project_build_id")
   status              AiConversationStatus          @default(ACTIVE)
   processingState     AiConversationProcessingState @default(IDLE) @map("processing_state")
   processingStartedAt DateTime?                     @map("processing_started_at")
@@ -1543,11 +1566,14 @@ model AiConversation {
   createdAt           DateTime                      @default(now()) @map("created_at")
   updatedAt           DateTime                      @updatedAt @map("updated_at")
   user                User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectBuild        ProjectBuild?                 @relation("BuildGuideConversation", fields: [projectBuildId], references: [id], onDelete: Cascade)
   messages            AiMessage[]
   pendingActions      AiPendingAction[]
 
+  @@unique([userId, projectBuildId])
   @@index([userId, status, lastMessageAt(sort: Desc)])
   @@index([userId, updatedAt(sort: Desc)])
+  @@index([projectBuildId])
   @@map("ai_conversations")
 }
 

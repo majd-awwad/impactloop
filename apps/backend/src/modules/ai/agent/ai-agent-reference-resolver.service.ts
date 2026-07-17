@@ -1,6 +1,8 @@
 import type { AiContentBlock } from '../ai.content-blocks.js';
 import { parseStoredContentBlocks } from '../ai-context-builder.js';
 import { listMessagesForConversation } from '../ai.repository.js';
+import { isActiveReservationBehaviorStatus } from '../../reservations/reservations.quantity.js';
+import type { ReservationStatus } from '../../../generated/prisma/client.js';
 import {
   detectComponentMaterialMatchingIntent,
   extractProjectTitleQuery,
@@ -770,6 +772,204 @@ export const resolveConversationReferences = async (input: {
   return null;
 };
 
+export type BuildGuideMaterialActionIntent = {
+  action: 'LINK' | 'UNLINK' | 'RESERVE' | 'NONE';
+  ordinal: number | null;
+  referenceText: string | null;
+  confidence: number;
+  source: 'deterministic' | 'fuzzy';
+};
+
+const BUILD_GUIDE_RESULT_NOUNS = [
+  'مادة',
+  'مواد',
+  'وحدة',
+  'واحدة',
+  'خيار',
+  'نتيجة',
+  'عنصر',
+  'material',
+  'materials',
+  'unit',
+  'option',
+  'result',
+  'one',
+];
+
+const BUILD_GUIDE_LINK_VERBS = ['اربط', 'ربط', 'link'];
+const BUILD_GUIDE_SELECT_VERBS = [
+  'اختار',
+  'اختر',
+  'استخدم',
+  'خد',
+  'خلينا نستخدم',
+  'choose',
+  'use',
+  'pick',
+];
+
+const messageIncludesNormalizedToken = (
+  message: string,
+  tokens: string[],
+): boolean => {
+  const normalized = normalizeBuildReferenceText(message);
+  return tokens.some((token) => {
+    const normalizedToken = normalizeBuildReferenceText(token);
+    return normalizedToken.length >= 2 && normalized.includes(normalizedToken);
+  });
+};
+
+export const resolveBuildGuideMaterialOrdinal = (userMessage: string): number => {
+  for (const ordinal of ORDINAL_PATTERNS) {
+    if (ordinal.patterns.some((pattern) => pattern.test(userMessage))) {
+      return ordinal.index;
+    }
+  }
+
+  if (/(رقم\s*واحد|option\s*one|option\s*1)\b/i.test(userMessage)) {
+    return 0;
+  }
+  if (/(رقم\s*اثنين|option\s*two|option\s*2)\b/i.test(userMessage)) {
+    return 1;
+  }
+  if (/(رقم\s*ثلاثة|option\s*three|option\s*3)\b/i.test(userMessage)) {
+    return 2;
+  }
+  if (/\bfirst\b/i.test(userMessage)) {
+    return 0;
+  }
+  if (/\bsecond\b/i.test(userMessage)) {
+    return 1;
+  }
+  if (/\bthird\b/i.test(userMessage)) {
+    return 2;
+  }
+
+  return 0;
+};
+
+const tryFuzzyBuildGuideLinkIntent = (
+  userMessage: string,
+): BuildGuideMaterialActionIntent | null => {
+  const collapsed = normalizeBuildReferenceText(userMessage).replace(/\s+/g, '');
+  const fuzzyLink =
+    collapsed.includes('اربط') ||
+    collapsed.includes('ربط') ||
+    /\blink(the)?(first|1|one)/i.test(collapsed);
+  const fuzzySelect =
+    /(اختار|اختر|استخدم|خد|choose|use|pick)/i.test(userMessage) &&
+    /(اول|أول|first|1)/i.test(userMessage);
+
+  if (!fuzzyLink && !fuzzySelect) {
+    return null;
+  }
+
+  return {
+    action: 'LINK',
+    ordinal: resolveBuildGuideMaterialOrdinal(userMessage),
+    referenceText: null,
+    confidence: 0.72,
+    source: 'fuzzy',
+  };
+};
+
+const detectBuildGuideUnlinkIntent = (text: string): boolean =>
+  /(فك الربط|فك ربط|الغ.? الربط|شيل المادة المربوطة|افصل المادة عن المكون|unlink it|remove the linked material)/i.test(
+    text,
+  ) ||
+  (/(فك الربط|فك ربط|unlink)/i.test(text) &&
+    /(مكون|component|مادة|material)/i.test(text)) ||
+  (/\bunlink\b/i.test(text) && /\b(material|component)\b/i.test(text));
+
+export const parseBuildGuideMaterialActionIntent = (
+  userMessage: string,
+): BuildGuideMaterialActionIntent | null => {
+  const text = userMessage.toLowerCase();
+  if (detectBuildGuideUnlinkIntent(text)) {
+    return {
+      action: 'UNLINK',
+      ordinal: null,
+      referenceText: null,
+      confidence: 0.95,
+      source: 'deterministic',
+    };
+  }
+
+  if (/(احجز|reserve|book)/i.test(text)) {
+    return {
+      action: 'RESERVE',
+      ordinal: null,
+      referenceText: null,
+      confidence: 0.95,
+      source: 'deterministic',
+    };
+  }
+
+  const hasLinkVerb =
+    messageIncludesNormalizedToken(userMessage, BUILD_GUIDE_LINK_VERBS) ||
+    /\blink\b/i.test(userMessage);
+  const hasSelectVerb = messageIncludesNormalizedToken(
+    userMessage,
+    BUILD_GUIDE_SELECT_VERBS,
+  );
+  const hasResultNoun = messageIncludesNormalizedToken(
+    userMessage,
+    BUILD_GUIDE_RESULT_NOUNS,
+  );
+  const hasOrdinalCue =
+    ORDINAL_PATTERNS.some((ordinal) =>
+      ordinal.patterns.some((pattern) => pattern.test(userMessage)),
+    ) ||
+    /\b(first|second|third|one)\b/i.test(userMessage) ||
+    /(رقم\s*(واحد|اثنين|ثلاثة)|option\s*(one|two|three|1|2|3))/i.test(
+      userMessage,
+    );
+  const linksViaPronoun =
+    /(واربطها|واربطه|and link|then link|link it|link them)/i.test(userMessage);
+  const suitableThenLink = /(مناسبة|مناسب|suitable).*(اربط|link|ربط)/i.test(
+    userMessage,
+  );
+
+  if (
+    hasLinkVerb ||
+    linksViaPronoun ||
+    suitableThenLink ||
+    (hasSelectVerb && (hasOrdinalCue || hasResultNoun))
+  ) {
+    return {
+      action: 'LINK',
+      ordinal: resolveBuildGuideMaterialOrdinal(userMessage),
+      referenceText: null,
+      confidence: 0.95,
+      source: 'deterministic',
+    };
+  }
+
+  return tryFuzzyBuildGuideLinkIntent(userMessage);
+};
+
+export const detectBuildGuideLinkAction = (userMessage: string): boolean =>
+  parseBuildGuideMaterialActionIntent(userMessage)?.action === 'LINK';
+
+export const resolveBuildItemIdForLinkedMaterial = async (input: {
+  trustedProjectBuildId: string;
+  materialId: string;
+  authenticatedUserId: string;
+}): Promise<string | null> => {
+  const build = await getOwnedProjectBuildByBuildId(
+    input.trustedProjectBuildId,
+    input.authenticatedUserId,
+  );
+  if (!build) {
+    return null;
+  }
+
+  return (
+    build.items.find((item) => item.linkedMaterial?.id === input.materialId)?.id ??
+    null
+  );
+};
+
 export const resolveLinkActionTargets = async (input: {
   conversationId: string;
   userMessage: string;
@@ -780,33 +980,87 @@ export const resolveLinkActionTargets = async (input: {
   const checklist = findLatestChecklistBlock(assistantBlocks);
 
   let materialId: string | null = null;
-  const ordinalMatch = ORDINAL_PATTERNS.find((ordinal) =>
-    ordinal.patterns.some((pattern) => pattern.test(input.userMessage)),
-  );
+  let componentId: string | null = null;
+  const materialIndex = resolveBuildGuideMaterialOrdinal(input.userMessage);
+  const normalizedMessage = input.userMessage.toLowerCase();
+
+  const matchComponentGroupFromMessage = (
+    groups: NonNullable<typeof latestMatches>['groups'],
+  ) => {
+    for (const group of groups) {
+      const componentName = group.componentName.toLowerCase();
+      if (componentName.length >= 2 && normalizedMessage.includes(componentName)) {
+        return group;
+      }
+    }
+
+    const forComponentMatch = input.userMessage.match(
+      /(?:بال|لل|for|to)\s*([^\s؟?.!,]+)/i,
+    );
+    const token = forComponentMatch?.[1]?.toLowerCase().trim();
+    if (!token || token.length < 2) {
+      return null;
+    }
+
+    return (
+      groups.find((group) => {
+        const componentName = group.componentName.toLowerCase();
+        return componentName.includes(token) || token.includes(componentName);
+      }) ?? null
+    );
+  };
 
   if (latestMatches) {
-    const group = latestMatches.groups[0];
-    const materialIndex = ordinalMatch?.index ?? 0;
-    materialId = group?.materials[materialIndex]?.materialId ?? null;
+    const explicitGroup = matchComponentGroupFromMessage(latestMatches.groups);
+    if (explicitGroup) {
+      componentId = explicitGroup.componentId;
+      materialId =
+        explicitGroup.materials[materialIndex]?.materialId ??
+        (materialIndex === 0 ? explicitGroup.materials[0]?.materialId : null) ??
+        null;
+    } else {
+      const flatMaterials: Array<{ materialId: string; componentId: string }> = [];
+      for (const group of latestMatches.groups) {
+        for (const material of group.materials) {
+          if (material.materialId) {
+            flatMaterials.push({
+              materialId: material.materialId,
+              componentId: group.componentId,
+            });
+          }
+        }
+      }
+
+      const selected = flatMaterials[materialIndex] ?? flatMaterials[0] ?? null;
+      if (selected) {
+        materialId = selected.materialId;
+        componentId = selected.componentId;
+      }
+    }
   }
 
   if (!materialId && latestMaterialBlock) {
-    const materialIndex = ordinalMatch?.index ?? 0;
-    materialId = latestMaterialBlock.items[materialIndex]?.materialId ?? null;
+    materialId =
+      latestMaterialBlock.items[materialIndex]?.materialId ??
+      (materialIndex === 0 ? latestMaterialBlock.items[0]?.materialId : null) ??
+      null;
   }
 
-  const missingItem =
-    checklist?.items.find(
-      (item) => item.status === 'MISSING' || item.status === 'AVAILABLE',
-    ) ?? null;
+  if (!componentId) {
+    const missingItem =
+      checklist?.items.find(
+        (item) => item.status === 'MISSING' || item.status === 'AVAILABLE',
+      ) ?? null;
+    componentId = missingItem?.componentId ?? null;
+  }
 
-  if (!materialId || !missingItem) {
+  if (!materialId || !componentId) {
     return null;
   }
 
   return {
     materialId,
-    componentId: missingItem.componentId,
+    componentId,
   };
 };
 
@@ -951,4 +1205,385 @@ export const resolveLatestBuildId = async (
   }
 
   return null;
+};
+
+type OwnedBuild = NonNullable<Awaited<ReturnType<typeof getOwnedProjectBuildByBuildId>>>;
+type OwnedBuildItem = OwnedBuild['items'][number];
+
+export type BuildGuideLinkedTarget = {
+  projectId: string;
+  projectTitle: string;
+  buildId: string;
+  buildItemId: string;
+  componentId: string;
+  componentName: string;
+  materialId: string;
+  materialTitle: string;
+};
+
+export type BuildGuideUnlinkResolution =
+  | { kind: 'resolved'; target: BuildGuideLinkedTarget }
+  | {
+      kind: 'ambiguous';
+      items: Array<{ componentName: string; materialTitle: string }>;
+    }
+  | { kind: 'not_found' };
+
+export type BuildGuideReservationResolution =
+  | { kind: 'resolved'; target: BuildGuideLinkedTarget }
+  | {
+      kind: 'active_reservation';
+      target: BuildGuideLinkedTarget;
+      reservationStatus: string;
+      reservationStatusLabel: string;
+    }
+  | {
+      kind: 'ambiguous';
+      items: Array<{ componentName: string; materialTitle: string }>;
+    }
+  | { kind: 'not_eligible'; reason: 'material_unavailable' | 'link_removed' }
+  | { kind: 'not_found' };
+
+const normalizeBuildReferenceText = (value: string): string =>
+  normalizeArabicVariants(
+    value
+      .toLowerCase()
+      .normalize('NFKC')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+  );
+
+const findLinkedBuildItems = (build: OwnedBuild) =>
+  build.items.filter((item) => item.linkedMaterial?.id);
+
+const toBuildGuideLinkedTarget = (
+  build: OwnedBuild,
+  item: OwnedBuildItem,
+): BuildGuideLinkedTarget => ({
+  projectId: build.projectId,
+  projectTitle: build.project.title,
+  buildId: build.id,
+  buildItemId: item.id,
+  componentId: item.requiredComponentId,
+  componentName: item.component.componentName,
+  materialId: item.linkedMaterial!.id,
+  materialTitle: item.linkedMaterial!.title,
+});
+
+const itemMatchesMessageReference = (
+  item: OwnedBuildItem,
+  userMessage: string,
+): boolean => {
+  const normalizedMessage = normalizeBuildReferenceText(userMessage);
+  const candidates = [
+    item.component.componentName,
+    item.component.materialType,
+    item.linkedMaterial?.title,
+  ]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .map((value) => normalizeBuildReferenceText(value))
+    .filter((value) => value.length >= 2);
+
+  return candidates.some((candidate) => normalizedMessage.includes(candidate));
+};
+
+const findLatestSuccessfulLinkActionResult = (
+  blocks: AiContentBlock[],
+  trustedBuildId: string,
+): Extract<AiContentBlock, { type: 'action_result' }> | null => {
+  for (let index = blocks.length - 1; index >= 0; index -= 1) {
+    const block = blocks[index];
+    if (
+      block.type === 'action_result' &&
+      block.actionType === 'LINK_MATERIAL_TO_BUILD_COMPONENT' &&
+      block.status === 'EXECUTED' &&
+      block.target?.type === 'COMPONENT' &&
+      block.navigation?.route === 'project_build' &&
+      block.navigation.id === trustedBuildId
+    ) {
+      return block;
+    }
+  }
+
+  return null;
+};
+
+const hydrateLinkedTargetFromLinkResult = (
+  build: OwnedBuild,
+  linkResult: Extract<AiContentBlock, { type: 'action_result' }>,
+): BuildGuideLinkedTarget | null => {
+  const buildItemId =
+    linkResult.target?.type === 'COMPONENT' ? linkResult.target.id : null;
+  if (!buildItemId) {
+    return null;
+  }
+
+  const item = build.items.find((entry) => entry.id === buildItemId);
+  if (!item?.linkedMaterial?.id) {
+    return null;
+  }
+
+  return toBuildGuideLinkedTarget(build, item);
+};
+
+const findComponentItemByMessage = (
+  build: OwnedBuild,
+  userMessage: string,
+): OwnedBuildItem | null => {
+  const normalizedMessage = normalizeBuildReferenceText(userMessage);
+
+  for (const item of build.items) {
+    const names = [item.component.componentName, item.component.materialType]
+      .map((value) => normalizeBuildReferenceText(value))
+      .filter((value) => value.length >= 2);
+
+    if (names.some((name) => normalizedMessage.includes(name))) {
+      return item;
+    }
+  }
+
+  return null;
+};
+
+const hasActiveReservationHold = (item: OwnedBuildItem): boolean => {
+  if (!item.linkedReservation) {
+    return false;
+  }
+
+  return isActiveReservationBehaviorStatus(
+    item.linkedReservation.status as ReservationStatus,
+  );
+};
+
+const isEligibleLinkedReservationItem = (item: OwnedBuildItem): boolean => {
+  if (!item.linkedMaterial?.id) {
+    return false;
+  }
+
+  if (item.linkedReservation?.status === 'COMPLETED') {
+    return false;
+  }
+
+  if (hasActiveReservationHold(item)) {
+    return false;
+  }
+
+  return item.linkedMaterial.status === 'AVAILABLE';
+};
+
+const resolveMaterialFromComponentMatches = (
+  blocks: AiContentBlock[],
+  trustedBuildId: string,
+  userMessage: string,
+  build: OwnedBuild,
+): OwnedBuildItem | null => {
+  const matches = findLatestComponentMatchesBlock(blocks);
+  if (!matches || matches.buildId !== trustedBuildId) {
+    return null;
+  }
+
+  const ordinalMatch = ORDINAL_PATTERNS.find((ordinal) =>
+    ordinal.patterns.some((pattern) => pattern.test(userMessage)),
+  );
+  const materialIndex = ordinalMatch?.index ?? 0;
+  const normalizedMessage = userMessage.toLowerCase();
+
+  for (const group of matches.groups) {
+    const componentName = group.componentName.toLowerCase();
+    const explicitComponent =
+      componentName.length >= 2 && normalizedMessage.includes(componentName);
+    const selectedMaterial =
+      group.materials[materialIndex]?.materialId ?? group.materials[0]?.materialId;
+    if (!selectedMaterial) {
+      continue;
+    }
+
+    if (explicitComponent || matches.groups.length === 1) {
+      const item = build.items.find(
+        (entry) =>
+          entry.requiredComponentId === group.componentId &&
+          entry.linkedMaterial?.id === selectedMaterial,
+      );
+      if (item) {
+        return item;
+      }
+    }
+  }
+
+  return null;
+};
+
+const buildAmbiguousLinkedItems = (
+  items: OwnedBuildItem[],
+): Array<{ componentName: string; materialTitle: string }> =>
+  items
+    .filter((item) => item.linkedMaterial?.id)
+    .map((item) => ({
+      componentName: item.component.componentName,
+      materialTitle: item.linkedMaterial!.title,
+    }));
+
+const finalizeReservationTarget = (
+  build: OwnedBuild,
+  item: OwnedBuildItem,
+): BuildGuideReservationResolution => {
+  if (!item.linkedMaterial?.id) {
+    return { kind: 'not_eligible', reason: 'link_removed' };
+  }
+
+  if (hasActiveReservationHold(item)) {
+    return {
+      kind: 'active_reservation',
+      target: toBuildGuideLinkedTarget(build, item),
+      reservationStatus: item.linkedReservation!.status,
+      reservationStatusLabel: item.linkedReservation!.statusLabel,
+    };
+  }
+
+  if (item.linkedMaterial.status !== 'AVAILABLE') {
+    return { kind: 'not_eligible', reason: 'material_unavailable' };
+  }
+
+  return { kind: 'resolved', target: toBuildGuideLinkedTarget(build, item) };
+};
+
+export const resolveBuildGuideUnlinkTarget = async (input: {
+  conversationId: string;
+  userMessage: string;
+  trustedProjectBuildId: string;
+  authenticatedUserId: string;
+}): Promise<BuildGuideUnlinkResolution> => {
+  const build = await getOwnedProjectBuildByBuildId(
+    input.trustedProjectBuildId,
+    input.authenticatedUserId,
+  );
+  if (!build) {
+    return { kind: 'not_found' };
+  }
+
+  const blocks = await loadRecentAssistantBlocks(input.conversationId);
+  const linkedItems = findLinkedBuildItems(build);
+
+  const explicitMatches = linkedItems.filter((item) =>
+    itemMatchesMessageReference(item, input.userMessage),
+  );
+  if (explicitMatches.length === 1) {
+    return {
+      kind: 'resolved',
+      target: toBuildGuideLinkedTarget(build, explicitMatches[0]!),
+    };
+  }
+  if (explicitMatches.length > 1) {
+    return { kind: 'ambiguous', items: buildAmbiguousLinkedItems(explicitMatches) };
+  }
+
+  const linkResult = findLatestSuccessfulLinkActionResult(
+    blocks,
+    input.trustedProjectBuildId,
+  );
+  if (linkResult) {
+    const target = hydrateLinkedTargetFromLinkResult(build, linkResult);
+    if (target) {
+      return { kind: 'resolved', target };
+    }
+  }
+
+  if (linkedItems.length === 1) {
+    return {
+      kind: 'resolved',
+      target: toBuildGuideLinkedTarget(build, linkedItems[0]!),
+    };
+  }
+
+  if (linkedItems.length > 1) {
+    return { kind: 'ambiguous', items: buildAmbiguousLinkedItems(linkedItems) };
+  }
+
+  return { kind: 'not_found' };
+};
+
+export const resolveBuildGuideReservationTarget = async (input: {
+  conversationId: string;
+  userMessage: string;
+  trustedProjectBuildId: string;
+  authenticatedUserId: string;
+}): Promise<BuildGuideReservationResolution> => {
+  const build = await getOwnedProjectBuildByBuildId(
+    input.trustedProjectBuildId,
+    input.authenticatedUserId,
+  );
+  if (!build) {
+    return { kind: 'not_found' };
+  }
+
+  const blocks = await loadRecentAssistantBlocks(input.conversationId);
+  const linkedItems = findLinkedBuildItems(build);
+  const linkResult = findLatestSuccessfulLinkActionResult(
+    blocks,
+    input.trustedProjectBuildId,
+  );
+
+  const explicitMatches = linkedItems.filter((item) =>
+    itemMatchesMessageReference(item, input.userMessage),
+  );
+  if (explicitMatches.length === 1) {
+    return finalizeReservationTarget(build, explicitMatches[0]!);
+  }
+  if (explicitMatches.length > 1) {
+    return { kind: 'ambiguous', items: buildAmbiguousLinkedItems(explicitMatches) };
+  }
+
+  if (linkResult) {
+    const target = hydrateLinkedTargetFromLinkResult(build, linkResult);
+    if (target) {
+      const item = build.items.find((entry) => entry.id === target.buildItemId);
+      if (item) {
+        return finalizeReservationTarget(build, item);
+      }
+    }
+  }
+
+  const componentItem = findComponentItemByMessage(build, input.userMessage);
+  if (componentItem?.linkedMaterial?.id) {
+    return finalizeReservationTarget(build, componentItem);
+  }
+
+  const eligibleItems = linkedItems.filter(isEligibleLinkedReservationItem);
+  if (eligibleItems.length === 1) {
+    return finalizeReservationTarget(build, eligibleItems[0]!);
+  }
+
+  if (!linkResult) {
+    const matchesItem = resolveMaterialFromComponentMatches(
+      blocks,
+      input.trustedProjectBuildId,
+      input.userMessage,
+      build,
+    );
+    if (matchesItem) {
+      return finalizeReservationTarget(build, matchesItem);
+    }
+  }
+
+  if (linkedItems.length === 1 && hasActiveReservationHold(linkedItems[0]!)) {
+    const item = linkedItems[0]!;
+    return {
+      kind: 'active_reservation',
+      target: toBuildGuideLinkedTarget(build, item),
+      reservationStatus: item.linkedReservation!.status,
+      reservationStatusLabel: item.linkedReservation!.statusLabel,
+    };
+  }
+
+  if (eligibleItems.length > 1 || linkedItems.length > 1) {
+    return {
+      kind: 'ambiguous',
+      items: buildAmbiguousLinkedItems(
+        eligibleItems.length > 0 ? eligibleItems : linkedItems,
+      ),
+    };
+  }
+
+  return { kind: 'not_found' };
 };

@@ -225,6 +225,29 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/steps/$stepId/complete',
+      ),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/guide-conversation',
+        data: const {},
+      ),
+      (json) => LearningHubApiMapper.fromBuildGuideConversationJson(json),
+    );
+  }
+
+  @override
   Future<List<MaterialCategory>> fetchProjectCategories() {
     return _categoriesApi.fetchProjectCategories();
   }

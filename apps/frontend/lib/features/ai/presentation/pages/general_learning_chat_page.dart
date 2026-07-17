@@ -22,8 +22,11 @@ class _AiAssistantRoutePageState extends ConsumerState<AiAssistantRoutePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final isBuildGuide =
+          GoRouterState.of(context).uri.queryParameters['buildGuide'] == '1';
       ref.read(aiAssistantShellProvider.notifier).open(
             conversationId: widget.conversationId,
+            clearBuildGuideContext: !isBuildGuide,
           );
       if (mounted && context.canPop()) {
         context.pop();

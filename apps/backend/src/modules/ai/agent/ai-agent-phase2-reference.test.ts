@@ -17,10 +17,8 @@ import {
 import { extractRecentEntitiesFromBlock } from './ai-agent-recent-entities.service.js';
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import { preserveDeterministicDomainLearning } from './ai-agent-plan-resolver.service.js';
-import {
-  buildComponentMatchesIntro,
-  isReservationContinuationMessage,
-} from './ai-agent-turn.service.js';
+import { buildComponentMatchesIntro } from './ai-tool-mappers.js';
+import { isReservationContinuationMessage } from './ai-agent-turn.service.js';
 import { extractRequestedResultCount } from './ai-agent-number-parser.service.js';
 
 describe('phase 2 intent guards', () => {
