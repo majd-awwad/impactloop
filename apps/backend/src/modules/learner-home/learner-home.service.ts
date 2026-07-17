@@ -153,7 +153,6 @@ const BUILD_ITEM_READY_STATUSES = new Set([
 const isBuildItemReady = (item: {
   status: string;
   linkedReservation: { status: string } | null;
-  linkedMaterial: unknown | null;
 }) => {
   if (item.linkedReservation?.status === 'COMPLETED') {
     return true;

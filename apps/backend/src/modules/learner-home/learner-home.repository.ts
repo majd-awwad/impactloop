@@ -130,7 +130,14 @@ const materialPoolSelect = {
   },
 } satisfies Prisma.MaterialSelect;
 
-const projectPoolInclude = {
+const projectCardSelect = {
+  id: true,
+  title: true,
+  shortDescription: true,
+  difficulty: true,
+  estimatedDurationMinutes: true,
+  coverImageUrl: true,
+  createdAt: true,
   category: {
     select: {
       id: true,
@@ -143,6 +150,10 @@ const projectPoolInclude = {
       tag: true,
     },
   },
+} satisfies Prisma.LearningProjectSelect;
+
+const projectCandidateSelect = {
+  ...projectCardSelect,
   requiredComponents: {
     select: {
       id: true,
@@ -159,9 +170,24 @@ const projectPoolInclude = {
       userReviews: true,
     },
   },
-} satisfies Prisma.LearningProjectInclude;
+} satisfies Prisma.LearningProjectSelect;
 
-const projectBuildInclude = {
+const savedProjectSelect = {
+  ...projectCardSelect,
+  _count: {
+    select: {
+      likes: true,
+    },
+  },
+} satisfies Prisma.LearningProjectSelect;
+
+const projectBuildSelect = {
+  id: true,
+  projectId: true,
+  status: true,
+  startedAt: true,
+  completedAt: true,
+  updatedAt: true,
   project: {
     select: {
       id: true,
@@ -171,24 +197,18 @@ const projectBuildInclude = {
     },
   },
   items: {
-    include: {
-      linkedMaterial: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-        },
-      },
+    select: {
+      id: true,
+      requiredComponentId: true,
+      status: true,
       linkedReservation: {
         select: {
-          id: true,
           status: true,
         },
       },
       requiredComponent: {
         select: {
           id: true,
-          categoryId: true,
           componentName: true,
           materialType: true,
           quantity: true,
@@ -202,7 +222,7 @@ const projectBuildInclude = {
       },
     },
   },
-} satisfies Prisma.ProjectBuildInclude;
+} satisfies Prisma.ProjectBuildSelect;
 
 const parseSearchKeywords = (value: Prisma.JsonValue | null | undefined) => {
   if (!Array.isArray(value)) {
@@ -718,7 +738,7 @@ export const loadMaterialCandidates = async () =>
 export const loadProjectPool = async (take = 120) =>
   prisma.learningProject.findMany({
     where: publicProjectWhere,
-    include: projectPoolInclude,
+    select: projectCandidateSelect,
     orderBy: [{ createdAt: 'desc' }],
     take,
   });
@@ -840,7 +860,7 @@ export const loadSavedProjectsForLearner = async (
     select: {
       createdAt: true,
       project: {
-        include: projectPoolInclude,
+        select: savedProjectSelect,
       },
     },
   });
@@ -900,7 +920,7 @@ export const loadInProgressBuilds = async (userId: string, limit = 6) =>
       status: 'IN_PROGRESS',
       project: publicProjectWhere,
     },
-    include: projectBuildInclude,
+    select: projectBuildSelect,
     orderBy: {
       updatedAt: 'desc',
     },
@@ -936,7 +956,7 @@ const materialBehaviorSelect = {
   },
 } satisfies Prisma.MaterialSelect;
 
-const projectBehaviorSelect = {
+const projectBehaviorSignalSelect = {
   id: true,
   title: true,
   shortDescription: true,
@@ -951,6 +971,21 @@ const projectBehaviorSelect = {
       tag: true,
     },
   },
+  requiredComponents: {
+    select: {
+      componentName: true,
+      materialType: true,
+      category: {
+        select: {
+          nameEn: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.LearningProjectSelect;
+
+const savedProjectBehaviorSelect = {
+  ...projectBehaviorSignalSelect,
   requiredComponents: {
     select: {
       id: true,
@@ -1089,9 +1124,7 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
+        project: { select: savedProjectBehaviorSelect },
       },
     }),
     prisma.projectLike.findMany({
@@ -1102,9 +1135,7 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
+        project: { select: projectBehaviorSignalSelect },
       },
     }),
     prisma.projectFollow.findMany({
@@ -1115,9 +1146,7 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
+        project: { select: projectBehaviorSignalSelect },
       },
     }),
     prisma.projectBuild.findMany({
@@ -1129,9 +1158,7 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { updatedAt: 'desc' },
       take: 10,
       select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
+        project: { select: projectBehaviorSignalSelect },
       },
     }),
   ]);
