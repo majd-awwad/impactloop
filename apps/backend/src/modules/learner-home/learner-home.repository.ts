@@ -448,7 +448,7 @@ export const collectMaterialCandidateCategoryIds = (
     ),
   ].slice(0, MAX_CATEGORY_FILTER_IDS);
 
-const buildMaterialRelevanceWhere = (
+export const buildMaterialRelevanceWhere = (
   input: Pick<
     MaterialCandidateLoadInput,
     'interests' | 'savedComponents' | 'behavior' | 'savedLocation'
@@ -466,67 +466,91 @@ const buildMaterialRelevanceWhere = (
     });
   }
 
-  for (const term of terms) {
-    orFilters.push({
+  const scalarTermFilters = terms.flatMap((term) => [
+    {
       title: {
         contains: term,
-        mode: 'insensitive',
+        mode: 'insensitive' as const,
       },
-    });
-    orFilters.push({
+    },
+    {
       materialType: {
         contains: term,
-        mode: 'insensitive',
+        mode: 'insensitive' as const,
       },
+    },
+  ] satisfies Prisma.MaterialWhereInput[]);
+
+  if (scalarTermFilters.length > 0) {
+    orFilters.push({
+      OR: scalarTermFilters,
     });
+  }
+
+  const tagTermFilters = terms.map((term) => ({
+    tag: {
+      contains: term,
+      mode: 'insensitive' as const,
+    },
+  }));
+
+  if (tagTermFilters.length > 0) {
     orFilters.push({
       tags: {
         some: {
-          tag: {
-            contains: term,
-            mode: 'insensitive',
-          },
+          OR: tagTermFilters,
         },
-      },
-    });
-    orFilters.push({
-      category: {
-        OR: [
-          {
-            nameEn: {
-              contains: term,
-              mode: 'insensitive',
-            },
-          },
-          {
-            nameAr: {
-              contains: term,
-              mode: 'insensitive',
-            },
-          },
-        ],
       },
     });
   }
 
-  if (input.savedLocation.city?.trim()) {
+  const categoryTermFilters = terms.flatMap((term) => [
+    {
+      nameEn: {
+        contains: term,
+        mode: 'insensitive' as const,
+      },
+    },
+    {
+      nameAr: {
+        contains: term,
+        mode: 'insensitive' as const,
+      },
+    },
+  ]);
+
+  if (categoryTermFilters.length > 0) {
     orFilters.push({
-      location: {
-        city: {
-          equals: input.savedLocation.city.trim(),
-          mode: 'insensitive',
-        },
+      category: {
+        OR: categoryTermFilters,
+      },
+    });
+  }
+
+  const locationFilters: Prisma.LocationWhereInput[] = [];
+
+  if (input.savedLocation.city?.trim()) {
+    locationFilters.push({
+      city: {
+        equals: input.savedLocation.city.trim(),
+        mode: 'insensitive',
       },
     });
   }
 
   if (input.savedLocation.area?.trim()) {
+    locationFilters.push({
+      area: {
+        equals: input.savedLocation.area.trim(),
+        mode: 'insensitive',
+      },
+    });
+  }
+
+  if (locationFilters.length > 0) {
     orFilters.push({
       location: {
-        area: {
-          equals: input.savedLocation.area.trim(),
-          mode: 'insensitive',
-        },
+        OR: locationFilters,
       },
     });
   }
@@ -569,6 +593,7 @@ const loadMaterialPoolIds = async (
   orderBy: Prisma.MaterialOrderByWithRelationInput[] = [
     { viewsCount: 'desc' },
     { createdAt: 'desc' },
+    { id: 'asc' },
   ],
 ) =>
   prisma.material.findMany({

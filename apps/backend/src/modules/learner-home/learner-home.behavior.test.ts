@@ -29,6 +29,7 @@ import {
 import {
   BROWSE_MATERIAL_POOL_CAP,
   HOME_MATERIAL_POOL_CAP,
+  buildMaterialRelevanceWhere,
   collectMaterialCandidateSearchTerms,
   mapSavedProjectComponentsFromBehaviorRows,
   mergeMaterialPoolRows,
@@ -474,6 +475,97 @@ describe('learner-home candidate pool', () => {
 
     assert.ok(terms.some((term) => term.includes('robot')));
     assert.ok(terms.some((term) => term.includes('arduino')));
+  });
+
+  test('consolidates repeated searchable relation predicates', () => {
+    const behavior = createEmptyBehaviorContext();
+    const input = {
+      interests: ['robotics'],
+      savedComponents: [
+        {
+          projectId: 'project-1',
+          projectTitle: 'Robot Build',
+          componentId: 'component-1',
+          componentName: 'Servo Motor',
+          categoryId: 'category-robotics',
+          materialType: 'Motor',
+          searchKeywords: ['servo', 'motor'],
+        },
+      ],
+      behavior,
+      savedLocation: { city: 'Ramallah', area: 'Al-Tireh' },
+    };
+    const where = buildMaterialRelevanceWhere(input);
+
+    assert.ok(where);
+    const relevanceOr = (
+      (where.AND as Array<Record<string, unknown>>)[1] as {
+        OR: Array<Record<string, unknown>>;
+      }
+    ).OR;
+    assert.equal(relevanceOr.filter((branch) => 'tags' in branch).length, 1);
+    assert.equal(relevanceOr.filter((branch) => 'category' in branch).length, 1);
+    assert.equal(relevanceOr.filter((branch) => 'location' in branch).length, 1);
+    assert.equal(relevanceOr.filter((branch) => 'OR' in branch).length, 1);
+    assert.equal(
+      (relevanceOr.find((branch) => 'tags' in branch)?.tags as { some: { OR: unknown[] } }).some.OR.length,
+      collectMaterialCandidateSearchTerms(input).length,
+    );
+  });
+
+  test('deduplicates equivalent normalized candidate terms without changing source order', () => {
+    const behavior = createEmptyBehaviorContext();
+    behavior.likedMaterials = [
+      materialSignal({
+        title: 'Arduino',
+        materialType: 'Arduino',
+        tags: ['arduino'],
+      }),
+    ];
+
+    const terms = collectMaterialCandidateSearchTerms({
+      interests: ['arduino'],
+      savedComponents: [
+        {
+          projectId: 'project-1',
+          projectTitle: 'Arduino Build',
+          componentId: 'component-1',
+          componentName: 'Arduino',
+          categoryId: null,
+          materialType: 'Arduino',
+          searchKeywords: ['arduino'],
+        },
+      ],
+      behavior,
+    });
+
+    assert.equal(terms.filter((term) => term === 'arduino').length, 1);
+  });
+
+  test('empty relevance signals avoid a relevance predicate', () => {
+    assert.equal(
+      buildMaterialRelevanceWhere({
+        interests: [],
+        savedComponents: [],
+        behavior: createEmptyBehaviorContext(),
+        savedLocation: { city: null, area: null },
+      }),
+      null,
+    );
+  });
+
+  test('relevance query shape is deterministic for identical inputs', () => {
+    const input = {
+      interests: ['robotics'],
+      savedComponents: [],
+      behavior: createEmptyBehaviorContext(),
+      savedLocation: { city: 'Ramallah', area: null },
+    };
+
+    assert.deepEqual(
+      buildMaterialRelevanceWhere(input),
+      buildMaterialRelevanceWhere(input),
+    );
   });
 
   test('mergeMaterialPoolRows caps merged candidate ids', () => {
