@@ -64,18 +64,143 @@ const SECTION_LIMITS = {
 const RANK_POOL_SIZE = 48;
 
 const LEARNER_HOME_CACHE_TTL_MS = 45_000;
-const learnerHomeCache = new Map<
-  string,
-  { expiresAt: number; payload: LearnerHomeResponse }
->();
+
+type LearnerHomeCacheLoader = (
+  userId: string,
+) => Promise<LearnerHomeResponse>;
+
+type LearnerHomeCacheEntry = {
+  expiresAt: number;
+  payload: LearnerHomeResponse;
+};
+
+type LearnerHomeInFlightEntry = {
+  promise: Promise<LearnerHomeResponse>;
+};
+
+type LearnerHomeCacheDiagnostics = {
+  cacheSize: number;
+  inFlightSize: number;
+  generationSize: number;
+  cacheWriteCount: number;
+};
+
+type LearnerHomeCacheController = {
+  get: (userId: string) => Promise<LearnerHomeResponse>;
+  invalidate: (userId: string) => void;
+  invalidateAll: () => void;
+  getDiagnostics: () => LearnerHomeCacheDiagnostics;
+};
+
+const createLearnerHomeCache = (
+  load: LearnerHomeCacheLoader,
+  now: () => number = Date.now,
+): LearnerHomeCacheController => {
+  const cache = new Map<string, LearnerHomeCacheEntry>();
+  const inFlight = new Map<string, LearnerHomeInFlightEntry>();
+
+  // Generation metadata is retained only for keys with active work. This
+  // keeps invalidation-race protection bounded by the in-flight map size.
+  const generationByKey = new Map<string, number>();
+  let cacheWriteCount = 0;
+
+  const currentGeneration = (userId: string): number =>
+    generationByKey.get(userId) ?? 0;
+
+  const get = async (userId: string): Promise<LearnerHomeResponse> => {
+    const cached = cache.get(userId);
+    if (cached && cached.expiresAt > now()) {
+      return cached.payload;
+    }
+
+    if (cached) {
+      cache.delete(userId);
+    }
+
+    const existing = inFlight.get(userId);
+    if (existing) {
+      return await existing.promise;
+    }
+
+    const generationAtStart = currentGeneration(userId);
+    let promise!: Promise<LearnerHomeResponse>;
+
+    // Queue the loader behind the map insertion so no asynchronous database
+    // work can begin before concurrent callers can observe the flight.
+    promise = Promise.resolve().then(async () => {
+      const payload = await load(userId);
+      const currentFlight = inFlight.get(userId);
+
+      if (
+        currentFlight?.promise === promise &&
+        currentGeneration(userId) === generationAtStart
+      ) {
+        cache.set(userId, {
+          expiresAt: now() + LEARNER_HOME_CACHE_TTL_MS,
+          payload,
+        });
+        cacheWriteCount += 1;
+      }
+
+      return payload;
+    });
+
+    inFlight.set(userId, { promise });
+
+    try {
+      return await promise;
+    } finally {
+      if (inFlight.get(userId)?.promise === promise) {
+        inFlight.delete(userId);
+        generationByKey.delete(userId);
+      }
+    }
+  };
+
+  const invalidate = (userId: string): void => {
+    cache.delete(userId);
+
+    if (inFlight.has(userId)) {
+      generationByKey.set(userId, currentGeneration(userId) + 1);
+    } else {
+      generationByKey.delete(userId);
+    }
+  };
+
+  const invalidateAll = (): void => {
+    cache.clear();
+
+    for (const userId of inFlight.keys()) {
+      generationByKey.set(userId, currentGeneration(userId) + 1);
+    }
+  };
+
+  return {
+    get,
+    invalidate,
+    invalidateAll,
+    getDiagnostics: () => ({
+      cacheSize: cache.size,
+      inFlightSize: inFlight.size,
+      generationSize: generationByKey.size,
+      cacheWriteCount,
+    }),
+  };
+};
+
+/** @internal Test-only factory for deterministic cache-coordination tests. */
+export const createLearnerHomeCacheForTests = (
+  load: LearnerHomeCacheLoader,
+  now: () => number = Date.now,
+): LearnerHomeCacheController => createLearnerHomeCache(load, now);
 
 export const invalidateLearnerHomeCache = (userId: string): void => {
-  learnerHomeCache.delete(userId);
+  learnerHomeCache.invalidate(userId);
 };
 
 /** Clears every cached learner-home response after a change to shared material availability. */
 export const invalidateAllLearnerHomeResponseCaches = (): void => {
-  learnerHomeCache.clear();
+  learnerHomeCache.invalidateAll();
 };
 
 /**
@@ -915,12 +1040,9 @@ export const getLearnerHomeSection = async (
   };
 };
 
-export const getLearnerHome = async (userId: string): Promise<LearnerHomeResponse> => {
-  const cached = learnerHomeCache.get(userId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.payload;
-  }
-
+async function loadLearnerHomeUncached(
+  userId: string,
+): Promise<LearnerHomeResponse> {
   const profiler = createLearnerHomeProfiler('getLearnerHome');
   const startedAt = performance.now();
   const context = await profiler.time('loadLearnerHomeContext', () =>
@@ -1020,10 +1142,11 @@ export const getLearnerHome = async (userId: string): Promise<LearnerHomeRespons
     sections,
   };
 
-  learnerHomeCache.set(userId, {
-    expiresAt: Date.now() + LEARNER_HOME_CACHE_TTL_MS,
-    payload: response,
-  });
-
   return response;
-};
+}
+
+const learnerHomeCache = createLearnerHomeCache(loadLearnerHomeUncached);
+
+export const getLearnerHome = async (
+  userId: string,
+): Promise<LearnerHomeResponse> => learnerHomeCache.get(userId);

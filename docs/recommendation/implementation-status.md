@@ -79,3 +79,27 @@ Remaining:
 - Concurrent identical cache misses still duplicate the full request pipeline.
 - General multi-user concurrency and connection-pool behavior remain unresolved.
 - Login performance remains unmeasured.
+
+### Slice 4: Per-learner cache-miss single-flight
+
+Status: ADOPT_WITH_CONDITIONS
+
+Confirmed:
+- Simultaneous misses for the same learner execute one uncached pipeline.
+- Same-learner batches of 1, 5, and 10 each emitted approximately 63 query events and one pipeline invocation.
+- Different learners remain independent and execute one pipeline per learner.
+- In-flight and generation metadata are removed after completion.
+- Invalidation during flight does not allow a stale computation to repopulate the cache.
+- Failure cleanup and retry behavior are covered.
+- 104 Learner Home tests and 32 related invalidation tests passed.
+
+Observed performance:
+- Same-learner batches: 1071ms at 1, 275ms at 5, and 238ms at 10.
+- These values were not collected as a controlled paired benchmark and were affected by warm-up state.
+- Different-learner p95: 846ms at 5 learners and 1388ms at 10 learners.
+- Different-user concurrency remains a performance concern.
+
+Remaining:
+- Approximately 63 queries are still executed for every distinct uncached learner.
+- General multi-user concurrency and connection-pool behavior require isolated investigation.
+- Login performance remains unmeasured.
