@@ -56,3 +56,26 @@ Evidence limits:
 Remaining:
 - Repeated project and behavior query phases remain for Slice 3.
 - Query consolidation, cache single-flight, pool tuning, and other out-of-scope changes remain deferred.
+
+### Slice 3: Consolidate repeated project and behavior reads
+
+Status: ADOPT_WITH_CONDITIONS
+
+Confirmed:
+- Prisma query events per cache miss decreased from 76–77 to 63.
+- Saved projects, likes, follows, review summaries, and bounded build data are reused within the request.
+- Seeded response parity passed.
+- 98 Learner Home tests passed.
+- Response size remained approximately 22,353 bytes.
+
+Observed performance:
+- Cache-miss samples: 1505, 355, 321, 278, 263ms.
+- Median: 321ms.
+- Observed sample p95: 1505ms.
+- Concurrency p95: 223ms at 1, 1130ms at 5, and 2710ms at 10.
+- Slice 3 did not demonstrate a stable latency improvement; its confirmed benefit is query-count reduction.
+
+Remaining:
+- Concurrent identical cache misses still duplicate the full request pipeline.
+- General multi-user concurrency and connection-pool behavior remain unresolved.
+- Login performance remains unmeasured.

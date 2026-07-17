@@ -194,6 +194,28 @@ const projectBuildSelect = {
       title: true,
       shortDescription: true,
       coverImageUrl: true,
+      category: {
+        select: {
+          nameEn: true,
+          nameAr: true,
+        },
+      },
+      tags: {
+        select: {
+          tag: true,
+        },
+      },
+      requiredComponents: {
+        select: {
+          componentName: true,
+          materialType: true,
+          category: {
+            select: {
+              nameEn: true,
+            },
+          },
+        },
+      },
     },
   },
   items: {
@@ -743,20 +765,14 @@ export const loadProjectPool = async (take = 120) =>
     take,
   });
 
-export const loadProjectCandidates = async (
-  userId: string,
-): Promise<LearnerHomeProjectCandidate[]> => {
-  const projects = await loadProjectPool();
-  const projectIds = projects.map((project) => project.id);
-  const [reviewSummaries, likedProjectIds, savedProjectIds, followedProjectIds] =
-    await Promise.all([
-      loadReviewSummaries(projectIds),
-      findLikedProjectIds(userId, projectIds),
-      findSavedProjectIds(userId, projectIds),
-      findFollowedProjectIds(userId, projectIds),
-    ]);
-
-  return projects.map((project) => {
+const mapProjectCandidates = (
+  projects: Awaited<ReturnType<typeof loadProjectPool>>,
+  reviewSummaries: Map<string, { average: number; count: number }>,
+  likedProjectIds: Set<string>,
+  savedProjectIds: Set<string>,
+  followedProjectIds: Set<string>,
+): LearnerHomeProjectCandidate[] =>
+  projects.map((project) => {
     const reviewSummary = reviewSummaries.get(project.id);
     const mapped = {
       id: project.id,
@@ -813,6 +829,27 @@ export const loadProjectCandidates = async (
       mapped,
     };
   });
+
+export const loadProjectCandidates = async (
+  userId: string,
+): Promise<LearnerHomeProjectCandidate[]> => {
+  const projects = await loadProjectPool();
+  const projectIds = projects.map((project) => project.id);
+  const [reviewSummaries, likedProjectIds, savedProjectIds, followedProjectIds] =
+    await Promise.all([
+      loadReviewSummaries(projectIds),
+      findLikedProjectIds(userId, projectIds),
+      findSavedProjectIds(userId, projectIds),
+      findFollowedProjectIds(userId, projectIds),
+    ]);
+
+  return mapProjectCandidates(
+    projects,
+    reviewSummaries,
+    likedProjectIds,
+    savedProjectIds,
+    followedProjectIds,
+  );
 };
 
 const loadReviewSummaries = async (projectIds: string[]) => {
@@ -986,6 +1023,17 @@ const projectBehaviorSignalSelect = {
 
 const savedProjectBehaviorSelect = {
   ...projectBehaviorSignalSelect,
+  category: {
+    select: {
+      id: true,
+      nameEn: true,
+      nameAr: true,
+    },
+  },
+  difficulty: true,
+  estimatedDurationMinutes: true,
+  coverImageUrl: true,
+  createdAt: true,
   requiredComponents: {
     select: {
       id: true,
@@ -998,6 +1046,11 @@ const savedProjectBehaviorSelect = {
           nameEn: true,
         },
       },
+    },
+  },
+  _count: {
+    select: {
+      likes: true,
     },
   },
 } satisfies Prisma.LearningProjectSelect;
@@ -1070,9 +1123,9 @@ const ACTIVE_RESERVATION_STATUSES = [
   'COMPLETED',
 ] as const;
 
-export const loadLearnerBehaviorContext = async (
+const loadLearnerBehaviorRows = async (
   userId: string,
-): Promise<LearnerBehaviorContext> => {
+) => {
   const [
     likedMaterialRows,
     viewedMaterialRows,
@@ -1124,6 +1177,7 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
+        createdAt: true,
         project: { select: savedProjectBehaviorSelect },
       },
     }),
@@ -1157,39 +1211,153 @@ export const loadLearnerBehaviorContext = async (
       },
       orderBy: { updatedAt: 'desc' },
       take: 10,
-      select: {
-        project: { select: projectBehaviorSignalSelect },
-      },
+      select: projectBuildSelect,
     }),
   ]);
 
+  return {
+    likedMaterialRows,
+    viewedMaterialRows,
+    reservedMaterialRows,
+    savedProjectRows,
+    likedProjectRows,
+    followedProjectRows,
+    inProgressBuildRows,
+  };
+};
+
+const mapLearnerBehaviorContext = (
+  rows: Awaited<ReturnType<typeof loadLearnerBehaviorRows>>,
+): LearnerBehaviorContext => {
   const viewedMaterials: LearnerBehaviorMaterialSignal[] = [];
-  for (const row of viewedMaterialRows) {
+  for (const row of rows.viewedMaterialRows) {
     viewedMaterials.push(mapMaterialBehaviorSignal(row.material));
   }
 
   return {
-    likedMaterials: likedMaterialRows.map((row) =>
+    likedMaterials: rows.likedMaterialRows.map((row) =>
       mapMaterialBehaviorSignal(row.material),
     ),
     viewedMaterials,
     savedProjectComponents: mapSavedProjectComponentsFromBehaviorRows(
-      savedProjectRows.slice(0, 12),
+      rows.savedProjectRows.slice(0, 12),
     ),
     reservedMaterials: dedupeMaterialSignals(
-      reservedMaterialRows.map((row) => mapMaterialBehaviorSignal(row.material)),
+      rows.reservedMaterialRows.map((row) => mapMaterialBehaviorSignal(row.material)),
     ),
-    savedProjects: savedProjectRows.map((row) =>
+    savedProjects: rows.savedProjectRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
-    likedProjects: likedProjectRows.map((row) =>
+    likedProjects: rows.likedProjectRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
-    followedProjects: followedProjectRows.map((row) =>
+    followedProjects: rows.followedProjectRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
-    inProgressBuildProjects: inProgressBuildRows.map((row) =>
+    inProgressBuildProjects: rows.inProgressBuildRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
+  };
+};
+
+export const loadLearnerBehaviorContext = async (
+  userId: string,
+): Promise<LearnerBehaviorContext> =>
+  mapLearnerBehaviorContext(await loadLearnerBehaviorRows(userId));
+
+type SavedProjectBehaviorRow = Awaited<
+  ReturnType<typeof loadLearnerBehaviorRows>
+>['savedProjectRows'][number];
+
+const mapSavedProjectItemFromBehaviorRow = (
+  row: SavedProjectBehaviorRow,
+  reviewSummaries: Map<string, { average: number; count: number }>,
+  likedProjectIds: Set<string>,
+  followedProjectIds: Set<string>,
+) => {
+  const project = row.project;
+  const reviewSummary = reviewSummaries.get(project.id);
+
+  return {
+    score: 0,
+    reasons: ['Saved by you'],
+    type: 'project' as const,
+    project: {
+      id: project.id,
+      title: project.title,
+      shortDescription: project.shortDescription,
+      category: {
+        id: project.category.id,
+        nameEn: project.category.nameEn,
+        nameAr: project.category.nameAr,
+      },
+      difficulty: project.difficulty,
+      estimatedDurationMinutes: project.estimatedDurationMinutes,
+      coverImageUrl: project.coverImageUrl,
+      authorName: '',
+      tags: project.tags.map((tag) => tag.tag),
+      ratingSummary:
+        reviewSummary && reviewSummary.count > 0
+          ? {
+              average: Math.round(reviewSummary.average * 10) / 10,
+              count: reviewSummary.count,
+            }
+          : null,
+      likesCount: project._count.likes,
+      isLiked: likedProjectIds.has(project.id),
+      isSaved: true,
+      followersCount: 0,
+      isFollowing: followedProjectIds.has(project.id),
+      createdAt: project.createdAt.toISOString(),
+    },
+  };
+};
+
+export const loadLearnerHomeProjectContext = async (
+  userId: string,
+  savedProjectLimit = 8,
+) => {
+  const [behaviorRows, projectRows] = await Promise.all([
+    loadLearnerBehaviorRows(userId),
+    loadProjectPool(),
+  ]);
+
+  const candidateProjectIds = projectRows.map((project) => project.id);
+  const savedProjectIds = behaviorRows.savedProjectRows.map(
+    (row) => row.project.id,
+  );
+  const annotationProjectIds = [
+    ...new Set([...candidateProjectIds, ...savedProjectIds]),
+  ];
+
+  const [reviewSummaries, likedProjectIds, followedProjectIds, candidateSavedIds] =
+    await Promise.all([
+      loadReviewSummaries(annotationProjectIds),
+      findLikedProjectIds(userId, annotationProjectIds),
+      findFollowedProjectIds(userId, annotationProjectIds),
+      findSavedProjectIds(userId, candidateProjectIds),
+    ]);
+
+  return {
+    behavior: mapLearnerBehaviorContext(behaviorRows),
+    projects: mapProjectCandidates(
+      projectRows,
+      reviewSummaries,
+      likedProjectIds,
+      candidateSavedIds,
+      followedProjectIds,
+    ),
+    savedProjects: behaviorRows.savedProjectRows
+      .slice(0, savedProjectLimit)
+      .map((row) =>
+        mapSavedProjectItemFromBehaviorRow(
+          row,
+          reviewSummaries,
+          likedProjectIds,
+          followedProjectIds,
+        ),
+      ),
+    inProgressBuilds: behaviorRows.inProgressBuildRows,
+    hasSavedProjects: behaviorRows.savedProjectRows.length > 0,
   };
 };

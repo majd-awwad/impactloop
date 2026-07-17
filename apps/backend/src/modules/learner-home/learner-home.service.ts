@@ -236,6 +236,12 @@ type LearnerHomeContext = {
   savedComponents: LearnerHomeSavedProjectComponent[];
   materials: Awaited<ReturnType<typeof learnerHomeRepository.loadMaterialCandidates>>;
   projects: Awaited<ReturnType<typeof learnerHomeRepository.loadProjectCandidates>>;
+  savedProjectItems: Awaited<
+    ReturnType<typeof learnerHomeRepository.loadLearnerHomeProjectContext>
+  >['savedProjects'];
+  inProgressBuilds: Awaited<
+    ReturnType<typeof learnerHomeRepository.loadLearnerHomeProjectContext>
+  >['inProgressBuilds'];
   savedProjectIds: Set<string>;
   hasSavedProjects: boolean;
   behavior: LearnerBehaviorContext;
@@ -246,6 +252,7 @@ type LearnerHomeContext = {
 type LearnerHomeLoadOptions = {
   materialPoolCap?: number;
   profiler?: ReturnType<typeof createLearnerHomeProfiler>;
+  useConsolidatedProjectContext?: boolean;
 };
 
 const loadLearnerHomeContext = async (
@@ -254,13 +261,13 @@ const loadLearnerHomeContext = async (
 ): Promise<LearnerHomeContext> => {
   const profiler = options.profiler;
   const materialPoolCap = options.materialPoolCap ?? HOME_MATERIAL_POOL_CAP;
+  const useConsolidatedProjectContext =
+    options.useConsolidatedProjectContext ?? false;
 
   const [
     rawInterests,
     savedLocation,
-    hasSavedProjects,
-    behavior,
-    projects,
+    projectContext,
   ] = await Promise.all([
     profiler
       ? profiler.time('loadLearnerInterests', () =>
@@ -272,22 +279,39 @@ const loadLearnerHomeContext = async (
           learnerHomeRepository.loadDefaultSavedLocation(userId),
         )
       : learnerHomeRepository.loadDefaultSavedLocation(userId),
-    profiler
-      ? profiler.time('hasSavedProjects', () =>
-          learnerHomeRepository.hasSavedProjects(userId),
-        )
-      : learnerHomeRepository.hasSavedProjects(userId),
-    profiler
-      ? profiler.time('loadLearnerBehaviorContext', () =>
-          learnerHomeRepository.loadLearnerBehaviorContext(userId),
-        )
-      : learnerHomeRepository.loadLearnerBehaviorContext(userId),
-    profiler
-      ? profiler.time('loadProjectCandidates', () =>
-          learnerHomeRepository.loadProjectCandidates(userId),
-        )
-      : learnerHomeRepository.loadProjectCandidates(userId),
+    useConsolidatedProjectContext
+      ? profiler
+        ? profiler.time('loadLearnerHomeProjectContext', () =>
+            learnerHomeRepository.loadLearnerHomeProjectContext(userId, 4),
+          )
+        : learnerHomeRepository.loadLearnerHomeProjectContext(userId, 4)
+      : Promise.all([
+          profiler
+            ? profiler.time('hasSavedProjects', () =>
+                learnerHomeRepository.hasSavedProjects(userId),
+              )
+            : learnerHomeRepository.hasSavedProjects(userId),
+          profiler
+            ? profiler.time('loadLearnerBehaviorContext', () =>
+                learnerHomeRepository.loadLearnerBehaviorContext(userId),
+              )
+            : learnerHomeRepository.loadLearnerBehaviorContext(userId),
+          profiler
+            ? profiler.time('loadProjectCandidates', () =>
+                learnerHomeRepository.loadProjectCandidates(userId),
+              )
+            : learnerHomeRepository.loadProjectCandidates(userId),
+        ]).then(([hasSavedProjects, behavior, projects]) => ({
+          hasSavedProjects,
+          behavior,
+          projects,
+          savedProjects: [],
+          inProgressBuilds: [],
+        })),
   ]);
+
+  const behavior = projectContext.behavior;
+  const projects = projectContext.projects;
 
   const savedComponents = behavior.savedProjectComponents ?? [];
 
@@ -331,8 +355,10 @@ const loadLearnerHomeContext = async (
     savedComponents,
     materials,
     projects,
+    savedProjectItems: projectContext.savedProjects,
+    inProgressBuilds: projectContext.inProgressBuilds,
     savedProjectIds,
-    hasSavedProjects,
+    hasSavedProjects: projectContext.hasSavedProjects,
     behavior,
     behaviorAffinityProfile,
     hasActivity: hasLearnerActivity(behavior),
@@ -624,8 +650,17 @@ const buildContinueProjectsItems = async (
 ): Promise<LearnerHomeContinueProjectItem[]> => {
   const builds = await learnerHomeRepository.loadInProgressBuilds(userId, limit);
 
+  return buildContinueProjectsItemsFromBuilds(builds, limit);
+};
+
+const buildContinueProjectsItemsFromBuilds = (
+  builds: Awaited<ReturnType<typeof learnerHomeRepository.loadInProgressBuilds>>,
+  limit: number,
+): LearnerHomeContinueProjectItem[] => {
+  const limitedBuilds = builds.slice(0, limit);
+
   return dedupeSectionItemsById(
-    builds
+    limitedBuilds
       .map((build) => mapContinueBuild(build))
       .filter((entry) => {
         const progress = entry.build.progress as {
@@ -648,8 +683,16 @@ const buildSavedProjectsItems = async (
     limit,
   );
 
-  return dedupeSectionItemsById(items, limit, getProjectItemId);
+  return buildSavedProjectsItemsFromItems(items, limit);
 };
+
+const buildSavedProjectsItemsFromItems = (
+  items: Awaited<
+    ReturnType<typeof learnerHomeRepository.loadSavedProjectsForLearner>
+  >,
+  limit: number,
+): LearnerHomeProjectItem[] =>
+  dedupeSectionItemsById(items, limit, getProjectItemId);
 
 const resolveFreeMaterialsTitle = (
   items: LearnerHomeMaterialItem[],
@@ -884,6 +927,7 @@ export const getLearnerHome = async (userId: string): Promise<LearnerHomeRespons
     loadLearnerHomeContext(userId, {
       profiler,
       materialPoolCap: HOME_MATERIAL_POOL_CAP,
+      useConsolidatedProjectContext: true,
     }),
   );
 
@@ -904,16 +948,16 @@ export const getLearnerHome = async (userId: string): Promise<LearnerHomeRespons
       profiler.time('buildContinueProjectsItems', async () => ({
         key: 'continue_projects' as const,
         ...SECTION_META.continue_projects,
-        items: await buildContinueProjectsItems(
-          userId,
+        items: buildContinueProjectsItemsFromBuilds(
+          context.inProgressBuilds,
           SECTION_LIMITS.continue_projects,
         ),
       })),
       profiler.time('buildSavedProjectsItems', async () => ({
         key: 'saved_projects' as const,
         ...SECTION_META.saved_projects,
-        items: await buildSavedProjectsItems(
-          userId,
+        items: buildSavedProjectsItemsFromItems(
+          context.savedProjectItems,
           SECTION_LIMITS.saved_projects,
         ),
       })),
