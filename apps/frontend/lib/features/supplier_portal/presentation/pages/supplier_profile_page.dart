@@ -20,9 +20,9 @@ import '../controllers/supplier_profile_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_location_input_mode.dart';
+import '../widgets/supplier_pickup_map.dart';
 import '../widgets/supplier_profile_edit_settings.dart';
 import '../widgets/supplier_profile_form.dart';
-import '../widgets/supplier_pickup_map.dart';
 import '../widgets/supplier_profile_view_widgets.dart';
 import '../widgets/supplier_reverse_geocode_state.dart';
 import '../widgets/supplier_type_selector.dart';
@@ -633,6 +633,7 @@ class _SupplierProfileContentState
           const SizedBox(height: AppSpacing.xl),
           ProfileDetailsSection(
             profile: profile,
+            onEdit: () => setState(() => _isEditing = true),
             onVerificationAction: verificationAction,
           ),
         ],
@@ -777,11 +778,7 @@ class _SupplierProfileLoading extends StatelessWidget {
   const _SupplierProfileLoading();
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: CircularProgressIndicator(color: context.supplierColors.accent),
-    );
-  }
+  Widget build(BuildContext context) => const SupplierProfileLoadingSkeleton();
 }
 
 class _SupplierProfileError extends ConsumerWidget {
@@ -803,7 +800,10 @@ class _SupplierProfileError extends ConsumerWidget {
             children: [
               Icon(Icons.error_outline, color: colors.error, size: 40),
               const SizedBox(height: AppSpacing.md),
-              Text(l.profileUnavailable, style: context.supplierTitle()),
+              Text(
+                l.t('Couldn’t load supplier profile', 'تعذّر تحميل ملف المورد'),
+                style: context.supplierTitle(),
+              ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 message,

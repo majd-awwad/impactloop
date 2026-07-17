@@ -55,7 +55,7 @@ class SupplierProfileLocation {
       addressLine: json['addressLine'] as String?,
       latitude: _parseCoordinate(json['latitude']),
       longitude: _parseCoordinate(json['longitude']),
-      visibility: json['visibility'] as String?,
+      visibility: _parseVisibility(json['visibility']),
       isApproximate: json['isApproximate'] as bool? ?? true,
       locationType: json['locationType'] as String?,
     );
@@ -74,4 +74,18 @@ class SupplierProfileLocation {
       'locationType': locationType ?? 'PICKUP_POINT',
     };
   }
+}
+
+String? _parseVisibility(dynamic value) {
+  if (value is! String) return null;
+  final normalized = value.trim().toUpperCase();
+  if (normalized.isEmpty) return null;
+
+  return switch (normalized) {
+    // Compatibility normalization for legacy payloads. The management model
+    // stores visibility and approximation as separate fields.
+    'PUBLIC_APPROXIMATE' => 'PUBLIC',
+    'PUBLIC' || 'ORDER_ONLY' || 'PRIVATE' => normalized,
+    _ => normalized,
+  };
 }

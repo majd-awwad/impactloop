@@ -16,11 +16,7 @@ const palestineFallbackCenter = LatLng(31.9522, 35.2332);
 /// Nablus fallback center.
 const nablusFallbackCenter = LatLng(32.2211, 35.2544);
 
-enum SupplierLocationButtonState {
-  idle,
-  loading,
-  captured,
-}
+enum SupplierLocationButtonState { idle, loading, captured }
 
 class SupplierPickupMap extends StatefulWidget {
   const SupplierPickupMap({
@@ -86,8 +82,9 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
     return city == 'nablus' ? 12 : 8;
   }
 
-  LatLng get _mapCenter =>
-      _hasCoordinates ? LatLng(widget.latitude!, widget.longitude!) : _fallbackCenter;
+  LatLng get _mapCenter => _hasCoordinates
+      ? LatLng(widget.latitude!, widget.longitude!)
+      : _fallbackCenter;
 
   double get _mapZoom => _hasCoordinates ? 14 : _fallbackZoom;
 
@@ -164,12 +161,12 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
 
     final width = MediaQuery.sizeOf(context).width;
     if (width >= 1024) {
-      return 320;
-    }
-    if (width >= 600) {
       return 260;
     }
-    return 240;
+    if (width >= 600) {
+      return 235;
+    }
+    return 205;
   }
 
   @override
@@ -187,10 +184,14 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: context.supplierColors.accentSoft.withValues(alpha: 0.18),
+                  color: context.supplierColors.accentSoft.withValues(
+                    alpha: 0.18,
+                  ),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: context.supplierColors.border.withValues(alpha: 0.35),
+                    color: context.supplierColors.border.withValues(
+                      alpha: 0.35,
+                    ),
                   ),
                 ),
                 child: Icon(
@@ -227,10 +228,13 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
         if (widget.showLocationButton) ...[
           OutlinedButton.icon(
             onPressed:
-                widget.locationButtonState == SupplierLocationButtonState.loading
+                widget.locationButtonState ==
+                    SupplierLocationButtonState.loading
                 ? null
                 : widget.onUseCurrentLocation,
-            icon: widget.locationButtonState == SupplierLocationButtonState.loading
+            icon:
+                widget.locationButtonState ==
+                    SupplierLocationButtonState.loading
                 ? const SizedBox(
                     width: 16,
                     height: 16,
@@ -246,7 +250,8 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
             label: Text(_locationButtonLabel(context)),
             style: OutlinedButton.styleFrom(
               foregroundColor:
-                  widget.locationButtonState == SupplierLocationButtonState.captured
+                  widget.locationButtonState ==
+                      SupplierLocationButtonState.captured
                   ? context.supplierColors.accent
                   : context.supplierColors.textPrimary,
               side: BorderSide(
@@ -261,16 +266,20 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        if (widget.locationButtonState == SupplierLocationButtonState.captured &&
+        if (widget.locationButtonState ==
+                SupplierLocationButtonState.captured &&
             widget.isEditable) ...[
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: context.supplierDecorations.profileSectionPanel.copyWith(
-              border: Border.all(
-                color: context.supplierColors.accent.withValues(alpha: 0.35),
-              ),
-            ),
+            decoration: context.supplierDecorations.profileSectionPanel
+                .copyWith(
+                  border: Border.all(
+                    color: context.supplierColors.accent.withValues(
+                      alpha: 0.35,
+                    ),
+                  ),
+                ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -316,161 +325,174 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                   color: context.supplierColors.border.withValues(alpha: 0.45),
                 ),
               ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  FlutterMap(
-                    key: ValueKey(
-                      '${widget.latitude}_${widget.longitude}_'
-                      '${widget.showCoordinatesAsLabel}',
-                    ),
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _mapCenter,
-                      initialZoom: _mapZoom,
-                      minZoom: 5,
-                      maxZoom: 18,
-                      onTap: _canPlacePin
-                          ? (_, point) => widget.onPinMoved!(point)
-                          : null,
-                      interactionOptions: const InteractionOptions(
-                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                      ),
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.impactloop.frontend',
-                      ),
-                      if (_hasCoordinates)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: LatLng(widget.latitude!, widget.longitude!),
-                              width: 44,
-                              height: 44,
-                              alignment: Alignment.topCenter,
-                              child: const _TealMapMarker(),
+              child: (_hasCoordinates || _canPlacePin)
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        FlutterMap(
+                          key: ValueKey(
+                            '${widget.latitude}_${widget.longitude}_'
+                            '${widget.showCoordinatesAsLabel}',
+                          ),
+                          mapController: _mapController,
+                          options: MapOptions(
+                            initialCenter: _mapCenter,
+                            initialZoom: _mapZoom,
+                            minZoom: 5,
+                            maxZoom: 18,
+                            onTap: _canPlacePin
+                                ? (_, point) => widget.onPinMoved!(point)
+                                : null,
+                            interactionOptions: const InteractionOptions(
+                              flags:
+                                  InteractiveFlag.all & ~InteractiveFlag.rotate,
+                            ),
+                          ),
+                          children: [
+                            TileLayer(
+                              urlTemplate:
+                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              userAgentPackageName: 'com.impactloop.frontend',
+                            ),
+                            if (_hasCoordinates)
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: LatLng(
+                                      widget.latitude!,
+                                      widget.longitude!,
+                                    ),
+                                    width: 44,
+                                    height: 44,
+                                    alignment: Alignment.topCenter,
+                                    child: const _TealMapMarker(),
+                                  ),
+                                ],
+                              ),
+                            RichAttributionWidget(
+                              alignment: AttributionAlignment.bottomRight,
+                              attributions: [
+                                TextSourceAttribution(
+                                  'OpenStreetMap contributors',
+                                  onTap: () {},
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      RichAttributionWidget(
-                        alignment: AttributionAlignment.bottomRight,
-                        attributions: [
-                          TextSourceAttribution(
-                            'OpenStreetMap contributors',
-                            onTap: () {},
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  if (!_hasCoordinates)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: _canPlacePin
-                                ? Colors.transparent
-                                : AppColorTokens.supplierMapDisabledOverlay,
-                          ),
-                          child: _canPlacePin
-                              ? Align(
-                                  alignment: Alignment.topCenter,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(AppSpacing.sm),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.sm,
-                                        vertical: AppSpacing.xs,
-                                      ),
-                                      decoration:
-                                          context.supplierDecorations.badge(
-                                        background: context
-                                            .supplierColors.surfaceSolid
-                                            .withValues(alpha: 0.92),
-                                      ),
-                                      child: Text(
-                                        context.s.tapMapToPlacePickupPin,
-                                        textAlign: TextAlign.center,
-                                        style: context.supplierChip(),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(AppSpacing.lg),
-                                    child: Container(
-                                      padding:
-                                          const EdgeInsets.all(AppSpacing.md),
-                                      decoration:
-                                          context.supplierDecorations.badge(
-                                        background: context
-                                            .supplierColors.surfaceSolid
-                                            .withValues(alpha: 0.92),
-                                      ),
-                                      child: Text(
-                                        context.s.mapLocationHelp,
-                                        textAlign: TextAlign.center,
-                                        style: context.supplierBody(),
-                                      ),
-                                    ),
-                                  ),
+                        if (!_hasCoordinates)
+                          Positioned.fill(
+                            child: IgnorePointer(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: _canPlacePin
+                                      ? Colors.transparent
+                                      : AppColorTokens
+                                            .supplierMapDisabledOverlay,
                                 ),
-                        ),
-                      ),
-                    ),
-                  if (_hasCoordinates &&
-                      widget.showCoordinatesAsLabel)
-                    Positioned(
-                      left: AppSpacing.sm,
-                      right: AppSpacing.sm,
-                      top: AppSpacing.sm,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.xs,
-                        ),
-                        decoration: context.supplierDecorations.badge(
-                          background: context.supplierColors.surfaceSolid.withValues(
-                            alpha: 0.92,
+                                child: _canPlacePin
+                                    ? Align(
+                                        alignment: Alignment.topCenter,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(
+                                            AppSpacing.sm,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: AppSpacing.sm,
+                                              vertical: AppSpacing.xs,
+                                            ),
+                                            decoration: context
+                                                .supplierDecorations
+                                                .badge(
+                                                  background: context
+                                                      .supplierColors
+                                                      .surfaceSolid
+                                                      .withValues(alpha: 0.92),
+                                                ),
+                                            child: Text(
+                                              context.s.tapMapToPlacePickupPin,
+                                              textAlign: TextAlign.center,
+                                              style: context.supplierChip(),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(
+                                            AppSpacing.lg,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(
+                                              AppSpacing.md,
+                                            ),
+                                            decoration: context
+                                                .supplierDecorations
+                                                .badge(
+                                                  background: context
+                                                      .supplierColors
+                                                      .surfaceSolid
+                                                      .withValues(alpha: 0.92),
+                                                ),
+                                            child: Text(
+                                              context.s.mapLocationHelp,
+                                              textAlign: TextAlign.center,
+                                              style: context.supplierBody(),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                            ),
                           ),
-                        ),
-                        child: Text(
-                          context.s.currentLocationLabel,
-                          style: context.supplierChip(),
-                        ),
-                      ),
+                        if (_hasCoordinates && widget.showCoordinatesAsLabel)
+                          PositionedDirectional(
+                            start: AppSpacing.sm,
+                            end: AppSpacing.sm,
+                            top: AppSpacing.sm,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: context.supplierDecorations.badge(
+                                background: context.supplierColors.surfaceSolid
+                                    .withValues(alpha: 0.92),
+                              ),
+                              child: Text(
+                                context.s.currentLocationLabel,
+                                style: context.supplierChip(),
+                              ),
+                            ),
+                          )
+                        else if (_hasCoordinates &&
+                            widget.fallbackCity != null &&
+                            widget.fallbackCity!.trim().isNotEmpty)
+                          PositionedDirectional(
+                            start: AppSpacing.sm,
+                            end: AppSpacing.sm,
+                            top: AppSpacing.sm,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: context.supplierDecorations.badge(
+                                background: context.supplierColors.surfaceSolid
+                                    .withValues(alpha: 0.92),
+                              ),
+                              child: Text(
+                                locationSummary,
+                                style: context.supplierChip(),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                      ],
                     )
-                  else if (_hasCoordinates &&
-                      widget.fallbackCity != null &&
-                      widget.fallbackCity!.trim().isNotEmpty)
-                    Positioned(
-                      left: AppSpacing.sm,
-                      right: AppSpacing.sm,
-                      top: AppSpacing.sm,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.xs,
-                        ),
-                        decoration: context.supplierDecorations.badge(
-                          background: context.supplierColors.surfaceSolid.withValues(
-                            alpha: 0.92,
-                          ),
-                        ),
-                        child: Text(
-                          locationSummary,
-                          style: context.supplierChip(),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+                  : const _MapUnavailable(),
             ),
           ),
         ),
@@ -488,10 +510,7 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
         if (widget.fallbackCountry != null &&
             widget.fallbackCountry!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            widget.fallbackCountry!,
-            style: context.supplierBody(),
-          ),
+          Text(widget.fallbackCountry!, style: context.supplierBody()),
         ],
       ],
     );
@@ -505,6 +524,47 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: context.supplierDecorations.sideInsightCard,
       child: content,
+    );
+  }
+}
+
+class _MapUnavailable extends StatelessWidget {
+  const _MapUnavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return ColoredBox(
+      color: colors.backgroundElevated,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.map_outlined, color: colors.textMuted, size: 28),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                context.s.t(
+                  'Pickup map unavailable',
+                  'خريطة الاستلام غير متاحة',
+                ),
+                style: context.supplierLabel(),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                context.s.t(
+                  'Add a pickup location to display the map.',
+                  'أضف موقع استلام لعرض الخريطة.',
+                ),
+                style: context.supplierBody().copyWith(color: colors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -526,7 +586,9 @@ class _TealMapMarker extends StatelessWidget {
             border: Border.all(color: context.supplierColors.accent, width: 2),
             boxShadow: [
               BoxShadow(
-                color: context.supplierColors.accentSoft.withValues(alpha: 0.45),
+                color: context.supplierColors.accentSoft.withValues(
+                  alpha: 0.45,
+                ),
                 blurRadius: 12,
               ),
             ],
