@@ -310,6 +310,46 @@ enum ProjectBuildItemStatus {
   ALTERNATIVE
 }
 
+enum RecommendationEntityType {
+  MATERIAL
+  PROJECT
+}
+
+enum RecommendationCacheState {
+  MISS
+  HIT
+  SINGLE_FLIGHT
+  UNCACHED
+}
+
+enum RecommendationActionType {
+  MATERIAL_VIEW
+  MATERIAL_LIKE
+  RESERVATION_SUBMITTED
+  PROJECT_LIKE
+  PROJECT_SAVE
+  PROJECT_FOLLOW
+  PROJECT_BUILD_STARTED
+  PROJECT_BUILD_PROGRESSED
+}
+
+enum RecommendationAttributionType {
+  DIRECT
+  ASSISTED
+}
+
+enum RecommendationEventSource {
+  REAL
+  SYNTHETIC
+  TEST
+  LOAD_TEST
+}
+
+enum RecommendationEligibilityResult {
+  ELIGIBLE
+  EXCLUDED
+}
+
 model User {
   id                            String                     @id @default(cuid())
   displayName                   String                     @map("display_name")
@@ -376,6 +416,10 @@ model User {
   reactivatedBy                 User?                      @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
   accountsReactivated           User[]                     @relation("UserReactivatedBy")
   adminActivityLogs             AdminActivityLog[]
+  recommendationGenerations    RecommendationGeneration[]
+  recommendationRequests       RecommendationRequest[]
+  recommendationImpressions    RecommendationImpression[]
+  recommendationActions        RecommendationAction[]
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -1477,4 +1521,125 @@ model IdempotencyRecord {
   @@index([status])
   @@index([expiresAt])
   @@map("idempotency_records")
+}
+
+model RecommendationGeneration {
+  id                   String                         @id @default(cuid())
+  generationKey        String                         @unique @map("generation_key")
+  learnerId            String                         @map("learner_id")
+  surface              String
+  algorithmName        String                         @map("algorithm_name")
+  algorithmVersion     String                         @map("algorithm_version")
+  policyVersion        String                         @map("policy_version")
+  generatedAt          DateTime                       @default(now()) @map("generated_at")
+  cacheState           RecommendationCacheState       @map("cache_state")
+  candidateCount       Int                            @map("candidate_count")
+  shownItemCount       Int                            @map("shown_item_count")
+  generationDurationMs Int                            @map("generation_duration_ms")
+  eventSource          RecommendationEventSource      @default(REAL) @map("event_source")
+  createdAt            DateTime                       @default(now()) @map("created_at")
+  learner              User                           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  requests             RecommendationRequest[]
+  candidateTraces      RecommendationCandidateTrace[]
+
+  @@index([learnerId, generatedAt(sort: Desc)])
+  @@index([surface, generatedAt(sort: Desc)])
+  @@index([algorithmName, algorithmVersion])
+  @@map("recommendation_generations")
+}
+
+model RecommendationRequest {
+  id                   String                    @id @default(cuid())
+  learnerId            String                    @map("learner_id")
+  generationId         String                    @map("generation_id")
+  surface              String
+  algorithmName        String                    @map("algorithm_name")
+  algorithmVersion     String                    @map("algorithm_version")
+  policyVersion        String                    @map("policy_version")
+  cacheState           RecommendationCacheState  @map("cache_state")
+  correlationId        String?                   @map("correlation_id")
+  candidateCount       Int                       @map("candidate_count")
+  shownItemCount       Int                       @map("shown_item_count")
+  generationDurationMs Int                       @map("generation_duration_ms")
+  eventSource          RecommendationEventSource @default(REAL) @map("event_source")
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  learner              User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  generation           RecommendationGeneration  @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  impressions          RecommendationImpression[]
+
+  @@index([learnerId, createdAt(sort: Desc)])
+  @@index([surface, createdAt(sort: Desc)])
+  @@index([generationId])
+  @@map("recommendation_requests")
+}
+
+model RecommendationCandidateTrace {
+  id                  String                           @id @default(cuid())
+  generationId        String                           @map("generation_id")
+  entityType          RecommendationEntityType        @map("entity_type")
+  entityId            String                           @map("entity_id")
+  surface             String
+  sectionKey          String?                          @map("section_key")
+  candidateSource     String                           @map("candidate_source")
+  eligibilityResult   RecommendationEligibilityResult @map("eligibility_result")
+  rankBeforeSelection Int?                            @map("rank_before_selection")
+  finalScore          Float?                          @map("final_score")
+  scoreComponents     Json?                           @map("score_components")
+  exclusionReason     String?                          @map("exclusion_reason")
+  selected            Boolean                         @default(false)
+  eventSource         RecommendationEventSource       @default(REAL) @map("event_source")
+  createdAt           DateTime                        @default(now()) @map("created_at")
+  generation          RecommendationGeneration       @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@index([generationId, sectionKey])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@map("recommendation_candidate_traces")
+}
+
+model RecommendationImpression {
+  id                String                    @id @default(cuid())
+  requestId         String                    @map("request_id")
+  learnerId         String                    @map("learner_id")
+  entityType        RecommendationEntityType @map("entity_type")
+  entityId          String                    @map("entity_id")
+  surface           String
+  sectionKey        String                    @map("section_key")
+  position          Int
+  score             Float
+  reasonCode        String                    @map("reason_code")
+  algorithmName     String                    @map("algorithm_name")
+  algorithmVersion  String                    @map("algorithm_version")
+  shownAt           DateTime                  @default(now()) @map("shown_at")
+  eventSource       RecommendationEventSource @default(REAL) @map("event_source")
+  request           RecommendationRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  learner           User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  actions           RecommendationAction[]
+
+  @@unique([requestId, entityType, entityId, sectionKey, position])
+  @@index([learnerId, surface, shownAt(sort: Desc)])
+  @@index([learnerId, entityType, entityId, surface, shownAt(sort: Desc)])
+  @@index([requestId])
+  @@map("recommendation_impressions")
+}
+
+model RecommendationAction {
+  id                String                         @id @default(cuid())
+  impressionId      String                         @map("impression_id")
+  learnerId         String                         @map("learner_id")
+  entityType        RecommendationEntityType      @map("entity_type")
+  entityId          String                         @map("entity_id")
+  actionType        RecommendationActionType      @map("action_type")
+  attributionType   RecommendationAttributionType @map("attribution_type")
+  actionAt          DateTime                       @default(now()) @map("action_at")
+  sourceOperationId String?                        @map("source_operation_id")
+  eventSource       RecommendationEventSource      @default(REAL) @map("event_source")
+  createdAt         DateTime                       @default(now()) @map("created_at")
+  impression        RecommendationImpression       @relation(fields: [impressionId], references: [id], onDelete: Cascade)
+  learner           User                           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([impressionId])
+  @@index([learnerId, actionAt(sort: Desc)])
+  @@index([entityType, entityId, actionType, actionAt(sort: Desc)])
+  @@index([sourceOperationId])
+  @@map("recommendation_actions")
 }

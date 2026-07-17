@@ -104,6 +104,46 @@ Remaining:
 - General multi-user concurrency and connection-pool behavior require isolated investigation.
 - Login performance remains unmeasured.
 
+## Phase 1 — Recommendation Observability
+
+### Data model and event domain
+
+Status: ADOPT_WITH_CONDITIONS
+
+Retained:
+- generation, exposure/request, candidate trace, impression, and action models;
+- migration and supporting indexes;
+- algorithm/version registry;
+- bounded trace and attribution domain logic;
+- focused event-domain tests.
+
+The models are retained for an asynchronous or durable delivery experiment. The migration was applied locally and must not be edited for this status change.
+
+### Awaited synchronous runtime integration
+
+Status: REJECT
+
+Reason:
+- synchronous telemetry did not pass existing Learner Home performance gates;
+- the request path must not await generation/request/impression/action materialization;
+- all active synchronous runtime wiring was removed.
+
+Next:
+- evaluate a durable outbox or another bounded asynchronous delivery strategy;
+- action attribution remains deferred until impressions are persisted reliably.
+
+Current runtime contract:
+- Learner Home and section requests perform zero recommendation-event writes;
+- cache hits perform zero recommendation-event writes;
+- responses contain no recommendation impression identifiers;
+- action controllers do not inspect recommendation attribution headers;
+- the recommendation attribution headers are not enabled through CORS.
+
+Scope limitations retained in the domain:
+- project views and supplier-side reservation lifecycle transitions remain unsupported for live attribution;
+- no ranking, candidate, section, cache-content, or Learner Home UI behavior changes are active;
+- no queue, worker, outbox, dashboard, taxonomy, or learned recommender is implemented.
+
 ### Slice 6: Request-scoped database fan-out limiter
 
 Status: REJECT

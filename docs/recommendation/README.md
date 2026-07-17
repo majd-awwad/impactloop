@@ -45,6 +45,10 @@ The recommendation system must optimize for useful and feasible material reuse, 
 9. Train a learned ranker only after sufficient request-grouped impression data exists.
 10. Use shadow mode, canary rollout, guardrails, and rollback before production promotion.
 
+## Phase 1 Observability Domain
+
+Recommendation generation, HTTP exposure, bounded candidate trace, impression, and attributed-action models remain available in normalized PostgreSQL tables, together with their domain service and tests. The awaited synchronous request-path integration was rejected and removed; the event tables may remain empty until a durable asynchronous delivery strategy is accepted. See `events.md` and `version-registry.md` for the retained domain contract and current baseline version.
+
 ## Required Reading Rules
 
 For any recommendation-system task, read this file first.
