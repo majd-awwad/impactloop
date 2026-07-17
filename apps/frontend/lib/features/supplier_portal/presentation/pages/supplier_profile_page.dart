@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
@@ -21,7 +22,6 @@ import '../theme/supplier_theme_extension.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_location_input_mode.dart';
 import '../widgets/supplier_pickup_map.dart';
-import '../widgets/supplier_profile_edit_settings.dart';
 import '../widgets/supplier_profile_form.dart';
 import '../widgets/supplier_profile_view_widgets.dart';
 import '../widgets/supplier_reverse_geocode_state.dart';
@@ -67,27 +67,31 @@ class _SupplierProfileContentState
   late final TextEditingController _addressLineController;
   late final TextEditingController _organizationNameController;
   late final TextEditingController _contactPersonController;
-  late final TextEditingController _workingDaysController;
   late final TextEditingController _workingFromController;
   late final TextEditingController _workingToController;
   late final TextEditingController _businessCountryController;
   late final TextEditingController _businessCityController;
   late final TextEditingController _businessAreaController;
   late final TextEditingController _businessAddressLineController;
+  late final ScrollController _editScrollController;
   late String _supplierType;
   late String _visibility;
   late bool _isApproximate;
   late bool _useSeparateBusinessLocation;
+  List<String> _selectedWorkingDays = [];
   bool _isEditing = false;
   bool _isSaving = false;
   bool _isUploadingAvatar = false;
   bool _isUploadingCover = false;
-  int _draftTick = 0;
   double? _latitude;
   double? _longitude;
   SupplierLocationInputMode _locationInputMode =
       SupplierLocationInputMode.manual;
   bool _locationCapturedThisSession = false;
+  bool _hasUnsavedChanges = false;
+  String _savedDraftFingerprint = '';
+  String? _storedCountryValue;
+  bool _countryFieldEdited = false;
   bool _manualAddressEditedAfterCapture = false;
   SupplierReverseGeocodeState _reverseGeocodeState =
       SupplierReverseGeocodeState.idle;
@@ -106,13 +110,13 @@ class _SupplierProfileContentState
     _addressLineController = TextEditingController();
     _organizationNameController = TextEditingController();
     _contactPersonController = TextEditingController();
-    _workingDaysController = TextEditingController();
     _workingFromController = TextEditingController();
     _workingToController = TextEditingController();
     _businessCountryController = TextEditingController();
     _businessCityController = TextEditingController();
     _businessAreaController = TextEditingController();
     _businessAddressLineController = TextEditingController();
+    _editScrollController = ScrollController(keepScrollOffset: true);
     _applyProfile(widget.profile);
     _isEditing = !widget.profile.hasSupplierProfile;
   }
@@ -134,7 +138,10 @@ class _SupplierProfileContentState
 
   void _restoreManualAddressFromProfile() {
     final location = widget.profile.pickupLocation;
-    _countryController.text = location?.country ?? '';
+    final storedCountry = location?.country ?? '';
+    _storedCountryValue = storedCountry;
+    _countryFieldEdited = false;
+    _countryController.text = context.s.countryDisplay(storedCountry);
     _cityController.text = location?.city ?? '';
     _areaController.text = location?.area ?? '';
     _addressLineController.text = location?.addressLine ?? '';
@@ -153,7 +160,6 @@ class _SupplierProfileContentState
     _addressLineController.text = location?.addressLine ?? '';
     _organizationNameController.text = organization?.organizationName ?? '';
     _contactPersonController.text = organization?.contactPersonName ?? '';
-    _workingDaysController.text = organization?.workingDays?.join(', ') ?? '';
     _workingFromController.text =
         organization?.workingHours?['from']?.toString() ??
         organization?.workingHours?['start']?.toString() ??
@@ -175,6 +181,10 @@ class _SupplierProfileContentState
         : 'ORDER_ONLY';
     _isApproximate = location?.isApproximate ?? true;
     _useSeparateBusinessLocation = false;
+    _selectedWorkingDays = [
+      for (final day in organization?.workingDays ?? <String>[])
+        if (supplierWorkingDayValues.contains(day)) day,
+    ];
     _latitude = location?.latitude;
     _longitude = location?.longitude;
     _locationInputMode = SupplierLocationInputMode.manual;
@@ -182,11 +192,14 @@ class _SupplierProfileContentState
     _manualAddressEditedAfterCapture = false;
     _reverseGeocodeState = SupplierReverseGeocodeState.idle;
     _locationButtonState = SupplierLocationButtonState.idle;
+    _savedDraftFingerprint = _draftFingerprint();
+    _hasUnsavedChanges = false;
   }
 
   void _applyReverseGeocodeResult(ReverseGeocodeResult result) {
     if (result.country != null) {
-      _countryController.text = result.country!;
+      _countryController.text = context.s.countryDisplay(result.country!);
+      _countryFieldEdited = true;
     }
     if (result.city != null) {
       _cityController.text = result.city!;
@@ -220,7 +233,6 @@ class _SupplierProfileContentState
 
       setState(() {
         _reverseGeocodeState = SupplierReverseGeocodeState.success;
-        _draftTick++;
       });
 
       if (kDebugMode) {
@@ -249,16 +261,77 @@ class _SupplierProfileContentState
     if (_locationCapturedThisSession) {
       _manualAddressEditedAfterCapture = true;
     }
-    setState(() => _draftTick++);
+    _markDirty();
+  }
+
+  void _onCountryFieldChanged() {
+    if (_locationCapturedThisSession) {
+      _manualAddressEditedAfterCapture = true;
+    }
+    _countryFieldEdited = true;
+    _markDirty();
+  }
+
+  void _markDirty() {
+    setState(() {
+      _hasUnsavedChanges = _draftFingerprint() != _savedDraftFingerprint;
+    });
+  }
+
+  String _draftFingerprint() => [
+    _publicNameController.text,
+    _descriptionController.text,
+    _countryController.text,
+    _cityController.text,
+    _areaController.text,
+    _addressLineController.text,
+    _supplierType,
+    _visibility,
+    _isApproximate,
+    _organizationNameController.text,
+    _contactPersonController.text,
+    _selectedWorkingDays.join(','),
+    _workingFromController.text,
+    _workingToController.text,
+    _useSeparateBusinessLocation,
+    _businessCountryController.text,
+    _businessCityController.text,
+    _businessAreaController.text,
+    _businessAddressLineController.text,
+    _latitude,
+    _longitude,
+    _locationInputMode,
+  ].join('\u0000');
+
+  void _startEditing() {
+    if (_editScrollController.hasClients) {
+      _editScrollController.jumpTo(0);
+    }
+    setState(() => _isEditing = true);
+  }
+
+  void _scheduleEditScrollClamp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_editScrollController.hasClients) return;
+      final position = _editScrollController.position;
+      final clamped = position.pixels
+          .clamp(0.0, position.maxScrollExtent)
+          .toDouble();
+      if (clamped != position.pixels) {
+        _editScrollController.jumpTo(clamped);
+      }
+    });
   }
 
   Future<void> _captureCurrentLocation() async {
+    _countryFieldEdited = true;
     setState(() {
       _locationButtonState = SupplierLocationButtonState.loading;
       _locationCapturedThisSession = false;
       _manualAddressEditedAfterCapture = false;
       _reverseGeocodeState = SupplierReverseGeocodeState.idle;
     });
+    _markDirty();
 
     try {
       final capture = await _locationService.captureCurrentLocation();
@@ -273,8 +346,8 @@ class _SupplierProfileContentState
         _locationCapturedThisSession = true;
         _locationButtonState = SupplierLocationButtonState.captured;
         _clearManualAddressFields();
-        _draftTick++;
       });
+      _markDirty();
 
       if (kDebugMode) {
         debugPrint(
@@ -296,6 +369,7 @@ class _SupplierProfileContentState
         _reverseGeocodeState = SupplierReverseGeocodeState.idle;
         _restoreManualAddressFromProfile();
       });
+      _markDirty();
       showSupplierErrorSnackBar(context, error.message);
     } catch (_) {
       if (!mounted) {
@@ -309,6 +383,7 @@ class _SupplierProfileContentState
         _reverseGeocodeState = SupplierReverseGeocodeState.idle;
         _restoreManualAddressFromProfile();
       });
+      _markDirty();
       showSupplierErrorSnackBar(context, context.s.couldNotGetLocation);
     }
   }
@@ -341,6 +416,20 @@ class _SupplierProfileContentState
         _longitude = savedLocation?.longitude;
       }
     });
+    _markDirty();
+  }
+
+  void _onPickupPinMoved(LatLng point) {
+    setState(() {
+      _latitude = point.latitude;
+      _longitude = point.longitude;
+      _locationInputMode = SupplierLocationInputMode.manual;
+      _locationCapturedThisSession = false;
+      _manualAddressEditedAfterCapture = false;
+      _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+    });
+    _markDirty();
+    _lookupAddressFromCoordinates(point.latitude, point.longitude);
   }
 
   @override
@@ -353,13 +442,13 @@ class _SupplierProfileContentState
     _addressLineController.dispose();
     _organizationNameController.dispose();
     _contactPersonController.dispose();
-    _workingDaysController.dispose();
     _workingFromController.dispose();
     _workingToController.dispose();
     _businessCountryController.dispose();
     _businessCityController.dispose();
     _businessAreaController.dispose();
     _businessAddressLineController.dispose();
+    _editScrollController.dispose();
     super.dispose();
   }
 
@@ -441,7 +530,6 @@ class _SupplierProfileContentState
 
   @override
   Widget build(BuildContext context) {
-    final l = context.s;
     final profile = widget.profile;
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
     final verificationAction = profile.verification.canResubmit
@@ -450,168 +538,8 @@ class _SupplierProfileContentState
         ? () => context.go(supplierVerificationPendingRoute)
         : null;
 
-    if (_isEditing) {
-      return SingleChildScrollView(
-        padding: context.supplierDecorations.pagePadding(compact: !isWide),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (profile.hasSupplierProfile) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l.editSupplierProfile,
-                      style: context.supplierTitle(),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _isSaving
-                        ? null
-                        : () {
-                            _applyProfile(profile);
-                            setState(() => _isEditing = false);
-                          },
-                    child: Text(l.cancel),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-            ],
-            SupplierProfileForm(
-              formKey: _formKey,
-              isSaving: _isSaving,
-              hasExistingProfile: profile.hasSupplierProfile,
-              publicNameController: _publicNameController,
-              descriptionController: _descriptionController,
-              countryController: _countryController,
-              cityController: _cityController,
-              areaController: _areaController,
-              addressLineController: _addressLineController,
-              supplierType: _supplierType,
-              visibility: _visibility,
-              isApproximate: _isApproximate,
-              organizationNameController: _organizationNameController,
-              contactPersonController: _contactPersonController,
-              workingDaysController: _workingDaysController,
-              workingFromController: _workingFromController,
-              workingToController: _workingToController,
-              useSeparateBusinessLocation: _useSeparateBusinessLocation,
-              businessCountryController: _businessCountryController,
-              businessCityController: _businessCityController,
-              businessAreaController: _businessAreaController,
-              businessAddressLineController: _businessAddressLineController,
-              onSupplierTypeChanged: (value) => setState(() {
-                _supplierType = value;
-              }),
-              onVisibilityChanged: (value) => setState(() {
-                _visibility = value;
-              }),
-              onApproximateChanged: (value) => setState(() {
-                _isApproximate = value;
-              }),
-              onSeparateBusinessLocationChanged: (value) => setState(() {
-                _useSeparateBusinessLocation = value;
-              }),
-              onFieldChanged: () => setState(() => _draftTick++),
-              onCancel: profile.hasSupplierProfile
-                  ? () {
-                      _applyProfile(profile);
-                      setState(() => _isEditing = false);
-                    }
-                  : null,
-              onSave: _saveProfile,
-              locationInputMode: _locationInputMode,
-              locationCapturedThisSession: _locationCapturedThisSession,
-              reverseGeocodeState: _reverseGeocodeState,
-              locationStatusMessage: _locationStatusMessage(l),
-              onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
-              onLocationInputModeChanged: _onLocationInputModeChanged,
-              showMapInForm: true,
-              showLocationButton: true,
-              latitude: _latitude,
-              longitude: _longitude,
-              locationButtonState: _locationButtonState,
-              onUseCurrentLocation: _captureCurrentLocation,
-            ),
-            if (profile.hasSupplierProfile) ...[
-              const SizedBox(height: AppSpacing.xl),
-              SupplierProfileEditSettings(
-                onChangeAvatar: () =>
-                    _uploadProfileImage(SupplierProfileImageKind.avatar),
-                onChangeCover: () =>
-                    _uploadProfileImage(SupplierProfileImageKind.cover),
-                isUploadingAvatar: _isUploadingAvatar,
-                isUploadingCover: _isUploadingCover,
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-
-    if (!profile.hasSupplierProfile) {
-      return SingleChildScrollView(
-        padding: context.supplierDecorations.pagePadding(compact: !isWide),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l.profileIntroNoProfile, style: context.supplierBody()),
-            const SizedBox(height: AppSpacing.lg),
-            SupplierProfileForm(
-              formKey: _formKey,
-              isSaving: _isSaving,
-              hasExistingProfile: false,
-              publicNameController: _publicNameController,
-              descriptionController: _descriptionController,
-              countryController: _countryController,
-              cityController: _cityController,
-              areaController: _areaController,
-              addressLineController: _addressLineController,
-              supplierType: _supplierType,
-              visibility: _visibility,
-              isApproximate: _isApproximate,
-              organizationNameController: _organizationNameController,
-              contactPersonController: _contactPersonController,
-              workingDaysController: _workingDaysController,
-              workingFromController: _workingFromController,
-              workingToController: _workingToController,
-              useSeparateBusinessLocation: _useSeparateBusinessLocation,
-              businessCountryController: _businessCountryController,
-              businessCityController: _businessCityController,
-              businessAreaController: _businessAreaController,
-              businessAddressLineController: _businessAddressLineController,
-              onSupplierTypeChanged: (value) => setState(() {
-                _supplierType = value;
-              }),
-              onVisibilityChanged: (value) => setState(() {
-                _visibility = value;
-              }),
-              onApproximateChanged: (value) => setState(() {
-                _isApproximate = value;
-              }),
-              onSeparateBusinessLocationChanged: (value) => setState(() {
-                _useSeparateBusinessLocation = value;
-              }),
-              onFieldChanged: () => setState(() => _draftTick++),
-              onCancel: null,
-              onSave: _saveProfile,
-              locationInputMode: _locationInputMode,
-              locationCapturedThisSession: _locationCapturedThisSession,
-              reverseGeocodeState: _reverseGeocodeState,
-              locationStatusMessage: _locationStatusMessage(l),
-              onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
-              onLocationInputModeChanged: _onLocationInputModeChanged,
-              showMapInForm: true,
-              showLocationButton: true,
-              latitude: _latitude,
-              longitude: _longitude,
-              locationButtonState: _locationButtonState,
-              onUseCurrentLocation: _captureCurrentLocation,
-            ),
-          ],
-        ),
-      );
+    if (_isEditing || !profile.hasSupplierProfile) {
+      return _buildEditPage(context, profile, isWide);
     }
 
     return SingleChildScrollView(
@@ -621,7 +549,7 @@ class _SupplierProfileContentState
         children: [
           SupplierProfileHeader(
             profile: profile,
-            onEdit: () => setState(() => _isEditing = true),
+            onEdit: _startEditing,
             onChangeAvatar: () =>
                 _uploadProfileImage(SupplierProfileImageKind.avatar),
             onChangeCover: () =>
@@ -633,7 +561,7 @@ class _SupplierProfileContentState
           const SizedBox(height: AppSpacing.xl),
           ProfileDetailsSection(
             profile: profile,
-            onEdit: () => setState(() => _isEditing = true),
+            onEdit: _startEditing,
             onVerificationAction: verificationAction,
           ),
         ],
@@ -641,8 +569,143 @@ class _SupplierProfileContentState
     );
   }
 
+  Widget _buildEditPage(
+    BuildContext context,
+    SupplierProfileManagement profile,
+    bool isWide,
+  ) {
+    final l = context.s;
+    final pagePadding = context.supplierDecorations.pagePadding(
+      compact: !isWide,
+    );
+    _scheduleEditScrollClamp();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        SingleChildScrollView(
+          key: const PageStorageKey<String>('supplier-profile-edit-scroll'),
+          controller: _editScrollController,
+          primary: false,
+          padding: pagePadding.copyWith(bottom: pagePadding.bottom + 112),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l.editProfileTitle, style: context.supplierTitle()),
+              const SizedBox(height: AppSpacing.xs),
+              Text(l.editProfileSubtitle, style: context.supplierBody()),
+              const SizedBox(height: AppSpacing.lg),
+              SupplierProfileForm(
+                formKey: _formKey,
+                publicNameController: _publicNameController,
+                descriptionController: _descriptionController,
+                countryController: _countryController,
+                cityController: _cityController,
+                areaController: _areaController,
+                addressLineController: _addressLineController,
+                supplierType: _supplierType,
+                visibility: _visibility,
+                isApproximate: _isApproximate,
+                organizationNameController: _organizationNameController,
+                contactPersonController: _contactPersonController,
+                workingFromController: _workingFromController,
+                workingToController: _workingToController,
+                selectedWorkingDays: _selectedWorkingDays,
+                useSeparateBusinessLocation: _useSeparateBusinessLocation,
+                businessCountryController: _businessCountryController,
+                businessCityController: _businessCityController,
+                businessAreaController: _businessAreaController,
+                businessAddressLineController: _businessAddressLineController,
+                onSupplierTypeChanged: (value) => setState(() {
+                  _supplierType = value;
+                }),
+                onVisibilityChanged: (value) => setState(() {
+                  _visibility = value;
+                  if (value != 'PUBLIC') _isApproximate = false;
+                }),
+                onApproximateChanged: (value) => setState(() {
+                  _isApproximate = value;
+                }),
+                onSeparateBusinessLocationChanged: (value) => setState(() {
+                  _useSeparateBusinessLocation = value;
+                }),
+                onWorkingDaysChanged: (days) => setState(() {
+                  _selectedWorkingDays = [...days];
+                  _hasUnsavedChanges =
+                      _draftFingerprint() != _savedDraftFingerprint;
+                }),
+                onFieldChanged: _markDirty,
+                locationInputMode: _locationInputMode,
+                locationCapturedThisSession: _locationCapturedThisSession,
+                reverseGeocodeState: _reverseGeocodeState,
+                locationStatusMessage: _locationStatusMessage(l),
+                onCountryChanged: _onCountryFieldChanged,
+                onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
+                onLocationInputModeChanged: _onLocationInputModeChanged,
+                onPinMoved: _onPickupPinMoved,
+                latitude: _latitude,
+                longitude: _longitude,
+                locationButtonState: _locationButtonState,
+                onUseCurrentLocation: _captureCurrentLocation,
+              ),
+            ],
+          ),
+        ),
+        PositionedDirectional(
+          start: 0,
+          end: 0,
+          bottom: 0,
+          child: _StickyFormActions(
+            isSaving: _isSaving,
+            isDirty: _hasUnsavedChanges,
+            onSave: _saveProfile,
+            onDiscard: () => _discardChanges(profile),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _discardChanges(SupplierProfileManagement profile) async {
+    if (!_hasUnsavedChanges) {
+      _applyProfile(profile);
+      if (profile.hasSupplierProfile && mounted) {
+        setState(() => _isEditing = false);
+      }
+      return;
+    }
+
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.s.t('Discard changes?', 'تجاهل التغييرات؟')),
+        content: Text(
+          context.s.t(
+            'Your unsaved edits will be lost.',
+            'ستفقد التعديلات غير المحفوظة.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.s.t('Keep editing', 'متابعة التعديل')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.s.discardChanges),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || shouldDiscard != true) return;
+    _applyProfile(profile);
+    setState(() {
+      if (profile.hasSupplierProfile) _isEditing = false;
+    });
+  }
+
   Future<void> _saveProfile() async {
-    if (_isSaving) {
+    if (_isSaving || !_hasUnsavedChanges) {
       return;
     }
 
@@ -713,11 +776,7 @@ class _SupplierProfileContentState
             organizationName: _organizationNameController.text.trim(),
             organizationType: _supplierType,
             contactPersonName: _emptyToNull(_contactPersonController.text),
-            workingDays: _workingDaysController.text
-                .split(',')
-                .map((item) => item.trim())
-                .where((item) => item.isNotEmpty)
-                .toList(),
+            workingDays: List<String>.from(_selectedWorkingDays),
             workingHours: {
               if (_workingFromController.text.trim().isNotEmpty)
                 'from': _workingFromController.text.trim(),
@@ -745,7 +804,9 @@ class _SupplierProfileContentState
       supplierType: _supplierType,
       description: _emptyToNull(_descriptionController.text),
       defaultPickupLocation: UpdateSupplierProfileLocationRequest(
-        country: _countryController.text.trim(),
+        country: _countryFieldEdited
+            ? _countryController.text.trim()
+            : (_storedCountryValue ?? _countryController.text.trim()),
         city: _cityController.text.trim(),
         area: _emptyToNull(_areaController.text),
         addressLine: _emptyToNull(_addressLineController.text),
@@ -771,6 +832,93 @@ class _SupplierProfileContentState
 
     setState(() => _isSaving = false);
     showSupplierErrorSnackBar(context, message);
+  }
+}
+
+class _StickyFormActions extends StatelessWidget {
+  const _StickyFormActions({
+    required this.isSaving,
+    required this.isDirty,
+    required this.onSave,
+    required this.onDiscard,
+  });
+
+  final bool isSaving;
+  final bool isDirty;
+  final VoidCallback onSave;
+  final VoidCallback onDiscard;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final l = context.s;
+    return Material(
+      color: colors.surfaceSolid,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: colors.border.withValues(alpha: 0.45)),
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final discard = OutlinedButton(
+                onPressed: !isSaving && isDirty ? onDiscard : null,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                ),
+                child: Text(l.discardChanges),
+              );
+              final save = SizedBox(
+                width: 168,
+                child: FilledButton.icon(
+                  onPressed: !isSaving && isDirty ? onSave : null,
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined, size: 18),
+                  label: Text(isSaving ? l.savingProfile : l.saveChanges),
+                ),
+              );
+              if (constraints.maxWidth < 480) {
+                return Row(
+                  children: [
+                    Expanded(child: discard),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: save),
+                  ],
+                );
+              }
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  discard,
+                  const SizedBox(width: AppSpacing.sm),
+                  save,
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 }
 

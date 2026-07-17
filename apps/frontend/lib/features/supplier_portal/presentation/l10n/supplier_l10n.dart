@@ -1006,6 +1006,10 @@ class SupplierL10n {
   // —— Profile ——
   String get createProfile => t('Create your profile', 'أنشئ ملفك');
   String get editProfileTitle => t('Edit profile', 'تعديل الملف');
+  String get editProfileSubtitle => t(
+    'Update your public identity and pickup settings.',
+    'حدّث هويتك العامة وإعدادات الاستلام.',
+  );
   String get profileIntro => t(
     'Update how learners discover you and where materials can be collected.',
     'حدّث كيف يكتشفك المتعلمون وأين يمكن جمع المواد.',
@@ -1032,7 +1036,14 @@ class SupplierL10n {
   );
   String get useCurrentLocation =>
       t('Use current location', 'استخدام الموقع الحالي');
-  String get enterManually => t('Enter manually', 'إدخال يدوي');
+  String get enterManually => t('Choose manually', 'اختيار يدوي');
+  String get locationModeLabel =>
+      t('Pickup location selection method', 'طريقة تحديد موقع الاستلام');
+  String get manualLocationInstructions => t(
+    'Enter the address details or move the map pin to choose the exact pickup location.',
+    'أدخل تفاصيل العنوان أو حرّك دبوس الخريطة لاختيار موقع الاستلام الدقيق.',
+  );
+  String get locationSelected => t('Location selected', 'تم تحديد الموقع');
   String get gettingLocation => t('Getting location…', 'جاري تحديد الموقع…');
   String get findingAddress => t('Finding address…', 'جاري البحث عن العنوان…');
   String get refreshLocation =>
@@ -1044,6 +1055,14 @@ class SupplierL10n {
     'الإحداثيات هي المرجع. هذه الحقول تساعد المتعلمين في العثور عليك.',
   );
   String get country => t('Country', 'البلد');
+  String countryDisplay(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'palestine' || normalized == 'palestinian territories') {
+      return t('Palestine', 'فلسطين');
+    }
+    return value.trim();
+  }
+
   String get city => t('City', 'المدينة');
   String get area => t('Area', 'المنطقة');
   String get areaHint => t('Neighborhood or district', 'الحي أو المنطقة');
@@ -1052,8 +1071,8 @@ class SupplierL10n {
       t('Street or building (kept private)', 'الشارع أو المبنى (يُحفظ بسرية)');
   String get locationPrivacy => t('Location privacy', 'خصوصية الموقع');
   String get locationPrivacySubtitle => t(
-    'Your exact pickup address stays private. Learners only see a general area until a reservation is accepted.',
-    'عنوان الاستلام الدقيق يبقى خاصاً. يرى المتعلمون منطقة عامة فقط حتى قبول الحجز.',
+    'Set your exact pickup location. Your visibility settings control what learners can see.',
+    'حدّد موقع الاستلام الدقيق. تتحكم إعدادات الظهور بما يمكن للمتعلمين رؤيته.',
   );
   String get locationVisibility => t('Location visibility', 'ظهور الموقع');
   String get visibilityPublic => t('Public area', 'منطقة عامة');
@@ -1077,6 +1096,7 @@ class SupplierL10n {
       t('Optional contact name', 'اسم جهة الاتصال (اختياري)');
   String get saveProfile => t('Save profile', 'حفظ الملف');
   String get savingProfile => t('Saving…', 'جاري الحفظ…');
+  String get discardChanges => t('Discard changes', 'تجاهل التغييرات');
   String get supplierProfileTitle => t('Supplier Profile', 'ملف المورد');
   String get profileIntroHasProfile => t(
     'Keep your public supplier details accurate, trustworthy, and easy for learners to understand.',
@@ -1119,10 +1139,10 @@ class SupplierL10n {
   String get openFrom => t('Open from', 'يفتح من');
   String get openUntil => t('Open until', 'يغلق عند');
   String get separateBusinessLocation =>
-      t('Use a separate business location', 'استخدام موقع عمل منفصل');
+      t('Use a separate organization address', 'استخدام عنوان مؤسسة منفصل');
   String get separateBusinessLocationSubtitle => t(
-    'Leave off to use your default pickup location.',
-    'اتركه معطلاً لاستخدام موقع الاستلام الافتراضي.',
+    'Enable this when your organization address is different from the default pickup location.',
+    'فعّل هذا الخيار عندما يختلف عنوان المؤسسة عن موقع الاستلام الافتراضي.',
   );
   String get businessCountry => t('Business country', 'بلد العمل');
   String get businessCity => t('Business city', 'مدينة العمل');

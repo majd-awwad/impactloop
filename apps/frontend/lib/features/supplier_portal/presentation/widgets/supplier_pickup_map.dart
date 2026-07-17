@@ -35,6 +35,7 @@ class SupplierPickupMap extends StatefulWidget {
     this.compact = false,
     this.showCoordinateDetails = false,
     this.showCoordinatesAsLabel = false,
+    this.showLocationSummary = true,
     this.allowPinPlacement = false,
     this.onPinMoved,
   });
@@ -53,6 +54,7 @@ class SupplierPickupMap extends StatefulWidget {
   final bool compact;
   final bool showCoordinateDetails;
   final bool showCoordinatesAsLabel;
+  final bool showLocationSummary;
   final bool allowPinPlacement;
   final ValueChanged<LatLng>? onPinMoved;
 
@@ -446,7 +448,9 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                               ),
                             ),
                           ),
-                        if (_hasCoordinates && widget.showCoordinatesAsLabel)
+                        if (widget.showLocationSummary &&
+                            _hasCoordinates &&
+                            widget.showCoordinatesAsLabel)
                           PositionedDirectional(
                             start: AppSpacing.sm,
                             end: AppSpacing.sm,
@@ -466,7 +470,8 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
                               ),
                             ),
                           )
-                        else if (_hasCoordinates &&
+                        else if (widget.showLocationSummary &&
+                            _hasCoordinates &&
                             widget.fallbackCity != null &&
                             widget.fallbackCity!.trim().isNotEmpty)
                           PositionedDirectional(
@@ -496,7 +501,9 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
             ),
           ),
         ),
-        if (widget.visibility != null && widget.visibility!.isNotEmpty) ...[
+        if (widget.showLocationSummary &&
+            widget.visibility != null &&
+            widget.visibility!.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
             context.s.visibilitySummary(
@@ -507,7 +514,8 @@ class _SupplierPickupMapState extends State<SupplierPickupMap> {
             ),
           ),
         ],
-        if (widget.fallbackCountry != null &&
+        if (widget.showLocationSummary &&
+            widget.fallbackCountry != null &&
             widget.fallbackCountry!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(widget.fallbackCountry!, style: context.supplierBody()),
