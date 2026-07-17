@@ -103,3 +103,21 @@ Remaining:
 - Approximately 63 queries are still executed for every distinct uncached learner.
 - General multi-user concurrency and connection-pool behavior require isolated investigation.
 - Login performance remains unmeasured.
+
+### Slice 6: Request-scoped database fan-out limiter
+
+Status: REJECT
+
+Findings:
+- Caps 2, 3, 4, and 5 were evaluated against the unbounded baseline.
+- Cap 2 materially reduced connection-acquisition waiting but did not improve end-to-end batch latency.
+- Other caps failed single-user or multi-user latency gates.
+- Query volume remained unchanged.
+- No cap demonstrated a sufficient balance of latency, throughput, and complexity.
+- The production scheduler implementation was removed.
+- Existing unbounded behavior was preserved.
+
+Decision:
+Do not add a request-scoped database limiter.
+Do not increase the pool size based on current evidence.
+Revisit multi-user cold-miss performance only with production-like telemetry or after a future reduction in total query volume.
