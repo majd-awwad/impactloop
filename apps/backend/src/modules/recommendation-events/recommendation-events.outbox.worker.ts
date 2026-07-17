@@ -13,8 +13,12 @@ import {
   MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES,
   MAX_RECOMMENDATION_SCORE_COMPONENTS,
   MAX_RECOMMENDATION_TRACE_ROWS,
+  RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION,
+  RECOMMENDATION_ATTRIBUTION_WINDOW_MS,
   RECOMMENDATION_EXPOSURE_OUTBOX_SCHEMA_VERSION,
   RECOMMENDATION_GENERATION_OUTBOX_SCHEMA_VERSION,
+  RECOMMENDATION_SURFACES,
+  type RecommendationActionOutboxPayload,
   type RecommendationExposureOutboxPayload,
   type RecommendationGenerationOutboxPayload,
   type RecommendationOutboxTrace,
@@ -331,6 +335,64 @@ const validatePayloadSize = (payload: unknown): void => {
   }
 };
 
+const actionTypeForEntity: Record<'MATERIAL' | 'PROJECT', readonly string[]> = {
+  MATERIAL: ['MATERIAL_VIEW', 'MATERIAL_LIKE', 'MATERIAL_UNLIKE', 'RESERVATION_CREATED'],
+  PROJECT: [
+    'PROJECT_LIKE',
+    'PROJECT_UNLIKE',
+    'PROJECT_SAVE',
+    'PROJECT_UNSAVE',
+    'PROJECT_FOLLOW',
+    'PROJECT_UNFOLLOW',
+    'PROJECT_BUILD_STARTED',
+    'PROJECT_BUILD_PROGRESS_UPDATED',
+  ],
+};
+
+const validateActionPayload = (
+  value: unknown,
+): RecommendationActionOutboxPayload => {
+  if (!isRecord(value)) {
+    throw new PoisonOutboxPayloadError('invalid_payload', 'Action payload is not an object');
+  }
+  if (value.schemaVersion !== RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION) {
+    throw new PoisonOutboxPayloadError('unsupported_schema_version', 'Unsupported action payload version');
+  }
+
+  const entityType = requiredString(value, 'entityType', 32);
+  if (entityType !== 'MATERIAL' && entityType !== 'PROJECT') {
+    throw new PoisonOutboxPayloadError('invalid_entity_type', 'Unknown action entity type');
+  }
+  const actionType = requiredString(value, 'actionType', 64);
+  if (!actionTypeForEntity[entityType].includes(actionType)) {
+    throw new PoisonOutboxPayloadError('invalid_action_type', 'Action type is not supported for entity type');
+  }
+
+  return {
+    schemaVersion: RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION,
+    actionId: requiredString(value, 'actionId', 128),
+    learnerId: requiredString(value, 'learnerId'),
+    actionType: actionType as RecommendationActionOutboxPayload['actionType'],
+    entityType: entityType as RecommendationActionOutboxPayload['entityType'],
+    entityId: requiredString(value, 'entityId'),
+    impressionId:
+      value.impressionId === null || value.impressionId === undefined
+        ? null
+        : requiredString(value, 'impressionId', 128),
+    sourceOperationId:
+      value.sourceOperationId === null || value.sourceOperationId === undefined
+        ? null
+        : requiredString(value, 'sourceOperationId'),
+    occurredAt: requiredString(value, 'occurredAt', 64),
+    eventSource:
+      value.eventSource === 'SYNTHETIC' ||
+      value.eventSource === 'TEST' ||
+      value.eventSource === 'LOAD_TEST'
+        ? value.eventSource
+        : 'REAL',
+  };
+};
+
 export const recoverStaleRecommendationOutbox = async (
   leaseMs: number,
 ): Promise<number> => {
@@ -516,6 +578,123 @@ const materializeExposure = async (
   });
 };
 
+const pendingExposureContains = async (payload: RecommendationActionOutboxPayload): Promise<boolean> => {
+  if (!payload.impressionId) {
+    return false;
+  }
+
+  const pending = await prisma.recommendationEventOutbox.findMany({
+    where: {
+      eventKind: 'RECOMMENDATION_EXPOSURE',
+      status: { in: ['PENDING', 'PROCESSING', 'RETRY'] },
+    },
+    orderBy: { createdAt: 'asc' },
+    take: 50,
+    select: { payload: true },
+  });
+
+  return pending.some((row) => {
+    const exposure = row.payload;
+    if (!isRecord(exposure) || exposure.learnerId !== payload.learnerId) {
+      return false;
+    }
+    const impressions = exposure.impressions;
+    return (
+      Array.isArray(impressions) &&
+      impressions.some(
+        (impression) =>
+          isRecord(impression) &&
+          impression.impressionId === payload.impressionId &&
+          impression.entityType === payload.entityType &&
+          impression.entityId === payload.entityId,
+      )
+    );
+  });
+};
+
+const resolveActionImpression = async (
+  payload: RecommendationActionOutboxPayload,
+  actionAt: Date,
+): Promise<{
+  impressionId: string;
+  attributionType: 'DIRECT' | 'ASSISTED';
+} | null> => {
+  const shownAfter = new Date(
+    actionAt.getTime() - RECOMMENDATION_ATTRIBUTION_WINDOW_MS,
+  );
+
+  if (payload.impressionId) {
+    const direct = await prisma.recommendationImpression.findFirst({
+      where: {
+        id: payload.impressionId,
+        learnerId: payload.learnerId,
+        entityType: payload.entityType,
+        entityId: payload.entityId,
+        surface: { in: [...RECOMMENDATION_SURFACES] },
+        shownAt: { gte: shownAfter, lte: actionAt },
+      },
+      select: { id: true },
+    });
+    if (direct) {
+      return { impressionId: direct.id, attributionType: 'DIRECT' };
+    }
+
+    if (await pendingExposureContains(payload)) {
+      throw new RetryableOutboxError(
+        'impression_not_ready',
+        'IMPRESSION_NOT_READY',
+      );
+    }
+  }
+
+  const assisted = await prisma.recommendationImpression.findFirst({
+    where: {
+      learnerId: payload.learnerId,
+      entityType: payload.entityType,
+      entityId: payload.entityId,
+      surface: { in: [...RECOMMENDATION_SURFACES] },
+      shownAt: { gte: shownAfter, lte: actionAt },
+    },
+    orderBy: [{ shownAt: 'desc' }, { id: 'desc' }],
+    select: { id: true },
+  });
+
+  return assisted
+    ? { impressionId: assisted.id, attributionType: 'ASSISTED' }
+    : null;
+};
+
+const materializeAction = async (
+  payload: RecommendationActionOutboxPayload,
+): Promise<void> => {
+  const actionAt = new Date(payload.occurredAt);
+  if (!Number.isFinite(actionAt.getTime())) {
+    throw new PoisonOutboxPayloadError('invalid_date', 'Invalid action date');
+  }
+
+  const resolved = await resolveActionImpression(payload, actionAt);
+  if (!resolved) {
+    return;
+  }
+
+  await prisma.recommendationAction.upsert({
+    where: { id: payload.actionId },
+    create: {
+      id: payload.actionId,
+      impressionId: resolved.impressionId,
+      learnerId: payload.learnerId,
+      entityType: payload.entityType,
+      entityId: payload.entityId,
+      actionType: payload.actionType,
+      attributionType: resolved.attributionType,
+      actionAt,
+      sourceOperationId: payload.sourceOperationId,
+      eventSource: payload.eventSource,
+    },
+    update: {},
+  });
+};
+
 const completeOutboxRecord = async (row: ClaimedOutboxRecord): Promise<void> => {
   await prisma.recommendationEventOutbox.updateMany({
     where: {
@@ -594,6 +773,11 @@ export const processRecommendationOutboxRecord = async (
         throw new PoisonOutboxPayloadError('unsupported_schema_version', 'Unsupported exposure schema version');
       }
       await materializeExposure(validateExposurePayload(row.payload));
+    } else if (row.event_kind === 'RECOMMENDATION_ACTION') {
+      if (row.schema_version !== RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION) {
+        throw new PoisonOutboxPayloadError('unsupported_schema_version', 'Unsupported action schema version');
+      }
+      await materializeAction(validateActionPayload(row.payload));
     } else {
       throw new PoisonOutboxPayloadError('unsupported_event_kind', 'Unsupported recommendation outbox event kind');
     }

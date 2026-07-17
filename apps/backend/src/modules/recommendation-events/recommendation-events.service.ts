@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { IncomingHttpHeaders } from 'node:http';
+import type { NextFunction, Request, Response } from 'express';
 
 import type {
   Prisma,
@@ -14,6 +15,7 @@ import type {
 
 import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
+import { getRequestId } from '../../observability/request-context.js';
 
 export const RECOMMENDATION_IMPRESSION_HEADER =
   'x-recommendation-impression-id';
@@ -26,6 +28,8 @@ export const RECOMMENDATION_GENERATION_OUTBOX_SCHEMA_VERSION =
   'recommendation-generation-outbox-v1';
 export const RECOMMENDATION_EXPOSURE_OUTBOX_SCHEMA_VERSION =
   'recommendation-exposure-outbox-v1';
+export const RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION =
+  'recommendation-action-outbox-v1';
 
 export const RECOMMENDATION_ALGORITHM_NAME = 'deterministic-hybrid';
 export const RECOMMENDATION_ALGORITHM_VERSION = 'learner-home-v1';
@@ -80,17 +84,40 @@ export type RecommendationExposureItem = {
   reasons: string[];
 };
 
-export type RecommendationActionInput = {
+export type RecommendationActionOutboxPayload = {
+  schemaVersion: typeof RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION;
+  actionId: string;
   learnerId: string;
   actionType: RecommendationActionType;
   entityType: EntityType;
   entityId: string;
-  impressionId?: string;
-  surface?: string;
-  sourceOperationId?: string;
-  correlationId?: string;
-  eventSource?: EventSource;
+  impressionId: string | null;
+  sourceOperationId: string | null;
+  occurredAt: string;
+  eventSource: EventSource;
 };
+
+export type RecommendationActionPlan = {
+  actionType: RecommendationActionType;
+  entityType: EntityType;
+  entityId: string;
+  sourceOperationId: string;
+};
+
+const RECOMMENDATION_ACTION_TYPES: readonly RecommendationActionType[] = [
+  'MATERIAL_VIEW',
+  'MATERIAL_LIKE',
+  'MATERIAL_UNLIKE',
+  'RESERVATION_CREATED',
+  'PROJECT_LIKE',
+  'PROJECT_UNLIKE',
+  'PROJECT_SAVE',
+  'PROJECT_UNSAVE',
+  'PROJECT_FOLLOW',
+  'PROJECT_UNFOLLOW',
+  'PROJECT_BUILD_STARTED',
+  'PROJECT_BUILD_PROGRESS_UPDATED',
+];
 
 export type RecommendationOutboxTrace = {
   entityType: EntityType;
@@ -558,6 +585,254 @@ export const enqueueRecommendationExposure = async (input: {
   }
 };
 
+const responseData = (body: unknown): Record<string, unknown> | null => {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return null;
+  }
+
+  const record = body as Record<string, unknown>;
+  if (record.success !== true || !record.data || typeof record.data !== 'object') {
+    return null;
+  }
+
+  return record.data as Record<string, unknown>;
+};
+
+const responseItemId = (body: unknown): string | undefined => {
+  const data = responseData(body);
+  return boundedString(data?.id as string | undefined, 191);
+};
+
+const requestHeader = (req: Request, name: string): string | undefined =>
+  boundedString(req.headers[name.toLowerCase()] as string | undefined, 191);
+
+const pathParam = (req: Request, name: string): string | undefined =>
+  boundedString(req.params?.[name] as string | undefined, 191);
+
+const sourceOperationIdFor = (req: Request, durableId?: string): string | undefined =>
+  boundedString(durableId, 191) ??
+  requestHeader(req, 'idempotency-key') ??
+  boundedString(getRequestIdFromContext(), 191);
+
+const getRequestIdFromContext = (): string | undefined => {
+  try {
+    return getRequestId();
+  } catch {
+    return undefined;
+  }
+};
+
+const isLearnerRequest = (req: Request): boolean =>
+  Boolean(req.auth?.roles.some((role) => role.toUpperCase() === 'LEARNER'));
+
+const actionPlanFor = (
+  req: Request,
+  body: unknown,
+): RecommendationActionPlan | null => {
+  if (!isLearnerRequest(req) || req.path.length > 240 || !responseData(body)) {
+    return null;
+  }
+
+  const method = req.method.toUpperCase();
+  const requestPath = req.path.startsWith('/api/')
+    ? req.path
+    : `${req.baseUrl ?? ''}${req.path}`;
+  const path = requestPath.replace(/\/$/, '');
+  const projectId = pathParam(req, 'id');
+  const materialId = pathParam(req, 'id');
+  const sourceOperationId = (durableId?: string) =>
+    sourceOperationIdFor(req, durableId);
+  const plan = (
+    actionType: RecommendationActionType,
+    entityType: EntityType,
+    entityId: string | undefined,
+    durableId?: string,
+  ): RecommendationActionPlan | null => {
+    const source = sourceOperationId(durableId);
+    const entity = boundedString(entityId, 191);
+    return source && entity
+      ? { actionType, entityType, entityId: entity, sourceOperationId: source }
+      : null;
+  };
+
+  if (method === 'GET' && /^\/api\/materials\/[^/]+$/.test(path)) {
+    return plan('MATERIAL_VIEW', 'MATERIAL', materialId);
+  }
+
+  if (
+    /^\/api\/materials\/[^/]+\/like$/.test(path) &&
+    (method === 'POST' || method === 'DELETE')
+  ) {
+    return plan(
+      method === 'POST' ? 'MATERIAL_LIKE' : 'MATERIAL_UNLIKE',
+      'MATERIAL',
+      materialId,
+    );
+  }
+
+  if (
+    /^\/api\/learning-projects\/[^/]+\/(like|save|follow)$/.test(path) &&
+    (method === 'POST' || method === 'DELETE')
+  ) {
+    const operation = path.split('/').at(-1);
+    const actionType =
+      operation === 'like'
+        ? method === 'POST'
+          ? 'PROJECT_LIKE'
+          : 'PROJECT_UNLIKE'
+        : operation === 'save'
+          ? method === 'POST'
+            ? 'PROJECT_SAVE'
+            : 'PROJECT_UNSAVE'
+          : method === 'POST'
+            ? 'PROJECT_FOLLOW'
+            : 'PROJECT_UNFOLLOW';
+    return plan(actionType as RecommendationActionType, 'PROJECT', projectId);
+  }
+
+  if (
+    method === 'POST' &&
+    /^\/api\/learning-projects\/[^/]+\/builds\/start$/.test(path)
+  ) {
+    return plan(
+      'PROJECT_BUILD_STARTED',
+      'PROJECT',
+      projectId,
+      responseItemId(body),
+    );
+  }
+
+  if (
+    method === 'PATCH' &&
+    /^\/api\/learning-projects\/[^/]+\/builds\/me\/items\/[^/]+$/.test(path)
+  ) {
+    const data = responseData(body);
+    const itemId = boundedString(path.split('/').at(-1), 191);
+    const updatedAt = boundedString(data?.updatedAt as string | undefined, 64);
+    const buildId = responseItemId(body);
+    const durableId =
+      buildId && itemId && updatedAt
+        ? `build:${buildId}:item:${itemId}:${updatedAt}`
+        : undefined;
+    return plan(
+      'PROJECT_BUILD_PROGRESS_UPDATED',
+      'PROJECT',
+      projectId,
+      durableId,
+    );
+  }
+
+  if (method === 'POST' && /^\/api\/reservations$/.test(path)) {
+    const data = responseData(body);
+    const reservationId = responseItemId(body);
+    const reservationMaterial = data?.material;
+    const entityId =
+      reservationMaterial && typeof reservationMaterial === 'object'
+        ? boundedString(
+            (reservationMaterial as Record<string, unknown>).id as string | undefined,
+            191,
+          )
+        : undefined;
+    return plan('RESERVATION_CREATED', 'MATERIAL', entityId, reservationId);
+  }
+
+  return null;
+};
+
+export const getRecommendationActionPlan = actionPlanFor;
+
+export const enqueueRecommendationAction = async (input: {
+  learnerId: string;
+  plan: RecommendationActionPlan;
+  headers: IncomingHttpHeaders;
+  occurredAt?: Date;
+  eventSource?: EventSource;
+}): Promise<boolean> => {
+  try {
+    if (
+      !boundedString(input.learnerId, 191) ||
+      !RECOMMENDATION_ACTION_TYPES.includes(input.plan.actionType) ||
+      !boundedString(input.plan.entityId, 191) ||
+      !boundedString(input.plan.sourceOperationId, 191)
+    ) {
+      return false;
+    }
+
+    const payload: RecommendationActionOutboxPayload = {
+      schemaVersion: RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION,
+      actionId: randomUUID(),
+      learnerId: input.learnerId,
+      actionType: input.plan.actionType,
+      entityType: input.plan.entityType,
+      entityId: input.plan.entityId,
+      impressionId:
+        readRecommendationAttributionHeaders(input.headers).impressionId ?? null,
+      sourceOperationId: input.plan.sourceOperationId,
+      occurredAt: (input.occurredAt ?? new Date()).toISOString(),
+      eventSource: input.eventSource ?? 'REAL',
+    };
+
+    if (payloadByteLength(payload) > MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES) {
+      return false;
+    }
+
+    await prisma.recommendationEventOutbox.createMany({
+      data: [
+        {
+          eventKind: 'RECOMMENDATION_ACTION' as RecommendationOutboxEventKind,
+          schemaVersion: payload.schemaVersion,
+          deduplicationKey: `action:${payload.actionType}:${payload.sourceOperationId}`,
+          payload: payload as unknown as Prisma.InputJsonValue,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    return true;
+  } catch (error) {
+    logger.warn(
+      writeFailureContext({
+        learnerId: input.learnerId,
+        correlationId: getRequestIdFromContext(),
+        phase: 'recommendation-action-outbox-enqueue',
+      }),
+      error instanceof Error
+        ? error.message.slice(0, 191)
+        : 'Recommendation action outbox enqueue failed',
+    );
+    return false;
+  }
+};
+
+export const recommendationActionAttributionMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  const originalJson = res.json.bind(res);
+  let actionCaptureAttempted = false;
+  res.json = ((body: unknown) => {
+    if (res.statusCode >= 400 || actionCaptureAttempted) {
+      return originalJson(body);
+    }
+
+    const plan = actionPlanFor(req, body);
+    if (!plan || !req.auth?.sub) {
+      return originalJson(body);
+    }
+    actionCaptureAttempted = true;
+
+    void enqueueRecommendationAction({
+      learnerId: req.auth.sub,
+      plan,
+      headers: req.headers,
+    }).finally(() => {
+      originalJson(body);
+    });
+    return res;
+  }) as Response['json'];
+  next();
+};
+
 export const persistRecommendationExposure = async (input: {
   generation: RecommendationGenerationMetadata;
   cacheState: CacheState;
@@ -680,120 +955,6 @@ export const persistRecommendationExposure = async (input: {
   }
 
   return impressionIds;
-};
-
-const findDirectImpression = async (input: {
-  learnerId: string;
-  impressionId: string;
-  entityType: EntityType;
-  entityId: string;
-  surface?: string;
-  now: Date;
-}) => {
-  if (!input.surface) {
-    return null;
-  }
-
-  const shownAfter = new Date(
-    input.now.getTime() - RECOMMENDATION_ATTRIBUTION_WINDOW_MS,
-  );
-  const impression = await prisma.recommendationImpression.findFirst({
-    where: {
-      id: input.impressionId,
-      learnerId: input.learnerId,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      surface: input.surface,
-      shownAt: { gte: shownAfter, lte: input.now },
-    },
-  });
-
-  return impression;
-};
-
-const findAssistedImpression = async (input: {
-  learnerId: string;
-  entityType: EntityType;
-  entityId: string;
-  surface?: string;
-  now: Date;
-}) => {
-  if (!input.surface || !RECOMMENDATION_SURFACES.includes(input.surface as (typeof RECOMMENDATION_SURFACES)[number])) {
-    return null;
-  }
-
-  const shownAfter = new Date(
-    input.now.getTime() - RECOMMENDATION_ATTRIBUTION_WINDOW_MS,
-  );
-  return prisma.recommendationImpression.findFirst({
-    where: {
-      learnerId: input.learnerId,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      surface: input.surface,
-      shownAt: { gte: shownAfter, lte: input.now },
-    },
-    orderBy: { shownAt: 'desc' },
-  });
-};
-
-export const recordRecommendationAction = async (
-  input: RecommendationActionInput,
-): Promise<{ attributed: boolean; attributionType?: RecommendationAttributionType }> => {
-  const now = new Date();
-
-  try {
-    const impression = input.impressionId
-      ? await findDirectImpression({
-          learnerId: input.learnerId,
-          impressionId: input.impressionId,
-          entityType: input.entityType,
-          entityId: input.entityId,
-          surface: input.surface,
-          now,
-        })
-      : await findAssistedImpression({
-          learnerId: input.learnerId,
-          entityType: input.entityType,
-          entityId: input.entityId,
-          surface: input.surface,
-          now,
-        });
-
-    if (!impression) {
-      return { attributed: false };
-    }
-
-    const attributionType: RecommendationAttributionType = input.impressionId
-      ? 'DIRECT'
-      : 'ASSISTED';
-
-    await prisma.recommendationAction.create({
-      data: {
-        impressionId: impression.id,
-        learnerId: input.learnerId,
-        entityType: input.entityType,
-        entityId: input.entityId,
-        actionType: input.actionType,
-        attributionType,
-        actionAt: now,
-        sourceOperationId: input.sourceOperationId ?? null,
-        eventSource: input.eventSource ?? 'REAL',
-      },
-    });
-
-    return { attributed: true, attributionType };
-  } catch (error) {
-    logger.error(
-      writeFailureContext({
-        learnerId: input.learnerId,
-        correlationId: input.correlationId,
-        phase: 'recommendation-action',
-      }),
-      error instanceof Error ? error.message : 'Recommendation action write failed',
-    );
-    return { attributed: false };
-  }
 };
 
 export const getRecommendationImpressionId = (

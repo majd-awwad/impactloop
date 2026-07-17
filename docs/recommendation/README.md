@@ -47,7 +47,7 @@ The recommendation system must optimize for useful and feasible material reuse, 
 
 ## Phase 1 Observability Domain
 
-Recommendation generation, HTTP exposure, bounded candidate trace, impression, and attributed-action models remain available in normalized PostgreSQL tables. Learner Home and section requests now enqueue bounded generation/exposure envelopes through `RecommendationEventOutbox`; an opt-in worker materializes the retained generation/request/trace/impression rows with at-least-once idempotent delivery. The awaited synchronous request-path integration remains rejected. Action attribution, headers, and CORS changes remain inactive. See `events.md`, `outbox.md`, and `version-registry.md` for the delivery contract and baseline versions.
+Recommendation generation, HTTP exposure, bounded candidate trace, impression, and attributed-action models remain available in normalized PostgreSQL tables. Learner Home and section requests enqueue bounded generation/exposure envelopes through `RecommendationEventOutbox`; supported learner actions enqueue `recommendation-action-outbox-v1` envelopes after successful business responses. An opt-in worker materializes the retained rows with at-least-once idempotent delivery and direct/assisted attribution. The awaited synchronous request-path integration remains rejected. `X-Recommendation-Impression-Id` is an optional CORS-allowed request header; the additive response field remains optional and cache-safe. See `events.md`, `outbox.md`, and `version-registry.md` for the delivery contract and baseline versions.
 
 ## Required Reading Rules
 

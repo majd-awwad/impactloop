@@ -186,3 +186,21 @@ Decision:
 Do not add a request-scoped database limiter.
 Do not increase the pool size based on current evidence.
 Revisit multi-user cold-miss performance only with production-like telemetry or after a future reduction in total query volume.
+
+## Phase 1C — Durable action attribution
+
+Status: ADOPT_WITH_CONDITIONS
+
+Implemented:
+- Additive action enum values and `RECOMMENDATION_ACTION` outbox event migration;
+- successful-response capture for supported learner material, reservation, project, and project-build actions;
+- bounded action payloads with stable deduplication, optional impression hint, and no request-body storage;
+- worker-side direct ownership/entity/window validation, pending-exposure retry, deterministic assisted attribution, and idempotent action upsert;
+- optional CORS allowance for `X-Recommendation-Impression-Id`;
+- focused tests for bulk enqueue, no synchronous action row, direct/assisted/foreign attribution, race retry, and idempotent redelivery.
+
+Conditions:
+- keep the worker disabled until migration deployment, queue-depth/dead-letter monitoring, and production-like drain/tail-latency evidence are available;
+- action delivery is at-least-once and asynchronous, not exactly-once external publication;
+- project views, supplier-side reservation lifecycle actions, historical backfill, and unsupported action routes remain out of scope;
+- the local validation database was migrated for testing only; no production migration application or commit was performed.

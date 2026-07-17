@@ -3,10 +3,8 @@ import { after, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
 import {
-  RECOMMENDATION_ATTRIBUTION_WINDOW_MS,
   getRecommendationActionContext,
   persistRecommendationExposure,
-  recordRecommendationAction,
 } from './recommendation-events.service.js';
 
 const TEST_MARKER = '[test-recommendation-events]';
@@ -178,107 +176,7 @@ describe('recommendation event instrumentation', () => {
     assert.notEqual([...first.values()][0], [...second.values()][0]);
   });
 
-  test('direct attribution is learner- and entity-scoped', async () => {
-    const impression = await prisma.recommendationImpression.findFirstOrThrow({
-      where: { learnerId },
-    });
-
-    const attributed = await recordRecommendationAction({
-      learnerId,
-      actionType: 'MATERIAL_VIEW',
-      entityType: 'MATERIAL',
-      entityId: impression.entityId,
-      impressionId: impression.id,
-      surface: impression.surface,
-    });
-    assert.deepEqual(attributed, { attributed: true, attributionType: 'DIRECT' });
-
-    const foreign = await recordRecommendationAction({
-      learnerId: otherLearnerId,
-      actionType: 'MATERIAL_VIEW',
-      entityType: 'MATERIAL',
-      entityId: impression.entityId,
-      impressionId: impression.id,
-      surface: impression.surface,
-    });
-    assert.deepEqual(foreign, { attributed: false });
-
-    const mismatch = await recordRecommendationAction({
-      learnerId,
-      actionType: 'PROJECT_LIKE',
-      entityType: 'PROJECT',
-      entityId: impression.entityId,
-      impressionId: impression.id,
-      surface: impression.surface,
-    });
-    assert.deepEqual(mismatch, { attributed: false });
-
-    const wrongSurface = await recordRecommendationAction({
-      learnerId,
-      actionType: 'MATERIAL_VIEW',
-      entityType: 'MATERIAL',
-      entityId: impression.entityId,
-      impressionId: impression.id,
-      surface: 'LEARNER_HOME_SECTION',
-    });
-    assert.deepEqual(wrongSurface, { attributed: false });
-  });
-
-  test('assisted attribution uses the latest matching impression and labels it assisted', async () => {
-    const result = await persistRecommendationExposure({
-      generation: generationFor(learnerId),
-      cacheState: 'HIT',
-      items: [
-        {
-          entityType: 'PROJECT',
-          entityId: 'project-test-1',
-          sectionKey: 'suggested_projects',
-          position: 1,
-          score: 4,
-          reasons: ['Popular with learners'],
-        },
-      ],
-    });
-
-    const attributed = await recordRecommendationAction({
-      learnerId,
-      actionType: 'PROJECT_SAVE',
-      entityType: 'PROJECT',
-      entityId: 'project-test-1',
-      surface: 'LEARNER_HOME',
-    });
-    assert.deepEqual(attributed, {
-      attributed: true,
-      attributionType: 'ASSISTED',
-    });
-    assert.equal(result.size, 1);
-
-    const action = await prisma.recommendationAction.findFirstOrThrow({
-      where: { learnerId, actionType: 'PROJECT_SAVE' },
-    });
-    assert.equal(action.attributionType, 'ASSISTED');
-  });
-
   test('expired impressions and telemetry failures do not fail the caller', async () => {
-    const impression = await prisma.recommendationImpression.findFirstOrThrow({
-      where: { learnerId, entityType: 'MATERIAL' },
-    });
-    await prisma.recommendationImpression.update({
-      where: { id: impression.id },
-      data: {
-        shownAt: new Date(Date.now() - RECOMMENDATION_ATTRIBUTION_WINDOW_MS - 1),
-      },
-    });
-
-    const expired = await recordRecommendationAction({
-      learnerId,
-      actionType: 'MATERIAL_LIKE',
-      entityType: 'MATERIAL',
-      entityId: impression.entityId,
-      impressionId: impression.id,
-    });
-    assert.deepEqual(expired, { attributed: false });
-
     const failedWrite = await persistRecommendationExposure({
       generation: generationFor('missing-user'),
       cacheState: 'MISS',

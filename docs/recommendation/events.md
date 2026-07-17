@@ -10,7 +10,7 @@
 
 The normalized event schema and the durable outbox are active in the recommendation read path. Learner Home and section requests enqueue at most one generation event and one exposure event with one bounded `createMany` call; they do not materialize recommendation domain rows synchronously. The worker is opt-in through `RECOMMENDATION_OUTBOX_WORKER_ENABLED` and materializes generation, request, candidate-trace, and impression rows with short idempotent transactions.
 
-Action attribution remains inactive in live controllers. The old awaited synchronous materialization strategy was rejected and is retained only as historical decision context; the outbox is the accepted delivery experiment for this phase.
+Action attribution is active for supported learner actions through the durable action outbox. The request path captures a successful business response, enqueues at most one bounded action envelope, and never inserts a `RecommendationAction` row synchronously. The old awaited synchronous materialization strategy remains rejected historical context.
 
 ## Current baseline
 
@@ -33,17 +33,21 @@ The version must change when candidate generation, eligibility, scoring, ranking
 
 ## Attribution
 
-The retained domain defines direct and assisted attribution rules, including learner ownership, entity match, surface match, and a 24-hour window. These rules are not active in live controllers. No attribution headers are currently accepted through the recommendation API contract, and no live action is attributed to a recommendation impression. The outbox phase intentionally does not add action-controller or CORS changes.
+The action envelope supports material view/like, reservation creation, project like/save/follow, and project build start/progress routes. Direct attribution validates learner ownership, entity type and ID, the optional `X-Recommendation-Impression-Id`, and a 24-hour window. The impression’s stored surface is authoritative. When direct attribution is unavailable, the worker selects the latest matching materialized impression by `shownAt DESC, id DESC` and labels the result `ASSISTED`. If neither is valid, no action row is created. A matching pending exposure causes `IMPRESSION_NOT_READY` retry; a foreign or mismatched impression does not retry.
+
+The optional `X-Recommendation-Impression-Id` request header is accepted by CORS. `X-Recommendation-Surface` is not required for action attribution. Action payloads contain only internal IDs, action/entity types, an impression hint, a bounded operation ID, timestamp, event source, and schema version. No request body, names, email addresses, tokens, descriptions, or supplier/private fields are stored.
 
 Currently instrumented learner actions are material view/like, reservation submission, project like/save/follow, and project build start/progress. Project views and supplier-side reservation lifecycle actions are not reliably attributable in this slice.
 
 ## Privacy and retention
 
-Events store internal learner/entity IDs, bounded section/source/reason/version metadata, scores, positions, and timestamps. They do not store names, emails, descriptions, search text, profiles, coordinates, tokens, request bodies, or response bodies. Impressions/actions are retained for evaluation; verbose candidate traces are intended for shorter evaluation retention. Cleanup/aggregation automation is deferred.
+Events store internal learner/entity IDs, bounded section/source/reason/version metadata, scores, positions, action types, operation IDs, and timestamps. They do not store names, emails, descriptions, search text, profiles, coordinates, tokens, request bodies, or response bodies. Impressions/actions are retained for evaluation; verbose candidate traces are intended for shorter evaluation retention. Cleanup/aggregation automation is deferred.
 
 ## Additive response contract
 
 The pre-Phase-1 response shape remains valid. When an exposure event is successfully enqueued, each returned recommendation entity may include an opaque `recommendationImpressionId`; clients that ignore the optional field remain compatible. The identifier is not written into the cache envelope and is omitted when telemetry enqueue fails or when the service is called outside an HTTP request context.
+
+Supported action delivery is at-least-once and idempotent by action outbox ID and stable deduplication key. It is not exactly-once external publication. Enqueue and worker failures are logged and retried/dead-lettered without failing the learner’s already-committed business action. Project views and supplier-side reservation lifecycle actions remain unsupported.
 
 ## Data quality
 

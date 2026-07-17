@@ -6,7 +6,7 @@
 
 ## Payload and privacy contract
 
-The two schema versions are `recommendation-generation-outbox-v1` and `recommendation-exposure-outbox-v1`. Payloads contain only internal learner/entity IDs, surface and section keys, finite scores, bounded score components, finite reason codes, cache state, correlation IDs, timestamps, and algorithm/policy versions. Payload size is capped at 256 KiB. Candidate traces and impressions are capped at 512 records, and score-component maps are capped at 12 scalar values.
+The three schema versions are `recommendation-generation-outbox-v1`, `recommendation-exposure-outbox-v1`, and `recommendation-action-outbox-v1`. Action payloads contain only an action ID, learner ID, finite action/entity type, entity ID, optional impression hint, bounded source operation ID, occurrence time, event source, and schema version. Payload size is capped at 256 KiB. Candidate traces and impressions are capped at 512 records.
 
 Names, emails, descriptions, search text, coordinates, tokens, request bodies, response bodies, and supplier/private fields are not serialized. The outbox is an operational delivery buffer, not an analytics warehouse; retention and aggregation jobs remain future work.
 
@@ -14,7 +14,7 @@ Names, emails, descriptions, search text, coordinates, tokens, request bodies, r
 
 The request path uses one bulk outbox insert for zero, one, or two rows: a generation event on a cache miss and an exposure event for every HTTP caller. Cache hits and single-flight waiters therefore share one generation but receive distinct exposure and impression IDs. Enqueue failure is logged with the request correlation ID and does not fail the recommendation response.
 
-The worker uses short transactions and at-least-once delivery. Claiming uses `FOR UPDATE SKIP LOCKED` and a lease token. Generation events are prioritized before exposure events. Materialization is idempotent by generation ID, exposure/request ID, and impression ID. A stale processing lease becomes retryable. Retry delay is bounded exponentially; poison payloads and records exceeding the configured attempt limit become `DEAD` with only a bounded error code/summary persisted.
+The worker uses short transactions and at-least-once delivery. Claiming uses `FOR UPDATE SKIP LOCKED` and a lease token. Generation events are prioritized before exposure/action events. Materialization is idempotent by generation ID, exposure/request ID, impression ID, and action ID. When a matching exposure is still pending, action processing records `IMPRESSION_NOT_READY` and retries; malformed, foreign, expired, or unsupported action payloads do not produce an action row. Retry delay is bounded exponentially; poison payloads and records exceeding the configured attempt limit become `DEAD` with only a bounded error code/summary persisted.
 
 ## Operations
 
@@ -24,7 +24,7 @@ The migration adds status/availability, lease, processed-time, and creation-time
 
 ## Limitations
 
-The worker currently materializes recommendation generations, requests, candidate traces, and impressions only. Learner action controllers, direct/assisted attribution, recommendation headers, and CORS configuration remain inactive. Project views and supplier-side reservation lifecycle actions remain unsupported. The outbox provides durable at-least-once delivery, not exactly-once external publication or a general-purpose job framework.
+The worker materializes recommendation generations, requests, candidate traces, impressions, and supported learner actions. Action capture is centralized at the successful JSON response boundary and never reads request bodies. Project views and supplier-side reservation lifecycle actions remain unsupported. The outbox provides durable at-least-once delivery, not exactly-once external publication or a general-purpose job framework.
 
 ## Redacted event samples
 
@@ -66,6 +66,27 @@ Exposure envelope:
       "position": 1,
       "reasonCode": "INTEREST_MATCH"
     }]
+  }
+}
+```
+
+Action envelope:
+
+```json
+{
+  "eventKind": "RECOMMENDATION_ACTION",
+  "schemaVersion": "recommendation-action-outbox-v1",
+  "deduplicationKey": "action:PROJECT_SAVE:<operation-id>",
+  "payload": {
+    "actionId": "<opaque-action-id>",
+    "learnerId": "<learner-id>",
+    "actionType": "PROJECT_SAVE",
+    "entityType": "PROJECT",
+    "entityId": "<project-id>",
+    "impressionId": "<opaque-impression-id>",
+    "sourceOperationId": "<bounded-operation-id>",
+    "occurredAt": "<iso-timestamp>",
+    "eventSource": "REAL"
   }
 }
 ```

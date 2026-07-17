@@ -23,6 +23,9 @@ import { locationsRouter } from './modules/locations/locations.routes.js';
 import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/saved-dropoff-addresses.routes.js';
 import { profileRouter } from './modules/profile/profile.routes.js';
 import { learnerHomeRouter } from './modules/learner-home/learner-home.routes.js';
+import {
+  recommendationActionAttributionMiddleware,
+} from './modules/recommendation-events/recommendation-events.service.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
 import {
   ensureMaterialUploadsDir,
@@ -65,6 +68,7 @@ app.use(
       'X-Request-Id',
       'X-Client-Platform',
       'Idempotency-Key',
+      'X-Recommendation-Impression-Id',
     ],
   }),
 );
@@ -75,6 +79,7 @@ app.use(
   express.static(SUPPLIER_VERIFICATION_UPLOADS_DIR),
 );
 app.use(express.json());
+app.use(recommendationActionAttributionMiddleware);
 
 app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
