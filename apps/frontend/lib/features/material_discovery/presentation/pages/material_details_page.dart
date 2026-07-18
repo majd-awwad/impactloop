@@ -71,6 +71,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
     this.buildItemId,
     this.returnTo,
     this.componentName,
+    this.recommendationImpressionId,
   });
 
   final String materialId;
@@ -79,6 +80,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
   final String? buildItemId;
   final String? returnTo;
   final String? componentName;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<MaterialDetailsPage> createState() =>
@@ -101,7 +103,10 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     super.initState();
     _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
-    _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+    _materialFuture = _activeRepository.getMaterialById(
+      widget.materialId,
+      recommendationImpressionId: widget.recommendationImpressionId,
+    );
     _startReservationPolling();
   }
 
@@ -132,7 +137,10 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     setState(() {
       _materialOverride = null;
       _showReservationStatusCta = false;
-      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+      _materialFuture = _activeRepository.getMaterialById(
+        widget.materialId,
+        recommendationImpressionId: widget.recommendationImpressionId,
+      );
     });
   }
 
@@ -142,11 +150,16 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     final nextRepository = widget.repository ?? _defaultRepository;
     if (oldWidget.materialId != widget.materialId ||
         oldWidget.repository != widget.repository ||
+        oldWidget.recommendationImpressionId !=
+            widget.recommendationImpressionId ||
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
       _showReservationStatusCta = false;
       _materialOverride = null;
-      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+      _materialFuture = _activeRepository.getMaterialById(
+        widget.materialId,
+        recommendationImpressionId: widget.recommendationImpressionId,
+      );
     }
   }
 
@@ -162,6 +175,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
           _materialOverride = null;
           _materialFuture = _activeRepository.getMaterialById(
             widget.materialId,
+            recommendationImpressionId: widget.recommendationImpressionId,
           );
         });
       }
@@ -280,8 +294,14 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
     try {
       final engagement = shouldLike
-          ? await _activeRepository.likeMaterial(material.id)
-          : await _activeRepository.unlikeMaterial(material.id);
+          ? await _activeRepository.likeMaterial(
+              material.id,
+              recommendationImpressionId: widget.recommendationImpressionId,
+            )
+          : await _activeRepository.unlikeMaterial(
+              material.id,
+              recommendationImpressionId: widget.recommendationImpressionId,
+            );
 
       if (!mounted) {
         return;
@@ -360,7 +380,10 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
     await ref
         .read(reservationCreateControllerProvider.notifier)
-        .create(enrichedRequest);
+        .create(
+          enrichedRequest,
+          recommendationImpressionId: widget.recommendationImpressionId,
+        );
 
     if (!mounted) {
       return;

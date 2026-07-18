@@ -132,6 +132,15 @@ bool _isAdminPortalPath(String path) {
 
 bool _isCheckingPath(String path) => path == authCheckingRoute;
 
+String? _recommendationImpressionIdFromExtra(Object? extra) {
+  if (extra is! String) {
+    return null;
+  }
+
+  final normalized = extra.trim();
+  return normalized.isEmpty ? null : normalized;
+}
+
 bool _isAuthPage(String path) =>
     path == loginRoute ||
     path == registerRoute ||
@@ -613,7 +622,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final projectId = state.pathParameters['id']!;
 
-          return LearningProjectBuildPage(projectId: projectId);
+          return LearningProjectBuildPage(
+            projectId: projectId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
+          );
         },
       ),
       GoRoute(
@@ -621,7 +635,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final projectId = state.pathParameters['id']!;
 
-          return LearningProjectDetailsPage(projectId: projectId);
+          return LearningProjectDetailsPage(
+            projectId: projectId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
+          );
         },
       ),
       GoRoute(
@@ -632,6 +651,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return MaterialDetailsPage(
             materialId: materialId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
             projectId: query['projectId'],
             buildItemId: query['buildItemId'],
             returnTo: query['returnTo'],
