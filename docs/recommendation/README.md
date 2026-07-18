@@ -80,3 +80,15 @@ Every experimental phase must end with one of:
 - `REJECT`
 
 “Implementation completed” is not sufficient evidence for adoption.
+
+## Phase 1D — Flutter Impression Propagation
+
+The Flutter client treats `recommendationImpressionId` as an optional,
+item-scoped field on the existing material and learning-project domain models.
+Learner Home recommendation cards pass that value through GoRouter `extra`
+when opening the matching detail page. Supported learner actions copy the
+same transient value into `X-Recommendation-Impression-Id`; ordinary discovery,
+deep links, refreshes without route context, and unrelated actions do not send
+the header. The client does not persist the value, place it in URLs, add a
+global interceptor, or send a surface header. See `phase-1d-validation.md`
+for the journey matrix, isolation guarantees, and validation evidence.

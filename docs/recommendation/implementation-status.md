@@ -165,6 +165,27 @@ Validation:
 
 Conditions:
 - worker enablement remains disabled by default and requires migration review, queue-depth/dead-letter monitoring, and production-like tail-latency/drain measurements;
+
+### Phase 1D — Flutter impression propagation
+
+Status: ADOPT_WITH_CONDITIONS
+
+Implemented:
+- optional `recommendationImpressionId` fields on the existing material and project models and API mappers;
+- item-scoped Learner Home card-to-detail-to-action propagation through transient GoRouter route extras;
+- optional `X-Recommendation-Impression-Id` headers on supported material, project, reservation, and build actions;
+- null/blank omission, no `X-Recommendation-Surface`, no persistent storage, and no global request interceptor;
+- focused mapper and Dio-interceptor tests for context propagation, body preservation, and isolation.
+
+Conditions and limitations:
+- direct deep links and app restarts have no recommendation context by design;
+- project views and supplier-side reservation lifecycle actions remain unsupported;
+- the Flutter client does not perform attribution validation; the backend remains the authority for ownership, entity, surface, and time-window checks;
+- focused propagation, mapper, and affected learner-flow checks passed 128/128 after the final scope hardening; an aggregate repository-wide run reported 8 pre-existing failures, while isolated reproduction deterministically reproduced 6 across admin/supplier UI expectations and the registration-draft `toJson` compilation failure;
+- full analysis was time-limited locally, while targeted analysis over all changed Flutter domains reported no issues;
+- final adoption remains conditional on the known repository-wide test/typecheck baseline being resolved separately.
+
+Evidence: `phase-1d-validation.md`.
 - query-event counts were not independently captured in the clean benchmark harness;
 - action attribution, recommendation headers/CORS, project views, and supplier-side reservation lifecycle actions remain unsupported;
 - no production migration application or commit was performed.
