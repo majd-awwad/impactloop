@@ -1,0 +1,681 @@
+{
+  "fixtureVersion": "phase-2d-v1",
+  "reviewStatus": "MANUALLY_REVIEWED",
+  "frozenSeedIdentifier": "realistic-impactloop-seed-primary-150-plus-9-workflow",
+  "notes": "Stable title-derived entity keys only. Delta rows were reviewed against frozen catalog content; no private identifiers, test rows, or database IDs are included.",
+  "labelScale": {
+    "RELEVANT": 2,
+    "PARTIALLY_RELEVANT": 1,
+    "NOT_RELEVANT": 0,
+    "INSUFFICIENT_INFORMATION": null
+  },
+  "materialDeltas": [
+    {
+      "interestKey": "electronics",
+      "interestLabelEn": "Electronics",
+      "interestLabelAr": "إلكترونيات",
+      "pairs": []
+    },
+    {
+      "interestKey": "arduino",
+      "interestLabelEn": "Arduino",
+      "interestLabelAr": "أردوينو",
+      "pairs": []
+    },
+    {
+      "interestKey": "robotics",
+      "interestLabelEn": "Robotics",
+      "interestLabelAr": "الروبوتات",
+      "pairs": [
+        {
+          "entityKey": "compression-and-extension-spring-sets",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Compression and Extension Spring Sets was already retrieved by production and only gains reviewed-alias scoring \"motor\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-plastic-and-metal-gear-sets",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Mixed Plastic and Metal Gear Sets was already retrieved by production and only gains reviewed-alias scoring \"motor\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-rubber-drive-belts",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Mixed Rubber Drive Belts was already retrieved by production and only gains reviewed-alias scoring \"motor\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "short-roller-chain-sections",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Short Roller Chain Sections was already retrieved by production and only gains reviewed-alias scoring \"motor\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "small-ball-bearing-assortments",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Small Ball Bearing Assortments was already retrieved by production and only gains reviewed-alias scoring \"motor\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        }
+      ]
+    },
+    {
+      "interestKey": "sensors",
+      "interestLabelEn": "Sensors",
+      "interestLabelAr": "أجهزة الاستشعار",
+      "pairs": []
+    },
+    {
+      "interestKey": "circuits",
+      "interestLabelEn": "Circuits",
+      "interestLabelAr": "الدوائر الإلكترونية",
+      "pairs": []
+    },
+    {
+      "interestKey": "displays",
+      "interestLabelEn": "Displays",
+      "interestLabelAr": "الشاشات",
+      "pairs": []
+    },
+    {
+      "interestKey": "wires_connectors",
+      "interestLabelEn": "Wires & Connectors",
+      "interestLabelAr": "أسلاك وموصلات",
+      "pairs": []
+    },
+    {
+      "interestKey": "audio_media",
+      "interestLabelEn": "Audio & Media",
+      "interestLabelAr": "الصوت والوسائط",
+      "pairs": []
+    },
+    {
+      "interestKey": "woodworking",
+      "interestLabelEn": "Woodworking",
+      "interestLabelAr": "أعمال خشبية",
+      "pairs": [
+        {
+          "entityKey": "clean-newspaper-bundles",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Clean Newspaper Bundles was already retrieved by production and only gains reviewed-alias scoring \"board\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "clean-paper-egg-cartons",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Clean Paper Egg Cartons was already retrieved by production and only gains reviewed-alias scoring \"board\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "decorative-paper-assortment",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Decorative Paper Assortment was already retrieved by production and only gains reviewed-alias scoring \"board\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "large-sewing-pattern-paper-sheets",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Large Sewing Pattern Paper Sheets was already retrieved by production and only gains reviewed-alias scoring \"board\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "old-magazine-bundles",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Old Magazine Bundles was already retrieved by production and only gains reviewed-alias scoring \"board\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "partially-used-gift-wrap-rolls",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Partially Used Gift Wrap Rolls was already retrieved by production and only gains reviewed-alias scoring \"board\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "wide-kraft-paper-rolls",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Wide Kraft Paper Rolls was already retrieved by production and only gains reviewed-alias scoring \"board\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        }
+      ]
+    },
+    {
+      "interestKey": "fabric_textiles",
+      "interestLabelEn": "Fabric & Textiles",
+      "interestLabelAr": "أقمشة ومنسوجات",
+      "pairs": [
+        {
+          "entityKey": "decorative-ribbon-rolls",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Decorative Ribbon Rolls was already retrieved by production and only gains reviewed-alias scoring \"fabric and textiles\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-yarn-bundles",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Mixed Yarn Bundles was already retrieved by production and only gains reviewed-alias scoring \"fabric and textiles\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "synthetic-leather-offcuts",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Synthetic Leather Offcuts was already retrieved by production and only gains reviewed-alias scoring \"fabric and textiles\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        }
+      ]
+    },
+    {
+      "interestKey": "art_crafts",
+      "interestLabelEn": "Art & Crafts",
+      "interestLabelAr": "فنون وحرف",
+      "pairs": [
+        {
+          "entityKey": "28byj-48-stepper-motor-kits",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "28BYJ-48 Stepper Motor Kits was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "acrylic-paint-leftovers-set",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Acrylic Paint Leftovers Set was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "clean-paper-egg-cartons",
+          "label": "RELEVANT",
+          "reason": "Clean Paper Egg Cartons was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "colored-craft-foam-sheets",
+          "label": "RELEVANT",
+          "reason": "Colored Craft Foam Sheets was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "compression-and-extension-spring-sets",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Compression and Extension Spring Sets was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "decorative-paper-assortment",
+          "label": "RELEVANT",
+          "reason": "Decorative Paper Assortment was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:tags",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "decorative-ribbon-rolls",
+          "label": "RELEVANT",
+          "reason": "Decorative Ribbon Rolls was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:tags",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "embroidery-hoop-sets",
+          "label": "RELEVANT",
+          "reason": "Embroidery Hoop Sets was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:tags",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "embroidery-thread-bundles",
+          "label": "RELEVANT",
+          "reason": "Embroidery Thread Bundles was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:tags",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "felt-sheets-leftovers",
+          "label": "RELEVANT",
+          "reason": "Felt Sheets Leftovers was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:tags",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "laminated-particleboard-offcuts",
+          "label": "RELEVANT",
+          "reason": "Laminated Particleboard Offcuts was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-craft-beads-assortment",
+          "label": "RELEVANT",
+          "reason": "Mixed Craft Beads Assortment was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-crochet-hook-sets",
+          "label": "RELEVANT",
+          "reason": "Mixed Crochet Hook Sets was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:tags",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-mosaic-tile-offcuts",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Mixed Mosaic Tile Offcuts was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-paint-brush-sets",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Mixed Paint Brush Sets was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-plastic-and-metal-gear-sets",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Mixed Plastic and Metal Gear Sets was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "mixed-rubber-drive-belts",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Mixed Rubber Drive Belts was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "natural-cork-pieces",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Natural Cork Pieces was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "nema-17-stepper-motors",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "NEMA 17 Stepper Motors was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "partially-used-gift-wrap-rolls",
+          "label": "RELEVANT",
+          "reason": "Partially Used Gift Wrap Rolls was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "partially-used-wood-glue-bottles",
+          "label": "RELEVANT",
+          "reason": "Partially Used Wood Glue Bottles was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "rubber-wheels-set",
+          "label": "RELEVANT",
+          "reason": "Rubber Wheels Set was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:description",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "sequins-and-decorative-shapes-packs",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Sequins and Decorative Shapes Packs was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "sg90-micro-servo-motors",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "SG90 Micro Servo Motors was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "shallow-plastic-parts-trays",
+          "label": "RELEVANT",
+          "reason": "Shallow Plastic Parts Trays was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "short-roller-chain-sections",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Short Roller Chain Sections was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "small-ball-bearing-assortments",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Small Ball Bearing Assortments was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "small-dc-gear-motors-pair",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Small DC Gear Motors Pair was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "small-pulley-wheel-sets",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Small Pulley Wheel Sets was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "small-swivel-caster-wheels",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Small Swivel Caster Wheels was already retrieved by production and only gains reviewed-alias scoring \"art\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "sorted-plastic-bottle-caps-bag",
+          "label": "RELEVANT",
+          "reason": "Sorted Plastic Bottle Caps Bag was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:description",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "synthetic-leather-offcuts",
+          "label": "RELEVANT",
+          "reason": "Synthetic Leather Offcuts was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:tags",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "wooden-clothespin-bundles",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Wooden Clothespin Bundles was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        }
+      ]
+    },
+    {
+      "interestKey": "recycling",
+      "interestLabelEn": "Recycling",
+      "interestLabelAr": "إعادة التدوير",
+      "pairs": []
+    },
+    {
+      "interestKey": "home_diy",
+      "interestLabelEn": "Home DIY",
+      "interestLabelAr": "أعمال منزلية يدوية",
+      "pairs": []
+    }
+  ],
+  "projectDeltas": [
+    {
+      "interestKey": "electronics",
+      "interestLabelEn": "Electronics",
+      "interestLabelAr": "إلكترونيات",
+      "pairs": []
+    },
+    {
+      "interestKey": "arduino",
+      "interestLabelEn": "Arduino",
+      "interestLabelAr": "أردوينو",
+      "pairs": []
+    },
+    {
+      "interestKey": "robotics",
+      "interestLabelEn": "Robotics",
+      "interestLabelAr": "الروبوتات",
+      "pairs": []
+    },
+    {
+      "interestKey": "sensors",
+      "interestLabelEn": "Sensors",
+      "interestLabelAr": "أجهزة الاستشعار",
+      "pairs": []
+    },
+    {
+      "interestKey": "circuits",
+      "interestLabelEn": "Circuits",
+      "interestLabelAr": "الدوائر الإلكترونية",
+      "pairs": []
+    },
+    {
+      "interestKey": "displays",
+      "interestLabelEn": "Displays",
+      "interestLabelAr": "الشاشات",
+      "pairs": []
+    },
+    {
+      "interestKey": "wires_connectors",
+      "interestLabelEn": "Wires & Connectors",
+      "interestLabelAr": "أسلاك وموصلات",
+      "pairs": []
+    },
+    {
+      "interestKey": "audio_media",
+      "interestLabelEn": "Audio & Media",
+      "interestLabelAr": "الصوت والوسائط",
+      "pairs": []
+    },
+    {
+      "interestKey": "woodworking",
+      "interestLabelEn": "Woodworking",
+      "interestLabelAr": "أعمال خشبية",
+      "pairs": []
+    },
+    {
+      "interestKey": "fabric_textiles",
+      "interestLabelEn": "Fabric & Textiles",
+      "interestLabelAr": "أقمشة ومنسوجات",
+      "pairs": []
+    },
+    {
+      "interestKey": "art_crafts",
+      "interestLabelEn": "Art & Crafts",
+      "interestLabelAr": "فنون وحرف",
+      "pairs": [
+        {
+          "entityKey": "bottle-cap-mosaic-board",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Bottle Cap Mosaic Board was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "decorated-tin-can-lantern",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Decorated Tin Can Lantern was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "egg-carton-seed-starter",
+          "label": "RELEVANT",
+          "reason": "Egg Carton Seed Starter was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "fabric-pencil-case",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Fabric Pencil Case was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "felt-phone-sleeve",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Felt Phone Sleeve was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "patchwork-tote-bag",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Patchwork Tote Bag was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "reused-yarn-wall-hanging",
+          "label": "PARTIALLY_RELEVANT",
+          "reason": "Reused Yarn Wall Hanging was already retrieved by production and only gains reviewed-alias scoring \"craft\"; the evidence is broad and treated as partial relevance.",
+          "evidenceSource": "reviewed-alias:categoryEn",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        },
+        {
+          "entityKey": "smart-plant-moisture-monitor",
+          "label": "RELEVANT",
+          "reason": "Smart Plant Moisture Monitor was already retrieved by production and only gains reviewed-alias scoring \"art\"; the title/type provides direct interest evidence.",
+          "evidenceSource": "reviewed-alias:title",
+          "baselinePresent": true,
+          "expandedPresent": true,
+          "scoringOnlyPresent": true
+        }
+      ]
+    },
+    {
+      "interestKey": "recycling",
+      "interestLabelEn": "Recycling",
+      "interestLabelAr": "إعادة التدوير",
+      "pairs": []
+    },
+    {
+      "interestKey": "home_diy",
+      "interestLabelEn": "Home DIY",
+      "interestLabelAr": "أعمال منزلية يدوية",
+      "pairs": []
+    }
+  ]
+}
