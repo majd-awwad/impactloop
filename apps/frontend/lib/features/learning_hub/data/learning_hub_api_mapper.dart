@@ -191,6 +191,9 @@ class LearningHubApiMapper {
       ratingValue: rating.value,
       ratingCount: rating.count,
       hasRatings: rating.hasRatings,
+      recommendationImpressionId: _nullableString(
+        json['recommendationImpressionId'],
+      ),
       componentCountLabel: componentCountLabel,
       components: components,
       requiredComponents: requiredComponents,

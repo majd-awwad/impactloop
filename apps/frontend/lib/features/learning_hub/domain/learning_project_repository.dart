@@ -37,13 +37,17 @@ abstract class LearningProjectRepository {
 
   Future<ProjectBuild?> fetchMyBuild(String projectId);
 
-  Future<ProjectBuild> startBuild(String projectId);
+  Future<ProjectBuild> startBuild(
+    String projectId, {
+    String? recommendationImpressionId,
+  });
 
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
     required ProjectBuildItemStatus status,
     String? learnerNote,
+    String? recommendationImpressionId,
   });
 
   Future<BuildMaterialCandidatesResult> fetchMaterialCandidates(
@@ -63,17 +67,35 @@ abstract class LearningProjectRepository {
 
   Future<List<MaterialCategory>> fetchMaterialCategories();
 
-  Future<ProjectEngagement> likeProject(String id);
+  Future<ProjectEngagement> likeProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectEngagement> unlikeProject(String id);
+  Future<ProjectEngagement> unlikeProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectSaveStatus> saveProject(String id);
+  Future<ProjectSaveStatus> saveProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectSaveStatus> unsaveProject(String id);
+  Future<ProjectSaveStatus> unsaveProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectFollowStatus> followProject(String id);
+  Future<ProjectFollowStatus> followProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectFollowStatus> unfollowProject(String id);
+  Future<ProjectFollowStatus> unfollowProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
   Future<void> reviewProject(String id, {required int rating, String? comment});
 
