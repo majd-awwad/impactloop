@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildGraphMetrics, buildMatrixMetrics, classifyOrigin, hasOperationLeakage, profileDatabase, resolveInteractionRecords, summarizeDistribution, type RawInteraction } from './evaluate-interaction-readiness.js';
+import { buildGraphMetrics, buildMatrixMetrics, classifyOrigin, countItemsWithAtLeastUsers, formatProgress, hasOperationLeakage, profileDatabase, resolveInteractionRecords, summarizeDistribution, validateTemporalOrder, type RawInteraction } from './evaluate-interaction-readiness.js';
 
 const row = (overrides: Partial<RawInteraction>): RawInteraction => ({ id: '1', userId: 'u1', itemId: 'i1', entityType: 'MATERIAL', signal: 'LIKE', state: 'ACTIVE', occurredAt: new Date('2026-01-01T00:00:00Z'), source: 'test', origin: 'REAL_USER', ...overrides });
 
@@ -10,6 +10,7 @@ test('data origin classification is deterministic and keeps test/seed origins se
   assert.equal(classifyOrigin({ eventSource: 'LOAD_TEST' }), 'BENCHMARK');
   assert.equal(classifyOrigin({ userEmail: 'real@example.com' }), 'REAL_USER');
   assert.equal(classifyOrigin({ itemText: '[test-internal-delivery] copy' }), 'TEST_FIXTURE');
+  assert.equal(classifyOrigin({}), 'UNKNOWN');
 });
 
 test('duplicate active state resolves to one row and reversals remove the positive state', () => {
@@ -49,6 +50,44 @@ test('matrix density, sparsity, cold thresholds, and graph components are exact'
   const matrix = buildMatrixMetrics(['u1', 'u2', 'u3'], ['i1', 'i2', 'i3'], pairs);
   assert.equal(matrix.possibleCells, 9); assert.equal(matrix.observedPairs, 3); assert.equal(matrix.density, 1 / 3); assert.ok(Math.abs(matrix.sparsity - 2 / 3) < 1e-12); assert.equal(matrix.usersBelow['2'], 2); assert.equal(matrix.itemsBelow['2'], 2);
   const graph = buildGraphMetrics(pairs); assert.equal(graph.connectedComponents, 1); assert.equal(graph.isolatedUsers, 0); assert.equal(graph.isolatedItems, 0); assert.equal(graph.itemPairCooccurrence[0]?.count, 1); assert.equal(graph.userPairOverlap[0]?.count, 1);
+  assert.equal(countItemsWithAtLeastUsers(matrix, 2), 1);
+  assert.equal(countItemsWithAtLeastUsers(matrix, 3), 0);
+});
+
+test('timestamp validation catches ordering violations', () => {
+  const errors = validateTemporalOrder({
+    availabilityAt: new Date('2026-01-03T00:00:00Z'),
+    impressionAt: new Date('2026-01-02T00:00:00Z'),
+    actionAt: new Date('2026-01-01T00:00:00Z'),
+    outcomeAt: new Date('2025-12-31T00:00:00Z'),
+  });
+  assert.deepEqual(errors, [
+    'impression_before_availability',
+    'action_before_impression',
+    'outcome_before_action',
+  ]);
+});
+
+test('progress output is deterministic, excludes non-real origin rows, and contains no PII fields', () => {
+  const profile = {
+    populations: { activeLearnersWithRealUserInteraction: 1 },
+    origins: { distributions: { REAL_USER: { usersWithAtLeast2UniqueItems: 1, usersWithAtLeast5UniqueItems: 0, usersWithAtLeast10UniqueItems: 0 } } },
+    temporal: { realActiveDays: 2 },
+    matrices: {
+      material: buildMatrixMetrics(['u1'], ['m1', 'm2'], [{ userId: 'u1', itemId: 'm1', occurredAt: new Date() }]),
+      project: buildMatrixMetrics(['u1'], ['p1'], []),
+    },
+    attribution: { direct: 2, assisted: 1 },
+    queue: { backlog: 0, dead: 0 },
+    splitEligibility: { usersWithAtLeast2MaterialItems: 1, usersWithAtLeast5MaterialItems: 0, usersWithAtLeast10MaterialItems: 0 },
+    decision: 'COLLECT_MORE_REAL_INTERACTIONS',
+  } as any;
+  const output = formatProgress(profile);
+  assert.equal(output, formatProgress(profile));
+  assert.match(output, /REAL_USERS_WITH_2_UNIQUE_ITEMS=1/);
+  assert.match(output, /OUTBOX_BACKLOG=0/);
+  assert.doesNotMatch(output, /@|email|phone|token|address|latitude|longitude|message|name/i);
+  assert.doesNotMatch(output, /DEMO_SEED|TEST_FIXTURE|BENCHMARK/);
 });
 
 test('percentile summaries are deterministic and profiling helpers perform no writes', () => {

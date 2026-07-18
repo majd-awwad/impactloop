@@ -74,15 +74,38 @@ export const hasOperationLeakage = (train: RawInteraction[], test: RawInteractio
   return test.some((row) => trainKeys.has(row.operationId ?? row.id));
 };
 
+export const validateTemporalOrder = (input: {
+  availabilityAt: Date | null;
+  impressionAt: Date | null;
+  actionAt: Date | null;
+  outcomeAt?: Date | null;
+}): string[] => {
+  const errors: string[] = [];
+  if (input.availabilityAt && input.impressionAt && input.impressionAt < input.availabilityAt) errors.push('impression_before_availability');
+  if (input.impressionAt && input.actionAt && input.actionAt < input.impressionAt) errors.push('action_before_impression');
+  if (input.actionAt && input.outcomeAt && input.outcomeAt < input.actionAt) errors.push('outcome_before_action');
+  return errors;
+};
+
 export const percentile = (values: number[], p: number) => { if (!values.length) return 0; const sorted = [...values].sort((a, b) => a - b); const index = (sorted.length - 1) * p; const low = Math.floor(index); const high = Math.ceil(index); return low === high ? sorted[low]! : sorted[low]! + (sorted[high]! - sorted[low]!) * (index - low); };
 export const summarizeDistribution = (values: number[]) => ({ min: values.length ? Math.min(...values) : 0, median: percentile(values, 0.5), p75: percentile(values, 0.75), p90: percentile(values, 0.9), p95: percentile(values, 0.95), max: values.length ? Math.max(...values) : 0 });
 type Pair = { userId: string; itemId: string; occurredAt: Date };
-export type MatrixMetrics = { users: number; items: number; possibleCells: number; observedPairs: number; density: number; sparsity: number; usersBelow: Record<'2' | '5' | '10', number>; itemsBelow: Record<'2' | '5' | '10', number> };
+export type MatrixMetrics = { users: number; items: number; possibleCells: number; observedPairs: number; density: number; sparsity: number; usersBelow: Record<'2' | '3' | '5' | '10', number>; itemsBelow: Record<'2' | '3' | '5' | '10', number> };
 export const buildMatrixMetrics = (users: string[], items: string[], pairs: Pair[]): MatrixMetrics => {
   const userItems = new Map(users.map((user) => [user, new Set<string>()])); const itemUsers = new Map(items.map((item) => [item, new Set<string>()])); const unique = new Set<string>();
   for (const pair of pairs) { unique.add(`${pair.userId}|${pair.itemId}`); if (!userItems.has(pair.userId)) userItems.set(pair.userId, new Set()); if (!itemUsers.has(pair.itemId)) itemUsers.set(pair.itemId, new Set()); userItems.get(pair.userId)!.add(pair.itemId); itemUsers.get(pair.itemId)!.add(pair.userId); }
   const below = (values: Iterable<Set<string>>, threshold: number) => [...values].filter((set) => set.size < threshold).length; const possibleCells = users.length * items.length; const density = possibleCells ? unique.size / possibleCells : 0;
-  return { users: users.length, items: items.length, possibleCells, observedPairs: unique.size, density, sparsity: 1 - density, usersBelow: { '2': below(userItems.values(), 2), '5': below(userItems.values(), 5), '10': below(userItems.values(), 10) }, itemsBelow: { '2': below(itemUsers.values(), 2), '5': below(itemUsers.values(), 5), '10': below(itemUsers.values(), 10) } };
+  return { users: users.length, items: items.length, possibleCells, observedPairs: unique.size, density, sparsity: 1 - density, usersBelow: { '2': below(userItems.values(), 2), '3': below(userItems.values(), 3), '5': below(userItems.values(), 5), '10': below(userItems.values(), 10) }, itemsBelow: { '2': below(itemUsers.values(), 2), '3': below(itemUsers.values(), 3), '5': below(itemUsers.values(), 5), '10': below(itemUsers.values(), 10) } };
+};
+
+export const countItemsWithAtLeastUsers = (
+  matrix: MatrixMetrics,
+  threshold: 2 | 3 | 5,
+): number => {
+  const totalItems = matrix.items;
+  if (threshold === 2) return totalItems - matrix.itemsBelow['2'];
+  if (threshold === 3) return totalItems - matrix.itemsBelow['3'];
+  return totalItems - matrix.itemsBelow['5'];
 };
 
 export type GraphMetrics = { connectedComponents: number; largestComponentShare: number; isolatedUsers: number; isolatedItems: number; userDegree: ReturnType<typeof summarizeDistribution>; itemDegree: ReturnType<typeof summarizeDistribution>; itemPairCooccurrence: Array<{ left: string; right: string; count: number }>; userPairOverlap: Array<{ left: string; right: string; count: number }> };
@@ -115,7 +138,23 @@ export async function profileDatabase(client: PrismaClient = prisma) {
     client.material.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, title: true, description: true, status: true, createdAt: true, updatedAt: true, category: { select: { isActive: true } } } }),
     client.learningProject.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, title: true, status: true, createdAt: true, updatedAt: true, category: { select: { isActive: true } } } }),
   ]);
-  const [viewCount, likeCount, reservationCount, historyCount, projectLikeCount, saveCount, followCount, buildCount, impressionCount, actionCount, outboxCount] = await Promise.all([client.materialView.count(), client.materialLike.count(), client.reservation.count(), client.reservationStatusHistory.count(), client.projectLike.count(), client.projectSave.count(), client.projectFollow.count(), client.projectBuild.count(), client.recommendationImpression.count(), client.recommendationAction.count(), client.recommendationEventOutbox.count()]);
+  const [viewCount, likeCount, reservationCount, historyCount, projectLikeCount, saveCount, followCount, buildCount, impressionCount, actionCount, outboxCount, outboxStatuses] = await Promise.all([
+    client.materialView.count(),
+    client.materialLike.count(),
+    client.reservation.count(),
+    client.reservationStatusHistory.count(),
+    client.projectLike.count(),
+    client.projectSave.count(),
+    client.projectFollow.count(),
+    client.projectBuild.count(),
+    client.recommendationImpression.count(),
+    client.recommendationAction.count(),
+    client.recommendationEventOutbox.count(),
+    client.recommendationEventOutbox.groupBy({
+      by: ['status'],
+      _count: { _all: true },
+    }),
+  ]);
   const [views, likes, reservations, histories, projectLikes, saves, follows, builds, impressions, actions] = await Promise.all([
     bounded(client.materialView.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, materialId: true, viewerUserId: true, viewSource: true, createdAt: true, material: { select: { title: true, description: true } } } }), viewCount),
     bounded(client.materialLike.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, materialId: true, userId: true, createdAt: true, material: { select: { title: true, description: true } }, user: { select: { email: true } } } }), likeCount),
@@ -126,7 +165,7 @@ export async function profileDatabase(client: PrismaClient = prisma) {
     bounded(client.projectFollow.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, projectId: true, userId: true, createdAt: true, project: { select: { title: true } }, user: { select: { email: true } } } }), followCount),
     bounded(client.projectBuild.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, projectId: true, learnerId: true, status: true, startedAt: true, completedAt: true, createdAt: true, updatedAt: true, project: { select: { title: true } }, learner: { select: { email: true } }, items: { select: { id: true, status: true, updatedAt: true } } } }), buildCount),
     bounded(client.recommendationImpression.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, learnerId: true, entityType: true, entityId: true, shownAt: true, eventSource: true, learner: { select: { email: true } } } }), impressionCount),
-    bounded(client.recommendationAction.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, learnerId: true, entityType: true, entityId: true, actionType: true, attributionType: true, actionAt: true, sourceOperationId: true, eventSource: true, learner: { select: { email: true } } } }), actionCount),
+    bounded(client.recommendationAction.findMany({ take: MAX_PROFILE_ROWS, select: { id: true, learnerId: true, entityType: true, entityId: true, actionType: true, attributionType: true, actionAt: true, sourceOperationId: true, eventSource: true, learner: { select: { email: true } }, impression: { select: { shownAt: true } } } }), actionCount),
   ]);
   const userById = new Map(users.map((user) => [user.id, user])); const materialById = new Map(materials.map((item) => [item.id, item])); const projectById = new Map(projects.map((item) => [item.id, item])); const raw: RawInteraction[] = [];
   const add = (row: RawInteraction) => raw.push(row);
@@ -141,13 +180,25 @@ export async function profileDatabase(client: PrismaClient = prisma) {
   for (const row of actions.rows) add({ id: row.id, userId: row.learnerId, itemId: row.entityId, entityType: row.entityType, signal: actionSignal(row.actionType), state: row.actionType, occurredAt: row.actionAt, source: 'recommendation_actions', eventSource: row.eventSource, attributionType: row.attributionType, operationId: row.sourceOperationId, origin: classifyOrigin({ eventSource: row.eventSource, userEmail: row.learner.email }) });
   const resolved = resolveInteractionRecords(raw); const allObserved = resolved.filter((row) => row.userId && row.itemId && row.entityType); const real = resolved.filter((row) => row.eligible && row.origin === 'REAL_USER' && row.userId && row.itemId && row.entityType); const pairs = (entity: EntityType): Pair[] => real.filter((row) => row.entityType === entity).map((row) => ({ userId: row.userId!, itemId: row.itemId!, occurredAt: row.occurredAt })); const allPairs = (entity: EntityType): Pair[] => allObserved.filter((row) => row.entityType === entity).map((row) => ({ userId: row.userId!, itemId: row.itemId!, occurredAt: row.occurredAt }));
   const materialIds = materials.filter((item) => item.status === 'AVAILABLE' && item.category.isActive).map((item) => item.id); const projectIds = projects.filter((item) => item.status === 'PUBLISHED' && item.category.isActive).map((item) => item.id); const activeUsers = [...new Set(real.map((row) => row.userId!))];
-  const grouped = (values: ResolvedInteraction[], key: (row: ResolvedInteraction) => string) => [...new Set(values.map(key))].map((value) => values.filter((row) => key(row) === value)); const dist = (groups: ResolvedInteraction[][], unique = false) => summarizeDistribution(groups.map((group) => unique ? new Set(group.map((row) => `${row.entityType}:${row.itemId}`)).size : group.length));
+  const grouped = (values: ResolvedInteraction[], key: (row: ResolvedInteraction) => string) => [...new Set(values.map(key))].map((value) => values.filter((row) => key(row) === value)); const dist = (groups: ResolvedInteraction[][], unique = false) => summarizeDistribution(groups.map((group) => unique ? new Set(group.map((row) => `${row.entityType}:${row.itemId}`)).size : group.length)); const usersAtLeast = (groups: ResolvedInteraction[][], threshold: number) => groups.filter((group) => new Set(group.map((row) => `${row.entityType}:${row.itemId}`)).size >= threshold).length;
   const userGroups = grouped(real, (row) => row.userId!); const materialGroups = materialIds.map((id) => real.filter((row) => row.entityType === 'MATERIAL' && row.itemId === id)); const projectGroups = projectIds.map((id) => real.filter((row) => row.entityType === 'PROJECT' && row.itemId === id)); const originCounts = Object.fromEntries((['REAL_USER', 'DEMO_SEED', 'TEST_FIXTURE', 'BENCHMARK', 'UNKNOWN'] as InteractionOrigin[]).map((origin) => [origin, resolved.filter((row) => row.origin === origin).length]));
   const daysByUser = new Map<string, Set<string>>(); const daysByItem = new Map<string, Set<string>>(); for (const row of real) { if (!daysByUser.has(row.userId!)) daysByUser.set(row.userId!, new Set()); daysByUser.get(row.userId!)!.add(utcDay(row.occurredAt)); const key = `${row.entityType}:${row.itemId}`; if (!daysByItem.has(key)) daysByItem.set(key, new Set()); daysByItem.get(key)!.add(utcDay(row.occurredAt)); }
-  const timeline = [...raw].filter((row) => row.userId && row.itemId).sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime()); const first = timeline[0]?.occurredAt ?? null; const last = timeline.at(-1)?.occurredAt ?? null; const beforePublication = resolved.filter((row) => { const item = row.entityType === 'MATERIAL' ? materialById.get(row.itemId ?? '') : projectById.get(row.itemId ?? ''); return Boolean(item && row.occurredAt < item.createdAt); }).length;
+  const timeline = [...raw].filter((row) => row.userId && row.itemId).sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime()); const first = timeline[0]?.occurredAt ?? null; const last = timeline.at(-1)?.occurredAt ?? null; const beforePublication = resolved.filter((row) => { const item = row.entityType === 'MATERIAL' ? materialById.get(row.itemId ?? '') : projectById.get(row.itemId ?? ''); return Boolean(item && row.occurredAt < item.createdAt); }).length; const impressionBeforeItemAvailability = impressions.rows.filter((row) => { const item = row.entityType === 'MATERIAL' ? materialById.get(row.entityId) : projectById.get(row.entityId); return Boolean(item && row.shownAt < item.createdAt); }).length; const actionBeforeImpression = actions.rows.filter((row) => row.actionAt < row.impression.shownAt).length;
   const attribution: Record<string, { total: number; DIRECT: number; ASSISTED: number }> = {}; for (const row of actions.rows) { const key = `${row.entityType}:${row.actionType}`; const value = attribution[key] ?? { total: 0, DIRECT: 0, ASSISTED: 0 }; value.total++; value[row.attributionType]++; attribution[key] = value; }
   const tableCounts = { materialViews: viewCount, materialLikes: likeCount, reservations: reservationCount, reservationStatusHistory: historyCount, projectViews: 0, projectLikes: projectLikeCount, projectSaves: saveCount, projectFollows: followCount, projectBuilds: buildCount, recommendationImpressions: impressionCount, recommendationActions: actionCount, recommendationEventOutbox: outboxCount };
-  const materialRealUsers = new Set(pairs('MATERIAL').map((pair) => pair.userId)); const projectRealUsers = new Set(pairs('PROJECT').map((pair) => pair.userId)); const allUsers = [...new Set(allObserved.map((row) => row.userId!))]; const materialAllUsers = new Set(allPairs('MATERIAL').map((pair) => pair.userId)); const projectAllUsers = new Set(allPairs('PROJECT').map((pair) => pair.userId)); const originDistributions = Object.fromEntries((['REAL_USER', 'DEMO_SEED', 'TEST_FIXTURE', 'BENCHMARK', 'UNKNOWN'] as InteractionOrigin[]).map((origin) => { const rows = allObserved.filter((row) => row.origin === origin); const groups = grouped(rows, (row) => row.userId!); return [origin, { rows: rows.length, users: groups.length, interactionsPerUser: dist(groups), uniqueItemsPerUser: dist(groups, true) }]; })); const profile = {
+  const queueStatusCounts = Object.fromEntries(
+    (['PENDING', 'PROCESSING', 'RETRY', 'PROCESSED', 'DEAD'] as const).map((status) => [
+      status,
+      outboxStatuses.find((row) => row.status === status)?._count._all ?? 0,
+    ]),
+  );
+  const queue = {
+    statusCounts: queueStatusCounts,
+    backlog: ['PENDING', 'PROCESSING', 'RETRY'].reduce((sum, status) => sum + (queueStatusCounts[status] ?? 0), 0),
+    dead: queueStatusCounts.DEAD ?? 0,
+    processed: queueStatusCounts.PROCESSED ?? 0,
+  };
+  const materialRealUsers = new Set(pairs('MATERIAL').map((pair) => pair.userId)); const projectRealUsers = new Set(pairs('PROJECT').map((pair) => pair.userId)); const allUsers = [...new Set(allObserved.map((row) => row.userId!))]; const materialAllUsers = new Set(allPairs('MATERIAL').map((pair) => pair.userId)); const projectAllUsers = new Set(allPairs('PROJECT').map((pair) => pair.userId)); const originDistributions = Object.fromEntries((['REAL_USER', 'DEMO_SEED', 'TEST_FIXTURE', 'BENCHMARK', 'UNKNOWN'] as InteractionOrigin[]).map((origin) => { const rows = allObserved.filter((row) => row.origin === origin); const groups = grouped(rows, (row) => row.userId!); return [origin, { rows: rows.length, users: groups.length, usersWithAtLeast2UniqueItems: usersAtLeast(groups, 2), usersWithAtLeast5UniqueItems: usersAtLeast(groups, 5), usersWithAtLeast10UniqueItems: usersAtLeast(groups, 10), interactionsPerUser: dist(groups), uniqueItemsPerUser: dist(groups, true) }]; })); const profile = {
     generatedAt: new Date().toISOString(), tablesScanned: Object.keys(tableCounts).length, tableCounts, bounded: { maxRowsPerTable: MAX_PROFILE_ROWS, cappedTables: [views, likes, reservations, histories, projectLikes, saves, follows, builds, impressions, actions].filter((value) => value.capped).length },
     populations: { learnerUsers: users.length, activeLearners: users.filter((user) => user.accountStatus === 'ACTIVE').length, materials: materials.length, availableMaterials: materials.filter((item) => item.status === 'AVAILABLE').length, publicAvailableMaterials: materialIds.length, projects: projects.length, publicProjects: projectIds.length, activeLearnersWithInteraction: allUsers.length, activeLearnersWithRealUserInteraction: activeUsers.length, usersWithMaterialInteractions: materialAllUsers.size, usersWithRealMaterialInteractions: materialRealUsers.size, usersWithProjectInteractions: projectAllUsers.size, usersWithRealProjectInteractions: projectRealUsers.size, usersWithBothDomains: [...materialAllUsers].filter((id) => projectAllUsers.has(id)).length, usersWithBothRealDomains: [...materialRealUsers].filter((id) => projectRealUsers.has(id)).length, coldUsers: users.filter((user) => !allUsers.includes(user.id)).length, coldRealUsers: users.filter((user) => !activeUsers.includes(user.id)).length, coldMaterials: materialIds.filter((id) => !allPairs('MATERIAL').some((pair) => pair.itemId === id)).length, coldRealMaterials: materialIds.filter((id) => !pairs('MATERIAL').some((pair) => pair.itemId === id)).length, coldProjects: projectIds.filter((id) => !allPairs('PROJECT').some((pair) => pair.itemId === id)).length, coldRealProjects: projectIds.filter((id) => !pairs('PROJECT').some((pair) => pair.itemId === id)).length },
     origins: { allResolvedRows: resolved.length, originCounts, realUserRows: originCounts.REAL_USER, demoSeedRows: originCounts.DEMO_SEED, testFixtureRows: originCounts.TEST_FIXTURE, benchmarkRows: originCounts.BENCHMARK, unknownRows: originCounts.UNKNOWN, distributions: originDistributions },
@@ -157,14 +208,50 @@ export async function profileDatabase(client: PrismaClient = prisma) {
     graph: { material: pseudonymizeGraph(buildGraphMetrics(pairs('MATERIAL'))), project: pseudonymizeGraph(buildGraphMetrics(pairs('PROJECT'))), allCurrentRows: { material: pseudonymizeGraph(buildGraphMetrics(allPairs('MATERIAL'))), project: pseudonymizeGraph(buildGraphMetrics(allPairs('PROJECT'))) } },
     stateResolution: { rawRows: raw.length, resolvedRows: resolved.length, realTrainableRows: real.length, viewsCapped: raw.filter((row) => row.signal === 'VIEW').length - resolved.filter((row) => row.signal === 'VIEW').length, reversals: resolved.filter((row) => row.reversal).length, reservationStates: Object.fromEntries([...new Set(reservations.rows.map((row) => row.status))].sort().map((status) => [status, reservations.rows.filter((row) => row.status === status).length])), buildStates: Object.fromEntries([...new Set(builds.rows.map((row) => row.status))].sort().map((status) => [status, builds.rows.filter((row) => row.status === status).length])) },
     attribution: { byAction: attribution, direct: actions.rows.filter((row) => row.attributionType === 'DIRECT').length, assisted: actions.rows.filter((row) => row.attributionType === 'ASSISTED').length, unattributedBusinessActions: null, actionOrigins: actions.rows.reduce((acc, row) => { acc[row.eventSource] = (acc[row.eventSource] ?? 0) + 1; return acc; }, {} as Record<string, number>) },
-    temporal: { earliest: first?.toISOString() ?? null, latest: last?.toISOString() ?? null, activeDays: new Set(timeline.map((row) => utcDay(row.occurredAt))).size, usersActiveMultipleDays: [...daysByUser.values()].filter((set) => set.size > 1).length, itemsActiveMultipleDays: [...daysByItem.values()].filter((set) => set.size > 1).length, interactionsBeforeItemPublication: beforePublication, futureTimestamps: resolved.filter((row) => row.occurredAt.getTime() > Date.now() + 300_000).length, duplicateTimestampRows: raw.length - new Set(raw.filter((row) => row.userId && row.itemId).map((row) => `${row.userId}|${row.entityType}|${row.itemId}|${row.signal}|${row.occurredAt.toISOString()}`)).size, impossibleReservationOrdering: reservations.rows.filter((row) => row.updatedAt < row.createdAt || Boolean(row.completedAt && row.acceptedAt && row.completedAt < row.acceptedAt) || Boolean(row.cancelledAt && row.cancelledAt < row.createdAt)).length, projectBuildOrdering: builds.rows.filter((row) => row.updatedAt < row.createdAt || Boolean(row.completedAt && row.completedAt < row.startedAt)).length },
+    queue,
+    temporal: { earliest: first?.toISOString() ?? null, latest: last?.toISOString() ?? null, activeDays: new Set(timeline.map((row) => utcDay(row.occurredAt))).size, realActiveDays: new Set(real.map((row) => utcDay(row.occurredAt))).size, usersActiveMultipleDays: [...daysByUser.values()].filter((set) => set.size > 1).length, itemsActiveMultipleDays: [...daysByItem.values()].filter((set) => set.size > 1).length, interactionsBeforeItemPublication: beforePublication, impressionBeforeItemAvailability, actionBeforeImpression, futureTimestamps: resolved.filter((row) => row.occurredAt.getTime() > Date.now() + 300_000).length, duplicateTimestampRows: raw.length - new Set(raw.filter((row) => row.userId && row.itemId).map((row) => `${row.userId}|${row.entityType}|${row.itemId}|${row.signal}|${row.occurredAt.toISOString()}`)).size, impossibleReservationOrdering: reservations.rows.filter((row) => row.updatedAt < row.createdAt || Boolean(row.completedAt && row.acceptedAt && row.completedAt < row.acceptedAt) || Boolean(row.cancelledAt && row.cancelledAt < row.createdAt)).length, projectBuildOrdering: builds.rows.filter((row) => row.updatedAt < row.createdAt || Boolean(row.completedAt && row.completedAt < row.startedAt)).length },
     leakage: { seededRows: resolved.filter((row) => row.origin === 'DEMO_SEED').length, recommendationGeneratedRows: resolved.filter((row) => row.source.startsWith('recommendation_')).length, workflowCopyItems: materials.filter((item) => hasMarker(item.title, ['(spare batch)'])).length, linkedBuildItems: builds.rows.reduce((sum, build) => sum + build.items.filter((item) => item.status !== 'MISSING').length, 0), durableOperationDeduplication: true },
-    splitEligibility: { usersWithAtLeast2MaterialItems: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 2)).size, usersWithAtLeast5MaterialItems: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 5)).size, leaveOneOutUsersMaterial: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 2)).size, temporalPerUserUsersMaterial: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 2)).size, realTrainableRows: real.length },
+    splitEligibility: { usersWithAtLeast2MaterialItems: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 2)).size, usersWithAtLeast5MaterialItems: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 5)).size, usersWithAtLeast10MaterialItems: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 10)).size, leaveOneOutUsersMaterial: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 2)).size, temporalPerUserUsersMaterial: new Set(activeUsers.filter((userId) => new Set(pairs('MATERIAL').filter((pair) => pair.userId === userId).map((pair) => pair.itemId)).size >= 2)).size, realTrainableRows: real.length },
     features: { user: { learnerInterests: 'ready-but-semantically-reviewed', preferredCityArea: 'ready-as-bucket', freeDeliveryPreferences: 'ready', IDs: 'rejected' }, material: { category: 'ready', materialType: 'needs-normalization', reviewedTags: 'sparse', typedTaxonomyConcepts: 'sparse-and-inactive', freeDelivery: 'ready', locationBucket: 'ready-as-bucket', condition: 'ready' }, project: { category: 'ready', reviewedTags: 'sparse', typedTaxonomyConcepts: 'sparse-and-inactive', components: 'needs-normalization', difficulty: 'ready', IDs: 'rejected' } },
     decision: 'COLLECT_MORE_REAL_INTERACTIONS' as const, durationMs: performance.now() - started, outputSizeBytes: 0,
   };
   const json = JSON.stringify(profile, null, 2); profile.outputSizeBytes = Buffer.byteLength(json, 'utf8'); return profile;
 }
 
-const main = async () => { const output = process.argv.find((arg) => arg.startsWith('--output='))?.slice('--output='.length); try { const profile = await profileDatabase(); const json = JSON.stringify(profile, null, 2); if (output) await writeFile(output, json, 'utf8'); else process.stdout.write(`${json}\n`); } finally { await prisma.$disconnect(); } };
+export const formatProgress = (profile: Awaited<ReturnType<typeof profileDatabase>>): string => {
+  const realUsers = profile.populations.activeLearnersWithRealUserInteraction;
+  const realUserDistribution = profile.origins.distributions.REAL_USER;
+  const material = profile.matrices.material;
+  const project = profile.matrices.project;
+  const realActiveDays = profile.temporal.realActiveDays;
+  const eligibleUsers = profile.splitEligibility;
+  const lines = [
+    `REAL_USERS_WITH_INTERACTIONS=${realUsers}`,
+    `REAL_USERS_WITH_2_UNIQUE_ITEMS=${realUserDistribution.usersWithAtLeast2UniqueItems}`,
+    `REAL_USERS_WITH_5_UNIQUE_ITEMS=${realUserDistribution.usersWithAtLeast5UniqueItems}`,
+    `REAL_USERS_WITH_10_UNIQUE_ITEMS=${realUserDistribution.usersWithAtLeast10UniqueItems}`,
+    `REAL_ACTIVE_DAYS=${realActiveDays}`,
+    `MATERIAL_OBSERVED_PAIRS=${material.observedPairs}`,
+    `PROJECT_OBSERVED_PAIRS=${project.observedPairs}`,
+    `MATERIAL_MATRIX_DENSITY=${material.density}`,
+    `PROJECT_MATRIX_DENSITY=${project.density}`,
+    `MATERIAL_ITEMS_WITH_2_USERS=${countItemsWithAtLeastUsers(material, 2)}`,
+    `MATERIAL_ITEMS_WITH_3_USERS=${countItemsWithAtLeastUsers(material, 3)}`,
+    `MATERIAL_ITEMS_WITH_5_USERS=${countItemsWithAtLeastUsers(material, 5)}`,
+    `PROJECT_ITEMS_WITH_2_USERS=${countItemsWithAtLeastUsers(project, 2)}`,
+    `PROJECT_ITEMS_WITH_3_USERS=${countItemsWithAtLeastUsers(project, 3)}`,
+    `PROJECT_ITEMS_WITH_5_USERS=${countItemsWithAtLeastUsers(project, 5)}`,
+    `DIRECT_ATTRIBUTION=${profile.attribution.direct}`,
+    `ASSISTED_ATTRIBUTION=${profile.attribution.assisted}`,
+    `OUTBOX_BACKLOG=${profile.queue.backlog}`,
+    `OUTBOX_DEAD=${profile.queue.dead}`,
+    `SPLIT_ELIGIBLE_USERS_MATERIAL_2=${eligibleUsers.usersWithAtLeast2MaterialItems}`,
+    `SPLIT_ELIGIBLE_USERS_MATERIAL_5=${eligibleUsers.usersWithAtLeast5MaterialItems}`,
+    `SPLIT_ELIGIBLE_USERS_MATERIAL_10=${eligibleUsers.usersWithAtLeast10MaterialItems}`,
+    `DECISION=${profile.decision}`,
+  ];
+  return `${lines.join('\n')}\n`;
+};
+
+const main = async () => { const output = process.argv.find((arg) => arg.startsWith('--output='))?.slice('--output='.length); const progress = process.argv.includes('--progress'); try { const profile = await profileDatabase(); const result = progress ? formatProgress(profile) : JSON.stringify(profile, null, 2); if (output) await writeFile(output, result, 'utf8'); else process.stdout.write(`${result}${progress ? '' : '\n'}`); } finally { await prisma.$disconnect(); } };
 if (process.argv[1]?.replace(/\\/g, '/').endsWith('/evaluate-interaction-readiness.ts')) void main();
