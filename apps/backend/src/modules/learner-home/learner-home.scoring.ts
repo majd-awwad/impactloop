@@ -6,12 +6,15 @@ import type {
   LearnerBehaviorContext,
   LearnerAffinityProfile,
 } from './learner-home.types.js';
+import type { RecommendationScorerVersion } from '../../config/recommendation-scoring-version.js';
 import {
   buildInterestMatchReason,
   getInterestSearchTermsForKey,
   isCustomInterestKey,
   matchLearnerInterestsAgainstHaystack,
+  matchLearnerInterestsAgainstHaystackForScorerVersion,
   matchLearnerInterestsAgainstMaterial,
+  matchLearnerInterestsAgainstMaterialForScorerVersion,
   normalizeInterestToken,
   normalizeLearnerInterestKeys,
   normalizeText,
@@ -377,13 +380,20 @@ export const assessSuggestedMaterialRelevance = (input: {
   savedLocation: LearnerHomeSavedLocationContext;
   behaviorAffinityProfile?: LearnerAffinityProfile;
   behavior?: LearnerBehaviorContext;
+  scorerVersion?: RecommendationScorerVersion;
 }): MaterialRelevanceAssessment => {
   const interestMatch =
     input.interests.length > 0
-      ? matchLearnerInterestsAgainstMaterial(
-          materialInterestInput(input.material),
-          input.interests,
-        )
+      ? input.scorerVersion
+        ? matchLearnerInterestsAgainstMaterialForScorerVersion(
+            materialInterestInput(input.material),
+            input.interests,
+            input.scorerVersion,
+          )
+        : matchLearnerInterestsAgainstMaterial(
+            materialInterestInput(input.material),
+            input.interests,
+          )
       : null;
   const matchedInterest = interestMatch?.labelEn ?? null;
   const matchedInterestReason = interestMatch
@@ -455,6 +465,7 @@ export const buildMaterialScoringSharedState = (input: {
   savedLocation: LearnerHomeSavedLocationContext;
   behaviorAffinityProfile?: LearnerAffinityProfile;
   behavior?: LearnerBehaviorContext;
+  scorerVersion?: RecommendationScorerVersion;
 }): MaterialScoringSharedState => {
   const behavior = input.behavior ?? createEmptyBehaviorContext();
   const behaviorAffinityProfile =
@@ -466,6 +477,7 @@ export const buildMaterialScoringSharedState = (input: {
     savedLocation: input.savedLocation,
     behaviorAffinityProfile,
     behavior,
+    scorerVersion: input.scorerVersion,
   });
 
   return {
@@ -490,6 +502,7 @@ export const scoreSuggestedMaterial = (input: {
   behavior?: LearnerBehaviorContext;
   includeAudit?: boolean;
   shared?: MaterialScoringSharedState;
+  scorerVersion?: RecommendationScorerVersion;
 }): ScoredMaterialResult => {
   const reasons: string[] = [];
   let relevanceScore = 0;
@@ -517,6 +530,7 @@ export const scoreSuggestedMaterial = (input: {
       savedLocation: input.savedLocation,
       behaviorAffinityProfile,
       behavior,
+      scorerVersion: input.scorerVersion,
     });
 
   const behaviorMatch =
@@ -685,6 +699,7 @@ export const scoreMaterialForSavedProjects = (input: {
   behavior?: LearnerBehaviorContext;
   shared?: MaterialScoringSharedState;
   suggestedBase?: ScoredMaterialResult;
+  scorerVersion?: RecommendationScorerVersion;
 }): ScoredMaterialResult => {
   const matchedComponent =
     input.shared?.matchedComponent ??
@@ -708,10 +723,16 @@ export const scoreMaterialForSavedProjects = (input: {
   const matchedInterest =
     input.shared?.interestMatch ??
     (input.interests.length > 0
-      ? matchLearnerInterestsAgainstMaterial(
-          materialInterestInput(input.material),
-          input.interests,
-        )
+      ? input.scorerVersion
+        ? matchLearnerInterestsAgainstMaterialForScorerVersion(
+            materialInterestInput(input.material),
+            input.interests,
+            input.scorerVersion,
+          )
+        : matchLearnerInterestsAgainstMaterial(
+            materialInterestInput(input.material),
+            input.interests,
+          )
       : null);
   const behavior = input.behavior ?? createEmptyBehaviorContext();
   const behaviorMatch =
@@ -755,6 +776,7 @@ export const scoreFreeNearbyMaterial = (input: {
   behaviorAffinityProfile?: LearnerAffinityProfile;
   behavior?: LearnerBehaviorContext;
   shared?: MaterialScoringSharedState;
+  scorerVersion?: RecommendationScorerVersion;
 }): ScoredMaterialResult => {
   if (
     input.material.status !== 'AVAILABLE' ||
@@ -777,10 +799,16 @@ export const scoreFreeNearbyMaterial = (input: {
   const interestMatch =
     input.shared?.interestMatch ??
     (interests.length > 0
-      ? matchLearnerInterestsAgainstMaterial(
-          materialInterestInput(input.material),
-          interests,
-        )
+      ? input.scorerVersion
+        ? matchLearnerInterestsAgainstMaterialForScorerVersion(
+            materialInterestInput(input.material),
+            interests,
+            input.scorerVersion,
+          )
+        : matchLearnerInterestsAgainstMaterial(
+            materialInterestInput(input.material),
+            interests,
+          )
       : null);
   const behaviorMatch =
     input.shared?.behaviorMatch ??
@@ -862,6 +890,7 @@ export const scoreSuggestedProject = (input: {
   availableMaterials: LearnerHomeMaterialCandidate[];
   behaviorAffinityProfile?: LearnerAffinityProfile;
   behavior?: LearnerBehaviorContext;
+  scorerVersion?: RecommendationScorerVersion;
 }): ScoredProjectResult => {
   const reasons: string[] = [];
   let score = 0;
@@ -872,10 +901,13 @@ export const scoreSuggestedProject = (input: {
   const haystack = haystackForProject(input.project);
   let interestMatch: LearnerInterestMatch | null = null;
   if (input.interests.length > 0) {
-    interestMatch = matchLearnerInterestsAgainstHaystack(
-      haystack,
-      input.interests,
-    );
+    interestMatch = input.scorerVersion
+      ? matchLearnerInterestsAgainstHaystackForScorerVersion(
+          haystack,
+          input.interests,
+          input.scorerVersion,
+        )
+      : matchLearnerInterestsAgainstHaystack(haystack, input.interests);
     if (interestMatch) {
       score += interestMatch.scoreWeight;
       reasons.push(buildInterestMatchReason(interestMatch));

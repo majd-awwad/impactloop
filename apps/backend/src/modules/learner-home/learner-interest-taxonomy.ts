@@ -1,3 +1,12 @@
+import {
+  TAXONOMY_CONCEPT_SEEDS,
+  type TaxonomyConceptSeed,
+} from '../taxonomy/taxonomy-foundation.data.js';
+import {
+  RECOMMENDATION_SCORER_VERSION,
+  type RecommendationScorerVersion,
+} from '../../config/recommendation-scoring-version.js';
+
 export type LearnerInterestMatchMode = 'keywords_only' | 'keywords_and_category';
 
 export type LearnerInterestDefinition = {
@@ -40,6 +49,8 @@ export type LearnerInterestMatch = {
   strength: LearnerInterestMatchStrength;
   scoreWeight: number;
   matchedSources?: InterestMatchSource[];
+  evidenceKind?: 'reviewed_alias';
+  evidenceLanguage?: 'EN' | 'AR';
 };
 
 export type MaterialInterestMatchInput = {
@@ -522,6 +533,117 @@ export const getInterestSearchTermsForKey = (key: string) => {
   return [...terms].filter((term) => term.length >= 2);
 };
 
+export const MAX_REVIEWED_INTEREST_SCORER_TERMS = 28;
+
+const REVIEWED_STOP_TERMS = new Set([
+  'and',
+  'or',
+  'the',
+  'of',
+  'in',
+  'to',
+  'for',
+  'with',
+]);
+
+export type ReviewedInterestScorerTerm = {
+  term: string;
+  source: 'canonical' | 'reviewed_alias';
+  language: 'EN' | 'AR';
+};
+
+export type ReviewedInterestScorerVocabulary = {
+  key: string;
+  terms: readonly ReviewedInterestScorerTerm[];
+};
+
+const normalizedUnique = (values: readonly string[]) => [
+  ...new Set(
+    values
+      .map(normalizeInterestToken)
+      .filter((value) => value.length >= 3),
+  ),
+];
+
+const reviewedInterestSeedFor = (key: string): TaxonomyConceptSeed | null =>
+  TAXONOMY_CONCEPT_SEEDS.find(
+    (candidate) =>
+      candidate.conceptType === 'INTEREST' &&
+      candidate.canonicalKey === `interest:${key.replace(/_/gu, '-')}`,
+  ) ?? null;
+
+const buildReviewedInterestScorerVocabulary = (
+  interest: LearnerInterestDefinition,
+): ReviewedInterestScorerVocabulary => {
+  const seed = reviewedInterestSeedFor(interest.key);
+  if (!seed) {
+    throw new Error(`Missing reviewed learner-interest vocabulary: ${interest.key}`);
+  }
+
+  const canonicalTerms = normalizedUnique(
+    getInterestSearchTermsForKey(interest.key),
+  );
+  const canonicalSet = new Set(canonicalTerms);
+  const englishAliases = normalizedUnique(
+    seed.aliases
+      .filter((alias) => alias.language === 'EN')
+      .map((alias) => alias.alias),
+  );
+  const arabicAliases = normalizedUnique([
+    seed.labelAr,
+    ...seed.aliases
+      .filter((alias) => alias.language === 'AR')
+      .map((alias) => alias.alias),
+  ]);
+  const reviewedAliasTerms = new Set([...englishAliases, ...arabicAliases]);
+  const orderedTerms = [
+    ...canonicalTerms,
+    ...englishAliases,
+    ...arabicAliases,
+  ].filter((term, index, values) => values.indexOf(term) === index);
+
+  return {
+    key: interest.key,
+    terms: Object.freeze(
+      orderedTerms.slice(0, MAX_REVIEWED_INTEREST_SCORER_TERMS).map((term) =>
+        Object.freeze({
+          term,
+          source:
+            reviewedAliasTerms.has(term) && !canonicalSet.has(term)
+              ? ('reviewed_alias' as const)
+              : canonicalSet.has(term) && reviewedAliasTerms.has(term)
+                ? ('reviewed_alias' as const)
+                : ('canonical' as const),
+          language: arabicAliases.includes(term)
+            ? ('AR' as const)
+            : ('EN' as const),
+        }),
+      ),
+    ),
+  };
+};
+
+export const REVIEWED_INTEREST_SCORER_VOCABULARY = Object.freeze(
+  Object.fromEntries(
+    INTERESTS.map((interest) => [
+      interest.key,
+      Object.freeze(buildReviewedInterestScorerVocabulary(interest)),
+    ]),
+  ),
+) as Readonly<Record<string, ReviewedInterestScorerVocabulary>>;
+
+const REVIEWED_INTEREST_TERM_TO_KEY = new Map<string, string>();
+for (const vocabulary of Object.values(REVIEWED_INTEREST_SCORER_VOCABULARY)) {
+  for (const candidate of vocabulary.terms) {
+    if (
+      candidate.source === 'reviewed_alias' &&
+      !REVIEWED_INTEREST_TERM_TO_KEY.has(candidate.term)
+    ) {
+      REVIEWED_INTEREST_TERM_TO_KEY.set(candidate.term, vocabulary.key);
+    }
+  }
+}
+
 const INTEREST_SEARCH_TERM_CANDIDATES = INTERESTS.flatMap((interest) =>
   getInterestSearchTermsForKey(interest.key).map((term) => ({
     key: interest.key,
@@ -648,7 +770,7 @@ export const matchCustomInterestKeyAgainstMaterial = (
   return null;
 };
 
-export const matchInterestKeyAgainstMaterial = (
+const matchCanonicalInterestKeyAgainstMaterial = (
   parts: MaterialMatchHaystack,
   key: string,
 ): LearnerInterestMatch | null => {
@@ -689,9 +811,105 @@ export const matchInterestKeyAgainstMaterial = (
   return null;
 };
 
-export const matchInterestKeyAgainstHaystack = (
+const reviewedAliasEvidence = (
+  parts: MaterialMatchHaystack,
+  key: string,
+) => {
+  const vocabulary = REVIEWED_INTEREST_SCORER_VOCABULARY[key];
+  if (!vocabulary) {
+    return null;
+  }
+
+  const fields: Array<[string, string]> = [
+    ['title', parts.title],
+    ['description', parts.description],
+    ['materialType', parts.materialType],
+    ['category', parts.category],
+    ['tags', parts.tags],
+  ];
+  const candidates = vocabulary.terms
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      field: fields.find(([, value]) => value.includes(candidate.term))?.[0] ?? null,
+    }))
+    .filter(
+      (candidate) =>
+        candidate.field && !REVIEWED_STOP_TERMS.has(candidate.candidate.term),
+    )
+    .sort(
+      (left, right) =>
+        right.candidate.term.length - left.candidate.term.length ||
+        left.index - right.index ||
+        left.candidate.term.localeCompare(right.candidate.term),
+    )[0];
+
+  return candidates ?? null;
+};
+
+const reviewedAliasMatch = (
+  parts: MaterialMatchHaystack,
+  key: string,
+): LearnerInterestMatch | null => {
+  const interest = INTEREST_BY_KEY.get(key);
+  const evidence = reviewedAliasEvidence(parts, key);
+  if (!interest || !evidence) {
+    return null;
+  }
+
+  return {
+    key: interest.key,
+    labelEn: interest.labelEn,
+    groupLabelEn: interest.groupLabelEn,
+    strength: 'custom',
+    scoreWeight: 12,
+    matchedSources: ['custom'],
+    evidenceKind: 'reviewed_alias',
+    evidenceLanguage: evidence.candidate.language,
+  };
+};
+
+const resolveScorerInterestKey = (
+  raw: string,
+  scorerVersion: RecommendationScorerVersion,
+) => {
+  const canonical = resolveInterestKey(raw);
+  if (canonical || scorerVersion === 'legacy-v1') {
+    return canonical;
+  }
+
+  return (
+    REVIEWED_INTEREST_TERM_TO_KEY.get(normalizeInterestToken(raw)) ?? null
+  );
+};
+
+export const matchInterestKeyAgainstMaterialForScorerVersion = (
+  parts: MaterialMatchHaystack,
+  key: string,
+  scorerVersion: RecommendationScorerVersion,
+): LearnerInterestMatch | null => {
+  const canonical = matchCanonicalInterestKeyAgainstMaterial(parts, key);
+  if (canonical || scorerVersion === 'legacy-v1') {
+    return canonical;
+  }
+
+  return reviewedAliasMatch(parts, key);
+};
+
+export const matchInterestKeyAgainstMaterial = (
+  parts: MaterialMatchHaystack,
+  key: string,
+): LearnerInterestMatch | null =>
+  matchInterestKeyAgainstMaterialForScorerVersion(
+    parts,
+    key,
+    RECOMMENDATION_SCORER_VERSION,
+  );
+
+export const matchInterestKeyAgainstHaystackForScorerVersion = (
   haystack: string,
   key: string,
+  scorerVersion: RecommendationScorerVersion,
 ): LearnerInterestMatch | null => {
   const parts: MaterialMatchHaystack = {
     full: normalizeInterestToken(haystack),
@@ -703,25 +921,44 @@ export const matchInterestKeyAgainstHaystack = (
     tags: '',
   };
 
-  return matchInterestKeyAgainstMaterial(parts, key);
+  return matchInterestKeyAgainstMaterialForScorerVersion(
+    parts,
+    key,
+    scorerVersion,
+  );
 };
 
-export const matchLearnerInterestsAgainstMaterial = (
+export const matchInterestKeyAgainstHaystack = (
+  haystack: string,
+  key: string,
+): LearnerInterestMatch | null =>
+  matchInterestKeyAgainstHaystackForScorerVersion(
+    haystack,
+    key,
+    RECOMMENDATION_SCORER_VERSION,
+  );
+
+export const matchLearnerInterestsAgainstMaterialForScorerVersion = (
   material: MaterialInterestMatchInput,
   interestKeys: string[],
+  scorerVersion: RecommendationScorerVersion,
 ): LearnerInterestMatch | null => {
   const parts = buildMaterialMatchHaystack(material);
   let bestMatch: LearnerInterestMatch | null = null;
 
   for (const key of interestKeys) {
-    const resolvedKey = resolveInterestKey(key);
+    const resolvedKey = resolveScorerInterestKey(key, scorerVersion);
     if (!resolvedKey) {
       continue;
     }
 
     const match = isCustomInterestKey(resolvedKey)
       ? matchCustomInterestKeyAgainstMaterial(parts, resolvedKey)
-      : matchInterestKeyAgainstMaterial(parts, resolvedKey);
+      : matchInterestKeyAgainstMaterialForScorerVersion(
+          parts,
+          resolvedKey,
+          scorerVersion,
+        );
 
     if (!match) {
       continue;
@@ -744,9 +981,20 @@ export const matchLearnerInterestsAgainstMaterial = (
   return bestMatch;
 };
 
-export const matchLearnerInterestsAgainstHaystack = (
+export const matchLearnerInterestsAgainstMaterial = (
+  material: MaterialInterestMatchInput,
+  interestKeys: string[],
+): LearnerInterestMatch | null =>
+  matchLearnerInterestsAgainstMaterialForScorerVersion(
+    material,
+    interestKeys,
+    RECOMMENDATION_SCORER_VERSION,
+  );
+
+export const matchLearnerInterestsAgainstHaystackForScorerVersion = (
   haystack: string,
   interestKeys: string[],
+  scorerVersion: RecommendationScorerVersion,
 ): LearnerInterestMatch | null => {
   const parts: MaterialMatchHaystack = {
     full: normalizeInterestToken(haystack),
@@ -761,12 +1009,16 @@ export const matchLearnerInterestsAgainstHaystack = (
   let bestMatch: LearnerInterestMatch | null = null;
 
   for (const key of interestKeys) {
-    const resolvedKey = resolveInterestKey(key);
+    const resolvedKey = resolveScorerInterestKey(key, scorerVersion);
     if (!resolvedKey || isCustomInterestKey(resolvedKey)) {
       continue;
     }
 
-    const match = matchInterestKeyAgainstMaterial(parts, resolvedKey);
+    const match = matchInterestKeyAgainstMaterialForScorerVersion(
+      parts,
+      resolvedKey,
+      scorerVersion,
+    );
     if (!match) {
       continue;
     }
@@ -787,7 +1039,23 @@ export const matchLearnerInterestsAgainstHaystack = (
   return bestMatch;
 };
 
+export const matchLearnerInterestsAgainstHaystack = (
+  haystack: string,
+  interestKeys: string[],
+): LearnerInterestMatch | null =>
+  matchLearnerInterestsAgainstHaystackForScorerVersion(
+    haystack,
+    interestKeys,
+    RECOMMENDATION_SCORER_VERSION,
+  );
+
 export const buildInterestMatchReason = (match: LearnerInterestMatch) => {
+  if (match.evidenceKind === 'reviewed_alias') {
+    return match.evidenceLanguage === 'AR'
+      ? `Matches your ${match.labelEn} interest through a reviewed Arabic term`
+      : `Matches your ${match.labelEn} interest through a reviewed interest term`;
+  }
+
   if (match.strength === 'strong') {
     return `Matches your ${match.labelEn} interest`;
   }

@@ -2,6 +2,11 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  parseRecommendationScorerVersion,
+  type RecommendationScorerVersion,
+} from './recommendation-scoring-version.js';
+
 const backendRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../..',
@@ -241,6 +246,9 @@ export const env = {
   aiProvider: resolveAiProvider(),
   geminiApiKey: readGeminiApiKey(),
   geminiModel: process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash',
+  recommendationScorerVersion: parseRecommendationScorerVersion(
+    process.env.RECOMMENDATION_SCORER_VERSION,
+  ) as RecommendationScorerVersion,
   recommendationOutboxWorkerEnabled: parseBoolean(
     process.env.RECOMMENDATION_OUTBOX_WORKER_ENABLED,
     false,

@@ -16,6 +16,7 @@ import type {
 import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import { getRequestId } from '../../observability/request-context.js';
+import { RECOMMENDATION_SCORER_VERSION } from '../../config/recommendation-scoring-version.js';
 
 export const RECOMMENDATION_IMPRESSION_HEADER =
   'x-recommendation-impression-id';
@@ -32,7 +33,8 @@ export const RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION =
   'recommendation-action-outbox-v1';
 
 export const RECOMMENDATION_ALGORITHM_NAME = 'deterministic-hybrid';
-export const RECOMMENDATION_ALGORITHM_VERSION = 'learner-home-v1';
+export const RECOMMENDATION_ALGORITHM_VERSION =
+  `learner-home-v1:${RECOMMENDATION_SCORER_VERSION}`;
 export const RECOMMENDATION_POLICY_VERSION = 'learner-home-policy-v1';
 
 export const RECOMMENDATION_SURFACES = [
