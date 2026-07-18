@@ -18,9 +18,14 @@ import '../theme/learning_ui_palette.dart';
 import '../widgets/project_build_material_linking.dart';
 
 class LearningProjectBuildPage extends ConsumerStatefulWidget {
-  const LearningProjectBuildPage({super.key, required this.projectId});
+  const LearningProjectBuildPage({
+    super.key,
+    required this.projectId,
+    this.recommendationImpressionId,
+  });
 
   final String projectId;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<LearningProjectBuildPage> createState() =>
@@ -33,12 +38,27 @@ class _LearningProjectBuildPageState
   bool _isStarting = false;
   final Set<String> _updatingItemIds = <String>{};
 
+  @override
+  void didUpdateWidget(covariant LearningProjectBuildPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId ||
+        oldWidget.recommendationImpressionId !=
+            widget.recommendationImpressionId) {
+      _buildOverride = null;
+      _isStarting = false;
+      _updatingItemIds.clear();
+    }
+  }
+
   Future<void> _startBuild() async {
     setState(() => _isStarting = true);
     try {
       final build = await ref
           .read(learningHubRepositoryProvider)
-          .startBuild(widget.projectId);
+          .startBuild(
+            widget.projectId,
+            recommendationImpressionId: widget.recommendationImpressionId,
+          );
       setState(() => _buildOverride = build);
       ref.invalidate(projectBuildProvider(widget.projectId));
     } catch (error) {
@@ -67,6 +87,7 @@ class _LearningProjectBuildPageState
             item.id,
             status: status,
             learnerNote: updateLearnerNote ? learnerNote : item.learnerNote,
+            recommendationImpressionId: widget.recommendationImpressionId,
           );
       setState(() => _buildOverride = build);
     } catch (error) {

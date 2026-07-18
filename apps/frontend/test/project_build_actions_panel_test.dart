@@ -155,7 +155,10 @@ class _BuildPanelRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectBuild> startBuild(String projectId) async {
+  Future<ProjectBuild> startBuild(
+    String projectId, {
+    String? recommendationImpressionId,
+  }) async {
     return (await fetchMyBuild(projectId))!;
   }
 
@@ -165,6 +168,7 @@ class _BuildPanelRepository implements LearningProjectRepository {
     String itemId, {
     required ProjectBuildItemStatus status,
     String? learnerNote,
+    String? recommendationImpressionId,
   }) async {
     return startBuild(projectId);
   }
@@ -255,32 +259,50 @@ class _BuildPanelRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectEngagement> likeProject(String id) {
+  Future<ProjectEngagement> likeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectEngagement> unlikeProject(String id) {
+  Future<ProjectEngagement> unlikeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectSaveStatus> saveProject(String id) {
+  Future<ProjectSaveStatus> saveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectSaveStatus> unsaveProject(String id) {
+  Future<ProjectSaveStatus> unsaveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectFollowStatus> followProject(String id) {
+  Future<ProjectFollowStatus> followProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectFollowStatus> unfollowProject(String id) {
+  Future<ProjectFollowStatus> unfollowProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     throw UnimplementedError();
   }
 

@@ -88,7 +88,10 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;
 
   @override
-  Future<ProjectBuild> startBuild(String projectId) async {
+  Future<ProjectBuild> startBuild(
+    String projectId, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectBuild(
       id: 'test-build',
       projectId: projectId,
@@ -109,6 +112,7 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
     String itemId, {
     required ProjectBuildItemStatus status,
     String? learnerNote,
+    String? recommendationImpressionId,
   }) async {
     return startBuild(projectId);
   }
@@ -141,27 +145,42 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectEngagement> likeProject(String id) async {
+  Future<ProjectEngagement> likeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectEngagement(projectId: id, likesCount: 1, isLiked: true);
   }
 
   @override
-  Future<ProjectEngagement> unlikeProject(String id) async {
+  Future<ProjectEngagement> unlikeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectEngagement(projectId: id, likesCount: 0, isLiked: false);
   }
 
   @override
-  Future<ProjectSaveStatus> saveProject(String id) async {
+  Future<ProjectSaveStatus> saveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectSaveStatus(projectId: id, isSaved: true);
   }
 
   @override
-  Future<ProjectSaveStatus> unsaveProject(String id) async {
+  Future<ProjectSaveStatus> unsaveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectSaveStatus(projectId: id, isSaved: false);
   }
 
   @override
-  Future<ProjectFollowStatus> followProject(String id) async {
+  Future<ProjectFollowStatus> followProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectFollowStatus(
       projectId: id,
       followersCount: 1,
@@ -170,7 +189,10 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectFollowStatus> unfollowProject(String id) async {
+  Future<ProjectFollowStatus> unfollowProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectFollowStatus(
       projectId: id,
       followersCount: 0,
