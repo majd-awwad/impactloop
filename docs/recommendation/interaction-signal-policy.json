@@ -1,0 +1,20 @@
+{
+  "version": "phase-3a-v1",
+  "purpose": "Offline evaluation policy only; not a production scoring policy.",
+  "signals": {
+    "VIEW": { "weight": 0.25, "sensitivityRange": [0.1, 0.5], "rationale": "Weak discovery intent; capped and session-deduplicated.", "risk": "Repeated browsing and bots can inflate it.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "CAPPED_REPEAT_VIEW": { "weight": 0.5, "sensitivityRange": [0.25, 1.0], "rationale": "A small increase for distinct capped view opportunities.", "risk": "No session identifier exists, so a UTC-day proxy is used.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "LIKE": { "weight": 2, "sensitivityRange": [1, 3], "rationale": "Explicit positive preference.", "risk": "Current tables retain active state, not full history.", "supportedByCurrentData": true, "reversalOverridesPositive": true },
+    "SAVE": { "weight": 3, "sensitivityRange": [2, 4], "rationale": "Explicit project intent to return later.", "risk": "Active state is available; historical unsaves are only partial through attribution.", "supportedByCurrentData": true, "reversalOverridesPositive": true },
+    "FOLLOW": { "weight": 2.5, "sensitivityRange": [1.5, 4], "rationale": "Sustained project interest, below a completed outcome.", "risk": "Follow history is not retained in the active table.", "supportedByCurrentData": true, "reversalOverridesPositive": true },
+    "RESERVATION_CREATED": { "weight": 4, "sensitivityRange": [3, 5], "rationale": "Strong material intent, but not a successful outcome.", "risk": "Pending, rejected, expired, and cancelled requests must not be equivalent.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "RESERVATION_ACCEPTED": { "weight": 5, "sensitivityRange": [4, 6], "rationale": "Supplier acceptance indicates materially stronger intent.", "risk": "Acceptance can still fail to complete.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "RESERVATION_COMPLETED": { "weight": 6, "sensitivityRange": [5, 8], "rationale": "Closest current proxy for successful reuse.", "risk": "Completion is sparse and still not a direct reuse-quality label.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "PROJECT_BUILD_STARTED": { "weight": 4, "sensitivityRange": [3, 5], "rationale": "Strong project intent represented by a durable build operation.", "risk": "A build can be abandoned.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "PROJECT_BUILD_PROGRESS": { "weight": 5, "sensitivityRange": [4, 6], "rationale": "Meaningful checklist progress is stronger than a start.", "risk": "Repeated item updates can be noisy.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "PROJECT_BUILD_COMPLETED": { "weight": 6, "sensitivityRange": [5, 8], "rationale": "Strongest current project outcome.", "risk": "Very sparse in the current seed/local population.", "supportedByCurrentData": false, "reversalOverridesPositive": false },
+    "UNLIKE_OR_REVERSAL": { "weight": 0, "sensitivityRange": [-3, 0], "rationale": "Resolve as removal of the active positive; do not treat it as universal dislike.", "risk": "Only attributed reversal history is available.", "supportedByCurrentData": true, "reversalOverridesPositive": true },
+    "CANCELLATION_OR_FAILURE": { "weight": -1, "sensitivityRange": [-3, 0], "rationale": "Contextual negative outcome, not a categorical item dislike.", "risk": "Cancellation reason and supplier-side failure can mean different things.", "supportedByCurrentData": true, "reversalOverridesPositive": false },
+    "IMPRESSION_WITHOUT_ACTION": { "weight": 0, "sensitivityRange": [0, 0], "rationale": "Exposure is not a dislike; it can be used as a bounded evaluation negative after a window.", "risk": "Exposure bias and missing visibility signals.", "supportedByCurrentData": true, "reversalOverridesPositive": false }
+  }
+}
