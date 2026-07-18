@@ -225,3 +225,43 @@ Conditions:
 - action delivery is at-least-once and asynchronous, not exactly-once external publication;
 - project views, supplier-side reservation lifecycle actions, historical backfill, and unsupported action routes remain out of scope;
 - the local validation database was migrated for testing only; no production migration application or commit was performed.
+
+## Phase 2B — Typed Taxonomy Foundation
+
+Status: ADOPT_WITH_CONDITIONS
+
+Implemented as an inactive, additive foundation:
+
+- five globally prefixed concept types: interest, material family, material form, project topic, and component;
+- 74 reviewed concepts and 189 bilingual aliases with deterministic normalization;
+- explicit learner-interest, material, project, and required-component mapping tables;
+- read-only alias/entity resolution with active-status filtering, ambiguity reporting, and a 500-ID bounded load limit;
+- idempotent exact-rule backfill from the frozen seed vocabulary;
+- additive migration `20260718120000_add_typed_taxonomy_foundation` and standalone `scripts/seed-taxonomy.ts` command.
+
+Validation:
+
+- local migration deployment passed;
+- first backfill inserted 74 concepts, 189 aliases, 13 learner-interest rows, 228 material rows, 30 project rows, and 56 component rows;
+- second backfill inserted zero duplicate aliases or mapping rows;
+- same-type alias collisions: 0; explicit cross-type collisions: 37;
+- mapped local coverage: 199/199 materials, 30/30 projects, and 56/117 required components; comparable seeded-material coverage is 159/159;
+- focused taxonomy tests: 5/5 passed;
+- local alias lookup p95: 5.82 ms; bounded mapping load p95: 81.92 ms over 30 iterations.
+
+Conditions:
+
+- current recommendation behavior, frontend/API behavior, scoring, ranking, and candidate generation do not read the foundation;
+- compatibility edges and transitive closure remain deferred;
+- the 61 unmapped required components require vocabulary review before activation;
+- repository-wide typecheck remains blocked by the pre-existing `admin-people.service.ts:52` nullability error.
+
+Evidence: `taxonomy.md`, `taxonomy-shadow-dataset.json`, and `phase-2b-validation.md`.
+
+Final acceptance verification:
+
+- the comparable Phase 2A database slice is 159 seeded materials (150 primary plus 9 workflow copies); the current local count is 199 because 40 clearly named test materials remain from three test supplier groups;
+- three consecutive backfill runs inserted zero duplicate rows, preserved all existing content/display fields and learner-interest arrays, and kept canonical IDs stable;
+- role-level component coverage is 36/64 required material, 9/32 optional material, 11/19 consumable, and 0/2 tool rows;
+- the active Learner Home/recommendation paths have no import or query dependency on the typed taxonomy foundation;
+- the shadow JSON is a deterministic contract fixture only, not a relevance or quality dataset.

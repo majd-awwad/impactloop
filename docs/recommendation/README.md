@@ -45,6 +45,8 @@ The recommendation system must optimize for useful and feasible material reuse, 
 9. Train a learned ranker only after sufficient request-grouped impression data exists.
 10. Use shadow mode, canary rollout, guardrails, and rollback before production promotion.
 
+Phase 2B establishes the inactive typed taxonomy foundation in [`taxonomy.md`](taxonomy.md). Its validation evidence and activation conditions are recorded in [`phase-2b-validation.md`](phase-2b-validation.md). The foundation is additive only: current recommendation behavior does not read taxonomy concepts, aliases, or mappings.
+
 ## Phase 1 Observability Domain
 
 Recommendation generation, HTTP exposure, bounded candidate trace, impression, and attributed-action models remain available in normalized PostgreSQL tables. Learner Home and section requests enqueue bounded generation/exposure envelopes through `RecommendationEventOutbox`; supported learner actions enqueue `recommendation-action-outbox-v1` envelopes after successful business responses. An opt-in worker materializes the retained rows with at-least-once idempotent delivery and direct/assisted attribution. The awaited synchronous request-path integration remains rejected. `X-Recommendation-Impression-Id` is an optional CORS-allowed request header; the additive response field remains optional and cache-safe. See `events.md`, `outbox.md`, and `version-registry.md` for the delivery contract and baseline versions.
