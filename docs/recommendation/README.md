@@ -6,6 +6,12 @@ This directory contains the authoritative architecture, evaluation rules, decisi
 
 The recommendation system must optimize for useful and feasible material reuse, successful reservations, and project progress. Clicks, views, likes, and saves are supporting signals, not the final product objective.
 
+## Phase 3C — Final Architecture Freeze
+
+The graduation-project recommendation architecture is frozen as a deterministic hybrid recommender with the legacy scorer as the active default. Recommendation observability and supported impression/action attribution remain active when the opt-in outbox worker is enabled. The normalized interest scorer remains opt-in only, and the typed taxonomy foundation remains inactive.
+
+The collection pipeline is technically ready, but real-user pilot execution is deferred because participant recruitment and multi-day collection are outside the current project execution capacity. No real-user evidence exists, and LightFM, ALS, item-KNN, and other collaborative models remain deferred for insufficient real data. See [`final-recommendation-architecture.md`](final-recommendation-architecture.md) and [`phase-3b-real-interaction-pilot.md`](phase-3b-real-interaction-pilot.md).
+
 ## Mandatory Principles
 
 1. PostgreSQL remains the transactional source of truth.
@@ -31,6 +37,8 @@ The recommendation system must optimize for useful and feasible material reuse, 
 - Qdrant and pgvector require a benchmark before adoption.
 - Redis online features and a separate Python recommendation service are conditional on a demonstrated online inference requirement.
 - The existing weighted recommender is a versioned baseline and reliability fallback, not a protected final design.
+
+The Phase 3C freeze supersedes the current-project execution status of the experimental collaborative-baseline planning items above: they remain future work, are not implemented or trained, and cannot replace the deterministic default without new real-user evidence and a separate decision.
 
 ## Official Execution Order
 

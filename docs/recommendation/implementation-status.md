@@ -297,3 +297,26 @@ Conditions:
 - retain normalized mode only behind the explicit `RECOMMENDATION_SCORER_VERSION` flag; no meaningful visible ranking improvement justified default activation;
 - repeat the paired benchmark and 48/8 parity review before any future default-change proposal;
 - keep component normalization, compatibility relations, typed overlap, semantic retrieval, and learned ranking out of scope.
+
+## Phase 3C — Final Architecture Freeze
+
+Status: FINALIZED_WITH_DEFERRED_REAL_USER_PILOT
+
+Final product state:
+
+| Capability | Status |
+|---|---|
+| Deterministic hybrid recommender | Active default |
+| Normalized interest scorer | Implemented, opt-in only; `legacy-v1` remains default |
+| Typed taxonomy foundation | Implemented, inactive |
+| Recommendation observability | Active through the durable outbox contract when the worker is enabled |
+| Impression/action attribution | Active for supported learner actions when the worker is enabled |
+| Real-user collection pipeline | Technically ready |
+| Real-user pilot execution | Deferred operationally |
+| LightFM/ALS/item-KNN | Deferred; insufficient real data; not implemented or trained |
+
+Phase 3B’s technical decision remains `READY_TO_START_REAL_USER_PILOT`. Phase 3C adds `REAL_USER_PILOT_EXECUTION = DEFERRED` because no participant sessions were run and no real-user interaction evidence was collected. The Phase 3B evaluator, tests, pilot protocol, and checklist are retained for future use.
+
+No runtime code, scorer weight, candidate retrieval, ranking behavior, schema, migration, seed, frontend, or API changed for this freeze. No synthetic interactions were created or relabeled, no collaborative model was trained, and no commit was created.
+
+Evidence: `final-recommendation-architecture.md` and `phase-3b-real-interaction-pilot.md`.

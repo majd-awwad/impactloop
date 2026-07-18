@@ -11,6 +11,12 @@ Phase 3B verified that the existing collection path is ready to receive genuine 
 
 The distinction is important: the system is ready to start a controlled human pilot, but it is not ready for offline recommendation-model evaluation.
 
+## Phase 3C Operational Note
+
+The collection pipeline passed technical readiness verification. Pilot execution is deferred because real participant recruitment and multi-day collection are outside the current project execution capacity. No real-user evidence was collected.
+
+This operational status does not change the technical readiness result below: `READY_TO_START_REAL_USER_PILOT`.
+
 ## 2. Collection Architecture
 
 The verified path is:
