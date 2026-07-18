@@ -265,3 +265,35 @@ Final acceptance verification:
 - role-level component coverage is 36/64 required material, 9/32 optional material, 11/19 consumable, and 0/2 tool rows;
 - the active Learner Home/recommendation paths have no import or query dependency on the typed taxonomy foundation;
 - the shadow JSON is a deterministic contract fixture only, not a relevance or quality dataset.
+
+## Phase 2E — Guarded Normalized Scoring
+
+Status: ADOPT_FEATURE_FLAG_ONLY
+
+Implemented:
+
+- immutable `legacy-v1` and `normalized-interests-v2` scorer modes, defaulting to `legacy-v1`;
+- static, bounded, learner-interest-only reviewed vocabulary with a maximum of 28 terms per interest;
+- one accepted score of 12 for alias-only evidence, with canonical scores and non-content weights preserved;
+- unchanged candidate retrieval, project pool, component matcher, cache single-flight behavior, and existing event/outbox contracts;
+- existing algorithm-version metadata distinguishes the scorer mode.
+
+Validation:
+
+- zero retrieval additions/removals;
+- 48 material and 8 project scoring-only deltas on the unchanged Phase 2D candidate pools;
+- zero reviewed false positives;
+- normalized scorer p95 510.66 ms versus 465.08 ms legacy over the 159-material/29-project × 13-interest microbenchmark (+9.8%);
+- focused normalized, Learner Home, and recommendation-event tests passed;
+- final end-to-end verification used separate clean processes: 10-miss p95 349.28 ms legacy versus 309.24 ms normalized, cache-hit p95 0.087 ms versus 0.116 ms, zero errors, and identical 23-item/21,984-byte preferred-learner responses;
+- learner-only concurrency runs had zero errors; same-learner single-flight produced one stable signature, and distinct 5/10-learner runs had no catastrophic behavior;
+- reviewed preferred-learner sections had identical top-five IDs, scores, ordering, caps, duplicates, and explanations in both modes.
+
+Evidence: `phase-2e-normalized-scoring-validation.md`.
+
+Conditions:
+
+- do not change the production default to normalized mode;
+- retain normalized mode only behind the explicit `RECOMMENDATION_SCORER_VERSION` flag; no meaningful visible ranking improvement justified default activation;
+- repeat the paired benchmark and 48/8 parity review before any future default-change proposal;
+- keep component normalization, compatibility relations, typed overlap, semantic retrieval, and learned ranking out of scope.

@@ -2,9 +2,17 @@
 
 | Algorithm | Version | Policy | Surfaces | Status |
 |---|---|---|---|---|
-| deterministic-hybrid | learner-home-v1 | learner-home-policy-v1 | Learner Home and Learner Home sections | Current baseline |
+| deterministic-hybrid | learner-home-v1:`<scorer-version>` | learner-home-policy-v1 | Learner Home and Learner Home sections | Current baseline; scorer defaults to `legacy-v1` |
 
 Change the algorithm version for material candidate generation, eligibility, scoring weights, ranking, section selection, or fallback changes. Keep policy version separate for operational/configuration changes.
+
+## Guarded scorer versions
+
+| Environment variable | Allowed values | Default | Meaning |
+|---|---|---|---|
+| `RECOMMENDATION_SCORER_VERSION` | `legacy-v1`, `normalized-interests-v2` | `legacy-v1` | Selects the immutable process-lifetime content scorer mode |
+
+Runtime generation and exposure metadata use `learner-home-v1:legacy-v1` or `learner-home-v1:normalized-interests-v2`. Changing this value requires a process restart; the restart clears the in-memory Learner Home cache. Normalized mode is guarded and must not become the default until its cache-miss and concurrency evidence passes the Phase 2E gates.
 
 ## Delivery schema versions
 
