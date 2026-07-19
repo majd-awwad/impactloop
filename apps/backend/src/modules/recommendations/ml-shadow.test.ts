@@ -8,7 +8,7 @@ import { env } from '../../config/env.js';
 import { resetLoggerForTests, setLoggerDestinationForTests } from '../../observability/logger.js';
 import { combineNormalizedScores, scorePortableLightFm } from './ml-lightfm-scorer.js';
 import { loadPortableModelArtifact, validatePortableModelArtifact } from './ml-model-artifact.js';
-import { clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
+import { calculateProjectTop10RankMovement, calculateProjectTopKOverlap, clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
 import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG } from './short-term-intent.js';
 
 const repositoryRoot = process.cwd().endsWith(path.join('apps', 'backend')) ? path.resolve(process.cwd(), '../..') : process.cwd();
@@ -90,6 +90,128 @@ test('material serving cannot bypass a disabled shadow flag', async () => {
   assert.equal(result.rankedCandidateKeys, undefined);
   env.recommendationMlShadowEnabled = prior.enabled;
   env.recommendationMlMaterialServingEnabled = prior.materialServing;
+});
+
+test('project serving flag cannot activate project ordering in Slice 4H-A', async () => {
+  const prior = { shadow: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlProjectServingEnabled = true;
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  clearMlArtifactCacheForTests();
+  try {
+    const response = { sections: [{ key: 'suggested_projects', items: ['deterministic-a', 'deterministic-b'] }] };
+    const candidates = [
+      { candidateKey: 'project-a', categoryId: 'fixture-category-a', categoryLabel: 'Fixture A', difficulty: 'BEGINNER' },
+      { candidateKey: 'project-b', categoryId: 'fixture-category-b', categoryLabel: 'Fixture B', difficulty: 'INTERMEDIATE' },
+    ];
+    const result = await runMlShadowComparison({ response, domain: 'project', interests: [], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: ['project-a', 'project-b'], recentEvents: [], evaluationTimestamp: '2026-07-19T00:00:00Z' });
+    assert.strictEqual(result.response, response);
+    assert.equal(result.rankedCandidateKeys, undefined);
+    assert.equal(result.diagnostics.projectReadinessStatus, 'NOT_READY');
+  } finally {
+    env.recommendationMlShadowEnabled = prior.shadow;
+    env.recommendationMlProjectServingEnabled = prior.projectServing;
+    env.recommendationMlProjectArtifactPath = prior.projectPath;
+    clearMlArtifactCacheForTests();
+  }
+});
+
+test('project readiness overlap and rank movement are bounded aggregate calculations', () => {
+  assert.deepEqual(calculateProjectTopKOverlap(['a', 'b', 'c', 'd', 'e'], ['e', 'c', 'x', 'b', 'a'], 5), { count: 4, ratio: 0.8 });
+  assert.deepEqual(calculateProjectTopKOverlap(['a'], ['a'], 10), { count: 1, ratio: 1 });
+  assert.deepEqual(calculateProjectTop10RankMovement(['a', 'b', 'c', 'd'], ['b', 'a', 'd', 'c']), { average: 1, maximum: 1 });
+  assert.deepEqual(calculateProjectTop10RankMovement([], []), { average: 0, maximum: 0 });
+});
+
+test('project readiness exposes candidate and artifact coverage without private identifiers', async () => {
+  const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  clearMlArtifactCacheForTests();
+  try {
+    const response = { unchanged: true };
+    const candidates = [
+      { candidateKey: 'private-project-a', categoryId: 'unknown-category-a', categoryLabel: 'Unknown A', difficulty: 'BEGINNER', conceptKeys: ['unknown-concept'] },
+      { candidateKey: 'private-project-b', categoryId: 'unknown-category-b', categoryLabel: 'Unknown B', difficulty: 'BEGINNER' },
+    ];
+    const result = await runMlShadowComparison({ response, domain: 'project', interests: [], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: ['private-project-a', 'private-project-b'], recentEvents: [], evaluationTimestamp: '2026-07-19T00:00:00Z' });
+    assert.strictEqual(result.response, response);
+    assert.equal(result.diagnostics.runtimeCandidateCount, 2);
+    assert.equal(result.diagnostics.scoredCandidateCount, 2);
+    assert.equal(result.diagnostics.duplicateRuntimeCandidateCount, 0);
+    assert.equal(result.diagnostics.duplicateScoredCandidateCount, 0);
+    assert.ok((result.diagnostics.artifactCatalogCount ?? 0) > 0);
+    assert.ok((result.diagnostics.runtimeCandidatesMissingFromArtifact ?? 0) > 0);
+    assert.ok((result.diagnostics.totalProjectShadowDurationMs ?? -1) >= 0);
+    assert.doesNotMatch(JSON.stringify(result.diagnostics), /private-project|Unknown A|Unknown B/i);
+  } finally {
+    env.recommendationMlShadowEnabled = prior.shadow;
+    env.recommendationMlProjectArtifactPath = prior.projectPath;
+    clearMlArtifactCacheForTests();
+  }
+});
+
+test('project duplicate runtime candidates are reported as NOT_READY without changing the response', async () => {
+  const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  clearMlArtifactCacheForTests();
+  try {
+    const response = { unchanged: true };
+    const duplicate = { candidateKey: 'project-duplicate', categoryId: 'fixture-category', categoryLabel: 'Fixture', difficulty: 'BEGINNER' };
+    const result = await runMlShadowComparison({ response, domain: 'project', interests: [], candidates: [duplicate, duplicate], activeCandidateKeys: ['project-duplicate'], currentTopKeys: ['project-duplicate'], recentEvents: [], evaluationTimestamp: '2026-07-19T00:00:00Z' });
+    assert.strictEqual(result.response, response);
+    assert.equal(result.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(result.diagnostics.duplicateRuntimeCandidateCount, 1);
+    assert.equal(result.diagnostics.duplicateScoredCandidateCount, 1);
+    assert.equal(result.diagnostics.hydratedMappingFailureCount, 1);
+  } finally {
+    env.recommendationMlShadowEnabled = prior.shadow;
+    env.recommendationMlProjectArtifactPath = prior.projectPath;
+    clearMlArtifactCacheForTests();
+  }
+});
+
+test('project shadow failures and timeout preserve the exact deterministic response', async () => {
+  const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  clearMlArtifactCacheForTests();
+  const response = { sections: [{ key: 'suggested_projects', items: ['deterministic'] }] };
+  const input = {
+    response,
+    domain: 'project' as const,
+    interests: [],
+    candidates: [{ candidateKey: 'project-a', categoryId: 'fixture-category', categoryLabel: 'Fixture', difficulty: 'BEGINNER' }],
+    activeCandidateKeys: ['project-a'],
+    currentTopKeys: ['project-a'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-07-19T00:00:00Z',
+  };
+  try {
+    env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'missing-project-artifact.json');
+    assert.strictEqual((await runMlShadowComparison(input)).response, response);
+    clearMlArtifactCacheForTests();
+    env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+    for (const phase of ['diagnostics', 'redaction', 'logger'] as const) {
+      setMlShadowFailureForTests(phase);
+      const result = await runMlShadowComparison(input);
+      assert.strictEqual(result.response, response);
+      assert.equal(result.diagnostics.projectReadinessStatus, 'FALLBACK');
+    }
+    setMlShadowFailureForTests(undefined);
+    setMlShadowNeverSettleForTests(response);
+    const timedOut = await runMlShadowComparison(input);
+    assert.strictEqual(timedOut.response, response);
+    assert.equal(timedOut.diagnostics.projectReadinessStatus, 'FALLBACK');
+    assert.equal(timedOut.diagnostics.fallbackReason, 'project_shadow_timeout');
+  } finally {
+    setMlShadowFailureForTests(undefined);
+    setMlShadowNeverSettleForTests();
+    env.recommendationMlShadowEnabled = prior.shadow;
+    env.recommendationMlProjectArtifactPath = prior.projectPath;
+    clearMlArtifactCacheForTests();
+  }
 });
 
 test('enabled shadow scores bounded candidates and failures safely fall back', async () => {
