@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ImpactLoop portable LightFM shadow artifact",
+  "type": "object",
+  "required": ["artifact_version", "model_version", "domain", "feature_schema_version", "latent_dimension", "catalog_snapshot_hash", "training_dataset_hash", "mapping_hash", "hyperparameters", "python_version", "lightfm_version", "exported_at_utc", "user_features", "item_features", "content_hash"],
+  "properties": {
+    "artifact_version": {"const": "impactloop-lightfm-portable-v1"},
+    "domain": {"enum": ["material", "project"]},
+    "latent_dimension": {"type": "integer", "minimum": 1},
+    "user_features": {"type": "array", "items": {"$ref": "#/$defs/feature"}},
+    "item_features": {"type": "array", "items": {"$ref": "#/$defs/feature"}},
+    "content_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "$defs": {"feature": {"type": "object", "required": ["name", "embedding", "bias"], "properties": {"name": {"type": "string"}, "embedding": {"type": "array", "items": {"type": "string", "pattern": "^-?[0-9.eE+]+$"}}, "bias": {"type": "string", "pattern": "^-?[0-9.eE+]+$"}}, "additionalProperties": false}},
+  "additionalProperties": true
+}

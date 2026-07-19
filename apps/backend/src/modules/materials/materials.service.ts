@@ -754,6 +754,9 @@ export const getMaterialById = async (
       materialsRepository.findLikedMaterialIds(viewer?.sub, [material.id]),
     ]);
   const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
+  if (viewer?.sub && incremented.recorded) {
+    invalidateLearnerHomeCache(viewer.sub);
+  }
   const mappedMaterial = mapMaterial(
     { ...material, viewsCount: incremented.viewsCount },
     heldQuantity,

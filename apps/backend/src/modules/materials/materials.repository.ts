@@ -385,12 +385,13 @@ export const recordMaterialView = async (
       });
 
       if (existingView) {
-        return tx.material.findUniqueOrThrow({
+        const material = await tx.material.findUniqueOrThrow({
           where: { id },
           select: {
             viewsCount: true,
           },
         });
+        return { ...material, recorded: false };
       }
     }
 
@@ -402,7 +403,7 @@ export const recordMaterialView = async (
       },
     });
 
-    return tx.material.update({
+    const material = await tx.material.update({
       where: { id },
       data: {
         viewsCount: {
@@ -413,6 +414,7 @@ export const recordMaterialView = async (
         viewsCount: true,
       },
     });
+    return { ...material, recorded: true };
   });
 };
 

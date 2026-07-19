@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { env } from '../../config/env.js';
 
 import * as learnerHomeRepository from './learner-home.repository.js';
 import {
@@ -63,6 +64,7 @@ import {
   type RecommendationCandidateTraceInput,
   type RecommendationGenerationMetadata,
 } from '../recommendation-events/recommendation-events.service.js';
+import { runMlShadowComparison } from '../recommendations/ml-shadow.service.js';
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -1285,6 +1287,83 @@ async function loadLearnerHomeUncached(
     profileCompletion,
     sections,
   };
+  const shadowConcepts = env.recommendationMlShadowEnabled
+    ? await learnerHomeRepository.loadMlShadowConcepts(
+        context.materials.map((material) => material.id),
+        context.projects.map((project) => project.id),
+      )
+    : { materialConcepts: new Map<string, string[]>(), projectConcepts: new Map<string, string[]>(), projectComponentConcepts: new Map<string, string[]>() };
+
+  const currentTopKeys = (domain: 'material' | 'project') =>
+    sections.flatMap((section) => section.items)
+      .flatMap((item) => {
+        if (domain === 'material' && item.type === 'material') {
+          return [String(item.material.id ?? '')];
+        }
+        if (domain === 'project' && item.type === 'project') {
+          return [String(item.project.id ?? '')];
+        }
+        return [];
+      })
+      .filter(Boolean);
+  const currentSections = (domain: 'material' | 'project') => sections.map((section) => ({
+    sectionKey: section.key,
+    candidateKeys: section.items.flatMap((item) => domain === 'material' && item.type === 'material' ? [String(item.material.id ?? '')] : domain === 'project' && item.type === 'project' ? [String(item.project.id ?? '')] : []).filter(Boolean),
+  })).filter((section) => section.candidateKeys.length > 0);
+
+  // Shadow calls are fail-safe and return this exact response object unchanged.
+  // Serving flags are intentionally not consulted here: neither domain may
+  // control user-visible ordering in Slice 4A.
+  await Promise.all([
+    runMlShadowComparison({
+      response,
+      domain: 'material',
+      interests: context.interests,
+      candidates: context.materials
+        .filter((material) => material.status === 'AVAILABLE' && material.availableQuantity > 0)
+        .map((material) => ({
+          candidateKey: material.id,
+          categoryId: material.categoryId,
+          categoryLabel: material.categoryNameEn,
+          condition: typeof material.mapped.condition === 'string' ? material.mapped.condition : undefined,
+          isFree: material.isFree,
+          pickupAllowed: material.pickupAllowed,
+          deliveryAllowed: material.deliveryAllowed,
+          conceptKeys: shadowConcepts.materialConcepts.get(material.id) ?? [],
+        })),
+      currentTopKeys: currentTopKeys('material'),
+      currentSections: currentSections('material'),
+      activeCandidateKeys: context.materials.filter((material) => material.status === 'AVAILABLE' && material.availableQuantity > 0).map((material) => material.id),
+      recentEvents: context.behavior.recentRecommendationEvents ?? [],
+      recentEntityMetadata: context.projects.map((project) => ({
+        entityKey: project.id,
+        candidateKey: project.id,
+        categoryId: project.categoryId,
+        categoryLabel: project.categoryNameEn,
+        conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
+        componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
+      })),
+      evaluationTimestamp: new Date().toISOString(),
+    }),
+    runMlShadowComparison({
+      response,
+      domain: 'project',
+      interests: context.interests,
+      candidates: context.projects.map((project) => ({
+        candidateKey: project.id,
+        categoryId: project.categoryId,
+        categoryLabel: project.categoryNameEn,
+        difficulty: project.difficulty,
+        conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
+        componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
+      })),
+      currentTopKeys: currentTopKeys('project'),
+      currentSections: currentSections('project'),
+      activeCandidateKeys: context.projects.map((project) => project.id),
+      recentEvents: context.behavior.recentRecommendationEvents ?? [],
+      evaluationTimestamp: new Date().toISOString(),
+    }),
+  ]);
 
   return {
     response,

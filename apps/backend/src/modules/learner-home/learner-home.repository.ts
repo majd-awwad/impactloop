@@ -1140,6 +1140,7 @@ const loadLearnerBehaviorRows = async (
       orderBy: { createdAt: 'desc' },
       take: 30,
       select: {
+        createdAt: true,
         material: {
           select: materialBehaviorSelect,
         },
@@ -1151,6 +1152,7 @@ const loadLearnerBehaviorRows = async (
       take: 50,
       select: {
         materialId: true,
+        createdAt: true,
         material: {
           select: materialBehaviorSelect,
         },
@@ -1164,6 +1166,8 @@ const loadLearnerBehaviorRows = async (
       orderBy: { createdAt: 'desc' },
       take: 30,
       select: {
+        createdAt: true,
+        status: true,
         material: {
           select: materialBehaviorSelect,
         },
@@ -1189,6 +1193,7 @@ const loadLearnerBehaviorRows = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
+        createdAt: true,
         project: { select: projectBehaviorSignalSelect },
       },
     }),
@@ -1200,6 +1205,7 @@ const loadLearnerBehaviorRows = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
+        createdAt: true,
         project: { select: projectBehaviorSignalSelect },
       },
     }),
@@ -1257,6 +1263,15 @@ const mapLearnerBehaviorContext = (
     inProgressBuildProjects: rows.inProgressBuildRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
+    recentRecommendationEvents: [
+      ...rows.likedMaterialRows.map((row) => ({ entityKey: row.material.id, actionType: 'like', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.viewedMaterialRows.map((row) => ({ entityKey: row.material.id, actionType: 'view', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.reservedMaterialRows.map((row) => ({ entityKey: row.material.id, actionType: row.status === 'COMPLETED' ? 'reservation' : 'reservation_pending', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.savedProjectRows.map((row) => ({ entityKey: row.project.id, actionType: 'project_save', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.likedProjectRows.map((row) => ({ entityKey: row.project.id, actionType: 'like', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.followedProjectRows.map((row) => ({ entityKey: row.project.id, actionType: 'project_follow', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.inProgressBuildRows.map((row) => ({ entityKey: row.project.id, actionType: 'build_started', timestampUtc: row.startedAt.toISOString() })),
+    ].sort((left, right) => left.timestampUtc.localeCompare(right.timestampUtc)),
   };
 };
 
@@ -1264,6 +1279,34 @@ export const loadLearnerBehaviorContext = async (
   userId: string,
 ): Promise<LearnerBehaviorContext> =>
   mapLearnerBehaviorContext(await loadLearnerBehaviorRows(userId));
+
+export const loadMlShadowConcepts = async (
+  materialIds: string[],
+  projectIds: string[],
+) => {
+  if (materialIds.length > 200 || projectIds.length > 200) throw new Error('ml_concept_candidate_bound');
+  const [materials, projects] = await Promise.all([
+    prisma.materialConcept.findMany({
+      where: { materialId: { in: materialIds }, concept: { status: 'ACTIVE' } },
+      select: { materialId: true, concept: { select: { canonicalKey: true } } },
+    }),
+    prisma.learningProject.findMany({
+      where: { id: { in: projectIds } },
+      select: {
+        id: true,
+        taxonomyConcepts: { where: { concept: { status: 'ACTIVE' } }, select: { concept: { select: { canonicalKey: true } } } },
+        requiredComponents: { select: { taxonomyConcepts: { where: { concept: { status: 'ACTIVE' } }, select: { concept: { select: { canonicalKey: true } } } } } },
+      },
+    }),
+  ]);
+  const materialConcepts = new Map<string, string[]>();
+  for (const row of materials) materialConcepts.set(row.materialId, [...(materialConcepts.get(row.materialId) ?? []), row.concept.canonicalKey]);
+  return {
+    materialConcepts: new Map([...materialConcepts].map(([key, values]) => [key, [...new Set(values)].sort()])),
+    projectConcepts: new Map(projects.map((project) => [project.id, project.taxonomyConcepts.map((entry) => entry.concept.canonicalKey).sort()])),
+    projectComponentConcepts: new Map(projects.map((project) => [project.id, [...new Set(project.requiredComponents.flatMap((component) => component.taxonomyConcepts.map((entry) => entry.concept.canonicalKey)))].sort()])),
+  };
+};
 
 type SavedProjectBehaviorRow = Awaited<
   ReturnType<typeof loadLearnerBehaviorRows>

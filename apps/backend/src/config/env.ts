@@ -249,6 +249,22 @@ export const env = {
   recommendationScorerVersion: parseRecommendationScorerVersion(
     process.env.RECOMMENDATION_SCORER_VERSION,
   ) as RecommendationScorerVersion,
+  recommendationMlShadowEnabled: parseBoolean(
+    process.env.RECOMMENDATION_ML_SHADOW_ENABLED,
+    false,
+  ),
+  recommendationMlMaterialServingEnabled: parseBoolean(
+    process.env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED,
+    false,
+  ),
+  recommendationMlProjectServingEnabled: parseBoolean(
+    process.env.RECOMMENDATION_ML_PROJECT_SERVING_ENABLED,
+    false,
+  ),
+  recommendationMlMaterialArtifactPath:
+    process.env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH?.trim() || '',
+  recommendationMlProjectArtifactPath:
+    process.env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH?.trim() || '',
   recommendationOutboxWorkerEnabled: parseBoolean(
     process.env.RECOMMENDATION_OUTBOX_WORKER_ENABLED,
     false,
