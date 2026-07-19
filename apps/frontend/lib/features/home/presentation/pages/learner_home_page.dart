@@ -18,6 +18,7 @@ import '../widgets/home_action_card.dart';
 import '../widgets/home_section_header.dart';
 import '../widgets/learner_home_feed_sections.dart';
 import '../../application/learner_home_provider.dart';
+import '../../data/learner_home_api.dart';
 
 class LearnerHomePage extends ConsumerWidget {
   const LearnerHomePage({super.key});
@@ -408,13 +409,22 @@ class _PersonalizedFeedSection extends ConsumerWidget {
           child: CircularProgressIndicator(),
         ),
       ),
-      error: (error, _) => EmptyActivityCard(
-        icon: Icons.cloud_off_outlined,
-        title: 'Could not load recommendations',
-        description: 'Pull to refresh or try again in a moment.',
-        actionLabel: 'Retry',
-        onAction: () => ref.invalidate(learnerHomeFeedProvider),
-      ),
+      error: (error, _) {
+        final failure = classifyLearnerHomeError(error);
+        return EmptyActivityCard(
+          icon: failure.kind == LearnerHomeErrorKind.sessionExpired
+              ? Icons.lock_clock_outlined
+              : Icons.cloud_off_outlined,
+          title: failure.title,
+          description: failure.description,
+          actionLabel: failure.kind == LearnerHomeErrorKind.sessionExpired
+              ? null
+              : 'Retry',
+          onAction: failure.kind == LearnerHomeErrorKind.sessionExpired
+              ? null
+              : () => ref.invalidate(learnerHomeFeedProvider),
+        );
+      },
       data: (feed) => LearnerHomeFeedSections(feed: feed),
     );
   }

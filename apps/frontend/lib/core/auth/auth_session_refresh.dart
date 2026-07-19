@@ -59,6 +59,12 @@ class AuthSessionExpiryNotifier extends Notifier<AuthSessionExpiryState?> {
     _generation += 1;
     state = AuthSessionExpiryState(generation: _generation, error: error);
   }
+
+  void clear() {
+    if (state != null) {
+      state = null;
+    }
+  }
 }
 
 class AuthSessionRefresher {
