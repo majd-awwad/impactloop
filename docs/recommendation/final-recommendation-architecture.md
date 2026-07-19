@@ -35,23 +35,25 @@ The deterministic hybrid recommender is the adopted default. It is explainable, 
 
 ## 2. Active Runtime Features
 
-| Capability | Status | Runtime |
-|---|---|---|
-| Deterministic hybrid scoring | Adopted | Active |
-| Material/project content scoring | Adopted | Active |
-| Behavior-profile scoring | Adopted | Active |
-| Location/free/delivery signals | Adopted | Active |
-| Recommendation caching | Adopted | Active |
-| Durable impression collection | Adopted | Active when worker enabled |
-| Action attribution | Adopted | Active when worker enabled |
-| Flutter impression propagation | Adopted | Active |
-| Typed taxonomy | Adopted with conditions | Inactive |
-| Normalized interest scoring | Feature flag only | Legacy remains default |
-| Compatibility rules | Deferred | Inactive |
-| Real-user pilot | Deferred operationally | Not executed |
-| LightFM | Deferred | Not implemented |
-| ALS | Deferred | Not implemented |
-| Item-KNN | Deferred | Not implemented |
+
+| Capability                       | Status                  | Runtime                    |
+| -------------------------------- | ----------------------- | -------------------------- |
+| Deterministic hybrid scoring     | Adopted                 | Active                     |
+| Material/project content scoring | Adopted                 | Active                     |
+| Behavior-profile scoring         | Adopted                 | Active                     |
+| Location/free/delivery signals   | Adopted                 | Active                     |
+| Recommendation caching           | Adopted                 | Active                     |
+| Durable impression collection    | Adopted                 | Active when worker enabled |
+| Action attribution               | Adopted                 | Active when worker enabled |
+| Flutter impression propagation   | Adopted                 | Active                     |
+| Typed taxonomy                   | Adopted with conditions | Inactive                   |
+| Normalized interest scoring      | Feature flag only       | Legacy remains default     |
+| Compatibility rules              | Deferred                | Inactive                   |
+| Real-user pilot                  | Deferred operationally  | Not executed               |
+| LightFM                          | Deferred                | Not implemented            |
+| ALS                              | Deferred                | Not implemented            |
+| Item-KNN                         | Deferred                | Not implemented            |
+
 
 The default scorer remains `legacy-v1`. `normalized-interests-v2` remains an explicit opt-in mode only. Typed taxonomy concepts, aliases, and mappings remain an additive inactive foundation and are not read by current retrieval or scoring.
 
