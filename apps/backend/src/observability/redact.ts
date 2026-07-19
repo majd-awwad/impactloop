@@ -82,6 +82,62 @@ const ALLOWED_LOG_KEYS = new Set([
   'slowestStepMs',
   'candidatePoolCap',
   'candidatePoolSize',
+  'fallbackReason',
+  'error',
+  'recommendationMlMaterialShadowDiagnostics',
+  'recommendationMlShadow',
+  'domain',
+  'status',
+  'candidateCount',
+  'artifactVersion',
+  'featureSchemaVersion',
+  'confidenceLevel',
+  'confidenceSource',
+  'uniqueRecentMaterialCount',
+  'uniqueRecentViewCount',
+  'activeRecentLikeCount',
+  'strongActionCount',
+  'burstWindowHours',
+  'burstUniqueMaterialCount',
+  'burstUniqueViewCount',
+  'burstActiveLikeCount',
+  'burstStrongActionCount',
+  'burstDominantCategoryShare',
+  'burstDominantConceptShare',
+  'fullHistoryDominantCategoryShare',
+  'fullHistoryDominantConceptShare',
+  'dominantCategoryShare',
+  'dominantConceptShare',
+  'newestEvidenceAgeHours',
+  'qualifiedRecentCandidateCount',
+  'recentSlotsAllowedTop5',
+  'recentSlotsUsedTop5',
+  'recentSlotsAllowedTop10',
+  'recentSlotsUsedTop10',
+  'longTermTop5RecentDomainCount',
+  'recentChannelTop5RecentDomainCount',
+  'fusedTop5RecentDomainCount',
+  'top5OverlapWithDeterministic',
+  'top10OverlapWithDeterministic',
+  'recentEvidenceRejectedCounts',
+  'unmappedCategory',
+  'unmappedConcept',
+  'stale',
+  'reversed',
+  'duplicateOrCapped',
+  'outsideCandidateUniverse',
+  'belowCandidateQualityThreshold',
+  'scorerDurationMs',
+  'fusionDurationMs',
+  'rankMovement',
+  'candidateKeyHash',
+  'longTermRank',
+  'recentRank',
+  'fusedRank',
+  'recentScore',
+  'qualificationStatus',
+  'mappedCategoryMatch',
+  'mappedConceptMatch',
 ]);
 
 const isSensitiveKey = (key: string): boolean => SENSITIVE_KEY_PATTERN.test(key);
@@ -94,6 +150,22 @@ export const redactString = (value: string): string => {
   return value
     .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
     .replace(/(password|passwd|token|secret|api[_-]?key)\s*[:=]\s*\S+/gi, '$1=[redacted]');
+};
+
+export const redactErrorMessage = (error: unknown): string => {
+  try {
+    const raw = error instanceof Error
+      ? error.message
+      : String(error ?? 'unknown_error');
+
+    return redactString(raw)
+      .replace(/(?:[A-Za-z]:\\|\/)[^\r\n]*/g, '[path]')
+      .replace(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/g, '[email]')
+      .replace(/\b[0-9a-f]{24,}\b/gi, '[id]')
+      .slice(0, 240) || 'unknown_error';
+  } catch {
+    return 'unknown_error';
+  }
 };
 
 export const redactUnknownValue = (

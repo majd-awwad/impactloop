@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
 
 import { env } from '../../config/env.js';
+import { resetLoggerForTests, setLoggerDestinationForTests } from '../../observability/logger.js';
 import { combineNormalizedScores, scorePortableLightFm } from './ml-lightfm-scorer.js';
 import { loadPortableModelArtifact, validatePortableModelArtifact } from './ml-model-artifact.js';
-import { clearMlArtifactCacheForTests, runMlShadowComparison } from './ml-shadow.service.js';
+import { clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
 import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG } from './short-term-intent.js';
 
 const repositoryRoot = process.cwd().endsWith(path.join('apps', 'backend')) ? path.resolve(process.cwd(), '../..') : process.cwd();
@@ -60,12 +62,21 @@ test('Python and TypeScript recent intent, decay, reversals, caps, and blend mat
 });
 
 test('flags default disabled and shadow returns exact response object', async () => {
-  assert.equal(env.recommendationMlShadowEnabled, false);
+  const priorEnabled = env.recommendationMlShadowEnabled;
+  env.recommendationMlShadowEnabled = false;
   assert.equal(env.recommendationMlMaterialServingEnabled, false);
   assert.equal(env.recommendationMlProjectServingEnabled, false);
   const response = { ordering: ['active', 'unchanged'] };
+  const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
+  const logLines: string[] = []; const logStream = new PassThrough(); logStream.on('data', (chunk) => logLines.push(chunk.toString())); setLoggerDestinationForTests(logStream); resetLoggerForTests();
+  setMlShadowObserverForTests((value) => observations.push(value));
   const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates: [], activeCandidateKeys: [], currentTopKeys: [], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' });
   assert.strictEqual(result.response, response); assert.equal(result.diagnostics.status, 'DISABLED');
+  assert.equal(observations.length, 0);
+  assert.doesNotMatch(logLines.join(''), /recommendationMlMaterialShadowDiagnostics/);
+  setMlShadowObserverForTests(undefined);
+  setLoggerDestinationForTests(null); resetLoggerForTests();
+  env.recommendationMlShadowEnabled = priorEnabled;
 });
 
 test('enabled shadow scores bounded candidates and failures safely fall back', async () => {
@@ -77,6 +88,94 @@ test('enabled shadow scores bounded candidates and failures safely fall back', a
   env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'missing.json'); clearMlArtifactCacheForTests();
   const failed = await runMlShadowComparison(input); assert.strictEqual(failed.response, response); assert.equal(failed.diagnostics.status, 'FALLBACK');
   env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialArtifactPath = prior.path; clearMlArtifactCacheForTests();
+});
+
+test('material development diagnostics are sanitized and preserve the deterministic response', async () => {
+  const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
+  const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
+  const logLines: string[] = []; const logStream = new PassThrough(); logStream.on('data', (chunk) => logLines.push(chunk.toString())); setLoggerDestinationForTests(logStream); resetLoggerForTests();
+  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); clearMlArtifactCacheForTests();
+  setMlShadowObserverForTests((value) => observations.push(value));
+  const response = { sections: [{ key: 'suggested_materials', materials: ['visible-id'] }] };
+  const candidates = Array.from({ length: 12 }, (_, index) => ({ candidateKey: `candidate-${index}`, categoryId: 'recent-category', categoryLabel: 'Recent category', conceptKeys: ['recent-concept'], condition: 'GOOD', isFree: true, pickupAllowed: true, deliveryAllowed: false }));
+  const recentEvents = candidates.slice(0, 8).flatMap((candidate, index) => [{ entityKey: candidate.candidateKey, actionType: 'view', timestampUtc: `2026-08-10T${String(index + 1).padStart(2, '0')}:00:00Z` }, ...(index < 2 ? [{ entityKey: candidate.candidateKey, actionType: 'like', timestampUtc: `2026-08-10T${String(index + 9).padStart(2, '0')}:00:00Z` }] : [])]);
+  const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: candidates.map((value) => value.candidateKey), recentEvents, evaluationTimestamp: '2026-08-10T12:00:00Z' });
+  assert.strictEqual(result.response, response);
+  assert.equal(observations.length, 1);
+  const diagnostic = observations[0]!;
+  assert.equal(diagnostic.recentConfidence, 'HIGH');
+  assert.equal(diagnostic.confidenceSource, 'VIEW_BURST'); assert.equal(diagnostic.burstWindowHours, 24); assert.equal(diagnostic.burstUniqueViewCount, 8); assert.equal(diagnostic.burstActiveLikeCount, 2);
+  assert.ok((diagnostic.rankMovement?.filter((value) => value.fusedRank <= 5).length ?? 0) >= (diagnostic.recentSlotsUsedTop5 ?? 0));
+  assert.ok((diagnostic.rankMovement?.filter((value) => value.fusedRank <= 10).length ?? 0) >= (diagnostic.recentSlotsUsedTop10 ?? 0));
+  assert.ok((diagnostic.qualifiedRecentCandidateCount ?? 0) >= (diagnostic.recentSlotsUsedTop5 ?? 0));
+  assert.ok(diagnostic.rankMovement?.every((value) => /^[a-f0-9]{16}$/.test(value.candidateKeyHash)));
+  assert.ok((diagnostic.rankMovement?.length ?? 0) <= 5);
+  const serialized = JSON.stringify(diagnostic);
+  for (const prohibited of ['userId', 'email', 'title', 'description', 'rawMaterialId', 'featureVector', 'embedding', 'interactionHistory', 'candidate-0']) assert.doesNotMatch(serialized, new RegExp(prohibited, 'i'));
+  const logged = logLines.flatMap((line) => line.trim().split('\n')).filter(Boolean).map((line) => JSON.parse(line)).find((entry) => entry.recommendationMlMaterialShadowDiagnostics)?.recommendationMlMaterialShadowDiagnostics;
+  assert.equal(logged.confidenceLevel, 'HIGH'); assert.equal(logged.confidenceSource, 'VIEW_BURST'); assert.equal(logged.burstWindowHours, 24); assert.equal(logged.burstDominantCategoryShare, 1); assert.equal(logged.fullHistoryDominantCategoryShare, 1); assert.equal(logged.domain, 'material'); assert.ok(Array.isArray(logged.rankMovement));
+  const loggedText = JSON.stringify(logged); assert.doesNotMatch(loggedText, /\[filtered\]|candidate-0|userId|email|title|description|embedding/i);
+  const stageEntries = logLines.flatMap((line) => line.trim().split('\n')).filter(Boolean).map((line) => JSON.parse(line)).flatMap((entry) => entry.operation === 'recommendation.ml-shadow.material-stage' && typeof entry.event === 'string' ? [JSON.parse(entry.event)] : []);
+  for (const stage of ['material_shadow', 'material_input_preparation', 'portable_artifact_scoring', 'recent_intent_scoring', 'burst_evidence_construction', 'weighted_dominance_calculation', 'confidence_classification', 'recent_candidate_qualification', 'rank_fusion', 'rank_movement_diagnostics', 'diagnostics_construction', 'diagnostics_serialization_redaction', 'diagnostics_logging']) {
+    assert.ok(stageEntries.some((entry) => entry.stage === stage && entry.phase === 'start'), `missing ${stage} start marker`);
+    assert.ok(stageEntries.some((entry) => entry.stage === stage && entry.phase === 'complete'), `missing ${stage} complete marker`);
+  }
+  setMlShadowObserverForTests(undefined); setLoggerDestinationForTests(null); resetLoggerForTests(); env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialArtifactPath = prior.path; clearMlArtifactCacheForTests();
+});
+
+test('real learner-home shadow shape fails safe across confidence, dominance, fusion, diagnostics, logger, and redaction failures', async () => {
+  const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+  clearMlArtifactCacheForTests();
+  const response = { profileCompletion: { hasInterests: true }, sections: [{ key: 'suggested_materials', items: ['deterministic'] }] };
+  const candidates = Array.from({ length: 107 }, (_, index) => ({ candidateKey: `real-material-${index}`, categoryId: `real-category-${index % 9}`, categoryLabel: `Category ${index % 9}`, conceptKeys: index % 3 === 0 ? [`concept-${index % 11}`] : [], condition: 'GOOD', isFree: index % 2 === 0, pickupAllowed: true, deliveryAllowed: index % 4 === 0 }));
+  const recentEvents = Array.from({ length: 26 }, (_, index) => ({ entityKey: `real-material-${index % 21}`, actionType: index % 3 === 0 ? 'like' : 'view', timestampUtc: `2026-07-19T${String(index % 12).padStart(2, '0')}:00:00Z` }));
+  const input = { response, domain: 'material' as const, interests: ['Category 1'], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: candidates.slice(0, 10).map((value) => value.candidateKey), currentSections: [{ sectionKey: 'suggested_materials', candidateKeys: candidates.slice(0, 10).map((value) => value.candidateKey) }], recentEvents, recentEntityMetadata: Array.from({ length: 29 }, (_, index) => ({ entityKey: `real-project-${index}`, candidateKey: `real-project-${index}`, categoryId: `project-category-${index % 4}`, categoryLabel: `Project Category ${index % 4}`, conceptKeys: [`project-concept-${index % 5}`], componentConceptKeys: [`component-${index % 7}`] })), evaluationTimestamp: '2026-07-19T12:00:00Z' };
+  setMlShadowFailureForTests(undefined);
+  const realShape = await runMlShadowComparison({ ...input, currentSections: [{ sectionKey: 'suggested_materials', candidateKeys: candidates.slice(0, 3).map((value) => value.candidateKey) }] });
+  assert.strictEqual(realShape.response, response);
+  assert.equal(realShape.diagnostics.status, 'SCORED');
+  const phases: MlShadowFailurePhase[] = ['confidence', 'dominance', 'fusion', 'diagnostics', 'logger', 'redaction'];
+  try {
+    for (const phase of phases) {
+      setMlShadowFailureForTests(phase);
+      const result = await runMlShadowComparison(input);
+      assert.strictEqual(result.response, response, `${phase} changed the original response object`);
+      assert.equal(result.diagnostics.status, 'FALLBACK');
+      assert.equal(result.diagnostics.fallbackReason, `injected_${phase}_failure`);
+      assert.ok(result.diagnostics.fallbackReason.length <= 240);
+    }
+  } finally {
+    setMlShadowFailureForTests(undefined);
+    env.recommendationMlShadowEnabled = prior.enabled;
+    env.recommendationMlMaterialArtifactPath = prior.path;
+    clearMlArtifactCacheForTests();
+  }
+});
+
+test('never-settling async material shadow is bounded by the secondary timeout', async () => {
+  const response = { deterministic: true };
+  const started = performance.now();
+  setMlShadowNeverSettleForTests(response);
+  try {
+    const result = await runMlShadowComparison({
+      response,
+      domain: 'material',
+      interests: [],
+      candidates: [],
+      activeCandidateKeys: [],
+      currentTopKeys: [],
+      recentEvents: [],
+      evaluationTimestamp: '2026-07-19T12:00:00Z',
+    });
+    assert.strictEqual(result.response, response);
+    assert.equal(result.diagnostics.status, 'FALLBACK');
+    assert.equal(result.diagnostics.fallbackReason, 'material_shadow_timeout');
+    assert.ok(performance.now() - started < 1_500);
+  } finally {
+    setMlShadowNeverSettleForTests();
+  }
 });
 
 test('candidate duplicates disable shadow and cached catalog-scale scoring stays bounded', async () => {

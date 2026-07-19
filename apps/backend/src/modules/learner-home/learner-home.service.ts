@@ -64,7 +64,7 @@ import {
   type RecommendationCandidateTraceInput,
   type RecommendationGenerationMetadata,
 } from '../recommendation-events/recommendation-events.service.js';
-import { runMlShadowComparison } from '../recommendations/ml-shadow.service.js';
+import { reportMlShadowFallback, runMlShadowComparison } from '../recommendations/ml-shadow.service.js';
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -1287,12 +1287,7 @@ async function loadLearnerHomeUncached(
     profileCompletion,
     sections,
   };
-  const shadowConcepts = env.recommendationMlShadowEnabled
-    ? await learnerHomeRepository.loadMlShadowConcepts(
-        context.materials.map((material) => material.id),
-        context.projects.map((project) => project.id),
-      )
-    : { materialConcepts: new Map<string, string[]>(), projectConcepts: new Map<string, string[]>(), projectComponentConcepts: new Map<string, string[]>() };
+  const emptyShadowConcepts = { materialConcepts: new Map<string, string[]>(), projectConcepts: new Map<string, string[]>(), projectComponentConcepts: new Map<string, string[]>() };
 
   const currentTopKeys = (domain: 'material' | 'project') =>
     sections.flatMap((section) => section.items)
@@ -1311,10 +1306,16 @@ async function loadLearnerHomeUncached(
     candidateKeys: section.items.flatMap((item) => domain === 'material' && item.type === 'material' ? [String(item.material.id ?? '')] : domain === 'project' && item.type === 'project' ? [String(item.project.id ?? '')] : []).filter(Boolean),
   })).filter((section) => section.candidateKeys.length > 0);
 
-  // Shadow calls are fail-safe and return this exact response object unchanged.
-  // Serving flags are intentionally not consulted here: neither domain may
-  // control user-visible ordering in Slice 4A.
-  await Promise.all([
+  // Shadow work is fail-safe and never controls this exact deterministic response.
+  // Serving flags are intentionally not consulted here: both domains remain shadow-only.
+  try {
+    const shadowConcepts = env.recommendationMlShadowEnabled
+      ? await learnerHomeRepository.loadMlShadowConcepts(
+          context.materials.map((material) => material.id),
+          context.projects.map((project) => project.id),
+        )
+      : emptyShadowConcepts;
+    await Promise.allSettled([
     runMlShadowComparison({
       response,
       domain: 'material',
@@ -1363,7 +1364,11 @@ async function loadLearnerHomeUncached(
       recentEvents: context.behavior.recentRecommendationEvents ?? [],
       evaluationTimestamp: new Date().toISOString(),
     }),
-  ]);
+    ]);
+  } catch (error) {
+    reportMlShadowFallback('material', context.materials.length, error);
+    reportMlShadowFallback('project', context.projects.length, error);
+  }
 
   return {
     response,

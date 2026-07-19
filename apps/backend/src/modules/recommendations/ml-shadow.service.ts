@@ -2,27 +2,41 @@ import { createHash } from 'node:crypto';
 
 import { env } from '../../config/env.js';
 import { logger } from '../../observability/logger.js';
+import { redactErrorMessage } from '../../observability/redact.js';
+import type { LogContext } from '../../observability/log-types.js';
 import { combineNormalizedScores, scorePortableLightFm, type WeightedFeature } from './ml-lightfm-scorer.js';
 import { loadPortableModelArtifact, type PortableModelArtifact } from './ml-model-artifact.js';
 import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG, type RecentIntentEvent } from './short-term-intent.js';
 import { classifyRecentIntent, type RecentIntentConfidence } from './recent-intent-confidence.js';
-import { fuseMaterialRankings } from './material-rank-fusion.js';
+import { fuseMaterialRankings, type MaterialFusionStageObserver } from './material-rank-fusion.js';
 
 export type ShadowCandidate = { candidateKey: string; categoryId: string; categoryLabel: string; conceptKeys?: string[]; componentConceptKeys?: string[]; condition?: string; isFree?: boolean; pickupAllowed?: boolean; deliveryAllowed?: boolean; difficulty?: string };
 export type ShadowComparisonInput<T> = { response: T; domain: 'material' | 'project'; interests: string[]; candidates: ShadowCandidate[]; recentEntityMetadata?: Array<ShadowCandidate & { entityKey: string }>; currentSections?: Array<{ sectionKey: string; candidateKeys: string[] }>; activeCandidateKeys: string[]; currentTopKeys: string[]; recentEvents: RecentIntentEvent[]; evaluationTimestamp: string };
 export type ShadowFeatureCoverage = { activeUserFeatures: number; zeroFeatureUser: boolean; itemFeatureTotal: number; itemsOnlyCategory: number; itemsWithoutApprovedFeatures: number; categoryCovered: number; conceptCovered: number; conditionCovered: number; freeCovered: number; pickupCovered: number; deliveryCovered: number; difficultyCovered: number; componentCovered: number };
-export type ShadowDiagnostics = { status: 'DISABLED' | 'SCORED' | 'FALLBACK'; fallbackReason?: string; candidateCount: number; top5Overlap?: number; top10Overlap?: number; rankCorrelation?: number; duplicateCurrentCount?: number; deduplicatedCurrentCount?: number; sectionDiagnostics?: Array<{ sectionKey: string; candidatePoolSize: number; top5Overlap: number; top10Overlap: number; fusedTop5Keys?: string[]; fusedTop10Keys?: string[] }>; recentEventInputCount?: number; recentEvidenceCount?: number; recentChannelApplied?: boolean; recentConfidence?: RecentIntentConfidence; recentUniqueMaterialCount?: number; recentActiveLikeCount?: number; recentStrongActionCount?: number; recentCoherence?: number; qualifiedRecentCandidateCount?: number; fusionDurationMs?: number; scoringDurationMs?: number; artifactVersion?: string; missingFeatureCount?: number; featureCoverage?: ShadowFeatureCoverage; currentTop5Keys?: string[]; shadowTop5Keys?: string[]; linearBlendTop5Keys?: string[] };
+export type ShadowDiagnostics = { status: 'DISABLED' | 'SCORED' | 'FALLBACK'; fallbackReason?: string; candidateCount: number; top5Overlap?: number; top10Overlap?: number; rankCorrelation?: number; duplicateCurrentCount?: number; deduplicatedCurrentCount?: number; sectionDiagnostics?: Array<{ sectionKey: string; candidatePoolSize: number; top5Overlap: number; top10Overlap: number; fusedTop5Keys?: string[] }>; recentEventInputCount?: number; recentEvidenceCount?: number; recentChannelApplied?: boolean; recentConfidence?: RecentIntentConfidence; confidenceSource?: string; recentUniqueMaterialCount?: number; recentUniqueViewCount?: number; recentActiveLikeCount?: number; recentStrongActionCount?: number; burstWindowHours?: number; burstUniqueMaterialCount?: number; burstUniqueViewCount?: number; burstActiveLikeCount?: number; burstStrongActionCount?: number; recentCoherence?: number; dominantCategoryShare?: number; dominantConceptShare?: number; fullHistoryDominantCategoryShare?: number; fullHistoryDominantConceptShare?: number; newestEvidenceAgeHours?: number; qualifiedRecentCandidateCount?: number; recentSlotsAllowedTop5?: number; recentSlotsUsedTop5?: number; recentSlotsAllowedTop10?: number; recentSlotsUsedTop10?: number; longTermTop5RecentDomainCount?: number; recentChannelTop5RecentDomainCount?: number; fusedTop5RecentDomainCount?: number; recentEvidenceRejectedCounts?: { unmappedCategory: number; unmappedConcept: number; stale: number; reversed: number; duplicateOrCapped: number; outsideCandidateUniverse: number; belowCandidateQualityThreshold: number }; rankMovement?: Array<{ candidateKeyHash: string; longTermRank: number; recentRank: number; fusedRank: number; recentScore: number; qualificationStatus: 'QUALIFIED'; mappedCategoryMatch: boolean; mappedConceptMatch: boolean }>; fusionDurationMs?: number; scoringDurationMs?: number; artifactVersion?: string; featureSchemaVersion?: string; missingFeatureCount?: number; featureCoverage?: ShadowFeatureCoverage; currentTop5Keys?: string[]; shadowTop5Keys?: string[]; linearBlendTop5Keys?: string[] };
 
 type ShadowObserver = (diagnostics: ShadowDiagnostics & { domain: 'material' | 'project' }) => void;
 let observer: ShadowObserver | undefined;
 let artifactLoadCount = 0;
 export const setMlShadowObserverForTests = (value?: ShadowObserver) => { observer = value; };
+export type MlShadowFailurePhase = 'confidence' | 'dominance' | 'fusion' | 'diagnostics' | 'logger' | 'redaction';
+let failurePhaseForTests: MlShadowFailurePhase | undefined;
+export const setMlShadowFailureForTests = (value?: MlShadowFailurePhase) => { failurePhaseForTests = value; };
+let neverSettleResponseForTests: unknown | undefined;
+export const setMlShadowNeverSettleForTests = (response?: unknown): void => { neverSettleResponseForTests = response; };
+const injectFailure = (phase: MlShadowFailurePhase) => {
+  if (failurePhaseForTests === phase) throw new Error(`injected_${phase}_failure`);
+};
 export const getMlArtifactCacheStatsForTests = () => ({ entries: cache.size, artifactLoadCount });
 
 const cache = new Map<string, Promise<PortableModelArtifact>>();
+const ML_SHADOW_TIMEOUT_MS = 1_000;
 const safeMaterialFusion = (...args: Parameters<typeof fuseMaterialRankings>) => {
   try { return { ...fuseMaterialRankings(...args), fallbackReason: undefined as string | undefined }; }
-  catch (error) { return { ranking: [...args[0]], qualifiedRecentCount: 0, insertedTop5Count: 0, insertedTop10Count: 0, fallbackReason: error instanceof Error ? error.message : 'fusion_error' }; }
+  catch (error) {
+    if (error instanceof Error && error.message === 'material_shadow_iteration_bound') throw error;
+    return { ranking: [...args[0]], qualifiedRecentCount: 0, insertedTop5Count: 0, insertedTop10Count: 0, recentSlotsAllowedTop5: 0, recentSlotsUsedTop5: 0, recentSlotsAllowedTop10: 0, recentSlotsUsedTop10: 0, qualifiedRecent: [], belowCandidateQualityThresholdCount: 0, outsideCandidateUniverseCount: 0, fallbackReason: error instanceof Error ? error.message : 'fusion_error' };
+  }
 };
 const artifact = (path: string, domain: 'material' | 'project') => {
   const key = `${domain}:${path}`; let value = cache.get(key);
@@ -60,10 +74,72 @@ const itemFeatures = (candidate: ShadowCandidate, domain: 'material' | 'project'
   return features;
 };
 
-export const runMlShadowComparison = async <T>(input: ShadowComparisonInput<T>): Promise<{ response: T; diagnostics: ShadowDiagnostics }> => {
-  if (!env.recommendationMlShadowEnabled) return { response: input.response, diagnostics: { status: 'DISABLED', candidateCount: input.candidates.length } };
+const safeLogWarning = (context: LogContext, message: string): void => {
+  try {
+    logger.warn(context, message);
+  } catch (loggingError) {
+    try {
+      process.stderr.write(`${JSON.stringify({ operation: 'recommendation.ml-shadow.log-failure', fallbackReason: redactErrorMessage(loggingError) })}\n`);
+    } catch {
+      // Logging is best effort and must never affect the learner-home response.
+    }
+  }
+};
+
+const safeObserve = (diagnostics: ShadowDiagnostics & { domain: 'material' | 'project' }): void => {
+  try {
+    observer?.(diagnostics);
+  } catch (observerError) {
+    safeLogWarning({ operation: 'recommendation.ml-shadow.observer-failure', fallbackReason: redactErrorMessage(observerError), domain: diagnostics.domain }, 'recommendation ML shadow observer failure');
+  }
+};
+
+const observeMaterialStage = (
+  input: ShadowComparisonInput<unknown>,
+  started: number,
+  stage: string,
+  phase: 'start' | 'complete',
+  iterationCount = 0,
+): void => {
+  if (env.nodeEnv !== 'development' || input.domain !== 'material') return;
+  try {
+    logger.info({
+      operation: 'recommendation.ml-shadow.material-stage',
+      event: JSON.stringify({
+        stage,
+        phase,
+        elapsedMs: Math.max(0, performance.now() - started),
+        candidateCount: input.candidates.length,
+        recentEvidenceCount: input.recentEvents.length,
+        iterationCount,
+      }),
+    }, 'material recommendation shadow stage');
+  } catch {
+    // Stage diagnostics are best effort and must never affect the response.
+  }
+};
+
+export const reportMlShadowFallback = (
+  domain: 'material' | 'project',
+  candidateCount: number,
+  error: unknown,
+): ShadowDiagnostics => {
+  const fallbackReason = redactErrorMessage(error);
+  const diagnostics: ShadowDiagnostics = { status: 'FALLBACK', fallbackReason, candidateCount, scoringDurationMs: 0 };
+  safeLogWarning({ userId: '[redacted]', recommendationMlShadow: diagnostics, domain, ...(env.nodeEnv === 'development' ? { error: fallbackReason } : {}) }, 'recommendation ML shadow fallback');
+  return diagnostics;
+};
+
+const runMlShadowComparisonInternal = async <T>(input: ShadowComparisonInput<T>): Promise<{ response: T; diagnostics: ShadowDiagnostics }> => {
+  const timeoutTestEnabled = neverSettleResponseForTests === input.response;
+  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled) return { response: input.response, diagnostics: { status: 'DISABLED', candidateCount: input.candidates.length } };
   const started = performance.now();
   try {
+    observeMaterialStage(input, started, 'material_shadow', 'start');
+    observeMaterialStage(input, started, 'material_input_preparation', 'start');
+    if (neverSettleResponseForTests !== undefined && neverSettleResponseForTests === input.response) {
+      await new Promise<never>(() => undefined);
+    }
     if (input.candidates.length > 200) throw new Error('candidate_bound');
     const unique = new Set(input.candidates.map((value) => value.candidateKey));
     if (unique.size !== input.candidates.length) throw new Error('candidate_mismatch');
@@ -71,22 +147,41 @@ export const runMlShadowComparison = async <T>(input: ShadowComparisonInput<T>):
     if (shadowKeys.length !== activeKeys.length || shadowKeys.some((value, index) => value !== activeKeys[index])) throw new Error('candidate_mismatch');
     const path = input.domain === 'material' ? env.recommendationMlMaterialArtifactPath : env.recommendationMlProjectArtifactPath;
     if (!path) throw new Error('artifact_path_missing');
+    observeMaterialStage(input, started, 'material_input_preparation', 'complete');
+    observeMaterialStage(input, started, 'portable_artifact_scoring', 'start');
     const model = await artifact(path, input.domain);
     const labels = new Map(input.candidates.map((value) => [normalize(value.categoryLabel), categoryKey(value.categoryId)]));
     const userFeatures: WeightedFeature[] = [];
     for (const interest of input.interests) { const key = labels.get(normalize(interest)); if (key) userFeatures.push([`interest:${key}`, 1]); }
     const candidates = input.candidates.map((value) => ({ candidateKey: value.candidateKey, features: itemFeatures(value, input.domain) }));
     const longTerm = scorePortableLightFm(model, userFeatures, candidates);
+    observeMaterialStage(input, started, 'portable_artifact_scoring', 'complete');
     const metadata = new Map(input.candidates.map((value) => [value.candidateKey, { categoryKey: categoryKey(value.categoryId), conceptKeys: value.conceptKeys ?? [], componentConceptKeys: value.componentConceptKeys ?? [] }]));
     for (const value of input.recentEntityMetadata ?? []) metadata.set(value.entityKey, { categoryKey: categoryKey(value.categoryId), conceptKeys: value.conceptKeys ?? [], componentConceptKeys: value.componentConceptKeys ?? [] });
+    observeMaterialStage(input, started, 'recent_intent_scoring', 'start');
     const recent = buildShortTermIntent(input.recentEvents, metadata, input.evaluationTimestamp);
     const recentScores = new Map(input.candidates.map((value) => [value.candidateKey, recentItemScore(metadata.get(value.candidateKey)!, recent.intent)]));
     const combined = combineNormalizedScores(longTerm.scored, recentScores, SHORT_TERM_CONFIG.recentBlend);
     const linearBlendTop = combined.map((value) => value.candidateKey);
-    const confidence = classifyRecentIntent(input.recentEvents, metadata, input.evaluationTimestamp);
+    observeMaterialStage(input, started, 'recent_intent_scoring', 'complete');
+    const candidateUniverse = new Set(input.candidates.map((value) => value.candidateKey));
+    injectFailure('confidence');
+    observeMaterialStage(input, started, 'burst_evidence_construction', 'start');
+    observeMaterialStage(input, started, 'confidence_classification', 'start');
+    observeMaterialStage(input, started, 'weighted_dominance_calculation', 'start');
+    const confidence = classifyRecentIntent(input.recentEvents, metadata, input.evaluationTimestamp, candidateUniverse);
+    observeMaterialStage(input, started, 'weighted_dominance_calculation', 'complete');
+    observeMaterialStage(input, started, 'confidence_classification', 'complete');
+    observeMaterialStage(input, started, 'burst_evidence_construction', 'complete');
+    injectFailure('dominance');
+    const scoringDurationMs = performance.now() - started;
     const fusionStarted = performance.now();
-    const fusion = input.domain === 'material' ? safeMaterialFusion(longTerm.scored, recentScores, confidence.confidence) : undefined;
-    if (fusion?.fallbackReason) logger.warn({ recommendationMlMaterialFusion: { fallbackReason: fusion.fallbackReason } }, 'material rank fusion fallback');
+    injectFailure('fusion');
+    const fusionStageObserver: MaterialFusionStageObserver | undefined = input.domain === 'material'
+      ? (stage, phase, iterationCount) => observeMaterialStage(input, started, stage, phase, iterationCount)
+      : undefined;
+    const fusion = input.domain === 'material' ? safeMaterialFusion(longTerm.scored, recentScores, confidence.confidence, fusionStageObserver) : undefined;
+    if (fusion?.fallbackReason) safeLogWarning({ userId: '[redacted]', recommendationMlMaterialFusion: { fallbackReason: redactErrorMessage(fusion.fallbackReason) } }, 'material rank fusion fallback');
     const fusionDurationMs = performance.now() - fusionStarted;
     const shadowTop = fusion?.ranking.map((value) => value.candidateKey) ?? linearBlendTop;
     const deduplicatedCurrent = [...new Set(input.currentTopKeys)];
@@ -94,20 +189,63 @@ export const runMlShadowComparison = async <T>(input: ShadowComparisonInput<T>):
       const current = [...new Set(section.candidateKeys)]; const allowed = new Set(current);
       const sectionLongTerm = longTerm.scored.filter((value) => allowed.has(value.candidateKey));
       const within = input.domain === 'material' && section.sectionKey === 'suggested_materials'
-        ? safeMaterialFusion(sectionLongTerm, new Map([...recentScores].filter(([key]) => allowed.has(key))), confidence.confidence).ranking.map((value) => value.candidateKey)
+        ? safeMaterialFusion(sectionLongTerm, new Map([...recentScores].filter(([key]) => allowed.has(key))), confidence.confidence, fusionStageObserver).ranking.map((value) => value.candidateKey)
         : sectionLongTerm.map((value) => value.candidateKey);
-      return { sectionKey: section.sectionKey, candidatePoolSize: current.length, top5Overlap: overlap(current, within, 5), top10Overlap: overlap(current, within, 10), fusedTop5Keys: within.slice(0, 5).map(privacyKey), fusedTop10Keys: within.slice(0, 10).map(privacyKey) };
+      return { sectionKey: section.sectionKey, candidatePoolSize: current.length, top5Overlap: overlap(current, within, 5), top10Overlap: overlap(current, within, 10), fusedTop5Keys: within.slice(0, 5).map(privacyKey) };
     });
     const itemFeatureCounts = input.candidates.map((value) => itemFeatures(value, input.domain).length);
-    const diagnostics: ShadowDiagnostics = { status: 'SCORED', candidateCount: input.candidates.length, top5Overlap: overlap(deduplicatedCurrent, shadowTop, 5), top10Overlap: overlap(deduplicatedCurrent, shadowTop, 10), rankCorrelation: rankCorrelation(deduplicatedCurrent.slice(0, 10), shadowTop.slice(0, 10)), duplicateCurrentCount: input.currentTopKeys.length - deduplicatedCurrent.length, deduplicatedCurrentCount: deduplicatedCurrent.length, sectionDiagnostics, recentEventInputCount: input.recentEvents.length, recentEvidenceCount: recent.evidenceCount, recentChannelApplied: recent.evidenceCount > 0, recentConfidence: confidence.confidence, recentUniqueMaterialCount: confidence.uniqueRecentMaterialCount, recentActiveLikeCount: confidence.activeRecentLikeCount, recentStrongActionCount: confidence.strongActionCount, recentCoherence: confidence.dominantEvidenceShare, qualifiedRecentCandidateCount: fusion?.qualifiedRecentCount, fusionDurationMs, scoringDurationMs: performance.now() - started, artifactVersion: model.model_version, missingFeatureCount: longTerm.missingFeatures.length, currentTop5Keys: deduplicatedCurrent.slice(0, 5).map(privacyKey), shadowTop5Keys: shadowTop.slice(0, 5).map(privacyKey), linearBlendTop5Keys: linearBlendTop.slice(0, 5).map(privacyKey), featureCoverage: { activeUserFeatures: userFeatures.length, zeroFeatureUser: userFeatures.length === 0, itemFeatureTotal: itemFeatureCounts.reduce((sum, value) => sum + value, 0), itemsOnlyCategory: itemFeatureCounts.filter((value) => value === 1).length, itemsWithoutApprovedFeatures: itemFeatureCounts.filter((value) => value === 0).length, categoryCovered: input.candidates.filter((value) => Boolean(value.categoryId)).length, conceptCovered: input.candidates.filter((value) => (value.conceptKeys?.length ?? 0) > 0).length, conditionCovered: input.candidates.filter((value) => Boolean(value.condition)).length, freeCovered: input.candidates.filter((value) => value.isFree !== undefined).length, pickupCovered: input.candidates.filter((value) => value.pickupAllowed !== undefined).length, deliveryCovered: input.candidates.filter((value) => value.deliveryAllowed !== undefined).length, difficultyCovered: input.candidates.filter((value) => Boolean(value.difficulty)).length, componentCovered: input.candidates.filter((value) => (value.componentConceptKeys?.length ?? 0) > 0).length } };
-    logger.info({ recommendationMlShadow: diagnostics, domain: input.domain }, 'recommendation ML shadow comparison');
-    observer?.({ ...diagnostics, domain: input.domain });
+    const outsideCandidateUniverse = new Set(input.recentEvents.filter((event) => metadata.has(event.entityKey) && !candidateUniverse.has(event.entityKey)).map((event) => event.entityKey)).size;
+    const dominantFeature = confidence.dominantFeature;
+    const matchesRecentDomain = (key: string) => {
+      const item = metadata.get(key); if (!item || !dominantFeature) return false;
+      return dominantFeature.startsWith('category:') ? `category:${item.categoryKey}` === dominantFeature : item.conceptKeys.some((value) => `concept:${value}` === dominantFeature);
+    };
+    const recentChannelTop = [...recentScores].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([key]) => key);
+    const longTermRanks = new Map(longTerm.scored.map((value, index) => [value.candidateKey, index + 1]));
+    const fusedRanks = new Map(shadowTop.map((key, index) => [key, index + 1]));
+    observeMaterialStage(input, started, 'rank_movement_diagnostics', 'start');
+    const rankMovement = (fusion?.qualifiedRecent ?? []).slice(0, 5).map((value) => { const item = metadata.get(value.candidateKey)!; return { candidateKeyHash: privacyKey(value.candidateKey), longTermRank: longTermRanks.get(value.candidateKey)!, recentRank: value.recentRank, fusedRank: fusedRanks.get(value.candidateKey)!, recentScore: value.recentScore, qualificationStatus: 'QUALIFIED' as const, mappedCategoryMatch: (recent.intent.get(`category:${item.categoryKey}`) ?? 0) > 0, mappedConceptMatch: item.conceptKeys.some((key) => (recent.intent.get(`concept:${key}`) ?? 0) > 0) }; });
+    observeMaterialStage(input, started, 'rank_movement_diagnostics', 'complete', rankMovement.length);
+    observeMaterialStage(input, started, 'diagnostics_construction', 'start');
+    const diagnostics: ShadowDiagnostics = { status: 'SCORED', candidateCount: input.candidates.length, top5Overlap: overlap(deduplicatedCurrent, shadowTop, 5), top10Overlap: overlap(deduplicatedCurrent, shadowTop, 10), rankCorrelation: rankCorrelation(deduplicatedCurrent.slice(0, 10), shadowTop.slice(0, 10)), duplicateCurrentCount: input.currentTopKeys.length - deduplicatedCurrent.length, deduplicatedCurrentCount: deduplicatedCurrent.length, sectionDiagnostics, recentEventInputCount: input.recentEvents.length, recentEvidenceCount: recent.evidenceCount, recentChannelApplied: recent.evidenceCount > 0, recentConfidence: confidence.confidence, confidenceSource: confidence.confidenceSource, recentUniqueMaterialCount: confidence.uniqueRecentMaterialCount, recentUniqueViewCount: confidence.uniqueRecentViewCount, recentActiveLikeCount: confidence.activeRecentLikeCount, recentStrongActionCount: confidence.strongActionCount, burstWindowHours: confidence.burstWindowHours, burstUniqueMaterialCount: confidence.burstUniqueMaterialCount, burstUniqueViewCount: confidence.burstUniqueViewCount, burstActiveLikeCount: confidence.burstActiveLikeCount, burstStrongActionCount: confidence.burstStrongActionCount, recentCoherence: confidence.dominantEvidenceShare, dominantCategoryShare: confidence.dominantCategoryShare, dominantConceptShare: confidence.dominantConceptShare, fullHistoryDominantCategoryShare: confidence.fullHistoryDominantCategoryShare, fullHistoryDominantConceptShare: confidence.fullHistoryDominantConceptShare, newestEvidenceAgeHours: confidence.newestEvidenceAgeDays === undefined ? undefined : confidence.newestEvidenceAgeDays * 24, qualifiedRecentCandidateCount: fusion?.qualifiedRecentCount, recentSlotsAllowedTop5: fusion?.recentSlotsAllowedTop5, recentSlotsUsedTop5: fusion?.recentSlotsUsedTop5, recentSlotsAllowedTop10: fusion?.recentSlotsAllowedTop10, recentSlotsUsedTop10: fusion?.recentSlotsUsedTop10, longTermTop5RecentDomainCount: longTerm.scored.slice(0, 5).filter((value) => matchesRecentDomain(value.candidateKey)).length, recentChannelTop5RecentDomainCount: recentChannelTop.slice(0, 5).filter(matchesRecentDomain).length, fusedTop5RecentDomainCount: shadowTop.slice(0, 5).filter(matchesRecentDomain).length, recentEvidenceRejectedCounts: { ...confidence.rejectedCounts, outsideCandidateUniverse, belowCandidateQualityThreshold: fusion?.belowCandidateQualityThresholdCount ?? 0 }, rankMovement, fusionDurationMs, scoringDurationMs, artifactVersion: model.model_version, featureSchemaVersion: model.feature_schema_version, missingFeatureCount: longTerm.missingFeatures.length, currentTop5Keys: deduplicatedCurrent.slice(0, 5).map(privacyKey), shadowTop5Keys: shadowTop.slice(0, 5).map(privacyKey), linearBlendTop5Keys: linearBlendTop.slice(0, 5).map(privacyKey), featureCoverage: { activeUserFeatures: userFeatures.length, zeroFeatureUser: userFeatures.length === 0, itemFeatureTotal: itemFeatureCounts.reduce((sum, value) => sum + value, 0), itemsOnlyCategory: itemFeatureCounts.filter((value) => value === 1).length, itemsWithoutApprovedFeatures: itemFeatureCounts.filter((value) => value === 0).length, categoryCovered: input.candidates.filter((value) => Boolean(value.categoryId)).length, conceptCovered: input.candidates.filter((value) => (value.conceptKeys?.length ?? 0) > 0).length, conditionCovered: input.candidates.filter((value) => Boolean(value.condition)).length, freeCovered: input.candidates.filter((value) => value.isFree !== undefined).length, pickupCovered: input.candidates.filter((value) => value.pickupAllowed !== undefined).length, deliveryCovered: input.candidates.filter((value) => value.deliveryAllowed !== undefined).length, difficultyCovered: input.candidates.filter((value) => Boolean(value.difficulty)).length, componentCovered: input.candidates.filter((value) => (value.componentConceptKeys?.length ?? 0) > 0).length } };
+    observeMaterialStage(input, started, 'diagnostics_construction', 'complete');
+    injectFailure('diagnostics');
+    if (env.nodeEnv === 'development' && input.domain === 'material') {
+      observeMaterialStage(input, started, 'diagnostics_serialization_redaction', 'start');
+      injectFailure('redaction');
+      observeMaterialStage(input, started, 'diagnostics_serialization_redaction', 'complete');
+      observeMaterialStage(input, started, 'diagnostics_logging', 'start');
+      injectFailure('logger');
+      logger.info({ userId: '[redacted]', recommendationMlMaterialShadowDiagnostics: { domain: input.domain, status: diagnostics.status, candidateCount: diagnostics.candidateCount, artifactVersion: diagnostics.artifactVersion ?? 'unknown', featureSchemaVersion: diagnostics.featureSchemaVersion ?? 'unknown', confidenceLevel: diagnostics.recentConfidence ?? 'NONE', confidenceSource: diagnostics.confidenceSource ?? 'NONE', uniqueRecentMaterialCount: diagnostics.recentUniqueMaterialCount ?? 0, uniqueRecentViewCount: diagnostics.recentUniqueViewCount ?? 0, activeRecentLikeCount: diagnostics.recentActiveLikeCount ?? 0, strongActionCount: diagnostics.recentStrongActionCount ?? 0, burstWindowHours: diagnostics.burstWindowHours ?? 24, burstUniqueMaterialCount: diagnostics.burstUniqueMaterialCount ?? 0, burstUniqueViewCount: diagnostics.burstUniqueViewCount ?? 0, burstActiveLikeCount: diagnostics.burstActiveLikeCount ?? 0, burstStrongActionCount: diagnostics.burstStrongActionCount ?? 0, dominantCategoryShare: diagnostics.dominantCategoryShare ?? 0, dominantConceptShare: diagnostics.dominantConceptShare ?? 0, burstDominantCategoryShare: diagnostics.dominantCategoryShare ?? 0, burstDominantConceptShare: diagnostics.dominantConceptShare ?? 0, fullHistoryDominantCategoryShare: diagnostics.fullHistoryDominantCategoryShare ?? 0, fullHistoryDominantConceptShare: diagnostics.fullHistoryDominantConceptShare ?? 0, newestEvidenceAgeHours: diagnostics.newestEvidenceAgeHours ?? -1, qualifiedRecentCandidateCount: diagnostics.qualifiedRecentCandidateCount ?? 0, recentSlotsAllowedTop5: diagnostics.recentSlotsAllowedTop5 ?? 0, recentSlotsUsedTop5: diagnostics.recentSlotsUsedTop5 ?? 0, recentSlotsAllowedTop10: diagnostics.recentSlotsAllowedTop10 ?? 0, recentSlotsUsedTop10: diagnostics.recentSlotsUsedTop10 ?? 0, longTermTop5RecentDomainCount: diagnostics.longTermTop5RecentDomainCount ?? 0, recentChannelTop5RecentDomainCount: diagnostics.recentChannelTop5RecentDomainCount ?? 0, fusedTop5RecentDomainCount: diagnostics.fusedTop5RecentDomainCount ?? 0, top5OverlapWithDeterministic: diagnostics.top5Overlap ?? 0, top10OverlapWithDeterministic: diagnostics.top10Overlap ?? 0, recentEvidenceRejectedCounts: diagnostics.recentEvidenceRejectedCounts!, scorerDurationMs: diagnostics.scoringDurationMs ?? 0, fusionDurationMs: diagnostics.fusionDurationMs ?? 0, rankMovement: diagnostics.rankMovement ?? [] } }, 'material recommendation shadow diagnostics');
+      observeMaterialStage(input, started, 'diagnostics_logging', 'complete');
+    } else logger.info({ userId: '[redacted]', recommendationMlShadow: { domain: input.domain, status: diagnostics.status, candidateCount: diagnostics.candidateCount, artifactVersion: diagnostics.artifactVersion ?? 'unknown', featureSchemaVersion: diagnostics.featureSchemaVersion ?? 'unknown', scorerDurationMs: diagnostics.scoringDurationMs ?? 0, fusionDurationMs: diagnostics.fusionDurationMs ?? 0 } }, 'recommendation ML shadow comparison');
+    safeObserve({ ...diagnostics, domain: input.domain });
+    observeMaterialStage(input, started, 'material_shadow', 'complete');
     return { response: input.response, diagnostics };
   } catch (error) {
-    const fallbackReason = error instanceof Error ? error.message : 'unknown_error';
-    const diagnostics: ShadowDiagnostics = { status: 'FALLBACK', fallbackReason, candidateCount: input.candidates.length, scoringDurationMs: performance.now() - started };
-    logger.warn({ recommendationMlShadow: diagnostics, domain: input.domain }, 'recommendation ML shadow fallback');
-    observer?.({ ...diagnostics, domain: input.domain });
+    const diagnostics = reportMlShadowFallback(input.domain, input.candidates.length, error);
+    safeObserve({ ...diagnostics, domain: input.domain });
     return { response: input.response, diagnostics };
+  }
+};
+
+export const runMlShadowComparison = async <T>(input: ShadowComparisonInput<T>): Promise<{ response: T; diagnostics: ShadowDiagnostics }> => {
+  const timeoutTestEnabled = neverSettleResponseForTests === input.response;
+  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled) return runMlShadowComparisonInternal(input);
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutHandle = setTimeout(() => reject(new Error(`${input.domain}_shadow_timeout`)), ML_SHADOW_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([runMlShadowComparisonInternal(input), timeout]);
+  } catch (error) {
+    if (error instanceof Error && error.message === `${input.domain}_shadow_timeout`) {
+      safeLogWarning({ operation: 'recommendation.ml-shadow.timeout', domain: input.domain, fallbackReason: `${input.domain}_shadow_timeout` }, `${input.domain} shadow timeout`);
+    }
+    const diagnostics = reportMlShadowFallback(input.domain, input.candidates.length, error);
+    safeObserve({ ...diagnostics, domain: input.domain });
+    return { response: input.response, diagnostics };
+  } finally {
+    if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
   }
 };
