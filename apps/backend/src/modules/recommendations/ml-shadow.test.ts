@@ -92,7 +92,7 @@ test('material serving cannot bypass a disabled shadow flag', async () => {
   env.recommendationMlMaterialServingEnabled = prior.materialServing;
 });
 
-test('project shadow recent intent diagnostics stay privacy-safe and serving remains disabled', async () => {
+test('project shadow recent intent diagnostics stay privacy-safe without mutating the response', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
@@ -202,22 +202,79 @@ test('project shadow failure does not change material serving path', async () =>
   }
 });
 
-test('project serving flag cannot activate project ordering in Slice 4H-B', async () => {
+test('project serving cannot bypass a disabled shadow flag', async () => {
+  const prior = { enabled: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+  env.recommendationMlShadowEnabled = false;
+  env.recommendationMlProjectServingEnabled = true;
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  clearMlArtifactCacheForTests();
+  const response = { sections: [{ key: 'suggested_projects', items: ['deterministic-a'] }] };
+  const result = await runMlShadowComparison({
+    response,
+    domain: 'project',
+    interests: [],
+    candidates: [{ candidateKey: 'project-a', categoryId: 'fixture-category', categoryLabel: 'Fixture', difficulty: 'BEGINNER' }],
+    activeCandidateKeys: ['project-a'],
+    currentTopKeys: ['project-a'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-07-19T00:00:00Z',
+  });
+  assert.strictEqual(result.response, response);
+  assert.equal(result.diagnostics.status, 'DISABLED');
+  assert.equal(result.rankedCandidateKeys, undefined);
+  env.recommendationMlShadowEnabled = prior.enabled;
+  env.recommendationMlProjectServingEnabled = prior.projectServing;
+  env.recommendationMlProjectArtifactPath = prior.projectPath;
+  clearMlArtifactCacheForTests();
+});
+
+test('project serving returns fused ranking only when shadow, serving, and readiness are all READY', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
   clearMlArtifactCacheForTests();
   try {
     const response = { sections: [{ key: 'suggested_projects', items: ['deterministic-a', 'deterministic-b'] }] };
-    const candidates = [
-      { candidateKey: 'project-a', categoryId: 'fixture-category-a', categoryLabel: 'Fixture A', difficulty: 'BEGINNER' },
-      { candidateKey: 'project-b', categoryId: 'fixture-category-b', categoryLabel: 'Fixture B', difficulty: 'INTERMEDIATE' },
-    ];
-    const result = await runMlShadowComparison({ response, domain: 'project', interests: [], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: ['project-a', 'project-b'], recentEvents: [], evaluationTimestamp: '2026-07-19T00:00:00Z' });
-    assert.strictEqual(result.response, response);
-    assert.equal(result.rankedCandidateKeys, undefined);
-    assert.equal(result.diagnostics.projectReadinessStatus, 'NOT_READY');
+    const notReady = await runMlShadowComparison({
+      response,
+      domain: 'project',
+      interests: [],
+      candidates: [
+        { candidateKey: 'project-a', categoryId: 'fixture-category-a', categoryLabel: 'Fixture A', difficulty: 'BEGINNER' },
+        { candidateKey: 'project-b', categoryId: 'fixture-category-b', categoryLabel: 'Fixture B', difficulty: 'INTERMEDIATE' },
+      ],
+      activeCandidateKeys: ['project-a', 'project-b'],
+      currentTopKeys: ['project-a', 'project-b'],
+      recentEvents: [],
+      evaluationTimestamp: '2026-07-19T00:00:00Z',
+    });
+    assert.strictEqual(notReady.response, response);
+    assert.equal(notReady.rankedCandidateKeys, undefined);
+    assert.equal(notReady.diagnostics.projectReadinessStatus, 'NOT_READY');
+
+    env.recommendationMlProjectServingEnabled = false;
+    clearMlArtifactCacheForTests();
+    const shadowOnly = await runMlShadowComparison({
+      response,
+      domain: 'project',
+      interests: ['Electronics & Components'],
+      candidates: [{
+        candidateKey: 'mapped-project',
+        categoryId: '8d9dfae37dba117ec300f83c2fad0b25b2114b204b6e9c621d5a94e93051bf94',
+        categoryLabel: 'Electronics & Components',
+        difficulty: 'BEGINNER',
+        conceptKeys: ['project-topic:electronics'],
+        componentConceptKeys: ['component:arduino-board'],
+      }],
+      activeCandidateKeys: ['mapped-project'],
+      currentTopKeys: ['mapped-project'],
+      recentEvents: [],
+      evaluationTimestamp: '2026-07-19T00:00:00Z',
+    });
+    assert.strictEqual(shadowOnly.response, response);
+    assert.equal(shadowOnly.rankedCandidateKeys, undefined);
+    assert.equal(shadowOnly.diagnostics.projectReadinessStatus, 'NOT_READY');
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
     env.recommendationMlProjectServingEnabled = prior.projectServing;

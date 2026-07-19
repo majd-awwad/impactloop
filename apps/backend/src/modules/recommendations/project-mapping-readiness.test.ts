@@ -147,7 +147,7 @@ test('live PostgreSQL runtime projects map completely to runtime-v2 artifact', a
   assert.equal(counts.artifactMappedCandidateCount, 29);
 });
 
-test('READY executes recent intent and fusion while public ordering stays disabled', async () => {
+test('READY executes recent intent and fusion and exposes fused ranking when serving is enabled', async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
     projectServing: env.recommendationMlProjectServingEnabled,
@@ -183,7 +183,8 @@ test('READY executes recent intent and fusion while public ordering stays disabl
     assert.equal(profileOnly.diagnostics.projectReadinessStatus, 'READY');
     assert.equal(profileOnly.diagnostics.recentConfidence, 'NONE');
     assert.equal(profileOnly.diagnostics.recentSlotsUsedTop5, 0);
-    assert.equal(profileOnly.rankedCandidateKeys, undefined);
+    assert.ok(Array.isArray(profileOnly.rankedCandidateKeys));
+    assert.equal(profileOnly.rankedCandidateKeys!.length, candidates.length);
 
     const coherent = await runMlShadowComparison({
       response,
@@ -203,7 +204,9 @@ test('READY executes recent intent and fusion while public ordering stays disabl
     assert.equal(coherent.diagnostics.projectReadinessStatus, 'READY');
     assert.ok(['MEDIUM', 'HIGH'].includes(String(coherent.diagnostics.recentConfidence)));
     assert.ok((coherent.diagnostics.recentFusionDurationMs ?? 0) > 0);
-    assert.equal(coherent.rankedCandidateKeys, undefined);
+    assert.ok(Array.isArray(coherent.rankedCandidateKeys));
+    assert.equal(coherent.rankedCandidateKeys!.length, candidates.length);
+    assert.strictEqual(coherent.response, response);
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
     env.recommendationMlProjectServingEnabled = prior.projectServing;

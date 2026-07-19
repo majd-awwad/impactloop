@@ -64,7 +64,8 @@ import {
   type RecommendationCandidateTraceInput,
   type RecommendationGenerationMetadata,
 } from '../recommendation-events/recommendation-events.service.js';
-import { reportMlShadowFallback, runMlShadowComparison } from '../recommendations/ml-shadow.service.js';
+import { reportMlShadowFallback, runMlShadowComparison, type MlShadowComparisonResult } from '../recommendations/ml-shadow.service.js';
+import { buildServedSuggestedProjectsItems } from '../recommendations/project-runtime-candidate-mapping.js';
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -101,6 +102,82 @@ const buildMaterialShadowCandidates = (
     deliveryAllowed: material.deliveryAllowed,
     conceptKeys: materialConcepts.get(material.id) ?? [],
   }));
+
+const buildProjectShadowCandidates = (
+  context: LearnerHomeContext,
+  shadowConcepts: typeof emptyMlShadowConcepts,
+) => context.projects.map((project) => ({
+  candidateKey: project.id,
+  categoryId: project.categoryId,
+  categoryLabel: project.categoryNameEn,
+  difficulty: project.difficulty,
+  conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
+  componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
+}));
+
+const buildProjectShadowSections = (
+  sections: LearnerHomeSection[],
+  domain: 'material' | 'project',
+) => sections.map((section) => ({
+  sectionKey: section.key,
+  candidateKeys: section.items.flatMap((item) => {
+    if (domain === 'material' && item.type === 'material') return [String(item.material.id ?? '')];
+    if (domain === 'project' && item.type === 'project') return [String(item.project.id ?? '')];
+    return [];
+  }).filter(Boolean),
+})).filter((section) => section.candidateKeys.length > 0);
+
+const buildProjectShadowInput = (
+  context: LearnerHomeContext,
+  response: LearnerHomeResponse,
+  shadowConcepts: typeof emptyMlShadowConcepts,
+) => ({
+  response,
+  domain: 'project' as const,
+  interests: context.interests,
+  candidates: buildProjectShadowCandidates(context, shadowConcepts),
+  currentTopKeys: response.sections.flatMap((section) => section.items)
+    .flatMap((item) => (item.type === 'project' ? [String(item.project.id ?? '')] : []))
+    .filter(Boolean),
+  currentSections: buildProjectShadowSections(response.sections, 'project'),
+  activeCandidateKeys: context.projects.map((project) => project.id),
+  recentEvents: context.behavior.recentRecommendationEvents ?? [],
+  recentEntityMetadata: context.projects.map((project) => ({
+    entityKey: project.id,
+    candidateKey: project.id,
+    categoryId: project.categoryId,
+    categoryLabel: project.categoryNameEn,
+    conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
+    componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
+  })),
+  evaluationTimestamp: new Date().toISOString(),
+});
+
+const applyServedSuggestedProjects = (
+  context: LearnerHomeContext,
+  response: LearnerHomeResponse,
+  projectShadow: MlShadowComparisonResult<LearnerHomeResponse> | undefined,
+  limit: number,
+): LearnerHomeResponse => {
+  if (
+    projectShadow?.diagnostics.status !== 'SCORED'
+    || projectShadow.diagnostics.projectReadinessStatus !== 'READY'
+    || !projectShadow.rankedCandidateKeys
+  ) {
+    return response;
+  }
+  try {
+    const items = buildSuggestedProjectsItems(context, limit, projectShadow.rankedCandidateKeys);
+    return {
+      ...response,
+      sections: response.sections.map((section) =>
+        section.key === 'suggested_projects' ? { ...section, items } : section,
+      ),
+    };
+  } catch {
+    return response;
+  }
+};
 
 type LearnerHomeCacheLoader<T> = (userId: string) => Promise<T>;
 
@@ -902,6 +979,7 @@ const rankProjects = (
 const buildSuggestedProjectsItems = (
   context: LearnerHomeContext,
   limit: number,
+  rankedCandidateKeys?: string[],
 ): LearnerHomeProjectItem[] => {
   const availableMaterials = context.materials.filter(
     (material) =>
@@ -916,6 +994,27 @@ const buildSuggestedProjectsItems = (
       behaviorAffinityProfile: context.behaviorAffinityProfile,
       behavior: context.behavior,
     });
+
+  if (rankedCandidateKeys) {
+    const projectsById = new Map(context.projects.map((project) => [project.id, project]));
+    return buildServedSuggestedProjectsItems({
+      rankedCandidateKeys,
+      savedProjectIds: context.savedProjectIds,
+      limit,
+      buildProjectItem: (projectId) => {
+        const project = projectsById.get(projectId);
+        if (!project) return undefined;
+        const scored = scoreProject(project);
+        if (scored.score <= 0) return undefined;
+        return {
+          type: 'project' as const,
+          score: scored.score,
+          reasons: scored.reasons,
+          project: project.mapped,
+        };
+      },
+    });
+  }
 
   const unsavedProjects = context.projects.filter(
     (project) => !context.savedProjectIds.has(project.id),
@@ -1029,6 +1128,7 @@ const buildSectionItems = async (
   offset = 0,
   preScoredMaterials?: PreScoredMaterialEntry[],
   rankedCandidateKeys?: string[],
+  rankedProjectCandidateKeys?: string[],
 ): Promise<{
   title: string;
   subtitle: string;
@@ -1103,7 +1203,7 @@ const buildSectionItems = async (
       };
     }
     case 'suggested_projects': {
-      const items = buildSuggestedProjectsItems(context, limit);
+      const items = buildSuggestedProjectsItems(context, limit, rankedProjectCandidateKeys);
       return {
         title: SECTION_META.suggested_projects.title,
         subtitle: resolveSuggestedProjectsSubtitle({
@@ -1265,6 +1365,67 @@ export const getLearnerHomeSection = async (
       }
     } catch (error) {
       reportMlShadowFallback('material', context.materials.length, error);
+    }
+  }
+
+  if (sectionKey === 'suggested_projects') {
+    try {
+      const shadowConcepts = env.recommendationMlShadowEnabled
+        ? await learnerHomeRepository.loadMlShadowConcepts(
+            context.materials.map((material) => material.id),
+            context.projects.map((project) => project.id),
+          )
+        : emptyMlShadowConcepts;
+      const shadowResponse: LearnerHomeResponse = {
+        profileCompletion: {
+          hasInterests: context.interests.length > 0,
+          hasSavedLocation:
+            (context.savedLocation.city?.trim().length ?? 0) > 0 ||
+            (context.savedLocation.area?.trim().length ?? 0) > 0,
+          hasSavedProjects: context.hasSavedProjects,
+          hasActivity: context.hasActivity,
+        },
+        sections: [{
+          key: 'suggested_projects',
+          ...SECTION_META.suggested_projects,
+          items: sectionResponse.items,
+        }],
+      };
+      const projectShadow = await runMlShadowComparison(
+        buildProjectShadowInput(context, shadowResponse, shadowConcepts),
+      );
+      if (
+        projectShadow.diagnostics.status === 'SCORED'
+        && projectShadow.diagnostics.projectReadinessStatus === 'READY'
+        && projectShadow.rankedCandidateKeys
+      ) {
+        try {
+          built = await profiler.time('buildServedSuggestedProjectsSection', () =>
+            buildSectionItems(
+              context,
+              userId,
+              sectionKey,
+              limit,
+              offset,
+              preScoredMaterials,
+              undefined,
+              projectShadow.rankedCandidateKeys,
+            ),
+          );
+          sectionResponse = {
+            ...sectionResponse,
+            title: built.title,
+            subtitle: built.subtitle,
+            items: built.items,
+            nextOffset: built.nextOffset,
+            hasMore: built.hasMore,
+          };
+        } catch {
+          // Fail closed to the deterministic section response.
+        }
+      }
+    } catch (error) {
+      reportMlShadowFallback('project', context.projects.length, error);
     }
   }
 
@@ -1457,24 +1618,7 @@ async function loadLearnerHomeUncached(
       })),
       evaluationTimestamp: new Date().toISOString(),
     }),
-    runMlShadowComparison({
-      response,
-      domain: 'project',
-      interests: context.interests,
-      candidates: context.projects.map((project) => ({
-        candidateKey: project.id,
-        categoryId: project.categoryId,
-        categoryLabel: project.categoryNameEn,
-        difficulty: project.difficulty,
-        conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
-        componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
-      })),
-      currentTopKeys: currentTopKeys('project'),
-      currentSections: currentSections('project'),
-      activeCandidateKeys: context.projects.map((project) => project.id),
-      recentEvents: context.behavior.recentRecommendationEvents ?? [],
-      evaluationTimestamp: new Date().toISOString(),
-    }),
+    runMlShadowComparison(buildProjectShadowInput(context, response, shadowConcepts)),
     ]);
     const materialShadow = shadowResults[0];
     if (materialShadow?.status === 'fulfilled' && materialShadow.value.diagnostics.status === 'SCORED' && materialShadow.value.rankedCandidateKeys) {
@@ -1492,6 +1636,15 @@ async function loadLearnerHomeUncached(
             : section,
         ),
       };
+    }
+    const projectShadow = shadowResults[1];
+    if (projectShadow?.status === 'fulfilled') {
+      response = applyServedSuggestedProjects(
+        context,
+        response,
+        projectShadow.value,
+        SECTION_LIMITS.suggested_projects,
+      );
     }
   } catch (error) {
     reportMlShadowFallback('material', context.materials.length, error);
@@ -1525,6 +1678,8 @@ const learnerHomeCacheKey = (userId: string): string => [
   env.recommendationMlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC',
   env.recommendationMlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
   env.recommendationMlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
+  env.recommendationMlProjectServingEnabled ? 'PROJECT_SERVED' : 'PROJECT_NOT_SERVED',
+  env.recommendationMlProjectArtifactPath || 'NO_PROJECT_ARTIFACT',
 ].join('\u0000');
 
 const learnerHomeCache = createLearnerHomeCache(
