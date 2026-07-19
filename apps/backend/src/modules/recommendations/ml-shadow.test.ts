@@ -79,15 +79,30 @@ test('flags default disabled and shadow returns exact response object', async ()
   env.recommendationMlShadowEnabled = priorEnabled;
 });
 
+test('material serving cannot bypass a disabled shadow flag', async () => {
+  const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled };
+  env.recommendationMlShadowEnabled = false;
+  env.recommendationMlMaterialServingEnabled = true;
+  const response = { ordering: ['deterministic'] };
+  const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates: [], activeCandidateKeys: [], currentTopKeys: [], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' });
+  assert.strictEqual(result.response, response);
+  assert.equal(result.diagnostics.status, 'DISABLED');
+  assert.equal(result.rankedCandidateKeys, undefined);
+  env.recommendationMlShadowEnabled = prior.enabled;
+  env.recommendationMlMaterialServingEnabled = prior.materialServing;
+});
+
 test('enabled shadow scores bounded candidates and failures safely fall back', async () => {
-  const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
-  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); clearMlArtifactCacheForTests();
+  const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled, projectServing: env.recommendationMlProjectServingEnabled, materialPath: env.recommendationMlMaterialArtifactPath, projectPath: env.recommendationMlProjectArtifactPath };
+  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialServingEnabled = true; env.recommendationMlProjectServingEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json'); clearMlArtifactCacheForTests();
   const response = { visible: ['x'] };
   const input = { response, domain: 'material' as const, interests: ['Electronics & Components'], candidates: [{ candidateKey: 'x', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', condition: 'GOOD', isFree: true, pickupAllowed: true, deliveryAllowed: false }], activeCandidateKeys: ['x'], currentTopKeys: ['x'], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' };
-  const scored = await runMlShadowComparison(input); assert.strictEqual(scored.response, response); assert.equal(scored.diagnostics.status, 'SCORED');
+  const scored = await runMlShadowComparison(input); assert.strictEqual(scored.response, response); assert.equal(scored.diagnostics.status, 'SCORED'); assert.deepEqual(scored.rankedCandidateKeys, ['x']);
+  const projectScored = await runMlShadowComparison({ ...input, response: { visible: ['project'] }, domain: 'project', candidates: [{ candidateKey: 'p', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', difficulty: 'BEGINNER' }], activeCandidateKeys: ['p'], currentTopKeys: ['p'] });
+  assert.equal(projectScored.diagnostics.status, 'SCORED'); assert.equal(projectScored.rankedCandidateKeys, undefined);
   env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'missing.json'); clearMlArtifactCacheForTests();
   const failed = await runMlShadowComparison(input); assert.strictEqual(failed.response, response); assert.equal(failed.diagnostics.status, 'FALLBACK');
-  env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialArtifactPath = prior.path; clearMlArtifactCacheForTests();
+  env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialServingEnabled = prior.materialServing; env.recommendationMlProjectServingEnabled = prior.projectServing; env.recommendationMlMaterialArtifactPath = prior.materialPath; env.recommendationMlProjectArtifactPath = prior.projectPath; clearMlArtifactCacheForTests();
 });
 
 test('material development diagnostics are sanitized and preserve the deterministic response', async () => {
@@ -112,14 +127,11 @@ test('material development diagnostics are sanitized and preserve the determinis
   assert.ok((diagnostic.rankMovement?.length ?? 0) <= 5);
   const serialized = JSON.stringify(diagnostic);
   for (const prohibited of ['userId', 'email', 'title', 'description', 'rawMaterialId', 'featureVector', 'embedding', 'interactionHistory', 'candidate-0']) assert.doesNotMatch(serialized, new RegExp(prohibited, 'i'));
-  const logged = logLines.flatMap((line) => line.trim().split('\n')).filter(Boolean).map((line) => JSON.parse(line)).find((entry) => entry.recommendationMlMaterialShadowDiagnostics)?.recommendationMlMaterialShadowDiagnostics;
-  assert.equal(logged.confidenceLevel, 'HIGH'); assert.equal(logged.confidenceSource, 'VIEW_BURST'); assert.equal(logged.burstWindowHours, 24); assert.equal(logged.burstDominantCategoryShare, 1); assert.equal(logged.fullHistoryDominantCategoryShare, 1); assert.equal(logged.domain, 'material'); assert.ok(Array.isArray(logged.rankMovement));
-  const loggedText = JSON.stringify(logged); assert.doesNotMatch(loggedText, /\[filtered\]|candidate-0|userId|email|title|description|embedding/i);
+  const logged = logLines.flatMap((line) => line.trim().split('\n')).filter(Boolean).map((line) => JSON.parse(line)).find((entry) => entry.operation === 'recommendation.ml.material-decision');
+  assert.equal(logged.mode, 'SHADOW'); assert.equal(logged.confidenceLevel, 'HIGH'); assert.equal(logged.confidenceSource, 'VIEW_BURST'); assert.equal(logged.domain, 'material'); assert.ok(logged.totalRecommendationDurationMs >= 0);
+  const loggedText = JSON.stringify(logged); assert.doesNotMatch(loggedText, /\[filtered\]|candidate-0|userId|email|title|description|embedding|rankMovement/i);
   const stageEntries = logLines.flatMap((line) => line.trim().split('\n')).filter(Boolean).map((line) => JSON.parse(line)).flatMap((entry) => entry.operation === 'recommendation.ml-shadow.material-stage' && typeof entry.event === 'string' ? [JSON.parse(entry.event)] : []);
-  for (const stage of ['material_shadow', 'material_input_preparation', 'portable_artifact_scoring', 'recent_intent_scoring', 'burst_evidence_construction', 'weighted_dominance_calculation', 'confidence_classification', 'recent_candidate_qualification', 'rank_fusion', 'rank_movement_diagnostics', 'diagnostics_construction', 'diagnostics_serialization_redaction', 'diagnostics_logging']) {
-    assert.ok(stageEntries.some((entry) => entry.stage === stage && entry.phase === 'start'), `missing ${stage} start marker`);
-    assert.ok(stageEntries.some((entry) => entry.stage === stage && entry.phase === 'complete'), `missing ${stage} complete marker`);
-  }
+  assert.equal(stageEntries.length, 0);
   setMlShadowObserverForTests(undefined); setLoggerDestinationForTests(null); resetLoggerForTests(); env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialArtifactPath = prior.path; clearMlArtifactCacheForTests();
 });
 

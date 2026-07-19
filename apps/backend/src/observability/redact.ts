@@ -138,6 +138,9 @@ const ALLOWED_LOG_KEYS = new Set([
   'qualificationStatus',
   'mappedCategoryMatch',
   'mappedConceptMatch',
+  'mode',
+  'servedItemCount',
+  'totalRecommendationDurationMs',
 ]);
 
 const isSensitiveKey = (key: string): boolean => SENSITIVE_KEY_PATTERN.test(key);

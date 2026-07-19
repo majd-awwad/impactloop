@@ -80,6 +80,28 @@ const RANK_POOL_SIZE = 48;
 
 const LEARNER_HOME_CACHE_TTL_MS = 45_000;
 
+const emptyMlShadowConcepts = {
+  materialConcepts: new Map<string, string[]>(),
+  projectConcepts: new Map<string, string[]>(),
+  projectComponentConcepts: new Map<string, string[]>(),
+};
+
+const buildMaterialShadowCandidates = (
+  context: LearnerHomeContext,
+  materialConcepts: Map<string, string[]>,
+) => context.materials
+  .filter((material) => material.status === 'AVAILABLE' && material.availableQuantity > 0)
+  .map((material) => ({
+    candidateKey: material.id,
+    categoryId: material.categoryId,
+    categoryLabel: material.categoryNameEn,
+    condition: typeof material.mapped.condition === 'string' ? material.mapped.condition : undefined,
+    isFree: material.isFree,
+    pickupAllowed: material.pickupAllowed,
+    deliveryAllowed: material.deliveryAllowed,
+    conceptKeys: materialConcepts.get(material.id) ?? [],
+  }));
+
 type LearnerHomeCacheLoader<T> = (userId: string) => Promise<T>;
 
 type LearnerHomeCacheEntry<T> = {
@@ -114,6 +136,7 @@ type LearnerHomeCacheController<T> = {
 const createLearnerHomeCache = <T>(
   load: LearnerHomeCacheLoader<T>,
   now: () => number = Date.now,
+  resolveCacheKey: (userId: string) => string = (userId) => userId,
 ): LearnerHomeCacheController<T> => {
   const cache = new Map<string, LearnerHomeCacheEntry<T>>();
   const inFlight = new Map<string, LearnerHomeInFlightEntry<T>>();
@@ -127,34 +150,35 @@ const createLearnerHomeCache = <T>(
     generationByKey.get(userId) ?? 0;
 
   const getWithState = async (userId: string): Promise<LearnerHomeCacheRead<T>> => {
-    const cached = cache.get(userId);
+    const cacheKey = resolveCacheKey(userId);
+    const cached = cache.get(cacheKey);
     if (cached && cached.expiresAt > now()) {
       return { payload: cached.payload, state: 'HIT' };
     }
 
     if (cached) {
-      cache.delete(userId);
+      cache.delete(cacheKey);
     }
 
-    const existing = inFlight.get(userId);
+    const existing = inFlight.get(cacheKey);
     if (existing) {
       return { payload: await existing.promise, state: 'SINGLE_FLIGHT' };
     }
 
-    const generationAtStart = currentGeneration(userId);
+    const generationAtStart = currentGeneration(cacheKey);
     let promise!: Promise<T>;
 
     // Queue the loader behind the map insertion so no asynchronous database
     // work can begin before concurrent callers can observe the flight.
     promise = Promise.resolve().then(async () => {
       const payload = await load(userId);
-      const currentFlight = inFlight.get(userId);
+      const currentFlight = inFlight.get(cacheKey);
 
       if (
         currentFlight?.promise === promise &&
-        currentGeneration(userId) === generationAtStart
+        currentGeneration(cacheKey) === generationAtStart
       ) {
-        cache.set(userId, {
+        cache.set(cacheKey, {
           expiresAt: now() + LEARNER_HOME_CACHE_TTL_MS,
           payload,
         });
@@ -164,14 +188,14 @@ const createLearnerHomeCache = <T>(
       return payload;
     });
 
-    inFlight.set(userId, { promise });
+    inFlight.set(cacheKey, { promise });
 
     try {
       return { payload: await promise, state: 'MISS' };
     } finally {
-      if (inFlight.get(userId)?.promise === promise) {
-        inFlight.delete(userId);
-        generationByKey.delete(userId);
+      if (inFlight.get(cacheKey)?.promise === promise) {
+        inFlight.delete(cacheKey);
+        generationByKey.delete(cacheKey);
       }
     }
   };
@@ -180,12 +204,19 @@ const createLearnerHomeCache = <T>(
     (await getWithState(userId)).payload;
 
   const invalidate = (userId: string): void => {
-    cache.delete(userId);
+    const keyPrefix = `${userId}\u0000`;
+    const keys = new Set([
+      ...cache.keys(),
+      ...inFlight.keys(),
+    ].filter((key) => key === userId || key.startsWith(keyPrefix)));
 
-    if (inFlight.has(userId)) {
-      generationByKey.set(userId, currentGeneration(userId) + 1);
-    } else {
-      generationByKey.delete(userId);
+    for (const cacheKey of keys) {
+      cache.delete(cacheKey);
+      if (inFlight.has(cacheKey)) {
+        generationByKey.set(cacheKey, currentGeneration(cacheKey) + 1);
+      } else {
+        generationByKey.delete(cacheKey);
+      }
     }
   };
 
@@ -662,6 +693,23 @@ type RankedMaterialEntry = {
   ownerId: string;
 };
 
+const reorderRankedMaterialEntries = (
+  entries: RankedMaterialEntry[],
+  rankedCandidateKeys?: string[],
+): RankedMaterialEntry[] => {
+  if (!rankedCandidateKeys) return entries;
+
+  const ranks = new Map(rankedCandidateKeys.map((key, index) => [key, index]));
+  const originalOrder = new Map(entries.map((entry, index) => [entry, index]));
+  const itemKey = (entry: RankedMaterialEntry) => String(entry.material.id ?? '');
+
+  return [...entries].sort((left, right) =>
+    (ranks.get(itemKey(left)) ?? Number.MAX_SAFE_INTEGER) -
+      (ranks.get(itemKey(right)) ?? Number.MAX_SAFE_INTEGER) ||
+    originalOrder.get(left)! - originalOrder.get(right)!,
+  );
+};
+
 const toMaterialItem = ({
   ownerId: _ownerId,
   tier: _tier,
@@ -677,13 +725,18 @@ const rankMaterialsFromPreScored = (
   useDiversityCap: boolean,
   useTieredSuggestedRanking = false,
   browseAllTierSort = false,
+  rankedCandidateKeys?: string[],
 ): LearnerHomeMaterialItem[] => {
-  const selected = rankPreScoredMaterialEntries(
-    entries,
-    scoreKey,
-    useTieredSuggestedRanking,
-    browseAllTierSort,
-  ).slice(0, limit);
+  const rankedEntries = reorderRankedMaterialEntries(
+    rankPreScoredMaterialEntries(
+      entries,
+      scoreKey,
+      useTieredSuggestedRanking,
+      browseAllTierSort,
+    ),
+    rankedCandidateKeys,
+  );
+  const selected = rankedEntries.slice(0, limit);
 
   if (useDiversityCap) {
     return applyDiversityCap(selected, limit, (item) => item.ownerId).map(
@@ -699,12 +752,11 @@ const rankMaterialsPageFromPreScored = (
   scoreKey: keyof PreScoredMaterialEntry['scores'],
   limit: number,
   offset: number,
+  rankedCandidateKeys?: string[],
 ): { items: LearnerHomeMaterialItem[]; hasMore: boolean; nextOffset: number | null } => {
-  const sorted = rankPreScoredMaterialEntries(
-    entries,
-    scoreKey,
-    true,
-    true,
+  const sorted = reorderRankedMaterialEntries(
+    rankPreScoredMaterialEntries(entries, scoreKey, true, true),
+    rankedCandidateKeys,
   );
   const pageEntries = sorted.slice(offset, offset + limit);
   const items = dedupeMaterialItems(pageEntries.map(toMaterialItem), limit);
@@ -722,6 +774,7 @@ const buildRankedHomeMaterialSections = (
   context: LearnerHomeContext,
   preScoredMaterials: PreScoredMaterialEntry[],
   profiler?: ReturnType<typeof createLearnerHomeProfiler>,
+  rankedCandidateKeys?: string[],
 ) => {
   let rankedMaterialsForSavedProjects: LearnerHomeMaterialItem[] = [];
   const rankSaved = () => {
@@ -749,9 +802,11 @@ const buildRankedHomeMaterialSections = (
     rankedSuggestedMaterials = rankMaterialsFromPreScored(
       preScoredMaterials,
       'suggested',
-      RANK_POOL_SIZE,
+      rankedCandidateKeys ? preScoredMaterials.length : RANK_POOL_SIZE,
       false,
       true,
+      false,
+      rankedCandidateKeys,
     );
   };
 
@@ -973,6 +1028,7 @@ const buildSectionItems = async (
   limit: number,
   offset = 0,
   preScoredMaterials?: PreScoredMaterialEntry[],
+  rankedCandidateKeys?: string[],
 ): Promise<{
   title: string;
   subtitle: string;
@@ -989,6 +1045,7 @@ const buildSectionItems = async (
         'suggested',
         limit,
         offset,
+        rankedCandidateKeys,
       );
 
       return {
@@ -1121,7 +1178,7 @@ export const getLearnerHomeSection = async (
     );
   }
 
-  const built = await profiler.time(`buildSection:${sectionKey}`, () =>
+  let built = await profiler.time(`buildSection:${sectionKey}`, () =>
     buildSectionItems(
       context,
       userId,
@@ -1135,7 +1192,7 @@ export const getLearnerHomeSection = async (
   profiler.record('totalGetLearnerHomeSection', performance.now() - startedAt);
   profiler.report({ userId, scope: 'getLearnerHomeSection' });
 
-  const sectionResponse = {
+  let sectionResponse = {
     key: sectionKey,
     title: built.title,
     subtitle: built.subtitle,
@@ -1145,6 +1202,71 @@ export const getLearnerHomeSection = async (
     nextOffset: built.nextOffset,
     hasMore: built.hasMore,
   };
+
+  if (sectionKey === 'suggested_materials') {
+    try {
+      const shadowConcepts = env.recommendationMlShadowEnabled
+        ? await learnerHomeRepository.loadMlShadowConcepts(
+            context.materials.map((material) => material.id),
+            context.projects.map((project) => project.id),
+          )
+        : emptyMlShadowConcepts;
+      const shadowResponse = { sections: [sectionResponse] };
+      const materialCandidates = buildMaterialShadowCandidates(
+        context,
+        shadowConcepts.materialConcepts,
+      );
+      const currentMaterialKeys = sectionResponse.items
+        .filter((item): item is LearnerHomeMaterialItem => item.type === 'material')
+        .map((item) => String(item.material.id ?? ''))
+        .filter(Boolean);
+      const materialShadow = await runMlShadowComparison({
+        response: shadowResponse,
+        domain: 'material',
+        interests: context.interests,
+        candidates: materialCandidates,
+        currentTopKeys: currentMaterialKeys,
+        currentSections: [{
+          sectionKey: sectionResponse.key,
+          candidateKeys: currentMaterialKeys,
+        }],
+        activeCandidateKeys: materialCandidates.map((candidate) => candidate.candidateKey),
+        recentEvents: context.behavior.recentRecommendationEvents ?? [],
+        recentEntityMetadata: context.projects.map((project) => ({
+          entityKey: project.id,
+          candidateKey: project.id,
+          categoryId: project.categoryId,
+          categoryLabel: project.categoryNameEn,
+          conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
+          componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
+        })),
+        evaluationTimestamp: new Date().toISOString(),
+      });
+      if (materialShadow.diagnostics.status === 'SCORED' && materialShadow.rankedCandidateKeys) {
+        built = await profiler.time('buildServedSuggestedMaterialsSection', () =>
+          buildSectionItems(
+            context,
+            userId,
+            sectionKey,
+            limit,
+            offset,
+            preScoredMaterials,
+            materialShadow.rankedCandidateKeys,
+          ),
+        );
+        sectionResponse = {
+          ...sectionResponse,
+          title: built.title,
+          subtitle: built.subtitle,
+          items: built.items,
+          nextOffset: built.nextOffset,
+          hasMore: built.hasMore,
+        };
+      }
+    } catch (error) {
+      reportMlShadowFallback('material', context.materials.length, error);
+    }
+  }
 
   const correlationId = getRequestId();
   if (!correlationId) {
@@ -1199,10 +1321,11 @@ async function loadLearnerHomeUncached(
     }),
   );
 
+  let preScoredMaterials!: PreScoredMaterialEntry[];
   const [dedupedMaterials, continueProjectsSection, savedProjectsSection] =
     await Promise.all([
       profiler.time('rankMaterialSections', async () => {
-        const preScoredMaterials = await profiler.time(
+        preScoredMaterials = await profiler.time(
           'preScoreMaterials',
           async () => preScoreMaterials(context),
         );
@@ -1283,11 +1406,10 @@ async function loadLearnerHomeUncached(
     },
   ];
 
-  const response: LearnerHomeResponse = {
+  let response: LearnerHomeResponse = {
     profileCompletion,
     sections,
   };
-  const emptyShadowConcepts = { materialConcepts: new Map<string, string[]>(), projectConcepts: new Map<string, string[]>(), projectComponentConcepts: new Map<string, string[]>() };
 
   const currentTopKeys = (domain: 'material' | 'project') =>
     sections.flatMap((section) => section.items)
@@ -1306,32 +1428,21 @@ async function loadLearnerHomeUncached(
     candidateKeys: section.items.flatMap((item) => domain === 'material' && item.type === 'material' ? [String(item.material.id ?? '')] : domain === 'project' && item.type === 'project' ? [String(item.project.id ?? '')] : []).filter(Boolean),
   })).filter((section) => section.candidateKeys.length > 0);
 
-  // Shadow work is fail-safe and never controls this exact deterministic response.
-  // Serving flags are intentionally not consulted here: both domains remain shadow-only.
+  // Shadow work is fail-safe. Material serving can only replace the order of
+  // the already-built suggested_materials items after a scored result.
   try {
     const shadowConcepts = env.recommendationMlShadowEnabled
       ? await learnerHomeRepository.loadMlShadowConcepts(
           context.materials.map((material) => material.id),
           context.projects.map((project) => project.id),
         )
-      : emptyShadowConcepts;
-    await Promise.allSettled([
+      : emptyMlShadowConcepts;
+    const shadowResults = await Promise.allSettled([
     runMlShadowComparison({
       response,
       domain: 'material',
       interests: context.interests,
-      candidates: context.materials
-        .filter((material) => material.status === 'AVAILABLE' && material.availableQuantity > 0)
-        .map((material) => ({
-          candidateKey: material.id,
-          categoryId: material.categoryId,
-          categoryLabel: material.categoryNameEn,
-          condition: typeof material.mapped.condition === 'string' ? material.mapped.condition : undefined,
-          isFree: material.isFree,
-          pickupAllowed: material.pickupAllowed,
-          deliveryAllowed: material.deliveryAllowed,
-          conceptKeys: shadowConcepts.materialConcepts.get(material.id) ?? [],
-        })),
+      candidates: buildMaterialShadowCandidates(context, shadowConcepts.materialConcepts),
       currentTopKeys: currentTopKeys('material'),
       currentSections: currentSections('material'),
       activeCandidateKeys: context.materials.filter((material) => material.status === 'AVAILABLE' && material.availableQuantity > 0).map((material) => material.id),
@@ -1365,6 +1476,23 @@ async function loadLearnerHomeUncached(
       evaluationTimestamp: new Date().toISOString(),
     }),
     ]);
+    const materialShadow = shadowResults[0];
+    if (materialShadow?.status === 'fulfilled' && materialShadow.value.diagnostics.status === 'SCORED' && materialShadow.value.rankedCandidateKeys) {
+      const servedMaterialSections = buildRankedHomeMaterialSections(
+        context,
+        preScoredMaterials,
+        undefined,
+        materialShadow.value.rankedCandidateKeys,
+      );
+      response = {
+        ...response,
+        sections: response.sections.map((section) =>
+          section.key === 'suggested_materials'
+            ? { ...section, items: servedMaterialSections.suggestedMaterials }
+            : section,
+        ),
+      };
+    }
   } catch (error) {
     reportMlShadowFallback('material', context.materials.length, error);
     reportMlShadowFallback('project', context.projects.length, error);
@@ -1392,7 +1520,18 @@ async function loadLearnerHomeUncached(
   };
 }
 
-const learnerHomeCache = createLearnerHomeCache(loadLearnerHomeUncached);
+const learnerHomeCacheKey = (userId: string): string => [
+  userId,
+  env.recommendationMlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC',
+  env.recommendationMlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
+  env.recommendationMlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
+].join('\u0000');
+
+const learnerHomeCache = createLearnerHomeCache(
+  loadLearnerHomeUncached,
+  Date.now,
+  learnerHomeCacheKey,
+);
 
 export const getLearnerHome = async (
   userId: string,

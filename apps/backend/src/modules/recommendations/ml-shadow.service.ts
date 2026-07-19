@@ -14,6 +14,7 @@ export type ShadowCandidate = { candidateKey: string; categoryId: string; catego
 export type ShadowComparisonInput<T> = { response: T; domain: 'material' | 'project'; interests: string[]; candidates: ShadowCandidate[]; recentEntityMetadata?: Array<ShadowCandidate & { entityKey: string }>; currentSections?: Array<{ sectionKey: string; candidateKeys: string[] }>; activeCandidateKeys: string[]; currentTopKeys: string[]; recentEvents: RecentIntentEvent[]; evaluationTimestamp: string };
 export type ShadowFeatureCoverage = { activeUserFeatures: number; zeroFeatureUser: boolean; itemFeatureTotal: number; itemsOnlyCategory: number; itemsWithoutApprovedFeatures: number; categoryCovered: number; conceptCovered: number; conditionCovered: number; freeCovered: number; pickupCovered: number; deliveryCovered: number; difficultyCovered: number; componentCovered: number };
 export type ShadowDiagnostics = { status: 'DISABLED' | 'SCORED' | 'FALLBACK'; fallbackReason?: string; candidateCount: number; top5Overlap?: number; top10Overlap?: number; rankCorrelation?: number; duplicateCurrentCount?: number; deduplicatedCurrentCount?: number; sectionDiagnostics?: Array<{ sectionKey: string; candidatePoolSize: number; top5Overlap: number; top10Overlap: number; fusedTop5Keys?: string[] }>; recentEventInputCount?: number; recentEvidenceCount?: number; recentChannelApplied?: boolean; recentConfidence?: RecentIntentConfidence; confidenceSource?: string; recentUniqueMaterialCount?: number; recentUniqueViewCount?: number; recentActiveLikeCount?: number; recentStrongActionCount?: number; burstWindowHours?: number; burstUniqueMaterialCount?: number; burstUniqueViewCount?: number; burstActiveLikeCount?: number; burstStrongActionCount?: number; recentCoherence?: number; dominantCategoryShare?: number; dominantConceptShare?: number; fullHistoryDominantCategoryShare?: number; fullHistoryDominantConceptShare?: number; newestEvidenceAgeHours?: number; qualifiedRecentCandidateCount?: number; recentSlotsAllowedTop5?: number; recentSlotsUsedTop5?: number; recentSlotsAllowedTop10?: number; recentSlotsUsedTop10?: number; longTermTop5RecentDomainCount?: number; recentChannelTop5RecentDomainCount?: number; fusedTop5RecentDomainCount?: number; recentEvidenceRejectedCounts?: { unmappedCategory: number; unmappedConcept: number; stale: number; reversed: number; duplicateOrCapped: number; outsideCandidateUniverse: number; belowCandidateQualityThreshold: number }; rankMovement?: Array<{ candidateKeyHash: string; longTermRank: number; recentRank: number; fusedRank: number; recentScore: number; qualificationStatus: 'QUALIFIED'; mappedCategoryMatch: boolean; mappedConceptMatch: boolean }>; fusionDurationMs?: number; scoringDurationMs?: number; artifactVersion?: string; featureSchemaVersion?: string; missingFeatureCount?: number; featureCoverage?: ShadowFeatureCoverage; currentTop5Keys?: string[]; shadowTop5Keys?: string[]; linearBlendTop5Keys?: string[] };
+export type MlShadowComparisonResult<T> = { response: T; diagnostics: ShadowDiagnostics; rankedCandidateKeys?: string[] };
 
 type ShadowObserver = (diagnostics: ShadowDiagnostics & { domain: 'material' | 'project' }) => void;
 let observer: ShadowObserver | undefined;
@@ -37,6 +38,11 @@ const safeMaterialFusion = (...args: Parameters<typeof fuseMaterialRankings>) =>
     if (error instanceof Error && error.message === 'material_shadow_iteration_bound') throw error;
     return { ranking: [...args[0]], qualifiedRecentCount: 0, insertedTop5Count: 0, insertedTop10Count: 0, recentSlotsAllowedTop5: 0, recentSlotsUsedTop5: 0, recentSlotsAllowedTop10: 0, recentSlotsUsedTop10: 0, qualifiedRecent: [], belowCandidateQualityThresholdCount: 0, outsideCandidateUniverseCount: 0, fallbackReason: error instanceof Error ? error.message : 'fusion_error' };
   }
+};
+const requireMaterialFusion = (...args: Parameters<typeof fuseMaterialRankings>) => {
+  const result = safeMaterialFusion(...args);
+  if (result.fallbackReason) throw new Error('material_fusion_failure');
+  return result;
 };
 const artifact = (path: string, domain: 'material' | 'project') => {
   const key = `${domain}:${path}`; let value = cache.get(key);
@@ -86,6 +92,52 @@ const safeLogWarning = (context: LogContext, message: string): void => {
   }
 };
 
+type MaterialDecisionMode = 'DETERMINISTIC' | 'SHADOW' | 'SERVED' | 'FALLBACK';
+
+const writeMaterialDecisionLog = (
+  input: ShadowComparisonInput<unknown>,
+  diagnostics: ShadowDiagnostics,
+  started: number,
+  mode: MaterialDecisionMode,
+): void => {
+  if (env.nodeEnv !== 'development' || input.domain !== 'material') return;
+  const servedItemCount = input.currentSections?.find(
+    (section) => section.sectionKey === 'suggested_materials',
+  )?.candidateKeys.length ?? input.currentTopKeys.length;
+  logger.info({
+    operation: 'recommendation.ml.material-decision',
+    domain: 'material',
+    mode,
+    status: diagnostics.status,
+    confidenceLevel: diagnostics.recentConfidence ?? 'NONE',
+    confidenceSource: diagnostics.confidenceSource ?? 'NONE',
+    candidateCount: diagnostics.candidateCount,
+    servedItemCount,
+    recentSlotsUsedTop5: diagnostics.recentSlotsUsedTop5 ?? 0,
+    recentSlotsUsedTop10: diagnostics.recentSlotsUsedTop10 ?? 0,
+    fallbackReason: diagnostics.fallbackReason ?? null,
+    scorerDurationMs: diagnostics.scoringDurationMs ?? 0,
+    fusionDurationMs: diagnostics.fusionDurationMs ?? 0,
+    totalRecommendationDurationMs: Math.max(0, performance.now() - started),
+  }, 'material recommendation decision');
+};
+
+const safeWriteMaterialDecisionLog = (
+  input: ShadowComparisonInput<unknown>,
+  diagnostics: ShadowDiagnostics,
+  started: number,
+  mode: MaterialDecisionMode,
+): void => {
+  try {
+    writeMaterialDecisionLog(input, diagnostics, started, mode);
+  } catch (loggingError) {
+    safeLogWarning(
+      { operation: 'recommendation.ml-shadow.decision-log-failure', fallbackReason: redactErrorMessage(loggingError) },
+      'material recommendation decision log failure',
+    );
+  }
+};
+
 const safeObserve = (diagnostics: ShadowDiagnostics & { domain: 'material' | 'project' }): void => {
   try {
     observer?.(diagnostics);
@@ -101,22 +153,8 @@ const observeMaterialStage = (
   phase: 'start' | 'complete',
   iterationCount = 0,
 ): void => {
-  if (env.nodeEnv !== 'development' || input.domain !== 'material') return;
-  try {
-    logger.info({
-      operation: 'recommendation.ml-shadow.material-stage',
-      event: JSON.stringify({
-        stage,
-        phase,
-        elapsedMs: Math.max(0, performance.now() - started),
-        candidateCount: input.candidates.length,
-        recentEvidenceCount: input.recentEvents.length,
-        iterationCount,
-      }),
-    }, 'material recommendation shadow stage');
-  } catch {
-    // Stage diagnostics are best effort and must never affect the response.
-  }
+  // Detailed stage tracing is intentionally disabled by default after the
+  // material shadow CPU-loop investigation.
 };
 
 export const reportMlShadowFallback = (
@@ -130,9 +168,13 @@ export const reportMlShadowFallback = (
   return diagnostics;
 };
 
-const runMlShadowComparisonInternal = async <T>(input: ShadowComparisonInput<T>): Promise<{ response: T; diagnostics: ShadowDiagnostics }> => {
+const runMlShadowComparisonInternal = async <T>(input: ShadowComparisonInput<T>): Promise<MlShadowComparisonResult<T>> => {
   const timeoutTestEnabled = neverSettleResponseForTests === input.response;
-  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled) return { response: input.response, diagnostics: { status: 'DISABLED', candidateCount: input.candidates.length } };
+  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled) {
+    const diagnostics: ShadowDiagnostics = { status: 'DISABLED', candidateCount: input.candidates.length };
+    safeWriteMaterialDecisionLog(input, diagnostics, performance.now(), 'DETERMINISTIC');
+    return { response: input.response, diagnostics };
+  }
   const started = performance.now();
   try {
     observeMaterialStage(input, started, 'material_shadow', 'start');
@@ -180,8 +222,7 @@ const runMlShadowComparisonInternal = async <T>(input: ShadowComparisonInput<T>)
     const fusionStageObserver: MaterialFusionStageObserver | undefined = input.domain === 'material'
       ? (stage, phase, iterationCount) => observeMaterialStage(input, started, stage, phase, iterationCount)
       : undefined;
-    const fusion = input.domain === 'material' ? safeMaterialFusion(longTerm.scored, recentScores, confidence.confidence, fusionStageObserver) : undefined;
-    if (fusion?.fallbackReason) safeLogWarning({ userId: '[redacted]', recommendationMlMaterialFusion: { fallbackReason: redactErrorMessage(fusion.fallbackReason) } }, 'material rank fusion fallback');
+    const fusion = input.domain === 'material' ? requireMaterialFusion(longTerm.scored, recentScores, confidence.confidence, fusionStageObserver) : undefined;
     const fusionDurationMs = performance.now() - fusionStarted;
     const shadowTop = fusion?.ranking.map((value) => value.candidateKey) ?? linearBlendTop;
     const deduplicatedCurrent = [...new Set(input.currentTopKeys)];
@@ -189,7 +230,7 @@ const runMlShadowComparisonInternal = async <T>(input: ShadowComparisonInput<T>)
       const current = [...new Set(section.candidateKeys)]; const allowed = new Set(current);
       const sectionLongTerm = longTerm.scored.filter((value) => allowed.has(value.candidateKey));
       const within = input.domain === 'material' && section.sectionKey === 'suggested_materials'
-        ? safeMaterialFusion(sectionLongTerm, new Map([...recentScores].filter(([key]) => allowed.has(key))), confidence.confidence, fusionStageObserver).ranking.map((value) => value.candidateKey)
+        ? requireMaterialFusion(sectionLongTerm, new Map([...recentScores].filter(([key]) => allowed.has(key))), confidence.confidence, fusionStageObserver).ranking.map((value) => value.candidateKey)
         : sectionLongTerm.map((value) => value.candidateKey);
       return { sectionKey: section.sectionKey, candidatePoolSize: current.length, top5Overlap: overlap(current, within, 5), top10Overlap: overlap(current, within, 10), fusedTop5Keys: within.slice(0, 5).map(privacyKey) };
     });
@@ -216,20 +257,35 @@ const runMlShadowComparisonInternal = async <T>(input: ShadowComparisonInput<T>)
       observeMaterialStage(input, started, 'diagnostics_serialization_redaction', 'complete');
       observeMaterialStage(input, started, 'diagnostics_logging', 'start');
       injectFailure('logger');
+      writeMaterialDecisionLog(
+        input,
+        diagnostics,
+        started,
+        env.recommendationMlMaterialServingEnabled ? 'SERVED' : 'SHADOW',
+      );
+      if (false) {
       logger.info({ userId: '[redacted]', recommendationMlMaterialShadowDiagnostics: { domain: input.domain, status: diagnostics.status, candidateCount: diagnostics.candidateCount, artifactVersion: diagnostics.artifactVersion ?? 'unknown', featureSchemaVersion: diagnostics.featureSchemaVersion ?? 'unknown', confidenceLevel: diagnostics.recentConfidence ?? 'NONE', confidenceSource: diagnostics.confidenceSource ?? 'NONE', uniqueRecentMaterialCount: diagnostics.recentUniqueMaterialCount ?? 0, uniqueRecentViewCount: diagnostics.recentUniqueViewCount ?? 0, activeRecentLikeCount: diagnostics.recentActiveLikeCount ?? 0, strongActionCount: diagnostics.recentStrongActionCount ?? 0, burstWindowHours: diagnostics.burstWindowHours ?? 24, burstUniqueMaterialCount: diagnostics.burstUniqueMaterialCount ?? 0, burstUniqueViewCount: diagnostics.burstUniqueViewCount ?? 0, burstActiveLikeCount: diagnostics.burstActiveLikeCount ?? 0, burstStrongActionCount: diagnostics.burstStrongActionCount ?? 0, dominantCategoryShare: diagnostics.dominantCategoryShare ?? 0, dominantConceptShare: diagnostics.dominantConceptShare ?? 0, burstDominantCategoryShare: diagnostics.dominantCategoryShare ?? 0, burstDominantConceptShare: diagnostics.dominantConceptShare ?? 0, fullHistoryDominantCategoryShare: diagnostics.fullHistoryDominantCategoryShare ?? 0, fullHistoryDominantConceptShare: diagnostics.fullHistoryDominantConceptShare ?? 0, newestEvidenceAgeHours: diagnostics.newestEvidenceAgeHours ?? -1, qualifiedRecentCandidateCount: diagnostics.qualifiedRecentCandidateCount ?? 0, recentSlotsAllowedTop5: diagnostics.recentSlotsAllowedTop5 ?? 0, recentSlotsUsedTop5: diagnostics.recentSlotsUsedTop5 ?? 0, recentSlotsAllowedTop10: diagnostics.recentSlotsAllowedTop10 ?? 0, recentSlotsUsedTop10: diagnostics.recentSlotsUsedTop10 ?? 0, longTermTop5RecentDomainCount: diagnostics.longTermTop5RecentDomainCount ?? 0, recentChannelTop5RecentDomainCount: diagnostics.recentChannelTop5RecentDomainCount ?? 0, fusedTop5RecentDomainCount: diagnostics.fusedTop5RecentDomainCount ?? 0, top5OverlapWithDeterministic: diagnostics.top5Overlap ?? 0, top10OverlapWithDeterministic: diagnostics.top10Overlap ?? 0, recentEvidenceRejectedCounts: diagnostics.recentEvidenceRejectedCounts!, scorerDurationMs: diagnostics.scoringDurationMs ?? 0, fusionDurationMs: diagnostics.fusionDurationMs ?? 0, rankMovement: diagnostics.rankMovement ?? [] } }, 'material recommendation shadow diagnostics');
+      }
       observeMaterialStage(input, started, 'diagnostics_logging', 'complete');
     } else logger.info({ userId: '[redacted]', recommendationMlShadow: { domain: input.domain, status: diagnostics.status, candidateCount: diagnostics.candidateCount, artifactVersion: diagnostics.artifactVersion ?? 'unknown', featureSchemaVersion: diagnostics.featureSchemaVersion ?? 'unknown', scorerDurationMs: diagnostics.scoringDurationMs ?? 0, fusionDurationMs: diagnostics.fusionDurationMs ?? 0 } }, 'recommendation ML shadow comparison');
     safeObserve({ ...diagnostics, domain: input.domain });
     observeMaterialStage(input, started, 'material_shadow', 'complete');
-    return { response: input.response, diagnostics };
+    return {
+      response: input.response,
+      diagnostics,
+      ...(input.domain === 'material' && env.recommendationMlShadowEnabled && env.recommendationMlMaterialServingEnabled
+        ? { rankedCandidateKeys: shadowTop }
+        : {}),
+    };
   } catch (error) {
     const diagnostics = reportMlShadowFallback(input.domain, input.candidates.length, error);
+    safeWriteMaterialDecisionLog(input, diagnostics, started, 'FALLBACK');
     safeObserve({ ...diagnostics, domain: input.domain });
     return { response: input.response, diagnostics };
   }
 };
 
-export const runMlShadowComparison = async <T>(input: ShadowComparisonInput<T>): Promise<{ response: T; diagnostics: ShadowDiagnostics }> => {
+export const runMlShadowComparison = async <T>(input: ShadowComparisonInput<T>): Promise<MlShadowComparisonResult<T>> => {
   const timeoutTestEnabled = neverSettleResponseForTests === input.response;
   if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled) return runMlShadowComparisonInternal(input);
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
@@ -243,6 +299,7 @@ export const runMlShadowComparison = async <T>(input: ShadowComparisonInput<T>):
       safeLogWarning({ operation: 'recommendation.ml-shadow.timeout', domain: input.domain, fallbackReason: `${input.domain}_shadow_timeout` }, `${input.domain} shadow timeout`);
     }
     const diagnostics = reportMlShadowFallback(input.domain, input.candidates.length, error);
+    safeWriteMaterialDecisionLog(input, diagnostics, performance.now(), 'FALLBACK');
     safeObserve({ ...diagnostics, domain: input.domain });
     return { response: input.response, diagnostics };
   } finally {
