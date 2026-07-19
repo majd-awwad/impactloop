@@ -22,6 +22,7 @@ import {
   normalizeInterestToken,
   resolveInterestKey,
 } from './learner-interest-taxonomy.js';
+import { selectRequiredComponentConceptKeys } from '../recommendations/project-runtime-candidate-mapping.js';
 
 import type {
   LearnerHomeMaterialCandidate,
@@ -1295,7 +1296,10 @@ export const loadMlShadowConcepts = async (
       select: {
         id: true,
         taxonomyConcepts: { where: { concept: { status: 'ACTIVE' } }, select: { concept: { select: { canonicalKey: true } } } },
-        requiredComponents: { select: { taxonomyConcepts: { where: { concept: { status: 'ACTIVE' } }, select: { concept: { select: { canonicalKey: true } } } } } },
+        requiredComponents: {
+          where: { isRequired: true },
+          select: { isRequired: true, taxonomyConcepts: { where: { concept: { status: 'ACTIVE' } }, select: { concept: { select: { canonicalKey: true } } } } },
+        },
       },
     }),
   ]);
@@ -1304,7 +1308,10 @@ export const loadMlShadowConcepts = async (
   return {
     materialConcepts: new Map([...materialConcepts].map(([key, values]) => [key, [...new Set(values)].sort()])),
     projectConcepts: new Map(projects.map((project) => [project.id, project.taxonomyConcepts.map((entry) => entry.concept.canonicalKey).sort()])),
-    projectComponentConcepts: new Map(projects.map((project) => [project.id, [...new Set(project.requiredComponents.flatMap((component) => component.taxonomyConcepts.map((entry) => entry.concept.canonicalKey)))].sort()])),
+    projectComponentConcepts: new Map(projects.map((project) => [
+      project.id,
+      selectRequiredComponentConceptKeys(project.requiredComponents),
+    ])),
   };
 };
 
