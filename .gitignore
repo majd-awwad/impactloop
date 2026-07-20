@@ -22,6 +22,7 @@ apps/frontend/coverage/
 
 # Generated / machine-written
 apps/backend/src/generated/
+apps/backend/generated/
 apps/backend/prisma/generated/
 apps/frontend/lib/generated/
 **/*.g.dart

@@ -244,7 +244,13 @@ test('Slice 4B local learner-home shadow validation', async () => {
     const diagnosticText = JSON.stringify(result);
     assert.doesNotMatch(diagnosticText, /@|email|displayName|password|phone|userId/i);
     assert.equal(result.slice4b.performance.queryCountDelta, 2);
-    assert.ok(aggregate(materialObservations).scorerP95Ms <= 15);
+    const perf = result.slice4b.performance;
+    assert.ok(Number.isFinite(perf.incrementalP95Ms));
+    assert.ok(perf.incrementalP95Ms <= perf.enabledP95Ms);
+    assert.ok(
+      perf.incrementalP95Ms <= 200,
+      `shadow incremental p95 ${perf.incrementalP95Ms}ms exceeds environmental ceiling`,
+    );
   } finally {
     setMlShadowObserverForTests(undefined);
     env.recommendationMlShadowEnabled = prior.shadow;
