@@ -275,12 +275,24 @@ export const withRecommendationFlags = async <T>(
 export const selectLearnerArchetypes = (
   learners: LearnerFixtureRow[],
   sparseCandidateLearnerId?: string,
+  forcedArchetypeLearners?: Partial<Record<ArchetypeKey, string>>,
 ): ArchetypeSelection[] => {
   const used = new Set<string>();
+  for (const learnerId of Object.values(forcedArchetypeLearners ?? {})) {
+    if (learnerId) used.add(learnerId);
+  }
   const pick = (
     archetypeKey: ArchetypeKey,
     predicate: (learner: LearnerFixtureRow) => boolean,
   ): ArchetypeSelection => {
+    const forcedLearnerId = forcedArchetypeLearners?.[archetypeKey];
+    if (forcedLearnerId && learners.some((learner) => learner.id === forcedLearnerId)) {
+      return {
+        archetypeKey,
+        archetypeStatus: 'RESOLVED',
+        learnerId: forcedLearnerId,
+      };
+    }
     const match = learners.find(
       (learner) => !used.has(learner.id) && predicate(learner),
     );
@@ -450,7 +462,10 @@ export const evaluateArchetypeBehavior = (
           materialActionCount(learner) >= 3 &&
           categories.size > 0 &&
           categories.size <= 2 &&
-          (hasRecentMaterialEvidence(materialDiagnostics) || categories.size <= 2),
+          (materialConfidence === 'MEDIUM' || materialConfidence === 'HIGH') &&
+          hasRecentMaterialEvidence(materialDiagnostics) &&
+          ((materialDiagnostics?.candidateCount ?? 0) <= 0 ||
+            (materialDiagnostics?.recentSlotsUsedTop5 ?? 0) > 0),
       };
     case 'material_scattered':
       return {
@@ -471,7 +486,9 @@ export const evaluateArchetypeBehavior = (
           engagementScore(learner) > 8 &&
           projects.size >= 4 &&
           projectConfidence === 'LOW' &&
-          (projectDiagnostics?.burstDistinctProjectCount ?? projects.size) >= 3,
+          (projectDiagnostics?.burstDistinctProjectCount ?? projects.size) >= 3 &&
+          (projectDiagnostics?.recentSlotsUsedTop5 ?? 0) === 0 &&
+          String(projectDiagnostics?.projectReadinessStatus ?? '') === 'READY',
       };
     case 'mixed':
       return {
@@ -1082,7 +1099,12 @@ export const classifyReleaseReadiness = (input: {
   releaseBlockers: string[];
   unresolvedArchetypes: number;
   unconfirmedArchetypes?: number;
+  cleanupVerified?: boolean;
+  cleanupBlockers?: string[];
 }): ReleaseClassification => {
+  if ((input.cleanupBlockers?.length ?? 0) > 0 || input.cleanupVerified === false) {
+    return 'NOT_READY';
+  }
   if (input.releaseBlockers.length > 0) return 'NOT_READY';
   const invariantFailures = Object.entries(input.invariants).filter(([, passed]) => !passed);
   if (invariantFailures.length > 0) return 'NOT_READY';
@@ -1106,6 +1128,13 @@ export const buildMarkdownSummary = (report: Slice4jAReport) => {
     `- Generated at: ${report.runMetadata.generatedAt}`,
     `- Node: ${report.runMetadata.nodeVersion}`,
     `- Evaluated archetypes: ${report.evaluatedArchetypes.filter((entry) => entry.archetypeStatus === 'RESOLVED').length}/${report.evaluatedArchetypes.length} (${report.evaluatedArchetypes.filter((entry) => entry.archetypeResolution === 'RESOLVED_CONFIRMED').length} confirmed)`,
+    ...(report.runMetadata.fixtureSummary
+      ? [
+          `- Fixture mode: ${(report.runMetadata.fixtureSummary as { fixtureMode?: string }).fixtureMode ?? 'unknown'}`,
+          `- Fixture cleanup: ${(report.runMetadata.fixtureSummary as { cleanupStatus?: string }).cleanupStatus ?? 'unknown'}`,
+          `- Post-run fixture records: ${(report.runMetadata.fixtureSummary as { postRunFixtureRecordCount?: number }).postRunFixtureRecordCount ?? 'unknown'}`,
+        ]
+      : []),
     '',
     '## Correctness invariants',
     ...Object.entries(report.correctnessInvariants).map(

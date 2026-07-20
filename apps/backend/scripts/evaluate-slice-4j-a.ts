@@ -53,6 +53,17 @@ import {
   type RecommendationFlagState,
   type Slice4jAReport,
 } from './evaluate-slice-4j-a-report.js';
+import {
+  buildFixtureSummary,
+  cleanupEphemeralFixtures,
+  countFixtureRecords,
+  createEphemeralFixtures,
+  syncOutboxIdsForFixtureUsers,
+  type EphemeralArchetypeKey,
+  type EphemeralFixtureResult,
+  type FixtureCleanupStatus,
+  type FixtureRunState,
+} from './evaluate-slice-4j-a-ephemeral-fixtures.js';
 
 const repositoryRoot = path.resolve(process.cwd(), '../..');
 const artifactPaths = resolveArtifactPaths(repositoryRoot);
@@ -67,6 +78,57 @@ const warnings: string[] = [];
 const modeComparisons: CaseMetrics[] = [];
 const baselineByArchetype = new Map<ArchetypeKey, LearnerHomeResponse>();
 let latencyHangCount = 0;
+let fixtureState: FixtureRunState | undefined;
+let fixtureCleanupStatus: FixtureCleanupStatus = 'SKIPPED';
+let fixtureCleanupFailureCategory: string | undefined;
+const fixtureCleanupBlockers: string[] = [];
+let preRunFixtureRecordCount = 0;
+let postRunFixtureRecordCount = 0;
+const ephemeralDiagnosticsByArchetype = new Map<
+  EphemeralArchetypeKey,
+  { material?: ShadowDiagnostics; project?: ShadowDiagnostics }
+>();
+
+const ensureFixtureCleanup = async (reason: string) => {
+  if (!fixtureState) {
+    fixtureCleanupStatus = 'SKIPPED';
+    return;
+  }
+  if (fixtureState.cleaned) return;
+  try {
+    await syncOutboxIdsForFixtureUsers(fixtureState);
+    await cleanupEphemeralFixtures(fixtureState);
+    postRunFixtureRecordCount = await countFixtureRecords(fixtureState);
+    if (postRunFixtureRecordCount > 0) {
+      fixtureCleanupStatus = 'FAILED';
+      fixtureCleanupFailureCategory = `residual_records_after_${reason}`;
+      if (!fixtureCleanupBlockers.includes('ephemeral_fixture_cleanup_failed')) {
+        fixtureCleanupBlockers.push('ephemeral_fixture_cleanup_failed');
+      }
+    } else {
+      fixtureCleanupStatus = 'SUCCESS';
+    }
+  } catch (error) {
+    fixtureCleanupStatus = 'FAILED';
+    fixtureCleanupFailureCategory =
+      error instanceof Error ? error.message : `cleanup_error_${reason}`;
+    if (!fixtureCleanupBlockers.includes('ephemeral_fixture_cleanup_failed')) {
+      fixtureCleanupBlockers.push('ephemeral_fixture_cleanup_failed');
+    }
+  }
+};
+
+const registerFixtureSignalHandlers = () => {
+  const handleSignal = (signal: 'SIGINT' | 'SIGTERM') => {
+    void ensureFixtureCleanup(signal)
+      .finally(() => {
+        restoreEnvironment();
+        process.exit(signal === 'SIGINT' ? 130 : 143);
+      });
+  };
+  process.once('SIGINT', () => handleSignal('SIGINT'));
+  process.once('SIGTERM', () => handleSignal('SIGTERM'));
+};
 
 const observationsForRun: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
 setMlShadowObserverForTests((value) => {
@@ -121,6 +183,16 @@ const probeArchetypes = async (
         observations.find((entry) => entry.domain === 'project'),
       ),
     );
+    if (
+      selection.archetypeKey === 'cold_start' ||
+      selection.archetypeKey === 'material_coherent' ||
+      selection.archetypeKey === 'project_scattered'
+    ) {
+      ephemeralDiagnosticsByArchetype.set(selection.archetypeKey, {
+        material: observations.find((entry) => entry.domain === 'material'),
+        project: observations.find((entry) => entry.domain === 'project'),
+      });
+    }
   }
   return evaluated;
 };
@@ -467,7 +539,11 @@ const buildQualityProxies = (
 
 const main = async () => {
   const { modeFilter, latencyOnly } = parseCliOptions();
+  registerFixtureSignalHandlers();
   let gitHead: string | null = null;
+  let ephemeralFixture: EphemeralFixtureResult | undefined;
+  let evaluatedArchetypes: EvaluatedArchetype[] = [];
+
   try {
     gitHead = execSync('git rev-parse HEAD', { cwd: repositoryRoot, stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
@@ -476,63 +552,75 @@ const main = async () => {
     gitHead = null;
   }
 
-  const unpublishedProjectIds = await loadUnpublishedProjectIds();
-  const learners = await loadLearners();
-  if (!learners.length) {
-    throw new Error('seeded_learner_fixtures_required');
-  }
+  try {
+    const unpublishedProjectIds = await loadUnpublishedProjectIds();
+    const seedLearners = await loadLearners();
+    if (!seedLearners.length) {
+      throw new Error('seeded_learner_fixtures_required');
+    }
 
-  const sparseLearnerId = await discoverSparseCandidateLearner(learners);
-  const archetypeSelections = selectLearnerArchetypes(learners, sparseLearnerId);
-  const evaluatedArchetypes = await probeArchetypes(archetypeSelections, learners);
+    ephemeralFixture = await createEphemeralFixtures();
+    fixtureState = ephemeralFixture.runState;
+    preRunFixtureRecordCount = 0;
 
-  const unresolvedArchetypes = evaluatedArchetypes.filter(
-    (entry) => entry.archetypeResolution === 'UNRESOLVED',
-  );
-  const unconfirmedArchetypes = evaluatedArchetypes.filter(
-    (entry) => entry.archetypeResolution === 'RESOLVED_UNCONFIRMED',
-  );
-  if (unresolvedArchetypes.length) {
-    warnings.push(
-      `Unresolved archetypes: ${unresolvedArchetypes.map((entry) => entry.archetypeKey).join(', ')}`,
+    const forcedIds = new Set(
+      Object.values(ephemeralFixture.forcedArchetypeLearners).filter(Boolean) as string[],
     );
-  }
-  if (unconfirmedArchetypes.length) {
-    warnings.push(
-      `Behaviorally unconfirmed archetypes: ${unconfirmedArchetypes.map((entry) => entry.archetypeKey).join(', ')}`,
+    const learners = [
+      ...ephemeralFixture.learnerRows,
+      ...seedLearners.filter((row) => !forcedIds.has(row.id)),
+    ];
+
+    const sparseLearnerId = await discoverSparseCandidateLearner(learners);
+    const archetypeSelections = selectLearnerArchetypes(
+      learners,
+      sparseLearnerId,
+      ephemeralFixture.forcedArchetypeLearners,
     );
-  }
+    evaluatedArchetypes = await probeArchetypes(archetypeSelections, learners);
 
-  const resolvedArchetypes = evaluatedArchetypes
-    .filter((entry) => entry.archetypeStatus === 'RESOLVED' && entry.accountCriteriaMatched)
-    .map((entry) => ({
-      archetypeKey: entry.archetypeKey,
-      learnerId: archetypeSelections.find((row) => row.archetypeKey === entry.archetypeKey)!.learnerId!,
-    }));
+    const unresolvedArchetypes = evaluatedArchetypes.filter(
+      (entry) => entry.archetypeResolution === 'UNRESOLVED',
+    );
+    const unconfirmedArchetypes = evaluatedArchetypes.filter(
+      (entry) => entry.archetypeResolution === 'RESOLVED_UNCONFIRMED',
+    );
+    if (unresolvedArchetypes.length) {
+      warnings.push(
+        `Unresolved archetypes: ${unresolvedArchetypes.map((entry) => entry.archetypeKey).join(', ')}`,
+      );
+    }
+    if (unconfirmedArchetypes.length) {
+      warnings.push(
+        `Behaviorally unconfirmed archetypes: ${unconfirmedArchetypes.map((entry) => entry.archetypeKey).join(', ')}`,
+      );
+    }
 
-  if (modeFilter === 'A_baseline') {
-    try {
+    const resolvedArchetypes = evaluatedArchetypes
+      .filter((entry) => entry.archetypeStatus === 'RESOLVED' && entry.accountCriteriaMatched)
+      .map((entry) => ({
+        archetypeKey: entry.archetypeKey,
+        learnerId: archetypeSelections.find((row) => row.archetypeKey === entry.archetypeKey)!.learnerId!,
+      }));
+
+    if (modeFilter === 'A_baseline') {
       if (!resolvedArchetypes.length) throw new Error('no_resolved_archetypes_for_baseline');
       await runBaselineOnly(resolvedArchetypes);
       return;
-    } finally {
-      restoreEnvironment();
     }
-  }
 
-  const learnerContexts = new Map<
-    ArchetypeKey,
-    {
-      interests: string[];
-      savedCity: string | null;
-      prefersDelivery: boolean;
-      prefersFree: boolean;
-      hasContinueProjects: boolean;
-      home: LearnerHomeResponse;
-    }
-  >();
+    const learnerContexts = new Map<
+      ArchetypeKey,
+      {
+        interests: string[];
+        savedCity: string | null;
+        prefersDelivery: boolean;
+        prefersFree: boolean;
+        hasContinueProjects: boolean;
+        home: LearnerHomeResponse;
+      }
+    >();
 
-  try {
     for (const archetype of resolvedArchetypes) {
       for (const modeKey of Object.keys(EVALUATION_MODES) as EvaluationModeKey[]) {
         const result = await runLearnerCase({
@@ -596,6 +684,11 @@ const main = async () => {
       }, {}),
     };
 
+    await ensureFixtureCleanup('evaluation_complete');
+    if (fixtureCleanupBlockers.length) {
+      releaseBlockers.push(...fixtureCleanupBlockers);
+    }
+
     const reportDraft: Slice4jAReport = {
       runMetadata: {
         generatedAt: new Date().toISOString(),
@@ -608,6 +701,24 @@ const main = async () => {
         },
         evaluationModes: Object.keys(EVALUATION_MODES),
         archetypeKeys: ARCHETYPE_KEYS,
+        fixtureSummary: buildFixtureSummary({
+          runState: fixtureState,
+          evaluatedArchetypes,
+          materialDiagnosticsByArchetype: {
+            cold_start: ephemeralDiagnosticsByArchetype.get('cold_start')?.material,
+            material_coherent: ephemeralDiagnosticsByArchetype.get('material_coherent')?.material,
+            project_scattered: ephemeralDiagnosticsByArchetype.get('project_scattered')?.material,
+          },
+          projectDiagnosticsByArchetype: {
+            cold_start: ephemeralDiagnosticsByArchetype.get('cold_start')?.project,
+            material_coherent: ephemeralDiagnosticsByArchetype.get('material_coherent')?.project,
+            project_scattered: ephemeralDiagnosticsByArchetype.get('project_scattered')?.project,
+          },
+          cleanupStatus: fixtureCleanupStatus,
+          cleanupFailureCategory: fixtureCleanupFailureCategory,
+          preRunFixtureRecordCount,
+          postRunFixtureRecordCount,
+        }),
       },
       artifactVersions,
       featureSchemaVersions,
@@ -637,6 +748,8 @@ const main = async () => {
       releaseBlockers,
       unresolvedArchetypes: unresolvedArchetypes.length,
       unconfirmedArchetypes: unconfirmedArchetypes.length,
+      cleanupVerified: fixtureCleanupStatus === 'SUCCESS',
+      cleanupBlockers: fixtureCleanupBlockers,
     });
 
     reportDraft.determinism.stableHash = buildStableHash(reportDraft);
@@ -656,6 +769,9 @@ const main = async () => {
     console.log(JSON.stringify(envelope, null, 2));
     console.error(`Wrote ${jsonOutputPath}`);
     console.error(`Wrote ${markdownOutputPath}`);
+    if (fixtureCleanupBlockers.length) {
+      process.exitCode = 1;
+    }
   } catch (error) {
     if (releaseBlockers.length) {
       const partial: Slice4jAReport = {
@@ -716,6 +832,12 @@ const main = async () => {
     }
     throw error;
   } finally {
+    if (fixtureState && !fixtureState.cleaned) {
+      await ensureFixtureCleanup('finally');
+    }
+    if (fixtureCleanupBlockers.length) {
+      process.exitCode = 1;
+    }
     restoreEnvironment();
   }
 };

@@ -31,6 +31,20 @@ import {
   type ShadowObservation,
   type Slice4jAReport,
 } from './evaluate-slice-4j-a-report.js';
+import {
+  buildColdStartFixtureRow,
+  createFixtureRunId,
+  createFixtureRunState,
+  fixtureTimestampInsideMaterialBurst,
+  fixtureTimestampInsideProjectBurst,
+  groupCoherentMaterialCandidates,
+  isMaterialCandidateEligible,
+  isProjectCandidateEligible,
+  isTimestampInsideBurstWindow,
+  MATERIAL_BURST_WINDOW_HOURS,
+  PROJECT_BURST_WINDOW_HOURS,
+  selectScatteredProjectCandidates,
+} from './evaluate-slice-4j-a-ephemeral-fixtures.js';
 
 const learner = (
   overrides: Partial<LearnerFixtureRow> & { id: string },
@@ -411,6 +425,245 @@ test('project_coherent with low confidence is behaviorally unconfirmed', () => {
     { recentConfidence: 'LOW', recentEvidenceCount: 0 } as any,
   );
   assert.equal(evaluated.archetypeResolution, 'RESOLVED_UNCONFIRMED');
+});
+
+test('classifyReleaseReadiness treats cleanup failures as NOT_READY', () => {
+  assert.equal(
+    classifyReleaseReadiness({
+      invariants: { noDuplicatesInServedSections: true },
+      warnings: [],
+      releaseBlockers: [],
+      unresolvedArchetypes: 0,
+      cleanupVerified: false,
+      cleanupBlockers: ['ephemeral_fixture_cleanup_failed'],
+    }),
+    'NOT_READY',
+  );
+});
+
+test('createFixtureRunId generates unique values', () => {
+  const first = createFixtureRunId();
+  const second = createFixtureRunId();
+  assert.notEqual(first, second);
+  assert.ok(first.length > 10);
+});
+
+test('cold-start fixture row has zero engagement', () => {
+  const row = buildColdStartFixtureRow('fixture-user');
+  assert.equal(row._count.materialViews, 0);
+  assert.equal(row._count.projectSaves, 0);
+  assert.deepEqual(row.learnerProfile?.interests, []);
+});
+
+test('material-coherent behavior requires MEDIUM confidence and recent evidence', () => {
+  const coherentLearner = learner({
+    id: 'material-coherent',
+    materialViews: [{ material: { categoryId: 'cat-a' } }],
+    _count: { materialLikes: 0, materialViews: 4, projectSaves: 0, projectLikes: 0, projectBuilds: 0 },
+  });
+  const confirmed = evaluateArchetypeBehavior(
+    'material_coherent',
+    coherentLearner,
+    {
+      recentConfidence: 'MEDIUM',
+      recentEvidenceCount: 4,
+      recentChannelApplied: true,
+      candidateCount: 20,
+      recentSlotsUsedTop5: 1,
+    } as any,
+    { recentConfidence: 'NONE' } as any,
+  );
+  assert.equal(confirmed.behavioralCriteriaMatched, true);
+  const weak = evaluateArchetypeBehavior(
+    'material_coherent',
+    coherentLearner,
+    { recentConfidence: 'LOW', recentEvidenceCount: 1 } as any,
+    { recentConfidence: 'NONE' } as any,
+  );
+  assert.equal(weak.behavioralCriteriaMatched, false);
+});
+
+test('material candidate filter excludes non-available rows', () => {
+  assert.equal(
+    isMaterialCandidateEligible({
+      id: 'm1',
+      status: 'AVAILABLE',
+      quantity: 2,
+      categoryId: 'c1',
+      conceptKey: 'concept-a',
+    }),
+    true,
+  );
+  assert.equal(
+    isMaterialCandidateEligible({
+      id: 'm2',
+      status: 'UNAVAILABLE',
+      quantity: 2,
+      categoryId: 'c1',
+      conceptKey: 'concept-a',
+    }),
+    false,
+  );
+});
+
+test('project-scattered behavior requires LOW confidence and zero recent slots', () => {
+  const scatteredLearner = learner({
+    id: 'project-scattered',
+    projectSaves: [{ projectId: 'p1' }, { projectId: 'p2' }, { projectId: 'p3' }, { projectId: 'p4' }],
+    _count: { materialLikes: 0, materialViews: 5, projectSaves: 4, projectLikes: 0, projectBuilds: 0 },
+  });
+  const confirmed = evaluateArchetypeBehavior(
+    'project_scattered',
+    scatteredLearner,
+    undefined,
+    {
+      recentConfidence: 'LOW',
+      burstDistinctProjectCount: 3,
+      recentSlotsUsedTop5: 0,
+      projectReadinessStatus: 'READY',
+    } as any,
+  );
+  assert.equal(confirmed.behavioralCriteriaMatched, true);
+});
+
+test('project candidate filter requires published diverse concepts', () => {
+  const selected = selectScatteredProjectCandidates([
+    {
+      id: 'p1',
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+      conceptKey: 'robotics',
+    },
+    {
+      id: 'p2',
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+      conceptKey: 'textiles',
+    },
+    {
+      id: 'p3',
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+      conceptKey: 'woodwork',
+    },
+    {
+      id: 'p4',
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+      conceptKey: 'electronics',
+    },
+  ]);
+  assert.equal(selected?.length, 4);
+  assert.equal(
+    isProjectCandidateEligible({
+      id: 'hidden',
+      status: 'PUBLISHED',
+      hiddenAt: new Date(),
+      archivedAt: null,
+      conceptKey: 'x',
+    }),
+    false,
+  );
+});
+
+test('fixture timestamps stay inside burst windows', () => {
+  const now = new Date('2026-07-20T12:00:00.000Z');
+  const materialAt = fixtureTimestampInsideMaterialBurst(now, 2);
+  const projectAt = fixtureTimestampInsideProjectBurst(now, 12);
+  assert.equal(
+    isTimestampInsideBurstWindow(materialAt, now, MATERIAL_BURST_WINDOW_HOURS),
+    true,
+  );
+  assert.equal(
+    isTimestampInsideBurstWindow(projectAt, now, PROJECT_BURST_WINDOW_HOURS),
+    true,
+  );
+});
+
+test('behavioral confirmation fails when diagnostics contradict fixture insertion', () => {
+  const coherentLearner = learner({
+    id: 'material-coherent',
+    materialViews: [{ material: { categoryId: 'cat-a' } }],
+    _count: { materialLikes: 0, materialViews: 4, projectSaves: 0, projectLikes: 0, projectBuilds: 0 },
+  });
+  const evaluated = resolveEvaluatedArchetype(
+    { archetypeKey: 'material_coherent', archetypeStatus: 'RESOLVED', learnerId: coherentLearner.id },
+    coherentLearner,
+    { recentConfidence: 'NONE', recentEvidenceCount: 0 } as any,
+    { recentConfidence: 'NONE' } as any,
+  );
+  assert.equal(evaluated.archetypeResolution, 'RESOLVED_UNCONFIRMED');
+});
+
+test('coherent material grouping finds four shared-concept materials', () => {
+  const group = groupCoherentMaterialCandidates([
+    { id: 'm1', status: 'AVAILABLE', quantity: 1, categoryId: 'c1', conceptKey: 'shared' },
+    { id: 'm2', status: 'AVAILABLE', quantity: 1, categoryId: 'c1', conceptKey: 'shared' },
+    { id: 'm3', status: 'AVAILABLE', quantity: 1, categoryId: 'c1', conceptKey: 'shared' },
+    { id: 'm4', status: 'AVAILABLE', quantity: 1, categoryId: 'c1', conceptKey: 'shared' },
+    { id: 'm5', status: 'AVAILABLE', quantity: 1, categoryId: 'c2', conceptKey: 'other' },
+  ]);
+  assert.equal(group?.length, 4);
+});
+
+test('forced archetype learners override seed selection', () => {
+  const learners: LearnerFixtureRow[] = [
+    learner({ id: 'seed-cold', learnerProfile: { interests: [] } }),
+    learner({ id: 'forced-cold', learnerProfile: { interests: [] } }),
+  ];
+  const selections = selectLearnerArchetypes(learners, 'missing', {
+    cold_start: 'forced-cold',
+  });
+  assert.equal(selections.find((entry) => entry.archetypeKey === 'cold_start')?.learnerId, 'forced-cold');
+});
+
+test('redactReport rejects fixture-style evaluation emails', () => {
+  const report: Slice4jAReport = {
+    runMetadata: { generatedAt: '2026-07-20T00:00:00.000Z', nodeVersion: process.version },
+    artifactVersions: { material: 'v2', project: 'v2' },
+    featureSchemaVersions: { material: 'runtime-v2', project: 'runtime-v2' },
+    evaluatedArchetypes: [{
+      archetypeKey: 'mixed',
+      archetypeStatus: 'RESOLVED',
+      archetypeResolution: 'RESOLVED_CONFIRMED',
+      accountCriteriaMatched: true,
+      behavioralCriteriaMatched: true,
+    }],
+    modeComparisons: [],
+    correctnessInvariants: { noDuplicatesInServedSections: true },
+    qualityProxies: {
+      materials: { offlineDiagnosticProxy: true, disclaimer: 'diagnostic only', top5: {}, top10: {} },
+      projects: { offlineDiagnosticProxy: true, disclaimer: 'diagnostic only', top5: {}, top10: {} },
+    },
+    confidenceDistributions: {},
+    latencySummary: {},
+    fallbackSummary: { totalFallbackCases: 0 },
+    releaseBlockers: [],
+    warnings: [],
+    finalRecommendation: 'READY_WITH_WARNINGS',
+    determinism: { stableHash: 'pending', excludes: ['generatedAt'] },
+  };
+  report.determinism.stableHash = buildStableHash(report);
+  assert.throws(() =>
+    redactReport({
+      ...report,
+      runMetadata: {
+        ...report.runMetadata,
+        leaked: 'slice4j-run-id-cold_start@evaluation.invalid',
+      },
+    }),
+  );
+});
+
+test('fixture run state starts with zero tracked records', () => {
+  const state = createFixtureRunState('test-run');
+  assert.equal(state.createdUserIds.length, 0);
+  assert.equal(state.createdRowIds.materialViews.length, 0);
+  assert.equal(state.cleaned, false);
 });
 
 test('classifyReleaseReadiness treats unconfirmed archetypes as warnings not blockers', () => {
