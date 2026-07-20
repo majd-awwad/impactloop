@@ -17,6 +17,7 @@ import {
   projectItemFeatureNames,
   selectRequiredComponentConceptKeys,
 } from './project-runtime-candidate-mapping.js';
+import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
 
 const root = process.cwd().endsWith(path.join('apps', 'backend'))
   ? path.resolve(process.cwd(), '../..')
@@ -69,7 +70,7 @@ test('optional component concepts never enter required runtime mapping', () => {
   assert.ok(!names.includes('component:component:denim-offcuts'));
 });
 
-test('missing eligible runtime mappings preserve NOT_READY', async () => {
+isolatedRecommendationTest('missing eligible runtime mappings preserve NOT_READY', async () => {
   const prior = env.recommendationMlProjectArtifactPath;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
   clearMlArtifactCacheForTests();
@@ -101,7 +102,7 @@ test('missing eligible runtime mappings preserve NOT_READY', async () => {
   }
 });
 
-test('duplicate runtime keys preserve NOT_READY', async () => {
+isolatedRecommendationTest('duplicate runtime keys preserve NOT_READY', async () => {
   const prior = env.recommendationMlProjectArtifactPath;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
   clearMlArtifactCacheForTests();
@@ -147,7 +148,7 @@ test('live PostgreSQL runtime projects map completely to runtime-v2 artifact', a
   assert.equal(counts.artifactMappedCandidateCount, 29);
 });
 
-test('READY executes recent intent and fusion and exposes fused ranking when serving is enabled', async () => {
+isolatedRecommendationTest('READY executes recent intent and fusion and exposes fused ranking when serving is enabled', async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
     projectServing: env.recommendationMlProjectServingEnabled,

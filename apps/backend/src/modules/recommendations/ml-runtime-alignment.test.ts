@@ -11,6 +11,7 @@ import { combineNormalizedScores, normalizeScores, scorePortableLightFm, type We
 import { loadPortableModelArtifact } from './ml-model-artifact.js';
 import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG } from './short-term-intent.js';
 import { clearMlArtifactCacheForTests, setMlShadowObserverForTests } from './ml-shadow.service.js';
+import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
 
 const root = process.cwd().endsWith(path.join('apps', 'backend')) ? path.resolve(process.cwd(), '../..') : process.cwd();
 const categoryKey = (id: string) => createHash('sha256').update(`impactloop-category:${id}`).digest('hex');
@@ -74,7 +75,7 @@ test('runtime-v2 fixed-weight live-catalog decomposition and project component e
   assert.equal(projectDriven.supported, false);
 });
 
-test('authenticated new material view invalidates only its learner and deduplicated repeats do not', async () => {
+isolatedRecommendationTest('authenticated new material view invalidates only its learner and deduplicated repeats do not', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, material: env.recommendationMlMaterialArtifactPath, project: env.recommendationMlProjectArtifactPath };
   const observations: unknown[] = []; const startedAt = new Date(); const cleanupMaterialIds: string[] = [];
   setMlShadowObserverForTests((value) => observations.push(value));

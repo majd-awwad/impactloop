@@ -72,6 +72,13 @@ const artifact = (path: string, domain: 'material' | 'project') => {
 };
 export const clearMlArtifactCacheForTests = () => { cache.clear(); artifactLoadCount = 0; };
 
+export const resetMlShadowTestStateForTests = (): void => {
+  clearMlArtifactCacheForTests();
+  setMlShadowObserverForTests(undefined);
+  setMlShadowFailureForTests(undefined);
+  setMlShadowNeverSettleForTests(undefined);
+};
+
 const categoryKey = (id: string) => createHash('sha256').update(`impactloop-category:${id}`).digest('hex');
 const normalize = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 const overlap = (left: string[], right: string[], k: number) => {

@@ -15,6 +15,7 @@ import {
   setMlShadowObserverForTests,
   type ShadowDiagnostics,
 } from './ml-shadow.service.js';
+import { withRecommendationTestIsolation } from './recommendation-test-isolation.js';
 
 const repositoryRoot = process.cwd().endsWith(path.join('apps', 'backend'))
   ? path.resolve(process.cwd(), '../..')
@@ -28,7 +29,8 @@ const percentile = (values: number[], fraction: number) => {
   return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * fraction))] ?? 0;
 };
 
-test('Slice 4B local learner-home shadow validation', async () => {
+test('Slice 4B local learner-home shadow validation', { concurrency: false }, async () => {
+  await withRecommendationTestIsolation(async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
     materialServing: env.recommendationMlMaterialServingEnabled,
@@ -261,4 +263,5 @@ test('Slice 4B local learner-home shadow validation', async () => {
     clearMlArtifactCacheForTests();
     await prisma.$disconnect();
   }
+  });
 });

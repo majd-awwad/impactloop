@@ -9,6 +9,7 @@ import { resetLoggerForTests, setLoggerDestinationForTests } from '../../observa
 import { combineNormalizedScores, scorePortableLightFm } from './ml-lightfm-scorer.js';
 import { loadPortableModelArtifact, validatePortableModelArtifact } from './ml-model-artifact.js';
 import { calculateProjectTop10RankMovement, calculateProjectTopKOverlap, clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
+import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
 import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG } from './short-term-intent.js';
 
 const repositoryRoot = process.cwd().endsWith(path.join('apps', 'backend')) ? path.resolve(process.cwd(), '../..') : process.cwd();
@@ -61,7 +62,7 @@ test('Python and TypeScript recent intent, decay, reversals, caps, and blend mat
   }
 });
 
-test('flags default disabled and shadow returns exact response object', async () => {
+isolatedRecommendationTest('flags default disabled and shadow returns exact response object', async () => {
   const priorEnabled = env.recommendationMlShadowEnabled;
   env.recommendationMlShadowEnabled = false;
   assert.equal(env.recommendationMlMaterialServingEnabled, false);
@@ -79,7 +80,7 @@ test('flags default disabled and shadow returns exact response object', async ()
   env.recommendationMlShadowEnabled = priorEnabled;
 });
 
-test('material serving cannot bypass a disabled shadow flag', async () => {
+isolatedRecommendationTest('material serving cannot bypass a disabled shadow flag', async () => {
   const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled };
   env.recommendationMlShadowEnabled = false;
   env.recommendationMlMaterialServingEnabled = true;
@@ -92,7 +93,7 @@ test('material serving cannot bypass a disabled shadow flag', async () => {
   env.recommendationMlMaterialServingEnabled = prior.materialServing;
 });
 
-test('project shadow recent intent diagnostics stay privacy-safe without mutating the response', async () => {
+isolatedRecommendationTest('project shadow recent intent diagnostics stay privacy-safe without mutating the response', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
@@ -161,7 +162,7 @@ test('project shadow recent intent diagnostics stay privacy-safe without mutatin
   }
 });
 
-test('project shadow failure does not change material serving path', async () => {
+isolatedRecommendationTest('project shadow failure does not change material serving path', async () => {
   const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled, materialPath: env.recommendationMlMaterialArtifactPath, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlMaterialServingEnabled = true;
@@ -202,7 +203,7 @@ test('project shadow failure does not change material serving path', async () =>
   }
 });
 
-test('project serving cannot bypass a disabled shadow flag', async () => {
+isolatedRecommendationTest('project serving cannot bypass a disabled shadow flag', async () => {
   const prior = { enabled: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = false;
   env.recommendationMlProjectServingEnabled = true;
@@ -228,7 +229,7 @@ test('project serving cannot bypass a disabled shadow flag', async () => {
   clearMlArtifactCacheForTests();
 });
 
-test('project serving returns fused ranking only when shadow, serving, and readiness are all READY', async () => {
+isolatedRecommendationTest('project serving returns fused ranking only when shadow, serving, and readiness are all READY', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
@@ -290,7 +291,7 @@ test('project readiness overlap and rank movement are bounded aggregate calculat
   assert.deepEqual(calculateProjectTop10RankMovement([], []), { average: 0, maximum: 0 });
 });
 
-test('project readiness exposes candidate and artifact coverage without private identifiers', async () => {
+isolatedRecommendationTest('project readiness exposes candidate and artifact coverage without private identifiers', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
@@ -318,7 +319,7 @@ test('project readiness exposes candidate and artifact coverage without private 
   }
 });
 
-test('project duplicate runtime candidates are reported as NOT_READY without changing the response', async () => {
+isolatedRecommendationTest('project duplicate runtime candidates are reported as NOT_READY without changing the response', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
@@ -339,7 +340,7 @@ test('project duplicate runtime candidates are reported as NOT_READY without cha
   }
 });
 
-test('project shadow failures and timeout preserve the exact deterministic response', async () => {
+isolatedRecommendationTest('project shadow failures and timeout preserve the exact deterministic response', async () => {
   const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
@@ -381,7 +382,7 @@ test('project shadow failures and timeout preserve the exact deterministic respo
   }
 });
 
-test('enabled shadow scores bounded candidates and failures safely fall back', async () => {
+isolatedRecommendationTest('enabled shadow scores bounded candidates and failures safely fall back', async () => {
   const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled, projectServing: env.recommendationMlProjectServingEnabled, materialPath: env.recommendationMlMaterialArtifactPath, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialServingEnabled = true; env.recommendationMlProjectServingEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json'); clearMlArtifactCacheForTests();
   const response = { visible: ['x'] };
@@ -394,7 +395,7 @@ test('enabled shadow scores bounded candidates and failures safely fall back', a
   env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialServingEnabled = prior.materialServing; env.recommendationMlProjectServingEnabled = prior.projectServing; env.recommendationMlMaterialArtifactPath = prior.materialPath; env.recommendationMlProjectArtifactPath = prior.projectPath; clearMlArtifactCacheForTests();
 });
 
-test('material development diagnostics are sanitized and preserve the deterministic response', async () => {
+isolatedRecommendationTest('material development diagnostics are sanitized and preserve the deterministic response', async () => {
   const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
   const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
   const logLines: string[] = []; const logStream = new PassThrough(); logStream.on('data', (chunk) => logLines.push(chunk.toString())); setLoggerDestinationForTests(logStream); resetLoggerForTests();
@@ -424,7 +425,7 @@ test('material development diagnostics are sanitized and preserve the determinis
   setMlShadowObserverForTests(undefined); setLoggerDestinationForTests(null); resetLoggerForTests(); env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialArtifactPath = prior.path; clearMlArtifactCacheForTests();
 });
 
-test('real learner-home shadow shape fails safe across confidence, dominance, fusion, diagnostics, logger, and redaction failures', async () => {
+isolatedRecommendationTest('real learner-home shadow shape fails safe across confidence, dominance, fusion, diagnostics, logger, and redaction failures', async () => {
   const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
@@ -455,7 +456,7 @@ test('real learner-home shadow shape fails safe across confidence, dominance, fu
   }
 });
 
-test('never-settling async material shadow is bounded by the secondary timeout', async () => {
+isolatedRecommendationTest('never-settling async material shadow is bounded by the secondary timeout', async () => {
   const response = { deterministic: true };
   const started = performance.now();
   setMlShadowNeverSettleForTests(response);
@@ -479,7 +480,7 @@ test('never-settling async material shadow is bounded by the secondary timeout',
   }
 });
 
-test('candidate duplicates disable shadow and cached catalog-scale scoring stays bounded', async () => {
+isolatedRecommendationTest('candidate duplicates disable shadow and cached catalog-scale scoring stays bounded', async () => {
   const loadStarted = performance.now(); const artifact = await loadPortableModelArtifact(path.join(portableRoot, 'material-hybrid.json'), 'material'); const loadMs = performance.now() - loadStarted;
   const projectLoadStarted = performance.now(); const projectArtifact = await loadPortableModelArtifact(path.join(portableRoot, 'project-hybrid.json'), 'project'); const projectLoadMs = performance.now() - projectLoadStarted;
   const fixture = JSON.parse(await readFile(path.join(portableRoot, 'parity-fixtures.json'), 'utf8')).lightfm_cases[0];

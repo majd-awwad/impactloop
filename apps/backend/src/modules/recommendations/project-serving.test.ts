@@ -10,6 +10,7 @@ import {
   clearMlArtifactCacheForTests,
   runMlShadowComparison,
 } from './ml-shadow.service.js';
+import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
 import { buildServedSuggestedProjectsItems } from './project-runtime-candidate-mapping.js';
 
 const root = process.cwd().endsWith(path.join('apps', 'backend'))
@@ -52,7 +53,7 @@ test('buildServedSuggestedProjectsItems fails closed on hydration mismatch', () 
   }), /project_hydration_failure/);
 });
 
-test('READY NONE and LOW serve long-term order with zero recent slots', async () => {
+isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero recent slots', async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
     projectServing: env.recommendationMlProjectServingEnabled,
@@ -112,7 +113,7 @@ test('READY NONE and LOW serve long-term order with zero recent slots', async ()
   }
 });
 
-test('READY MEDIUM and HIGH respect frozen recent slot caps in served ranking', async () => {
+isolatedRecommendationTest('READY MEDIUM and HIGH respect frozen recent slot caps in served ranking', async () => {
   const prior = {
     shadow: env.recommendationMlShadowEnabled,
     projectServing: env.recommendationMlProjectServingEnabled,

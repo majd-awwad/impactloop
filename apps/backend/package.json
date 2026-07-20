@@ -14,6 +14,7 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "test": "node --import tsx --test src/modules/**/*.test.ts",
     "evaluate:4j-a": "tsx scripts/evaluate-slice-4j-a.ts",
+    "recommendations:demo:preflight": "tsx scripts/recommendations-demo-preflight.ts",
     "clean-dev-notifications": "tsx ../../scripts/clean-dev-notifications.ts",
     "clean-driver-notifications": "tsx ../../scripts/clean-driver-notifications.ts",
     "backfill-driver-new-job-notifications": "tsx ../../scripts/backfill-driver-new-job-notifications.ts",
