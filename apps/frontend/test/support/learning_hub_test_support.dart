@@ -85,6 +85,14 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) async {
+    return fetchMyLearningProjectSubmission(id);
+  }
+
+  @override
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;
 
   @override
@@ -261,5 +269,24 @@ class _EmptyLearningHubRepository implements LearningProjectRepository {
     List<Map<String, dynamic>>? links,
   }) async {
     return;
+  }
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) {
+    throw UnimplementedError('createAiAuthoringDraft');
+  }
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) {
+    throw UnimplementedError('getOrCreateAuthoringConversation');
   }
 }

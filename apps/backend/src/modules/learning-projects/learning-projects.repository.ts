@@ -351,6 +351,7 @@ const projectBuildInclude = {
           canBeSubstituted: true,
           notes: true,
           searchKeywords: true,
+          alternativeKeywords: true,
           category: {
             select: {
               id: true,
@@ -1303,11 +1304,11 @@ export const createLearningProjectForReview = async (input: {
 export const updateMyLearningProjectSubmission = async (input: {
   id: string;
   userId: string;
-  categoryId: string;
-  title: string;
-  shortDescription: string;
-  description: string;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  categoryId?: string;
+  title?: string;
+  shortDescription?: string;
+  description?: string;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
   estimatedDurationMinutes?: number;
   coverImageUrl?: string | null;
   requiredComponents?: Array<{
@@ -1346,14 +1347,26 @@ export const updateMyLearningProjectSubmission = async (input: {
       return null;
     }
 
-    const projectUpdateData: Prisma.LearningProjectUpdateManyMutationInput = {
-      title: input.title,
-      shortDescription: input.shortDescription,
-      description: input.description,
-      difficulty: input.difficulty,
-      estimatedDurationMinutes: input.estimatedDurationMinutes,
-      coverImageUrl: input.coverImageUrl ?? null,
-    };
+    const projectUpdateData: Prisma.LearningProjectUpdateManyMutationInput = {};
+
+    if (input.title !== undefined) {
+      projectUpdateData.title = input.title;
+    }
+    if (input.shortDescription !== undefined) {
+      projectUpdateData.shortDescription = input.shortDescription;
+    }
+    if (input.description !== undefined) {
+      projectUpdateData.description = input.description;
+    }
+    if (input.difficulty !== undefined) {
+      projectUpdateData.difficulty = input.difficulty;
+    }
+    if (input.estimatedDurationMinutes !== undefined) {
+      projectUpdateData.estimatedDurationMinutes = input.estimatedDurationMinutes;
+    }
+    if (input.coverImageUrl !== undefined) {
+      projectUpdateData.coverImageUrl = input.coverImageUrl;
+    }
 
     if (existing.status === 'PENDING_REVIEW') {
       projectUpdateData.reviewNote = null;
@@ -1374,10 +1387,12 @@ export const updateMyLearningProjectSubmission = async (input: {
       return null;
     }
 
-    await tx.learningProject.update({
-      where: { id: input.id },
-      data: { categoryId: input.categoryId },
-    });
+    if (input.categoryId !== undefined) {
+      await tx.learningProject.update({
+        where: { id: input.id },
+        data: { categoryId: input.categoryId },
+      });
+    }
 
     if (input.requiredComponents !== undefined) {
       const existingIds = new Set(
@@ -1484,6 +1499,39 @@ export const updateMyLearningProjectSubmission = async (input: {
     : null;
 };
 
+export const applyReviewedAuthoringProposalToMyDraft = async (input: {
+  id: string;
+  userId: string;
+  expectedUpdatedAt: Date;
+  categoryId: string;
+  title: string;
+  shortDescription: string;
+  description: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  estimatedDurationMinutes?: number;
+  coverImageUrl?: string | null;
+  requiredComponents: Array<{ component: NormalizedSubmitComponent }>;
+  steps: { title: string; description: string }[];
+  links?: { url: string; title?: string }[];
+}) => {
+  const current = await prisma.learningProject.findFirst({
+    where: {
+      id: input.id,
+      createdBy: input.userId,
+      status: 'DRAFT',
+      updatedAt: input.expectedUpdatedAt,
+    },
+    select: { id: true },
+  });
+
+  if (!current) {
+    return null;
+  }
+
+  const { expectedUpdatedAt: _expectedUpdatedAt, ...updateInput } = input;
+  return updateMyLearningProjectSubmission(updateInput);
+};
+
 export const resubmitMyLearningProjectSubmission = async (
   id: string,
   userId: string,
@@ -1503,6 +1551,42 @@ export const resubmitMyLearningProjectSubmission = async (
       changesRequestedReason: null,
       rejectionReason: null,
     },
+  });
+};
+
+export const submitMyLearningProjectDraft = async (input: {
+  id: string;
+  userId: string;
+  client?: Prisma.TransactionClient;
+}) => {
+  const db = input.client ?? prisma;
+  const updated = await db.learningProject.updateMany({
+    where: {
+      id: input.id,
+      createdBy: input.userId,
+      status: 'DRAFT',
+    },
+    data: {
+      status: 'PENDING_REVIEW',
+      submittedAt: new Date(),
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewNote: null,
+      changesRequestedReason: null,
+      rejectionReason: null,
+    },
+  });
+
+  if (updated.count === 0) {
+    return null;
+  }
+
+  return db.learningProject.findFirst({
+    where: {
+      id: input.id,
+      createdBy: input.userId,
+    },
+    include: myLearningProjectDetailInclude,
   });
 };
 
@@ -1553,6 +1637,8 @@ export const completeProjectBuildStep = async (input: {
             linkedMaterialId: true,
             linkedReservation: {
               select: {
+                id: true,
+                materialId: true,
                 status: true,
               },
             },
@@ -1597,7 +1683,6 @@ export const completeProjectBuildStep = async (input: {
     const allMaterialsReady = build.items.every((item) =>
       resolveBuildItemStepUnlockReadiness({
         status: item.status,
-        linkedMaterial: item.linkedMaterial,
         linkedReservation: item.linkedReservation,
       }).isReadyForStepUnlock,
     );
@@ -1760,5 +1845,75 @@ export const findGuideConversationIdForBuild = async (
     },
     select: {
       id: true,
+    },
+  });
+
+export const insertLearnerAuthoringDraft = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    createdBy: string;
+    categoryId: string;
+    difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    title: string;
+    shortDescription: string;
+    description: string;
+  },
+) =>
+  tx.learningProject.create({
+    data: {
+      createdBy: input.createdBy,
+      categoryId: input.categoryId,
+      title: input.title,
+      shortDescription: input.shortDescription,
+      description: input.description,
+      difficulty: input.difficulty,
+      status: 'DRAFT',
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+
+export const findOwnedDraftProjectForAuthoring = async (
+  projectId: string,
+  userId: string,
+) =>
+  prisma.learningProject.findFirst({
+    where: {
+      id: projectId,
+      createdBy: userId,
+      status: 'DRAFT',
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+
+export const createAuthoringConversationForDraft = async (input: {
+  userId: string;
+  learningProjectId: string;
+  locale: string;
+  title: string | null;
+}) =>
+  prisma.aiConversation.create({
+    data: {
+      userId: input.userId,
+      mode: 'PROJECT_AUTHORING',
+      locale: input.locale,
+      title: input.title,
+      projectBuildId: null,
+      learningProjectId: input.learningProjectId,
+    },
+    select: {
+      id: true,
+      mode: true,
+      learningProjectId: true,
+      updatedAt: true,
     },
   });

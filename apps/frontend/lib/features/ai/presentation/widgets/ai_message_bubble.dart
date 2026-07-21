@@ -5,8 +5,10 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
+import '../../../../shared/utils/content_text_direction.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/ai_chat_controller.dart';
+import '../../domain/ai_helpers.dart';
 import '../../domain/ai_models.dart';
 import 'ai_content_blocks.dart';
 
@@ -15,10 +17,16 @@ class AiMessageBubble extends ConsumerWidget {
     super.key,
     required this.message,
     required this.locale,
+    this.authoringProjectUpdatedAt,
+    this.authoringDraftSnapshot,
+    this.hideStructuredAuthoringBlocks = false,
   });
 
   final AiMessageItem message;
   final String locale;
+  final DateTime? authoringProjectUpdatedAt;
+  final AuthoringDraftSnapshot? authoringDraftSnapshot;
+  final bool hideStructuredAuthoringBlocks;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,6 +82,9 @@ class AiMessageBubble extends ConsumerWidget {
                             height: 1.45,
                           ),
                           textAlign: TextAlign.start,
+                          textDirection: resolveContentTextDirection(
+                            message.contentText ?? '',
+                          ),
                         )
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,10 +92,17 @@ class AiMessageBubble extends ConsumerWidget {
                             for (var index = 0;
                                 index < message.contentBlocks.length;
                                 index += 1)
-                              AiContentBlockView(
+                              if (!hideStructuredAuthoringBlocks ||
+                                  !isAuthoringStructuredHistoryBlock(
+                                    message.contentBlocks[index].type,
+                                  ))
+                                AiContentBlockView(
                                 block: message.contentBlocks[index],
                                 messageBlocks: message.contentBlocks,
                                 blockIndex: index,
+                                locale: locale,
+                                authoringProjectUpdatedAt: authoringProjectUpdatedAt,
+                                authoringDraftSnapshot: authoringDraftSnapshot,
                                 pendingActionBusyId:
                                     chatState.pendingActionBusyId,
                                 actionErrorMessage: message

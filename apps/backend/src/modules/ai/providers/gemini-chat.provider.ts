@@ -26,7 +26,22 @@ import type {
   AiChatProviderResult,
 } from './ai-chat-provider.types.js';
 
-type GeminiChatClient = Pick<GoogleGenAI, 'models'>;
+type GeminiGenerateContentResponse = {
+  modelVersion?: string | null;
+  text?: string | null;
+  usageMetadata?: {
+    promptTokenCount?: number | null;
+    candidatesTokenCount?: number | null;
+  } | null;
+};
+
+type GeminiChatClient = {
+  models: {
+    generateContent: (
+      request: Parameters<GoogleGenAI['models']['generateContent']>[0],
+    ) => Promise<GeminiGenerateContentResponse>;
+  };
+};
 
 type GeminiFailureStage =
   | 'client_init'
@@ -285,7 +300,7 @@ const isGeminiQuotaOrRateLimitError = (error: unknown): boolean => {
 };
 
 const generateContentWithModelFallback = async <
-  T extends { modelVersion?: string | null },
+  T extends GeminiGenerateContentResponse,
 >(
   ai: GeminiChatClient,
   operation: string,
@@ -300,7 +315,7 @@ const generateContentWithModelFallback = async <
     try {
       const response = (await ai.models.generateContent(
         buildRequest(model),
-      )) as T;
+      )) as unknown as T;
 
       if (model !== candidates[0]) {
         logger.info(

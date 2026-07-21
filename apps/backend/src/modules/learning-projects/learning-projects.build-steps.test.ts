@@ -9,7 +9,6 @@ import {
   completeProjectBuildStepById,
   getMyProjectBuildById,
   getOrCreateBuildGuideConversationByProjectId,
-  linkBuildItemMaterialById,
   startProjectBuildById,
   updateProjectBuildItemById,
 } from './learning-projects.service.js';
@@ -39,6 +38,143 @@ const ids: TestIds = {
   conversations: [],
   reservations: [],
 };
+
+function assertAllStepsLocked(
+  build: NonNullable<Awaited<ReturnType<typeof getMyProjectBuildById>>>,
+) {
+  assert.equal(build.stepProgress.currentStep, null);
+  assert.equal(build.stepProgress.nextAction, 'PREPARE_MATERIALS');
+  assert.ok(build.stepProgress.steps.every((step) => step.state === 'LOCKED'));
+}
+
+async function createSupplierUser(suffix: string) {
+  const passwordHash = await hashPassword('TestPassword123!');
+  const user = await prisma.user.create({
+    data: {
+      displayName: `${TEST_MARKER} Supplier ${suffix}`,
+      email: `${TEST_MARKER}-supplier-${suffix}-${Date.now()}@impactloop.test`,
+      passwordHash,
+      phone: `+97059${Math.floor(Math.random() * 1_000_000)
+        .toString()
+        .padStart(6, '0')}`,
+      accountStatus: 'ACTIVE',
+      emailVerifiedAt: new Date(),
+      roles: { create: [{ role: 'SUPPLIER', isPrimary: true }] },
+      supplierProfile: {
+        create: {
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: `${TEST_MARKER} Supplier ${suffix}`,
+          verificationStatus: 'APPROVED',
+        },
+      },
+    },
+  });
+  ids.users.push(user.id);
+  return user;
+}
+
+async function createLocation() {
+  const location = await prisma.location.create({
+    data: {
+      country: 'PS',
+      city: 'Ramallah',
+      area: 'Al Bireh',
+      isApproximate: true,
+    },
+  });
+  ids.locations.push(location.id);
+  return location;
+}
+
+async function createMaterial(input: {
+  ownerId: string;
+  categoryId: string;
+  locationId: string;
+  title: string;
+}) {
+  const supplierProfile = await prisma.supplierProfile.findUnique({
+    where: { userId: input.ownerId },
+  });
+
+  const material = await prisma.material.create({
+    data: {
+      ownerId: input.ownerId,
+      supplierProfileId: supplierProfile?.id,
+      categoryId: input.categoryId,
+      locationId: input.locationId,
+      title: input.title,
+      description: `${TEST_MARKER} material description`,
+      materialType: 'LED',
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      sourceType: 'WORKSHOP_SURPLUS',
+      status: 'AVAILABLE',
+      isFree: true,
+    },
+  });
+  ids.materials.push(material.id);
+  return material;
+}
+
+async function createProjectCategories(suffix: string) {
+  const projectCategory = await prisma.category.create({
+    data: {
+      nameEn: `${TEST_MARKER} Projects ${suffix}`,
+      nameAr: `${TEST_MARKER} مشاريع ${suffix}`,
+      categoryType: 'PROJECT',
+      isActive: true,
+    },
+  });
+  ids.categories.push(projectCategory.id);
+  const materialCategory = await prisma.category.create({
+    data: {
+      nameEn: `${TEST_MARKER} Electronics ${suffix}`,
+      nameAr: `${TEST_MARKER} إلكترونيات ${suffix}`,
+      categoryType: 'BOTH',
+      isActive: true,
+    },
+  });
+  ids.materialCategories.push(materialCategory.id);
+  return { projectCategory, materialCategory };
+}
+
+async function createPublishedProjectWithZeroSteps(input: {
+  authorId: string;
+  projectCategoryId: string;
+  materialCategoryId: string;
+}) {
+  const project = await prisma.learningProject.create({
+    data: {
+      categoryId: input.projectCategoryId,
+      createdBy: input.authorId,
+      title: `${TEST_MARKER} Zero-step project`,
+      shortDescription: `${TEST_MARKER} short`,
+      description: `${TEST_MARKER} description`,
+      difficulty: 'BEGINNER',
+      status: 'PUBLISHED',
+      requiredComponents: {
+        create: [
+          {
+            componentName: 'LED',
+            materialType: 'LED',
+            quantity: 1,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: input.materialCategoryId,
+            searchKeywords: ['led'],
+          },
+        ],
+      },
+    },
+    include: {
+      requiredComponents: true,
+      steps: { orderBy: { stepNumber: 'asc' } },
+    },
+  });
+  ids.projects.push(project.id);
+  return project;
+}
 
 async function createLearnerUser(suffix: string) {
   const passwordHash = await hashPassword('TestPassword123!');
@@ -113,7 +249,7 @@ async function createPublishedProjectWithSteps(input: {
             stepNumber: 2,
             title: 'Add the resistor',
             description: 'Connect resistor in series',
-            reviewStatus: 'ACCEPTED',
+            reviewStatus: 'APPROVED',
           },
         ],
       },
@@ -125,155 +261,6 @@ async function createPublishedProjectWithSteps(input: {
   });
   ids.projects.push(project.id);
   return project;
-}
-
-async function createSupplierUser(suffix: string) {
-  const passwordHash = await hashPassword('TestPassword123!');
-  const user = await prisma.user.create({
-    data: {
-      displayName: `${TEST_MARKER} Supplier ${suffix}`,
-      email: `${TEST_MARKER}-supplier-${suffix}-${Date.now()}@impactloop.test`,
-      passwordHash,
-      phone: `+97059${Math.floor(Math.random() * 1_000_000)
-        .toString()
-        .padStart(6, '0')}`,
-      accountStatus: 'ACTIVE',
-      emailVerifiedAt: new Date(),
-      roles: { create: [{ role: 'SUPPLIER', isPrimary: true }] },
-      supplierProfile: {
-        create: {
-          supplierType: 'INDIVIDUAL_SUPPLIER',
-          publicName: `${TEST_MARKER} Supplier ${suffix}`,
-          verificationStatus: 'APPROVED',
-        },
-      },
-    },
-  });
-  ids.users.push(user.id);
-  return user;
-}
-
-async function createLocation() {
-  const location = await prisma.location.create({
-    data: {
-      country: 'PS',
-      city: 'Ramallah',
-      area: 'Al Bireh',
-      isApproximate: true,
-    },
-  });
-  ids.locations.push(location.id);
-  return location;
-}
-
-async function createMaterial(input: {
-  ownerId: string;
-  categoryId: string;
-  locationId: string;
-  title: string;
-}) {
-  const supplierProfile = await prisma.supplierProfile.findUnique({
-    where: { userId: input.ownerId },
-  });
-
-  const material = await prisma.material.create({
-    data: {
-      ownerId: input.ownerId,
-      supplierProfileId: supplierProfile?.id,
-      categoryId: input.categoryId,
-      locationId: input.locationId,
-      title: input.title,
-      description: `${TEST_MARKER} material description`,
-      materialType: 'LED',
-      quantity: 1,
-      unit: 'piece',
-      condition: 'GOOD',
-      sourceType: 'WORKSHOP_SURPLUS',
-      status: 'AVAILABLE',
-      isFree: true,
-    },
-  });
-  ids.materials.push(material.id);
-  return material;
-}
-
-async function createProjectCategories(suffix = '') {
-  const label = suffix ? ` ${suffix}` : '';
-  const projectCategory = await prisma.category.create({
-    data: {
-      nameEn: `${TEST_MARKER} Projects${label}`,
-      nameAr: `${TEST_MARKER} مشاريع${label}`,
-      categoryType: 'PROJECT',
-      isActive: true,
-    },
-  });
-  ids.categories.push(projectCategory.id);
-  const materialCategory = await prisma.category.create({
-    data: {
-      nameEn: `${TEST_MARKER} Electronics${label}`,
-      nameAr: `${TEST_MARKER} إلكترونيات${label}`,
-      categoryType: 'BOTH',
-      isActive: true,
-    },
-  });
-  ids.materialCategories.push(materialCategory.id);
-  return { projectCategory, materialCategory };
-}
-
-async function createPublishedProjectWithZeroSteps(input: {
-  authorId: string;
-  projectCategoryId: string;
-  materialCategoryId: string;
-}) {
-  const project = await prisma.learningProject.create({
-    data: {
-      categoryId: input.projectCategoryId,
-      createdBy: input.authorId,
-      title: `${TEST_MARKER} Zero-step project`,
-      shortDescription: `${TEST_MARKER} short`,
-      description: `${TEST_MARKER} description`,
-      difficulty: 'BEGINNER',
-      status: 'PUBLISHED',
-      requiredComponents: {
-        create: [
-          {
-            componentName: 'LED',
-            materialType: 'LED',
-            quantity: 1,
-            unit: 'piece',
-            componentRole: 'REQUIRED_MATERIAL',
-            categoryId: input.materialCategoryId,
-            searchKeywords: ['led'],
-          },
-        ],
-      },
-    },
-    include: {
-      requiredComponents: true,
-      steps: { orderBy: { stepNumber: 'asc' } },
-    },
-  });
-  ids.projects.push(project.id);
-  return project;
-}
-
-function assertAllStepsLocked(build: Awaited<ReturnType<typeof getMyProjectBuildById>>) {
-  assert.ok(build);
-  assert.equal(build.stepProgress.currentStep, null);
-  assert.equal(build.stepProgress.nextAction, 'PREPARE_MATERIALS');
-  assert.ok(build.stepProgress.steps.every((step) => step.state === 'LOCKED'));
-}
-
-async function markAllItemsAlreadyOwned(
-  projectId: string,
-  learnerId: string,
-  items: Array<{ id: string }>,
-) {
-  for (const item of items) {
-    await updateProjectBuildItemById(projectId, learnerId, item.id, {
-      status: 'ALREADY_OWNED',
-    });
-  }
 }
 
 before(() => {
@@ -281,20 +268,6 @@ before(() => {
 });
 
 after(async () => {
-  if (ids.reservations.length > 0) {
-    await prisma.reservation.deleteMany({
-      where: { id: { in: ids.reservations } },
-    });
-  }
-
-  if (ids.materials.length > 0) {
-    await prisma.material.deleteMany({ where: { id: { in: ids.materials } } });
-  }
-
-  if (ids.locations.length > 0) {
-    await prisma.location.deleteMany({ where: { id: { in: ids.locations } } });
-  }
-
   if (ids.conversations.length > 0) {
     await prisma.aiConversation.deleteMany({
       where: { id: { in: ids.conversations } },
@@ -394,6 +367,7 @@ describe('learning project build step progress', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'ALREADY_OWNED',
+        learnerNote: null,
       });
     }
 
@@ -728,7 +702,7 @@ describe('build step unlock material readiness', () => {
   test('keeps steps LOCKED when checklist status is AVAILABLE self-report', async () => {
     const learner = await createLearnerUser('readiness-available');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('available');
+      await createProjectCategoryAndMaterialCategory('available');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -740,6 +714,7 @@ describe('build step unlock material readiness', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'AVAILABLE',
+        learnerNote: null,
       });
     }
 
@@ -753,7 +728,7 @@ describe('build step unlock material readiness', () => {
     const learner = await createLearnerUser('readiness-linked');
     const supplier = await createSupplierUser('readiness-linked');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('linked');
+      await createProjectCategoryAndMaterialCategory('linked');
     const location = await createLocation();
     const material = await createMaterial({
       ownerId: supplier.id,
@@ -785,7 +760,7 @@ describe('build step unlock material readiness', () => {
   test('keeps steps LOCKED for active RESERVED checklist status', async () => {
     const learner = await createLearnerUser('readiness-reserved');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('reserved');
+      await createProjectCategoryAndMaterialCategory('reserved');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -797,6 +772,7 @@ describe('build step unlock material readiness', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'RESERVED',
+        learnerNote: null,
       });
     }
 
@@ -809,7 +785,7 @@ describe('build step unlock material readiness', () => {
     const learner = await createLearnerUser('readiness-completed');
     const supplier = await createSupplierUser('readiness-completed');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('completed');
+      await createProjectCategoryAndMaterialCategory('completed');
     const location = await createLocation();
     const material = await createMaterial({
       ownerId: supplier.id,
@@ -859,7 +835,7 @@ describe('build step unlock material readiness', () => {
   test('unlocks steps for ALREADY_OWNED checklist status', async () => {
     const learner = await createLearnerUser('readiness-owned');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('owned');
+      await createProjectCategoryAndMaterialCategory('owned');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -884,7 +860,7 @@ describe('build step unlock material readiness', () => {
   test('keeps steps LOCKED for suggested ALTERNATIVE status', async () => {
     const learner = await createLearnerUser('readiness-alternative');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('alternative');
+      await createProjectCategoryAndMaterialCategory('alternative');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -896,6 +872,7 @@ describe('build step unlock material readiness', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'ALTERNATIVE',
+        learnerNote: null,
       });
     }
 
@@ -908,7 +885,7 @@ describe('build step unlock material readiness', () => {
   test('returns stable progress for a project with zero steps', async () => {
     const learner = await createLearnerUser('readiness-zero-steps');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('zero-steps');
+      await createProjectCategoryAndMaterialCategory('zero-steps');
     const project = await createPublishedProjectWithZeroSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -937,7 +914,7 @@ describe('build step unlock material readiness', () => {
   test('unlocks step 1 when every material is genuinely ready on multi-step builds', async () => {
     const learner = await createLearnerUser('readiness-multi');
     const { projectCategory, materialCategory } =
-      await createProjectCategories('multi');
+      await createProjectCategoryAndMaterialCategory('multi');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,

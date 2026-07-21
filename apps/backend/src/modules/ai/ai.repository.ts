@@ -27,6 +27,7 @@ export const createConversation = async (input: {
   locale: string;
   title?: string | null;
   projectBuildId?: string | null;
+  learningProjectId?: string | null;
 }) =>
   prisma.aiConversation.create({
     data: {
@@ -35,6 +36,77 @@ export const createConversation = async (input: {
       locale: input.locale,
       title: input.title ?? null,
       projectBuildId: input.projectBuildId ?? null,
+      learningProjectId: input.learningProjectId ?? null,
+    },
+  });
+
+export const insertAuthoringConversation = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    userId: string;
+    learningProjectId: string;
+    locale: string;
+    title: string | null;
+  },
+) =>
+  tx.aiConversation.create({
+    data: {
+      userId: input.userId,
+      mode: 'PROJECT_AUTHORING',
+      locale: input.locale,
+      title: input.title,
+      projectBuildId: null,
+      learningProjectId: input.learningProjectId,
+      lastMessageAt: new Date(),
+    },
+    select: {
+      id: true,
+      mode: true,
+      learningProjectId: true,
+      updatedAt: true,
+    },
+  });
+
+export const insertAuthoringIdeaUserMessage = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    conversationId: string;
+    contentText: string;
+    locale: string;
+    clientMessageId: string;
+  },
+) =>
+  tx.aiMessage.create({
+    data: {
+      conversationId: input.conversationId,
+      role: 'USER',
+      status: 'COMPLETED',
+      contentText: input.contentText,
+      clientMessageId: input.clientMessageId,
+      locale: input.locale,
+    },
+    select: {
+      id: true,
+      role: true,
+      contentText: true,
+    },
+  });
+
+export const findAuthoringConversationForProject = async (
+  learningProjectId: string,
+) =>
+  prisma.aiConversation.findFirst({
+    where: {
+      learningProjectId,
+      mode: 'PROJECT_AUTHORING',
+    },
+    select: {
+      id: true,
+      userId: true,
+      mode: true,
+      learningProjectId: true,
+      projectBuildId: true,
+      updatedAt: true,
     },
   });
 
@@ -67,8 +139,7 @@ export const listConversationsForUser = async (input: {
       where: {
         userId: input.userId,
         status,
-        mode: 'GENERAL_LEARNING',
-        projectBuildId: null,
+        mode: { in: ['GENERAL_LEARNING', 'LEARNER_ASSISTANT'] },
       },
     }),
   ]);
@@ -198,6 +269,7 @@ export const createUserMessage = async (input: {
   contentText: string;
   clientMessageId: string;
   locale: string;
+  contentBlocks?: AiContentBlock[];
 }) =>
   prisma.aiMessage.create({
     data: {
@@ -207,6 +279,9 @@ export const createUserMessage = async (input: {
       contentText: input.contentText,
       clientMessageId: input.clientMessageId,
       locale: input.locale,
+      ...(input.contentBlocks
+        ? { contentBlocks: input.contentBlocks as Prisma.InputJsonValue }
+        : {}),
     },
   });
 
@@ -281,7 +356,7 @@ export const deleteAiDataForUsers = async (userIds: string[]) => {
 export const appendActionResultToAssistantMessage = async (input: {
   conversationId: string;
   pendingActionId: string;
-  resultBlock: AiContentBlock;
+  resultBlock: Extract<AiContentBlock, { type: 'action_result' }>;
 }) => {
   const messages = await prisma.aiMessage.findMany({
     where: {
@@ -299,12 +374,14 @@ export const appendActionResultToAssistantMessage = async (input: {
         block.type === 'action_confirmation' &&
         block.pendingActionId === input.pendingActionId,
     );
-    const hasResult = blocks.some(
-      (block) =>
-        block.type === 'action_result' &&
-        block.actionType === input.resultBlock.actionType &&
-        block.status === input.resultBlock.status,
-    );
+    const hasResult =
+      input.resultBlock.type === 'action_result' &&
+      blocks.some(
+        (block) =>
+          block.type === 'action_result' &&
+          block.actionType === input.resultBlock.actionType &&
+          block.status === input.resultBlock.status,
+      );
 
     if (!hasConfirmation || hasResult) {
       continue;

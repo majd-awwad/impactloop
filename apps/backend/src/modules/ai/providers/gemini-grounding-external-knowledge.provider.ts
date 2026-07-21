@@ -37,7 +37,13 @@ type GeminiGroundingResponse = {
   }>;
 };
 
-type GeminiGroundingClient = Pick<GoogleGenAI, 'models'>;
+type GeminiGroundingClient = {
+  models: {
+    generateContent: (
+      request: Parameters<GoogleGenAI['models']['generateContent']>[0],
+    ) => Promise<GeminiGroundingResponse>;
+  };
+};
 
 let clientFactoryOverride: (() => GeminiGroundingClient) | null = null;
 

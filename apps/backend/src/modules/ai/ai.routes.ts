@@ -14,6 +14,19 @@ import {
   listAiConversationsHandler,
   restoreAiConversationHandler,
   sendAiConversationMessageHandler,
+  startProjectAuthoringHandler,
+  generateProjectAuthoringProposalHandler,
+  submitProjectAuthoringProposalReviewHandler,
+  submitProjectAuthoringDiscussionHandler,
+  reviseProjectAuthoringProposalHandler,
+  prepareApplyReviewedAuthoringProposalHandler,
+  runSequentialAuthoringActionHandler,
+  discussSequentialAuthoringTurnHandler,
+  getSequentialAuthoringStateHandler,
+  startAuthoringSessionHandler,
+  getAuthoringSessionHandler,
+  runAuthoringSessionActionHandler,
+  sendAuthoringSessionMessageHandler,
 } from './ai.controller.js';
 import {
   aiChatConversationCreateRateLimitMiddleware,
@@ -21,6 +34,14 @@ import {
 } from './ai.rate-limit.js';
 import {
   conversationIdParamSchema,
+  authoringProposalIdParamSchema,
+  authoringReviewStateIdParamSchema,
+  submitAuthoringProposalReviewSchema,
+  submitAuthoringProposalDiscussionSchema,
+  reviseAuthoringProposalSchema,
+  sequentialAuthoringActionSchema,
+  discussSequentialAuthoringTurnSchema,
+  authoringTurnIdParamSchema,
   confirmAiPendingActionSchema,
   createAiConversationSchema,
   listAiConversationsQuerySchema,
@@ -28,6 +49,12 @@ import {
   aiPendingActionIdParamSchema,
   sendAiMessageSchema,
 } from './ai.validation.js';
+import {
+  authoringSessionActionSchema,
+  authoringSessionMessageSchema,
+  sessionIdParamSchema,
+  startAuthoringSessionSchema,
+} from './project-authoring-session.controller.js';
 
 export const aiRouter = Router();
 
@@ -51,6 +78,102 @@ aiRouter.get(
   validate(conversationIdParamSchema, 'params'),
   validate(listAiMessagesQuerySchema, 'query'),
   asyncHandler(listAiConversationMessagesHandler),
+);
+
+aiRouter.post(
+  '/authoring/sessions/start',
+  aiChatMessageRateLimitMiddleware,
+  validate(startAuthoringSessionSchema),
+  asyncHandler(startAuthoringSessionHandler),
+);
+
+aiRouter.get(
+  '/authoring/sessions/:sessionId',
+  validate(sessionIdParamSchema, 'params'),
+  asyncHandler(getAuthoringSessionHandler),
+);
+
+aiRouter.post(
+  '/authoring/sessions/:sessionId/messages',
+  aiChatMessageRateLimitMiddleware,
+  validate(sessionIdParamSchema, 'params'),
+  validate(authoringSessionMessageSchema),
+  asyncHandler(sendAuthoringSessionMessageHandler),
+);
+
+aiRouter.post(
+  '/authoring/sessions/:sessionId/actions',
+  aiChatMessageRateLimitMiddleware,
+  validate(sessionIdParamSchema, 'params'),
+  validate(authoringSessionActionSchema),
+  asyncHandler(runAuthoringSessionActionHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/start',
+  aiChatMessageRateLimitMiddleware,
+  validate(conversationIdParamSchema, 'params'),
+  asyncHandler(startProjectAuthoringHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/proposal',
+  aiChatMessageRateLimitMiddleware,
+  validate(conversationIdParamSchema, 'params'),
+  asyncHandler(generateProjectAuthoringProposalHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/sequential/action',
+  aiChatMessageRateLimitMiddleware,
+  validate(conversationIdParamSchema, 'params'),
+  validate(sequentialAuthoringActionSchema),
+  asyncHandler(runSequentialAuthoringActionHandler),
+);
+
+aiRouter.get(
+  '/conversations/:conversationId/authoring/sequential/state',
+  validate(conversationIdParamSchema, 'params'),
+  asyncHandler(getSequentialAuthoringStateHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/turns/:turnId/discuss',
+  aiChatMessageRateLimitMiddleware,
+  validate(authoringTurnIdParamSchema, 'params'),
+  validate(discussSequentialAuthoringTurnSchema),
+  asyncHandler(discussSequentialAuthoringTurnHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/proposals/:proposalId/review',
+  aiChatMessageRateLimitMiddleware,
+  validate(authoringProposalIdParamSchema, 'params'),
+  validate(submitAuthoringProposalReviewSchema),
+  asyncHandler(submitProjectAuthoringProposalReviewHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/proposals/:proposalId/discuss',
+  aiChatMessageRateLimitMiddleware,
+  validate(authoringProposalIdParamSchema, 'params'),
+  validate(submitAuthoringProposalDiscussionSchema),
+  asyncHandler(submitProjectAuthoringDiscussionHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/proposals/:proposalId/revise',
+  aiChatMessageRateLimitMiddleware,
+  validate(authoringProposalIdParamSchema, 'params'),
+  validate(reviseAuthoringProposalSchema),
+  asyncHandler(reviseProjectAuthoringProposalHandler),
+);
+
+aiRouter.post(
+  '/conversations/:conversationId/authoring/reviews/:reviewStateId/apply',
+  aiChatMessageRateLimitMiddleware,
+  validate(authoringReviewStateIdParamSchema, 'params'),
+  asyncHandler(prepareApplyReviewedAuthoringProposalHandler),
 );
 
 aiRouter.post(

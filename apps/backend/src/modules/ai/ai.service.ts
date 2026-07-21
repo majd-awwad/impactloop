@@ -5,9 +5,12 @@ import {
   buildMessagePreviewFromBlocks,
   processGeneralLearningTurn,
 } from './ai-orchestrator.service.js';
-import type { AiConversationMode } from '../../generated/prisma/client.js';
-
-import {  archiveConversationForUser,
+import {
+  bootstrapProjectAuthoringForUser,
+  sendProjectAuthoringMessageForUser,
+} from './ai-project-authoring.service.js';
+import {
+  archiveConversationForUser,
   createConversation,
   findOwnedConversation,
   listConversationsForUser,
@@ -24,23 +27,9 @@ import { parseStoredContentBlocks } from './ai-context-builder.js';
 import type { CreateAiConversationInput, SendAiMessageInput } from './ai.validation.js';
 import { assertMessageLength } from './ai.rate-limit.js';
 
-const ASSISTANT_STORED_MODE = 'GENERAL_LEARNING' as const;
-
-export const resolveAssistantStoredMode = (
-  mode: CreateAiConversationInput['mode'],
-): typeof ASSISTANT_STORED_MODE => {
-  if (mode === 'LEARNER_ASSISTANT' || mode === 'GENERAL_LEARNING') {
-    return ASSISTANT_STORED_MODE;
-  }
-
-  throw new AppError('Unsupported assistant mode.', 400, 'VALIDATION_ERROR', {
-    field: 'mode',
-  });
-};
-
 const mapConversationSummary = (input: {
   id: string;
-  mode: AiConversationSummary['mode'] | typeof ASSISTANT_STORED_MODE;
+  mode: AiConversationSummary['mode'];
   locale: string;
   title: string | null;
   status: AiConversationSummary['status'];
@@ -50,10 +39,7 @@ const mapConversationSummary = (input: {
   preview: string | null;
 }): AiConversationSummary => ({
   id: input.id,
-  mode:
-    input.mode === ASSISTANT_STORED_MODE
-      ? 'LEARNER_ASSISTANT'
-      : 'GENERAL_LEARNING',
+  mode: input.mode,
   locale: input.locale,
   title: input.title,
   status: input.status,
@@ -99,7 +85,7 @@ export const createGeneralLearningConversationForUser = async (
 ) => {
   const conversation = await createConversation({
     userId,
-    mode: resolveAssistantStoredMode(input.mode),
+    mode: input.mode,
     locale: input.locale,
     title: input.title ?? null,
   });
@@ -112,13 +98,12 @@ export const createGeneralLearningConversationForUser = async (
 
 export const listGeneralLearningConversationsForUser = async (
   userId: string,
-  input: { limit: number; offset: number; status?: 'ACTIVE' | 'ARCHIVED' },
+  input: { limit: number; offset: number },
 ) => {
   const { items, total } = await listConversationsForUser({
     userId,
     limit: input.limit,
     offset: input.offset,
-    status: input.status,
   });
 
   return {
@@ -216,6 +201,16 @@ export const sendGeneralLearningMessageForUser = async (
     );
   }
 
+  if (conversation.mode === 'PROJECT_AUTHORING') {
+    return sendProjectAuthoringMessageForUser({
+      userId,
+      conversationId,
+      text: input.text,
+      locale: input.locale as AiLocale,
+      clientMessageId: input.clientMessageId,
+    });
+  }
+
   return processGeneralLearningTurn({
     conversation,
     text: input.text,
@@ -255,3 +250,27 @@ export const restoreGeneralLearningConversationForUser = async (
 
   return { restored: true };
 };
+
+export const startProjectAuthoringForUser = async (
+  userId: string,
+  conversationId: string,
+) => bootstrapProjectAuthoringForUser(userId, conversationId);
+
+export {
+  generateProjectAuthoringProposalForUser,
+} from './ai-project-authoring.service.js';
+
+export {
+  submitProjectAuthoringProposalReviewForUser,
+  submitProjectAuthoringDiscussionForUser,
+  reviseProjectAuthoringProposalForUser,
+  prepareApplyReviewedAuthoringProposalForUser,
+} from './ai-project-authoring-review.service.js';
+
+export {
+  beginGuidedAuthoringOverviewForUser,
+  runSequentialAuthoringActionForUser,
+  discussSequentialAuthoringTurnForUser,
+  getSequentialAuthoringStateForUser,
+  findLatestAuthoringSessionState,
+} from './ai-project-authoring-sequential.service.js';

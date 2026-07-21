@@ -322,12 +322,28 @@ const readExplicitAiChatProvider = (): AiChatProviderName | null => {
   return null;
 };
 
+let resolvedAiChatProviderTestOverride: AiChatProviderName | null = null;
+
+export const setResolvedAiChatProviderForTests = (
+  provider: AiChatProviderName | null,
+): void => {
+  resolvedAiChatProviderTestOverride = provider;
+};
+
 export const resolveAiChatProvider = (): AiChatProviderName => {
+  if (resolvedAiChatProviderTestOverride) {
+    return resolvedAiChatProviderTestOverride;
+  }
+
   reloadDevEnvFromDisk();
 
   const explicit = readExplicitAiChatProvider();
   if (explicit) {
     return explicit;
+  }
+
+  if (process.env.NODE_TEST_CONTEXT) {
+    return 'mock';
   }
 
   const explicitPriceProvider = readExplicitAiProvider();

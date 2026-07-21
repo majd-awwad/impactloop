@@ -7,6 +7,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
+import '../../../../shared/utils/content_text_direction.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
@@ -28,6 +29,8 @@ class AiContentBlockView extends ConsumerWidget {
     this.onCancelAction,
     this.pendingActionBusyId,
     this.actionErrorMessage,
+    this.authoringProjectUpdatedAt,
+    this.authoringDraftSnapshot,
   });
 
   final AiContentBlock block;
@@ -38,6 +41,8 @@ class AiContentBlockView extends ConsumerWidget {
   final VoidCallback? onCancelAction;
   final String? pendingActionBusyId;
   final String? actionErrorMessage;
+  final DateTime? authoringProjectUpdatedAt;
+  final AuthoringDraftSnapshot? authoringDraftSnapshot;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -100,6 +105,53 @@ class AiContentBlockView extends ConsumerWidget {
           ),
         'action_result' => _AiActionResultBlock(block: block),
         'external_sources' => _AiExternalSourcesBlock(items: block.externalSources),
+        'project_authoring_clarification' => _AiProjectAuthoringClarificationCard(
+            block: block,
+            locale: locale,
+            projectUpdatedAt: authoringProjectUpdatedAt,
+          ),
+        'project_authoring_proposal' => Consumer(
+            builder: (context, ref, _) {
+              ref.watch(aiAssistantControllerProvider);
+              final controller =
+                  ref.read(aiAssistantControllerProvider.notifier);
+              final hasSequential = controller.hasActiveSequentialAuthoring;
+              if (hasSequential) {
+                return const SizedBox.shrink();
+              }
+              if (controller.hasLegacyAuthoringWithoutSession) {
+                return _AiSequentialAuthoringStageCard(
+                  block: block,
+                  draftSnapshot: authoringDraftSnapshot,
+                );
+              }
+              return _AiProjectAuthoringProposalCard(
+                block: block,
+                projectUpdatedAt: authoringProjectUpdatedAt,
+                draftSnapshot: authoringDraftSnapshot,
+              );
+            },
+          ),
+        'project_authoring_session' => Consumer(
+            builder: (context, ref, _) {
+              ref.watch(aiAssistantControllerProvider);
+              return _AiSequentialAuthoringStageCard(
+                block: block,
+                draftSnapshot: authoringDraftSnapshot,
+              );
+            },
+          ),
+        'project_authoring_turn' =>
+          messageBlocks.any((item) => item.type == 'project_authoring_session')
+              ? const SizedBox.shrink()
+              : _AiSequentialAuthoringStageCard(
+                  block: block,
+                  draftSnapshot: authoringDraftSnapshot,
+                ),
+        'project_authoring_review_state' => const SizedBox.shrink(),
+        'project_authoring_proposal_diff' => _AiProjectAuthoringProposalDiffCard(
+            block: block,
+          ),
         _ => const SizedBox.shrink(),
       },
     );
@@ -1484,6 +1536,1922 @@ Color _checklistColor(MaterialsUiPalette palette, String status) {
       return materialWarning;
     default:
       return palette.textMuted;
+  }
+}
+
+class _AiProjectAuthoringClarificationCard extends ConsumerStatefulWidget {
+  const _AiProjectAuthoringClarificationCard({
+    required this.block,
+    required this.locale,
+    this.projectUpdatedAt,
+  });
+
+  final AiContentBlock block;
+  final String locale;
+  final DateTime? projectUpdatedAt;
+
+  @override
+  ConsumerState<_AiProjectAuthoringClarificationCard> createState() =>
+      _AiProjectAuthoringClarificationCardState();
+}
+
+class _AiProjectAuthoringClarificationCardState
+    extends ConsumerState<_AiProjectAuthoringClarificationCard> {
+  final Set<String> _selectedOptions = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final chatState = ref.watch(aiAssistantControllerProvider);
+    final controller = ref.read(aiAssistantControllerProvider.notifier);
+    final canAnswer = chatState.canSend;
+    final question = widget.block.authoringNextQuestion;
+    final isReady = widget.block.authoringStatus == 'READY_FOR_PROPOSAL';
+    final hasCurrentProposal = widget.projectUpdatedAt == null
+        ? controller.findLatestAuthoringProposalState()?.proposal != null
+        : controller.hasCurrentAuthoringProposal(
+            projectUpdatedAt: widget.projectUpdatedAt!,
+          );
+    final hasSequential = controller.hasActiveSequentialAuthoring;
+    final canGenerate = isReady &&
+        !hasCurrentProposal &&
+        chatState.canGenerateProposal &&
+        !hasSequential;
+
+    Future<void> submitAnswer(String answer) async {
+      if (!canAnswer || answer.trim().isEmpty) {
+        return;
+      }
+      await controller.sendMessage(text: answer.trim(), locale: widget.locale);
+      if (mounted) {
+        setState(() => _selectedOptions.clear());
+      }
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if ((widget.block.authoringSummary ?? '').isNotEmpty) ...[
+              Text(
+                AiL10n.authoringWhatIUnderstand.resolve(context),
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                widget.block.authoringSummary!,
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textPrimary,
+                  height: 1.45,
+                ),
+                textDirection: resolveContentTextDirection(
+                  widget.block.authoringSummary!,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (widget.block.authoringKnownFacts.isNotEmpty) ...[
+              for (final fact in widget.block.authoringKnownFacts)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          fact.label,
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          fact.value,
+                          style: AppTextStyles.body(context).copyWith(
+                            color: palette.textPrimary,
+                          ),
+                          textDirection: resolveContentTextDirection(fact.value),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            if (isReady) ...[
+              Text(
+                AiL10n.authoringReadyForProposal.resolve(context),
+                style: AppTextStyles.subtitle(context).copyWith(
+                  color: palette.heroMid,
+                ),
+                textDirection: resolveContentTextDirection(
+                  AiL10n.authoringReadyForProposal.resolve(context),
+                ),
+              ),
+              if (canGenerate || chatState.isGeneratingProposal) ...[
+                const SizedBox(height: AppSpacing.sm),
+                FilledButton(
+                  onPressed: canGenerate
+                      ? () => controller.generateProjectProposal()
+                      : null,
+                  child: chatState.isGeneratingProposal
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Text(
+                              AiL10n.authoringGeneratingProposal.resolve(context),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          AiL10n.authoringGenerateProposal.resolve(context),
+                        ),
+                ),
+              ],
+            ] else if (question != null && question.prompt.isNotEmpty) ...[
+              Text(
+                AiL10n.authoringCurrentQuestion.resolve(context),
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                question.prompt,
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textPrimary,
+                  height: 1.45,
+                ),
+                textDirection: resolveContentTextDirection(question.prompt),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (question.answerType == 'SINGLE_CHOICE')
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    for (final option in question.options)
+                      ActionChip(
+                        label: Text(option),
+                        onPressed: canAnswer ? () => submitAnswer(option) : null,
+                      ),
+                  ],
+                )
+              else if (question.answerType == 'MULTI_CHOICE') ...[
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    for (final option in question.options)
+                      FilterChip(
+                        label: Text(option),
+                        selected: _selectedOptions.contains(option),
+                        onSelected: canAnswer
+                            ? (selected) {
+                                setState(() {
+                                  if (selected) {
+                                    _selectedOptions.add(option);
+                                  } else {
+                                    _selectedOptions.remove(option);
+                                  }
+                                });
+                              }
+                            : null,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                FilledButton(
+                  onPressed: canAnswer && _selectedOptions.isNotEmpty
+                      ? () => submitAnswer(_selectedOptions.join(', '))
+                      : null,
+                  child: Text(AiL10n.authoringConfirmSelection.resolve(context)),
+                ),
+              ],
+            ],
+            if (widget.block.authoringAssumptions.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                AiL10n.authoringAssumptions.resolve(context),
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              for (final assumption in widget.block.authoringAssumptions)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  child: Text(
+                    assumption,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textPrimary,
+                    ),
+                    textDirection: resolveContentTextDirection(assumption),
+                  ),
+                ),
+            ],
+            if (widget.block.authoringWarnings.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                AiL10n.authoringWarnings.resolve(context),
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              for (final warning in widget.block.authoringWarnings)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  child: Text(
+                    warning,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textPrimary,
+                    ),
+                    textDirection: resolveContentTextDirection(warning),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AiProjectAuthoringProposalCard extends ConsumerStatefulWidget {
+  const _AiProjectAuthoringProposalCard({
+    required this.block,
+    this.projectUpdatedAt,
+    this.draftSnapshot,
+  });
+
+  final AiContentBlock block;
+  final DateTime? projectUpdatedAt;
+  final AuthoringDraftSnapshot? draftSnapshot;
+
+  @override
+  ConsumerState<_AiProjectAuthoringProposalCard> createState() =>
+      _AiProjectAuthoringProposalCardState();
+}
+
+class _AiProjectAuthoringProposalCardState
+    extends ConsumerState<_AiProjectAuthoringProposalCard> {
+  final Set<String> _expandedChangeTargets = <String>{};
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final controller = ref.read(aiAssistantControllerProvider.notifier);
+    final chatState = ref.watch(aiAssistantControllerProvider);
+    final project = widget.block.authoringProposalProject;
+    if (project == null || project.title.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final proposalId = widget.block.authoringProposalId;
+    final latestProposal =
+        controller.findLatestAuthoringProposalState()?.proposal;
+    final isLatestProposal = latestProposal != null &&
+        latestProposal.authoringProposalId == proposalId;
+
+    final isStale = widget.projectUpdatedAt != null &&
+        widget.block.authoringProposalBaseUpdatedAt != null &&
+        widget.block.authoringProposalBaseUpdatedAt !=
+            widget.projectUpdatedAt!.toUtc().toIso8601String();
+
+    final review = proposalId == null
+        ? null
+        : controller.findLatestReviewStateForProposal(proposalId);
+    final reviewBusy = chatState.isSubmittingReview ||
+        chatState.isRevisingProposal ||
+        chatState.isPreparingApply;
+    final controlsEnabled =
+        isLatestProposal && !isStale && !(review?.isApplied ?? false) && !reviewBusy;
+
+    String formatDuration(int? minutes) {
+      if (minutes == null || minutes <= 0) {
+        return '—';
+      }
+      if (minutes < 60) {
+        return '$minutes min';
+      }
+      final hours = minutes ~/ 60;
+      final remainder = minutes % 60;
+      if (remainder == 0) {
+        return '$hours h';
+      }
+      return '$hours h $remainder min';
+    }
+
+    Widget sectionTitle(String label) {
+      return Text(
+        label,
+        style: AppTextStyles.label(context).copyWith(
+          color: palette.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    String? latestRevisionComment(String target) {
+      final requests = review?.revisionRequests ?? const [];
+      for (var index = requests.length - 1; index >= 0; index -= 1) {
+        final request = requests[index];
+        if (request.target == target && request.status == 'OPEN') {
+          return request.comment;
+        }
+      }
+      return null;
+    }
+
+    String decisionForTarget(String target) {
+      if (review == null) {
+        return 'UNREVIEWED';
+      }
+      final fields = review.fieldDecisions;
+      return switch (target) {
+        'title' => fields.title,
+        'shortDescription' => fields.shortDescription,
+        'description' => fields.description,
+        'difficulty' => fields.difficulty,
+        'estimatedMinutes' => fields.estimatedMinutes,
+        'components' => review.componentDecision,
+        'steps' => review.stepDecision,
+        _ => 'UNREVIEWED',
+      };
+    }
+
+    bool isResolvedDecision(String decision) =>
+        decision == 'ACCEPT_PROPOSAL' || decision == 'KEEP_CURRENT';
+
+    bool isDiscussionDecision(String decision) =>
+        decision == 'UNDER_DISCUSSION' ||
+        decision == 'REVISION_REQUESTED' ||
+        decision == 'NEEDS_REVISION';
+
+    Widget decisionBadge(String decision) {
+      final label = switch (decision) {
+        'ACCEPT_PROPOSAL' => AiL10n.authoringReviewDecisionAccept,
+        'KEEP_CURRENT' => AiL10n.authoringReviewDecisionKeep,
+        'UNDER_DISCUSSION' => AiL10n.authoringReviewDecisionUnderDiscussion,
+        'REVISION_REQUESTED' => AiL10n.authoringReviewDecisionRevisionRequested,
+        'NEEDS_REVISION' => AiL10n.authoringReviewDecisionRevisionRequested,
+        _ => AiL10n.authoringReviewDecisionUnreviewed,
+      };
+      final color = switch (decision) {
+        'ACCEPT_PROPOSAL' => palette.mint,
+        'KEEP_CURRENT' => palette.heroMid,
+        'UNDER_DISCUSSION' => materialWarning,
+        'REVISION_REQUESTED' => materialWarning,
+        'NEEDS_REVISION' => materialWarning,
+        _ => palette.textSecondary,
+      };
+      return Container(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: AppRadius.smAll,
+        ),
+        child: Text(
+          label.resolve(context),
+          style: AppTextStyles.label(context).copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    Future<void> submitDecision(String target, String decision) async {
+      if (proposalId == null || !controlsEnabled) {
+        return;
+      }
+      setState(() => _expandedChangeTargets.remove(target));
+      await controller.submitAuthoringReviewDecision(
+        proposalId: proposalId,
+        target: target,
+        decision: decision,
+      );
+    }
+
+    void startDiscussion(String target) {
+      if (proposalId == null || review == null || !controlsEnabled) {
+        return;
+      }
+      controller.selectDiscussionTarget(
+        proposalId: proposalId,
+        reviewStateId: review.reviewStateId,
+        target: target,
+      );
+    }
+
+    Widget reviewActionButtons({
+      required String target,
+      required String decision,
+      required bool locked,
+    }) {
+      final showControls =
+          !locked || _expandedChangeTargets.contains(target);
+      if (!controlsEnabled || !showControls) {
+        return const SizedBox.shrink();
+      }
+
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(top: AppSpacing.xs),
+        child: Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          children: [
+            TextButton(
+              onPressed: reviewBusy
+                  ? null
+                  : () => submitDecision(target, 'ACCEPT_PROPOSAL'),
+              child: Text(
+                AiL10n.authoringReviewAcceptProposal.resolve(context),
+              ),
+            ),
+            TextButton(
+              onPressed: reviewBusy
+                  ? null
+                  : () => submitDecision(target, 'KEEP_CURRENT'),
+              child: Text(
+                AiL10n.authoringReviewKeepCurrent.resolve(context),
+              ),
+            ),
+            TextButton(
+              onPressed: reviewBusy ? null : () => startDiscussion(target),
+              child: Text(AiL10n.authoringReviewDiscuss.resolve(context)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget reviewTargetStatusRow({
+      required String target,
+      required String decision,
+      required bool locked,
+    }) {
+      return Wrap(
+        spacing: AppSpacing.xs,
+        runSpacing: AppSpacing.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          decisionBadge(decision),
+          if (locked) ...[
+            Icon(Icons.lock_outline, size: 14, color: palette.textSecondary),
+            Text(
+              AiL10n.authoringReviewLocked.resolve(context),
+              style: AppTextStyles.label(context).copyWith(
+                color: palette.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (locked && !_expandedChangeTargets.contains(target))
+            TextButton(
+              onPressed: controlsEnabled
+                  ? () => setState(() => _expandedChangeTargets.add(target))
+                  : null,
+              child: Text(
+                AiL10n.authoringReviewChangeDecision.resolve(context),
+              ),
+            ),
+        ],
+      );
+    }
+
+    Widget reviewSection({
+      required String target,
+      required String label,
+      required Widget content,
+      String? currentValue,
+    }) {
+      final decision = decisionForTarget(target);
+      final locked = review?.lockedTargets.contains(target) ?? false;
+      final isActive = chatState.activeDiscussionTarget == target;
+      final comment = latestRevisionComment(target);
+      final showReviewControls =
+          isLatestProposal && !(review?.isApplied ?? false);
+
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isActive
+                ? palette.heroMid.withValues(alpha: 0.06)
+                : Colors.transparent,
+            borderRadius: AppRadius.mdAll,
+            border: isActive
+                ? Border.all(color: palette.heroMid, width: 1.5)
+                : null,
+          ),
+          child: Padding(
+            padding: isActive
+                ? const EdgeInsetsDirectional.all(AppSpacing.sm)
+                : EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: sectionTitle(label)),
+                    if (showReviewControls)
+                      reviewTargetStatusRow(
+                        target: target,
+                        decision: decision,
+                        locked: locked,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                content,
+                if (decision == 'KEEP_CURRENT' &&
+                    (currentValue ?? '').isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    '${AiL10n.authoringReviewCurrentDraft.resolve(context)}: $currentValue',
+                    style: AppTextStyles.label(context).copyWith(
+                      color: palette.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textDirection: resolveContentTextDirection(currentValue!),
+                  ),
+                ],
+                if (isDiscussionDecision(decision) &&
+                    (comment ?? '').isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    '${AiL10n.authoringReviewYourRequest.resolve(context)}: $comment',
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textPrimary,
+                      height: 1.4,
+                    ),
+                    textDirection: resolveContentTextDirection(comment!),
+                  ),
+                ],
+                if (showReviewControls) ...[
+                  reviewActionButtons(
+                    target: target,
+                    decision: decision,
+                    locked: locked,
+                  ),
+                  if (isDiscussionDecision(decision))
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton(
+                        onPressed:
+                            reviewBusy ? null : () => startDiscussion(target),
+                        child: Text(
+                          AiL10n.authoringReviewContinueDiscussion
+                              .resolve(context),
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final version = widget.block.authoringProposalVersion ?? 1;
+    final draft = widget.draftSnapshot;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    project.title,
+                    style: AppTextStyles.subtitle(context).copyWith(
+                      color: palette.textPrimary,
+                    ),
+                    textDirection: resolveContentTextDirection(project.title),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                if (version > 1)
+                  Container(
+                    margin: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: palette.borderSubtle,
+                      borderRadius: AppRadius.smAll,
+                    ),
+                    child: Text(
+                      '${AiL10n.authoringProposalVersion.resolve(context)} $version',
+                      style: AppTextStyles.label(context).copyWith(
+                        color: palette.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: palette.heroMid.withValues(alpha: 0.12),
+                    borderRadius: AppRadius.smAll,
+                  ),
+                  child: Text(
+                    review?.isApplied ?? false
+                        ? AiL10n.authoringReviewApplied.resolve(context)
+                        : AiL10n.authoringProposalPreviewBadge.resolve(context),
+                    style: AppTextStyles.label(context).copyWith(
+                      color: palette.heroMid,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.xs,
+              children: [
+                Text(
+                  '${AiL10n.authoringProposalDifficulty.resolve(context)}: ${project.difficulty}',
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textSecondary,
+                  ),
+                ),
+                Text(
+                  '${AiL10n.authoringProposalEstimatedDuration.resolve(context)}: ${formatDuration(project.estimatedMinutes)}',
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textSecondary,
+                  ),
+                ),
+                if ((widget.block.authoringProposalCategoryDisplayName ?? '')
+                    .isNotEmpty)
+                  Text(
+                    widget.block.authoringProposalCategoryDisplayName!,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textSecondary,
+                    ),
+                    textDirection: resolveContentTextDirection(
+                      widget.block.authoringProposalCategoryDisplayName!,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              AiL10n.authoringProposalPreviewNotice.resolve(context),
+              style: AppTextStyles.body(context).copyWith(
+                color: palette.heroMid,
+                height: 1.4,
+              ),
+              textDirection: resolveContentTextDirection(
+                AiL10n.authoringProposalPreviewNotice.resolve(context),
+              ),
+            ),
+            if (isStale) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                AiL10n.authoringProposalStaleNotice.resolve(context),
+                style: AppTextStyles.label(context).copyWith(
+                  color: materialWarning,
+                ),
+                textDirection: resolveContentTextDirection(
+                  AiL10n.authoringProposalStaleNotice.resolve(context),
+                ),
+              ),
+            ],
+            if (isLatestProposal && review != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Builder(
+                builder: (context) {
+                  final progress =
+                      controller.computeAuthoringReviewProgress(review);
+                  final statusLabel = AiL10n.authoringReviewStatusLabel(
+                    progress.status,
+                  ).resolve(context);
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: palette.borderSubtle.withValues(alpha: 0.45),
+                      borderRadius: AppRadius.mdAll,
+                      border: Border.all(color: palette.borderSubtle),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            AiL10n.authoringReviewProgressSummary(
+                              progress.resolved,
+                              progress.total,
+                              progress.needsDiscussion,
+                            ).resolve(context),
+                            style: AppTextStyles.body(context).copyWith(
+                              color: palette.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            statusLabel,
+                            style: AppTextStyles.label(context).copyWith(
+                              color: palette.heroMid,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textDirection:
+                                resolveContentTextDirection(statusLabel),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+            if (isLatestProposal && !(review?.isApplied ?? false)) ...[
+              const SizedBox(height: AppSpacing.md),
+              reviewSection(
+                label: 'Title',
+                target: 'title',
+                currentValue: draft?.title,
+                content: Text(
+                  project.title,
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textPrimary,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textDirection: resolveContentTextDirection(project.title),
+                ),
+              ),
+              reviewSection(
+                label: AiL10n.authoringProposalShortDescription.resolve(context),
+                target: 'shortDescription',
+                currentValue: draft?.shortDescription,
+                content: Text(
+                  project.shortDescription,
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textPrimary,
+                    height: 1.45,
+                  ),
+                  textDirection:
+                      resolveContentTextDirection(project.shortDescription),
+                ),
+              ),
+              reviewSection(
+                label: AiL10n.authoringProposalDescription.resolve(context),
+                target: 'description',
+                currentValue: draft?.description,
+                content: Text(
+                  project.description,
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textPrimary,
+                    height: 1.45,
+                  ),
+                  textDirection: resolveContentTextDirection(project.description),
+                ),
+              ),
+              reviewSection(
+                label: AiL10n.authoringProposalDifficulty.resolve(context),
+                target: 'difficulty',
+                currentValue: draft?.difficulty,
+                content: Text(
+                  project.difficulty,
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textPrimary,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+              reviewSection(
+                label: AiL10n.authoringProposalEstimatedDuration.resolve(context),
+                target: 'estimatedMinutes',
+                currentValue: formatDuration(draft?.estimatedMinutes),
+                content: Text(
+                  formatDuration(project.estimatedMinutes),
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textPrimary,
+                    height: 1.45,
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: AppSpacing.md),
+              sectionTitle(
+                AiL10n.authoringProposalShortDescription.resolve(context),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                project.shortDescription,
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textPrimary,
+                  height: 1.45,
+                ),
+                textDirection:
+                    resolveContentTextDirection(project.shortDescription),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              sectionTitle(AiL10n.authoringProposalDescription.resolve(context)),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                project.description,
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textPrimary,
+                  height: 1.45,
+                ),
+                textDirection: resolveContentTextDirection(project.description),
+              ),
+            ],
+            if (widget.block.authoringProposalComponents.isNotEmpty) ...[
+              if (isLatestProposal && !(review?.isApplied ?? false))
+                reviewSection(
+                  label: AiL10n.authoringProposalRequiredComponents
+                      .resolve(context),
+                  target: 'components',
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final component
+                          in widget.block.authoringProposalComponents)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            bottom: AppSpacing.sm,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                component.componentName,
+                                style: AppTextStyles.body(context).copyWith(
+                                  color: palette.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textDirection: resolveContentTextDirection(
+                                  component.componentName,
+                                ),
+                              ),
+                              Text(
+                                '${component.quantity.toString().replaceAll(RegExp(r'\.0$'), '')} ${component.unit} · ${component.isRequired ? AiL10n.authoringProposalRequired.resolve(context) : AiL10n.authoringProposalOptional.resolve(context)}${component.canBeSubstituted ? ' · ${AiL10n.authoringProposalSubstitutable.resolve(context)}' : ''}',
+                                style: AppTextStyles.label(context).copyWith(
+                                  color: palette.textSecondary,
+                                ),
+                              ),
+                              if ((component.notes ?? '').isNotEmpty)
+                                Text(
+                                  component.notes!,
+                                  style: AppTextStyles.body(context).copyWith(
+                                    color: palette.textPrimary,
+                                  ),
+                                  textDirection: resolveContentTextDirection(
+                                    component.notes!,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                )
+              else ...[
+                const SizedBox(height: AppSpacing.md),
+                sectionTitle(
+                  AiL10n.authoringProposalRequiredComponents.resolve(context),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                for (final component in widget.block.authoringProposalComponents)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      bottom: AppSpacing.sm,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          component.componentName,
+                          style: AppTextStyles.body(context).copyWith(
+                            color: palette.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textDirection: resolveContentTextDirection(
+                            component.componentName,
+                          ),
+                        ),
+                        Text(
+                          '${component.quantity.toString().replaceAll(RegExp(r'\.0$'), '')} ${component.unit} · ${component.isRequired ? AiL10n.authoringProposalRequired.resolve(context) : AiL10n.authoringProposalOptional.resolve(context)}${component.canBeSubstituted ? ' · ${AiL10n.authoringProposalSubstitutable.resolve(context)}' : ''}',
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                        if ((component.notes ?? '').isNotEmpty)
+                          Text(
+                            component.notes!,
+                            style: AppTextStyles.body(context).copyWith(
+                              color: palette.textPrimary,
+                            ),
+                            textDirection: resolveContentTextDirection(
+                              component.notes!,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ],
+            if (widget.block.authoringProposalSteps.isNotEmpty) ...[
+              if (isLatestProposal && !(review?.isApplied ?? false))
+                reviewSection(
+                  label: AiL10n.authoringProposalSteps.resolve(context),
+                  target: 'steps',
+                  content: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var index = 0;
+                          index < widget.block.authoringProposalSteps.length;
+                          index += 1)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            bottom: AppSpacing.sm,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${index + 1}. ${widget.block.authoringProposalSteps[index].title}',
+                                style: AppTextStyles.body(context).copyWith(
+                                  color: palette.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textDirection: resolveContentTextDirection(
+                                  widget.block.authoringProposalSteps[index].title,
+                                ),
+                              ),
+                              Text(
+                                widget.block.authoringProposalSteps[index]
+                                    .description,
+                                style: AppTextStyles.body(context).copyWith(
+                                  color: palette.textPrimary,
+                                  height: 1.45,
+                                ),
+                                textDirection: resolveContentTextDirection(
+                                  widget.block.authoringProposalSteps[index]
+                                      .description,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                )
+              else ...[
+                const SizedBox(height: AppSpacing.md),
+                sectionTitle(AiL10n.authoringProposalSteps.resolve(context)),
+                const SizedBox(height: AppSpacing.xs),
+                for (var index = 0;
+                    index < widget.block.authoringProposalSteps.length;
+                    index += 1)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      bottom: AppSpacing.sm,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${index + 1}. ${widget.block.authoringProposalSteps[index].title}',
+                          style: AppTextStyles.body(context).copyWith(
+                            color: palette.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textDirection: resolveContentTextDirection(
+                            widget.block.authoringProposalSteps[index].title,
+                          ),
+                        ),
+                        Text(
+                          widget.block.authoringProposalSteps[index].description,
+                          style: AppTextStyles.body(context).copyWith(
+                            color: palette.textPrimary,
+                            height: 1.45,
+                          ),
+                          textDirection: resolveContentTextDirection(
+                            widget.block.authoringProposalSteps[index]
+                                .description,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ],
+            if (widget.block.authoringProposalAssumptions.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              sectionTitle(AiL10n.authoringAssumptions.resolve(context)),
+              const SizedBox(height: AppSpacing.xs),
+              for (final assumption in widget.block.authoringProposalAssumptions)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  child: Text(
+                    assumption,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textPrimary,
+                    ),
+                    textDirection: resolveContentTextDirection(assumption),
+                  ),
+                ),
+            ],
+            if (widget.block.authoringProposalWarnings.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              sectionTitle(AiL10n.authoringWarnings.resolve(context)),
+              const SizedBox(height: AppSpacing.xs),
+              for (final warning in widget.block.authoringProposalWarnings)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  child: Text(
+                    warning,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textPrimary,
+                    ),
+                    textDirection: resolveContentTextDirection(warning),
+                  ),
+                ),
+            ],
+            if (widget.block.authoringProposalSafetyConsiderations.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              sectionTitle(AiL10n.authoringProposalSafety.resolve(context)),
+              const SizedBox(height: AppSpacing.xs),
+              for (final note in widget.block.authoringProposalSafetyConsiderations)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+                  child: Text(
+                    note,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textPrimary,
+                    ),
+                    textDirection: resolveContentTextDirection(note),
+                  ),
+                ),
+            ],
+            if (isLatestProposal &&
+                (review?.hasOpenRevisionRequests ?? false) &&
+                controlsEnabled &&
+                proposalId != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: reviewBusy
+                      ? null
+                      : () => controller.reviseAuthoringProposal(
+                            proposalId: proposalId,
+                            reviewStateId: review!.reviewStateId,
+                          ),
+                  child: Text(
+                    chatState.isRevisingProposal
+                        ? AiL10n.authoringGeneratingProposal.resolve(context)
+                        : AiL10n.authoringReviewGenerateRevised.resolve(context),
+                  ),
+                ),
+              ),
+            ],
+            if (isLatestProposal &&
+                (review?.isReadyToApply ?? false) &&
+                controlsEnabled &&
+                review != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              Builder(
+                builder: (context) {
+                  final progress =
+                      controller.computeAuthoringReviewProgress(review);
+                  return DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: palette.mint.withValues(alpha: 0.08),
+                      borderRadius: AppRadius.mdAll,
+                      border:
+                          Border.all(color: palette.mint.withValues(alpha: 0.35)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            AiL10n.authoringReviewCompleteSummary(
+                              progress.resolved,
+                              progress.total,
+                            ).resolve(context),
+                            style: AppTextStyles.body(context).copyWith(
+                              color: palette.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            textDirection: resolveContentTextDirection(
+                              AiL10n.authoringReviewCompleteSummary(
+                                progress.resolved,
+                                progress.total,
+                              ).resolve(context),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          FilledButton(
+                            onPressed: reviewBusy
+                                ? null
+                                : () => controller
+                                    .prepareApplyReviewedAuthoringProposal(
+                                      reviewStateId: review.reviewStateId,
+                                    ),
+                            child: Text(
+                              chatState.isPreparingApply
+                                  ? AiL10n.loading.resolve(context)
+                                  : AiL10n.authoringReviewApplyReviewed
+                                      .resolve(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AiProjectAuthoringProposalDiffCard extends StatelessWidget {
+  const _AiProjectAuthoringProposalDiffCard({required this.block});
+
+  final AiContentBlock block;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final diff = block.authoringProposalDiff;
+    if (diff == null) {
+      return const SizedBox.shrink();
+    }
+
+    Widget bulletList(String title, List<String> items) {
+      if (items.isEmpty) {
+        return const SizedBox.shrink();
+      }
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: AppTextStyles.label(context).copyWith(
+                color: palette.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            for (final item in items)
+              Text(
+                '• $item',
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textPrimary,
+                ),
+                textDirection: resolveContentTextDirection(item),
+              ),
+          ],
+        ),
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AiL10n.authoringProposalUpdated.resolve(context),
+              style: AppTextStyles.subtitle(context).copyWith(
+                color: palette.textPrimary,
+              ),
+            ),
+            if (diff.changedTargets.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                '${AiL10n.authoringDiffChangedTargets.resolve(context)}: ${diff.changedTargets.join(', ')}',
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.sm),
+            bulletList(
+              AiL10n.authoringDiffAdded.resolve(context),
+              diff.componentAdded,
+            ),
+            bulletList(
+              AiL10n.authoringDiffRemoved.resolve(context),
+              diff.componentRemoved,
+            ),
+            bulletList(
+              AiL10n.authoringDiffUpdated.resolve(context),
+              diff.componentUpdated,
+            ),
+            bulletList(
+              AiL10n.authoringDiffAdded.resolve(context),
+              diff.stepAdded,
+            ),
+            bulletList(
+              AiL10n.authoringDiffRemoved.resolve(context),
+              diff.stepRemoved,
+            ),
+            bulletList(
+              AiL10n.authoringDiffUpdated.resolve(context),
+              diff.stepUpdated,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AiSequentialAuthoringStageCard extends ConsumerStatefulWidget {
+  const _AiSequentialAuthoringStageCard({
+    required this.block,
+    this.draftSnapshot,
+  });
+
+  final AiContentBlock block;
+  final AuthoringDraftSnapshot? draftSnapshot;
+
+  @override
+  ConsumerState<_AiSequentialAuthoringStageCard> createState() =>
+      _AiSequentialAuthoringStageCardState();
+}
+
+class _AiSequentialAuthoringStageCardState
+    extends ConsumerState<_AiSequentialAuthoringStageCard> {
+  bool _manualEntryMode = false;
+  final _manualController = TextEditingController();
+  String? _manualDifficulty;
+
+  @override
+  void dispose() {
+    _manualController.dispose();
+    super.dispose();
+  }
+
+  bool _supportsManualEntry(String stage) {
+    return stage == 'TITLE' ||
+        stage == 'SHORT_DESCRIPTION' ||
+        stage == 'FULL_DESCRIPTION' ||
+        stage == 'DIFFICULTY' ||
+        stage == 'ESTIMATED_DURATION';
+  }
+
+  int? _manualLinesForStage(String stage) {
+    return switch (stage) {
+      'SHORT_DESCRIPTION' => 3,
+      'FULL_DESCRIPTION' => 6,
+      _ => 1,
+    };
+  }
+
+  Object? _manualValueForStage(String stage) {
+    if (stage == 'DIFFICULTY') {
+      return _manualDifficulty;
+    }
+    if (stage == 'ESTIMATED_DURATION') {
+      return int.tryParse(_manualController.text.trim());
+    }
+    final value = _manualController.text.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  Object? _componentFromTurnProposal(Map<String, dynamic> proposal) {
+    final componentJson = proposal['component'];
+    if (componentJson is Map) {
+      return AiAuthoringProposalComponent.fromJson(
+        Map<String, dynamic>.from(componentJson),
+      );
+    }
+    return null;
+  }
+
+  Object? _stepFromTurnProposal(Map<String, dynamic> proposal) {
+    final title = proposal['title'] as String?;
+    final description = proposal['description'] as String?;
+    if (title == null || title.isEmpty) {
+      return null;
+    }
+    return AiAuthoringProposalStep(
+      title: title,
+      description: description ?? '',
+    );
+  }
+
+  Widget _legacyTransitionBanner({
+    required BuildContext context,
+    required AiAssistantController controller,
+    required bool busy,
+    required MaterialsUiPalette palette,
+  }) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              AiL10n.authoringSequentialLegacyTransitionBanner.resolve(context),
+              style: AppTextStyles.body(context).copyWith(
+                color: palette.textPrimary,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FilledButton(
+              onPressed: busy
+                  ? null
+                  : () => controller.runSequentialAuthoringAction(
+                        action: 'CONTINUE_GUIDED',
+                      ),
+              child: Text(
+                AiL10n.authoringSequentialContinueGuided.resolve(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sequentialItemControls({
+    required BuildContext context,
+    required AiAssistantController controller,
+    required AiAuthoringTurn turn,
+    required bool busy,
+    required bool isStepReview,
+    required bool canGoBack,
+    required VoidCallback? onAccept,
+    Object? addManualValue,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        FilledButton(
+          onPressed: busy ? null : onAccept,
+          child: Text(
+            (isStepReview
+                    ? AiL10n.authoringSequentialAcceptStep
+                    : AiL10n.authoringSequentialAcceptComponent)
+                .resolve(context),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        OutlinedButton(
+          onPressed: busy
+              ? null
+              : () => controller.runSequentialAuthoringAction(
+                    action: 'REMOVE_ITEM',
+                    turnId: turn.turnId,
+                  ),
+          child: Text(AiL10n.authoringSequentialRemoveItem.resolve(context)),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        OutlinedButton(
+          onPressed: busy || addManualValue == null
+              ? null
+              : () => controller.runSequentialAuthoringAction(
+                    action: 'ADD_ITEM',
+                    turnId: turn.turnId,
+                    manualValue: addManualValue,
+                  ),
+          child: Text(AiL10n.authoringSequentialAddItem.resolve(context)),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        OutlinedButton(
+          onPressed: !canGoBack || busy
+              ? null
+              : () => controller.runSequentialAuthoringAction(
+                    action: 'BACK_ITEM',
+                    turnId: turn.turnId,
+                  ),
+          child: Text(AiL10n.authoringSequentialBackItem.resolve(context)),
+        ),
+        if (isStepReview) ...[
+          const SizedBox(height: AppSpacing.xs),
+          OutlinedButton(
+            onPressed: busy
+                ? null
+                : () => controller.runSequentialAuthoringAction(
+                      action: 'EXPLAIN_STEP',
+                      turnId: turn.turnId,
+                    ),
+            child: Text(AiL10n.authoringSequentialExplainStep.resolve(context)),
+          ),
+        ],
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final controller = ref.read(aiAssistantControllerProvider.notifier);
+    final chatState = ref.watch(aiAssistantControllerProvider);
+    final busy = chatState.isSubmittingReview || chatState.isGeneratingProposal;
+
+    if (controller.hasLegacyAuthoringWithoutSession) {
+      return _legacyTransitionBanner(
+        context: context,
+        controller: controller,
+        busy: busy,
+        palette: palette,
+      );
+    }
+
+    final session = controller.findLatestAuthoringSession();
+    final turn = widget.block.authoringTurn ?? controller.findCurrentAuthoringTurn();
+    if (session == null) {
+      return const SizedBox.shrink();
+    }
+
+    final stage = turn?.stage ?? session.stage;
+
+    Widget progressRow(String label, bool done, bool active) {
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.xs),
+        child: Row(
+          children: [
+            Icon(
+              done ? Icons.check_circle : Icons.circle_outlined,
+              size: 16,
+              color: done
+                  ? palette.mint
+                  : active
+                  ? palette.heroMid
+                  : palette.textSecondary,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                label,
+                style: AppTextStyles.label(context).copyWith(
+                  color: active ? palette.textPrimary : palette.textSecondary,
+                  fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final accepted = session.acceptedStages.toSet();
+    String proposalPreview() {
+      final proposal = turn?.proposal ?? const {};
+      if (proposal.containsKey('value')) {
+        return '${proposal['value']}';
+      }
+      if (proposal.containsKey('components')) {
+        final items = (proposal['components'] as List?) ?? const [];
+        return '${items.length} components';
+      }
+      if (proposal.containsKey('steps')) {
+        final items = (proposal['steps'] as List?) ?? const [];
+        return '${items.length} steps';
+      }
+      if (proposal.containsKey('title')) {
+        return '${proposal['title']}';
+      }
+      return '';
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              AiL10n.authoringSequentialProgressTitle.resolve(context),
+              style: AppTextStyles.subtitle(context).copyWith(
+                color: palette.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            progressRow('Title', accepted.contains('TITLE'), stage == 'TITLE'),
+            progressRow(
+              'Descriptions',
+              accepted.contains('SHORT_DESCRIPTION') &&
+                  accepted.contains('FULL_DESCRIPTION'),
+              stage == 'SHORT_DESCRIPTION' || stage == 'FULL_DESCRIPTION',
+            ),
+            progressRow(
+              'Difficulty & duration',
+              accepted.contains('DIFFICULTY') &&
+                  accepted.contains('ESTIMATED_DURATION'),
+              stage == 'DIFFICULTY' || stage == 'ESTIMATED_DURATION',
+            ),
+            progressRow(
+              'Components',
+              accepted.contains('COMPONENTS'),
+              stage == 'COMPONENTS',
+            ),
+            progressRow(
+              'Steps',
+              accepted.contains('STEPS_OVERVIEW') ||
+                  accepted.contains('STEP_REVIEW'),
+              stage == 'STEPS_OVERVIEW' || stage == 'STEP_REVIEW',
+            ),
+            if (session.isStale) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                AiL10n.authoringProposalStaleNotice.resolve(context),
+                style: AppTextStyles.label(context).copyWith(color: materialWarning),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              OutlinedButton(
+                onPressed: busy
+                    ? null
+                    : () => controller.runSequentialAuthoringAction(
+                          action: 'REGENERATE_STALE',
+                        ),
+                child: Text(AiL10n.authoringSequentialRegenerateStale.resolve(context)),
+              ),
+            ],
+            if (session.stage == 'OVERVIEW') ...[
+              const SizedBox(height: AppSpacing.md),
+              FilledButton(
+                onPressed: busy
+                    ? null
+                    : () => controller.runSequentialAuthoringAction(action: 'START'),
+                child: busy
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          Text(AiL10n.authoringSequentialStart.resolve(context)),
+                        ],
+                      )
+                    : Text(AiL10n.authoringSequentialStart.resolve(context)),
+              ),
+            ] else if (turn != null && turn.isProposed) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                AiL10n.authoringSequentialStageLabel(stage).resolve(context),
+                style: AppTextStyles.label(context).copyWith(
+                  color: palette.heroMid,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (session.isComponentOneByOne &&
+                  stage == 'COMPONENTS' &&
+                  !session.awaitingComponentsFinalSave &&
+                  session.componentProgressTotal > 0) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  AiL10n.authoringSequentialComponentProgress(
+                    session.componentProgressIndex,
+                    session.componentProgressTotal,
+                  ).resolve(context),
+                  style: AppTextStyles.label(context).copyWith(
+                    color: palette.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if ((session.isStepByStep || stage == 'STEP_REVIEW') &&
+                  stage == 'STEP_REVIEW' &&
+                  !session.awaitingStepsFinalSave &&
+                  session.workingStepCount > 0) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  AiL10n.authoringSequentialStepProgress(
+                    session.stepProgressIndex,
+                    session.workingStepCount,
+                  ).resolve(context),
+                  style: AppTextStyles.label(context).copyWith(
+                    color: palette.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                proposalPreview(),
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                textDirection: resolveContentTextDirection(proposalPreview()),
+              ),
+              if ((turn.explanation).isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  turn.explanation,
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textSecondary,
+                    height: 1.45,
+                  ),
+                  textDirection: resolveContentTextDirection(turn.explanation),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              if (session.awaitingComponentsFinalSave && stage == 'COMPONENTS') ...[
+                FilledButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'FINALIZE_SECTION',
+                            turnId: turn.turnId,
+                          ),
+                  child: Text(
+                    AiL10n.authoringSequentialAcceptListAndSave.resolve(context),
+                  ),
+                ),
+              ] else if (session.awaitingStepsFinalSave &&
+                  stage == 'STEPS_OVERVIEW') ...[
+                FilledButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'FINALIZE_SECTION',
+                            turnId: turn.turnId,
+                          ),
+                  child: Text(
+                    AiL10n.authoringSequentialAcceptPlanAndSave.resolve(context),
+                  ),
+                ),
+              ] else if (session.isComponentOneByOne &&
+                  stage == 'COMPONENTS' &&
+                  !session.awaitingComponentsFinalSave) ...[
+                _sequentialItemControls(
+                  context: context,
+                  controller: controller,
+                  turn: turn,
+                  busy: busy,
+                  isStepReview: false,
+                  canGoBack: (session.currentComponentIndex ?? 0) > 0,
+                  addManualValue: _componentFromTurnProposal(turn.proposal),
+                  onAccept: () => controller.runSequentialAuthoringAction(
+                    action: 'ACCEPT_TURN',
+                    turnId: turn.turnId,
+                  ),
+                ),
+              ] else if (stage == 'STEP_REVIEW' &&
+                  session.isStepByStep &&
+                  !session.awaitingStepsFinalSave) ...[
+                _sequentialItemControls(
+                  context: context,
+                  controller: controller,
+                  turn: turn,
+                  busy: busy,
+                  isStepReview: true,
+                  canGoBack: (session.currentStepIndex ?? 0) > 0,
+                  addManualValue: _stepFromTurnProposal(turn.proposal),
+                  onAccept: () => controller.runSequentialAuthoringAction(
+                    action: 'ACCEPT_TURN',
+                    turnId: turn.turnId,
+                  ),
+                ),
+              ] else ...[
+                FilledButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'ACCEPT_TURN',
+                            turnId: turn.turnId,
+                          ),
+                  child: Text(AiL10n.authoringSequentialAcceptAndSave.resolve(context)),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                OutlinedButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'SUGGEST_ANOTHER',
+                            turnId: turn.turnId,
+                          ),
+                  child: Text(AiL10n.authoringSequentialSuggestAnother.resolve(context)),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                OutlinedButton(
+                  onPressed: busy ? null : controller.selectSequentialDiscussionTarget,
+                  child: Text(AiL10n.authoringReviewDiscuss.resolve(context)),
+                ),
+              ],
+              if (_supportsManualEntry(stage)) ...[
+                const SizedBox(height: AppSpacing.xs),
+                if (!_manualEntryMode)
+                  OutlinedButton(
+                    onPressed: busy
+                        ? null
+                        : () => setState(() => _manualEntryMode = true),
+                    child: Text(
+                      AiL10n.authoringSequentialEnterOwnValue.resolve(context),
+                    ),
+                  )
+                else ...[
+                  if (stage == 'DIFFICULTY') ...[
+                    DropdownButtonFormField<String>(
+                      value: _manualDifficulty,
+                      decoration: InputDecoration(
+                        labelText: AiL10n.authoringSequentialManualHint(stage)
+                            .resolve(context),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'BEGINNER', child: Text('Beginner')),
+                        DropdownMenuItem(
+                          value: 'INTERMEDIATE',
+                          child: Text('Intermediate'),
+                        ),
+                        DropdownMenuItem(value: 'ADVANCED', child: Text('Advanced')),
+                      ],
+                      onChanged: busy
+                          ? null
+                          : (value) => setState(() => _manualDifficulty = value),
+                    ),
+                  ] else
+                    TextField(
+                      controller: _manualController,
+                      enabled: !busy,
+                      maxLines: _manualLinesForStage(stage),
+                      decoration: InputDecoration(
+                        labelText: AiL10n.authoringSequentialManualHint(stage)
+                            .resolve(context),
+                      ),
+                      textDirection: resolveContentTextDirection(
+                        _manualController.text,
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    AiL10n.authoringSequentialManualPreview.resolve(context),
+                    style: AppTextStyles.label(context).copyWith(
+                      color: palette.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    stage == 'DIFFICULTY'
+                        ? (_manualDifficulty ?? '—')
+                        : _manualController.text.trim().isEmpty
+                        ? '—'
+                        : _manualController.text.trim(),
+                    style: AppTextStyles.body(context).copyWith(
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  FilledButton(
+                    onPressed: busy || _manualValueForStage(stage) == null
+                        ? null
+                        : () => controller.runSequentialAuthoringAction(
+                              action: 'SAVE_MANUAL',
+                              manualValue: _manualValueForStage(stage),
+                            ),
+                    child: Text(
+                      AiL10n.authoringSequentialSaveManualValue.resolve(context),
+                    ),
+                  ),
+                ],
+              ],
+              if (stage == 'COMPONENTS' &&
+                  !session.isComponentOneByOne &&
+                  !session.awaitingComponentsFinalSave) ...[
+                const SizedBox(height: AppSpacing.xs),
+                OutlinedButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'CHOOSE_MODE',
+                            mode: 'COMPONENTS_FULL_LIST',
+                          ),
+                  child: Text(AiL10n.authoringSequentialReviewFullList.resolve(context)),
+                ),
+                OutlinedButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'CHOOSE_MODE',
+                            mode: 'COMPONENTS_ONE_BY_ONE',
+                          ),
+                  child: Text(AiL10n.authoringSequentialReviewOneByOne.resolve(context)),
+                ),
+              ],
+              if (stage == 'STEPS_OVERVIEW' && !session.awaitingStepsFinalSave) ...[
+                const SizedBox(height: AppSpacing.xs),
+                OutlinedButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'CHOOSE_MODE',
+                            mode: 'STEPS_FULL_PLAN',
+                          ),
+                  child: Text(AiL10n.authoringSequentialReviewCompletePlan.resolve(context)),
+                ),
+                OutlinedButton(
+                  onPressed: busy
+                      ? null
+                      : () => controller.runSequentialAuthoringAction(
+                            action: 'CHOOSE_MODE',
+                            mode: 'STEP_BY_STEP',
+                          ),
+                  child: Text(AiL10n.authoringSequentialReviewStepByStep.resolve(context)),
+                ),
+              ],
+            ] else if (session.stage == 'FINAL_REVIEW') ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                AiL10n.authoringSequentialFinalReview.resolve(context),
+                style: AppTextStyles.body(context).copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              FilledButton(
+                onPressed: busy
+                    ? null
+                    : () => controller.runSequentialAuthoringAction(action: 'FINISH'),
+                child: Text(AiL10n.authoringSequentialFinish.resolve(context)),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 

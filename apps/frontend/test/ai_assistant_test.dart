@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/learning_project_authoring_repository_stubs.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:frontend/app/widgets/app_mobile_bottom_nav_bar.dart';
@@ -1546,6 +1547,14 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectBuild> startBuild(String projectId) async => _build;
 
   @override
@@ -1644,6 +1653,32 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
     List<Map<String, dynamic>>? steps,
     List<Map<String, dynamic>>? links,
   }) async {}
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) =>
+      unimplementedCreateAiAuthoringDraft(
+        ideaText: ideaText,
+        categoryId: categoryId,
+        difficulty: difficulty,
+        idempotencyKey: idempotencyKey,
+        locale: locale,
+      );
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) =>
+      unimplementedGetOrCreateAuthoringConversation(
+        projectId: projectId,
+        locale: locale,
+      );
 }
 
 class _LearnerAuthController extends AuthController {
@@ -1806,6 +1841,147 @@ class _FakeAiRepository implements AiRepository {
       ],
       scopeClassification: 'DOMAIN_KNOWLEDGE',
     );
+  }
+
+  @override
+  Future<AiTurnResponse> startAuthoring({required String conversationId}) async {
+    return AiTurnResponse(
+      conversationId: conversationId,
+      userMessageId: 'idea-1',
+      assistantMessageId: 'assistant-bootstrap',
+      contentBlocks: const [
+        AiContentBlock(
+          type: 'project_authoring_clarification',
+          authoringStatus: 'NEEDS_CLARIFICATION',
+          authoringSummary: 'Mock authoring summary.',
+          authoringNextQuestion: AiAuthoringQuestion(
+            prompt: 'What behavior do you want?',
+            answerType: 'FREE_TEXT',
+          ),
+        ),
+      ],
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> generateAuthoringProposal({
+    required String conversationId,
+  }) async {
+    return AiTurnResponse(
+      conversationId: conversationId,
+      userMessageId: 'idea-1',
+      assistantMessageId: 'assistant-proposal',
+      contentBlocks: const [
+        AiContentBlock(
+          type: 'project_authoring_proposal',
+          authoringProposalProject: AiAuthoringProposalProject(
+            title: 'Mock proposal',
+            shortDescription: 'Short enough summary for preview.',
+            description: 'Long enough description for the mock proposal preview.',
+            difficulty: 'BEGINNER',
+            estimatedMinutes: 90,
+          ),
+          authoringProposalCategoryDisplayName: 'Electronics',
+          authoringProposalComponents: [
+            AiAuthoringProposalComponent(
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              isRequired: true,
+              canBeSubstituted: false,
+            ),
+          ],
+          authoringProposalSteps: [
+            AiAuthoringProposalStep(
+              title: 'Wire the circuit',
+              description: 'Connect the Arduino and sensor on a breadboard.',
+            ),
+            AiAuthoringProposalStep(
+              title: 'Upload code',
+              description: 'Flash the moisture-reading sketch.',
+            ),
+            AiAuthoringProposalStep(
+              title: 'Test the alert',
+              description: 'Verify the LED turns on when dry.',
+            ),
+          ],
+        ),
+      ],
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalReview({
+    required String conversationId,
+    required String proposalId,
+    required String target,
+    required String decision,
+    String? comment,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> reviseAuthoringProposal({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> prepareApplyReviewedAuthoringProposal({
+    required String conversationId,
+    required String reviewStateId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalDiscussion({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+    required String target,
+    required String comment,
+    required String clientMessageId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> runSequentialAuthoringAction({
+    required String conversationId,
+    required String action,
+    String? turnId,
+    String? comment,
+    String? clientMessageId,
+    Object? manualValue,
+    String? mode,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> discussSequentialAuthoringTurn({
+    required String conversationId,
+    required String turnId,
+    required String comment,
+    required String clientMessageId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiAuthoringSnapshot?> loadSequentialAuthoringState({
+    required String conversationId,
+  }) async {
+    return null;
   }
 }
 

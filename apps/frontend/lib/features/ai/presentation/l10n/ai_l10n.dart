@@ -76,6 +76,612 @@ class AiL10n {
     ar: 'جارٍ التفكير…',
   );
 
+  static const analyzingIdea = LocalizedText(
+    en: 'Analyzing your project idea…',
+    ar: 'جارٍ تحليل فكرة مشروعك…',
+  );
+
+  static const authoringWhatIUnderstand = LocalizedText(
+    en: 'What I understand',
+    ar: 'ما أفهمه',
+  );
+
+  static const authoringCurrentQuestion = LocalizedText(
+    en: 'Current question',
+    ar: 'السؤال الحالي',
+  );
+
+  static const authoringAssumptions = LocalizedText(
+    en: 'Assumptions',
+    ar: 'افتراضات',
+  );
+
+  static const authoringWarnings = LocalizedText(
+    en: 'Warnings',
+    ar: 'تحذيرات',
+  );
+
+  static const authoringReadyForProposal = LocalizedText(
+    en: 'Your project idea has enough detail to generate a structured draft.',
+    ar: 'أصبحت فكرة مشروعك واضحة بما يكفي لإنشاء مسودة منظمة.',
+  );
+
+  static const authoringConfirmSelection = LocalizedText(
+    en: 'Confirm selection',
+    ar: 'تأكيد الاختيار',
+  );
+
+  static const authoringInputHint = LocalizedText(
+    en: 'Answer about your project idea…',
+    ar: 'أجب عن فكرة مشروعك…',
+  );
+
+  static const authoringGenerateProposal = LocalizedText(
+    en: 'Generate project proposal',
+    ar: 'إنشاء اقتراح المشروع',
+  );
+
+  static const authoringGeneratingProposal = LocalizedText(
+    en: 'Generating your project proposal…',
+    ar: 'جارٍ إنشاء اقتراح مشروعك…',
+  );
+
+  static const proposalGenerationInvalid = LocalizedText(
+    en: 'The assistant could not create a valid proposal. Please try again.',
+    ar: 'تعذر على المساعد إنشاء اقتراح صالح. يرجى المحاولة مرة أخرى.',
+  );
+
+  static const proposalGenerationRateLimited = LocalizedText(
+    en: 'The AI service is temporarily busy. Please try again shortly.',
+    ar: 'خدمة الذكاء الاصطناعي مشغولة مؤقتًا. يرجى المحاولة بعد قليل.',
+  );
+
+  static const proposalGenerationTimeout = LocalizedText(
+    en: 'Proposal generation took too long. Please try again.',
+    ar: 'استغرق إنشاء الاقتراح وقتًا طويلًا. يرجى المحاولة مرة أخرى.',
+  );
+
+  static const proposalAiDisabled = LocalizedText(
+    en: 'AI project generation is currently unavailable.',
+    ar: 'إنشاء المشروع بالذكاء الاصطناعي غير متاح حاليًا.',
+  );
+
+  static const authoringProposalPreviewBadge = LocalizedText(
+    en: 'Preview',
+    ar: 'معاينة',
+  );
+
+  static const authoringProposalPreviewNotice = LocalizedText(
+    en: 'This is a preview. Your saved project has not been changed.',
+    ar: 'هذه معاينة فقط. لم يتم تغيير مشروعك المحفوظ.',
+  );
+
+  static const authoringProposalStaleNotice = LocalizedText(
+    en: 'Project changed after this proposal.',
+    ar: 'تم تغيير المشروع بعد هذا الاقتراح.',
+  );
+
+  static const authoringProposalDescription = LocalizedText(
+    en: 'Description',
+    ar: 'الوصف',
+  );
+
+  static const authoringProposalShortDescription = LocalizedText(
+    en: 'Summary',
+    ar: 'الملخص',
+  );
+
+  static const authoringProposalRequiredComponents = LocalizedText(
+    en: 'Required components',
+    ar: 'المكونات المطلوبة',
+  );
+
+  static const authoringProposalSteps = LocalizedText(
+    en: 'Steps',
+    ar: 'الخطوات',
+  );
+
+  static const authoringProposalSafety = LocalizedText(
+    en: 'Safety considerations',
+    ar: 'اعتبارات السلامة',
+  );
+
+  static const authoringProposalEstimatedDuration = LocalizedText(
+    en: 'Estimated duration',
+    ar: 'المدة التقديرية',
+  );
+
+  static const authoringProposalDifficulty = LocalizedText(
+    en: 'Difficulty',
+    ar: 'الصعوبة',
+  );
+
+  static const authoringProposalOptional = LocalizedText(
+    en: 'Optional',
+    ar: 'اختياري',
+  );
+
+  static const authoringProposalRequired = LocalizedText(
+    en: 'Required',
+    ar: 'مطلوب',
+  );
+
+  static const authoringProposalSubstitutable = LocalizedText(
+    en: 'Substitutions allowed',
+    ar: 'يسمح بالبدائل',
+  );
+
+  static const authoringReviewAcceptProposal = LocalizedText(
+    en: 'Accept proposal',
+    ar: 'قبول الاقتراح',
+  );
+
+  static const authoringReviewKeepCurrent = LocalizedText(
+    en: 'Keep current',
+    ar: 'الإبقاء على الحالي',
+  );
+
+  static const authoringReviewRequestChanges = LocalizedText(
+    en: 'Request changes',
+    ar: 'طلب تعديلات',
+  );
+
+  static const authoringReviewChangeDecision = LocalizedText(
+    en: 'Change decision',
+    ar: 'تغيير القرار',
+  );
+
+  static const authoringReviewDecisionAccept = LocalizedText(
+    en: 'Accepted',
+    ar: 'مقبول',
+  );
+
+  static const authoringReviewDecisionKeep = LocalizedText(
+    en: 'Keeping current',
+    ar: 'يبقى الحالي',
+  );
+
+  static const authoringReviewDecisionRevision = LocalizedText(
+    en: 'Needs revision',
+    ar: 'بحاجة إلى مراجعة',
+  );
+
+  static const authoringReviewDecisionUnreviewed = LocalizedText(
+    en: 'Not reviewed',
+    ar: 'لم تتم المراجعة',
+  );
+
+  static const authoringReviewCurrentDraft = LocalizedText(
+    en: 'Current draft',
+    ar: 'المسودة الحالية',
+  );
+
+  static const authoringReviewRevisionCommentHint = LocalizedText(
+    en: 'Describe what should change…',
+    ar: 'صف التغيير المطلوب…',
+  );
+
+  static const authoringReviewSaveRequest = LocalizedText(
+    en: 'Save request',
+    ar: 'حفظ الطلب',
+  );
+
+  static const authoringReviewGenerateRevised = LocalizedText(
+    en: 'Generate revised proposal',
+    ar: 'إنشاء اقتراح مُراجع',
+  );
+
+  static const authoringReviewApplyReviewed = LocalizedText(
+    en: 'Apply reviewed proposal',
+    ar: 'تطبيق الاقتراح المراجع',
+  );
+
+  static const authoringReviewApplied = LocalizedText(
+    en: 'Applied to draft',
+    ar: 'تم التطبيق على المسودة',
+  );
+
+  static const authoringProposalUpdated = LocalizedText(
+    en: 'Proposal updated',
+    ar: 'تم تحديث الاقتراح',
+  );
+
+  static const authoringProposalVersion = LocalizedText(
+    en: 'Version',
+    ar: 'الإصدار',
+  );
+
+  static const authoringDiffAdded = LocalizedText(
+    en: 'Added',
+    ar: 'أُضيف',
+  );
+
+  static const authoringDiffRemoved = LocalizedText(
+    en: 'Removed',
+    ar: 'أُزيل',
+  );
+
+  static const authoringDiffUpdated = LocalizedText(
+    en: 'Updated',
+    ar: 'تم التحديث',
+  );
+
+  static const authoringDiffChangedTargets = LocalizedText(
+    en: 'Changed sections',
+    ar: 'الأقسام المتغيرة',
+  );
+
+  static const authoringReviewDiscuss = LocalizedText(
+    en: 'Discuss',
+    ar: 'ناقش',
+  );
+
+  static LocalizedText authoringDiscussingTargetLabel(String target) {
+    return switch (target) {
+      'title' => const LocalizedText(en: 'Discussing: Title', ar: 'النقاش: العنوان'),
+      'shortDescription' => const LocalizedText(
+          en: 'Discussing: Summary', ar: 'النقاش: الملخص'),
+      'description' => const LocalizedText(
+          en: 'Discussing: Description', ar: 'النقاش: الوصف'),
+      'difficulty' => const LocalizedText(
+          en: 'Discussing: Difficulty', ar: 'النقاش: الصعوبة'),
+      'estimatedMinutes' => const LocalizedText(
+          en: 'Discussing: Estimated duration',
+          ar: 'النقاش: المدة التقديرية'),
+      'components' => const LocalizedText(
+          en: 'Discussing: Required components',
+          ar: 'النقاش: المكوّنات المطلوبة'),
+      'steps' => const LocalizedText(en: 'Discussing: Steps', ar: 'النقاش: الخطوات'),
+      'TITLE' => const LocalizedText(en: 'Discussing: Title', ar: 'النقاش: العنوان'),
+      'SHORT_DESCRIPTION' => const LocalizedText(
+          en: 'Discussing: Summary', ar: 'النقاش: الملخص'),
+      'FULL_DESCRIPTION' => const LocalizedText(
+          en: 'Discussing: Description', ar: 'النقاش: الوصف'),
+      'DIFFICULTY' => const LocalizedText(
+          en: 'Discussing: Difficulty', ar: 'النقاش: الصعوبة'),
+      'ESTIMATED_DURATION' => const LocalizedText(
+          en: 'Discussing: Estimated duration',
+          ar: 'النقاش: المدة التقديرية'),
+      'COMPONENTS' => const LocalizedText(
+          en: 'Discussing: Required components',
+          ar: 'النقاش: المكوّنات المطلوبة'),
+      'STEPS_OVERVIEW' => const LocalizedText(
+          en: 'Discussing: Steps', ar: 'النقاش: الخطوات'),
+      'STEP_REVIEW' => const LocalizedText(
+          en: 'Discussing: Step', ar: 'النقاش: الخطوة'),
+      _ => LocalizedText(en: 'Discussing: $target', ar: 'النقاش: $target'),
+    };
+  }
+
+  static LocalizedText authoringDiscussComposerHintForSessionStage(String stage) {
+    return switch (stage) {
+      'TITLE' => authoringDiscussComposerHint('title'),
+      'SHORT_DESCRIPTION' => authoringDiscussComposerHint('shortDescription'),
+      'FULL_DESCRIPTION' => authoringDiscussComposerHint('description'),
+      'DIFFICULTY' => authoringDiscussComposerHint('difficulty'),
+      'ESTIMATED_DURATION' => authoringDiscussComposerHint('estimatedMinutes'),
+      'COMPONENTS' => authoringDiscussComposerHint('components'),
+      'STEPS_OVERVIEW' || 'STEP_REVIEW' => authoringDiscussComposerHint('steps'),
+      _ => const LocalizedText(
+          en: 'Describe the change you want…',
+          ar: 'صف التغيير الذي تريده…',
+        ),
+    };
+  }
+
+  static LocalizedText authoringDiscussComposerHint(String target) {
+    return switch (target) {
+      'title' => const LocalizedText(
+          en: 'Describe the title change you want…',
+          ar: 'صف تغيير العنوان الذي تريده…'),
+      'shortDescription' => const LocalizedText(
+          en: 'Describe the summary change you want…',
+          ar: 'صف تغيير الملخص الذي تريده…'),
+      'description' => const LocalizedText(
+          en: 'Describe the description change you want…',
+          ar: 'صف تغيير الوصف الذي تريده…'),
+      'difficulty' => const LocalizedText(
+          en: 'Describe the difficulty change you want…',
+          ar: 'صف تغيير مستوى الصعوبة الذي تريده…'),
+      'estimatedMinutes' => const LocalizedText(
+          en: 'Describe the duration change you want…',
+          ar: 'صف تغيير المدة التي تريدها…'),
+      'components' => const LocalizedText(
+          en: 'Describe the component changes you want…',
+          ar: 'صف تغييرات المكوّنات التي تريدها…'),
+      'steps' => const LocalizedText(
+          en: 'Describe the step changes you want…',
+          ar: 'صف تغييرات الخطوات التي تريدها…'),
+      _ => LocalizedText(
+          en: 'Describe the change you want for $target…',
+          ar: 'صف التغيير الذي تريده لـ $target…',
+        ),
+    };
+  }
+
+  static LocalizedText authoringReviewProgressSummary(
+    int resolved,
+    int total,
+    int needsDiscussion,
+  ) {
+    return LocalizedText(
+      en: '$resolved of $total reviewed'
+          '${needsDiscussion > 0 ? ' · $needsDiscussion need discussion' : ''}',
+      ar: '$resolved من $total تمت مراجعتها'
+          '${needsDiscussion > 0 ? ' · $needsDiscussion بحاجة إلى نقاش' : ''}',
+    );
+  }
+
+  static LocalizedText authoringReviewStatusLabel(String status) {
+    return switch (status) {
+      'READY_TO_APPLY' => const LocalizedText(
+          en: 'Ready to apply', ar: 'جاهز للتطبيق'),
+      'DISCUSSION_NEEDED' => const LocalizedText(
+          en: 'Discussion needed', ar: 'يلزم نقاش'),
+      'APPLIED' => const LocalizedText(en: 'Applied', ar: 'تم التطبيق'),
+      'STALE' => const LocalizedText(en: 'Stale', ar: 'قديم'),
+      _ => const LocalizedText(en: 'In review', ar: 'قيد المراجعة'),
+    };
+  }
+
+  static const authoringReviewCompleteBanner = LocalizedText(
+    en: 'Review complete — all sections resolved',
+    ar: 'اكتملت المراجعة — تم حسم جميع الأقسام',
+  );
+
+  static LocalizedText authoringReviewCompleteSummary(int resolved, int total) {
+    return LocalizedText(
+      en: 'Review complete — $resolved of $total sections resolved',
+      ar: 'اكتملت المراجعة — $resolved من $total أقسام تم حسمها',
+    );
+  }
+
+  static const authoringReviewLocked = LocalizedText(
+    en: 'Locked',
+    ar: 'مقفل',
+  );
+
+  static const authoringReviewYourRequest = LocalizedText(
+    en: 'Your request',
+    ar: 'طلبك',
+  );
+
+  static const authoringReviewDecisionUnderDiscussion = LocalizedText(
+    en: 'Under discussion',
+    ar: 'قيد النقاش',
+  );
+
+  static const authoringReviewDecisionRevisionRequested = LocalizedText(
+    en: 'Revision requested',
+    ar: 'طُلبت مراجعة',
+  );
+
+  static const authoringReviewContinueDiscussion = LocalizedText(
+    en: 'Continue discussion',
+    ar: 'متابعة النقاش',
+  );
+
+  static const authoringProposalAppliedSuccess = LocalizedText(
+    en: 'Project proposal applied to your draft.',
+    ar: 'تم تطبيق اقتراح المشروع على مسودتك.',
+  );
+
+  static const authoringSequentialProgressTitle = LocalizedText(
+    en: 'Guided project authoring',
+    ar: 'تأليف المشروع الموجّه',
+  );
+
+  static const authoringSequentialStart = LocalizedText(
+    en: 'Start',
+    ar: 'ابدأ',
+  );
+
+  static const authoringSequentialAcceptAndSave = LocalizedText(
+    en: 'Accept and save',
+    ar: 'اعتماد وحفظ',
+  );
+
+  static const authoringSequentialSuggestAnother = LocalizedText(
+    en: 'Suggest another',
+    ar: 'اقترح بديلًا',
+  );
+
+  static const authoringSequentialEnterOwnValue = LocalizedText(
+    en: 'Enter my own value',
+    ar: 'أدخل قيمتي الخاصة',
+  );
+
+  static const authoringSequentialEnterOwnComponentList = LocalizedText(
+    en: 'Enter my own component list',
+    ar: 'أدخل قائمة مكوّناتي',
+  );
+
+  static const authoringSequentialSavedComponents = LocalizedText(
+    en: 'Current saved components',
+    ar: 'المكوّنات المحفوظة حاليًا',
+  );
+
+  static const authoringSequentialProposedComponents = LocalizedText(
+    en: 'Assistant proposal — not saved yet',
+    ar: 'اقتراح المساعد — لم يُحفظ بعد',
+  );
+
+  static const authoringSequentialSaveComponentList = LocalizedText(
+    en: 'Save component list',
+    ar: 'حفظ قائمة المكوّنات',
+  );
+
+  static const authoringSequentialSaveManualValue = LocalizedText(
+    en: 'Save this value',
+    ar: 'احفظ هذه القيمة',
+  );
+
+  static const authoringSequentialManualPreview = LocalizedText(
+    en: 'Preview',
+    ar: 'معاينة',
+  );
+
+  static LocalizedText authoringSequentialManualHint(String stage) {
+    return switch (stage) {
+      'TITLE' => const LocalizedText(en: 'Enter your project title', ar: 'أدخل عنوان مشروعك'),
+      'SHORT_DESCRIPTION' =>
+        const LocalizedText(en: 'Enter a short description', ar: 'أدخل وصفًا مختصرًا'),
+      'FULL_DESCRIPTION' =>
+        const LocalizedText(en: 'Enter the full description', ar: 'أدخل الوصف الكامل'),
+      'DIFFICULTY' =>
+        const LocalizedText(en: 'Choose difficulty', ar: 'اختر مستوى الصعوبة'),
+      'ESTIMATED_DURATION' =>
+        const LocalizedText(en: 'Estimated minutes', ar: 'المدة بالدقائق'),
+      _ => const LocalizedText(en: 'Enter your value', ar: 'أدخل قيمتك'),
+    };
+  }
+
+  static const authoringSequentialRegenerateStale = LocalizedText(
+    en: 'Generate a new suggestion using the updated draft',
+    ar: 'أنشئ اقتراحًا جديدًا بناءً على المسودة المحدّثة',
+  );
+
+  static const authoringSequentialReviewFullList = LocalizedText(
+    en: 'Review full list',
+    ar: 'راجع القائمة كاملة',
+  );
+
+  static const authoringSequentialReviewCompletePlan = LocalizedText(
+    en: 'Review complete plan',
+    ar: 'راجع الخطة كاملة',
+  );
+
+  static const authoringSequentialReviewStepByStep = LocalizedText(
+    en: 'Review step by step',
+    ar: 'راجع خطوة بخطوة',
+  );
+
+  static const authoringSequentialReviewOneByOne = LocalizedText(
+    en: 'Review one by one',
+    ar: 'راجع واحدًا تلو الآخر',
+  );
+
+  static LocalizedText authoringSequentialComponentProgress(int current, int total) {
+    return LocalizedText(
+      en: 'Component $current of $total',
+      ar: 'المكوّن $current من $total',
+    );
+  }
+
+  static LocalizedText authoringSequentialStepProgress(int current, int total) {
+    return LocalizedText(
+      en: 'Step $current of $total',
+      ar: 'الخطوة $current من $total',
+    );
+  }
+
+  static const authoringSequentialAcceptComponent = LocalizedText(
+    en: 'Accept component',
+    ar: 'اعتماد المكوّن',
+  );
+
+  static const authoringSequentialAcceptStep = LocalizedText(
+    en: 'Accept step',
+    ar: 'اعتماد الخطوة',
+  );
+
+  static const authoringSequentialRemoveItem = LocalizedText(
+    en: 'Remove',
+    ar: 'إزالة',
+  );
+
+  static const authoringSequentialAddItem = LocalizedText(
+    en: 'Add',
+    ar: 'إضافة',
+  );
+
+  static const authoringSequentialBackItem = LocalizedText(
+    en: 'Back',
+    ar: 'رجوع',
+  );
+
+  static const authoringSequentialExplainStep = LocalizedText(
+    en: 'Explain more',
+    ar: 'اشرح أكثر',
+  );
+
+  static const authoringSequentialAcceptListAndSave = LocalizedText(
+    en: 'Accept component list and save',
+    ar: 'اعتماد قائمة المكوّنات وحفظها',
+  );
+
+  static const authoringSequentialAcceptPlanAndSave = LocalizedText(
+    en: 'Accept steps and save',
+    ar: 'اعتماد الخطوات وحفظها',
+  );
+
+  static const authoringSequentialEnterOwnSteps = LocalizedText(
+    en: 'Enter my own steps',
+    ar: 'أدخل خطواتي بنفسي',
+  );
+
+  static const authoringSequentialReloadDraft = LocalizedText(
+    en: 'Reload draft',
+    ar: 'إعادة تحميل المسودة',
+  );
+
+  static const authoringSequentialGeneratingStepPlan = LocalizedText(
+    en: 'Generating your step plan…',
+    ar: 'جارٍ إنشاء خطة الخطوات…',
+  );
+
+  static const authoringSequentialGenerateStepPlan = LocalizedText(
+    en: 'Generate step plan',
+    ar: 'إنشاء خطة الخطوات',
+  );
+
+  static const authoringSequentialFinalReviewSummary = LocalizedText(
+    en: 'Final review',
+    ar: 'المراجعة النهائية',
+  );
+
+  static const authoringSequentialLegacyTransitionBanner = LocalizedText(
+    en:
+        'Your project uses the previous review flow. Continue with the new guided authoring assistant.',
+    ar: 'مشروعك يستخدم تدفق المراجعة السابق. تابع باستخدام مساعد التأليف الموجّه الجديد.',
+  );
+
+  static const authoringSequentialContinueGuided = LocalizedText(
+    en: 'Continue guided authoring',
+    ar: 'متابعة التأليف الموجّه',
+  );
+
+  static const authoringSequentialFinalReview = LocalizedText(
+    en: 'Your project draft is ready.',
+    ar: 'مسودة مشروعك جاهزة.',
+  );
+
+  static const authoringSequentialFinish = LocalizedText(
+    en: 'Finish authoring',
+    ar: 'إنهاء التأليف',
+  );
+
+  static LocalizedText authoringSequentialStageLabel(String stage) {
+    return switch (stage) {
+      'TITLE' => const LocalizedText(en: 'Title', ar: 'العنوان'),
+      'SHORT_DESCRIPTION' =>
+        const LocalizedText(en: 'Short description', ar: 'الوصف المختصر'),
+      'FULL_DESCRIPTION' =>
+        const LocalizedText(en: 'Full description', ar: 'الوصف الكامل'),
+      'DIFFICULTY' => const LocalizedText(en: 'Difficulty', ar: 'الصعوبة'),
+      'ESTIMATED_DURATION' =>
+        const LocalizedText(en: 'Estimated duration', ar: 'المدة التقديرية'),
+      'COMPONENTS' =>
+        const LocalizedText(en: 'Required components', ar: 'المكوّنات المطلوبة'),
+      'STEPS_OVERVIEW' => const LocalizedText(en: 'Build steps', ar: 'خطوات البناء'),
+      'STEP_REVIEW' => const LocalizedText(en: 'Build steps', ar: 'خطوات البناء'),
+      'FINAL_REVIEW' =>
+        const LocalizedText(en: 'Final review', ar: 'المراجعة النهائية'),
+      'COMPLETE' => const LocalizedText(en: 'Complete', ar: 'مكتمل'),
+      _ => LocalizedText(en: stage, ar: stage),
+    };
+  }
+
   static const maxLength = LocalizedText(
     en: 'Message is too long.',
     ar: 'الرسالة طويلة جدًا.',
@@ -307,19 +913,14 @@ class AiL10n {
   static String errorMessageForCode(BuildContext context, String? code) {
     switch (code) {
       case 'AI_DISABLED':
-        return aiDisabled.resolve(context);
+        return proposalAiDisabled.resolve(context);
       case 'AI_RATE_LIMITED':
-        return LocalizedText(
-          en: 'Too many requests. Please wait and try again.',
-          ar: 'طلبات كثيرة. يرجى الانتظار ثم المحاولة مرة أخرى.',
-        ).resolve(context);
+      case 'AI_PROVIDER_RATE_LIMITED':
+        return proposalGenerationRateLimited.resolve(context);
       case 'AI_CONVERSATION_BUSY':
         return busyConversation.resolve(context);
       case 'AI_PROVIDER_TIMEOUT':
-        return LocalizedText(
-          en: 'The assistant took too long to respond.',
-          ar: 'استغرق المساعد وقتًا طويلًا للرد.',
-        ).resolve(context);
+        return proposalGenerationTimeout.resolve(context);
       case 'AI_PROVIDER_AUTH_ERROR':
         return LocalizedText(
           en: 'The assistant is not configured correctly on the server.',
@@ -337,7 +938,7 @@ class AiL10n {
         ).resolve(context);
       case 'AI_PROVIDER_ERROR':
       case 'AI_RESPONSE_INVALID':
-        return genericFailure.resolve(context);
+        return proposalGenerationInvalid.resolve(context);
       case 'AI_CONVERSATION_NOT_FOUND':
         return LocalizedText(
           en: 'This conversation is no longer available.',

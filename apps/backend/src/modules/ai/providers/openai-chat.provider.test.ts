@@ -107,8 +107,12 @@ describe('OpenAiAiChatProvider', () => {
 
     assert.equal(result.provider, 'openai');
     assert.equal(result.data.blocks.length, 1);
-    assert.equal(result.data.blocks[0]?.purpose, 'answer');
-    assert.match(result.data.blocks[0]?.text ?? '', /Arduino Uno/i);
+    const firstBlock = result.data.blocks[0];
+    assert.equal(firstBlock?.type, 'text');
+    if (firstBlock?.type === 'text') {
+      assert.equal(firstBlock.purpose, 'answer');
+      assert.match(firstBlock.text ?? '', /Arduino Uno/i);
+    }
   });
 
   test('maps empty completion to AI_RESPONSE_INVALID', async () => {

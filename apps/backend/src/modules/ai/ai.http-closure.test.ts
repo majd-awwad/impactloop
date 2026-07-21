@@ -15,7 +15,7 @@ type ApiJson = {
   success?: boolean;
   message?: string;
   data?: Record<string, unknown> & {
-    meta?: { scopeClassification?: string };
+    meta?: { scopeClassification?: string; provider?: string };
     contentBlocks?: Array<Record<string, unknown>>;
     items?: Array<Record<string, unknown>>;
   };
@@ -267,8 +267,11 @@ describe('ai http closure', () => {
     assert.equal(provider.answerCalls, 0);
     const blocks = sent.json.data?.contentBlocks as Array<Record<string, unknown>>;
     assert.ok(blocks.some((block) => block.purpose === 'answer'));
-    assert.match(JSON.stringify(blocks), /الطقس|مواضيع التعلم/);
-    setAiChatProviderForTests(new MockAiChatProviderClass());
+    assert.match(
+      JSON.stringify(blocks),
+      /الطقس|مواضيع التعلم/,
+    );
+    setAiChatProviderForTests(new MockAiChatProvider());
   });
 
   test('legitimate safety and dangerous requests behave correctly', async () => {
@@ -432,7 +435,7 @@ describe('ai http closure', () => {
     assert.equal(userRows, 1);
     assert.equal(assistantRows, 1);
 
-    setAiChatProviderForTests(new MockAiChatProviderClass());
+    setAiChatProviderForTests(new MockAiChatProvider());
   });
 
   test('concurrent turns reject busy conversation', async () => {

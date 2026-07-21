@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../support/learning_project_authoring_repository_stubs.dart';
 
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/ai/application/ai_assistant_shell_provider.dart';
@@ -9,6 +10,7 @@ import 'package:frontend/features/ai/application/ai_chat_controller.dart';
 import 'package:frontend/features/ai/data/ai_repository.dart';
 import 'package:frontend/features/ai/domain/ai_helpers.dart';
 import 'package:frontend/features/ai/domain/ai_models.dart';
+import 'package:frontend/features/ai/domain/authoring_session_models.dart';
 import 'package:frontend/features/ai/presentation/widgets/ai_message_bubble.dart';
 import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
@@ -1145,6 +1147,129 @@ class _RecordingAiRepository implements AiRepository {
   }) async {
     throw UnimplementedError();
   }
+
+  @override
+  Future<AiTurnResponse> startAuthoring({required String conversationId}) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> generateAuthoringProposal({
+    required String conversationId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalReview({
+    required String conversationId,
+    required String proposalId,
+    required String target,
+    required String decision,
+    String? comment,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> reviseAuthoringProposal({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> prepareApplyReviewedAuthoringProposal({
+    required String conversationId,
+    required String reviewStateId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalDiscussion({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+    required String target,
+    required String comment,
+    required String clientMessageId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> runSequentialAuthoringAction({
+    required String conversationId,
+    required String action,
+    String? turnId,
+    String? comment,
+    String? clientMessageId,
+    Object? manualValue,
+    String? mode,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> discussSequentialAuthoringTurn({
+    required String conversationId,
+    required String turnId,
+    required String comment,
+    required String clientMessageId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiAuthoringSnapshot?> loadSequentialAuthoringState({
+    required String conversationId,
+  }) async {
+    return null;
+  }
+
+  @override
+  Future<AuthoringSessionResponse> startAuthoringSession({
+    required String conversationId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> loadAuthoringSession({
+    required String sessionId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> sendAuthoringSessionMessage({
+    required String sessionId,
+    required int expectedVersion,
+    String? text,
+    String? clientMessageId,
+    String? questionId,
+    List<String>? selectedOptionIds,
+    String? otherText,
+    String? currentTurnId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> runAuthoringSessionAction({
+    required String sessionId,
+    required String action,
+    required int expectedVersion,
+    String? turnId,
+    Object? manualValue,
+    String? mode,
+    String? targetStage,
+  }) async {
+    throw UnimplementedError();
+  }
 }
 
 class _SlowConfirmRepository extends _RecordingAiRepository {
@@ -1329,6 +1454,14 @@ class _TrackingBuildRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectBuild> startBuild(String projectId) async {
     return _refreshedBuild(projectId);
   }
@@ -1436,6 +1569,32 @@ class _TrackingBuildRepository implements LearningProjectRepository {
     List<Map<String, dynamic>>? steps,
     List<Map<String, dynamic>>? links,
   }) async {}
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) =>
+      unimplementedCreateAiAuthoringDraft(
+        ideaText: ideaText,
+        categoryId: categoryId,
+        difficulty: difficulty,
+        idempotencyKey: idempotencyKey,
+        locale: locale,
+      );
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) =>
+      unimplementedGetOrCreateAuthoringConversation(
+        projectId: projectId,
+        locale: locale,
+      );
 }
 
 class _BuildGuideShellNotifier extends AiAssistantShellNotifier {
@@ -1666,6 +1825,14 @@ class _StepCompletionTrackingBuildRepository implements LearningProjectRepositor
   }
 
   @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectBuild> startBuild(String projectId) async {
     return _inProgressBuild(projectId);
   }
@@ -1775,6 +1942,32 @@ class _StepCompletionTrackingBuildRepository implements LearningProjectRepositor
     List<Map<String, dynamic>>? steps,
     List<Map<String, dynamic>>? links,
   }) async {}
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) =>
+      unimplementedCreateAiAuthoringDraft(
+        ideaText: ideaText,
+        categoryId: categoryId,
+        difficulty: difficulty,
+        idempotencyKey: idempotencyKey,
+        locale: locale,
+      );
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) =>
+      unimplementedGetOrCreateAuthoringConversation(
+        projectId: projectId,
+        locale: locale,
+      );
 }
 
 class _StepCompletionShellNotifier extends AiAssistantShellNotifier {
@@ -1926,6 +2119,129 @@ class _StaleReloadLinkRepository implements AiRepository {
       contentBlocks: _linkConfirmationBlocks(),
       scopeClassification: 'DOMAIN_KNOWLEDGE',
     );
+  }
+
+  @override
+  Future<AiTurnResponse> startAuthoring({required String conversationId}) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> generateAuthoringProposal({
+    required String conversationId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalReview({
+    required String conversationId,
+    required String proposalId,
+    required String target,
+    required String decision,
+    String? comment,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> reviseAuthoringProposal({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> prepareApplyReviewedAuthoringProposal({
+    required String conversationId,
+    required String reviewStateId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalDiscussion({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+    required String target,
+    required String comment,
+    required String clientMessageId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> runSequentialAuthoringAction({
+    required String conversationId,
+    required String action,
+    String? turnId,
+    String? comment,
+    String? clientMessageId,
+    Object? manualValue,
+    String? mode,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiTurnResponse> discussSequentialAuthoringTurn({
+    required String conversationId,
+    required String turnId,
+    required String comment,
+    required String clientMessageId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AiAuthoringSnapshot?> loadSequentialAuthoringState({
+    required String conversationId,
+  }) async {
+    return null;
+  }
+
+  @override
+  Future<AuthoringSessionResponse> startAuthoringSession({
+    required String conversationId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> loadAuthoringSession({
+    required String sessionId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> sendAuthoringSessionMessage({
+    required String sessionId,
+    required int expectedVersion,
+    String? text,
+    String? clientMessageId,
+    String? questionId,
+    List<String>? selectedOptionIds,
+    String? otherText,
+    String? currentTurnId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> runAuthoringSessionAction({
+    required String sessionId,
+    required String action,
+    required int expectedVersion,
+    String? turnId,
+    Object? manualValue,
+    String? mode,
+    String? targetStage,
+  }) async {
+    throw UnimplementedError();
   }
 }
 

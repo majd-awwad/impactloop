@@ -674,6 +674,7 @@ before(async () => {
       limit: 20,
       status: 'AVAILABLE',
       priceType: 'ANY',
+      sort: 'newest',
       q: SEED_TOKEN,
     },
     { sub: ids.learnerAId, roles: ['LEARNER'] },
@@ -1018,150 +1019,7 @@ describe('ai agent http closure', () => {
     const intro = blocks.find((block) => block.type === 'text');
     assert.ok(intro?.text);
     for (const item of items) {
-      assert.match(String(intro?.text), new RegExp(item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    }
-    await assertTurnBasics(conversationId, messageClientId);
-  });
-
-  test('project duration follow-up answers from persisted comparison', async () => {
-    const token = tokenFor(ids.learnerAId);
-    const conversationId = await createConversation(token);
-
-    const searchClientId = clientId('duration-search');
-    const searchSent = await sendAgentMessage(
-      token,
-      conversationId,
-      `اعرضي مشروعين ${SEED_TOKEN}`,
-      searchClientId,
-    );
-    assert.equal(searchSent.response.status, 201);
-    const searchBlocks = parseBlocks(searchSent.json);
-    const searchResults = projectResultsBlock(searchBlocks);
-    const searchItems = searchResults.items as Array<{
-      projectId: string;
-      title: string;
-    }>;
-    assert.equal(searchItems.length, 2);
-
-    await prisma.learningProject.update({
-      where: { id: searchItems[0]!.projectId },
-      data: { estimatedDurationMinutes: 60 },
-    });
-    await prisma.learningProject.update({
-      where: { id: searchItems[1]!.projectId },
-      data: { estimatedDurationMinutes: 120 },
-    });
-
-    const compareClientId = clientId('duration-compare');
-    const compareSent = await sendAgentMessage(
-      token,
-      conversationId,
-      'قارن أول مشروعين',
-      compareClientId,
-    );
-    assert.equal(compareSent.response.status, 201);
-    const compareBlocks = parseBlocks(compareSent.json);
-    const comparison = compareBlocks.find((block) => block.type === 'comparison');
-    assert.ok(comparison);
-    const comparedIds = (
-      (comparison.items as Array<{ id: string }> | undefined) ?? []
-    ).map((item) => item.id);
-    assert.deepEqual(comparedIds, [
-      searchItems[0]!.projectId,
-      searchItems[1]!.projectId,
-    ]);
-
-    const followUpClientId = clientId('duration-followup');
-    const followUpSent = await sendAgentMessage(
-      token,
-      conversationId,
-      'أي واحد وقته أقل؟',
-      followUpClientId,
-    );
-    assert.equal(followUpSent.response.status, 201);
-    const followUpBlocks = parseBlocks(followUpSent.json);
-    const answer = followUpBlocks.find((block) => block.type === 'text');
-    assert.ok(answer?.text);
-    assert.doesNotMatch(
-      String(answer?.text),
-      /أخبرني أكثر عن المشروع|Tell me a bit more about the practical project/i,
-    );
-    const shorterProject = searchItems[0]!;
-    assert.match(String(answer?.text), new RegExp(shorterProject.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    assert.ok(
-      !followUpBlocks.some((block) => block.type === 'project_results'),
-      'duration follow-up must not trigger a new project search',
-    );
-    await assertTurnBasics(conversationId, followUpClientId);
-  });
-
-  test('component matching resolves Simple LED Circuit build without prior chat context', async () => {
-    const ledProject = await prisma.learningProject.findFirst({
-      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
-      select: { id: true },
-    });
-    assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
-
-    let build = await prisma.projectBuild.findFirst({
-      where: { projectId: ledProject.id, learnerId: ids.learnerNoCoordsId },
-      select: { id: true },
-    });
-    if (!build) {
-      const started = await startProjectBuildById(ledProject.id, ids.learnerNoCoordsId);
-      build = { id: started.id };
-      for (const item of started.items) {
-        const status =
-          item.component.componentName === 'LED' ||
-          item.component.componentName === 'Resistor'
-            ? 'ALREADY_OWNED'
-            : 'MISSING';
-        await updateProjectBuildItemById(
-          ledProject.id,
-          ids.learnerNoCoordsId,
-          item.id,
-          {
-            status,
-            learnerNote: null,
-          },
-        );
-      }
-    }
-
-    const token = tokenFor(ids.learnerNoCoordsId);
-    const conversationId = await createConversation(token);
-    const messageClientId = clientId('component-match-led');
-    const sent = await sendAgentMessage(
-      token,
-      conversationId,
-      'لاقيلي مواد للمكونات الناقصة: Simple LED Circuit',
-      messageClientId,
-    );
-    assert.equal(sent.response.status, 201);
-    const blocks = parseBlocks(sent.json);
-    assert.equal(
-      blocks.some((block) => block.type === 'error'),
-      false,
-      'component matching must not return an error block',
-    );
-    const matches = blocks.find((block) => block.type === 'component_matches');
-    assert.ok(matches, 'expected component_matches block');
-    assert.equal(matches.buildId, build.id);
-    const groups = matches.groups as Array<{
-      componentName: string;
-      materials: Array<{ materialId: string }>;
-    }>;
-    assert.ok(groups.length > 0);
-    const componentNames = groups.map((group) => group.componentName);
-    assert.ok(componentNames.includes('Breadboard') || componentNames.includes('Jumper wires'));
-    assert.equal(componentNames.includes('LED'), false);
-    assert.equal(componentNames.includes('Resistor'), false);
-    const intro = blocks.find((block) => block.type === 'text');
-    assert.ok(intro?.text);
-    assert.doesNotMatch(String(intro?.text), /Arduino Nano/i);
-    for (const name of componentNames) {
-      assert.match(String(intro?.text), new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    }
-    await assertTurnBasics(conversationId, messageClientId);
+      assert.match(String(intro?.text), new RegExp(item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\    await assertTurnBasics(conversationId, messageClientId);
   });
 
   test('component matching with explicit project title is stable across 10 fresh conversations', async () => {
@@ -1360,6 +1218,206 @@ describe('ai agent http closure', () => {
 
       await assertTurnBasics(conversationId, matchClientId);
     }
+  });
+
+  test('saved projects are scoped to the authenticated learner', async () => {')));
+    }
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('project duration follow-up answers from persisted comparison', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+
+    const searchClientId = clientId('duration-search');
+    const searchSent = await sendAgentMessage(
+      token,
+      conversationId,
+      `اعرضي مشروعين ${SEED_TOKEN}`,
+      searchClientId,
+    );
+    assert.equal(searchSent.response.status, 201);
+    const searchBlocks = parseBlocks(searchSent.json);
+    const searchResults = projectResultsBlock(searchBlocks);
+    const searchItems = searchResults.items as Array<{
+      projectId: string;
+      title: string;
+    }>;
+    assert.equal(searchItems.length, 2);
+
+    await prisma.learningProject.update({
+      where: { id: searchItems[0]!.projectId },
+      data: { estimatedDurationMinutes: 60 },
+    });
+    await prisma.learningProject.update({
+      where: { id: searchItems[1]!.projectId },
+      data: { estimatedDurationMinutes: 120 },
+    });
+
+    const compareClientId = clientId('duration-compare');
+    const compareSent = await sendAgentMessage(
+      token,
+      conversationId,
+      'قارن أول مشروعين',
+      compareClientId,
+    );
+    assert.equal(compareSent.response.status, 201);
+    const compareBlocks = parseBlocks(compareSent.json);
+    const comparison = compareBlocks.find((block) => block.type === 'comparison');
+    assert.ok(comparison);
+    const comparedIds = (
+      (comparison.items as Array<{ id: string }> | undefined) ?? []
+    ).map((item) => item.id);
+    assert.deepEqual(comparedIds, [
+      searchItems[0]!.projectId,
+      searchItems[1]!.projectId,
+    ]);
+
+    const followUpClientId = clientId('duration-followup');
+    const followUpSent = await sendAgentMessage(
+      token,
+      conversationId,
+      'أي واحد وقته أقل؟',
+      followUpClientId,
+    );
+    assert.equal(followUpSent.response.status, 201);
+    const followUpBlocks = parseBlocks(followUpSent.json);
+    const answer = followUpBlocks.find((block) => block.type === 'text');
+    assert.ok(answer?.text);
+    assert.doesNotMatch(
+      String(answer?.text),
+      /أخبرني أكثر عن المشروع|Tell me a bit more about the practical project/i,
+    );
+    const shorterProject =
+      searchItems[0]!.projectId === ids.publishedArduinoProjectId
+        ? searchItems[0]!
+        : searchItems[1]!;
+    assert.match(String(answer?.text), new RegExp(shorterProject.title.replace(/[.*+?^${}()|[\]\\]/g, '\\  test('project duration follow-up answers from persisted comparison', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    await prisma.learningProject.update({
+      where: { id: ids.publishedArduinoProjectId },
+      data: { estimatedDurationMinutes: 60 },
+    });
+    await prisma.learningProject.update({
+      where: { id: ids.obstacleProjectId },
+      data: { estimatedDurationMinutes: 120 },
+    });
+
+    const compareClientId = clientId('duration-compare');
+    const compareSent = await sendAgentMessage(
+      token,
+      conversationId,
+      'قارن أول مشروعين',
+      compareClientId,
+    );
+    assert.equal(compareSent.response.status, 201);
+    assert.ok(
+      parseBlocks(compareSent.json).some((block) => block.type === 'comparison'),
+    );
+
+    const followUpClientId = clientId('duration-followup');
+    const followUpSent = await sendAgentMessage(
+      token,
+      conversationId,
+      'أي واحد وقته أقل؟',
+      followUpClientId,
+    );
+    assert.equal(followUpSent.response.status, 201);
+    const followUpBlocks = parseBlocks(followUpSent.json);
+    const answer = followUpBlocks.find((block) => block.type === 'text');
+    assert.ok(answer?.text);
+    assert.doesNotMatch(
+      String(answer?.text),
+      /أخبرني أكثر عن المشروع|Tell me a bit more about the practical project/i,
+    );
+    assert.match(
+      String(answer?.text),
+      /Arduino LED Blink|Mini Wooden Phone Stand/i,
+    );
+    assert.ok(
+      !followUpBlocks.some((block) => block.type === 'project_results'),
+      'duration follow-up must not trigger a new project search',
+    );
+    await assertTurnBasics(conversationId, followUpClientId);
+  });')));
+    assert.ok(
+      !followUpBlocks.some((block) => block.type === 'project_results'),
+      'duration follow-up must not trigger a new project search',
+    );
+    await assertTurnBasics(conversationId, followUpClientId);
+  });
+
+  test('component matching resolves Simple LED Circuit build without prior chat context', async () => {
+    const ledProject = await prisma.learningProject.findFirst({
+      where: { title: 'Simple LED Circuit', status: 'PUBLISHED' },
+      select: { id: true },
+    });
+    assert.ok(ledProject, 'Simple LED Circuit must exist in the database');
+
+    let build = await prisma.projectBuild.findFirst({
+      where: { projectId: ledProject.id, learnerId: ids.learnerNoCoordsId },
+      select: { id: true },
+    });
+    if (!build) {
+      const started = await startProjectBuildById(ledProject.id, ids.learnerNoCoordsId);
+      build = { id: started.id };
+      for (const item of started.items) {
+        const status =
+          item.component.componentName === 'LED' ||
+          item.component.componentName === 'Resistor'
+            ? 'ALREADY_OWNED'
+            : 'MISSING';
+        await updateProjectBuildItemById(
+          ledProject.id,
+          ids.learnerNoCoordsId,
+          item.id,
+          {
+            status,
+            learnerNote: null,
+          },
+        );
+      }
+    }
+
+    const token = tokenFor(ids.learnerNoCoordsId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('component-match-led');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'لاقيلي مواد للمكونات الناقصة: Simple LED Circuit',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+    const blocks = parseBlocks(sent.json);
+    assert.equal(
+      blocks.some((block) => block.type === 'error'),
+      false,
+      'component matching must not return an error block',
+    );
+    const matches = blocks.find((block) => block.type === 'component_matches');
+    assert.ok(matches, 'expected component_matches block');
+    assert.equal(matches.buildId, build.id);
+    const groups = matches.groups as Array<{
+      componentName: string;
+      materials: Array<{ materialId: string }>;
+    }>;
+    assert.ok(groups.length > 0);
+    const componentNames = groups.map((group) => group.componentName);
+    assert.ok(componentNames.includes('Breadboard') || componentNames.includes('Jumper wires'));
+    assert.equal(componentNames.includes('LED'), false);
+    assert.equal(componentNames.includes('Resistor'), false);
+    const intro = blocks.find((block) => block.type === 'text');
+    assert.ok(intro?.text);
+    assert.doesNotMatch(String(intro?.text), /Arduino Nano/i);
+    for (const name of componentNames) {
+      assert.match(String(intro?.text), new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\    await assertTurnBasics(conversationId, followUpClientId);
+  });
+
+  test('saved projects are scoped to the authenticated learner', async () => {')));
+    }
+    await assertTurnBasics(conversationId, messageClientId);
   });
 
   test('saved projects are scoped to the authenticated learner', async () => {

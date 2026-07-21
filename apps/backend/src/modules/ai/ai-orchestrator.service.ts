@@ -310,11 +310,6 @@ export const processGeneralLearningTurn = async (input: {
         } else {
           scopeClassification = 'DOMAIN_KNOWLEDGE';
         }
-      } else if (deterministic.classification === 'DANGEROUS_REQUEST') {
-        blocks = [textBlock(DANGEROUS_SAFETY_COPY[responseLocale], 'safety')];
-        providerName = 'system';
-        assistantStatus = 'REFUSED';
-        scopeClassification = 'DANGEROUS_REQUEST';
       } else if (
         deterministic.classification === 'DOMAIN_KNOWLEDGE' ||
         deterministic.classification === 'MIXED'

@@ -16,8 +16,9 @@ const snapshotEnv = () => ({ ...process.env });
 
 describe('AI chat provider resolution', () => {
   let savedEnv = snapshotEnv();
+  let savedNodeTestContext: string | undefined;
 
-  afterEach(() => {
+  afterEach(async () => {
     for (const key of Object.keys(process.env)) {
       if (!(key in savedEnv)) {
         delete process.env[key];
@@ -25,10 +26,23 @@ describe('AI chat provider resolution', () => {
     }
     Object.assign(process.env, savedEnv);
     savedEnv = snapshotEnv();
+    if (savedNodeTestContext === undefined) {
+      delete process.env.NODE_TEST_CONTEXT;
+    } else {
+      process.env.NODE_TEST_CONTEXT = savedNodeTestContext;
+    }
+    const { setResolvedAiChatProviderForTests } = await import('../../config/env.js');
+    setResolvedAiChatProviderForTests(null);
     setGeminiChatClientFactoryForTests(null);
   });
 
+  const withoutTestContext = () => {
+    savedNodeTestContext = process.env.NODE_TEST_CONTEXT;
+    delete process.env.NODE_TEST_CONTEXT;
+  };
+
   test('explicit AI_CHAT_PROVIDER=gemini wins over OpenAI key', () => {
+    withoutTestContext();
     process.env.AI_CHAT_PROVIDER = 'gemini';
     process.env.GEMINI_API_KEY = TEST_GEMINI_KEY;
     process.env.OPENAI_API_KEY = TEST_OPENAI_KEY;
@@ -37,6 +51,7 @@ describe('AI chat provider resolution', () => {
   });
 
   test('prefers gemini over openai when both keys are configured', () => {
+    withoutTestContext();
     delete process.env.AI_CHAT_PROVIDER;
     process.env.GEMINI_API_KEY = TEST_GEMINI_KEY;
     process.env.OPENAI_API_KEY = TEST_OPENAI_KEY;
@@ -45,6 +60,7 @@ describe('AI chat provider resolution', () => {
   });
 
   test('defaults chat to gemini when AI_PROVIDER=gemini and Gemini key exists', () => {
+    withoutTestContext();
     delete process.env.AI_CHAT_PROVIDER;
     process.env.AI_PROVIDER = 'gemini';
     process.env.GEMINI_API_KEY = TEST_GEMINI_KEY;
@@ -54,6 +70,7 @@ describe('AI chat provider resolution', () => {
   });
 
   test('explicit gemini never resolves to mock', () => {
+    withoutTestContext();
     process.env.AI_CHAT_PROVIDER = 'gemini';
     process.env.GEMINI_API_KEY = TEST_GEMINI_KEY;
 
@@ -61,6 +78,7 @@ describe('AI chat provider resolution', () => {
   });
 
   test('explicit gemini with missing key stays gemini but is not operational', async () => {
+    withoutTestContext();
     process.env.AI_CHAT_PROVIDER = 'gemini';
     process.env.GEMINI_API_KEY = 'your_key_here';
 
@@ -71,6 +89,7 @@ describe('AI chat provider resolution', () => {
   });
 
   test('mock is used only when explicitly selected or no provider/key is configured', () => {
+    withoutTestContext();
     delete process.env.AI_CHAT_PROVIDER;
     delete process.env.AI_PROVIDER;
     delete process.env.GEMINI_API_KEY;
@@ -118,9 +137,13 @@ describe('GeminiAiChatProvider', () => {
 
     assert.equal(result.provider, 'gemini');
     assert.equal(result.model, 'gemini-2.5-flash');
-    assert.equal(
-      result.data.blocks[0]?.text,
-      'Arduino Uno is a beginner microcontroller board.',
-    );
+    const firstBlock = result.data.blocks[0];
+    assert.equal(firstBlock?.type, 'text');
+    if (firstBlock?.type === 'text') {
+      assert.equal(
+        firstBlock.text,
+        'Arduino Uno is a beginner microcontroller board.',
+      );
+    }
   });
 });

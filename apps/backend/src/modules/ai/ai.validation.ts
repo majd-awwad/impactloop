@@ -56,3 +56,110 @@ export const confirmAiPendingActionSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(128),
   locale: aiLocaleSchema.default('en'),
 });
+
+export const authoringProposalIdParamSchema = conversationIdParamSchema.extend({
+  proposalId: z.string().trim().min(1).max(80),
+});
+
+export const authoringReviewStateIdParamSchema = conversationIdParamSchema.extend({
+  reviewStateId: z.string().trim().min(1).max(80),
+});
+
+export const submitAuthoringProposalReviewSchema = z.object({
+  target: z.enum([
+    'title',
+    'shortDescription',
+    'description',
+    'difficulty',
+    'estimatedMinutes',
+    'components',
+    'steps',
+  ]),
+  decision: z.enum(['ACCEPT_PROPOSAL', 'KEEP_CURRENT', 'NEEDS_REVISION']),
+  comment: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const submitAuthoringProposalDiscussionSchema = z.object({
+  reviewStateId: z.string().trim().min(1).max(80),
+  target: z.enum([
+    'title',
+    'shortDescription',
+    'description',
+    'difficulty',
+    'estimatedMinutes',
+    'components',
+    'steps',
+  ]),
+  comment: z.string().trim().min(8).max(2000),
+  clientMessageId: z.string().trim().min(8).max(128),
+});
+
+export const reviseAuthoringProposalSchema = z.object({
+  reviewStateId: z.string().trim().min(1).max(80),
+});
+
+export const authoringTurnIdParamSchema = z.object({
+  conversationId: z.string().trim().min(1).max(80),
+  turnId: z.string().trim().min(1).max(80),
+});
+
+const sequentialAuthoringComponentInputSchema = z.object({
+  componentName: z.string().trim().min(1).max(200),
+  materialType: z.string().trim().min(1).max(200),
+  quantity: z.number().positive().max(99999),
+  unit: z.string().trim().min(1).max(50),
+  componentRole: z.enum(['REQUIRED_MATERIAL', 'TOOL', 'CONSUMABLE']),
+  isRequired: z.boolean(),
+  canBeSubstituted: z.boolean(),
+  searchKeywords: z.array(z.string().trim().min(1).max(80)).max(5).optional(),
+  notes: z.string().trim().max(1000).nullable().optional(),
+});
+
+const sequentialAuthoringStepInputSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(5000),
+});
+
+export const sequentialAuthoringActionSchema = z.object({
+  action: z.enum([
+    'START',
+    'COMPOSER_MESSAGE',
+    'ACCEPT_TURN',
+    'SUGGEST_ANOTHER',
+    'SAVE_MANUAL',
+    'CHOOSE_MODE',
+    'FINISH',
+    'REGENERATE_STALE',
+    'REMOVE_ITEM',
+    'ADD_ITEM',
+    'BACK_ITEM',
+    'EXPLAIN_STEP',
+    'FINALIZE_SECTION',
+    'CONTINUE_GUIDED',
+  ]),
+  turnId: z.string().trim().min(1).max(80).optional(),
+  comment: z.string().trim().max(2000).optional(),
+  clientMessageId: z.string().trim().min(8).max(128).optional(),
+  manualValue: z
+    .union([
+      z.string(),
+      z.number(),
+      sequentialAuthoringComponentInputSchema,
+      z.array(sequentialAuthoringComponentInputSchema).min(1).max(50),
+      sequentialAuthoringStepInputSchema,
+    ])
+    .optional(),
+  mode: z
+    .enum([
+      'COMPONENTS_FULL_LIST',
+      'COMPONENTS_ONE_BY_ONE',
+      'STEPS_FULL_PLAN',
+      'STEP_BY_STEP',
+    ])
+    .optional(),
+});
+
+export const discussSequentialAuthoringTurnSchema = z.object({
+  comment: z.string().trim().min(8).max(2000),
+  clientMessageId: z.string().trim().min(8).max(128),
+});

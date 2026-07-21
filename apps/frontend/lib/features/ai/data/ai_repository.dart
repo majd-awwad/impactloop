@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../domain/ai_models.dart';
+import '../domain/authoring_session_models.dart';
 import 'ai_api.dart';
 
 abstract class AiRepository {
@@ -27,6 +28,90 @@ abstract class AiRepository {
     required String text,
     required String locale,
     required String clientMessageId,
+  });
+
+  Future<AiTurnResponse> startAuthoring({required String conversationId});
+
+  Future<AiTurnResponse> generateAuthoringProposal({
+    required String conversationId,
+  });
+
+  Future<AiTurnResponse> submitAuthoringProposalReview({
+    required String conversationId,
+    required String proposalId,
+    required String target,
+    required String decision,
+    String? comment,
+  });
+
+  Future<AiTurnResponse> reviseAuthoringProposal({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+  });
+
+  Future<AiTurnResponse> prepareApplyReviewedAuthoringProposal({
+    required String conversationId,
+    required String reviewStateId,
+  });
+
+  Future<AiTurnResponse> submitAuthoringProposalDiscussion({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+    required String target,
+    required String comment,
+    required String clientMessageId,
+  });
+
+  Future<AiTurnResponse> runSequentialAuthoringAction({
+    required String conversationId,
+    required String action,
+    String? turnId,
+    String? comment,
+    String? clientMessageId,
+    Object? manualValue,
+    String? mode,
+  });
+
+  Future<AiTurnResponse> discussSequentialAuthoringTurn({
+    required String conversationId,
+    required String turnId,
+    required String comment,
+    required String clientMessageId,
+  });
+
+  Future<AiAuthoringSnapshot?> loadSequentialAuthoringState({
+    required String conversationId,
+  });
+
+  Future<AuthoringSessionResponse> startAuthoringSession({
+    required String conversationId,
+  });
+
+  Future<AuthoringSessionResponse> loadAuthoringSession({
+    required String sessionId,
+  });
+
+  Future<AuthoringSessionResponse> sendAuthoringSessionMessage({
+    required String sessionId,
+    required int expectedVersion,
+    String? text,
+    String? clientMessageId,
+    String? questionId,
+    List<String>? selectedOptionIds,
+    String? otherText,
+    String? currentTurnId,
+  });
+
+  Future<AuthoringSessionResponse> runAuthoringSessionAction({
+    required String sessionId,
+    required String action,
+    required int expectedVersion,
+    String? turnId,
+    Object? manualValue,
+    String? mode,
+    String? targetStage,
   });
 
   Future<void> archiveConversation({required String conversationId});
@@ -93,6 +178,179 @@ class ApiAiRepository implements AiRepository {
       text: text,
       locale: locale,
       clientMessageId: clientMessageId,
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> startAuthoring({required String conversationId}) {
+    return _api.startAuthoring(conversationId: conversationId);
+  }
+
+  @override
+  Future<AiTurnResponse> generateAuthoringProposal({
+    required String conversationId,
+  }) {
+    return _api.generateAuthoringProposal(conversationId: conversationId);
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalReview({
+    required String conversationId,
+    required String proposalId,
+    required String target,
+    required String decision,
+    String? comment,
+  }) {
+    return _api.submitAuthoringProposalReview(
+      conversationId: conversationId,
+      proposalId: proposalId,
+      target: target,
+      decision: decision,
+      comment: comment,
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> reviseAuthoringProposal({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+  }) {
+    return _api.reviseAuthoringProposal(
+      conversationId: conversationId,
+      proposalId: proposalId,
+      reviewStateId: reviewStateId,
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> prepareApplyReviewedAuthoringProposal({
+    required String conversationId,
+    required String reviewStateId,
+  }) {
+    return _api.prepareApplyReviewedAuthoringProposal(
+      conversationId: conversationId,
+      reviewStateId: reviewStateId,
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> submitAuthoringProposalDiscussion({
+    required String conversationId,
+    required String proposalId,
+    required String reviewStateId,
+    required String target,
+    required String comment,
+    required String clientMessageId,
+  }) {
+    return _api.submitAuthoringProposalDiscussion(
+      conversationId: conversationId,
+      proposalId: proposalId,
+      reviewStateId: reviewStateId,
+      target: target,
+      comment: comment,
+      clientMessageId: clientMessageId,
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> runSequentialAuthoringAction({
+    required String conversationId,
+    required String action,
+    String? turnId,
+    String? comment,
+    String? clientMessageId,
+    Object? manualValue,
+    String? mode,
+  }) {
+    return _api.runSequentialAuthoringAction(
+      conversationId: conversationId,
+      action: action,
+      turnId: turnId,
+      comment: comment,
+      clientMessageId: clientMessageId,
+      manualValue: manualValue,
+      mode: mode,
+    );
+  }
+
+  @override
+  Future<AiTurnResponse> discussSequentialAuthoringTurn({
+    required String conversationId,
+    required String turnId,
+    required String comment,
+    required String clientMessageId,
+  }) {
+    return _api.discussSequentialAuthoringTurn(
+      conversationId: conversationId,
+      turnId: turnId,
+      comment: comment,
+      clientMessageId: clientMessageId,
+    );
+  }
+
+  @override
+  Future<AiAuthoringSnapshot?> loadSequentialAuthoringState({
+    required String conversationId,
+  }) {
+    return _api.loadSequentialAuthoringState(conversationId: conversationId);
+  }
+
+  @override
+  Future<AuthoringSessionResponse> startAuthoringSession({
+    required String conversationId,
+  }) {
+    return _api.startAuthoringSession(conversationId: conversationId);
+  }
+
+  @override
+  Future<AuthoringSessionResponse> loadAuthoringSession({
+    required String sessionId,
+  }) {
+    return _api.loadAuthoringSession(sessionId: sessionId);
+  }
+
+  @override
+  Future<AuthoringSessionResponse> sendAuthoringSessionMessage({
+    required String sessionId,
+    required int expectedVersion,
+    String? text,
+    String? clientMessageId,
+    String? questionId,
+    List<String>? selectedOptionIds,
+    String? otherText,
+    String? currentTurnId,
+  }) {
+    return _api.sendAuthoringSessionMessage(
+      sessionId: sessionId,
+      expectedVersion: expectedVersion,
+      text: text,
+      clientMessageId: clientMessageId,
+      questionId: questionId,
+      selectedOptionIds: selectedOptionIds,
+      otherText: otherText,
+      currentTurnId: currentTurnId,
+    );
+  }
+
+  @override
+  Future<AuthoringSessionResponse> runAuthoringSessionAction({
+    required String sessionId,
+    required String action,
+    required int expectedVersion,
+    String? turnId,
+    Object? manualValue,
+    String? mode,
+    String? targetStage,
+  }) {
+    return _api.runAuthoringSessionAction(
+      sessionId: sessionId,
+      action: action,
+      expectedVersion: expectedVersion,
+      turnId: turnId,
+      manualValue: manualValue,
+      mode: mode,
+      targetStage: targetStage,
     );
   }
 

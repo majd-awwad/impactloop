@@ -7,6 +7,8 @@ import type {
 
 import type { AiContentBlock } from './ai.content-blocks.js';
 
+import type { AuthoringSnapshot } from './ai-project-authoring-sequential.snapshot.js';
+
 export type AiLocale = 'en' | 'ar';
 
 export type AiTurnMeta = {
@@ -21,7 +23,10 @@ export type AiTurnMeta = {
   };
 };
 
-export type AiAssistantConversationMode = 'LEARNER_ASSISTANT' | 'GENERAL_LEARNING';
+export type AiAssistantConversationMode =
+  | 'LEARNER_ASSISTANT'
+  | 'GENERAL_LEARNING'
+  | 'PROJECT_AUTHORING';
 
 export type AiTurnResponse = {
   conversationId: string;
@@ -31,6 +36,7 @@ export type AiTurnResponse = {
   locale: AiLocale;
   contentBlocks: AiContentBlock[];
   meta: AiTurnMeta;
+  authoringSnapshot?: AuthoringSnapshot | null;
 };
 
 export type AiConversationSummary = {

@@ -1,4 +1,5 @@
 import { logger } from '../../../observability/logger.js';
+import type { SafeLogValue } from '../../../observability/log-types.js';
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import type { AiLocale } from '../ai.types.js';
 import type { AiAgentRouteDecision, AiAgentRouteType } from './ai-agent.types.js';
@@ -350,7 +351,10 @@ export const preserveDeterministicDomainLearning = (input: {
     };
   }
 
-  return input.plan;
+  return preserveDeterministicDomainLearning({
+    userMessage: input.userMessage,
+    plan: input.plan,
+  });
 };
 
 const reconcilePlannerWithPlatformIntent = (input: {
@@ -466,8 +470,7 @@ const reconcilePlannerWithPlatformIntent = (input: {
 
   if (
     /(قارن|مقارنة|compare)/i.test(input.userMessage) &&
-    /(مادتين|مواد|مادة|materials?)/i.test(input.userMessage) &&
-    input.plan.route !== 'MATERIAL_COMPARISON'
+    /(مادتين|مواد|مادة|materials?)/i.test(input.userMessage)
   ) {
     const fallback = buildDeterministicFallbackPlan({
       userMessage: input.userMessage,
@@ -633,7 +636,7 @@ export const resolveAgentExecutionPlan = async (input: {
         semanticPlannerUsed: plan.diagnostics.semanticPlannerUsed,
         semanticRoute: plan.diagnostics.semanticRoute,
         validatedRoute: plan.diagnostics.validatedRoute,
-        normalizedFilters: plan.diagnostics.normalizedFilters,
+        normalizedFilters: plan.diagnostics.normalizedFilters as SafeLogValue | null,
         toolName: plan.diagnostics.toolName,
         plannerConfidence: plan.diagnostics.plannerConfidence,
         resolvedEntityTitle: plan.diagnostics.resolvedEntityTitle,

@@ -450,6 +450,7 @@ before(async () => {
       limit: 20,
       status: 'AVAILABLE',
       priceType: 'ANY',
+      sort: 'newest',
       q: SEED_TOKEN,
     },
     { sub: ids.learnerAId, roles: ['LEARNER'] },
@@ -681,7 +682,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مشاريع Arduino',
+      `اعرضلي مشاريع ${SEED_TOKEN}`,
       clientId('build-search'),
     );
     const before = await prisma.projectBuild.count({ where: { learnerId: ids.learnerBId } });
@@ -714,17 +715,10 @@ describe('ai actions http closure', () => {
   test('LINK_MATERIAL_TO_BUILD_COMPONENT links once after confirm', async () => {
     const token = tokenFor(ids.learnerAId);
     const conversationId = await createConversation(token);
-    await sendMessage(token, conversationId, 'شو ناقصني؟', clientId('link-gap'));
     await sendMessage(
       token,
       conversationId,
-      'لاقيلّي مواد للمكونات الناقصة',
-      clientId('link-match'),
-    );
-    await sendMessage(
-      token,
-      conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('link-search'),
     );
     const prepared = await sendMessage(
@@ -762,17 +756,14 @@ describe('ai actions http closure', () => {
       data: { linkedMaterialId: null },
     });
     const conversationId = await createConversation(token);
-    await sendMessage(token, conversationId, 'شو ناقصني؟', clientId('bad-link-gap'));
+    await prisma.material.update({
+      where: { id: ids.reservableMaterialId },
+      data: { status: 'AVAILABLE' },
+    });
     await sendMessage(
       token,
       conversationId,
-      'لاقيلّي مواد للمكونات الناقصة',
-      clientId('bad-link-match'),
-    );
-    await sendMessage(
-      token,
-      conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('bad-link-search'),
     );
     const prepared = await sendMessage(
@@ -858,11 +849,11 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('reserve-search'),
     );
     const before = await prisma.reservation.count({
-      where: { requesterId: ids.learnerBId },
+      where: { learnerId: ids.learnerBId },
     });
     const prepared = await sendMessage(
       token,
@@ -877,7 +868,7 @@ describe('ai actions http closure', () => {
       false,
     );
     const after = await prisma.reservation.count({
-      where: { requesterId: ids.learnerBId },
+      where: { learnerId: ids.learnerBId },
     });
     assert.equal(after, before);
   });
@@ -962,7 +953,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('reserve2-search'),
     );
     const window = futurePickupWindow();
@@ -975,7 +966,7 @@ describe('ai actions http closure', () => {
     assert.equal(prepared.response.status, 201);
     const confirmation = confirmationBlock(parseBlocks(prepared.json));
     const before = await prisma.reservation.count({
-      where: { requesterId: ids.learnerBId },
+      where: { learnerId: ids.learnerBId },
     });
     const confirmed = await confirmAction(
       token,
@@ -984,7 +975,7 @@ describe('ai actions http closure', () => {
     );
     assert.equal(confirmed.response.status, 201);
     const after = await prisma.reservation.count({
-      where: { requesterId: ids.learnerBId },
+      where: { learnerId: ids.learnerBId },
     });
     assert.equal(after, before + 1);
   });
@@ -995,7 +986,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('reserve3-search'),
     );
     const window = futurePickupWindow(96);
@@ -1012,7 +1003,7 @@ describe('ai actions http closure', () => {
       'confirm-reservation-a',
     );
     const countAfterFirst = await prisma.reservation.count({
-      where: { requesterId: ids.learnerBId },
+      where: { learnerId: ids.learnerBId },
     });
     await confirmAction(
       token,
@@ -1020,7 +1011,7 @@ describe('ai actions http closure', () => {
       'confirm-reservation-b',
     );
     const countAfterSecond = await prisma.reservation.count({
-      where: { requesterId: ids.learnerBId },
+      where: { learnerId: ids.learnerBId },
     });
     assert.equal(countAfterFirst, countAfterSecond);
   });
@@ -1031,7 +1022,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('reserve4-search'),
     );
     const window = futurePickupWindow(120);
@@ -1057,12 +1048,8 @@ describe('ai actions http closure', () => {
       confirmation.pendingActionId as string,
       'confirm-unavailable',
     );
-    assert.ok([400, 409].includes(confirm.response.status));
-    assert.ok(
-      ['MATERIAL_NOT_AVAILABLE', 'NOT_FOUND', 'AI_ACTION_CONFLICT', 'CONFLICT'].includes(
-        confirm.json.error?.code ?? '',
-      ),
-    );
+    assert.equal(confirm.response.status, 409);
+    assert.equal(confirm.json.error?.code, 'MATERIAL_NOT_AVAILABLE');
   });
 
   test('insufficient quantity fails safely', async () => {
@@ -1071,7 +1058,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('reserve5-search'),
     );
     const window = futurePickupWindow(144);
@@ -1101,7 +1088,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('reserve6-search'),
     );
     const start = new Date(Date.now() + 15 * 60_000);

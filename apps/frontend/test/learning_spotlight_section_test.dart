@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/learning_project_authoring_repository_stubs.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:frontend/features/home/presentation/widgets/learning_spotlight_section.dart';
@@ -310,6 +311,14 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;
 
   @override
@@ -483,4 +492,30 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }) async {
     return;
   }
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) =>
+      unimplementedCreateAiAuthoringDraft(
+        ideaText: ideaText,
+        categoryId: categoryId,
+        difficulty: difficulty,
+        idempotencyKey: idempotencyKey,
+        locale: locale,
+      );
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) =>
+      unimplementedGetOrCreateAuthoringConversation(
+        projectId: projectId,
+        locale: locale,
+      );
 }

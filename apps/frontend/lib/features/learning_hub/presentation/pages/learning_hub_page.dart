@@ -23,6 +23,7 @@ import '../widgets/featured_project_card.dart';
 import '../widgets/learning_category_chips.dart';
 import '../widgets/learning_hub_hero.dart';
 import '../widgets/learning_project_card.dart';
+import 'learning_project_authoring_pages.dart';
 
 const _featuredTip = LocalizedText(
   en: ' helps learners turn surplus materials into practical builds. Browse published projects for inspiration, then reserve materials when you are ready.',
@@ -283,7 +284,7 @@ class _LearningHubPageState extends ConsumerState<LearningHubPage> {
         onListModeSelected: _setListMode,
         onClearFilters: _clearFilters,
         onRetry: () => _invalidateCurrentProjects(query),
-        onSubmitProject: () => context.go('/learning/add-draft'),
+        onSubmitProject: () => showLearningProjectCreateChoice(context),
         onMySubmissions: canManageSubmissions
             ? () => context.go('/learning/submissions')
             : null,
@@ -1219,11 +1220,11 @@ class _SubmitProjectCallout extends StatelessWidget {
                 context,
                 AppStatusTone.primary,
               ),
-              icon: const Icon(Icons.edit_note_rounded),
+              icon: const Icon(Icons.add_rounded),
               label: Text(
                 const LocalizedText(
-                  en: 'Add project draft',
-                  ar: 'إضافة مسودة مشروع',
+                  en: 'Create project',
+                  ar: 'إنشاء مشروع',
                 ).resolve(context),
               ),
             ),

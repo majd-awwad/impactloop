@@ -14,6 +14,7 @@ import {
   unsaveLearningProjectById,
   getOwnedProjectBuildByBuildId,
   completeProjectBuildStepById,
+  applyReviewedAuthoringProposalToMyDraft,
 } from '../learning-projects/learning-projects.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { createReservation } from '../reservations/reservations.service.js';
@@ -28,6 +29,7 @@ import {
   appendActionResultToAssistantMessage,
   findOwnedConversation,
 } from './ai.repository.js';
+import { persistAppliedReviewStateAfterConfirm } from './ai-project-authoring-review.service.js';
 import {
   assertNoForbiddenPayloadFields,
   linkMaterialToBuildPayloadSchema,
@@ -42,6 +44,7 @@ import {
   unsaveProjectPayloadSchema,
   updateBuildComponentStatusesPayloadSchema,
   completeCurrentBuildStepPayloadSchema,
+  applyProjectAuthoringProposalPayloadSchema,
   type VersionedActionPayload,
 } from './ai-action.payloads.js';
 
@@ -357,6 +360,20 @@ const loadPreparedDisplay = async (
         displaySnapshot: payload.displaySnapshot,
       };
     }
+    case 'APPLY_PROJECT_AUTHORING_PROPOSAL': {
+      const payload = applyProjectAuthoringProposalPayloadSchema.parse(rawPayload);
+      return {
+        title:
+          locale === 'ar'
+            ? 'تطبيق الاقتراح المراجع على المسودة؟'
+            : 'Apply reviewed proposal to draft?',
+        summary: payload.displaySnapshot.summary ?? payload.displaySnapshot.title,
+        targetTitle: payload.displaySnapshot.title,
+        targetType: 'PROJECT' as const,
+        targetId: payload.target.projectId,
+        displaySnapshot: payload.displaySnapshot,
+      };
+    }
     default:
       throw new AppError('Action is not supported.', 400, 'AI_ACTION_NOT_SUPPORTED');
   }
@@ -565,7 +582,7 @@ const executeConfirmedAction = async (input: {
         target: {
           type: 'MATERIAL',
           id: result.materialId,
-          title: payload.displaySnapshot.title,
+          title: input.payload.displaySnapshot.title,
         },
       });
     }
@@ -600,8 +617,8 @@ const executeConfirmedAction = async (input: {
             : 'Project removed from your saved list.',
         target: {
           type: 'PROJECT',
-          id: payload.target.projectId,
-          title: payload.displaySnapshot.title,
+          id: input.payload.target.projectId!,
+          title: input.payload.displaySnapshot.title,
         },
       });
     }
@@ -681,8 +698,8 @@ const executeConfirmedAction = async (input: {
             : 'Material unlinked from the component.',
         target: {
           type: 'COMPONENT',
-          id: payload.target.buildItemId,
-          title: payload.displaySnapshot.title,
+          id: input.payload.target.buildItemId!,
+          title: input.payload.displaySnapshot.title,
         },
         navigation: { route: 'project_build', id: linkedBuild.id },
       });
@@ -863,6 +880,34 @@ const executeConfirmedAction = async (input: {
         navigation: { route: 'project_build', id: payload.target.projectId },
       });
     }
+    case 'APPLY_PROJECT_AUTHORING_PROPOSAL': {
+      const payload = applyProjectAuthoringProposalPayloadSchema.parse(input.payload);
+      const updated = await applyReviewedAuthoringProposalToMyDraft({
+        userId: input.userId,
+        projectId: payload.target.projectId,
+        expectedUpdatedAt: payload.parameters.expectedUpdatedAt,
+        finalProject: payload.parameters.finalProject,
+      });
+
+      return buildResultBlock({
+        actionType: input.actionType,
+        status: 'EXECUTED',
+        title:
+          input.locale === 'ar'
+            ? 'تم تحديث مسودة المشروع'
+            : 'Draft project updated',
+        summary:
+          input.locale === 'ar'
+            ? 'تم تطبيق الاقتراح المراجع على مسودتك. لم يتم إرسال المشروع للمراجعة.'
+            : 'Project proposal applied to your draft. The project was not submitted for review.',
+        target: {
+          type: 'PROJECT',
+          id: updated.id,
+          title: updated.title,
+        },
+        navigation: { route: 'learning_project_edit', id: updated.id },
+      });
+    }
     default:
       throw new AppError('Action is not supported.', 400, 'AI_ACTION_NOT_SUPPORTED');
   }
@@ -917,6 +962,16 @@ export const confirmAiPendingAction = async (input: {
       pendingActionId: acquired.action.id,
       resultBlock,
     });
+
+    if (acquired.action.actionType === 'APPLY_PROJECT_AUTHORING_PROPOSAL') {
+      const applyPayload = applyProjectAuthoringProposalPayloadSchema.parse(payload);
+      await persistAppliedReviewStateAfterConfirm({
+        userId: input.userId,
+        conversationId: applyPayload.parameters.conversationId,
+        reviewStateId: applyPayload.parameters.reviewStateId,
+        locale: input.locale,
+      });
+    }
 
     return {
       pendingActionId: acquired.action.id,
@@ -1010,6 +1065,97 @@ export const buildMaterialSavePayload = (input: {
     parameters: {},
     displaySnapshot: input.displaySnapshot,
   }) as VersionedActionPayload;
+
+const reservationDraftIdempotencyKey = (conversationId: string) =>
+  `reservation-draft:${conversationId}`;
+
+export const buildPrepareReservationPayload = (input: {
+  materialId: string;
+  parameters?: z.infer<typeof prepareMaterialReservationPayloadSchema>['parameters'];
+  displaySnapshot: VersionedActionPayload['displaySnapshot'];
+}): VersionedActionPayload =>
+  ({
+    schemaVersion: 1,
+    actionType: 'PREPARE_MATERIAL_RESERVATION',
+    target: { materialId: input.materialId },
+    parameters: input.parameters ?? {},
+    displaySnapshot: input.displaySnapshot,
+  }) as VersionedActionPayload;
+
+export const findActiveReservationDraft = async (input: {
+  conversationId: string;
+  userId: string;
+}) =>
+  prisma.aiPendingAction.findFirst({
+    where: {
+      conversationId: input.conversationId,
+      userId: input.userId,
+      actionType: 'PREPARE_MATERIAL_RESERVATION',
+      status: 'PENDING',
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+
+export const saveReservationDraft = async (input: {
+  userId: string;
+  conversationId: string;
+  materialId: string;
+  parameters: z.infer<typeof prepareMaterialReservationPayloadSchema>['parameters'];
+  locale: 'en' | 'ar';
+}) => {
+  await assertOwnedConversation(input.conversationId, input.userId);
+  const viewer = buildViewer(input.userId);
+  const material = await getMaterialById(input.materialId, viewer);
+  const payload = buildPrepareReservationPayload({
+    materialId: material.id,
+    parameters: input.parameters,
+    displaySnapshot: { title: material.title, summary: material.title },
+  });
+  parseVersionedActionPayload('PREPARE_MATERIAL_RESERVATION', payload);
+  const expiresAt = new Date(Date.now() + ACTION_EXPIRY_MS);
+
+  return prisma.aiPendingAction.upsert({
+    where: {
+      userId_idempotencyKey: {
+        userId: input.userId,
+        idempotencyKey: reservationDraftIdempotencyKey(input.conversationId),
+      },
+    },
+    create: {
+      userId: input.userId,
+      conversationId: input.conversationId,
+      actionType: 'PREPARE_MATERIAL_RESERVATION',
+      payload: payload as Prisma.InputJsonValue,
+      displaySnapshot: { title: material.title } as Prisma.InputJsonValue,
+      idempotencyKey: reservationDraftIdempotencyKey(input.conversationId),
+      expiresAt,
+    },
+    update: {
+      status: 'PENDING',
+      conversationId: input.conversationId,
+      payload: payload as Prisma.InputJsonValue,
+      expiresAt,
+      errorCode: null,
+      result: undefined,
+    },
+  });
+};
+
+export const cancelReservationDraft = async (input: {
+  conversationId: string;
+  userId: string;
+}) => {
+  const draft = await findActiveReservationDraft(input);
+  if (!draft) {
+    return null;
+  }
+
+  return prisma.aiPendingAction.update({
+    where: { id: draft.id },
+    data: { status: 'CANCELLED' },
+  });
+};
 
 export const buildProjectSavePayload = (input: {
   projectId: string;
@@ -1165,110 +1311,3 @@ export const buildReservationPayload = (input: {
     parameters: input.parameters,
     displaySnapshot: input.displaySnapshot,
   }) as VersionedActionPayload;
-
-const reservationDraftIdempotencyKey = (conversationId: string) =>
-  `reservation-draft:${conversationId}`;
-
-type ReservationDraftParameters = {
-  quantityRequested?: number;
-  fulfillmentMethod?: 'PICKUP' | 'DELIVERY';
-  message?: string;
-  pickupDate?: string;
-  pickupStartTime?: string;
-  pickupEndTime?: string;
-  learnerPreferredPickupWindows?: Array<{ start: string; end: string }>;
-  learnerPreferredDeliveryWindows?: Array<{ start: string; end: string }>;
-  deliveryAddressText?: string;
-  dropoffCity?: string;
-  dropoffArea?: string;
-  safeDropoffAllowed?: boolean;
-  deliveryNote?: string;
-};
-
-export const buildPrepareReservationPayload = (input: {
-  materialId: string;
-  parameters?: ReservationDraftParameters;
-  displaySnapshot: VersionedActionPayload['displaySnapshot'];
-}): VersionedActionPayload =>
-  ({
-    schemaVersion: 1,
-    actionType: 'PREPARE_MATERIAL_RESERVATION',
-    target: { materialId: input.materialId },
-    parameters: input.parameters ?? {},
-    displaySnapshot: input.displaySnapshot,
-  }) as VersionedActionPayload;
-
-export const findActiveReservationDraft = async (input: {
-  conversationId: string;
-  userId: string;
-}) =>
-  prisma.aiPendingAction.findFirst({
-    where: {
-      conversationId: input.conversationId,
-      userId: input.userId,
-      actionType: 'PREPARE_MATERIAL_RESERVATION',
-      status: 'PENDING',
-      expiresAt: { gt: new Date() },
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
-
-export const saveReservationDraft = async (input: {
-  userId: string;
-  conversationId: string;
-  materialId: string;
-  parameters: ReservationDraftParameters;
-  locale: 'en' | 'ar';
-}) => {
-  await assertOwnedConversation(input.conversationId, input.userId);
-  const viewer = buildViewer(input.userId);
-  const material = await getMaterialById(input.materialId, viewer);
-  const payload = buildPrepareReservationPayload({
-    materialId: material.id,
-    parameters: input.parameters,
-    displaySnapshot: { title: material.title, summary: material.title },
-  });
-  parseVersionedActionPayload('PREPARE_MATERIAL_RESERVATION', payload);
-  const expiresAt = new Date(Date.now() + ACTION_EXPIRY_MS);
-
-  return prisma.aiPendingAction.upsert({
-    where: {
-      userId_idempotencyKey: {
-        userId: input.userId,
-        idempotencyKey: reservationDraftIdempotencyKey(input.conversationId),
-      },
-    },
-    create: {
-      userId: input.userId,
-      conversationId: input.conversationId,
-      actionType: 'PREPARE_MATERIAL_RESERVATION',
-      payload: payload as Prisma.InputJsonValue,
-      displaySnapshot: { title: material.title } as Prisma.InputJsonValue,
-      idempotencyKey: reservationDraftIdempotencyKey(input.conversationId),
-      expiresAt,
-    },
-    update: {
-      status: 'PENDING',
-      conversationId: input.conversationId,
-      payload: payload as Prisma.InputJsonValue,
-      expiresAt,
-      errorCode: null,
-      result: undefined,
-    },
-  });
-};
-
-export const cancelReservationDraft = async (input: {
-  conversationId: string;
-  userId: string;
-}) => {
-  const draft = await findActiveReservationDraft(input);
-  if (!draft) {
-    return null;
-  }
-
-  return prisma.aiPendingAction.update({
-    where: { id: draft.id },
-    data: { status: 'CANCELLED' },
-  });
-};

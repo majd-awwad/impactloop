@@ -222,6 +222,23 @@ class LearningHubApiMapper {
     );
   }
 
+  static LearningProjectAuthoringSession authoringSessionFromJson(
+    Map<String, dynamic> json,
+  ) {
+    final updatedAt = _dateTimeFromDynamic(json['updatedAt']);
+    return LearningProjectAuthoringSession(
+      learningProjectId: _stringOrFallback(
+        json['learningProjectId'],
+        fallback: '',
+      ),
+      conversationId: _stringOrFallback(json['conversationId'], fallback: ''),
+      status: _stringOrFallback(json['status'], fallback: ''),
+      mode: _stringOrFallback(json['mode'], fallback: ''),
+      title: _stringOrFallback(json['title'], fallback: ''),
+      updatedAt: updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+
   static LearningProject _mapProject(
     Map<String, dynamic> json, {
     required bool includeDetailFields,

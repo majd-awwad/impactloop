@@ -257,6 +257,7 @@ describe('acceptance: fuzzy project references', () => {
       if ('contextual' in row && row.contextual) {
         const resolved = resolveEntityFromContext({
           context: {
+            recentMessages: [],
             entities: [
               {
                 type: 'PROJECT',

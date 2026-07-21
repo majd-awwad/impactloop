@@ -81,7 +81,7 @@ const mapRecommendationSectionItems = (
   seen: Set<string>,
 ): RecommendationMappedItem[] =>
   items
-    .map((item) => {
+    .map((item): RecommendationMappedItem | null => {
       if (item.type === 'material') {
         const material = item.material as Parameters<typeof mapMaterialToCard>[0];
         const itemId = material.id ?? '';
@@ -133,10 +133,10 @@ const mapRecommendationSectionItems = (
         itemType: 'ACTION' as const,
         itemId,
         title: build.project?.title ?? 'Continue build',
-        reasons: withLocalizedReasons(item.reasons, locale),
+        reasons: localizeRecommendationReasons(item.reasons, locale),
       };
     })
-    .filter((entry): entry is RecommendationMappedItem => entry != null);
+    .filter((entry): entry is RecommendationMappedItem => entry !== null);
 
 const dedupeMappedMaterialRecommendations = (
   items: RecommendationMappedItem[],

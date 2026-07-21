@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/utils/content_text_direction.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_feedback.dart';
@@ -16,13 +19,105 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/learning_project_status_presentation.dart';
+import '../../../profile/application/profile_providers.dart';
+import '../../../profile/presentation/widgets/profile_image_picker.dart';
 import '../../../materials/data/models/category.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../application/learning_hub_providers.dart';
+import '../../../ai/domain/authoring_session_models.dart';
+import '../../../ai/application/authoring_workspace_controller.dart';
+import '../../../ai/application/ai_chat_controller.dart';
+import '../../../ai/domain/ai_models.dart';
 import '../../domain/models/learning_project_draft_component.dart';
 import '../../domain/models/learning_project_step_text.dart';
 import '../../domain/models/learning_project_submission.dart';
+import '../models/authoring_workspace_state.dart';
 import '../theme/learning_ui_palette.dart';
 import '../widgets/learning_project_component_editor.dart';
+
+const _continueWithAiLabel = LocalizedText(
+  en: 'Continue with AI',
+  ar: 'متابعة بالذكاء الاصطناعي',
+);
+
+const _missingProjectImageMessage =
+    'Add at least one project image before submitting for review.';
+
+String _newSubmitIdempotencyKey() =>
+    'learning-draft-submit-${DateTime.now().microsecondsSinceEpoch}';
+
+String _submissionDetailsPath(String submissionId, {bool focusImages = false}) {
+  if (!focusImages) {
+    return '/learning/submissions/$submissionId';
+  }
+  return '/learning/submissions/$submissionId?focusImages=1';
+}
+
+Future<void> _focusImagesSection(GlobalKey imagesSectionKey) async {
+  final contextForScroll = imagesSectionKey.currentContext;
+  if (contextForScroll == null) {
+    return;
+  }
+
+  await Scrollable.ensureVisible(
+    contextForScroll,
+    duration: const Duration(milliseconds: 250),
+    curve: Curves.easeInOut,
+    alignment: 0.1,
+  );
+}
+
+void _showSubmissionIncompleteFeedback(
+  BuildContext context,
+  ApiException error, {
+  GlobalKey? imagesSectionKey,
+  VoidCallback? onEdit,
+  bool navigateToImages = false,
+  required String submissionId,
+}) {
+  final requiresImage = projectSubmissionIncompleteRequiresImage(error);
+  final message = formatProjectSubmissionIncompleteMessage(error);
+  final hasMultipleIssues = error.fieldIssues.length > 1;
+
+  if (hasMultipleIssues) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Project is not ready to submit'),
+        content: SingleChildScrollView(
+          child: Text(message),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+          if (onEdit != null)
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                onEdit();
+              },
+              child: const Text('Edit draft'),
+            ),
+        ],
+      ),
+    );
+  } else {
+    showInfoSnackBar(context, message);
+  }
+
+  if (requiresImage) {
+    if (navigateToImages) {
+      context.go(_submissionDetailsPath(submissionId, focusImages: true));
+      return;
+    }
+    if (imagesSectionKey != null) {
+      unawaited(_focusImagesSection(imagesSectionKey));
+    }
+  }
+}
 
 class LearningProjectSubmissionsPage extends ConsumerStatefulWidget {
   const LearningProjectSubmissionsPage({super.key});
@@ -142,7 +237,7 @@ class _SubmissionsContent extends StatelessWidget {
                     ],
                   ),
                   OutlinedButton.icon(
-                    onPressed: () => context.go('/learning/add-draft'),
+                    onPressed: () => context.go('/learning/create-project'),
                     style: AppStatusButtonStyle.filled(
                       context,
                       AppStatusTone.primary,
@@ -165,7 +260,7 @@ class _SubmissionsContent extends StatelessWidget {
                   subtitle:
                       'Submitted project drafts and admin feedback will appear here.',
                   actionLabel: 'Create a project draft',
-                  onAction: () => context.go('/learning/add-draft'),
+                  onAction: () => context.go('/learning/create-project'),
                 )
               else
                 LayoutBuilder(
@@ -210,6 +305,8 @@ class LearningProjectSubmissionDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = LearningUiPalette.of(context);
+    final focusImages =
+        GoRouterState.of(context).uri.queryParameters['focusImages'] == '1';
     final submissionAsync = ref.watch(
       myLearningProjectSubmissionProvider(submissionId),
     );
@@ -234,8 +331,10 @@ class LearningProjectSubmissionDetailPage extends ConsumerWidget {
                   actionProminent: false,
                   onAction: () => context.go('/learning/submissions'),
                 ),
-                data: (submission) =>
-                    _SubmissionDetailContent(submission: submission),
+                data: (submission) => _SubmissionDetailContent(
+                  submission: submission,
+                  focusImagesOnLoad: focusImages,
+                ),
               ),
             ),
           ],
@@ -245,13 +344,166 @@ class LearningProjectSubmissionDetailPage extends ConsumerWidget {
   }
 }
 
-class _SubmissionDetailContent extends ConsumerWidget {
-  const _SubmissionDetailContent({required this.submission});
+class _SubmissionDetailContent extends ConsumerStatefulWidget {
+  const _SubmissionDetailContent({
+    required this.submission,
+    this.focusImagesOnLoad = false,
+  });
 
   final LearningProjectSubmission submission;
+  final bool focusImagesOnLoad;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SubmissionDetailContent> createState() =>
+      _SubmissionDetailContentState();
+}
+
+class _SubmissionDetailContentState extends ConsumerState<_SubmissionDetailContent> {
+  final _imagesSectionKey = GlobalKey();
+  bool _isSubmitting = false;
+  bool _isUploadingImage = false;
+  String _submitIdempotencyKey = _newSubmitIdempotencyKey();
+
+  LearningProjectSubmission get submission => widget.submission;
+
+  bool get _hasPersistedImage =>
+      submission.coverImageUrl?.trim().isNotEmpty == true;
+
+  bool get _canSubmitDraft =>
+      submission.status == LearningProjectSubmissionStatus.draft;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusImagesOnLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_focusImagesSection(_imagesSectionKey));
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _SubmissionDetailContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusImagesOnLoad && !oldWidget.focusImagesOnLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_focusImagesSection(_imagesSectionKey));
+      });
+    }
+  }
+
+  Future<void> _uploadProjectImage() async {
+    if (_isUploadingImage) {
+      return;
+    }
+
+    try {
+      final picked = await pickProfileImageFile();
+      if (picked == null || !mounted) {
+        return;
+      }
+
+      setState(() => _isUploadingImage = true);
+      // Stores the file only; learner profile is not updated until PATCH /api/profile.
+      final uploaded = await ref
+          .read(profileRepositoryProvider)
+          .uploadProfileImage(picked);
+      final imageUrl = uploaded.url.trim();
+      if (imageUrl.isEmpty) {
+        throw const FormatException('Uploaded image URL was empty.');
+      }
+
+      final repository = ref.read(learningHubRepositoryProvider);
+      final updated = await repository.updateMyLearningProjectSubmission(
+        submission.id,
+        {'coverImageUrl': imageUrl},
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ref.invalidate(myLearningProjectSubmissionProvider(submission.id));
+      ref.invalidate(myLearningProjectSubmissionsProvider);
+      showInfoSnackBar(context, 'Project image saved.');
+      setState(() {
+        _isUploadingImage = false;
+        _submitIdempotencyKey = _newSubmitIdempotencyKey();
+      });
+      if (updated.coverImageUrl?.trim().isNotEmpty == true) {
+        return;
+      }
+    } catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error);
+        setState(() => _isUploadingImage = false);
+      }
+    }
+  }
+
+  Future<void> _openProjectImagePicker() => _uploadProjectImage();
+
+  Future<void> _submitForReview() async {
+    if (_isSubmitting || !_canSubmitDraft) {
+      return;
+    }
+
+    if (!_hasPersistedImage) {
+      showInfoSnackBar(context, _missingProjectImageMessage);
+      await _focusImagesSection(_imagesSectionKey);
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final repository = ref.read(learningHubRepositoryProvider);
+      final updated = await repository.submitMyLearningProjectDraft(
+        submission.id,
+        idempotencyKey: _submitIdempotencyKey,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ref.invalidate(myLearningProjectSubmissionProvider(submission.id));
+      ref.invalidate(myLearningProjectSubmissionsProvider);
+      showInfoSnackBar(context, 'Project submitted for review.');
+      setState(() {
+        _isSubmitting = false;
+        _submitIdempotencyKey = _newSubmitIdempotencyKey();
+      });
+      if (updated.status != LearningProjectSubmissionStatus.pendingReview) {
+        return;
+      }
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSubmissionIncompleteFeedback(
+        context,
+        error,
+        imagesSectionKey: _imagesSectionKey,
+        submissionId: submission.id,
+        onEdit: () => context.go('/learning/submissions/${submission.id}/edit'),
+      );
+      setState(() {
+        _isSubmitting = false;
+        _submitIdempotencyKey = _newSubmitIdempotencyKey();
+      });
+    } catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error);
+        setState(() {
+          _isSubmitting = false;
+          _submitIdempotencyKey = _newSubmitIdempotencyKey();
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
 
     return SingleChildScrollView(
@@ -340,12 +592,75 @@ class _SubmissionDetailContent extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.lg),
                       _FeedbackPanel(submission: submission),
                     ],
+                    if (submission.status ==
+                        LearningProjectSubmissionStatus.pendingReview) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      _ReviewStateBanner(
+                        title: 'Pending admin review',
+                        message:
+                            'Your project was submitted for moderation. It will not become public until an admin approves it.',
+                        tone: AppStatusTone.warning,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.lg),
                     _SubmissionActions(submission: submission),
                   ],
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              _ProjectImagesSection(
+                key: _imagesSectionKey,
+                coverImageUrl: submission.coverImageUrl,
+                canManageImages: _canSubmitDraft ||
+                    submission.status ==
+                        LearningProjectSubmissionStatus.changesRequested,
+                isUploading: _isUploadingImage,
+                onAddImage: _uploadProjectImage,
+              ),
+              if (_canSubmitDraft) ...[
+                const SizedBox(height: AppSpacing.md),
+                if (!_hasPersistedImage)
+                  _ReviewStateBanner(
+                    title: 'Project image required',
+                    message: _missingProjectImageMessage,
+                    tone: AppStatusTone.warning,
+                    actionLabel: 'Add project image',
+                    onAction: _openProjectImagePicker,
+                  ),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: palette.cardSurface,
+                    borderRadius: AppRadius.lgAll,
+                    border: Border.all(color: palette.borderSubtle),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Submit for review',
+                        style: AppTextStyles.title(
+                          context,
+                        ).copyWith(color: palette.textPrimary),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Send this draft to admin moderation. It will not be published until approved. You may receive requested changes or rejection.',
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      AppPrimaryButton(
+                        label: 'Submit for review',
+                        isLoading: _isSubmitting,
+                        onPressed: _isSubmitting ? null : _submitForReview,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               _SummarySection(
                 title: 'Components',
                 emptyLabel: 'No components submitted.',
@@ -397,9 +712,13 @@ class LearningProjectSubmissionEditPage extends ConsumerStatefulWidget {
   const LearningProjectSubmissionEditPage({
     super.key,
     required this.submissionId,
+    this.embeddedInAuthoringWorkspace = false,
+    this.saveStateNotifier,
   });
 
   final String submissionId;
+  final bool embeddedInAuthoringWorkspace;
+  final ValueNotifier<AuthoringWorkspaceSaveState>? saveStateNotifier;
 
   @override
   ConsumerState<LearningProjectSubmissionEditPage> createState() =>
@@ -417,6 +736,9 @@ class _LearningProjectSubmissionEditPageState
   final _linksController = TextEditingController();
 
   String? _loadedId;
+  String? _loadedUpdatedAt;
+  String? _pendingLoadId;
+  String? _pendingLoadUpdatedAt;
   String? _selectedCategoryId;
   String _selectedDifficulty = 'INTERMEDIATE';
   bool _isSaving = false;
@@ -425,6 +747,41 @@ class _LearningProjectSubmissionEditPageState
     LearningProjectDraftComponent.empty(),
   ];
   List<String?> _componentIds = [null];
+  bool _dirty = false;
+  bool _suppressDirtyTracking = false;
+  Set<String> _highlightedFields = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.embeddedInAuthoringWorkspace) {
+      widget.saveStateNotifier?.value = AuthoringWorkspaceSaveState.unsaved;
+    }
+    for (final controller in [
+      _titleController,
+      _summaryController,
+      _descriptionController,
+      _durationController,
+      _stepsController,
+      _linksController,
+    ]) {
+      controller.addListener(_markDirty);
+    }
+  }
+
+  void _markDirty() {
+    if (_suppressDirtyTracking || !widget.embeddedInAuthoringWorkspace) {
+      return;
+    }
+    if (!_dirty) {
+      _dirty = true;
+      widget.saveStateNotifier?.value = AuthoringWorkspaceSaveState.unsaved;
+    }
+  }
+
+  void _setSaveState(AuthoringWorkspaceSaveState state) {
+    widget.saveStateNotifier?.value = state;
+  }
 
   @override
   void dispose() {
@@ -437,20 +794,194 @@ class _LearningProjectSubmissionEditPageState
     super.dispose();
   }
 
-  void _loadSubmission(LearningProjectSubmission submission) {
-    if (_loadedId == submission.id) {
+  void _applyAuthoringDraftSnapshot(ScopedAuthoringCanonicalUpdate update) {
+    if (widget.embeddedInAuthoringWorkspace &&
+        update.projectId != widget.submissionId) {
       return;
     }
 
+    final snapshot = maskAuthoringDraftPlaceholders(update.snapshot);
+    setState(() {
+      _suppressDirtyTracking = true;
+      _titleController.text = snapshot.title;
+      _summaryController.text = snapshot.shortDescription;
+      _descriptionController.text = snapshot.description;
+      _durationController.text = snapshot.estimatedMinutes?.toString() ?? '';
+      if (isValidAuthoringDifficulty(snapshot.difficulty)) {
+        _selectedDifficulty =
+            snapshot.difficulty.trim().toUpperCase();
+      }
+      _components = snapshot.components.isEmpty
+          ? [LearningProjectDraftComponent.empty()]
+          : snapshot.components
+                .map(_draftComponentFromProposal)
+                .toList(growable: false);
+      _componentIds = snapshot.components.isEmpty
+          ? [null]
+          : snapshot.components.map((component) => component.id).toList();
+      _stepsController.text = LearningProjectStepText.formatStepsForEditing(
+        snapshot.steps.map(
+          (step) => (title: step.title, description: step.description),
+        ),
+      );
+      _dirty = false;
+      _suppressDirtyTracking = false;
+    });
+    final mirror = ScopedAuthoringEditorMirror(
+      projectId: update.projectId,
+      canonicalUpdatedAt: update.canonicalUpdatedAt,
+      snapshot: _mirrorSnapshotFromEditor(snapshot),
+    );
+    ref.read(authoringEditorAppliedSnapshotProvider.notifier).setMirror(mirror);
+    ref.read(aiAssistantControllerProvider.notifier).acknowledgeEditorSynchronized(mirror);
+    ref.read(authoringWorkspaceControllerProvider.notifier).acknowledgeEditorSynchronized(mirror);
+    if (widget.embeddedInAuthoringWorkspace) {
+      final authoringStage =
+          ref.read(authoringWorkspaceControllerProvider).snapshot?.session.stage;
+      if (authoringStage != null && authoringStage != 'OVERVIEW') {
+        _setSaveState(AuthoringWorkspaceSaveState.saved);
+      } else {
+        _setSaveState(AuthoringWorkspaceSaveState.unsaved);
+      }
+    }
+  }
+
+  LearningProjectDraftComponent _draftComponentFromProposal(
+    AiAuthoringProposalComponent component,
+  ) {
+    return LearningProjectDraftComponent(
+      name: component.componentName,
+      quantity: component.quantity,
+      unit: component.unit,
+      role: LearningProjectComponentRole.fromApiValue(component.componentRole),
+      materialTypeHint: component.materialType,
+      keywords: component.searchKeywords,
+      canBeSubstituted: component.canBeSubstituted,
+      notes: component.notes ?? '',
+    );
+  }
+
+  AuthoringDraftSnapshot _mirrorSnapshotFromEditor(
+    AuthoringDraftSnapshot source,
+  ) {
+    final parsedSteps = LearningProjectStepText.parseStepsFromText(
+      _stepsController.text,
+    );
+    return AuthoringDraftSnapshot(
+      title: _titleController.text,
+      shortDescription: _summaryController.text,
+      description: _descriptionController.text,
+      difficulty: _selectedDifficulty,
+      estimatedMinutes: int.tryParse(_durationController.text.trim()) ??
+          source.estimatedMinutes,
+      components: [
+        for (var index = 0; index < _components.length; index += 1)
+          if (_components[index].name.trim().isNotEmpty)
+            AiAuthoringProposalComponent(
+              id: index < _componentIds.length
+                  ? _componentIds[index]
+                  : index < source.components.length
+                      ? source.components[index].id
+                      : null,
+              componentName: _components[index].name.trim(),
+              materialType: _components[index].materialTypeHint,
+              quantity: _components[index].quantity,
+              unit: _components[index].unit,
+              componentRole: _components[index].role.apiValue,
+              isRequired: _components[index].role == LearningProjectComponentRole.material,
+              canBeSubstituted: _components[index].canBeSubstituted,
+              searchKeywords: _components[index].keywords,
+              notes: _components[index].notes.trim().isEmpty
+                  ? null
+                  : _components[index].notes.trim(),
+            ),
+      ],
+      steps: parsedSteps
+          .map(
+            (step) => AiAuthoringProposalStep(
+              title: '${step['title'] ?? ''}',
+              description: '${step['description'] ?? ''}',
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  /// Schedules a submission load outside the build phase.
+  ///
+  /// `build()` must stay side-effect free: [_loadSubmission] mutates controllers
+  /// and the save-state [ValueNotifier], which throws
+  /// `setState()/markNeedsBuild() called during build` when invoked synchronously
+  /// from `AsyncValue.when(data: ...)`. We instead run it once per (id, stamp)
+  /// change in a guarded post-frame callback so the first valid start response
+  /// renders without a manual Refresh.
+  void _scheduleSubmissionLoad(
+    LearningProjectSubmission submission, {
+    bool force = false,
+  }) {
+    if (widget.embeddedInAuthoringWorkspace) {
+      final workspaceLifecycle =
+          ref.read(authoringWorkspaceControllerProvider).lifecycle;
+      if (!force &&
+          (workspaceLifecycle == AuthoringWorkspaceLifecycle.activating ||
+              workspaceLifecycle == AuthoringWorkspaceLifecycle.loading)) {
+        return;
+      }
+    }
+    final remoteStamp = submission.updatedAt?.toUtc().toIso8601String();
+    if (!force &&
+        _loadedId == submission.id &&
+        _loadedUpdatedAt == remoteStamp) {
+      return;
+    }
+    if (!force &&
+        _pendingLoadId == submission.id &&
+        _pendingLoadUpdatedAt == remoteStamp) {
+      return;
+    }
+    _pendingLoadId = submission.id;
+    _pendingLoadUpdatedAt = remoteStamp;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      if (_pendingLoadId != submission.id ||
+          _pendingLoadUpdatedAt != remoteStamp) {
+        return;
+      }
+      setState(() => _loadSubmission(submission, force: force));
+    });
+  }
+
+  void _loadSubmission(LearningProjectSubmission submission, {bool force = false}) {
+    final remoteStamp = submission.updatedAt?.toUtc().toIso8601String();
+    if (!force &&
+        _loadedId == submission.id &&
+        _loadedUpdatedAt == remoteStamp) {
+      return;
+    }
+    if (!force &&
+        _dirty &&
+        widget.embeddedInAuthoringWorkspace &&
+        _loadedId == submission.id) {
+      return;
+    }
+
+    _suppressDirtyTracking = true;
     _loadedId = submission.id;
-    _titleController.text = submission.title;
-    _summaryController.text = submission.shortDescription;
-    _descriptionController.text =
-        submission.description ?? submission.shortDescription;
+    _loadedUpdatedAt = remoteStamp;
+    _titleController.text = maskAuthoringDraftFieldTitle(submission.title);
+    _summaryController.text =
+        maskAuthoringDraftFieldShortDescription(submission.shortDescription);
+    _descriptionController.text = maskAuthoringDraftFieldDescription(
+      submission.description ?? '',
+    );
     _durationController.text =
         submission.estimatedDurationMinutes?.toString() ?? '';
     _selectedCategoryId = null;
-    _selectedDifficulty = submission.difficulty;
+    _selectedDifficulty = isValidAuthoringDifficulty(submission.difficulty)
+        ? submission.difficulty.trim().toUpperCase()
+        : 'INTERMEDIATE';
     _components = submission.requiredComponents.isEmpty
         ? [LearningProjectDraftComponent.empty()]
         : submission.requiredComponents
@@ -467,6 +998,17 @@ class _LearningProjectSubmissionEditPageState
       ),
     );
     _linksController.text = submission.links.map((link) => link.url).join('\n');
+    _dirty = false;
+    _suppressDirtyTracking = false;
+    if (widget.embeddedInAuthoringWorkspace) {
+      final authoringStage =
+          ref.read(authoringWorkspaceControllerProvider).snapshot?.session.stage;
+      if (authoringStage != null && authoringStage != 'OVERVIEW') {
+        _setSaveState(AuthoringWorkspaceSaveState.saved);
+      } else {
+        _setSaveState(AuthoringWorkspaceSaveState.unsaved);
+      }
+    }
   }
 
   @override
@@ -478,55 +1020,80 @@ class _LearningProjectSubmissionEditPageState
     final projectCategoriesAsync = ref.watch(projectCategoriesProvider);
     final materialCategoriesAsync = ref.watch(materialCategoriesProvider);
 
-    return Scaffold(
-      backgroundColor: palette.pageBackground,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const EntryNavBar(homeRoute: '/home'),
-            Expanded(
-              child: submissionAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stackTrace) => _StatePanel(
-                  icon: Icons.search_off_outlined,
-                  title: 'Submission not found',
-                  subtitle:
-                      'This submission may not exist or may belong to another learner.',
-                  actionLabel: 'Back to submissions',
-                  actionTone: AppStatusTone.neutral,
-                  actionProminent: false,
-                  onAction: () => context.go('/learning/submissions'),
-                ),
-                data: (submission) {
-                  _loadSubmission(submission);
-                  if (!submission.availableActions.canEdit) {
-                    return _StatePanel(
-                      icon: Icons.lock_outline_rounded,
-                      title: 'This submission cannot be edited',
-                      subtitle:
-                          'Only drafts, pending review, and projects with requested changes can be edited.',
-                      actionLabel: 'View submission',
-                      actionTone: AppStatusTone.neutral,
-                      actionProminent: false,
-                      onAction: () =>
-                          context.go('/learning/submissions/${submission.id}'),
-                    );
-                  }
+    ref.listen<ScopedAuthoringCanonicalUpdate?>(
+        authoringCanonicalProjectUpdateProvider, (previous, next) {
+      if (next == null) {
+        return;
+      }
+      _applyAuthoringDraftSnapshot(next);
+    });
 
-                  final projectCategories =
-                      projectCategoriesAsync.value ??
-                      const <MaterialCategory>[];
-                  final materialCategories = materialSelectableCategories(
-                    materialCategoriesAsync.value ??
-                        const <MaterialCategory>[],
-                  );
-                  _selectedCategoryId ??= submission.category.resolve(context);
+    ref.listen<Set<String>>(authoringHighlightedFieldsProvider, (previous, next) {
+      if (next.isEmpty) {
+        return;
+      }
+      setState(() => _highlightedFields = next);
+      Future<void>.delayed(const Duration(seconds: 2), () {
+        if (!mounted) {
+          return;
+        }
+        setState(() => _highlightedFields = const {});
+        ref.read(authoringHighlightedFieldsProvider.notifier).clear();
+      });
+    });
 
-                  return _EditContent(
-                    formKey: _formKey,
-                    submission: submission,
-                    titleController: _titleController,
+    ref.listen<int>(authoringCanonicalApplyNonceProvider, (previous, next) {
+      if (widget.embeddedInAuthoringWorkspace) {
+        return;
+      }
+      if (next > (previous ?? 0)) {
+        final submission = submissionAsync.asData?.value;
+        if (submission != null) {
+          _scheduleSubmissionLoad(submission, force: true);
+        }
+      }
+    });
+
+    final body = submissionAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => _StatePanel(
+        icon: Icons.search_off_outlined,
+        title: 'Submission not found',
+        subtitle:
+            'This submission may not exist or may belong to another learner.',
+        actionLabel: 'Back to submissions',
+        actionTone: AppStatusTone.neutral,
+        actionProminent: false,
+        onAction: () => context.go('/learning/submissions'),
+      ),
+      data: (submission) {
+        _scheduleSubmissionLoad(submission);
+        if (!submission.availableActions.canEdit) {
+          return _StatePanel(
+            icon: Icons.lock_outline_rounded,
+            title: 'This submission cannot be edited',
+            subtitle:
+                'Only drafts, pending review, and projects with requested changes can be edited.',
+            actionLabel: 'View submission',
+            actionTone: AppStatusTone.neutral,
+            actionProminent: false,
+            onAction: () => context.go('/learning/submissions/${submission.id}'),
+          );
+        }
+
+        final projectCategories =
+            projectCategoriesAsync.value ?? const <MaterialCategory>[];
+        final materialCategories = materialSelectableCategories(
+          materialCategoriesAsync.value ?? const <MaterialCategory>[],
+        );
+        _selectedCategoryId ??= submission.category.resolve(context);
+
+        return _EditContent(
+          formKey: _formKey,
+          submission: submission,
+          embeddedInAuthoringWorkspace: widget.embeddedInAuthoringWorkspace,
+          highlightedFields: _highlightedFields,
+          titleController: _titleController,
                     summaryController: _summaryController,
                     descriptionController: _descriptionController,
                     durationController: _durationController,
@@ -544,8 +1111,9 @@ class _LearningProjectSubmissionEditPageState
                     isSaving: _isSaving,
                     onCategoryChanged: (value) =>
                         setState(() => _selectedCategoryId = value),
-                    onDifficultyChanged: (value) =>
-                        setState(() => _selectedDifficulty = value),
+                    onDifficultyChanged: (value) {
+                      setState(() => _selectedDifficulty = value);
+                    },
                     onComponentsChanged: (components) =>
                         setState(() => _components = components),
                     onAddComponent: () {
@@ -575,9 +1143,21 @@ class _LearningProjectSubmissionEditPageState
                     onSave: () => _save(submission, resubmit: false),
                     onSaveAndResubmit: () => _save(submission, resubmit: true),
                   );
-                },
-              ),
-            ),
+      },
+    );
+
+    if (widget.embeddedInAuthoringWorkspace) {
+      return body;
+    }
+
+    return Scaffold(
+      backgroundColor: palette.pageBackground,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const EntryNavBar(homeRoute: '/home'),
+            Expanded(child: body),
           ],
         ),
       ),
@@ -633,6 +1213,9 @@ class _LearningProjectSubmissionEditPageState
       _isSaving = true;
       _componentValidationMessage = null;
     });
+    if (widget.embeddedInAuthoringWorkspace) {
+      _setSaveState(AuthoringWorkspaceSaveState.saving);
+    }
 
     try {
       final repository = ref.read(learningHubRepositoryProvider);
@@ -646,15 +1229,29 @@ class _LearningProjectSubmissionEditPageState
 
       if (!mounted) return;
       invalidateLearningProjectSubmissions(ref, submission.id);
-      showInfoSnackBar(
-        context,
-        resubmit
-            ? 'Project resubmitted for admin review.'
-            : 'Project submission changes saved.',
-      );
-      context.go('/learning/submissions/${submission.id}');
+      _dirty = false;
+      if (widget.embeddedInAuthoringWorkspace) {
+        _setSaveState(AuthoringWorkspaceSaveState.saved);
+        showInfoSnackBar(
+          context,
+          'Project draft saved.',
+        );
+      } else {
+        showInfoSnackBar(
+          context,
+          resubmit
+              ? 'Project resubmitted for admin review.'
+              : 'Project submission changes saved.',
+        );
+        context.go('/learning/submissions/${submission.id}');
+      }
     } catch (error) {
-      if (mounted) showErrorSnackBar(context, error);
+      if (mounted) {
+        if (widget.embeddedInAuthoringWorkspace) {
+          _setSaveState(AuthoringWorkspaceSaveState.failed);
+        }
+        showErrorSnackBar(context, error);
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -723,6 +1320,8 @@ class _EditContent extends StatelessWidget {
   const _EditContent({
     required this.formKey,
     required this.submission,
+    required this.embeddedInAuthoringWorkspace,
+    this.highlightedFields = const {},
     required this.titleController,
     required this.summaryController,
     required this.descriptionController,
@@ -748,6 +1347,8 @@ class _EditContent extends StatelessWidget {
 
   final GlobalKey<FormState> formKey;
   final LearningProjectSubmission submission;
+  final bool embeddedInAuthoringWorkspace;
+  final Set<String> highlightedFields;
   final TextEditingController titleController;
   final TextEditingController summaryController;
   final TextEditingController descriptionController;
@@ -773,13 +1374,20 @@ class _EditContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final titleDirection = resolveContentTextDirection(titleController.text);
+    final summaryDirection = resolveContentTextDirection(
+      summaryController.text,
+    );
+    final descriptionDirection = resolveContentTextDirection(
+      descriptionController.text,
+    );
 
     return SingleChildScrollView(
-      padding: const EdgeInsetsDirectional.fromSTEB(
+      padding: EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.md,
+        embeddedInAuthoringWorkspace ? AppSpacing.md : AppSpacing.lg,
         AppSpacing.md,
         AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.xl,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -789,34 +1397,49 @@ class _EditContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Edit project submission',
-                  style: AppTextStyles.display(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  submission.status ==
-                          LearningProjectSubmissionStatus.pendingReview
-                      ? 'This project is still pending review. Saving changes updates what admins will review.'
-                      : 'Save changes without resubmitting, or send it back to admin review when ready.',
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: palette.textSecondary),
-                ),
+                if (!embeddedInAuthoringWorkspace) ...[
+                  Text(
+                    'Edit project submission',
+                    style: AppTextStyles.display(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    submission.status ==
+                            LearningProjectSubmissionStatus.pendingReview
+                        ? 'This project is still pending review. Saving changes updates what admins will review.'
+                        : 'Save changes without resubmitting, or send it back to admin review when ready.',
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
+                  ),
+                ],
                 if (submission.activeFeedback != null) ...[
-                  const SizedBox(height: AppSpacing.md),
+                  SizedBox(
+                    height: embeddedInAuthoringWorkspace
+                        ? AppSpacing.md
+                        : AppSpacing.md,
+                  ),
                   _FeedbackPanel(submission: submission),
                 ],
-                const SizedBox(height: AppSpacing.lg),
+                SizedBox(
+                  height: embeddedInAuthoringWorkspace
+                      ? AppSpacing.md
+                      : AppSpacing.lg,
+                ),
                 _FormPanel(
+                  title: embeddedInAuthoringWorkspace ? 'Basic details' : null,
                   children: [
-                    AppTextField(
-                      controller: titleController,
-                      label: 'Project title',
-                      hint: 'Arduino soil moisture monitor',
-                      validator: _validateTitle,
+                    _AuthoringFieldHighlight(
+                      active: highlightedFields.contains('title'),
+                      child: AppTextField(
+                        controller: titleController,
+                        label: 'Project title',
+                        hint: 'Arduino soil moisture monitor',
+                        validator: _validateTitle,
+                        textDirection: titleDirection,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextArea(
@@ -826,6 +1449,7 @@ class _EditContent extends StatelessWidget {
                       minLines: 2,
                       maxLines: 4,
                       validator: _validateSummary,
+                      textDirection: summaryDirection,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AppTextArea(
@@ -835,6 +1459,7 @@ class _EditContent extends StatelessWidget {
                       minLines: 4,
                       maxLines: 8,
                       validator: _validateDescription,
+                      textDirection: descriptionDirection,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     LayoutBuilder(
@@ -854,7 +1479,9 @@ class _EditContent extends StatelessWidget {
                         );
                         final difficultyField = AppDropdownField<String>(
                           label: 'Difficulty',
-                          value: selectedDifficulty,
+                          value: isValidAuthoringDifficulty(selectedDifficulty)
+                              ? selectedDifficulty.trim().toUpperCase()
+                              : null,
                           items: const [
                             DropdownMenuItem(
                               value: 'BEGINNER',
@@ -873,12 +1500,15 @@ class _EditContent extends StatelessWidget {
                             if (value != null) onDifficultyChanged(value);
                           },
                         );
-                        final durationField = AppTextField(
-                          controller: durationController,
-                          label: 'Estimated minutes',
-                          hint: '120',
-                          keyboardType: TextInputType.number,
-                          validator: _validateDuration,
+                        final durationField = _AuthoringFieldHighlight(
+                          active: highlightedFields.contains('estimatedMinutes'),
+                          child: AppTextField(
+                            controller: durationController,
+                            label: 'Estimated minutes',
+                            hint: '120',
+                            keyboardType: TextInputType.number,
+                            validator: _validateDuration,
+                          ),
                         );
 
                         if (!wide) {
@@ -948,14 +1578,15 @@ class _EditContent extends StatelessWidget {
                   runSpacing: AppSpacing.sm,
                   alignment: WrapAlignment.end,
                   children: [
-                    OutlinedButton(
-                      onPressed: isSaving ? null : onCancel,
-                      style: AppStatusButtonStyle.outlined(
-                        context,
-                        AppStatusTone.warning,
+                    if (!embeddedInAuthoringWorkspace)
+                      OutlinedButton(
+                        onPressed: isSaving ? null : onCancel,
+                        style: AppStatusButtonStyle.outlined(
+                          context,
+                          AppStatusTone.warning,
+                        ),
+                        child: const Text('Cancel'),
                       ),
-                      child: const Text('Cancel'),
-                    ),
                     OutlinedButton.icon(
                       onPressed: isSaving ? null : onSave,
                       style: AppStatusButtonStyle.outlined(
@@ -1054,25 +1685,97 @@ class _SubmissionCard extends StatelessWidget {
   }
 }
 
-class _SubmissionActions extends StatelessWidget {
+class _SubmissionActions extends ConsumerStatefulWidget {
   const _SubmissionActions({required this.submission, this.compact = false});
 
   final LearningProjectSubmission submission;
   final bool compact;
 
   @override
+  ConsumerState<_SubmissionActions> createState() => _SubmissionActionsState();
+}
+
+class _SubmissionActionsState extends ConsumerState<_SubmissionActions> {
+  bool _isSubmitting = false;
+  String _submitIdempotencyKey = _newSubmitIdempotencyKey();
+
+  LearningProjectSubmission get submission => widget.submission;
+
+  bool get _isDraft =>
+      submission.status == LearningProjectSubmissionStatus.draft;
+
+  Future<void> _submitFromCard() async {
+    if (_isSubmitting || !_isDraft) {
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final repository = ref.read(learningHubRepositoryProvider);
+      await repository.submitMyLearningProjectDraft(
+        submission.id,
+        idempotencyKey: _submitIdempotencyKey,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      ref.invalidate(myLearningProjectSubmissionProvider(submission.id));
+      ref.invalidate(myLearningProjectSubmissionsProvider);
+      showInfoSnackBar(context, 'Project submitted for review.');
+      setState(() {
+        _isSubmitting = false;
+        _submitIdempotencyKey = _newSubmitIdempotencyKey();
+      });
+    } on ApiException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showSubmissionIncompleteFeedback(
+        context,
+        error,
+        submissionId: submission.id,
+        navigateToImages: projectSubmissionIncompleteRequiresImage(error),
+        onEdit: () => context.go('/learning/submissions/${submission.id}/edit'),
+      );
+      setState(() {
+        _isSubmitting = false;
+        _submitIdempotencyKey = _newSubmitIdempotencyKey();
+      });
+    } catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error);
+        setState(() {
+          _isSubmitting = false;
+          _submitIdempotencyKey = _newSubmitIdempotencyKey();
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final actions = <Widget>[
+    final secondaryActions = <Widget>[
       OutlinedButton(
         onPressed: () => context.go('/learning/submissions/${submission.id}'),
         style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
         child: const Text('View'),
       ),
+      if (_isDraft)
+        OutlinedButton.icon(
+          onPressed: () => context.go(
+            '/learning/submissions/${submission.id}/author',
+          ),
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary),
+          icon: const Icon(Icons.auto_awesome_outlined),
+          label: Text(_continueWithAiLabel.resolve(context)),
+        ),
       if (submission.availableActions.canEdit)
-        FilledButton.icon(
+        OutlinedButton.icon(
           onPressed: () =>
               context.go('/learning/submissions/${submission.id}/edit'),
-          style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary),
           icon: const Icon(Icons.edit_outlined),
           label: Text(
             submission.availableActions.canResubmit
@@ -1089,10 +1792,57 @@ class _SubmissionActions extends StatelessWidget {
         ),
     ];
 
+    if (!widget.compact) {
+      return Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: secondaryActions,
+      );
+    }
+
+    if (_isDraft) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPrimaryButton(
+            label: 'Submit for review',
+            isLoading: _isSubmitting,
+            onPressed: _isSubmitting ? null : _submitFromCard,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: secondaryActions,
+          ),
+        ],
+      );
+    }
+
+    if (submission.status == LearningProjectSubmissionStatus.changesRequested &&
+        submission.availableActions.canResubmit) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppPrimaryButton(
+            label: 'Resubmit for review',
+            onPressed: () =>
+                context.go('/learning/submissions/${submission.id}/edit'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: secondaryActions,
+          ),
+        ],
+      );
+    }
+
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
-      children: actions,
+      children: secondaryActions,
     );
   }
 }
@@ -1436,6 +2186,154 @@ List<Map<String, dynamic>> _parseLinks(String raw) {
       .toList(growable: false);
 }
 
+class _AuthoringFieldHighlight extends StatelessWidget {
+  const _AuthoringFieldHighlight({
+    required this.active,
+    required this.child,
+  });
+
+  final bool active;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: active
+          ? const EdgeInsetsDirectional.all(AppSpacing.xs)
+          : EdgeInsetsDirectional.zero,
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.mdAll,
+        border: active
+            ? Border.all(color: palette.heroAccent, width: 2)
+            : Border.all(color: Colors.transparent, width: 2),
+      ),
+      child: child,
+    );
+  }
+}
+
 extension on num {
   String get g => this == roundToDouble() ? toInt().toString() : toString();
+}
+
+class _ProjectImagesSection extends StatelessWidget {
+  const _ProjectImagesSection({
+    super.key,
+    required this.coverImageUrl,
+    required this.canManageImages,
+    required this.isUploading,
+    required this.onAddImage,
+  });
+
+  final String? coverImageUrl;
+  final bool canManageImages;
+  final bool isUploading;
+  final VoidCallback onAddImage;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final resolvedUrl = coverImageUrl?.trim();
+    final hasImage = resolvedUrl?.isNotEmpty == true;
+
+    return _FormPanel(
+      title: 'Project images',
+      children: [
+        if (hasImage)
+          ClipRRect(
+            borderRadius: AppRadius.mdAll,
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Image.network(
+                ApiConfig.resolveMediaUrl(resolvedUrl!),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: palette.borderSubtle,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ),
+            ),
+          )
+        else
+          Text(
+            'No project image yet.',
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+        if (canManageImages) ...[
+          const SizedBox(height: AppSpacing.md),
+          OutlinedButton.icon(
+            onPressed: isUploading ? null : onAddImage,
+            style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary),
+            icon: isUploading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(hasImage ? 'Replace project image' : 'Add project image'),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReviewStateBanner extends StatelessWidget {
+  const _ReviewStateBanner({
+    required this.title,
+    required this.message,
+    required this.tone,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String title;
+  final String message;
+  final AppStatusTone tone;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppStatusStyle.of(context, tone).foreground;
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.label(context).copyWith(color: color),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            message,
+            style: AppTextStyles.body(context),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.text(context, tone),
+              child: Text(actionLabel!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

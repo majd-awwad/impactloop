@@ -146,6 +146,47 @@ export const completeCurrentBuildStepPayloadSchema = basePayloadSchema.extend({
   }),
 });
 
+const finalProjectStepSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().trim().min(1).max(5000),
+});
+
+const finalProjectComponentSchema = z.object({
+  componentName: z.string().trim().min(1).max(200),
+  materialType: z.string().trim().min(1).max(200),
+  quantity: z.number().positive(),
+  unit: z.string().trim().min(1).max(50),
+  componentRole: z.string().trim().min(1).max(80),
+  isRequired: z.boolean(),
+  canBeSubstituted: z.boolean(),
+  searchKeywords: z.array(z.string().trim().min(1).max(80)),
+  notes: z.string().nullable(),
+});
+
+export const applyProjectAuthoringProposalPayloadSchema = basePayloadSchema.extend({
+  actionType: z.literal('APPLY_PROJECT_AUTHORING_PROPOSAL'),
+  target: z.object({
+    projectId: cuidLike,
+  }),
+  parameters: z.object({
+    conversationId: cuidLike,
+    proposalId: z.string().trim().min(1).max(80),
+    reviewStateId: z.string().trim().min(1).max(80),
+    expectedUpdatedAt: z.string().datetime(),
+    acceptedSections: z.array(z.string().trim().min(1).max(80)),
+    keptCurrentSections: z.array(z.string().trim().min(1).max(80)),
+    finalProject: z.object({
+      title: z.string().trim().min(3).max(200),
+      shortDescription: z.string().trim().min(10).max(500),
+      description: z.string().trim().min(10).max(10000),
+      difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
+      estimatedDurationMinutes: z.number().int().positive().max(10000).optional(),
+      requiredComponents: z.array(finalProjectComponentSchema),
+      steps: z.array(finalProjectStepSchema).min(3).max(20),
+    }),
+  }),
+});
+
 export const prepareMaterialReservationPayloadSchema = basePayloadSchema.extend({
   actionType: z.literal('PREPARE_MATERIAL_RESERVATION'),
   target: z.object({ materialId: cuidLike }),
@@ -179,7 +220,8 @@ export type VersionedActionPayload =
   | z.infer<typeof prepareMaterialReservationPayloadSchema>
   | z.infer<typeof reservationPayloadSchema>
   | z.infer<typeof updateBuildComponentStatusesPayloadSchema>
-  | z.infer<typeof completeCurrentBuildStepPayloadSchema>;
+  | z.infer<typeof completeCurrentBuildStepPayloadSchema>
+  | z.infer<typeof applyProjectAuthoringProposalPayloadSchema>;
 
 const payloadSchemaByType: Record<
   AiPendingActionType,
@@ -196,6 +238,7 @@ const payloadSchemaByType: Record<
   CONFIRM_MATERIAL_RESERVATION: reservationPayloadSchema,
   UPDATE_BUILD_COMPONENT_STATUSES: updateBuildComponentStatusesPayloadSchema,
   COMPLETE_CURRENT_BUILD_STEP: completeCurrentBuildStepPayloadSchema,
+  APPLY_PROJECT_AUTHORING_PROPOSAL: applyProjectAuthoringProposalPayloadSchema,
   CANCEL_PENDING_AI_ACTION: null,
 };
 

@@ -7,11 +7,16 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/utils/content_text_direction.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/ai_assistant_shell_provider.dart';
 import '../../application/ai_chat_controller.dart';
+import '../../application/authoring_workspace_controller.dart';
 import '../../domain/ai_helpers.dart';
+import '../../domain/ai_models.dart';
 import '../../../learning_hub/domain/models/project_build.dart';
+import 'ai_sequential_authoring_panel.dart';
 import '../l10n/ai_l10n.dart';
 import 'ai_chat_empty_state.dart';
 import 'ai_history_panel.dart';
@@ -641,6 +646,7 @@ class _ChatComposer extends StatelessWidget {
     required this.isOverLimit,
     required this.onChanged,
     required this.onSend,
+    this.hintText,
   });
 
   final TextEditingController controller;
@@ -650,6 +656,7 @@ class _ChatComposer extends StatelessWidget {
   final bool isOverLimit;
   final ValueChanged<String> onChanged;
   final VoidCallback onSend;
+  final String? hintText;
 
   @override
   Widget build(BuildContext context) {
@@ -716,7 +723,7 @@ class _ChatComposer extends StatelessWidget {
                           onChanged: onChanged,
                           onSubmitted: canSend ? (_) => onSend() : null,
                           decoration: InputDecoration(
-                            hintText: AiL10n.inputHint.resolve(context),
+                            hintText: hintText ?? AiL10n.inputHint.resolve(context),
                             border: InputBorder.none,
                             contentPadding:
                                 const EdgeInsetsDirectional.all(AppSpacing.sm),
@@ -796,7 +803,22 @@ class AiBuildGuideContextBanner extends StatelessWidget {
 }
 
 class AiEmbeddedAssistantChat extends ConsumerStatefulWidget {
-  const AiEmbeddedAssistantChat({super.key});
+  const AiEmbeddedAssistantChat({
+    super.key,
+    this.composerEnabled = true,
+    this.showSuggestedQuestions = true,
+    this.infoFooter,
+    this.authoringMode = false,
+    this.authoringProjectUpdatedAt,
+    this.authoringDraftSnapshot,
+  });
+
+  final bool composerEnabled;
+  final bool showSuggestedQuestions;
+  final Widget? infoFooter;
+  final bool authoringMode;
+  final DateTime? authoringProjectUpdatedAt;
+  final AuthoringDraftSnapshot? authoringDraftSnapshot;
 
   @override
   ConsumerState<AiEmbeddedAssistantChat> createState() =>
@@ -823,11 +845,31 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
       return;
     }
 
-    await ref.read(aiAssistantControllerProvider.notifier).sendMessage(
+    final chatState = ref.read(aiAssistantControllerProvider);
+    final controller = ref.read(aiAssistantControllerProvider.notifier);
+
+    if (widget.authoringMode && chatState.activeDiscussionTarget != null) {
+      if (ref.read(aiAssistantControllerProvider.notifier).hasActiveSequentialAuthoring) {
+        await controller.submitSequentialDiscussionComment(
           text: trimmed,
           locale: locale,
-          onAccepted: text == null ? _inputController.clear : null,
         );
+      } else {
+        await controller.submitDiscussionComment(
+          text: trimmed,
+          locale: locale,
+        );
+      }
+      if (text == null && mounted) {
+        _inputController.clear();
+      }
+    } else {
+      await controller.sendMessage(
+        text: trimmed,
+        locale: locale,
+        onAccepted: text == null ? _inputController.clear : null,
+      );
+    }
 
     if (!mounted) {
       return;
@@ -881,7 +923,29 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              AiL10n.loading.resolve(context),
+              widget.authoringMode
+                  ? AiL10n.analyzingIdea.resolve(context)
+                  : AiL10n.loading.resolve(context),
+              style: AppTextStyles.body(context),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (widget.authoringMode && chatState.isBootstrapping) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              AiL10n.analyzingIdea.resolve(context),
               style: AppTextStyles.body(context),
             ),
           ],
@@ -897,7 +961,10 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
     }
 
     final messages = chatState.messages;
-    final showEmpty = messages.isEmpty && !chatState.isSending;
+    final showEmpty = messages.isEmpty &&
+        !chatState.isSending &&
+        !chatState.isBootstrapping &&
+        !chatState.isGeneratingProposal;
 
     return Column(
       children: [
@@ -917,9 +984,12 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
               return false;
             },
             child: showEmpty
-                ? AiChatEmptyState(
-                    onSuggestedQuestionTap: (question) => _sendMessage(text: question),
-                  )
+                ? (widget.showSuggestedQuestions
+                    ? AiChatEmptyState(
+                        onSuggestedQuestionTap: (question) =>
+                            _sendMessage(text: question),
+                      )
+                    : const SizedBox.shrink())
                 : ListView.separated(
                     controller: _scrollController,
                     padding: const EdgeInsetsDirectional.fromSTEB(
@@ -928,7 +998,10 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
                       AppSpacing.md,
                       AppSpacing.sm,
                     ),
-                    itemCount: messages.length + (chatState.isSending ? 1 : 0),
+                    itemCount: messages.length +
+                        ((chatState.isSending || chatState.isBootstrapping)
+                            ? 1
+                            : 0),
                     separatorBuilder: (_, _) =>
                         const SizedBox(height: AppSpacing.sm),
                     itemBuilder: (context, index) {
@@ -939,6 +1012,8 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
                       return AiMessageBubble(
                         message: messages[index],
                         locale: resolveAiLocale(context),
+                        authoringProjectUpdatedAt: widget.authoringProjectUpdatedAt,
+                        authoringDraftSnapshot: widget.authoringDraftSnapshot,
                       );
                     },
                   ),
@@ -954,24 +1029,216 @@ class _AiEmbeddedAssistantChatState extends ConsumerState<AiEmbeddedAssistantCha
             ),
             child: _SendErrorBanner(
               error: chatState.sendError!,
-              isSending: chatState.isSending,
+              isSending: chatState.isSending ||
+                  chatState.isBootstrapping ||
+                  chatState.isGeneratingProposal ||
+                  chatState.isSubmittingReview,
               onRetry: isRetryableAiError(chatState.sendError!.code)
-                  ? () => ref
-                      .read(aiAssistantControllerProvider.notifier)
-                      .retryPendingSend()
+                  ? () {
+                      if (chatState.pendingSend != null) {
+                        ref
+                            .read(aiAssistantControllerProvider.notifier)
+                            .retryPendingSend();
+                        return;
+                      }
+                      if (widget.authoringMode) {
+                        ref
+                            .read(aiAssistantControllerProvider.notifier)
+                            .retryAuthoringFlow();
+                        return;
+                      }
+                    }
                   : null,
             ),
           ),
-        _ChatComposer(
-          controller: _inputController,
-          canSend: canSend && !isOverLimit,
-          isSending: chatState.isSending,
-          isDisabled: chatState.disabledByProvider,
-          isOverLimit: isOverLimit,
-          onChanged: (_) => setState(() {}),
-          onSend: () => _sendMessage(),
-        ),
+        if (widget.composerEnabled) ...[
+          if (widget.authoringMode &&
+              chatState.activeDiscussionTarget != null)
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InputChip(
+                      label: Text(
+                        AiL10n.authoringDiscussingTargetLabel(
+                          chatState.activeDiscussionTarget!,
+                        ).resolve(context),
+                        textDirection: resolveContentTextDirection(
+                          AiL10n.authoringDiscussingTargetLabel(
+                            chatState.activeDiscussionTarget!,
+                          ).resolve(context),
+                        ),
+                      ),
+                      onDeleted: () => ref
+                          .read(aiAssistantControllerProvider.notifier)
+                          .clearDiscussionTarget(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          _ChatComposer(
+            controller: _inputController,
+            canSend: canSend && !isOverLimit,
+            isSending: chatState.isSending ||
+                chatState.isBootstrapping ||
+                chatState.isGeneratingProposal ||
+                chatState.isSubmittingReview,
+            isDisabled: chatState.disabledByProvider,
+            isOverLimit: isOverLimit,
+            hintText: widget.authoringMode
+                ? (chatState.activeDiscussionTarget != null
+                    ? AiL10n.authoringDiscussComposerHint(
+                        chatState.activeDiscussionTarget!,
+                      ).resolve(context)
+                    : AiL10n.authoringInputHint.resolve(context))
+                : null,
+            onChanged: (_) => setState(() {}),
+            onSend: () => _sendMessage(),
+          ),
+        ] else if (widget.infoFooter != null)
+          widget.infoFooter!,
       ],
+    );
+  }
+}
+
+class AiEmbeddedAuthoringAssistant extends ConsumerWidget {
+  const AiEmbeddedAuthoringAssistant({
+    super.key,
+    this.projectUpdatedAt,
+    this.draftSnapshot,
+  });
+
+  final DateTime? projectUpdatedAt;
+  final AuthoringDraftSnapshot? draftSnapshot;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chatState = ref.watch(aiAssistantControllerProvider);
+    final workspaceState = ref.watch(authoringWorkspaceControllerProvider);
+    final workspaceScope = ref.watch(authoringActiveWorkspaceProvider);
+    final locale = resolveAiLocale(context);
+    final useWorkspacePanel = workspaceScope != null ||
+        workspaceState.isReady ||
+        workspaceState.isLoading ||
+        workspaceState.lifecycle == AuthoringWorkspaceLifecycle.failed ||
+        workspaceState.hasLegacyWithoutSession;
+
+    if (useWorkspacePanel) {
+      return AiSequentialAuthoringPanel(
+        locale: locale,
+        projectUpdatedAt: projectUpdatedAt,
+        draftSnapshot: draftSnapshot,
+      );
+    }
+
+    return AiEmbeddedAssistantChat(
+      composerEnabled: true,
+      showSuggestedQuestions: false,
+      authoringMode: true,
+      authoringProjectUpdatedAt: projectUpdatedAt,
+      authoringDraftSnapshot: draftSnapshot,
+    );
+  }
+}
+
+class AiProjectAuthoringSidePanel extends StatelessWidget {
+  const AiProjectAuthoringSidePanel({
+    super.key,
+    required this.width,
+    required this.onClose,
+    this.projectUpdatedAt,
+    this.draftSnapshot,
+  });
+
+  final double width;
+  final VoidCallback onClose;
+  final DateTime? projectUpdatedAt;
+  final AuthoringDraftSnapshot? draftSnapshot;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    return Material(
+      color: palette.cardSurface,
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: palette.cardSurface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        margin: const EdgeInsetsDirectional.only(
+          end: AppSpacing.md,
+          bottom: AppSpacing.md,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.xs,
+                AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome_outlined,
+                    size: 20,
+                    color: palette.heroMid,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      const LocalizedText(
+                        en: 'AI project assistant',
+                        ar: 'مساعد مشروع الذكاء الاصطناعي',
+                      ).resolve(context),
+                      style: AppTextStyles.subtitle(context).copyWith(
+                        color: palette.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  AppStatusBadge(
+                    label: const LocalizedText(
+                      en: 'Draft',
+                      ar: 'مسودة',
+                    ).resolve(context),
+                    tone: AppStatusTone.neutral,
+                  ),
+                  IconButton(
+                    tooltip: const LocalizedText(
+                      en: 'Close',
+                      ar: 'إغلاق',
+                    ).resolve(context),
+                    onPressed: onClose,
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: AiEmbeddedAuthoringAssistant(
+                projectUpdatedAt: projectUpdatedAt,
+                draftSnapshot: draftSnapshot,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

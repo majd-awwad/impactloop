@@ -18,7 +18,15 @@ import {
   buildClassifierPrompt,
 } from './chat-prompt-builders.js';
 
-type OpenAiChatClient = Pick<OpenAI, 'chat'>;
+type OpenAiChatClient = {
+  chat: {
+    completions: {
+      create: (
+        ...args: Parameters<OpenAI['chat']['completions']['create']>
+      ) => Promise<OpenAI.Chat.Completions.ChatCompletion>;
+    };
+  };
+};
 
 let clientFactoryOverride: (() => OpenAiChatClient) | null = null;
 

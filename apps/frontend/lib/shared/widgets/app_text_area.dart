@@ -16,6 +16,7 @@ class AppTextArea extends StatelessWidget {
     this.onFieldSubmitted,
     this.errorText,
     this.onChanged,
+    this.textDirection,
   });
 
   final TextEditingController controller;
@@ -28,6 +29,7 @@ class AppTextArea extends StatelessWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final String? errorText;
   final ValueChanged<String>? onChanged;
+  final TextDirection? textDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +43,7 @@ class AppTextArea extends StatelessWidget {
       onFieldSubmitted: onFieldSubmitted,
       onChanged: onChanged,
       forceErrorText: errorText,
+      textDirection: textDirection,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

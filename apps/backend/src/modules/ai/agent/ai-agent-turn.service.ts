@@ -1,7 +1,9 @@
 import { env, isAiChatProviderOperational } from '../../../config/env.js';
 import { prisma } from '../../../database/prisma.js';
 import { AppError } from '../../../utils/app-error.js';
+import type { AccessTokenPayload } from '../../../utils/jwt.js';
 import { logger } from '../../../observability/logger.js';
+import type { SafeLogValue } from '../../../observability/log-types.js';
 import {
   buildBoundedConversationHistory,
   parseStoredContentBlocks,
@@ -25,7 +27,7 @@ import { getAiChatProvider } from '../providers/ai-chat-provider.factory.js';
 import type { AiLocale } from '../ai.types.js';
 import { prepareAiPendingAction, buildMaterialSavePayload, buildProjectSavePayload, buildStartBuildPayload, buildLinkMaterialPayload, buildUnsaveMaterialPayload, buildUnsaveProjectPayload, buildUnlinkMaterialPayload, buildReservationPayload, buildUpdateBuildComponentStatusesPayload, saveReservationDraft, cancelReservationDraft, findActiveReservationDraft } from '../ai-action.service.js';
 import * as learningProjectsRepository from '../../learning-projects/learning-projects.repository.js';
-import { normalizeArabicVariants } from './ai-agent-filter-extractor.service.js';
+import { normalizeArabicVariants, detectMaterialSearchIntent } from './ai-agent-filter-extractor.service.js';
 import { prepareMaterialReservationPayloadSchema } from '../ai-action.payloads.js';
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import type { AiPendingActionType } from '../../../generated/prisma/client.js';
@@ -822,7 +824,10 @@ const buildActionPayload = async (input: {
   authenticatedUserId: string;
   trustedProjectBuildId?: string;
 }) => {
-  const viewer = { sub: input.authenticatedUserId, roles: ['LEARNER'] as const };
+  const viewer: AccessTokenPayload = {
+    sub: input.authenticatedUserId,
+    roles: ['LEARNER'],
+  };
 
   if (input.actionType === 'PREPARE_MATERIAL_RESERVATION') {
     const params = parseReservationParameters(input.userMessage);
@@ -1243,6 +1248,82 @@ const handleActionRequestTurn = async (input: {
     };
   }
 
+  if (
+    actionType === 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT' ||
+    actionType === 'PREPARE_MATERIAL_RESERVATION'
+  ) {
+    const built = await buildActionPayload({
+      actionType,
+      targetId: '',
+      referenceKind: 'COMPONENT',
+      userMessage: input.userMessage,
+      conversationId: input.conversationId,
+      authenticatedUserId: input.authenticatedUserId,
+    });
+
+    if (built && 'missing' in built) {
+      return {
+        blocks: [
+          textBlock(reservationClarification(input.locale, built.missing ?? []), 'clarification'),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    if (built && 'error' in built) {
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? 'لم أجد رابطاً حالياً لإلغائه.'
+              : 'I could not find a current link to remove.',
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+
+    if (built && !('missing' in built) && !('error' in built)) {
+      const prepared = await prepareAiPendingAction({
+        userId: input.authenticatedUserId,
+        conversationId: input.conversationId,
+        actionType: built.actionType,
+        payload: built.payload,
+        idempotencyKey: `${input.clientMessageId}:${built.actionType}:unlink`,
+        locale: input.locale,
+      });
+
+      return {
+        blocks: mergeAgentBlocks(
+          input.locale === 'ar'
+            ? 'راجع التفاصيل ثم أكّد الإجراء:'
+            : 'Review the details, then confirm:',
+          [prepared.block],
+        ),
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+  }
+
   if (actionType === 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT') {
     if (input.trustedProjectBuildId) {
       const resolution = await resolveBuildGuideUnlinkTarget({
@@ -1351,7 +1432,7 @@ const handleActionRequestTurn = async (input: {
       };
     }
 
-    if (built && !('error' in built)) {
+    if (built && 'actionType' in built) {
       const prepared = await prepareAiPendingAction({
         userId: input.authenticatedUserId,
         conversationId: input.conversationId,
@@ -1405,15 +1486,12 @@ const handleActionRequestTurn = async (input: {
     }
 
     const buildId =
-      input.trustedProjectBuildId ??
       (await resolveLatestBuildId(input.conversationId)) ??
-      (
-        await resolveBuildIdForUserMessage({
-          conversationId: input.conversationId,
-          userMessage: input.userMessage,
-          userId: input.authenticatedUserId,
-        })
-      )?.buildId ??
+      (await resolveBuildIdForUserMessage({
+        conversationId: input.conversationId,
+        userMessage: input.userMessage,
+        userId: input.authenticatedUserId,
+      }))?.buildId ??
       null;
 
     if (!buildId) {
@@ -1754,7 +1832,7 @@ const handleActionRequestTurn = async (input: {
     }
 
     return {
-      blocks: [textBlock(reservationClarification(input.locale, built.missing), 'clarification')],
+      blocks: [textBlock(reservationClarification(input.locale, built.missing ?? []), 'clarification')],
       usedProvider: false,
       providerName: 'system',
       model: null,
@@ -2079,7 +2157,9 @@ const assembleTrustedResponseBlocks = (input: {
       block.recommendationType === 'MATERIALS' &&
       input.trustedBlocks[index - 1]?.type === 'recommendations'
     ) {
-      const localeHint = input.explanationBlocks[0]?.text ?? '';
+      const firstExplanation = input.explanationBlocks[0];
+      const localeHint =
+        firstExplanation?.type === 'text' ? firstExplanation.text ?? '' : '';
       const locale: AiLocale = /[\u0600-\u06FF]/.test(localeHint) ? 'ar' : 'en';
       assembled.push(textBlock(buildRelatedMaterialsIntro(locale)));
     }
@@ -2305,7 +2385,7 @@ const resolveToolInput = async (input: {
       return { projectId: projectMatch.entity.id };
     }
 
-    const viewer = { sub: input.userId, roles: ['LEARNER'] as const };
+    const viewer: AccessTokenPayload = { sub: input.userId, roles: ['LEARNER'] };
     if (parsed.projectQuery) {
       const projects = await getLearningProjects(
         { page: 1, limit: 5, q: parsed.projectQuery },
@@ -2788,7 +2868,7 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       trustedBlockTypes: trustedBlocks.map((block) => block.type),
       synthesisUsed: explanationBlocks.length > 0 && providerName !== 'system',
       semanticPlannerUsed: executionPlan.diagnostics.semanticPlannerUsed,
-      normalizedFilters: executionPlan.diagnostics.normalizedFilters,
+      normalizedFilters: executionPlan.diagnostics.normalizedFilters as SafeLogValue | null,
       resultCount,
     },
     'learner agent platform turn completed',

@@ -324,6 +324,807 @@ class AiExternalSourceItem {
   final String? snippet;
 }
 
+class AiAuthoringKnownFact {
+  const AiAuthoringKnownFact({
+    required this.label,
+    required this.value,
+  });
+
+  factory AiAuthoringKnownFact.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringKnownFact(
+      label: json['label'] as String? ?? '',
+      value: json['value'] as String? ?? '',
+    );
+  }
+
+  final String label;
+  final String value;
+}
+
+class AiAuthoringQuestion {
+  const AiAuthoringQuestion({
+    required this.prompt,
+    required this.answerType,
+    this.options = const [],
+  });
+
+  factory AiAuthoringQuestion.fromJson(Map<String, dynamic> json) {
+    final options = json['options'];
+    return AiAuthoringQuestion(
+      prompt: json['prompt'] as String? ?? '',
+      answerType: json['answerType'] as String? ?? 'FREE_TEXT',
+      options: options is List
+          ? options.whereType<String>().toList(growable: false)
+          : const [],
+    );
+  }
+
+  final String prompt;
+  final String answerType;
+  final List<String> options;
+}
+
+class AiAuthoringProposalProject {
+  const AiAuthoringProposalProject({
+    required this.title,
+    required this.shortDescription,
+    required this.description,
+    required this.difficulty,
+    this.estimatedMinutes,
+  });
+
+  factory AiAuthoringProposalProject.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringProposalProject(
+      title: json['title'] as String? ?? '',
+      shortDescription: json['shortDescription'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      difficulty: json['difficulty'] as String? ?? '',
+      estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt(),
+    );
+  }
+
+  final String title;
+  final String shortDescription;
+  final String description;
+  final String difficulty;
+  final int? estimatedMinutes;
+}
+
+class AiAuthoringProposalComponent {
+  const AiAuthoringProposalComponent({
+    this.id,
+    required this.componentName,
+    required this.materialType,
+    required this.quantity,
+    required this.unit,
+    required this.componentRole,
+    required this.isRequired,
+    required this.canBeSubstituted,
+    this.searchKeywords = const [],
+    this.alternativeKeywords = const [],
+    this.notes,
+  });
+
+  factory AiAuthoringProposalComponent.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringProposalComponent(
+      id: json['id'] as String?,
+      componentName: json['componentName'] as String? ?? '',
+      materialType: json['materialType'] as String? ?? '',
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      unit: json['unit'] as String? ?? '',
+      componentRole: json['componentRole'] as String? ?? 'REQUIRED_MATERIAL',
+      isRequired: json['isRequired'] == true,
+      canBeSubstituted: json['canBeSubstituted'] == true,
+      searchKeywords: (json['searchKeywords'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      alternativeKeywords: (json['alternativeKeywords'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      notes: json['notes'] as String?,
+    );
+  }
+
+  final String? id;
+  final String componentName;
+  final String materialType;
+  final double quantity;
+  final String unit;
+  final String componentRole;
+  final bool isRequired;
+  final bool canBeSubstituted;
+  final List<String> searchKeywords;
+  final List<String> alternativeKeywords;
+  final String? notes;
+}
+
+class AiAuthoringProposalStep {
+  const AiAuthoringProposalStep({
+    required this.title,
+    required this.description,
+    this.safetyNote,
+  });
+
+  factory AiAuthoringProposalStep.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringProposalStep(
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      safetyNote: json['safetyNote'] as String?,
+    );
+  }
+
+  final String title;
+  final String description;
+  final String? safetyNote;
+}
+
+class AuthoringDraftSnapshot {
+  const AuthoringDraftSnapshot({
+    required this.title,
+    required this.shortDescription,
+    required this.description,
+    required this.difficulty,
+    this.estimatedMinutes,
+    this.components = const [],
+    this.steps = const [],
+  });
+
+  final String title;
+  final String shortDescription;
+  final String description;
+  final String difficulty;
+  final int? estimatedMinutes;
+  final List<AiAuthoringProposalComponent> components;
+  final List<AiAuthoringProposalStep> steps;
+}
+
+class AiAuthoringReviewFieldDecisions {
+  const AiAuthoringReviewFieldDecisions({
+    required this.title,
+    required this.shortDescription,
+    required this.description,
+    required this.difficulty,
+    required this.estimatedMinutes,
+  });
+
+  factory AiAuthoringReviewFieldDecisions.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringReviewFieldDecisions(
+      title: json['title'] as String? ?? 'UNREVIEWED',
+      shortDescription: json['shortDescription'] as String? ?? 'UNREVIEWED',
+      description: json['description'] as String? ?? 'UNREVIEWED',
+      difficulty: json['difficulty'] as String? ?? 'UNREVIEWED',
+      estimatedMinutes: json['estimatedMinutes'] as String? ?? 'UNREVIEWED',
+    );
+  }
+
+  final String title;
+  final String shortDescription;
+  final String description;
+  final String difficulty;
+  final String estimatedMinutes;
+}
+
+class AiAuthoringRevisionRequest {
+  const AiAuthoringRevisionRequest({
+    required this.target,
+    required this.comment,
+    required this.status,
+  });
+
+  factory AiAuthoringRevisionRequest.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringRevisionRequest(
+      target: json['target'] as String? ?? '',
+      comment: json['comment'] as String? ?? '',
+      status: json['status'] as String? ?? 'OPEN',
+    );
+  }
+
+  final String target;
+  final String comment;
+  final String status;
+}
+
+class AiAuthoringReviewState {
+  const AiAuthoringReviewState({
+    required this.reviewStateId,
+    required this.proposalId,
+    required this.baseUpdatedAt,
+    required this.status,
+    required this.fieldDecisions,
+    required this.componentDecision,
+    required this.stepDecision,
+    this.lockedTargets = const [],
+    this.revisionRequests = const [],
+  });
+
+  factory AiAuthoringReviewState.fromJson(Map<String, dynamic> json) {
+    final fieldJson = json['fieldDecisions'];
+    return AiAuthoringReviewState(
+      reviewStateId: json['reviewStateId'] as String? ?? '',
+      proposalId: json['proposalId'] as String? ?? '',
+      baseUpdatedAt: json['baseUpdatedAt'] as String? ?? '',
+      status: json['status'] as String? ?? 'IN_REVIEW',
+      fieldDecisions: fieldJson is Map
+          ? AiAuthoringReviewFieldDecisions.fromJson(
+              Map<String, dynamic>.from(fieldJson),
+            )
+          : const AiAuthoringReviewFieldDecisions(
+              title: 'UNREVIEWED',
+              shortDescription: 'UNREVIEWED',
+              description: 'UNREVIEWED',
+              difficulty: 'UNREVIEWED',
+              estimatedMinutes: 'UNREVIEWED',
+            ),
+      componentDecision: json['componentDecision'] as String? ?? 'UNREVIEWED',
+      stepDecision: json['stepDecision'] as String? ?? 'UNREVIEWED',
+      lockedTargets: (json['lockedTargets'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      revisionRequests: _mapJsonList(
+        json['revisionRequests'],
+        AiAuthoringRevisionRequest.fromJson,
+      ),
+    );
+  }
+
+  final String reviewStateId;
+  final String proposalId;
+  final String baseUpdatedAt;
+  final String status;
+  final AiAuthoringReviewFieldDecisions fieldDecisions;
+  final String componentDecision;
+  final String stepDecision;
+  final List<String> lockedTargets;
+  final List<AiAuthoringRevisionRequest> revisionRequests;
+
+  bool get isReadyToApply =>
+      status == 'READY_TO_APPLY' && !isApplied;
+
+  bool get isApplied => status == 'APPLIED';
+
+  bool get hasOpenRevisionRequests =>
+      revisionRequests.any((request) => request.status == 'OPEN');
+
+  bool get needsDiscussion =>
+      status == 'DISCUSSION_NEEDED' || hasOpenRevisionRequests;
+}
+
+class AuthoringReviewProgress {
+  const AuthoringReviewProgress({
+    required this.resolved,
+    required this.needsDiscussion,
+    required this.unreviewed,
+    required this.total,
+    required this.status,
+  });
+
+  final int resolved;
+  final int needsDiscussion;
+  final int unreviewed;
+  final int total;
+  final String status;
+
+  bool get isReadyToApply => status == 'READY_TO_APPLY';
+}
+
+class AiAuthoringSession {
+  const AiAuthoringSession({
+    required this.sessionId,
+    required this.projectId,
+    required this.baseUpdatedAt,
+    required this.stage,
+    required this.flowStatus,
+    this.acceptedStages = const [],
+    this.currentTurnId,
+    this.componentReviewMode,
+    this.stepReviewMode,
+    this.currentComponentIndex,
+    this.workingComponents = const [],
+    this.acceptedComponentIndexes = const [],
+    this.componentSourceTotal,
+    this.awaitingComponentsFinalSave = false,
+    this.currentStepIndex,
+    this.workingSteps = const [],
+    this.acceptedStepIndexes = const [],
+    this.awaitingStepsFinalSave = false,
+  });
+
+  factory AiAuthoringSession.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringSession(
+      sessionId: json['sessionId'] as String? ?? '',
+      projectId: json['projectId'] as String? ?? '',
+      baseUpdatedAt: json['baseUpdatedAt'] as String? ?? '',
+      stage: json['stage'] as String? ?? 'OVERVIEW',
+      flowStatus: json['flowStatus'] as String? ?? 'WAITING_FOR_USER',
+      acceptedStages: (json['acceptedStages'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      currentTurnId: json['currentTurnId'] as String?,
+      componentReviewMode: json['componentReviewMode'] as String?,
+      stepReviewMode: json['stepReviewMode'] as String?,
+      currentComponentIndex: (json['currentComponentIndex'] as num?)?.toInt(),
+      workingComponents: _mapJsonList(
+        json['workingComponents'],
+        AiAuthoringProposalComponent.fromJson,
+      ),
+      acceptedComponentIndexes: (json['acceptedComponentIndexes'] as List?)
+              ?.map((value) => (value as num).toInt())
+              .toList(growable: false) ??
+          const [],
+      componentSourceTotal: (json['componentSourceTotal'] as num?)?.toInt(),
+      awaitingComponentsFinalSave: json['awaitingComponentsFinalSave'] == true,
+      currentStepIndex: (json['currentStepIndex'] as num?)?.toInt(),
+      workingSteps: _mapJsonList(
+        json['workingSteps'],
+        AiAuthoringProposalStep.fromJson,
+      ),
+      acceptedStepIndexes: (json['acceptedStepIndexes'] as List?)
+              ?.map((value) => (value as num).toInt())
+              .toList(growable: false) ??
+          const [],
+      awaitingStepsFinalSave: json['awaitingStepsFinalSave'] == true,
+    );
+  }
+
+  final String sessionId;
+  final String projectId;
+  final String baseUpdatedAt;
+  final String stage;
+  final String flowStatus;
+  final List<String> acceptedStages;
+  final String? currentTurnId;
+  final String? componentReviewMode;
+  final String? stepReviewMode;
+  final int? currentComponentIndex;
+  final List<AiAuthoringProposalComponent> workingComponents;
+  final List<int> acceptedComponentIndexes;
+  final int? componentSourceTotal;
+  final bool awaitingComponentsFinalSave;
+  final int? currentStepIndex;
+  final List<AiAuthoringProposalStep> workingSteps;
+  final List<int> acceptedStepIndexes;
+  final bool awaitingStepsFinalSave;
+
+  bool get isComplete => stage == 'COMPLETE' || flowStatus == 'COMPLETE';
+  bool get isStale => flowStatus == 'STALE';
+  bool get isComponentOneByOne => componentReviewMode == 'ONE_BY_ONE';
+  bool get isStepByStep => stepReviewMode == 'STEP_BY_STEP';
+
+  int get workingComponentCount => workingComponents.length;
+  int get acceptedComponentCount => acceptedComponentIndexes.length;
+  int get workingStepCount => workingSteps.length;
+  int get acceptedStepCount => acceptedStepIndexes.length;
+
+  int get componentProgressTotal =>
+      workingComponentCount > 0
+          ? workingComponentCount
+          : componentSourceTotal ?? workingComponentCount;
+
+  int get componentProgressIndex => (currentComponentIndex ?? 0) + 1;
+  int get stepProgressIndex => (currentStepIndex ?? 0) + 1;
+}
+
+class AiAuthoringTurn {
+  const AiAuthoringTurn({
+    required this.turnId,
+    required this.sessionId,
+    required this.stage,
+    required this.projectId,
+    required this.baseUpdatedAt,
+    required this.status,
+    required this.proposal,
+    required this.explanation,
+  });
+
+  factory AiAuthoringTurn.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringTurn(
+      turnId: json['turnId'] as String? ?? '',
+      sessionId: json['sessionId'] as String? ?? '',
+      stage: json['stage'] as String? ?? '',
+      projectId: json['projectId'] as String? ?? '',
+      baseUpdatedAt: json['baseUpdatedAt'] as String? ?? '',
+      status: json['status'] as String? ?? 'PROPOSED',
+      proposal: json['proposal'] is Map
+          ? Map<String, dynamic>.from(json['proposal'] as Map)
+          : const {},
+      explanation: json['explanation'] as String? ?? '',
+    );
+  }
+
+  final String turnId;
+  final String sessionId;
+  final String stage;
+  final String projectId;
+  final String baseUpdatedAt;
+  final String status;
+  final Map<String, dynamic> proposal;
+  final String explanation;
+
+  bool get isProposed => status == 'PROPOSED';
+}
+
+class AiAuthoringCanonicalProject {
+  const AiAuthoringCanonicalProject({
+    required this.id,
+    required this.updatedAt,
+    required this.title,
+    required this.shortDescription,
+    required this.description,
+    required this.difficulty,
+    this.estimatedMinutes,
+    this.components = const [],
+    this.steps = const [],
+  });
+
+  factory AiAuthoringCanonicalProject.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringCanonicalProject(
+      id: json['id'] as String? ?? '',
+      updatedAt: json['updatedAt'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      shortDescription: json['shortDescription'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      difficulty: json['difficulty'] as String? ?? 'INTERMEDIATE',
+      estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt(),
+      components: _mapJsonList(
+        json['components'],
+        (component) => AiAuthoringProposalComponent.fromJson(component),
+      ),
+      steps: _mapJsonList(
+        json['steps'],
+        (step) => AiAuthoringProposalStep.fromJson(step),
+      ),
+    );
+  }
+
+  AuthoringDraftSnapshot toDraftSnapshot() {
+    return AuthoringDraftSnapshot(
+      title: title,
+      shortDescription: shortDescription,
+      description: description,
+      difficulty: difficulty,
+      estimatedMinutes: estimatedMinutes,
+      components: components,
+      steps: steps,
+    );
+  }
+
+  final String id;
+  final String updatedAt;
+  final String title;
+  final String shortDescription;
+  final String description;
+  final String difficulty;
+  final int? estimatedMinutes;
+  final List<AiAuthoringProposalComponent> components;
+  final List<AiAuthoringProposalStep> steps;
+}
+
+class AiAuthoringCurrentSuggestion {
+  const AiAuthoringCurrentSuggestion({
+    required this.turnId,
+    required this.stage,
+    required this.explanation,
+    required this.status,
+    this.value,
+    this.components = const [],
+    this.component,
+    this.componentIndex,
+    this.componentTotal,
+    this.steps = const [],
+    this.step,
+    this.stepIndex,
+    this.stepTotal,
+  });
+
+  factory AiAuthoringCurrentSuggestion.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringCurrentSuggestion(
+      turnId: json['turnId'] as String? ?? '',
+      stage: json['stage'] as String? ?? '',
+      explanation: json['explanation'] as String? ?? '',
+      status: json['status'] as String? ?? 'PROPOSED',
+      value: json['value'],
+      components: _mapJsonList(
+        json['components'],
+        (component) => AiAuthoringProposalComponent.fromJson(component),
+      ),
+      component: json['component'] is Map
+          ? Map<String, dynamic>.from(json['component'] as Map)
+          : null,
+      componentIndex: (json['componentIndex'] as num?)?.toInt(),
+      componentTotal: (json['componentTotal'] as num?)?.toInt(),
+      steps: _mapJsonList(
+        json['steps'],
+        (step) => AiAuthoringProposalStep.fromJson(step),
+      ),
+      step: json['step'] is Map
+          ? Map<String, dynamic>.from(json['step'] as Map)
+          : null,
+      stepIndex: (json['stepIndex'] as num?)?.toInt(),
+      stepTotal: (json['stepTotal'] as num?)?.toInt(),
+    );
+  }
+
+  final String turnId;
+  final String stage;
+  final String explanation;
+  final String status;
+  final Object? value;
+  final List<AiAuthoringProposalComponent> components;
+  final Map<String, dynamic>? component;
+  final int? componentIndex;
+  final int? componentTotal;
+  final List<AiAuthoringProposalStep> steps;
+  final Map<String, dynamic>? step;
+  final int? stepIndex;
+  final int? stepTotal;
+
+  bool get isProposed => status == 'PROPOSED';
+  bool get hasComponentList => components.isNotEmpty;
+  bool get hasStepList => steps.isNotEmpty;
+}
+
+class AiAuthoringSnapshot {
+  const AiAuthoringSnapshot({
+    required this.session,
+    required this.currentTurn,
+    required this.currentSuggestion,
+    required this.canonicalProject,
+    required this.availableActions,
+    required this.progress,
+  });
+
+  factory AiAuthoringSnapshot.fromJson(Map<String, dynamic> json) {
+    final progressJson = json['progress'];
+    AiAuthoringTurn? currentTurn;
+    if (json['currentTurn'] is Map) {
+      currentTurn = AiAuthoringTurn.fromJson(
+        Map<String, dynamic>.from(json['currentTurn'] as Map),
+      );
+    }
+    AiAuthoringCurrentSuggestion? currentSuggestion;
+    if (json['currentSuggestion'] is Map) {
+      currentSuggestion = AiAuthoringCurrentSuggestion.fromJson(
+        Map<String, dynamic>.from(json['currentSuggestion'] as Map),
+      );
+    } else if (currentTurn != null) {
+      currentSuggestion = AiAuthoringCurrentSuggestion(
+        turnId: currentTurn.turnId,
+        stage: currentTurn.stage,
+        explanation: currentTurn.explanation,
+        status: currentTurn.status,
+        value: currentTurn.proposal['value'],
+        components: _mapJsonList(
+          currentTurn.proposal['components'],
+          (component) => AiAuthoringProposalComponent.fromJson(component),
+        ),
+        component: currentTurn.proposal['component'] is Map
+            ? Map<String, dynamic>.from(
+                currentTurn.proposal['component'] as Map,
+              )
+            : null,
+        componentIndex: (currentTurn.proposal['index'] as num?)?.toInt(),
+        componentTotal: (currentTurn.proposal['total'] as num?)?.toInt(),
+        steps: _mapJsonList(
+          currentTurn.proposal['steps'],
+          (step) => AiAuthoringProposalStep.fromJson(step),
+        ),
+        step: currentTurn.proposal['title'] is String
+            ? {
+                'index': currentTurn.proposal['index'],
+                'title': currentTurn.proposal['title'],
+                'description': currentTurn.proposal['description'],
+              }
+            : null,
+        stepIndex: (currentTurn.proposal['index'] as num?)?.toInt(),
+        stepTotal: (currentTurn.proposal['total'] as num?)?.toInt(),
+      );
+    }
+    return AiAuthoringSnapshot(
+      session: AiAuthoringSnapshotSession.fromJson(
+        Map<String, dynamic>.from(json['session'] as Map? ?? const {}),
+      ),
+      currentTurn: currentTurn,
+      currentSuggestion: currentSuggestion,
+      canonicalProject: AiAuthoringCanonicalProject.fromJson(
+        Map<String, dynamic>.from(json['canonicalProject'] as Map? ?? const {}),
+      ),
+      availableActions: (json['availableActions'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      progress: progressJson is Map
+          ? AiAuthoringSnapshotProgress.fromJson(
+              Map<String, dynamic>.from(progressJson),
+            )
+          : const AiAuthoringSnapshotProgress(completed: 0, total: 7),
+    );
+  }
+
+  final AiAuthoringSnapshotSession session;
+  final AiAuthoringTurn? currentTurn;
+  final AiAuthoringCurrentSuggestion? currentSuggestion;
+  final AiAuthoringCanonicalProject canonicalProject;
+  final List<String> availableActions;
+  final AiAuthoringSnapshotProgress progress;
+}
+
+class AiAuthoringSnapshotSession {
+  const AiAuthoringSnapshotSession({
+    required this.sessionId,
+    required this.projectId,
+    required this.stage,
+    required this.status,
+    required this.completedStages,
+    required this.currentTurnId,
+    required this.baseUpdatedAt,
+    required this.isStale,
+    this.componentReviewMode,
+    this.awaitingComponentsFinalSave = false,
+    this.currentComponentIndex,
+    this.componentSourceTotal,
+    this.stepReviewMode,
+    this.awaitingStepsFinalSave = false,
+    this.currentStepIndex,
+    this.workingSteps = const [],
+  });
+
+  factory AiAuthoringSnapshotSession.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringSnapshotSession(
+      sessionId: json['sessionId'] as String? ?? '',
+      projectId: json['projectId'] as String? ?? '',
+      stage: json['stage'] as String? ?? 'OVERVIEW',
+      status: json['status'] as String? ?? 'WAITING_FOR_USER',
+      completedStages: (json['completedStages'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      currentTurnId: json['currentTurnId'] as String?,
+      baseUpdatedAt: json['baseUpdatedAt'] as String? ?? '',
+      isStale: json['isStale'] as bool? ?? false,
+      componentReviewMode: json['componentReviewMode'] as String?,
+      awaitingComponentsFinalSave: json['awaitingComponentsFinalSave'] == true,
+      currentComponentIndex: (json['currentComponentIndex'] as num?)?.toInt(),
+      componentSourceTotal: (json['componentSourceTotal'] as num?)?.toInt(),
+      stepReviewMode: json['stepReviewMode'] as String?,
+      awaitingStepsFinalSave: json['awaitingStepsFinalSave'] == true,
+      currentStepIndex: (json['currentStepIndex'] as num?)?.toInt(),
+      workingSteps: _mapJsonList(
+        json['workingSteps'],
+        (step) => AiAuthoringProposalStep.fromJson(step),
+      ),
+    );
+  }
+
+  final String sessionId;
+  final String projectId;
+  final String stage;
+  final String status;
+  final List<String> completedStages;
+  final String? currentTurnId;
+  final String baseUpdatedAt;
+  final bool isStale;
+  final String? componentReviewMode;
+  final bool awaitingComponentsFinalSave;
+  final int? currentComponentIndex;
+  final int? componentSourceTotal;
+  final String? stepReviewMode;
+  final bool awaitingStepsFinalSave;
+  final int? currentStepIndex;
+  final List<AiAuthoringProposalStep> workingSteps;
+
+  bool get isComplete => stage == 'COMPLETE' || status == 'COMPLETE';
+  bool get isStepByStep => stepReviewMode == 'STEP_BY_STEP';
+  int get workingStepCount =>
+      workingSteps.isNotEmpty ? workingSteps.length : 0;
+  int get stepProgressIndex => (currentStepIndex ?? 0) + 1;
+  int get componentProgressTotal => componentSourceTotal ?? 0;
+}
+
+class AiAuthoringSnapshotProgress {
+  const AiAuthoringSnapshotProgress({
+    required this.completed,
+    required this.total,
+  });
+
+  factory AiAuthoringSnapshotProgress.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringSnapshotProgress(
+      completed: (json['completed'] as num?)?.toInt() ?? 0,
+      total: (json['total'] as num?)?.toInt() ?? 7,
+    );
+  }
+
+  final int completed;
+  final int total;
+}
+
+class AiAuthoringFieldChange {
+  const AiAuthoringFieldChange({
+    required this.target,
+    required this.before,
+    required this.after,
+  });
+
+  factory AiAuthoringFieldChange.fromJson(Map<String, dynamic> json) {
+    return AiAuthoringFieldChange(
+      target: json['target'] as String? ?? '',
+      before: json['before'] as String? ?? '',
+      after: json['after'] as String? ?? '',
+    );
+  }
+
+  final String target;
+  final String before;
+  final String after;
+}
+
+class AiAuthoringProposalDiff {
+  const AiAuthoringProposalDiff({
+    required this.changedTargets,
+    this.fieldChanges = const [],
+    this.componentAdded = const [],
+    this.componentRemoved = const [],
+    this.componentUpdated = const [],
+    this.stepAdded = const [],
+    this.stepRemoved = const [],
+    this.stepUpdated = const [],
+    this.stepsReordered = false,
+  });
+
+  factory AiAuthoringProposalDiff.fromJson(Map<String, dynamic> json) {
+    final componentJson = json['componentChanges'];
+    final stepJson = json['stepChanges'];
+    return AiAuthoringProposalDiff(
+      changedTargets: (json['changedTargets'] as List?)
+              ?.whereType<String>()
+              .toList(growable: false) ??
+          const [],
+      fieldChanges: _mapJsonList(
+        json['fieldChanges'],
+        AiAuthoringFieldChange.fromJson,
+      ),
+      componentAdded: componentJson is Map
+          ? (componentJson['added'] as List?)?.whereType<String>().toList() ??
+              const []
+          : const [],
+      componentRemoved: componentJson is Map
+          ? (componentJson['removed'] as List?)?.whereType<String>().toList() ??
+              const []
+          : const [],
+      componentUpdated: componentJson is Map
+          ? (componentJson['updated'] as List?)?.whereType<String>().toList() ??
+              const []
+          : const [],
+      stepAdded: stepJson is Map
+          ? (stepJson['added'] as List?)?.whereType<String>().toList() ??
+              const []
+          : const [],
+      stepRemoved: stepJson is Map
+          ? (stepJson['removed'] as List?)?.whereType<String>().toList() ??
+              const []
+          : const [],
+      stepUpdated: stepJson is Map
+          ? (stepJson['updated'] as List?)?.whereType<String>().toList() ??
+              const []
+          : const [],
+      stepsReordered: stepJson is Map && stepJson['reordered'] == true,
+    );
+  }
+
+  final List<String> changedTargets;
+  final List<AiAuthoringFieldChange> fieldChanges;
+  final List<String> componentAdded;
+  final List<String> componentRemoved;
+  final List<String> componentUpdated;
+  final List<String> stepAdded;
+  final List<String> stepRemoved;
+  final List<String> stepUpdated;
+  final bool stepsReordered;
+}
+
 List<T> _mapJsonList<T>(
   dynamic value,
   T Function(Map<String, dynamic> json) fromJson,
@@ -379,6 +1180,31 @@ class AiContentBlock {
     this.guideImageUrl,
     this.progressPercent,
     this.completedSteps,
+    this.authoringStatus,
+    this.authoringSummary,
+    this.authoringKnownFacts = const [],
+    this.authoringNextQuestion,
+    this.authoringRemainingTopics,
+    this.authoringAssumptions = const [],
+    this.authoringWarnings = const [],
+    this.authoringProposalProject,
+    this.authoringProposalCategoryDisplayName,
+    this.authoringProposalComponents = const [],
+    this.authoringProposalSteps = const [],
+    this.authoringProposalAssumptions = const [],
+    this.authoringProposalWarnings = const [],
+    this.authoringProposalSafetyConsiderations = const [],
+    this.authoringProposalBaseUpdatedAt,
+    this.authoringProposalClarificationMessageId,
+    this.authoringProposalId,
+    this.authoringProposalVersion,
+    this.authoringReviewState,
+    this.authoringProposalDiff,
+    this.authoringDiscussionTarget,
+    this.authoringDiscussionProposalId,
+    this.authoringDiscussionReviewStateId,
+    this.authoringSession,
+    this.authoringTurn,
   });
 
   factory AiContentBlock.fromJson(Map<String, dynamic> json) {
@@ -534,6 +1360,98 @@ class AiContentBlock {
                   .where((item) => item.url.isNotEmpty)
                   .toList(growable: false),
         );
+      case 'project_authoring_clarification':
+        final nextQuestionJson = json['nextQuestion'];
+        return AiContentBlock(
+          type: type,
+          authoringStatus: json['status'] as String?,
+          authoringSummary: json['summary'] as String?,
+          authoringKnownFacts:
+              _mapJsonList(json['knownFacts'], AiAuthoringKnownFact.fromJson)
+                  .where((fact) => fact.label.isNotEmpty && fact.value.isNotEmpty)
+                  .toList(growable: false),
+          authoringNextQuestion: nextQuestionJson is Map
+              ? AiAuthoringQuestion.fromJson(
+                  Map<String, dynamic>.from(nextQuestionJson),
+                )
+              : null,
+          authoringRemainingTopics: (json['remainingTopics'] as num?)?.toInt(),
+          authoringAssumptions: (json['assumptions'] as List?)
+                  ?.whereType<String>()
+                  .toList(growable: false) ??
+              const [],
+          authoringWarnings: (json['warnings'] as List?)
+                  ?.whereType<String>()
+                  .toList(growable: false) ??
+              const [],
+        );
+      case 'project_authoring_proposal':
+        final projectJson = json['project'];
+        return AiContentBlock(
+          type: type,
+          authoringProposalId: json['proposalId'] as String?,
+          authoringProposalVersion: (json['version'] as num?)?.toInt() ?? 1,
+          authoringProposalCategoryDisplayName:
+              json['categoryDisplayName'] as String?,
+          authoringProposalProject: projectJson is Map
+              ? AiAuthoringProposalProject.fromJson(
+                  Map<String, dynamic>.from(projectJson),
+                )
+              : null,
+          authoringProposalComponents: _mapJsonList(
+            json['requiredComponents'],
+            AiAuthoringProposalComponent.fromJson,
+          ).where((component) => component.componentName.isNotEmpty).toList(
+                growable: false,
+              ),
+          authoringProposalSteps: _mapJsonList(
+            json['steps'],
+            AiAuthoringProposalStep.fromJson,
+          ).where((step) => step.title.isNotEmpty).toList(growable: false),
+          authoringProposalAssumptions: (json['assumptions'] as List?)
+                  ?.whereType<String>()
+                  .toList(growable: false) ??
+              const [],
+          authoringProposalWarnings: (json['warnings'] as List?)
+                  ?.whereType<String>()
+                  .toList(growable: false) ??
+              const [],
+          authoringProposalSafetyConsiderations:
+              (json['safetyConsiderations'] as List?)
+                      ?.whereType<String>()
+                      .toList(growable: false) ??
+                  const [],
+          authoringProposalBaseUpdatedAt: json['baseUpdatedAt'] as String?,
+          authoringProposalClarificationMessageId:
+              json['clarificationMessageId'] as String?,
+        );
+      case 'project_authoring_review_state':
+        return AiContentBlock(
+          type: type,
+          authoringReviewState: AiAuthoringReviewState.fromJson(json),
+        );
+      case 'project_authoring_proposal_diff':
+        return AiContentBlock(
+          type: type,
+          authoringProposalDiff: AiAuthoringProposalDiff.fromJson(json),
+        );
+      case 'project_authoring_discussion_context':
+        return AiContentBlock(
+          type: type,
+          authoringDiscussionTarget: json['target'] as String?,
+          authoringDiscussionProposalId: json['proposalId'] as String?,
+          authoringDiscussionReviewStateId: json['reviewStateId'] as String?,
+        );
+      case 'project_authoring_session':
+        return AiContentBlock(
+          type: type,
+          authoringSession: AiAuthoringSession.fromJson(json),
+        );
+      case 'project_authoring_turn':
+        return AiContentBlock(
+          type: type,
+          authoringTurn: AiAuthoringTurn.fromJson(json),
+        );
       default:
         return AiContentBlock(type: type.isEmpty ? 'unknown' : type);
     }
@@ -578,6 +1496,31 @@ class AiContentBlock {
   final String? guideImageUrl;
   final int? progressPercent;
   final int? completedSteps;
+  final String? authoringStatus;
+  final String? authoringSummary;
+  final List<AiAuthoringKnownFact> authoringKnownFacts;
+  final AiAuthoringQuestion? authoringNextQuestion;
+  final int? authoringRemainingTopics;
+  final List<String> authoringAssumptions;
+  final List<String> authoringWarnings;
+  final AiAuthoringProposalProject? authoringProposalProject;
+  final String? authoringProposalCategoryDisplayName;
+  final List<AiAuthoringProposalComponent> authoringProposalComponents;
+  final List<AiAuthoringProposalStep> authoringProposalSteps;
+  final List<String> authoringProposalAssumptions;
+  final List<String> authoringProposalWarnings;
+  final List<String> authoringProposalSafetyConsiderations;
+  final String? authoringProposalBaseUpdatedAt;
+  final String? authoringProposalClarificationMessageId;
+  final String? authoringProposalId;
+  final int? authoringProposalVersion;
+  final AiAuthoringReviewState? authoringReviewState;
+  final AiAuthoringProposalDiff? authoringProposalDiff;
+  final String? authoringDiscussionTarget;
+  final String? authoringDiscussionProposalId;
+  final String? authoringDiscussionReviewStateId;
+  final AiAuthoringSession? authoringSession;
+  final AiAuthoringTurn? authoringTurn;
 }
 
 enum AiConversationStatus {
@@ -634,6 +1577,7 @@ class AiMessageItem {
     required this.contentText,
     required this.contentBlocks,
     required this.createdAt,
+    this.clientMessageId,
   });
 
   factory AiMessageItem.fromJson(Map<String, dynamic> json) {
@@ -653,6 +1597,7 @@ class AiMessageItem {
           : const [],
       createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+      clientMessageId: json['clientMessageId'] as String?,
     );
   }
 
@@ -662,6 +1607,7 @@ class AiMessageItem {
   final String? contentText;
   final List<AiContentBlock> contentBlocks;
   final DateTime createdAt;
+  final String? clientMessageId;
 }
 
 class AiTurnResponse {
@@ -671,11 +1617,13 @@ class AiTurnResponse {
     required this.assistantMessageId,
     required this.contentBlocks,
     required this.scopeClassification,
+    this.authoringSnapshot,
   });
 
   factory AiTurnResponse.fromJson(Map<String, dynamic> json) {
     final blocksJson = json['contentBlocks'];
     final meta = json['meta'];
+    final snapshotJson = json['authoringSnapshot'];
     return AiTurnResponse(
       conversationId: json['conversationId'] as String? ?? '',
       userMessageId: json['userMessageId'] as String? ?? '',
@@ -691,6 +1639,11 @@ class AiTurnResponse {
                     ))
                 .toList(growable: false)
           : const [],
+      authoringSnapshot: snapshotJson is Map
+          ? AiAuthoringSnapshot.fromJson(
+              Map<String, dynamic>.from(snapshotJson),
+            )
+          : null,
     );
   }
 
@@ -699,6 +1652,7 @@ class AiTurnResponse {
   final String? assistantMessageId;
   final List<AiContentBlock> contentBlocks;
   final String scopeClassification;
+  final AiAuthoringSnapshot? authoringSnapshot;
 }
 
 class AiConversationMessagesPage {

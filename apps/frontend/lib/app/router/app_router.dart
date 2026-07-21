@@ -23,6 +23,7 @@ import '../../features/deliveries/presentation/pages/learner_delivery_tracking_p
 import '../../features/driver_portal/presentation/pages/driver_delivery_detail_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_authoring_pages.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
 import '../../features/learning_hub/domain/models/project_build.dart';
@@ -165,6 +166,8 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   }
 
   if (path == '/learning/add-draft' ||
+      path == '/learning/create-project' ||
+      path.startsWith('/learning/authoring/') ||
       path == '/learning/submissions' ||
       path.startsWith('/learning/submissions/') ||
       (path.startsWith('/learning/') && path.endsWith('/build')) ||
@@ -609,12 +612,32 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AuthCheckingPage(),
       ),
       GoRoute(
+        path: '/learning/create-project',
+        builder: (context, state) => const LearningProjectCreateChoicePage(),
+      ),
+      GoRoute(
+        path: '/learning/authoring/new',
+        builder: (context, state) => const LearningProjectAiStarterPage(),
+      ),
+      GoRoute(
         path: '/learning/add-draft',
         builder: (context, state) => const LearningAddDraftPage(),
       ),
       GoRoute(
         path: '/learning/submissions',
         builder: (context, state) => const LearningProjectSubmissionsPage(),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id/author/assistant',
+        builder: (context, state) => LearningProjectAuthoringAssistantPage(
+          projectId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id/author',
+        builder: (context, state) => LearningProjectAuthoringWorkspacePage(
+          projectId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/learning/submissions/:id/edit',
