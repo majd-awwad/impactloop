@@ -48,7 +48,7 @@ import {
   touchConversationActivity,
 } from './ai.repository.js';
 import { getAiChatProvider } from './providers/ai-chat-provider.factory.js';
-import type { AiLocale, AiTurnResponse } from './ai.types.js';
+import type { AiLocale, AiTurnResponse, BoundedHistoryMessage } from './ai.types.js';
 
 const textBlock = (
   text: string,
@@ -501,3 +501,129 @@ export const processGeneralLearningTurn = async (input: {
 };
 
 export const buildMessagePreviewFromBlocks = deriveConversationPreview;
+
+export const MANUAL_DRAFT_COPILOT_POLICY_VERSION = 'MANUAL_DRAFT_COPILOT_V1';
+
+const MANUAL_DRAFT_REFUSAL_COPY = {
+  en: 'I can help you document and improve this learning project, but I cannot answer unrelated questions here.',
+  ar: 'يمكنني مساعدتك في توثيق مشروع التعلّم وتحسينه، لكن لا أستطيع الإجابة عن أسئلة غير مرتبطة هنا.',
+} as const;
+
+const MANUAL_DRAFT_COPILOT_INSTRUCTIONS = [
+  'You are the ImpactLoop manual project writing assistant.',
+  'The learner is documenting a learning project they already built or substantially planned on a manual draft form.',
+  'Your job is to help them write clear project content through conversation only.',
+  'You must never claim the learner used, tested, built, or completed anything they did not mention.',
+  'When information is missing or uncertain, ask focused follow-up questions instead of inventing facts.',
+  'Ask one or a small group of closely related questions at a time, not a long questionnaire.',
+  'When suggesting optional improvements, label them clearly as "Optional suggestion" or "Confirm whether you used this".',
+  'Do not silently mix optional future improvements into factual descriptions of what was already built.',
+  'Use separate sections with headings when helpful:',
+  '### Suggested title',
+  '### Suggested short description',
+  '### Suggested full description',
+  '### Suggested components',
+  '### Suggested steps',
+  '### Suggested difficulty',
+  '### Suggested duration',
+  '### Missing information',
+  'When reviewing the draft, identify missing required fields, unclear text, inconsistent difficulty/duration, missing image before submission, and steps referencing unlisted components.',
+  'Explain that a project image is required before submission and that submission goes to admin moderation.',
+  'Stay within learning-project documentation scope. Refuse unrelated topics such as weather, news, sports, recipes, or poetry.',
+  'Match the learner language.',
+  'Return strict JSON only with shape: {"blocks":[{"type":"text","text":"...","purpose":"answer|refusal|clarification|safety"}]}',
+].join('\n');
+
+const buildManualDraftCopilotUserMessage = (input: {
+  draftContext: Record<string, unknown>;
+  text: string;
+}) =>
+  [
+    '[MANUAL_DRAFT_WRITING_ASSISTANT]',
+    MANUAL_DRAFT_COPILOT_INSTRUCTIONS,
+    'Current manual draft snapshot (read-only context; fields may be empty):',
+    JSON.stringify(input.draftContext),
+    `Latest learner message: ${JSON.stringify(input.text)}`,
+  ].join('\n\n');
+
+export type ManualDraftCopilotResponse = {
+  locale: AiLocale;
+  contentBlocks: AiContentBlock[];
+  meta: {
+    provider: string;
+    model: string | null;
+    policyVersion: string;
+    scopeClassification: AiScopeClassification;
+    latencyMs: number | null;
+    usage: {
+      inputTokens: number | null;
+      outputTokens: number | null;
+    };
+  };
+};
+
+export const processManualDraftCopilotTurn = async (input: {
+  text: string;
+  locale: AiLocale;
+  draftContext: Record<string, unknown>;
+  history: BoundedHistoryMessage[];
+}): Promise<ManualDraftCopilotResponse> => {
+  const responseLocale = detectResponseLocale(input.text, input.locale);
+  const deterministic = classifyScopeDeterministic(input.text);
+
+  let blocks: AiContentBlock[] = [];
+  let scopeClassification = deterministic.classification;
+  let providerName = 'system';
+  let model: string | null = null;
+  let latencyMs: number | null = null;
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
+
+  if (deterministic.classification === 'OUT_OF_SCOPE') {
+    blocks = [textBlock(MANUAL_DRAFT_REFUSAL_COPY[responseLocale], 'refusal')];
+    scopeClassification = 'OUT_OF_SCOPE';
+  } else if (deterministic.classification === 'DANGEROUS_REQUEST') {
+    blocks = [textBlock(DANGEROUS_SAFETY_COPY[responseLocale], 'safety')];
+    scopeClassification = 'DANGEROUS_REQUEST';
+  } else {
+    assertProviderOperational(responseLocale);
+    const provider = getAiChatProvider();
+    const answer = await provider.generateGeneralLearningAnswer({
+      locale: responseLocale,
+      userMessage: buildManualDraftCopilotUserMessage({
+        draftContext: input.draftContext,
+        text: input.text,
+      }),
+      history: input.history.slice(-12),
+      scopeClassification:
+        deterministic.classification === 'MIXED'
+          ? deterministic.classification
+          : 'DOMAIN_KNOWLEDGE',
+    });
+
+    blocks = answer.data.blocks;
+    providerName = answer.provider;
+    model = answer.model;
+    latencyMs = answer.latencyMs;
+    inputTokens = answer.usage.inputTokens;
+    outputTokens = answer.usage.outputTokens;
+  }
+
+  const validatedBlocks = aiContentBlocksSchema.parse(blocks);
+
+  return {
+    locale: responseLocale,
+    contentBlocks: validatedBlocks,
+    meta: {
+      provider: providerName,
+      model,
+      policyVersion: MANUAL_DRAFT_COPILOT_POLICY_VERSION,
+      scopeClassification,
+      latencyMs,
+      usage: {
+        inputTokens,
+        outputTokens,
+      },
+    },
+  };
+};

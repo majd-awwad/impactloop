@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:frontend/app/widgets/entry_nav_bar.dart';
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/ai/application/ai_chat_controller.dart';
+import 'package:frontend/features/ai/data/ai_api.dart';
 import 'package:frontend/features/ai/data/ai_repository.dart';
 import 'package:frontend/features/ai/domain/ai_models.dart';
 import 'package:frontend/features/ai/domain/authoring_session_models.dart';
@@ -17,6 +20,7 @@ import 'package:frontend/features/learning_hub/domain/learning_project_repositor
 import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
+import 'package:frontend/features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import 'package:frontend/features/learning_hub/presentation/pages/learning_project_authoring_pages.dart';
 import 'package:frontend/features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
 import 'package:frontend/shared/utils/content_text_direction.dart';
@@ -35,6 +39,7 @@ class _AuthoringTestRepository implements LearningProjectRepository {
   final List<MaterialCategory> categories;
   LearningProjectSubmission? draftSubmission;
   int createCalls = 0;
+  int updateCalls = 0;
   int reopenCalls = 0;
   String? lastIdempotencyKey;
   String? lastIdeaText;
@@ -42,6 +47,8 @@ class _AuthoringTestRepository implements LearningProjectRepository {
   String? lastDifficulty;
   String? lastLocale;
   String? lastReopenProjectId;
+  String? lastUpdateProjectId;
+  Map<String, dynamic>? lastUpdatePayload;
 
   Future<LearningProjectAuthoringSession> Function({
     required String ideaText,
@@ -126,6 +133,21 @@ class _AuthoringTestRepository implements LearningProjectRepository {
       throw const ApiException(message: 'Not found', code: 'NOT_FOUND');
     }
     return submission;
+  }
+
+  @override
+  Future<LearningProjectSubmission> updateMyLearningProjectSubmission(
+    String id,
+    Map<String, dynamic> payload,
+  ) async {
+    updateCalls += 1;
+    lastUpdateProjectId = id;
+    lastUpdatePayload = payload;
+    draftSubmission = _draftSubmission(
+      id: id,
+      title: payload['title'] as String? ?? 'Saved draft',
+    );
+    return draftSubmission!;
   }
 
   @override
@@ -366,6 +388,7 @@ Widget _wrap(
   Widget child, {
   required LearningProjectRepository repository,
   AiRepository? aiRepository,
+  AiApi? aiApi,
   Locale locale = const Locale('en'),
   String initialLocation = learningProjectCreateRoute,
 }) {
@@ -378,12 +401,17 @@ Widget _wrap(
       ),
       GoRoute(
         path: '/learning/add-draft',
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: Text('Manual draft page'))),
+        builder: (context, state) => const LearningAddDraftPage(),
       ),
       GoRoute(
         path: learningProjectAiStarterRoute,
         builder: (context, state) => const LearningProjectAiStarterPage(),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id',
+        builder: (context, state) => LearningProjectSubmissionDetailPage(
+          submissionId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/learning/submissions/:id/author',
@@ -406,6 +434,7 @@ Widget _wrap(
       authControllerProvider.overrideWith(_LearnerAuthController.new),
       if (aiRepository != null)
         aiRepositoryProvider.overrideWithValue(aiRepository),
+      if (aiApi != null) aiApiProvider.overrideWithValue(aiApi),
     ],
     child: MaterialApp.router(
       locale: locale,
@@ -480,7 +509,8 @@ void main() {
 
     await tester.tap(find.text('Create manually'));
     await tester.pumpAndSettle();
-    expect(find.text('Manual draft page'), findsOneWidget);
+    while (tester.takeException() != null) {}
+    expect(find.text('Add project draft'), findsOneWidget);
   });
 
   testWidgets('AI choice opens starter form', (tester) async {
@@ -1133,6 +1163,459 @@ void main() {
     expect(find.text('Continue with AI'), findsOneWidget);
     expect(find.text('Edit'), findsOneWidget);
   });
+
+  group('manual draft copilot', () {
+    const projectCategory = MaterialCategory(
+      id: 'cat-electronics',
+      nameEn: 'Electronics',
+      nameAr: 'إلكترونيات',
+      categoryType: 'PROJECT',
+    );
+
+    Future<void> settlePage(WidgetTester tester) async {
+      await tester.pumpAndSettle();
+      while (tester.takeException() != null) {}
+    }
+
+    Future<void> pumpAddDraftPage(
+      WidgetTester tester, {
+      required _CopilotTestAiApi aiApi,
+    }) async {
+      tester.view.resetPhysicalSize();
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox.shrink(),
+          repository: _AuthoringTestRepository(categories: const [projectCategory]),
+          aiApi: aiApi,
+          initialLocation: '/learning/add-draft',
+        ),
+      );
+      await settlePage(tester);
+    }
+
+    Future<void> pumpAddDraftAtSize(
+      WidgetTester tester, {
+      required _CopilotTestAiApi aiApi,
+      required Size size,
+    }) async {
+      tester.view.resetPhysicalSize();
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox.shrink(),
+          repository: _AuthoringTestRepository(categories: const [projectCategory]),
+          aiApi: aiApi,
+          initialLocation: '/learning/add-draft',
+        ),
+      );
+      await settlePage(tester);
+    }
+
+    Finder desktopCopilotPanelFinder() {
+      return find.byWidgetPredicate(
+        (widget) => widget is Material && widget.elevation == 8,
+      );
+    }
+
+    Rect desktopCopilotPanelRect(WidgetTester tester) {
+      return tester.getRect(desktopCopilotPanelFinder());
+    }
+
+    const quickActionLabels = <String>[
+      'Help me describe my project',
+      'Suggest a project title',
+      'Write a short description',
+      'Improve my full description',
+      'Organize my components',
+      'Turn my notes into steps',
+      'Review my current draft',
+      'What information is missing?',
+    ];
+
+    Future<void> openCopilot(WidgetTester tester) async {
+      final launcher = find.bySemanticsLabel('AI writing assistant');
+      await tester.ensureVisible(launcher);
+      await tester.tap(launcher);
+      await settlePage(tester);
+    }
+
+    testWidgets('shows floating assistant button on manual draft page', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      expect(find.bySemanticsLabel('AI writing assistant'), findsOneWidget);
+      expect(aiApi.sendCalls, 0);
+    });
+
+    testWidgets('quick action sends draft context without mutating form', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      final titleField = find.widgetWithText(TextFormField, 'Project title');
+      final titleBefore =
+          tester.widget<TextFormField>(titleField).controller!.text;
+
+      await openCopilot(tester);
+      expect(find.text('Project writing assistant'), findsOneWidget);
+
+      final quickAction = find.byType(ActionChip).first;
+      expect(quickAction, findsOneWidget);
+      await tester.tap(quickAction);
+      await tester.pump();
+      await settlePage(tester);
+
+      expect(aiApi.sendCalls, 1);
+      expect(aiApi.lastDraftContext?['title'], titleBefore);
+      expect(
+        tester.widget<TextFormField>(titleField).controller!.text,
+        titleBefore,
+      );
+    });
+
+    testWidgets('second contextual message preserves history', (tester) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      await openCopilot(tester);
+
+      final composerField = find.byType(TextField).last;
+      await tester.ensureVisible(composerField);
+      await tester.enterText(
+        composerField,
+        'I built an Arduino LDR lamp',
+      );
+      final sendButton = find.byIcon(Icons.send_rounded).last;
+      await tester.ensureVisible(sendButton);
+      await tester.tap(sendButton);
+      await tester.pump();
+      await settlePage(tester);
+
+      await tester.enterText(composerField, 'Make it shorter');
+      await tester.ensureVisible(sendButton);
+      await tester.tap(sendButton);
+      await tester.pump();
+      await settlePage(tester);
+
+      expect(aiApi.sendCalls, 2);
+      expect(aiApi.lastHistory?.length, 2);
+      expect(aiApi.lastHistory?.first['text'], contains('Arduino'));
+      expect(aiApi.lastText, 'Make it shorter');
+    });
+
+    testWidgets('copy action does not modify form fields', (tester) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData' ||
+            call.method == 'Clipboard.getData') {
+          return null;
+        }
+        return null;
+      });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+
+      final aiApi = _CopilotTestAiApi(
+        responseText: '### Suggested title\nSmart LDR lamp',
+      );
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      final titleField = find.widgetWithText(TextFormField, 'Project title');
+      await tester.enterText(titleField, 'Original title');
+      await openCopilot(tester);
+      expect(find.text('Project writing assistant'), findsOneWidget);
+      final quickAction = find.byType(ActionChip).first;
+      expect(quickAction, findsOneWidget);
+      await tester.tap(quickAction);
+      await settlePage(tester);
+
+      await tester.tap(find.text('Copy').first);
+      await settlePage(tester);
+
+      expect(
+        tester.widget<TextFormField>(titleField).controller!.text,
+        'Original title',
+      );
+      expect(find.text('Copied'), findsOneWidget);
+    });
+
+    testWidgets('shows image reminder in copilot before draft is saved', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      await openCopilot(tester);
+
+      expect(
+        find.textContaining('Save the draft first'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('You can add it after saving the draft'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('image reminder is not part of assistant response text', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi(
+        responseText: '### Suggested title\nSmart LDR lamp',
+      );
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      await openCopilot(tester);
+      expect(find.text('Project writing assistant'), findsOneWidget);
+      final quickAction = find.byType(ActionChip).first;
+      expect(quickAction, findsOneWidget);
+      await tester.tap(quickAction);
+      await settlePage(tester);
+
+      expect(find.text('Smart LDR lamp'), findsOneWidget);
+      expect(find.textContaining('Save the draft first'), findsOneWidget);
+      expect(
+        find.textContaining('Smart LDR lamp Save the draft first'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('opening assistant does not call provider', (tester) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      await openCopilot(tester);
+
+      expect(find.text('Project writing assistant'), findsOneWidget);
+      expect(aiApi.sendCalls, 0);
+    });
+
+    testWidgets('desktop panel sits below navbar and inside viewport', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftAtSize(
+        tester,
+        aiApi: aiApi,
+        size: const Size(1650, 900),
+      );
+      await openCopilot(tester);
+
+      final navBottom = tester.getRect(find.byType(EntryNavBar)).bottom;
+      final panel = desktopCopilotPanelRect(tester);
+      final viewport = tester.view.physicalSize;
+
+      expect(panel.top, greaterThanOrEqualTo(navBottom));
+      expect(panel.width, greaterThanOrEqualTo(460));
+      expect(panel.width, lessThanOrEqualTo(500));
+      expect(panel.right, lessThanOrEqualTo(viewport.width));
+      expect(panel.bottom, lessThanOrEqualTo(viewport.height));
+    });
+
+    testWidgets('quick actions wrap with fully visible labels', (tester) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftAtSize(
+        tester,
+        aiApi: aiApi,
+        size: const Size(1280, 900),
+      );
+      await openCopilot(tester);
+
+      for (final label in quickActionLabels) {
+        expect(find.text(label), findsOneWidget);
+      }
+
+      final chipTops = <double>{};
+      for (var index = 0; index < quickActionLabels.length; index++) {
+        chipTops.add(tester.getRect(find.byType(ActionChip).at(index)).top);
+      }
+      expect(chipTops.length, greaterThan(1));
+
+      expect(find.byIcon(Icons.send_rounded), findsOneWidget);
+      expect(find.byType(Scrollable), findsWidgets);
+    });
+
+    testWidgets('closing copilot restores the unchanged add-draft page', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftPage(tester, aiApi: aiApi);
+
+      await openCopilot(tester);
+      expect(find.text('Project writing assistant'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await settlePage(tester);
+
+      expect(find.text('Project writing assistant'), findsNothing);
+      expect(find.text('Save draft'), findsOneWidget);
+      expect(find.bySemanticsLabel('AI writing assistant'), findsOneWidget);
+    });
+
+    testWidgets('medium desktop panel fits without horizontal overflow', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftAtSize(
+        tester,
+        aiApi: aiApi,
+        size: const Size(1200, 900),
+      );
+      await openCopilot(tester);
+
+      final panel = desktopCopilotPanelRect(tester);
+      expect(panel.width, greaterThanOrEqualTo(390));
+      expect(panel.width, lessThanOrEqualTo(440));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('narrow layout uses full-height sheet without desktop offsets', (
+      tester,
+    ) async {
+      final aiApi = _CopilotTestAiApi();
+      await pumpAddDraftAtSize(
+        tester,
+        aiApi: aiApi,
+        size: const Size(800, 900),
+      );
+      await openCopilot(tester);
+
+      expect(find.text('Project writing assistant'), findsOneWidget);
+      expect(desktopCopilotPanelFinder(), findsNothing);
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('manual draft save lifecycle', () {
+    const projectCategory = MaterialCategory(
+      id: 'cat-electronics',
+      nameEn: 'Electronics',
+      nameAr: 'إلكترونيات',
+      categoryType: 'PROJECT',
+    );
+
+    Future<void> settlePage(WidgetTester tester) async {
+      await tester.pumpAndSettle();
+      while (tester.takeException() != null) {}
+    }
+
+    Future<_AuthoringTestRepository> pumpAddDraftPage(
+      WidgetTester tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+
+      final repository = _AuthoringTestRepository(
+        categories: const [projectCategory],
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox.shrink(),
+          repository: repository,
+          initialLocation: '/learning/add-draft',
+        ),
+      );
+      await settlePage(tester);
+      return repository;
+    }
+
+    Future<void> fillMinimumDraftFields(WidgetTester tester) async {
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Project title'),
+        'Arduino night lamp',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Short description'),
+        'A simple LDR night lamp for learners.',
+      );
+      await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+      await settlePage(tester);
+      await tester.tap(find.text('Electronics').last);
+      await settlePage(tester);
+    }
+
+    Future<void> tapSaveDraft(
+      WidgetTester tester, {
+      bool settleAfterTap = true,
+    }) async {
+      final saveButton = find.text('Save draft');
+      await tester.scrollUntilVisible(
+        saveButton,
+        120,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(saveButton);
+      await tester.tap(saveButton);
+      await tester.pump();
+      if (settleAfterTap) {
+        await settlePage(tester);
+      }
+    }
+
+    testWidgets('primary action is Save draft', (tester) async {
+      await pumpAddDraftPage(tester);
+
+      expect(find.text('Save draft'), findsOneWidget);
+      expect(find.text('Submit for review'), findsNothing);
+      expect(
+        find.textContaining(
+          'Saving creates a private draft. You can add images and submit it for admin review afterward.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('save creates one canonical draft without requiring an image', (
+      tester,
+    ) async {
+      final repository = await pumpAddDraftPage(tester);
+      await fillMinimumDraftFields(tester);
+
+      await tapSaveDraft(tester);
+
+      expect(repository.createCalls, 1);
+      expect(repository.updateCalls, 1);
+      expect(repository.lastUpdateProjectId, 'project-1');
+      expect(repository.lastUpdatePayload?['title'], 'Arduino night lamp');
+      expect(
+        find.textContaining(
+          'Draft saved. You can add images and submit it for review when it is ready.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(LearningProjectSubmissionDetailPage), findsOneWidget);
+    });
+  });
 }
 
 class _DiscussionRecordingAiRepository extends _RecordingAiRepository {
@@ -1235,4 +1718,38 @@ class _ReviewRecordingAiRepository extends _RecordingAiRepository {
       scopeClassification: 'DOMAIN_KNOWLEDGE',
     );
   }
+}
+
+class _CopilotTestAiApi implements AiApi {
+  _CopilotTestAiApi({this.responseText = '### Suggested title\nSmart night lamp'});
+
+  final String responseText;
+  int sendCalls = 0;
+  Map<String, dynamic>? lastDraftContext;
+  List<Map<String, String>>? lastHistory;
+  String? lastText;
+
+  @override
+  Future<ManualDraftCopilotResponse> sendManualDraftCopilotMessage({
+    required String text,
+    required String locale,
+    required String clientMessageId,
+    required Map<String, dynamic> draftContext,
+    required List<Map<String, String>> history,
+  }) async {
+    sendCalls += 1;
+    lastText = text;
+    lastDraftContext = draftContext;
+    lastHistory = history;
+    return ManualDraftCopilotResponse(
+      locale: locale,
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+      contentBlocks: [
+        AiContentBlock(type: 'text', text: responseText, purpose: 'answer'),
+      ],
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }

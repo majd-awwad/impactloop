@@ -27,6 +27,7 @@ import {
   cancelAiPendingAction,
   confirmAiPendingAction,
 } from './ai-action.service.js';
+import { processManualDraftCopilotTurn } from './ai-orchestrator.service.js';
 import {
   conversationIdParamSchema,
   authoringProposalIdParamSchema,
@@ -43,6 +44,7 @@ import {
   listAiMessagesQuerySchema,
   aiPendingActionIdParamSchema,
   sendAiMessageSchema,
+  manualDraftCopilotMessageSchema,
 } from './ai.validation.js';
 
 export const createAiConversationHandler = async (
@@ -326,6 +328,21 @@ export const getSequentialAuthoringStateHandler = async (
   );
 
   res.status(200).json(successResponse('Authoring state loaded.', data));
+};
+
+export const sendManualDraftCopilotMessageHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  const body = manualDraftCopilotMessageSchema.parse(req.body);
+  const data = await processManualDraftCopilotTurn({
+    text: body.text,
+    locale: body.locale,
+    draftContext: body.draftContext,
+    history: body.history,
+  });
+
+  res.status(200).json(successResponse('Manual draft copilot response ready.', data));
 };
 
 export {

@@ -48,6 +48,43 @@ export type CreateAiConversationInput = z.infer<
 >;
 export type SendAiMessageInput = z.infer<typeof sendAiMessageSchema>;
 
+const manualDraftCopilotComponentSchema = z.object({
+  name: z.string().trim().max(200),
+  quantity: z.string().trim().max(50).optional(),
+  unit: z.string().trim().max(50).optional(),
+  role: z.string().trim().max(50).optional(),
+});
+
+export const manualDraftCopilotContextSchema = z.object({
+  title: z.string().trim().max(500).optional(),
+  categoryLabel: z.string().trim().max(200).optional().nullable(),
+  difficulty: z.string().trim().max(50).optional().nullable(),
+  durationLabel: z.string().trim().max(50).optional().nullable(),
+  shortDescription: z.string().trim().max(500).optional(),
+  fullDescription: z.string().trim().max(12000).optional(),
+  components: z.array(manualDraftCopilotComponentSchema).max(50).optional(),
+  steps: z.array(z.string().trim().max(5000)).max(100).optional(),
+  links: z.array(z.string().trim().max(500)).max(20).optional(),
+  hasProjectImage: z.boolean().optional(),
+});
+
+const manualDraftCopilotHistorySchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  text: z.string().trim().min(1).max(8000),
+});
+
+export const manualDraftCopilotMessageSchema = z.object({
+  text: z.string().trim().min(1).max(4000),
+  locale: aiLocaleSchema,
+  clientMessageId: aiClientMessageIdSchema,
+  draftContext: manualDraftCopilotContextSchema,
+  history: z.array(manualDraftCopilotHistorySchema).max(24).default([]),
+});
+
+export type ManualDraftCopilotMessageInput = z.infer<
+  typeof manualDraftCopilotMessageSchema
+>;
+
 export const aiPendingActionIdParamSchema = z.object({
   pendingActionId: z.string().trim().min(1),
 });

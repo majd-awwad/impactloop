@@ -80,6 +80,28 @@ class AiApi {
     );
   }
 
+  Future<ManualDraftCopilotResponse> sendManualDraftCopilotMessage({
+    required String text,
+    required String locale,
+    required String clientMessageId,
+    required Map<String, dynamic> draftContext,
+    required List<Map<String, String>> history,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '/api/ai/v1/manual-draft/copilot',
+        data: {
+          'text': text,
+          'locale': locale,
+          'clientMessageId': clientMessageId,
+          'draftContext': draftContext,
+          'history': history,
+        },
+      ),
+      ManualDraftCopilotResponse.fromJson,
+    );
+  }
+
   Future<AiTurnResponse> startAuthoring({required String conversationId}) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
@@ -353,5 +375,52 @@ class AiApi {
         return AiContentBlock.fromJson(Map<String, dynamic>.from(blockJson));
       },
     );
+  }
+}
+
+class ManualDraftCopilotResponse {
+  const ManualDraftCopilotResponse({
+    required this.locale,
+    required this.contentBlocks,
+    required this.scopeClassification,
+  });
+
+  factory ManualDraftCopilotResponse.fromJson(Map<String, dynamic> json) {
+    final blocksJson = json['contentBlocks'];
+    final meta = json['meta'];
+    return ManualDraftCopilotResponse(
+      locale: json['locale'] as String? ?? 'en',
+      scopeClassification: meta is Map
+          ? meta['scopeClassification'] as String? ?? ''
+          : '',
+      contentBlocks: blocksJson is List
+          ? blocksJson
+                .whereType<Map>()
+                .map(
+                  (block) => AiContentBlock.fromJson(
+                    Map<String, dynamic>.from(block),
+                  ),
+                )
+                .toList(growable: false)
+          : const [],
+    );
+  }
+
+  final String locale;
+  final List<AiContentBlock> contentBlocks;
+  final String scopeClassification;
+
+  String get assistantText {
+    final buffer = StringBuffer();
+    for (final block in contentBlocks) {
+      if (block.type == 'text' && block.text?.trim().isNotEmpty == true) {
+        if (buffer.isNotEmpty) {
+          buffer.writeln();
+          buffer.writeln();
+        }
+        buffer.write(block.text!.trim());
+      }
+    }
+    return buffer.toString();
   }
 }

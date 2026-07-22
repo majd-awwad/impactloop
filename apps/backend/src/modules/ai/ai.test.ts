@@ -23,6 +23,7 @@ import {
   restoreGeneralLearningConversationForUser,
   sendGeneralLearningMessageForUser,
 } from './ai.service.js';
+import { processManualDraftCopilotTurn } from './ai-orchestrator.service.js';
 import { deleteAiDataForUsers } from './ai.repository.js';
 import {
   setAiChatProviderForTests,
@@ -43,6 +44,8 @@ const ids = {
 class CountingMockProvider extends MockAiChatProvider {
   answerCalls = 0;
   classifyCalls = 0;
+  lastAnswerInput: Parameters<MockAiChatProvider['generateGeneralLearningAnswer']>[0] | null =
+    null;
 
   override async classifyScope(input: Parameters<MockAiChatProvider['classifyScope']>[0]) {
     this.classifyCalls += 1;
@@ -53,6 +56,7 @@ class CountingMockProvider extends MockAiChatProvider {
     input: Parameters<MockAiChatProvider['generateGeneralLearningAnswer']>[0],
   ) {
     this.answerCalls += 1;
+    this.lastAnswerInput = input;
     return super.generateGeneralLearningAnswer(input);
   }
 }
@@ -757,6 +761,69 @@ describe('ai general learning conversations', () => {
         return true;
       },
     );
+  });
+});
+
+describe('manual draft copilot', () => {
+  test('applies manual writing instructions and draft context to provider input', async () => {
+    const provider = new CountingMockProvider();
+    setAiChatProviderForTests(provider);
+
+    const result = await processManualDraftCopilotTurn({
+      text: 'اقترح عنواناً مناسباً',
+      locale: 'ar',
+      draftContext: {
+        title: 'LDR night light',
+        shortDescription: '',
+        steps: ['Wire the sensor'],
+      },
+      history: [
+        { role: 'user', text: 'عملت مصباح LDR' },
+        { role: 'assistant', text: 'ما نوع لوحة Arduino؟' },
+      ],
+    });
+
+    assert.equal(provider.answerCalls, 1);
+    assert.ok(provider.lastAnswerInput);
+    assert.ok(
+      provider.lastAnswerInput.userMessage.includes('MANUAL_DRAFT_WRITING_ASSISTANT'),
+    );
+    assert.ok(provider.lastAnswerInput.userMessage.includes('LDR night light'));
+    assert.equal(provider.lastAnswerInput.locale, 'ar');
+    assert.equal(result.meta.policyVersion, 'MANUAL_DRAFT_COPILOT_V1');
+    assert.ok(result.contentBlocks.length > 0);
+  });
+
+  test('out-of-scope questions return scoped refusal without provider call', async () => {
+    const provider = new CountingMockProvider();
+    setAiChatProviderForTests(provider);
+
+    const result = await processManualDraftCopilotTurn({
+      text: 'What is the weather today?',
+      locale: 'en',
+      draftContext: { title: 'Test project' },
+      history: [],
+    });
+
+    assert.equal(provider.answerCalls, 0);
+    assert.equal(result.contentBlocks[0]?.purpose, 'refusal');
+    assert.match(result.contentBlocks[0]?.text ?? '', /learning project/i);
+  });
+
+  test('manual draft copilot performs no database writes', async () => {
+    const beforeMessages = await prisma.aiMessage.count();
+    const beforeSessions = await prisma.projectAuthoringSession.count();
+
+    setAiChatProviderForTests(new MockAiChatProvider());
+    await processManualDraftCopilotTurn({
+      text: 'Help me describe my Arduino project',
+      locale: 'en',
+      draftContext: {},
+      history: [],
+    });
+
+    assert.equal(await prisma.aiMessage.count(), beforeMessages);
+    assert.equal(await prisma.projectAuthoringSession.count(), beforeSessions);
   });
 });
 

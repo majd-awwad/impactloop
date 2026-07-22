@@ -27,6 +27,7 @@ import {
   getAuthoringSessionHandler,
   runAuthoringSessionActionHandler,
   sendAuthoringSessionMessageHandler,
+  sendManualDraftCopilotMessageHandler,
 } from './ai.controller.js';
 import {
   aiChatConversationCreateRateLimitMiddleware,
@@ -48,6 +49,7 @@ import {
   listAiMessagesQuerySchema,
   aiPendingActionIdParamSchema,
   sendAiMessageSchema,
+  manualDraftCopilotMessageSchema,
 } from './ai.validation.js';
 import {
   authoringSessionActionSchema,
@@ -107,6 +109,13 @@ aiRouter.post(
   validate(sessionIdParamSchema, 'params'),
   validate(authoringSessionActionSchema),
   asyncHandler(runAuthoringSessionActionHandler),
+);
+
+aiRouter.post(
+  '/manual-draft/copilot',
+  aiChatMessageRateLimitMiddleware,
+  validate(manualDraftCopilotMessageSchema),
+  asyncHandler(sendManualDraftCopilotMessageHandler),
 );
 
 aiRouter.post(
