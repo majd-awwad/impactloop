@@ -658,6 +658,113 @@ describe('ai general learning conversations', () => {
     assert.equal(messages.conversation.id, conversation.id);
   });
 
+  test('learner assistant alias conversation accepts messages via general learning turn', async () => {
+    const user = await createLearnerUser();
+    const conversation = await createGeneralLearningConversationForUser(
+      user.id,
+      { mode: 'LEARNER_ASSISTANT', locale: 'en' },
+    );
+
+    const turn = await sendGeneralLearningMessageForUser(
+      user.id,
+      conversation.id,
+      {
+        text: 'How is the weather today?',
+        locale: 'en',
+        clientMessageId: 'client-msg-owned-materials-001',
+      },
+    );
+
+    assert.equal(turn.mode, 'LEARNER_ASSISTANT');
+    assert.ok(turn.contentBlocks.length > 0);
+
+    const stored = await prisma.aiConversation.findUnique({
+      where: { id: conversation.id },
+    });
+    assert.equal(stored?.mode, 'GENERAL_LEARNING');
+  });
+
+  test('in-domain Arabic material query completes without stack overflow', async () => {
+    const user = await createLearnerUser();
+    const conversation = await createGeneralLearningConversationForUser(
+      user.id,
+      { mode: 'LEARNER_ASSISTANT', locale: 'ar' },
+    );
+
+    const turn = await sendGeneralLearningMessageForUser(
+      user.id,
+      conversation.id,
+      {
+        text: 'اعرضلي مواد Arduino المتوفرة.',
+        locale: 'ar',
+        clientMessageId: 'client-msg-arduino-materials-001',
+      },
+    );
+
+    assert.equal(turn.mode, 'LEARNER_ASSISTANT');
+    assert.ok(turn.contentBlocks.length > 0);
+    assert.equal(turn.meta.scopeClassification, 'DOMAIN_KNOWLEDGE');
+
+    const assistantMessages = await prisma.aiMessage.count({
+      where: { conversationId: conversation.id, role: 'ASSISTANT' },
+    });
+    assert.equal(assistantMessages, 1);
+  });
+
+  test('in-domain English material query completes without stack overflow', async () => {
+    const user = await createLearnerUser();
+    const conversation = await createGeneralLearningConversationForUser(
+      user.id,
+      { mode: 'LEARNER_ASSISTANT', locale: 'en' },
+    );
+
+    const turn = await sendGeneralLearningMessageForUser(
+      user.id,
+      conversation.id,
+      {
+        text: 'Show available Arduino materials.',
+        locale: 'en',
+        clientMessageId: 'client-msg-arduino-materials-en-001',
+      },
+    );
+
+    assert.equal(turn.mode, 'LEARNER_ASSISTANT');
+    assert.ok(turn.contentBlocks.length > 0);
+    assert.equal(turn.meta.scopeClassification, 'DOMAIN_KNOWLEDGE');
+
+    const assistantMessages = await prisma.aiMessage.count({
+      where: { conversationId: conversation.id, role: 'ASSISTANT' },
+    });
+    assert.equal(assistantMessages, 1);
+  });
+
+  test('out-of-scope English weather is refused without answer provider call', async () => {
+    const countingProvider = new CountingMockProvider();
+    setAiChatProviderForTests(countingProvider);
+
+    const user = await createLearnerUser();
+    const conversation = await createGeneralLearningConversationForUser(
+      user.id,
+      { mode: 'LEARNER_ASSISTANT', locale: 'en' },
+    );
+
+    const turn = await sendGeneralLearningMessageForUser(
+      user.id,
+      conversation.id,
+      {
+        text: 'How is the weather today?',
+        locale: 'en',
+        clientMessageId: 'client-msg-weather-en-refusal-001',
+      },
+    );
+
+    assert.equal(countingProvider.answerCalls, 0);
+    assert.equal(turn.meta.scopeClassification, 'OUT_OF_SCOPE');
+    assert.ok(turn.contentBlocks.length > 0);
+
+    setAiChatProviderForTests(new MockAiChatProvider());
+  });
+
   test('title is derived from first user message and stays stable', async () => {
     const user = await createLearnerUser();
     const conversation = await createGeneralLearningConversationForUser(

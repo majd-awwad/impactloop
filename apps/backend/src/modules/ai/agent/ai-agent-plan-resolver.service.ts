@@ -351,10 +351,7 @@ export const preserveDeterministicDomainLearning = (input: {
     };
   }
 
-  return preserveDeterministicDomainLearning({
-    userMessage: input.userMessage,
-    plan: input.plan,
-  });
+  return input.plan;
 };
 
 const reconcilePlannerWithPlatformIntent = (input: {
@@ -447,10 +444,7 @@ const reconcilePlannerWithPlatformIntent = (input: {
     input.plan.route !== 'GENERAL_LEARNING' &&
     input.plan.route !== 'CLARIFICATION'
   ) {
-    return preserveDeterministicDomainLearning({
-      userMessage: input.userMessage,
-      plan: input.plan,
-    });
+    return domainPreservedPlan;
   }
 
   if (detectBuildGapIntent(input.userMessage)) {
@@ -520,10 +514,7 @@ const reconcilePlannerWithPlatformIntent = (input: {
     return fallback;
   }
 
-  return preserveDeterministicDomainLearning({
-    userMessage: input.userMessage,
-    plan: input.plan,
-  });
+  return domainPreservedPlan;
 };
 
 export const resolveAgentExecutionPlan = async (input: {

@@ -1,4 +1,5 @@
 import { env } from '../../config/env.js';
+import type { AiConversationMode } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 
 import {
@@ -18,6 +19,7 @@ import {
   restoreConversationForUser,
 } from './ai.repository.js';
 import type {
+  AiAssistantConversationMode,
   AiConversationSummary,
   AiLocale,
   AiMessageDto,
@@ -27,9 +29,26 @@ import { parseStoredContentBlocks } from './ai-context-builder.js';
 import type { CreateAiConversationInput, SendAiMessageInput } from './ai.validation.js';
 import { assertMessageLength } from './ai.rate-limit.js';
 
+const PERSISTED_GENERAL_ASSISTANT_MODE: AiConversationMode = 'GENERAL_LEARNING';
+
+const normalizeAssistantConversationMode = (
+  mode: CreateAiConversationInput['mode'],
+): AiConversationMode => {
+  if (mode === 'LEARNER_ASSISTANT' || mode === 'GENERAL_LEARNING') {
+    return PERSISTED_GENERAL_ASSISTANT_MODE;
+  }
+
+  return mode as AiConversationMode;
+};
+
+const presentAssistantConversationMode = (
+  mode: AiConversationMode,
+): AiAssistantConversationMode =>
+  mode === 'GENERAL_LEARNING' ? 'LEARNER_ASSISTANT' : mode;
+
 const mapConversationSummary = (input: {
   id: string;
-  mode: AiConversationSummary['mode'];
+  mode: AiConversationMode;
   locale: string;
   title: string | null;
   status: AiConversationSummary['status'];
@@ -39,7 +58,7 @@ const mapConversationSummary = (input: {
   preview: string | null;
 }): AiConversationSummary => ({
   id: input.id,
-  mode: input.mode,
+  mode: presentAssistantConversationMode(input.mode),
   locale: input.locale,
   title: input.title,
   status: input.status,
@@ -85,7 +104,7 @@ export const createGeneralLearningConversationForUser = async (
 ) => {
   const conversation = await createConversation({
     userId,
-    mode: input.mode,
+    mode: normalizeAssistantConversationMode(input.mode),
     locale: input.locale,
     title: input.title ?? null,
   });

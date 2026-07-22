@@ -182,6 +182,19 @@ describe('ai http closure', () => {
     assert.equal(created.json.success, true);
     assert.equal(created.json.data?.mode, 'LEARNER_ASSISTANT');
 
+    const learnerAssistantAlias = await apiFetch('/api/ai/v1/conversations', {
+      method: 'POST',
+      token: learnerToken,
+      body: { mode: 'LEARNER_ASSISTANT', locale: 'en' },
+    });
+    assert.equal(learnerAssistantAlias.response.status, 201);
+    assert.equal(learnerAssistantAlias.json.data?.mode, 'LEARNER_ASSISTANT');
+    const aliasConversationId = learnerAssistantAlias.json.data?.id as string;
+    const storedAlias = await prisma.aiConversation.findUnique({
+      where: { id: aliasConversationId },
+    });
+    assert.equal(storedAlias?.mode, 'GENERAL_LEARNING');
+
     const futureMode = await apiFetch('/api/ai/v1/conversations', {
       method: 'POST',
       token: learnerToken,
@@ -271,7 +284,71 @@ describe('ai http closure', () => {
       JSON.stringify(blocks),
       /الطقس|مواضيع التعلم/,
     );
-    setAiChatProviderForTests(new MockAiChatProvider());
+    setAiChatProviderForTests(new MockAiChatProviderClass());
+  });
+
+  test('out-of-scope Arabic weather phrase كيف الجو اليوم returns refusal', async () => {
+    const provider = new CountingMockProvider();
+    setAiChatProviderForTests(provider);
+
+    const learner = await createLearnerUser('out-scope-ar-weather');
+    const token = tokenFor(learner.id, ['LEARNER']);
+    const created = await apiFetch('/api/ai/v1/conversations', {
+      method: 'POST',
+      token,
+      body: { mode: 'LEARNER_ASSISTANT', locale: 'ar' },
+    });
+    const conversationId = created.json.data?.id as string;
+
+    const sent = await apiFetch(
+      `/api/ai/v1/conversations/${conversationId}/messages`,
+      {
+        method: 'POST',
+        token,
+        body: {
+          text: 'كيف الجو اليوم؟',
+          locale: 'ar',
+          clientMessageId: clientId('weather-ar-exact-001'),
+        },
+      },
+    );
+
+    assert.equal(sent.response.status, 201);
+    assert.equal(sent.json.data?.meta?.scopeClassification, 'OUT_OF_SCOPE');
+    assert.equal(provider.answerCalls, 0);
+    setAiChatProviderForTests(new MockAiChatProviderClass());
+  });
+
+  test('out-of-scope English weather returns refusal without provider call', async () => {
+    const provider = new CountingMockProvider();
+    setAiChatProviderForTests(provider);
+
+    const learner = await createLearnerUser('out-scope-en-weather');
+    const token = tokenFor(learner.id, ['LEARNER']);
+    const created = await apiFetch('/api/ai/v1/conversations', {
+      method: 'POST',
+      token,
+      body: { mode: 'LEARNER_ASSISTANT', locale: 'en' },
+    });
+    const conversationId = created.json.data?.id as string;
+
+    const sent = await apiFetch(
+      `/api/ai/v1/conversations/${conversationId}/messages`,
+      {
+        method: 'POST',
+        token,
+        body: {
+          text: 'How is the weather today?',
+          locale: 'en',
+          clientMessageId: clientId('weather-en-001'),
+        },
+      },
+    );
+
+    assert.equal(sent.response.status, 201);
+    assert.equal(sent.json.data?.meta?.scopeClassification, 'OUT_OF_SCOPE');
+    assert.equal(provider.answerCalls, 0);
+    setAiChatProviderForTests(new MockAiChatProviderClass());
   });
 
   test('legitimate safety and dangerous requests behave correctly', async () => {
@@ -435,7 +512,7 @@ describe('ai http closure', () => {
     assert.equal(userRows, 1);
     assert.equal(assistantRows, 1);
 
-    setAiChatProviderForTests(new MockAiChatProvider());
+    setAiChatProviderForTests(new MockAiChatProviderClass());
   });
 
   test('concurrent turns reject busy conversation', async () => {

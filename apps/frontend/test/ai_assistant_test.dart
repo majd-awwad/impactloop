@@ -986,6 +986,62 @@ void main() {
 
       expect(find.byType(AiAssistantShellOverlay), findsOneWidget);
     });
+
+    testWidgets('ultra-narrow assistant shell avoids layout overflow', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(172, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final router = GoRouter(
+        initialLocation: '/home',
+        routes: [
+          ShellRoute(
+            builder: (context, state, child) =>
+                AppMobileNavigationShell(child: child),
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) =>
+                    const Scaffold(body: Text('home page')),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            aiRepositoryProvider.overrideWithValue(_FakeAiRepository()),
+            authControllerProvider.overrideWith(
+              () => _LearnerAuthController(),
+            ),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('en'), Locale('ar')],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final element = tester.element(find.text('home page'));
+      ProviderScope.containerOf(element)
+          .read(aiAssistantShellProvider.notifier)
+          .open();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AiAssistantShellOverlay), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert_rounded), findsOneWidget);
+    });
   });
 }
 

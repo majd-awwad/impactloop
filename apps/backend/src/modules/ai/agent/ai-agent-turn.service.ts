@@ -672,19 +672,26 @@ const buildPickupWindowFromParts = (input: {
   return { start: start.toISOString(), end: end.toISOString() };
 };
 
+const normalizeReservationDigits = (text: string) =>
+  text
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
+
 const parseReservationParameters = (userMessage: string) => {
-  const trimmed = userMessage.trim();
+  const trimmed = normalizeReservationDigits(userMessage.trim());
   const quantityMatch =
-    userMessage.match(/(?:كمية|quantity)\s*[:：]?\s*(\d+(?:\.\d+)?)/i) ??
-    userMessage.match(/(\d+(?:\.\d+)?)\s*(?:قطعة|piece|units?)/i);
+    trimmed.match(/(?:كمية|quantity)\s*[:：]?\s*(\d+(?:\.\d+)?)/i) ??
+    trimmed.match(/(\d+(?:\.\d+)?)\s*(?:قطعة|piece|units?)/i) ??
+    trimmed.match(/(?:بدي|بدّي|i need|quantity)\s+(\d+(?:\.\d+)?)/i);
   let quantity = quantityMatch ? Number(quantityMatch[1]) : null;
   if (quantity == null) {
     if (/^(\d+(?:\.\d+)?)$/.test(trimmed)) {
       quantity = Number(trimmed);
     } else if (/^(واحد|واحدة|قطعة واحدة)$/i.test(trimmed)) {
       quantity = 1;
-    } else if (/^بدي\s+(?:قطعة|وحدة)$/i.test(trimmed)) {
-      quantity = 1;
+    } else if (/^بدي\s+(?:قطعة|وحدة|\d)/i.test(trimmed)) {
+      const embedded = trimmed.match(/(\d+(?:\.\d+)?)/);
+      quantity = embedded ? Number(embedded[1]) : 1;
     }
   }
 
@@ -781,14 +788,17 @@ const computeReservationMissing = (params: {
 };
 
 export const isReservationContinuationMessage = (userMessage: string): boolean => {
-  const trimmed = userMessage.trim();
+  const trimmed = normalizeReservationDigits(userMessage.trim());
   if (/^(\d+(?:\.\d+)?)$/.test(trimmed)) {
     return true;
   }
   if (/^(واحد|واحدة|قطعة واحدة)$/i.test(trimmed)) {
     return true;
   }
-  if (/^بدي\s+(?:قطعة|وحدة)$/i.test(trimmed)) {
+  if (/^بدي\s+(?:قطعة|وحدة|\d)/i.test(trimmed)) {
+    return true;
+  }
+  if (/(?:بدي|بدّي|i need|quantity|كمية)\s+\d/i.test(trimmed)) {
     return true;
   }
   if (/(توصيل|delivery|استلام|pickup|من المورد)/i.test(userMessage)) {
@@ -1024,11 +1034,23 @@ const handleReservationDraftContinuation = async (input: {
   }
 
   if (!isReservationContinuationMessage(input.userMessage)) {
-    await cancelReservationDraft({
-      conversationId: input.conversationId,
-      userId: input.authenticatedUserId,
-    });
-    return null;
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? 'ما زال حجز المادة قيد الإعداد. أرسل الكمية أو اضغط متابعة، أو اكتب إلغاء لإيقاف الحجز.'
+            : 'A material reservation is still in progress. Send the quantity or press Continue, or type cancel to stop.',
+          'clarification',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'ACTION_REQUEST',
+    };
   }
 
   if (/(الغ|إلغاء|cancel)/i.test(input.userMessage)) {
@@ -1056,6 +1078,27 @@ const handleReservationDraftContinuation = async (input: {
   const draftPayload = prepareMaterialReservationPayloadSchema.parse(draft.payload);
   const parsed = parseReservationParameters(input.userMessage);
   const existing = draftPayload.parameters;
+
+  if (parsed.quantity != null && parsed.quantity <= 0) {
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? 'الكمية يجب أن تكون أكبر من صفر. كم كمية بدك؟'
+            : 'Quantity must be greater than zero. What quantity do you need?',
+          'clarification',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'ACTION_REQUEST',
+    };
+  }
+
   const merged = {
     quantityRequested:
       parsed.quantity ?? existing.quantityRequested ?? undefined,
@@ -1100,6 +1143,63 @@ const handleReservationDraftContinuation = async (input: {
     });
     if (builtWindow) {
       merged.learnerPreferredPickupWindows = [builtWindow];
+    }
+  }
+
+  if (merged.quantityRequested != null) {
+    const viewer: AccessTokenPayload = {
+      sub: input.authenticatedUserId,
+      roles: ['LEARNER'],
+    };
+    const material = await getMaterialById(draftPayload.target.materialId, viewer);
+    if (material.status !== 'AVAILABLE' || material.availableQuantity <= 0) {
+      await cancelReservationDraft({
+        conversationId: input.conversationId,
+        userId: input.authenticatedUserId,
+      });
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? 'المادة لم تعد متاحة للحجز حالياً.'
+              : 'This material is no longer available to reserve.',
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
+    }
+    if (merged.quantityRequested > material.availableQuantity) {
+      await saveReservationDraft({
+        userId: input.authenticatedUserId,
+        conversationId: input.conversationId,
+        materialId: draftPayload.target.materialId,
+        parameters: merged,
+        locale: input.locale,
+      });
+      return {
+        blocks: [
+          textBlock(
+            input.locale === 'ar'
+              ? `الكمية المتوفرة حالياً ${material.availableQuantity}. أرسل كمية أقل أو مساوية.`
+              : `Only ${material.availableQuantity} is currently available. Send a lower or equal quantity.`,
+            'clarification',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: 'ACTION_REQUEST',
+      };
     }
   }
 
@@ -1249,8 +1349,7 @@ const handleActionRequestTurn = async (input: {
   }
 
   if (
-    actionType === 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT' ||
-    actionType === 'PREPARE_MATERIAL_RESERVATION'
+    actionType === 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT'
   ) {
     const built = await buildActionPayload({
       actionType,

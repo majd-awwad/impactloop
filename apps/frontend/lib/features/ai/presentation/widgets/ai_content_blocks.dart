@@ -444,8 +444,7 @@ class _AiMaterialCompactCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final isFree = _isFreePrice(item.priceLabel);
-
-    return ImpactMaterialCompactCard(
+    final card = ImpactMaterialCompactCard(
       title: item.title,
       description: item.categoryLabel ?? '',
       category: item.categoryLabel ?? '',
@@ -467,6 +466,22 @@ class _AiMaterialCompactCard extends StatelessWidget {
       onTap: item.materialId.isEmpty
           ? null
           : () => context.push('/materials/${item.materialId}'),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 280) {
+          return card;
+        }
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: 280,
+            child: card,
+          ),
+        );
+      },
     );
   }
 }
@@ -1337,34 +1352,37 @@ class _AiExternalSourcesBlock extends StatelessWidget {
               padding: EdgeInsetsDirectional.only(
                 bottom: i == items.length - 1 ? 0 : AppSpacing.sm,
               ),
-              child: InkWell(
-                borderRadius: AppRadius.mdAll,
-                onTap: () => _launchExternalUrl(items[i].url),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    vertical: AppSpacing.xs,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        items[i].title,
-                        style: AppTextStyles.link(context).copyWith(
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (items[i].snippet?.isNotEmpty ?? false)
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: AppRadius.mdAll,
+                  onTap: () => _launchExternalUrl(items[i].url),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      vertical: AppSpacing.xs,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          items[i].snippet!,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: palette.textMuted,
-                            fontSize: 12,
-                            height: 1.35,
+                          items[i].title,
+                          style: AppTextStyles.link(context).copyWith(
+                            fontSize: 13,
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                    ],
+                        if (items[i].snippet?.isNotEmpty ?? false)
+                          Text(
+                            items[i].snippet!,
+                            style: AppTextStyles.body(context).copyWith(
+                              color: palette.textMuted,
+                              fontSize: 12,
+                              height: 1.35,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

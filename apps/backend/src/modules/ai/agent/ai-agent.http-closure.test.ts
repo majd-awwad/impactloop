@@ -1019,7 +1019,12 @@ describe('ai agent http closure', () => {
     const intro = blocks.find((block) => block.type === 'text');
     assert.ok(intro?.text);
     for (const item of items) {
-      assert.match(String(intro?.text), new RegExp(item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\    await assertTurnBasics(conversationId, messageClientId);
+      assert.match(
+        String(intro?.text),
+        new RegExp(item.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      );
+    }
+    await assertTurnBasics(conversationId, messageClientId);
   });
 
   test('component matching with explicit project title is stable across 10 fresh conversations', async () => {
@@ -1220,11 +1225,6 @@ describe('ai agent http closure', () => {
     }
   });
 
-  test('saved projects are scoped to the authenticated learner', async () => {')));
-    }
-    await assertTurnBasics(conversationId, messageClientId);
-  });
-
   test('project duration follow-up answers from persisted comparison', async () => {
     const token = tokenFor(ids.learnerAId);
     const conversationId = await createConversation(token);
@@ -1292,55 +1292,10 @@ describe('ai agent http closure', () => {
       searchItems[0]!.projectId === ids.publishedArduinoProjectId
         ? searchItems[0]!
         : searchItems[1]!;
-    assert.match(String(answer?.text), new RegExp(shorterProject.title.replace(/[.*+?^${}()|[\]\\]/g, '\\  test('project duration follow-up answers from persisted comparison', async () => {
-    const token = tokenFor(ids.learnerAId);
-    const conversationId = await createConversation(token);
-    await prisma.learningProject.update({
-      where: { id: ids.publishedArduinoProjectId },
-      data: { estimatedDurationMinutes: 60 },
-    });
-    await prisma.learningProject.update({
-      where: { id: ids.obstacleProjectId },
-      data: { estimatedDurationMinutes: 120 },
-    });
-
-    const compareClientId = clientId('duration-compare');
-    const compareSent = await sendAgentMessage(
-      token,
-      conversationId,
-      'قارن أول مشروعين',
-      compareClientId,
-    );
-    assert.equal(compareSent.response.status, 201);
-    assert.ok(
-      parseBlocks(compareSent.json).some((block) => block.type === 'comparison'),
-    );
-
-    const followUpClientId = clientId('duration-followup');
-    const followUpSent = await sendAgentMessage(
-      token,
-      conversationId,
-      'أي واحد وقته أقل؟',
-      followUpClientId,
-    );
-    assert.equal(followUpSent.response.status, 201);
-    const followUpBlocks = parseBlocks(followUpSent.json);
-    const answer = followUpBlocks.find((block) => block.type === 'text');
-    assert.ok(answer?.text);
-    assert.doesNotMatch(
-      String(answer?.text),
-      /أخبرني أكثر عن المشروع|Tell me a bit more about the practical project/i,
-    );
     assert.match(
       String(answer?.text),
-      /Arduino LED Blink|Mini Wooden Phone Stand/i,
+      new RegExp(shorterProject.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     );
-    assert.ok(
-      !followUpBlocks.some((block) => block.type === 'project_results'),
-      'duration follow-up must not trigger a new project search',
-    );
-    await assertTurnBasics(conversationId, followUpClientId);
-  });')));
     assert.ok(
       !followUpBlocks.some((block) => block.type === 'project_results'),
       'duration follow-up must not trigger a new project search',
@@ -1412,10 +1367,10 @@ describe('ai agent http closure', () => {
     assert.ok(intro?.text);
     assert.doesNotMatch(String(intro?.text), /Arduino Nano/i);
     for (const name of componentNames) {
-      assert.match(String(intro?.text), new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\    await assertTurnBasics(conversationId, followUpClientId);
-  });
-
-  test('saved projects are scoped to the authenticated learner', async () => {')));
+      assert.match(
+        String(intro?.text),
+        new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      );
     }
     await assertTurnBasics(conversationId, messageClientId);
   });
@@ -1831,6 +1786,45 @@ describe('ai agent http closure', () => {
     assert.ok(
       firstItems.some((item) => item.itemType === 'PROJECT' || item.itemType === 'ACTION'),
     );
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('LEARNER_ASSISTANT alias conversation handles Arduino material query without stack overflow', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const created = await apiFetch('/api/ai/v1/conversations', {
+      method: 'POST',
+      token,
+      body: { mode: 'LEARNER_ASSISTANT', locale: 'ar' },
+    });
+    assert.equal(created.response.status, 201);
+    assert.equal(created.json.data?.mode, 'LEARNER_ASSISTANT');
+    const conversationId = created.json.data?.id as string;
+    const stored = await prisma.aiConversation.findUnique({
+      where: { id: conversationId },
+    });
+    assert.equal(stored?.mode, 'GENERAL_LEARNING');
+
+    const messageClientId = clientId('arduino-alias-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد Arduino المتوفرة.',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const materialBlocks = blocks.filter((block) => block.type === 'material_results');
+    assert.equal(materialBlocks.length, 1);
+    const results = materialResultsBlock(blocks);
+    const items = results.items as Array<{ materialId: string }>;
+    assert.ok(items.length >= 1);
+
+    const assistantCount = await prisma.aiMessage.count({
+      where: { conversationId, role: 'ASSISTANT' },
+    });
+    assert.equal(assistantCount, 1);
 
     await assertTurnBasics(conversationId, messageClientId);
   });

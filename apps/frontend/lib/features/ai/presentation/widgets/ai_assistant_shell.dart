@@ -24,6 +24,8 @@ import 'ai_message_bubble.dart';
 
 const _panelWidth = 460.0;
 const _desktopBreakpoint = 900.0;
+const _sidePanelMinViewportWidth = 920.0;
+const _compactHeaderBreakpoint = 400.0;
 
 class AiAssistantShellOverlay extends ConsumerStatefulWidget {
   const AiAssistantShellOverlay({super.key});
@@ -129,7 +131,10 @@ class _AiAssistantShellOverlayState
     }
 
     final width = MediaQuery.sizeOf(context).width;
-    final isWide = width >= _desktopBreakpoint && !shellState.isExpanded;
+    final useSidePanel = width >= _desktopBreakpoint &&
+        width >= _sidePanelMinViewportWidth &&
+        !shellState.isExpanded;
+    final isWide = useSidePanel;
     final chatState = ref.watch(aiAssistantControllerProvider);
 
     ref.listen(aiAssistantControllerProvider, (previous, next) {
@@ -212,7 +217,9 @@ class _AiAssistantShellOverlayState
 
     return Material(
       color: MaterialsUiPalette.of(context).pageBackground,
-      child: SafeArea(child: panel),
+      child: SafeArea(
+        child: SizedBox.expand(child: panel),
+      ),
     );
   }
 }
@@ -424,6 +431,8 @@ class _AssistantHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final colors = AppThemeColors.of(context);
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isCompactHeader = viewportWidth < _compactHeaderBreakpoint;
 
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(
@@ -443,6 +452,7 @@ class _AssistantHeader extends StatelessWidget {
             tooltip: MaterialLocalizations.of(context).closeButtonLabel,
             onPressed: onClose,
             icon: Icon(isWide ? Icons.close_rounded : Icons.arrow_back_rounded),
+            visualDensity: isCompactHeader ? VisualDensity.compact : null,
           ),
           Container(
             width: 32,
@@ -459,41 +469,77 @@ class _AssistantHeader extends StatelessWidget {
               AiL10n.title.resolve(context),
               style: AppTextStyles.title(context).copyWith(
                 color: palette.textPrimary,
-                fontSize: 17,
+                fontSize: isCompactHeader ? 15 : 17,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          IconButton(
-            tooltip: AiL10n.newChat.resolve(context),
-            onPressed: onNewChat,
-            icon: const Icon(Icons.add_comment_outlined),
-          ),
-          IconButton(
-            tooltip: AiL10n.history.resolve(context),
-            onPressed: onToggleHistory,
-            icon: Icon(
-              showHistory ? Icons.chat_outlined : Icons.history_rounded,
-            ),
-          ),
-          if (isWide)
+          if (isCompactHeader)
+            PopupMenuButton<_AssistantHeaderAction>(
+              tooltip: AiL10n.history.resolve(context),
+              icon: const Icon(Icons.more_vert_rounded),
+              onSelected: (action) {
+                switch (action) {
+                  case _AssistantHeaderAction.newChat:
+                    onNewChat?.call();
+                  case _AssistantHeaderAction.history:
+                    onToggleHistory();
+                  case _AssistantHeaderAction.archive:
+                    onArchive?.call();
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: _AssistantHeaderAction.newChat,
+                  enabled: onNewChat != null,
+                  child: Text(AiL10n.newChat.resolve(context)),
+                ),
+                PopupMenuItem(
+                  value: _AssistantHeaderAction.history,
+                  child: Text(AiL10n.history.resolve(context)),
+                ),
+                if (canArchive)
+                  PopupMenuItem(
+                    value: _AssistantHeaderAction.archive,
+                    enabled: onArchive != null,
+                    child: Text(AiL10n.archive.resolve(context)),
+                  ),
+              ],
+            )
+          else ...[
             IconButton(
-              tooltip: AiL10n.expand.resolve(context),
-              onPressed: onToggleExpanded,
-              icon: const Icon(Icons.open_in_full_rounded),
+              tooltip: AiL10n.newChat.resolve(context),
+              onPressed: onNewChat,
+              icon: const Icon(Icons.add_comment_outlined),
             ),
-          if (canArchive)
             IconButton(
-              tooltip: AiL10n.archive.resolve(context),
-              onPressed: onArchive,
-              icon: const Icon(Icons.archive_outlined),
+              tooltip: AiL10n.history.resolve(context),
+              onPressed: onToggleHistory,
+              icon: Icon(
+                showHistory ? Icons.chat_outlined : Icons.history_rounded,
+              ),
             ),
+            if (isWide)
+              IconButton(
+                tooltip: AiL10n.expand.resolve(context),
+                onPressed: onToggleExpanded,
+                icon: const Icon(Icons.open_in_full_rounded),
+              ),
+            if (canArchive)
+              IconButton(
+                tooltip: AiL10n.archive.resolve(context),
+                onPressed: onArchive,
+                icon: const Icon(Icons.archive_outlined),
+              ),
+          ],
         ],
       ),
     );
   }
 }
+
+enum _AssistantHeaderAction { newChat, history, archive }
 
 class _AssistantLoadingPlaceholder extends StatelessWidget {
   const _AssistantLoadingPlaceholder();
@@ -662,13 +708,15 @@ class _ChatComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final colors = AppThemeColors.of(context);
-    final isWide = MediaQuery.sizeOf(context).width >= _desktopBreakpoint;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isWide = viewportWidth >= _desktopBreakpoint;
+    final isCompact = viewportWidth < _compactHeaderBreakpoint;
 
     return Padding(
       padding: EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.md,
+        isCompact ? AppSpacing.sm : AppSpacing.md,
         AppSpacing.sm,
-        AppSpacing.md,
+        isCompact ? AppSpacing.sm : AppSpacing.md,
         AppSpacing.md + MediaQuery.paddingOf(context).bottom,
       ),
       child: Center(

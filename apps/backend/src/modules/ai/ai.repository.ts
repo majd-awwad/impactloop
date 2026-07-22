@@ -139,7 +139,7 @@ export const listConversationsForUser = async (input: {
       where: {
         userId: input.userId,
         status,
-        mode: { in: ['GENERAL_LEARNING', 'LEARNER_ASSISTANT'] },
+        mode: 'GENERAL_LEARNING',
       },
     }),
   ]);

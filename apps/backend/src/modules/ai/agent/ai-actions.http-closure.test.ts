@@ -947,6 +947,149 @@ describe('ai actions http closure', () => {
     assert.equal(reservationsFinal, reservationsAfter);
   });
 
+  test('reservation draft persists selected material before quantity reply', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const search = await sendMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد إلكترونيات متوفرة',
+      clientId('reserve-material-id-search'),
+    );
+    const searchBlocks = parseBlocks(search.json);
+    const materialResults = searchBlocks.find((block) => block.type === 'material_results');
+    const firstMaterialId = (
+      (materialResults?.items as Array<{ materialId: string }> | undefined) ?? []
+    )[0]?.materialId;
+    assert.ok(firstMaterialId);
+
+    const step1 = await sendMessage(
+      token,
+      conversationId,
+      'احجزلي الأولى',
+      clientId('reserve-material-id-step1'),
+    );
+    assert.equal(step1.response.status, 201);
+    const draft = await prisma.aiPendingAction.findFirst({
+      where: {
+        conversationId,
+        actionType: 'PREPARE_MATERIAL_RESERVATION',
+        status: 'PENDING',
+      },
+    });
+    assert.ok(draft);
+    const payload = draft.payload as { target?: { materialId?: string } };
+    assert.equal(payload.target?.materialId, firstMaterialId);
+  });
+
+  test('typed quantity 2 continues reservation flow without general learning fallback', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    await sendMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد إلكترونيات متوفرة',
+      clientId('reserve-two-search'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
+      'احجزلي أول مادة',
+      clientId('reserve-two-step1'),
+    );
+
+    const step2 = await sendMessage(
+      token,
+      conversationId,
+      '2',
+      clientId('reserve-two-step2'),
+    );
+    assert.equal(step2.response.status, 201);
+    const blocks2 = parseBlocks(step2.json);
+    const clarify2 = blocks2.find((block) => block.type === 'text');
+    assert.match(String(clarify2?.text ?? ''), /استلام|توصيل|pickup|delivery/i);
+    assert.doesNotMatch(
+      String(clarify2?.text ?? ''),
+      /Tell me a bit more about the practical project|أخبرني أكثر عن المشروع/i,
+    );
+  });
+
+  test('arabic digit quantity continues reservation flow', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    await sendMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد إلكترونيات متوفرة',
+      clientId('reserve-ar-digit-search'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
+      'احجزلي أول مادة',
+      clientId('reserve-ar-digit-step1'),
+    );
+
+    const step2 = await sendMessage(
+      token,
+      conversationId,
+      '٢',
+      clientId('reserve-ar-digit-step2'),
+    );
+    assert.equal(step2.response.status, 201);
+    const blocks2 = parseBlocks(step2.json);
+    const clarify2 = blocks2.find((block) => block.type === 'text');
+    assert.match(String(clarify2?.text ?? ''), /استلام|توصيل|pickup|delivery/i);
+  });
+
+  test('بدي 2 continues reservation flow', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    await sendMessage(
+      token,
+      conversationId,
+      'اعرضلي مواد إلكترونيات متوفرة',
+      clientId('reserve-badi-search'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
+      'احجزلي أول مادة',
+      clientId('reserve-badi-step1'),
+    );
+
+    const step2 = await sendMessage(
+      token,
+      conversationId,
+      'بدي 2',
+      clientId('reserve-badi-step2'),
+    );
+    assert.equal(step2.response.status, 201);
+    const blocks2 = parseBlocks(step2.json);
+    const clarify2 = blocks2.find((block) => block.type === 'text');
+    assert.match(String(clarify2?.text ?? ''), /استلام|توصيل|pickup|delivery/i);
+  });
+
+  test('numeric reply without active reservation draft does not start reservation', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const sent = await sendMessage(token, conversationId, '2', clientId('reserve-no-draft'));
+    assert.equal(sent.response.status, 201);
+    const blocks = parseBlocks(sent.json);
+    assert.equal(
+      blocks.some((block) => block.type === 'action_confirmation'),
+      false,
+    );
+    const draftCount = await prisma.aiPendingAction.count({
+      where: {
+        conversationId,
+        actionType: 'PREPARE_MATERIAL_RESERVATION',
+        status: 'PENDING',
+      },
+    });
+    assert.equal(draftCount, 0);
+  });
+
   test('valid reservation confirmation creates one reservation', async () => {
     const token = tokenFor(ids.learnerBId);
     const conversationId = await createConversation(token);

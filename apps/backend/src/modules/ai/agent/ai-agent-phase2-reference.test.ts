@@ -269,6 +269,54 @@ describe('stabilization regressions', () => {
     assert.equal(preserved.route, 'GENERAL_LEARNING');
   });
 
+  test('material search plan is returned unchanged without recursion', () => {
+    const preserved = preserveDeterministicDomainLearning({
+      userMessage: 'اعرضلي مواد Arduino المتوفرة.',
+      plan: {
+        route: 'MATERIAL_SEARCH',
+        toolName: 'search_available_materials',
+        toolInput: { query: 'Arduino' },
+        diagnostics: {
+          deterministicRoute: 'MATERIAL_SEARCH',
+          deterministicConfidence: 0.94,
+          semanticPlannerUsed: true,
+          semanticRoute: 'MATERIAL_SEARCH',
+          validatedRoute: 'MATERIAL_SEARCH',
+          normalizedFilters: null,
+          toolName: 'search_available_materials',
+          plannerConfidence: 0.95,
+          resolvedEntityTitle: null,
+        },
+      },
+    });
+    assert.equal(preserved.route, 'MATERIAL_SEARCH');
+    assert.equal(preserved.toolName, 'search_available_materials');
+  });
+
+  test('english material search plan is returned unchanged without recursion', () => {
+    const preserved = preserveDeterministicDomainLearning({
+      userMessage: 'show available Arduino materials',
+      plan: {
+        route: 'MATERIAL_SEARCH',
+        toolName: 'search_available_materials',
+        toolInput: { query: 'Arduino' },
+        diagnostics: {
+          deterministicRoute: 'MATERIAL_SEARCH',
+          deterministicConfidence: 0.94,
+          semanticPlannerUsed: true,
+          semanticRoute: 'MATERIAL_SEARCH',
+          validatedRoute: 'MATERIAL_SEARCH',
+          normalizedFilters: null,
+          toolName: 'search_available_materials',
+          plannerConfidence: 0.95,
+          resolvedEntityTitle: null,
+        },
+      },
+    });
+    assert.equal(preserved.route, 'MATERIAL_SEARCH');
+    assert.equal(preserved.toolName, 'search_available_materials');
+  });
+
   const projectComparison: Extract<AiContentBlock, { type: 'comparison' }> = {
     type: 'comparison',
     subject: 'PROJECT',
@@ -339,8 +387,12 @@ describe('stabilization regressions', () => {
     assert.doesNotMatch(intro, /Arduino Nano/i);
   });
 
-  test('reservation continuation helper ignores craft follow-up', () => {
-    assert.equal(isReservationContinuationMessage('1'), true);
+  test('reservation continuation helper accepts typed quantity variants', () => {
+    assert.equal(isReservationContinuationMessage('2'), true);
+    assert.equal(isReservationContinuationMessage('٢'), true);
+    assert.equal(isReservationContinuationMessage('بدي 2'), true);
+    assert.equal(isReservationContinuationMessage('I need 2'), true);
+    assert.equal(isReservationContinuationMessage('quantity 2'), true);
     assert.equal(isReservationContinuationMessage('كيف اصنع الشمع'), false);
   });
 
