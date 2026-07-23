@@ -1790,6 +1790,269 @@ describe('ai agent http closure', () => {
     await assertTurnBasics(conversationId, messageClientId);
   });
 
+  test('owned materials Arabic query matches published projects by required components', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const buildsBefore = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerAId },
+    });
+    const messageClientId = clientId('owned-materials-ar-001');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'عندي Arduino Uno، شو أقدر أعمل فيه؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{
+      projectId: string;
+      readinessPercent?: number;
+      matchedComponents?: string[];
+      missingComponents?: string[];
+    }>;
+
+    assert.ok(items.some((item) => item.projectId === ids.publishedArduinoProjectId));
+    const arduinoMatch = items.find(
+      (item) => item.projectId === ids.publishedArduinoProjectId,
+    );
+    assert.equal(arduinoMatch?.readinessPercent, 50);
+    assert.deepEqual(arduinoMatch?.matchedComponents, ['Arduino Uno']);
+    assert.deepEqual(arduinoMatch?.missingComponents, ['LED']);
+
+    const buildsAfter = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerAId },
+    });
+    assert.equal(buildsAfter, buildsBefore);
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('owned materials English query matches multiple components without duplicate alias counting', async () => {
+    const multiMaterialProject = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: `${SEED_TOKEN} Mini Traffic Light`,
+        shortDescription: `${TEST_MARKER} traffic light`,
+        description: `${TEST_MARKER} traffic light project`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['arduino', 'arduino uno'],
+            },
+            {
+              componentName: 'Jumper wires',
+              materialType: 'Wire',
+              quantity: 1,
+              unit: 'set',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['jumper wires', 'wires'],
+            },
+            {
+              componentName: 'LEDs',
+              materialType: 'LED',
+              quantity: 3,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['led', 'leds'],
+            },
+            {
+              componentName: 'Resistors',
+              materialType: 'Resistor',
+              quantity: 3,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['resistor', 'resistors'],
+            },
+          ],
+        },
+      },
+    });
+    ids.projects.push(multiMaterialProject.id);
+
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('owned-materials-en-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'I have an Arduino and jumper wires. What can I build?',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{
+      projectId: string;
+      readinessPercent?: number;
+      matchedComponentCount?: number;
+      totalRequiredComponentCount?: number;
+      matchedComponents?: string[];
+      missingComponents?: string[];
+    }>;
+    const match = items.find((item) => item.projectId === multiMaterialProject.id);
+    assert.ok(match);
+    assert.equal(match?.matchedComponentCount, 2);
+    assert.equal(match?.totalRequiredComponentCount, 4);
+    assert.equal(match?.readinessPercent, 50);
+    assert.deepEqual(
+      [...(match?.matchedComponents ?? [])].sort(),
+      ['Arduino Uno', 'Jumper wires'].sort(),
+    );
+    assert.deepEqual(match?.missingComponents, ['LEDs', 'Resistors']);
+
+    const duplicateAliasSent = await sendAgentMessage(
+      token,
+      conversationId,
+      'I have Arduino Uno and أردوينو. What can I build?',
+      clientId('owned-materials-alias-dedupe'),
+    );
+    assert.equal(duplicateAliasSent.response.status, 201);
+    const duplicateItems = (
+      projectResultsBlock(parseBlocks(duplicateAliasSent.json)).items as Array<{
+        projectId: string;
+        matchedComponentCount?: number;
+      }>
+    );
+    const duplicateMatch = duplicateItems.find(
+      (item) => item.projectId === multiMaterialProject.id,
+    );
+    assert.equal(duplicateMatch?.matchedComponentCount, 1);
+  });
+
+  test('owned materials no-match does not return unrelated projects', async () => {
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('owned-materials-no-match');
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'عندي xyz-material، شو أقدر أعمل؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    assert.equal(blocks.some((block) => block.type === 'project_results'), false);
+    assert.ok(
+      blocks.some(
+        (block) =>
+          block.type === 'text' &&
+          typeof block.text === 'string' &&
+          /ImpactLoop|impactloop/i.test(block.text),
+      ),
+    );
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('owned materials excludes hidden archived and rejected published projects', async () => {
+    const hidden = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: `${SEED_TOKEN} Hidden Arduino`,
+        shortDescription: `${TEST_MARKER} hidden`,
+        description: `${TEST_MARKER} hidden`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        hiddenAt: new Date(),
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+            },
+          ],
+        },
+      },
+    });
+    const archived = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: `${SEED_TOKEN} Archived Arduino`,
+        shortDescription: `${TEST_MARKER} archived`,
+        description: `${TEST_MARKER} archived`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        archivedAt: new Date(),
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+            },
+          ],
+        },
+      },
+    });
+    const rejected = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: `${SEED_TOKEN} Rejected Arduino`,
+        shortDescription: `${TEST_MARKER} rejected`,
+        description: `${TEST_MARKER} rejected`,
+        difficulty: 'BEGINNER',
+        status: 'REJECTED',
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+            },
+          ],
+        },
+      },
+    });
+    ids.projects.push(hidden.id, archived.id, rejected.id);
+
+    const token = tokenFor(ids.learnerAId);
+    const conversationId = await createConversation(token);
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'عندي Arduino Uno، شو أقدر أعمل فيه؟',
+      clientId('owned-materials-eligibility'),
+    );
+    assert.equal(sent.response.status, 201);
+    const items = (
+      projectResultsBlock(parseBlocks(sent.json)).items as Array<{ projectId: string }>
+    );
+    assert.equal(
+      items.some((item) => [hidden.id, archived.id, rejected.id].includes(item.projectId)),
+      false,
+    );
+  });
+
   test('LEARNER_ASSISTANT alias conversation handles Arduino material query without stack overflow', async () => {
     const token = tokenFor(ids.learnerAId);
     const created = await apiFetch('/api/ai/v1/conversations', {

@@ -13,6 +13,7 @@ import {
   projectIdInputSchema,
   searchAvailableMaterialsInputSchema,
   searchLearningProjectsInputSchema,
+  matchProjectsByOwnedMaterialsInputSchema,
 } from './ai-tool.types.js';
 import { executeLearnerAgentTool } from './ai-tool-handlers.js';
 
@@ -60,6 +61,17 @@ export const AI_TOOL_REGISTRY = {
     maxOutputBytes: 32_768,
     handler: (input, context) =>
       executeLearnerAgentTool('search_learning_projects', input, context),
+  }),
+  match_projects_by_owned_materials: defineReadTool({
+    name: 'match_projects_by_owned_materials',
+    kind: 'read',
+    description:
+      'Match learner-listed owned materials to published project required components',
+    inputSchema: matchProjectsByOwnedMaterialsInputSchema,
+    timeoutMs: 12_000,
+    maxOutputBytes: 48_768,
+    handler: (input, context) =>
+      executeLearnerAgentTool('match_projects_by_owned_materials', input, context),
   }),
   get_learning_project_details: defineReadTool({
     name: 'get_learning_project_details',

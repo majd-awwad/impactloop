@@ -841,6 +841,21 @@ class AiL10n {
     ar: 'عرض المشروع',
   );
 
+  static const matchedComponentsLabel = LocalizedText(
+    en: 'Matched',
+    ar: 'متطابقة',
+  );
+
+  static const missingComponentsLabel = LocalizedText(
+    en: 'Missing',
+    ar: 'ناقصة',
+  );
+
+  static const coverageLabel = LocalizedText(
+    en: 'coverage',
+    ar: 'تغطية',
+  );
+
   static const viewBuild = LocalizedText(
     en: 'View build',
     ar: 'عرض البناء',

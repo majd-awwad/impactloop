@@ -11,6 +11,7 @@ import {
   classifyRecommendationSubtype,
   extractProjectTitleQuery,
   mergeMaterialSearchPlan,
+  parseOwnedMaterialsProjectInput,
 } from './ai-agent-filter-extractor.service.js';
 import { extractRequestedResultCount } from './ai-agent-number-parser.service.js';
 import type { z } from 'zod';
@@ -88,6 +89,8 @@ export const buildToolInputForRoute = (
       return parseProjectComponentsInput(userMessage);
     case 'PERSONALIZED_RECOMMENDATION':
       return parseRecommendationInput(userMessage);
+    case 'OWNED_MATERIALS_PROJECT_MATCH':
+      return parseOwnedMaterialsProjectInput(userMessage);
     case 'SAVED_PROJECTS':
     case 'ACTIVE_PROJECT_BUILDS':
       return {};

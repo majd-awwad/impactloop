@@ -12,7 +12,12 @@ import { extractJsonObject } from '../../../services/gemini-price-suggestion.pro
 import type { AiLocale } from '../ai.types.js';
 import type { AiAgentRouteType } from './ai-agent.types.js';
 import { getRegisteredTool, isRegisteredToolName } from './ai-tool-registry.js';
-import { mergeMaterialSearchPlan, normalizeMaterialItemQuery } from './ai-agent-filter-extractor.service.js';
+import {
+  mergeMaterialSearchPlan,
+  normalizeMaterialItemQuery,
+  parseOwnedMaterialsProjectInput,
+  resolveOwnedMaterialsFromConversation,
+} from './ai-agent-filter-extractor.service.js';
 import {
   summarizePlannerContextForPrompt,
   type PlannerConversationContext,
@@ -25,6 +30,7 @@ const PLANNER_ROUTES = [
   'PROJECT_SEARCH',
   'PROJECT_DETAILS',
   'PROJECT_COMPONENTS',
+  'OWNED_MATERIALS_PROJECT_MATCH',
   'SAVED_PROJECTS',
   'ACTIVE_PROJECT_BUILDS',
   'BUILD_GAP_ANALYSIS',
@@ -128,6 +134,9 @@ const buildPlannerPrompt = (input: {
     '- "كيف بستخدم breadboard؟" -> GENERAL_LEARNING',
     '- "ما هي فلسطين؟" -> OUT_OF_SCOPE',
     '- "Obstacle Robot شو مكونات مشروع ال" with recent project "Obstacle Avoidance Robot" -> PROJECT_COMPONENTS, entity mention Obstacle Robot, referenceType RECENT_RESULT',
+    '- "لقيت Arduino وشوية أسلاك، في إشي بالمشاريع الموجودة بقدر أعمله؟" -> OWNED_MATERIALS_PROJECT_MATCH, tool match_projects_by_owned_materials, materials ["Arduino","wires"]',
+    '- "I have leftover LEDs, resistors and wires. Could I reuse them here?" -> OWNED_MATERIALS_PROJECT_MATCH, tool match_projects_by_owned_materials, materials ["LEDs","resistors","wires"]',
+    '- "اشرحلي كيف Arduino بشتغل" -> GENERAL_LEARNING',
     'Do not copy the full user sentence into query.',
     'Use trustedEntities IDs only when referenceType is RECENT_RESULT/RESULT_INDEX and the entity is clearly identified.',
     'Never invent inventory facts.',
@@ -154,6 +163,8 @@ const buildPlannerPrompt = (input: {
     '- analyze_build_gaps',
     '- find_materials_for_component',
     '- get_personalized_recommendations',
+    '- match_projects_by_owned_materials: use when the learner mentions materials/components they have or found and wants to know what they can build, make, reuse, or which published ImpactLoop Learning Hub projects fit those materials. Accept indirect/conversational wording, dialect, and follow-ups where materials appear in recent messages. Extract only material/component names from the current message and bounded recent context; never invent materials, projects, ownership records, reservations, or readiness scores. toolCall.arguments shape: { materials: string[], category?: string, difficulty?: "BEGINNER"|"INTERMEDIATE"|"ADVANCED", limit?: number }.',
+    'For bare possession statements without a clear build/project intent (for example only "I have Arduino and wires"), set route CLARIFICATION with clarificationNeeded true and ask whether to show ImpactLoop projects that use those materials.',
     'Never include userId, coordinates, conversationId, or arbitrary database IDs in filters.',
     `Locale: ${input.locale}`,
     `Deterministic route guess: ${input.deterministicRoute}`,
@@ -251,6 +262,29 @@ export const validatePlannerOutput = (raw: unknown): AgentPlannerOutput | null =
   }
 
   if (parsed.data.route === 'MATERIAL_SEARCH' && parsed.data.filters) {
+    return parsed.data;
+  }
+
+  if (parsed.data.route === 'OWNED_MATERIALS_PROJECT_MATCH') {
+    if (parsed.data.clarificationNeeded) {
+      return parsed.data;
+    }
+
+    const toolName =
+      parsed.data.toolCall?.name ?? 'match_projects_by_owned_materials';
+    if (toolName !== 'match_projects_by_owned_materials') {
+      return null;
+    }
+
+    try {
+      sanitizePlannerArguments(
+        toolName,
+        parsed.data.toolCall?.arguments ?? {},
+      );
+    } catch {
+      return null;
+    }
+
     return parsed.data;
   }
 
@@ -378,4 +412,71 @@ export const materialSearchPlanFromPlanner = (
   }
 
   return sanitizePlannerArguments('search_available_materials', merged);
+};
+
+export const ownedMaterialsPlanFromPlanner = (
+  userMessage: string,
+  planner: AgentPlannerOutput,
+  conversationContext?: PlannerConversationContext,
+): Record<string, unknown> | null => {
+  if (
+    planner.route !== 'OWNED_MATERIALS_PROJECT_MATCH' &&
+    planner.toolCall?.name !== 'match_projects_by_owned_materials'
+  ) {
+    return null;
+  }
+
+  const deterministic = parseOwnedMaterialsProjectInput(userMessage);
+  const toolArgs =
+    planner.toolCall?.name === 'match_projects_by_owned_materials'
+      ? planner.toolCall.arguments
+      : {};
+  const contextMaterials = resolveOwnedMaterialsFromConversation(
+    userMessage,
+    conversationContext?.recentMessages,
+  );
+  const plannerMaterials = Array.isArray(toolArgs.materials)
+    ? toolArgs.materials.filter(
+        (value): value is string => typeof value === 'string' && value.trim().length > 0,
+      )
+    : [];
+
+  const mergedMaterials =
+    plannerMaterials.length > 0
+      ? plannerMaterials
+      : [...deterministic.materials, ...contextMaterials];
+  const seen = new Set<string>();
+  const materials: string[] = [];
+  for (const material of mergedMaterials) {
+    const trimmed = material.trim().slice(0, 80);
+    if (trimmed.length === 0) {
+      continue;
+    }
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    materials.push(trimmed);
+    if (materials.length >= 12) {
+      break;
+    }
+  }
+
+  if (materials.length === 0) {
+    return null;
+  }
+
+  return sanitizePlannerArguments('match_projects_by_owned_materials', {
+    materials,
+    category:
+      (typeof toolArgs.category === 'string' ? toolArgs.category : undefined) ??
+      deterministic.category,
+    difficulty:
+      (toolArgs.difficulty as string | undefined) ?? deterministic.difficulty,
+    limit:
+      (toolArgs.limit as number | undefined) ??
+      deterministic.limit ??
+      10,
+  });
 };

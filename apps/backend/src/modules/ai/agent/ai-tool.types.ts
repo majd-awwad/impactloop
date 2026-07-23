@@ -116,3 +116,12 @@ export const searchLearningProjectsInputSchema = z
     limit: z.number().int().min(1).max(10).optional(),
   })
   .strict();
+
+export const matchProjectsByOwnedMaterialsInputSchema = z
+  .object({
+    materials: z.array(z.string().trim().min(1).max(80)).min(1).max(12),
+    category: z.string().trim().min(1).max(80).optional(),
+    difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).optional(),
+    limit: z.number().int().min(1).max(10).optional(),
+  })
+  .strict();

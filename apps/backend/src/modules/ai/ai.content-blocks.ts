@@ -48,6 +48,14 @@ const aiProjectCardSchema = z.object({
   interestLabels: z.array(z.string().trim().min(1)).max(6).optional(),
   savedByLearner: z.boolean().optional(),
   activeBuildId: z.string().trim().min(1).nullable().optional(),
+  summary: z.string().trim().min(1).optional(),
+  categoryLabel: z.string().trim().min(1).optional(),
+  readinessPercent: z.number().int().min(0).max(100).optional(),
+  matchedComponentCount: z.number().int().min(0).optional(),
+  totalRequiredComponentCount: z.number().int().min(0).optional(),
+  matchedComponents: z.array(z.string().trim().min(1)).max(20).optional(),
+  missingComponents: z.array(z.string().trim().min(1)).max(20).optional(),
+  matchExplanation: z.string().trim().min(1).optional(),
 });
 
 export const aiProjectResultsBlockSchema = z.object({

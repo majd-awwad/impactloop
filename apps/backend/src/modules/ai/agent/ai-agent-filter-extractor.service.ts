@@ -1,6 +1,9 @@
 import type { z } from 'zod';
 
-import type { searchAvailableMaterialsInputSchema } from './ai-tool.types.js';
+import type {
+  matchProjectsByOwnedMaterialsInputSchema,
+  searchAvailableMaterialsInputSchema,
+} from './ai-tool.types.js';
 import {
   extractBoundedMaxPrice,
   extractRequestedResultCount,
@@ -593,6 +596,10 @@ export const detectMaterialSearchIntent = (userMessage: string): {
     return { detected: false, confidence: 0.15 };
   }
 
+  if (shouldDeferMaterialSearchForOwnedMaterialsProjectUse(userMessage)) {
+    return { detected: false, confidence: 0.18 };
+  }
+
   if (hasMaterialNoun && (hasSearchVerb || hasStructuredFilter || hasRelationPhrase)) {
     return { detected: true, confidence: hasStructuredFilter ? 0.96 : 0.9 };
   }
@@ -620,6 +627,81 @@ export const detectMaterialSearchIntent = (userMessage: string): {
   return { detected: false, confidence: 0.2 };
 };
 
+export const isExplicitMaterialSearchCommand = (userMessage: string): boolean => {
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalize(parsedMessage);
+
+  if (
+    /(?:اعرض|ورجيني|وريني|ورّيني|طلعلي|هاتلي|دور(?:لي)?\s+على|show\s+me|find|search\s+for|list|browse)\s+.*(?:مواد|مادة|materials?)/iu.test(
+      parsedMessage,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    /(?:شو\s+في|ايش\s+في|what(?:'s| is)\s+available).*(?:مواد|materials?)/iu.test(
+      parsedMessage,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    /(?:دور(?:لي)?\s+على|اعرض(?:لي)?)\s+.+\s+(?:موجود|متوفرة?|بالمنصة|available)/iu.test(
+      parsedMessage,
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    includesAny(normalized, NEAR_TERMS) &&
+    includesAny(normalized, SEARCH_VERBS)
+  ) {
+    return true;
+  }
+
+  if (
+    includesAny(normalized, MATERIAL_NOUNS) &&
+    includesAny(normalized, [...SEARCH_VERBS, ...AVAILABILITY_TERMS, ...NEAR_TERMS])
+  ) {
+    return true;
+  }
+
+  if (
+    /^(?:اعرض|ورجيني|وريني|show|find|search)\b/iu.test(parsedMessage) &&
+    includesAny(normalized, MATERIAL_NOUNS)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+export const shouldDeferMaterialSearchForOwnedMaterialsProjectUse = (
+  userMessage: string,
+): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+
+  if (isExplicitMaterialSearchCommand(userMessage)) {
+    return false;
+  }
+
+  return (
+    detectOwnedMaterialsProjectIntent(userMessage) ||
+    detectOwnedMaterialsSemanticParaphrase(userMessage) ||
+    detectBareOwnedMaterialsPossession(userMessage) ||
+    detectOwnedMaterialsBuildFollowUp(userMessage) ||
+    isAffirmativeOwnedMaterialsContinuation(userMessage) ||
+    /fit\s+(?:an?\s+)?(?:impactloop\s+)?projects?/i.test(userMessage) ||
+    (/(?:leftover|remaining)\s+components?/i.test(userMessage) &&
+      /project/i.test(userMessage))
+  );
+};
+
 export const detectBuildGapIntent = (userMessage: string): boolean => {
   const normalized = normalize(userMessage);
   return /(ناقص|ناقصني|نقص|missing|what.?s left|gap|يلزمني|باقي|ظل علي|شو ظل)/i.test(
@@ -629,6 +711,15 @@ export const detectBuildGapIntent = (userMessage: string): boolean => {
 
 export const detectProjectComponentsIntent = (userMessage: string): boolean => {
   if (detectBuildGapIntent(userMessage)) {
+    return false;
+  }
+
+  if (
+    /fit\s+(?:an?\s+)?(?:impactloop\s+)?projects?/i.test(userMessage) ||
+    /use\s+them\s+in\s+one\s+of\s+your\s+projects?/i.test(userMessage) ||
+    (/(?:leftover|remaining)\s+components?/i.test(userMessage) &&
+      /project/i.test(userMessage))
+  ) {
     return false;
   }
 
@@ -850,3 +941,435 @@ export const mergeMaterialSearchPlan = (
 
 export const messageImpliesFreeFilter = (userMessage: string): boolean =>
   includesAny(normalize(userMessage), FREE_SYNONYMS);
+
+const OWNED_MATERIALS_OWNERSHIP_CUES = [
+  'عندي',
+  'معي',
+  'معاي',
+  'لقيت',
+  'وجدت',
+  'i have',
+  "i've got",
+  'i got',
+  'i found',
+  'with my',
+  'leftover',
+];
+
+const OWNED_MATERIALS_BUILD_CUES = [
+  'شو أقدر أعمل',
+  'شو اقدر اعمل',
+  'شو مشروع مناسب',
+  'شو بقدر أبني',
+  'شو بقدر ابني',
+  'شو مشاريع',
+  'مشاريع باستخدام',
+  'شو مشروع',
+  'ايش أقدر أعمل',
+  'إيش أقدر أعمل',
+  'what can i build',
+  'what can i make',
+  'what projects',
+  'projects using',
+  'what can i do with',
+  'what can we build',
+  'build using',
+  'make with',
+  'what can you build',
+];
+
+const OWNED_MATERIALS_NEGATIVE_OWNERSHIP_CUES = [
+  'ما عندي',
+  'مش عندي',
+  "don't have",
+  'do not have',
+];
+
+const OWNED_MATERIAL_GENERIC_BLOCKLIST = new Set(
+  [
+    'material',
+    'materials',
+    'component',
+    'components',
+    'board',
+    'item',
+    'items',
+    'part',
+    'parts',
+    'piece',
+    'pieces',
+    'stuff',
+    'مادة',
+    'مواد',
+    'قطعة',
+    'قطع',
+    'مكوّن',
+    'مكون',
+    'مكونات',
+    'لوح',
+    'شيء',
+    'اشي',
+    'إشي',
+  ].map((term) => normalizeArabicVariants(normalize(term))),
+);
+
+const OWNED_MATERIAL_ALIAS_GROUPS: string[][] = [
+  ['arduino', 'arduino uno', 'arduino nano', 'اردوينو', 'أردوينو'],
+  ['jumper wires', 'jumper wire', 'wires', 'wire', 'أسلاك', 'اسلاك', 'سلك'],
+  ['cardboard', 'carton', 'كرتون', 'ورق مقوى'],
+  ['led', 'leds', 'ليد'],
+  ['resistor', 'resistors', 'مقاومة', 'مقاومات'],
+  ['motor', 'dc motor', 'محرك', 'موتور'],
+  ['breadboard', 'لوحة تجارب', 'بريدبورد'],
+];
+
+const normalizeOwnedMaterialLabel = (value: string): string =>
+  normalizeArabicVariants(normalize(value));
+
+const splitOwnedMaterialSegments = (segment: string): string[] =>
+  segment
+    .split(
+      /\s+و\s+|\s+و(?=[\u0600-\u06FFa-zA-Z])|(?<=[a-zA-Z0-9])و(?=[\u0600-\u06FFa-zA-Z])|\s+and\s+|،|,|\/|\+/iu,
+    )
+    .map((part) =>
+      part
+        .trim()
+        .replace(/^[وف]\s+/i, '')
+        .replace(/[؟?.!]+$/g, '')
+        .trim(),
+    )
+    .filter((part) => part.length > 0);
+
+const extractOwnedMaterialsSegment = (userMessage: string): string | null => {
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const patterns = [
+    /(?:عندي|معي|معاي)\s+(.+?)(?:،|,|\s+)(?:شو|ما|ايش|إيش)\s+(?:أقدر|اقدر|بقدر)/iu,
+    /(?:عندي|معي|معاي)\s+(.+?)(?:\?|؟|$)/iu,
+    /(?:شو|ما)\s+(?:بقدر|أقدر|اقدر)\s+(?:أبني|ابني)\s+باستخدام\s+(.+?)(?:\?|؟|$)/iu,
+    /(?:مشاريع|مشروع)\s+باستخدام\s+(.+?)(?:\?|؟|$)/iu,
+    /\bi\s+have\s+(.+?)(?:\.|,|\s+)(?:what\s+can\s+i\s+(?:build|make)|what\s+projects)/iu,
+    /what\s+(?:projects\s+can\s+i\s+make|can\s+i\s+(?:make|build))\s+with\s+(.+?)(?:\?|$)/iu,
+    /what\s+can\s+i\s+do\s+with\s+(?:an\s+|a\s+|the\s+)?(.+?)(?:\?|$)/iu,
+    /(?:what|which)\s+projects?\s+use\s+(?:an\s+|a\s+|the\s+)?(.+?)(?:\?|$)/iu,
+    /what\s+project\s+uses\s+(?:an\s+|a\s+|the\s+)?(.+?)(?:\?|$)/iu,
+    /projects?\s+that\s+use\s+(.+?)(?:\?|$)/iu,
+    /projects?\s+using\s+(.+?)(?:\?|$)/iu,
+    /what\s+can\s+i\s+build\s+using\s+(.+?)(?:\?|$)/iu,
+  ];
+
+  for (const pattern of patterns) {
+    const match = parsedMessage.match(pattern);
+    const segment = match?.[1]?.trim();
+    if (segment && segment.length >= 2) {
+      return segment
+        .replace(/(?:فيها?|فيه)\s*$/iu, '')
+        .replace(/[؟?.!]+$/g, '')
+        .trim();
+    }
+  }
+
+  return null;
+};
+
+export const detectOwnedMaterialsProjectIntent = (userMessage: string): boolean => {
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalizeOwnedMaterialLabel(parsedMessage);
+
+  if (
+    OWNED_MATERIALS_NEGATIVE_OWNERSHIP_CUES.some((cue) =>
+      normalized.includes(normalizeOwnedMaterialLabel(cue)),
+    )
+  ) {
+    return false;
+  }
+
+  const hasOwnershipCue = OWNED_MATERIALS_OWNERSHIP_CUES.some((cue) =>
+    normalized.includes(normalizeOwnedMaterialLabel(cue)),
+  );
+  const hasBuildCue = OWNED_MATERIALS_BUILD_CUES.some((cue) =>
+    normalized.includes(normalizeOwnedMaterialLabel(cue)),
+  );
+
+  if (hasOwnershipCue && hasBuildCue) {
+    return true;
+  }
+
+  if (
+    /(?:شو|ما)\s+(?:بقدر|أقدر|اقدر)\s+(?:أبني|ابني)\s+باستخدام/i.test(parsedMessage) ||
+    /(?:مشاريع|مشروع)\s+باستخدام/i.test(parsedMessage) ||
+    /what\s+(?:projects\s+can\s+i\s+make|can\s+i\s+(?:make|build))\s+with/i.test(
+      parsedMessage,
+    ) ||
+    /what\s+can\s+i\s+do\s+with/i.test(parsedMessage) ||
+    /(?:what|which)\s+projects?\s+use/i.test(parsedMessage) ||
+    /what\s+project\s+uses/i.test(parsedMessage) ||
+    /projects?\s+that\s+use/i.test(parsedMessage) ||
+    /projects?\s+using/i.test(parsedMessage) ||
+    /what\s+can\s+i\s+build\s+using/i.test(parsedMessage)
+  ) {
+    return extractOwnedMaterialsSegment(parsedMessage) != null;
+  }
+
+  return false;
+};
+
+const isGenericOwnedMaterialLabel = (value: string): boolean => {
+  const normalized = normalizeOwnedMaterialLabel(value);
+  if (normalized.length === 0) {
+    return true;
+  }
+
+  const tokens = normalized.split(/\s+/).filter((token) => token.length > 0);
+  if (tokens.length === 0) {
+    return true;
+  }
+
+  return tokens.every((token) => OWNED_MATERIAL_GENERIC_BLOCKLIST.has(token));
+};
+
+export const parseOwnedMaterialsFromMessage = (userMessage: string): string[] => {
+  const segment = extractOwnedMaterialsSegment(userMessage);
+  if (!segment) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const materials: string[] = [];
+
+  for (const raw of splitOwnedMaterialSegments(segment)) {
+    const trimmed = raw.trim().slice(0, 80);
+    if (trimmed.length === 0 || isGenericOwnedMaterialLabel(trimmed)) {
+      continue;
+    }
+
+    const key = normalizeOwnedMaterialLabel(trimmed);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    materials.push(trimmed);
+    if (materials.length >= 12) {
+      break;
+    }
+  }
+
+  return materials;
+};
+
+export const parseOwnedMaterialsProjectInput = (
+  userMessage: string,
+): z.infer<typeof matchProjectsByOwnedMaterialsInputSchema> => {
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalizeOwnedMaterialLabel(parsedMessage);
+  const materials = parseOwnedMaterialsFromMessage(parsedMessage);
+  const input: z.infer<typeof matchProjectsByOwnedMaterialsInputSchema> = {
+    materials,
+    limit: extractRequestedResultCount(parsedMessage) ?? 10,
+  };
+
+  if (includesAny(normalized, ['beginner', 'مبتدئ', 'مبتدئين'])) {
+    input.difficulty = 'BEGINNER';
+  } else if (includesAny(normalized, ['intermediate', 'متوسط'])) {
+    input.difficulty = 'INTERMEDIATE';
+  } else if (includesAny(normalized, ['advanced', 'متقدم'])) {
+    input.difficulty = 'ADVANCED';
+  }
+
+  for (const entry of CATEGORY_SYNONYMS) {
+    if (includesAny(normalized, entry.terms)) {
+      input.category = entry.categoryText;
+      break;
+    }
+  }
+
+  return input;
+};
+
+export const ownedMaterialAliasGroups = () => OWNED_MATERIAL_ALIAS_GROUPS;
+
+export const normalizeOwnedMaterialForMatching = normalizeOwnedMaterialLabel;
+
+const dedupeOwnedMaterialLabels = (values: string[]): string[] => {
+  const seen = new Set<string>();
+  const materials: string[] = [];
+
+  for (const raw of values) {
+    const trimmed = raw.trim().slice(0, 80);
+    if (trimmed.length === 0 || isGenericOwnedMaterialLabel(trimmed)) {
+      continue;
+    }
+
+    const key = normalizeOwnedMaterialLabel(trimmed);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    materials.push(trimmed);
+    if (materials.length >= 12) {
+      break;
+    }
+  }
+
+  return materials;
+};
+
+export const extractBareOwnedMaterialsFromMessage = (userMessage: string): string[] => {
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const patterns = [
+    /(?:عندي|معي|معاي|لقيت|وجدت)\s+(.+?)(?:،|,|\s+ب(?:نفع|قدر|أقدر|استفيد)|\?|؟|$)/iu,
+    /\b(?:i\s+have|i\s+found|i\s+got|i've\s+got)\s+(.+?)(?:\?|\.|,|$)/iu,
+  ];
+
+  for (const pattern of patterns) {
+    const match = parsedMessage.match(pattern);
+    const segment = match?.[1]?.trim();
+    if (!segment || segment.length < 2) {
+      continue;
+    }
+
+    return dedupeOwnedMaterialLabels(
+      splitOwnedMaterialSegments(
+        segment.replace(/(?:فيها?|فيه)\s*$/iu, '').replace(/[؟?.!]+$/g, '').trim(),
+      ),
+    );
+  }
+
+  return [];
+};
+
+export const detectOwnedMaterialsBuildFollowUp = (userMessage: string): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  return (
+    /(?:شو|ما|ايش|إيش)\s+(?:بعمل|اعمل|أعمل|بقدر\s+أعمل|بقدر\s+اعمل)\s*(?:فيها?|فيه|بهم|بها)?/iu.test(
+      parsedMessage,
+    ) ||
+    /what\s+(?:can|should|could)\s+(?:i|we)\s+do(?:\s+with\s+(?:them|these|it))?/iu.test(
+      parsedMessage,
+    ) ||
+    /what\s+to\s+do\s+with/i.test(parsedMessage)
+  );
+};
+
+export const detectOwnedMaterialsSemanticParaphrase = (userMessage: string): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalizeOwnedMaterialLabel(parsedMessage);
+  const hasOwnershipCue = OWNED_MATERIALS_OWNERSHIP_CUES.some((cue) =>
+    normalized.includes(normalizeOwnedMaterialLabel(cue)),
+  );
+  if (!hasOwnershipCue) {
+    return false;
+  }
+
+  return (
+    /(?:مشروع|مشاريع|project|projects|build|make|اعمل|أعمل|استفيد|reuse|benefit|فيها?|فيه|فيهم|here)/iu.test(
+      parsedMessage,
+    ) && extractBareOwnedMaterialsFromMessage(userMessage).length > 0
+  );
+};
+
+export const detectBareOwnedMaterialsPossession = (userMessage: string): boolean => {
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalizeOwnedMaterialLabel(parsedMessage);
+
+  if (
+    OWNED_MATERIALS_NEGATIVE_OWNERSHIP_CUES.some((cue) =>
+      normalized.includes(normalizeOwnedMaterialLabel(cue)),
+    )
+  ) {
+    return false;
+  }
+
+  const hasOwnershipCue = OWNED_MATERIALS_OWNERSHIP_CUES.some((cue) =>
+    normalized.includes(normalizeOwnedMaterialLabel(cue)),
+  );
+  if (!hasOwnershipCue) {
+    return false;
+  }
+
+  if (detectOwnedMaterialsProjectIntent(userMessage)) {
+    return false;
+  }
+
+  return extractBareOwnedMaterialsFromMessage(userMessage).length > 0;
+};
+
+export const isAffirmativeOwnedMaterialsContinuation = (userMessage: string): boolean => {
+  const trimmed = userMessage.trim();
+  return /^(?:آه|اه|أجل|ايوه|ايوا|نعم|ورجيني|ورّيني|أكيد|تمام|yes|yeah|yep|sure|ok|okay|please|go\s+ahead)(?:\s|[,.،]|$)/i.test(
+    trimmed,
+  );
+};
+
+const OWNED_MATERIALS_PROJECT_CONTEXT_MARKERS = [
+  'مشاريع impactloop التي يمكن تنفيذها',
+  'impactloop projects that use these materials',
+  'ما المواد أو القطع المتوفرة لديك',
+  'what materials or components do you have',
+];
+
+export const hasRecentOwnedMaterialsProjectContext = (input: {
+  recentMessages?: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+}): boolean => {
+  if (!input.recentMessages?.length) {
+    return false;
+  }
+
+  return input.recentMessages.slice(-6).some((message) => {
+    const normalized = normalizeOwnedMaterialLabel(message.text);
+    if (message.role === 'ASSISTANT') {
+      return (
+        OWNED_MATERIALS_PROJECT_CONTEXT_MARKERS.some((marker) =>
+          normalized.includes(normalizeOwnedMaterialLabel(marker)),
+        ) ||
+        /(?:ما|what)\s+.*(?:المواد|materials|components)/i.test(message.text) ||
+        /(?:محتار|not sure what).*(?:مشروع|project)/i.test(message.text)
+      );
+    }
+
+    return /(?:بدي|أريد|want).*(?:مشروع|project)/i.test(message.text) &&
+      /(?:محتار|مش عارف|not sure|confused)/i.test(message.text);
+  });
+};
+
+export const resolveOwnedMaterialsFromConversation = (
+  userMessage: string,
+  recentMessages?: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>,
+): string[] => {
+  const fromMessage = dedupeOwnedMaterialLabels([
+    ...parseOwnedMaterialsFromMessage(userMessage),
+    ...extractBareOwnedMaterialsFromMessage(userMessage),
+  ]);
+  if (fromMessage.length > 0) {
+    return fromMessage;
+  }
+
+  if (!recentMessages?.length) {
+    return [];
+  }
+
+  for (const message of [...recentMessages].reverse()) {
+    if (message.role !== 'USER') {
+      continue;
+    }
+
+    const materials = dedupeOwnedMaterialLabels([
+      ...parseOwnedMaterialsFromMessage(message.text),
+      ...extractBareOwnedMaterialsFromMessage(message.text),
+    ]);
+    if (materials.length > 0) {
+      return materials;
+    }
+  }
+
+  return [];
+};

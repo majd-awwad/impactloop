@@ -626,6 +626,66 @@ class _AiProjectCompactCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (item.readinessPercent != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        item.matchExplanation?.trim().isNotEmpty == true
+                            ? item.matchExplanation!.trim()
+                            : '${item.title} — ${item.readinessPercent}%',
+                        style: AppTextStyles.body(context).copyWith(
+                          color: palette.textSecondary,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (item.matchedComponents.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          AiL10n.matchedComponentsLabel.resolve(context),
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children: [
+                            for (final component in item.matchedComponents)
+                              _AiMetaChip(label: component),
+                          ],
+                        ),
+                      ],
+                      if (item.missingComponents.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          AiL10n.missingComponentsLabel.resolve(context),
+                          style: AppTextStyles.label(context).copyWith(
+                            color: palette.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xs,
+                          children: [
+                            for (final component in item.missingComponents)
+                              _AiMetaChip(label: component),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.sm),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          AiL10n.viewProject.resolve(context),
+                          style: AppTextStyles.label(context).copyWith(
+                            color: colors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1514,8 +1574,10 @@ String _availabilityLabel(BuildContext context, AiMaterialCardItem item) {
 
 List<String> _projectMetaLabels(AiProjectCardItem item) {
   return [
+    if (item.categoryLabel?.isNotEmpty ?? false) item.categoryLabel!,
     if (item.difficulty?.isNotEmpty ?? false) item.difficulty!,
     if (item.estimatedTimeLabel?.isNotEmpty ?? false) item.estimatedTimeLabel!,
+    if (item.readinessPercent != null) '${item.readinessPercent}%',
     ...item.interestLabels.where((label) => label.trim().isNotEmpty),
   ];
 }

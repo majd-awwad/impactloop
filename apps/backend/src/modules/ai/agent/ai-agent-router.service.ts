@@ -8,7 +8,9 @@ import {
   detectActiveProjectBuildsIntent,
   detectMaterialDetailsIntent,
   detectMaterialSearchIntent,
+  detectOwnedMaterialsProjectIntent,
   detectProjectComponentsIntent,
+  shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
 import { stripBenignListPrefixForParsing } from './ai-agent-number-parser.service.js';
 import type { AiAgentRouteDecision, AiAgentRouteType } from './ai-agent.types.js';
@@ -89,6 +91,21 @@ const PLATFORM_ROUTE_PATTERNS: RoutePattern[] = [
       /(تفاصيل|معلومات).*(مادة|المواد)/i,
       /(احكيلي|اخبرني|حكيلي|tell me).*(عن|about).*(أول|الاول|اول|first|second|ثاني).*(مادة|مواد|material)/i,
       /(احكيلي|اخبرني|حكيلي).*(عن|about).*(مادة|مواد|material)/i,
+    ],
+  },
+  {
+    route: 'OWNED_MATERIALS_PROJECT_MATCH',
+    confidence: 0.95,
+    suggestedTool: 'match_projects_by_owned_materials',
+    patterns: [
+      /(?:عندي|معي).*(?:شو\s+أقدر\s+أعمل|شو\s+اقدر\s+اعمل|شو\s+مشروع)/i,
+      /(?:شو|ما)\s+(?:بقدر|أقدر|اقدر)\s+(?:أبني|ابني)\s+باستخدام/i,
+      /(?:مشاريع|مشروع)\s+باستخدام/i,
+      /\bi\s+have\b.*\bwhat\s+can\s+i\s+(?:build|make)\b/i,
+      /\bwhat\s+(?:projects\s+can\s+i\s+make|can\s+i\s+(?:make|build))\s+with\b/i,
+      /\bwhat\s+can\s+i\s+do\s+with\b/i,
+      /\bprojects?\s+using\b/i,
+      /\bwhat\s+can\s+i\s+build\s+using\b/i,
     ],
   },
   {
@@ -195,6 +212,15 @@ const matchExternalKnowledgeRoute = (text: string): AiAgentRouteDecision | null 
 };
 
 const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null => {
+  if (detectOwnedMaterialsProjectIntent(text)) {
+    return {
+      route: 'OWNED_MATERIALS_PROJECT_MATCH',
+      confidence: 0.95,
+      source: 'deterministic',
+      suggestedTool: 'match_projects_by_owned_materials',
+    };
+  }
+
   if (detectActiveProjectBuildsIntent(text)) {
     return {
       route: 'ACTIVE_PROJECT_BUILDS',
@@ -285,6 +311,12 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
       if (
         candidate.route === 'PROJECT_COMPONENTS' &&
         detectBuildGapIntent(text)
+      ) {
+        continue;
+      }
+      if (
+        candidate.route === 'PROJECT_COMPONENTS' &&
+        shouldDeferMaterialSearchForOwnedMaterialsProjectUse(text)
       ) {
         continue;
       }

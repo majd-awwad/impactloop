@@ -56,7 +56,11 @@ import {
   findLatestComparisonBlock,
 } from './ai-agent-comparison-followup.service.js';
 import { detectComparisonFollowUpIntent, extractProjectTitleQuery } from './ai-agent-filter-extractor.service.js';
-import type { AiAgentRouteType, AiToolExecutionContext } from './ai-agent.types.js';
+import {
+  AI_AGENT_PLATFORM_ROUTES,
+  type AiAgentRouteType,
+  type AiToolExecutionContext,
+} from './ai-agent.types.js';
 import { AiToolExecutor } from './ai-tool-executor.service.js';
 import { mergeAgentBlocks, buildComponentMatchesIntro } from './ai-tool-mappers.js';
 import {
@@ -2067,22 +2071,7 @@ const handleExternalDomainKnowledgeTurn = async (input: {
   };
 };
 
-const PLATFORM_ROUTES = new Set<AiAgentRouteType>([
-  'MATERIAL_SEARCH',
-  'MATERIAL_DETAILS',
-  'PROJECT_SEARCH',
-  'PROJECT_DETAILS',
-  'PROJECT_COMPONENTS',
-  'SAVED_PROJECTS',
-  'ACTIVE_PROJECT_BUILDS',
-  'BUILD_CHECKLIST',
-  'BUILD_GAP_ANALYSIS',
-  'COMPONENT_MATERIAL_MATCHING',
-  'PROJECT_MATERIAL_MATCHING',
-  'MATERIAL_COMPARISON',
-  'PROJECT_COMPARISON',
-  'PERSONALIZED_RECOMMENDATION',
-]);
+const PLATFORM_ROUTES = new Set<AiAgentRouteType>(AI_AGENT_PLATFORM_ROUTES);
 
 const textBlock = (
   text: string,
@@ -2122,6 +2111,26 @@ const buildGracefulToolFailureResult = (input: {
   }
 
   if (input.errorCode === 'NO_MATCHING_RESULTS') {
+    if (input.route === 'OWNED_MATERIALS_PROJECT_MATCH') {
+      return {
+        blocks: [
+          textBlock(
+            input.responseLocale === 'ar'
+              ? 'لم أجد مشروعاً منشوراً على ImpactLoop يطابق المواد التي ذكرتها. جرّب أسماء مواد أو مكوّنات أوضح أو أكثر تحديداً.'
+              : 'I could not find a published ImpactLoop project that matches the materials you listed. Try entering clearer or more specific material or component names.',
+            'answer',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: input.route,
+      };
+    }
+
     return {
       blocks: [
         textBlock(buildNoResultsIntro(input.responseLocale), 'answer'),
@@ -2168,6 +2177,16 @@ const buildProjectResultsIntro = (
   block: Extract<AiContentBlock, { type: 'project_results' }>,
   locale: AiLocale,
 ): string => {
+  const hasCoverageEstimate = block.items.some(
+    (item) => item.readinessPercent != null,
+  );
+
+  if (hasCoverageEstimate) {
+    return locale === 'ar'
+      ? 'تقدير تغطية المكونات بناءً على المواد التي ذكرتها.'
+      : 'Estimated component coverage based on the materials you listed.';
+  }
+
   const titles = block.items.map((item) => item.title);
   const joined =
     locale === 'ar'
@@ -2787,7 +2806,9 @@ export const executeLearnerAgentPlatformTurn = async (input: {
 
     toolInput =
       !mustResolveToolInput &&
-      (routeDecision.route === 'MATERIAL_SEARCH' || planHasTrustedIds)
+      (routeDecision.route === 'MATERIAL_SEARCH' ||
+        routeDecision.route === 'OWNED_MATERIALS_PROJECT_MATCH' ||
+        planHasTrustedIds)
         ? executionPlan.toolInput
         : await resolveToolInput({
             route: routeDecision.route,

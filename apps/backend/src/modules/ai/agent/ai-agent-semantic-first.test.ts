@@ -109,6 +109,7 @@ describe('semantic-first general learning distinction', () => {
     'كيف بستخدم breadboard؟',
     'اشرحلي شو هي الحساسات',
     'شو الفرق بين المحرك والسيرفو؟',
+    'اشرحلي كيف Arduino بشتغل',
   ];
 
   for (const message of cases) {

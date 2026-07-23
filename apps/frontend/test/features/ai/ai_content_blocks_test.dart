@@ -98,6 +98,55 @@ void main() {
       expect(block.projectItems.first.savedByLearner, isTrue);
     });
 
+    test('parses project_results block with owned-materials coverage fields', () {
+      final block = AiContentBlock.fromJson({
+        'type': 'project_results',
+        'items': [
+          {
+            'projectId': 'proj-owned-1',
+            'title': 'Mini Traffic Light',
+            'difficulty': 'BEGINNER',
+            'readinessPercent': 50,
+            'matchedComponentCount': 2,
+            'totalRequiredComponentCount': 4,
+            'matchedComponents': ['Arduino Uno', 'Jumper wires'],
+            'missingComponents': ['LEDs', 'Resistors'],
+            'matchExplanation':
+                'Mini Traffic Light — estimated component coverage: 50%',
+          },
+        ],
+      });
+
+      expect(block.projectItems.single.readinessPercent, 50);
+      expect(block.projectItems.single.matchedComponentCount, 2);
+      expect(block.projectItems.single.totalRequiredComponentCount, 4);
+      expect(
+        block.projectItems.single.matchedComponents,
+        ['Arduino Uno', 'Jumper wires'],
+      );
+      expect(
+        block.projectItems.single.missingComponents,
+        ['LEDs', 'Resistors'],
+      );
+    });
+
+    test('parses legacy project_results block without coverage fields', () {
+      final block = AiContentBlock.fromJson({
+        'type': 'project_results',
+        'items': [
+          {
+            'projectId': 'proj-legacy-1',
+            'title': 'Solar night light',
+            'difficulty': 'Beginner',
+          },
+        ],
+      });
+
+      expect(block.projectItems.single.readinessPercent, isNull);
+      expect(block.projectItems.single.matchedComponents, isEmpty);
+      expect(block.projectItems.single.missingComponents, isEmpty);
+    });
+
     test('parses project_details block', () {
       final block = AiContentBlock.fromJson({
         'type': 'project_details',

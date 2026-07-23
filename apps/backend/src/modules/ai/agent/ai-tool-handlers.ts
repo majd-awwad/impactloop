@@ -1,4 +1,5 @@
 import { AppError } from '../../../utils/app-error.js';
+import { prisma } from '../../../database/prisma.js';
 import { getCategories } from '../../categories/categories.service.js';
 import { getLearnerHomeSection } from '../../learner-home/learner-home.service.js';
 import { normalizeMaterialTitleKey } from '../../learner-home/learner-home.deduplication.js';
@@ -17,6 +18,11 @@ import type { MaterialsQuery } from '../../materials/materials.validation.js';
 import type { LearningProjectsQuery } from '../../learning-projects/learning-projects.validation.js';
 
 import type { AiContentBlock } from '../ai.content-blocks.js';
+import type { AiLocale } from '../ai.types.js';
+import {
+  normalizeOwnedMaterialForMatching,
+  ownedMaterialAliasGroups,
+} from './ai-agent-filter-extractor.service.js';
 import type { AiToolExecutionContext } from './ai-agent.types.js';
 import { shouldHideE2eFixtureTitle } from '../e2e-fixture-guard.js';
 import { localizeRecommendationReasons } from './ai-agent-reason-localizer.service.js';
@@ -44,6 +50,7 @@ import {
   componentIdInputSchema,
   findMaterialsForProjectInputSchema,
   materialIdInputSchema,
+  matchProjectsByOwnedMaterialsInputSchema,
   personalizedRecommendationsInputSchema,
   projectIdInputSchema,
   searchAvailableMaterialsInputSchema,
@@ -331,6 +338,322 @@ const filterByDistance = <T>(
   });
 };
 
+type OwnedMaterialsComponentRecord = {
+  id: string;
+  componentName: string;
+  materialType: string;
+  searchKeywords: unknown;
+  alternativeKeywords: unknown;
+  isRequired: boolean;
+};
+
+const asStringArray = (value: unknown): string[] =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+
+const isGeneralOwnedMaterialType = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized.length === 0 ||
+    normalized === 'general' ||
+    normalized === 'unspecified'
+  );
+};
+
+const tokenizeForOwnedMaterialMatch = (value: string) =>
+  normalizeOwnedMaterialForMatching(value)
+    .split(/\s+/)
+    .filter((token) => token.length >= 3)
+    .map((token) => (token.length > 4 && token.endsWith('s') ? token.slice(0, -1) : token));
+
+const hasOwnedMaterialTokenOverlap = (left: string, right: string) => {
+  const leftTokens = tokenizeForOwnedMaterialMatch(left);
+  const rightTokens = tokenizeForOwnedMaterialMatch(right);
+  if (leftTokens.length === 0 || rightTokens.length === 0) {
+    return false;
+  }
+
+  const [shorter, longer] =
+    leftTokens.length <= rightTokens.length
+      ? [leftTokens, rightTokens]
+      : [rightTokens, leftTokens];
+
+  return shorter.every((token) => longer.includes(token));
+};
+
+const resolveOwnedMaterialAliasKey = (value: string): string => {
+  const normalized = normalizeOwnedMaterialForMatching(value);
+
+  for (const group of ownedMaterialAliasGroups()) {
+    const canonical = normalizeOwnedMaterialForMatching(group[0] ?? '');
+    for (const alias of group) {
+      const aliasNorm = normalizeOwnedMaterialForMatching(alias);
+      if (
+        normalized === aliasNorm ||
+        hasOwnedMaterialTokenOverlap(normalized, aliasNorm)
+      ) {
+        return canonical;
+      }
+    }
+  }
+
+  return normalized;
+};
+
+const ownedMaterialMatchesTerm = (material: string, term: string): boolean => {
+  const materialNorm = normalizeOwnedMaterialForMatching(material);
+  const termNorm = normalizeOwnedMaterialForMatching(term);
+
+  if (!materialNorm || !termNorm) {
+    return false;
+  }
+
+  if (materialNorm === termNorm) {
+    return true;
+  }
+
+  if (resolveOwnedMaterialAliasKey(material) === resolveOwnedMaterialAliasKey(term)) {
+    return true;
+  }
+
+  if (hasOwnedMaterialTokenOverlap(materialNorm, termNorm)) {
+    return true;
+  }
+
+  if (termNorm.length >= 4 && materialNorm.includes(termNorm)) {
+    return true;
+  }
+
+  if (materialNorm.length >= 4 && termNorm.includes(materialNorm)) {
+    return true;
+  }
+
+  return false;
+};
+
+const ownedComponentTerms = (component: OwnedMaterialsComponentRecord): string[] => {
+  const terms = new Set<string>();
+  terms.add(component.componentName);
+
+  if (!isGeneralOwnedMaterialType(component.materialType)) {
+    terms.add(component.materialType);
+  }
+
+  for (const keyword of [
+    ...asStringArray(component.searchKeywords),
+    ...asStringArray(component.alternativeKeywords),
+  ]) {
+    if (keyword.trim().length > 0) {
+      terms.add(keyword);
+    }
+  }
+
+  return [...terms];
+};
+
+const ownedComponentMatchesMaterials = (
+  component: OwnedMaterialsComponentRecord,
+  materials: string[],
+): boolean =>
+  materials.some((material) =>
+    ownedComponentTerms(component).some((term) =>
+      ownedMaterialMatchesTerm(material, term),
+    ),
+  );
+
+const computeOwnedMaterialsReadinessPercent = (
+  matchedCount: number,
+  totalCount: number,
+): number => {
+  if (totalCount <= 0) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.min(100, Math.round((matchedCount / totalCount) * 100)),
+  );
+};
+
+const buildOwnedMaterialsMatchExplanation = (
+  title: string,
+  readinessPercent: number,
+  locale: AiLocale,
+): string =>
+  locale === 'ar'
+    ? `${title} — تقدير تغطية المكونات: ${readinessPercent}%`
+    : `${title} — estimated component coverage: ${readinessPercent}%`;
+
+const matchProjectsByOwnedMaterials = async (
+  input: ReturnType<typeof matchProjectsByOwnedMaterialsInputSchema.parse>,
+  locale: AiLocale,
+) => {
+  const materials = [...new Set(input.materials.map((material) => material.trim()))].filter(
+    (material) => material.length > 0,
+  );
+
+  if (materials.length === 0) {
+    throw new AppError(
+      'Tell me which materials you have.',
+      400,
+      'AI_ROUTE_UNCLEAR',
+    );
+  }
+
+  const limit = Math.min(input.limit ?? 10, 10);
+  const projects = await prisma.learningProject.findMany({
+    where: {
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+      category: {
+        isActive: true,
+        categoryType: {
+          in: ['PROJECT', 'BOTH'],
+        },
+        ...(input.category
+          ? {
+              OR: [
+                {
+                  nameEn: {
+                    contains: input.category,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  nameAr: {
+                    contains: input.category,
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
+      ...(input.difficulty ? { difficulty: input.difficulty } : {}),
+      requiredComponents: {
+        some: {
+          isRequired: true,
+        },
+      },
+    },
+    include: {
+      category: {
+        select: {
+          nameEn: true,
+          nameAr: true,
+        },
+      },
+      requiredComponents: {
+        where: {
+          isRequired: true,
+        },
+        select: {
+          id: true,
+          componentName: true,
+          materialType: true,
+          searchKeywords: true,
+          alternativeKeywords: true,
+          isRequired: true,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      },
+    },
+  });
+
+  const matches = projects
+    .map((project) => {
+      const requiredComponents = project.requiredComponents;
+      const totalRequired = requiredComponents.length;
+      if (totalRequired === 0) {
+        return null;
+      }
+
+      const matchedComponents = requiredComponents.filter((component) =>
+        ownedComponentMatchesMaterials(component, materials),
+      );
+      if (matchedComponents.length === 0) {
+        return null;
+      }
+
+      const matchedNames = matchedComponents.map(
+        (component) => component.componentName,
+      );
+      const matchedIds = new Set(matchedComponents.map((component) => component.id));
+      const missingNames = requiredComponents
+        .filter((component) => !matchedIds.has(component.id))
+        .map((component) => component.componentName);
+      const readinessPercent = computeOwnedMaterialsReadinessPercent(
+        matchedComponents.length,
+        totalRequired,
+      );
+
+      return {
+        project,
+        readinessPercent,
+        matchedNames,
+        missingNames,
+        matchedCount: matchedComponents.length,
+        totalRequired,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null)
+    .sort((left, right) => {
+      if (right.readinessPercent !== left.readinessPercent) {
+        return right.readinessPercent - left.readinessPercent;
+      }
+      if (right.matchedCount !== left.matchedCount) {
+        return right.matchedCount - left.matchedCount;
+      }
+      return left.project.title.localeCompare(right.project.title);
+    })
+    .slice(0, limit);
+
+  if (matches.length === 0) {
+    throw new AppError(
+      'No matching projects found.',
+      404,
+      'NO_MATCHING_RESULTS',
+    );
+  }
+
+  return {
+    block: {
+      type: 'project_results' as const,
+      items: matches.map((match) => ({
+        ...mapProjectToCard(
+          {
+            id: match.project.id,
+            title: match.project.title,
+            coverImageUrl: match.project.coverImageUrl,
+            difficulty: match.project.difficulty,
+            estimatedDurationMinutes: match.project.estimatedDurationMinutes,
+          },
+          locale,
+        ),
+        categoryLabel:
+          locale === 'ar'
+            ? match.project.category.nameAr
+            : match.project.category.nameEn,
+        readinessPercent: match.readinessPercent,
+        matchedComponentCount: match.matchedCount,
+        totalRequiredComponentCount: match.totalRequired,
+        matchedComponents: match.matchedNames,
+        missingComponents: match.missingNames,
+        matchExplanation: buildOwnedMaterialsMatchExplanation(
+          match.project.title,
+          match.readinessPercent,
+          locale,
+        ),
+      })),
+    },
+    count: matches.length,
+  };
+};
+
 const mapLearningProjectsQuery = (
   input: ReturnType<typeof searchLearningProjectsInputSchema.parse>,
 ): LearningProjectsQuery => ({
@@ -404,6 +727,11 @@ export const executeLearnerAgentTool = async (
         block: toProjectResultsBlock(items, locale),
         count: items.length,
       };
+    }
+
+    case 'match_projects_by_owned_materials': {
+      const input = matchProjectsByOwnedMaterialsInputSchema.parse(rawInput ?? {});
+      return matchProjectsByOwnedMaterials(input, locale);
     }
 
     case 'get_learning_project_details': {

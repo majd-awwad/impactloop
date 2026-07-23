@@ -1,14 +1,25 @@
 import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
+import { afterEach, describe, test } from 'node:test';
 
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import {
   detectMaterialSearchIntent,
+  detectOwnedMaterialsProjectIntent,
   detectProjectComponentsIntent,
   extractMaterialSearchFilters,
+  isExplicitMaterialSearchCommand,
+  parseOwnedMaterialsFromMessage,
+  parseOwnedMaterialsProjectInput,
+  resolveOwnedMaterialsFromConversation,
+  shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
 import { extractBoundedMaxPrice } from './ai-agent-number-parser.service.js';
 import { resolveAgentExecutionPlan } from './ai-agent-plan-resolver.service.js';
+import {
+  ownedMaterialsPlanFromPlanner,
+  setSemanticPlannerOverrideForTests,
+  validatePlannerOutput,
+} from './ai-agent-semantic-planner.service.js';
 import {
   resolveEntityFromContext,
   scoreEntityTitleMatch,
@@ -233,6 +244,375 @@ describe('acceptance: bounded number parsing', () => {
   for (const [index, row] of priceExpressions.entries()) {
     test(`price expression ${index + 1}`, () => {
       assert.equal(extractBoundedMaxPrice(row.message), row.expected, row.message);
+    });
+  }
+});
+
+describe('acceptance: owned materials project match intent', () => {
+  test('detects Arabic and English owned-materials build intents', () => {
+    assert.equal(
+      detectOwnedMaterialsProjectIntent('عندي Arduino، شو أقدر أعمل فيه؟'),
+      true,
+    );
+    assert.equal(
+      detectOwnedMaterialsProjectIntent('عندي Arduino وأسلاك وكرتون، شو أقدر أعمل؟'),
+      true,
+    );
+    assert.equal(
+      detectOwnedMaterialsProjectIntent(
+        'I have an Arduino and wires. What can I build?',
+      ),
+      true,
+    );
+  });
+
+  test('parses multiple owned materials independently', () => {
+    assert.deepEqual(
+      parseOwnedMaterialsFromMessage('عندي Arduino وأسلاك وكرتون، شو أقدر أعمل؟'),
+      ['Arduino', 'أسلاك', 'كرتون'],
+    );
+  });
+
+  test('rejects generic owned-material words', () => {
+    assert.deepEqual(
+      parseOwnedMaterialsFromMessage('عندي مادة، شو أقدر أعمل؟'),
+      [],
+    );
+  });
+
+  test('routes owned materials intents to deterministic tool plan', async () => {
+    const message = 'عندي Arduino Uno، شو أقدر أعمل فيه؟';
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: message,
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.equal(plan.toolName, 'match_projects_by_owned_materials');
+    assert.deepEqual(plan.toolInput, parseOwnedMaterialsProjectInput(message));
+  });
+});
+
+describe('acceptance: semantic owned materials planner routing', () => {
+  afterEach(() => {
+    setSemanticPlannerOverrideForTests(null);
+  });
+
+  const ownedPlannerResponse = (materials: string[]) => ({
+    route: 'OWNED_MATERIALS_PROJECT_MATCH' as const,
+    confidence: 0.94,
+    entities: [],
+    toolCall: {
+      name: 'match_projects_by_owned_materials',
+      arguments: { materials, limit: 5 },
+    },
+    clarificationNeeded: false,
+  });
+
+  test('natural Arabic request selects match_projects_by_owned_materials', async () => {
+    setSemanticPlannerOverrideForTests(async () =>
+      ownedPlannerResponse(['Arduino', 'wires']),
+    );
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'لقيت أردوينو وشوية أسلاك، بنفع أعمل فيهم إشي؟',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.equal(plan.toolName, 'match_projects_by_owned_materials');
+    assert.deepEqual(plan.toolInput.materials, ['Arduino', 'wires']);
+    assert.equal(plan.diagnostics.semanticPlannerUsed, true);
+  });
+
+  test('natural English request selects match_projects_by_owned_materials', async () => {
+    setSemanticPlannerOverrideForTests(async () =>
+      ownedPlannerResponse(['LEDs', 'resistors', 'wires']),
+    );
+    const plan = await resolveAgentExecutionPlan({
+      userMessage:
+        'I have some leftover LEDs, resistors and wires. Could I reuse them here?',
+      locale: 'en',
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.equal(plan.toolName, 'match_projects_by_owned_materials');
+    assert.deepEqual(plan.toolInput.materials, ['LEDs', 'resistors', 'wires']);
+  });
+
+  test('dialect wording selects owned-materials tool', async () => {
+    setSemanticPlannerOverrideForTests(async () =>
+      ownedPlannerResponse(['cardboard', 'glue', 'small motor']),
+    );
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'معي كرتون وغرا ومحرك صغير ومش عارف شو أستفيد منهم',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.equal(plan.toolName, 'match_projects_by_owned_materials');
+  });
+
+  test('split follow-up uses recent conversation materials', async () => {
+    setSemanticPlannerOverrideForTests(async ({ userMessage, conversationContext }) =>
+      ownedPlannerResponse(
+        resolveOwnedMaterialsFromConversation(
+          userMessage,
+          conversationContext?.recentMessages,
+        ),
+      ),
+    );
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'شو بعمل فيهم؟',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'عندي Arduino وأسلاك' },
+        ],
+        entities: [],
+      },
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.deepEqual(plan.toolInput.materials, ['Arduino', 'أسلاك']);
+  });
+
+  test('materials after assistant clarification are recovered', async () => {
+    setSemanticPlannerOverrideForTests(async () =>
+      ownedPlannerResponse(['كرتون', 'محرك صغير', 'أسلاك']),
+    );
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'كرتون ومحرك صغير وأسلاك',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'بدي أعمل مشروع بس مش عارف شو' },
+          {
+            role: 'ASSISTANT',
+            text: 'ما المواد أو القطع المتوفرة لديك؟',
+          },
+        ],
+        entities: [],
+      },
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.deepEqual(plan.toolInput.materials, [
+      'كرتون',
+      'محرك صغير',
+      'أسلاك',
+    ]);
+  });
+
+  test('planner-extracted materials pass schema validation', () => {
+    const validated = validatePlannerOutput({
+      route: 'OWNED_MATERIALS_PROJECT_MATCH',
+      confidence: 0.9,
+      entities: [],
+      toolCall: {
+        name: 'match_projects_by_owned_materials',
+        arguments: { materials: ['Arduino'], limit: 5 },
+      },
+      clarificationNeeded: false,
+    });
+    assert.ok(validated);
+    const plan = ownedMaterialsPlanFromPlanner('Arduino test', validated!);
+    assert.equal(Array.isArray(plan?.materials), true);
+    assert.equal((plan?.materials as string[]).length, 1);
+  });
+
+  test('duplicate extracted materials are normalized', () => {
+    const plan = ownedMaterialsPlanFromPlanner('Arduino', {
+      route: 'OWNED_MATERIALS_PROJECT_MATCH',
+      confidence: 0.9,
+      entities: [],
+      toolCall: {
+        name: 'match_projects_by_owned_materials',
+        arguments: { materials: ['Arduino', 'arduino', 'Arduino Uno'] },
+      },
+      clarificationNeeded: false,
+    });
+    assert.deepEqual(plan?.materials, ['Arduino', 'Arduino Uno']);
+  });
+
+  test('empty planner materials produce material-specific clarification', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'OWNED_MATERIALS_PROJECT_MATCH',
+      confidence: 0.9,
+      entities: [],
+      clarificationNeeded: true,
+      clarificationReason:
+        'ما أسماء المواد أو المكوّنات التي لديك؟ اذكرها بشكل أوضح (مثل Arduino، أسلاك، كرتون) وسأطابقها مع مشاريع ImpactLoop.',
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'حابب أعمل إشي من المواد اللي عندي',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'CLARIFICATION');
+    assert.match(plan.clarificationReason ?? '', /المواد أو المكوّنات/);
+  });
+
+  test('invalid planner tool names are rejected safely', () => {
+    assert.equal(
+      validatePlannerOutput({
+        route: 'OWNED_MATERIALS_PROJECT_MATCH',
+        confidence: 0.9,
+        entities: [],
+        toolCall: { name: 'invent_projects', arguments: { materials: ['Arduino'] } },
+        clarificationNeeded: false,
+      }),
+      null,
+    );
+  });
+
+  test('planner failure does not invent owned-material execution', async () => {
+    setSemanticPlannerOverrideForTests(async () => null);
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'ما رأيك بهذه الفكرة التعليمية؟',
+      locale: 'ar',
+    });
+    assert.notEqual(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.equal(plan.toolName, null);
+  });
+
+  test('bare possession without context asks bounded clarification', async () => {
+    setSemanticPlannerOverrideForTests(async () => null);
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'عندي Arduino وأسلاك',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'CLARIFICATION');
+    assert.match(
+      plan.clarificationReason ?? '',
+      /مشاريع ImpactLoop التي يمكن تنفيذها/,
+    );
+  });
+
+  test('bare possession with relevant project context executes matching', async () => {
+    setSemanticPlannerOverrideForTests(async () => null);
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'عندي Arduino وأسلاك',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'بدي أعمل مشروع بس مش عارف شو' },
+          {
+            role: 'ASSISTANT',
+            text: 'ما المواد أو القطع المتوفرة لديك؟',
+          },
+        ],
+        entities: [],
+      },
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.deepEqual(plan.toolInput.materials, ['Arduino', 'أسلاك']);
+  });
+
+  test('affirmative continuation reuses recent materials', async () => {
+    setSemanticPlannerOverrideForTests(async () => null);
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'آه، ورجيني',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'معي Arduino وأسلاك' },
+          {
+            role: 'ASSISTANT',
+            text: 'هل تريد أن أعرض مشاريع ImpactLoop التي يمكن تنفيذها باستخدام هذه المواد؟',
+          },
+        ],
+        entities: [],
+      },
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.deepEqual(plan.toolInput.materials, ['Arduino', 'أسلاك']);
+  });
+});
+
+describe('acceptance: owned materials vs material search routing', () => {
+  afterEach(() => {
+    setSemanticPlannerOverrideForTests(null);
+  });
+
+  const ownedPlannerResponse = (materials: string[]) => ({
+    route: 'OWNED_MATERIALS_PROJECT_MATCH' as const,
+    confidence: 0.95,
+    entities: [],
+    toolCall: {
+      name: 'match_projects_by_owned_materials',
+      arguments: { materials },
+    },
+    clarificationNeeded: false,
+  });
+
+  const ownedMessages = [
+    {
+      message:
+        'لقيت Arduino وشوية أسلاك، بنفع أستفيد منهم بمشروع موجود عندكم؟',
+      locale: 'ar' as const,
+      materials: ['Arduino', 'wires'],
+    },
+    {
+      message: 'معي كرتون وغرا، في إشي من مشاريعكم بقدر أعمله؟',
+      locale: 'ar' as const,
+      materials: ['cardboard', 'glue'],
+    },
+    {
+      message: 'عندي LEDs ومقاومات، بناسبوا مشروع بالمنصة؟',
+      locale: 'ar' as const,
+      materials: ['LEDs', 'resistors'],
+    },
+    {
+      message:
+        'I found an Arduino and wires. Can I use them in one of your projects?',
+      locale: 'en' as const,
+      materials: ['Arduino', 'wires'],
+    },
+    {
+      message: 'Could these leftover components fit an ImpactLoop project?',
+      locale: 'en' as const,
+      materials: ['components'],
+    },
+  ];
+
+  for (const [index, sample] of ownedMessages.entries()) {
+    test(`owned-material routing case ${index + 1}`, async () => {
+      setSemanticPlannerOverrideForTests(async () =>
+        ownedPlannerResponse(sample.materials),
+      );
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: sample.message,
+        locale: sample.locale,
+      });
+      assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+      assert.equal(plan.toolName, 'match_projects_by_owned_materials');
+      assert.notEqual(plan.toolName, 'search_available_materials');
+    });
+  }
+
+  test('owned-material routing works when planner fails', async () => {
+    setSemanticPlannerOverrideForTests(async () => null);
+    const plan = await resolveAgentExecutionPlan({
+      userMessage:
+        'لقيت Arduino وشوية أسلاك، بنفع أستفيد منهم بمشروع موجود عندكم؟',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.equal(plan.toolName, 'match_projects_by_owned_materials');
+  });
+
+  const explicitMaterialSearch = [
+    'اعرضلي مواد Arduino المتوفرة',
+    'دورلي على Arduino موجود بالمنصة',
+    'شو في مواد إلكترونية قريبة مني؟',
+    'Show me available Arduino materials',
+    'Find cardboard near me',
+  ];
+
+  for (const [index, message] of explicitMaterialSearch.entries()) {
+    test(`explicit material search case ${index + 1}`, async () => {
+      setSemanticPlannerOverrideForTests(async () =>
+        ownedPlannerResponse(['Arduino']),
+      );
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: message,
+        locale: message.match(/[\u0600-\u06FF]/) ? 'ar' : 'en',
+      });
+      assert.equal(plan.route, 'MATERIAL_SEARCH');
+      assert.equal(plan.toolName, 'search_available_materials');
     });
   }
 });

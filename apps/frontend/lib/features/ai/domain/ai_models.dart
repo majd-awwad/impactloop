@@ -53,6 +53,13 @@ class AiProjectCardItem {
     this.savedByLearner,
     this.activeBuildId,
     this.summary,
+    this.categoryLabel,
+    this.readinessPercent,
+    this.matchedComponentCount,
+    this.totalRequiredComponentCount,
+    this.matchedComponents = const [],
+    this.missingComponents = const [],
+    this.matchExplanation,
   });
 
   factory AiProjectCardItem.fromJson(Map<String, dynamic> json) {
@@ -69,6 +76,22 @@ class AiProjectCardItem {
       savedByLearner: json['savedByLearner'] as bool?,
       activeBuildId: json['activeBuildId'] as String?,
       summary: json['summary'] as String?,
+      categoryLabel: json['categoryLabel'] as String?,
+      readinessPercent: (json['readinessPercent'] as num?)?.toInt(),
+      matchedComponentCount: (json['matchedComponentCount'] as num?)?.toInt(),
+      totalRequiredComponentCount:
+          (json['totalRequiredComponentCount'] as num?)?.toInt(),
+      matchedComponents: json['matchedComponents'] is List
+          ? (json['matchedComponents'] as List).whereType<String>().toList(
+                growable: false,
+              )
+          : const [],
+      missingComponents: json['missingComponents'] is List
+          ? (json['missingComponents'] as List).whereType<String>().toList(
+                growable: false,
+              )
+          : const [],
+      matchExplanation: json['matchExplanation'] as String?,
     );
   }
 
@@ -81,6 +104,13 @@ class AiProjectCardItem {
   final bool? savedByLearner;
   final String? activeBuildId;
   final String? summary;
+  final String? categoryLabel;
+  final int? readinessPercent;
+  final int? matchedComponentCount;
+  final int? totalRequiredComponentCount;
+  final List<String> matchedComponents;
+  final List<String> missingComponents;
+  final String? matchExplanation;
 }
 
 class AiComponentListItem {
