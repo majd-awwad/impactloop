@@ -1,0 +1,1633 @@
+diff --git a/apps/backend/src/modules/recommendations/recommendation-feature-token-contract.test.ts b/apps/backend/src/modules/recommendations/recommendation-feature-token-contract.test.ts
+new file mode 100644
+index 00000000..42c737b2
+--- /dev/null
++++ b/apps/backend/src/modules/recommendations/recommendation-feature-token-contract.test.ts
+@@ -0,0 +1,348 @@
++import assert from 'node:assert/strict';
++import { readFile, rm, writeFile, mkdtemp } from 'node:fs/promises';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import test from 'node:test';
++import { fileURLToPath, pathToFileURL } from 'node:url';
++import { TAXONOMY_CONCEPT_SEEDS } from '../taxonomy/taxonomy-foundation.data.js';
++import { normalizeTaxonomyAlias } from '../taxonomy/taxonomy-normalization.js';
++import {
++  RecommendationFeatureTokenContractLoadError,
++  RecommendationFeatureTokenContractValidationError,
++  computeTaxonomyVocabularyFingerprint,
++  loadRecommendationFeatureTokenContract,
++  parseRecommendationFeatureTokenContract,
++  resolveRecommendationFeatureTokenContractUrl,
++  validateCanonicalFeatureToken,
++  validatePortableFeatureRow,
++  type ContractLoadErrorCode,
++  type PortableFeatureOccurrence,
++  type RecommendationFeatureTokenContract,
++} from './recommendation-feature-token-contract.js';
++
++const loadErrorCode = async (
++  promise: Promise<unknown>,
++  expected: ContractLoadErrorCode,
++): Promise<void> => {
++  await assert.rejects(promise, (error: unknown) => {
++    if (!(error instanceof RecommendationFeatureTokenContractLoadError)) {
++      return false;
++    }
++    assert.equal(error.code, expected);
++    return true;
++  });
++};
++
++test('loads the authoritative contract explicitly and by source-relative default', async () => {
++  const defaultUrl = resolveRecommendationFeatureTokenContractUrl();
++  const byDefault = await loadRecommendationFeatureTokenContract();
++  const byUrl = await loadRecommendationFeatureTokenContract(defaultUrl);
++  const byAbsolutePath = await loadRecommendationFeatureTokenContract(
++    fileURLToPath(defaultUrl),
++  );
++
++  assert.equal(byDefault.contractId, 'recommendation-feature-token-contract-v3');
++  assert.equal(byDefault.contractVersion, '3.0.0');
++  assert.deepEqual(byUrl, byDefault);
++  assert.deepEqual(byAbsolutePath, byDefault);
++  assert.equal(byDefault.status.runtimeActivation, 'INACTIVE');
++  assert.equal(byDefault.aggregation.selectedMode, null);
++  assert.equal(byDefault.aggregation.portableActivationAllowed, false);
++});
++
++test('default URL has the same repository-relative result from src and dist layouts', () => {
++  const sourceModuleUrl = new URL(
++    './recommendation-feature-token-contract.js',
++    import.meta.url,
++  );
++  const distModuleUrl = new URL(
++    sourceModuleUrl.href.replace('/src/', '/dist/'),
++  );
++
++  assert.equal(
++    resolveRecommendationFeatureTokenContractUrl(sourceModuleUrl).href,
++    resolveRecommendationFeatureTokenContractUrl(distModuleUrl).href,
++  );
++});
++
++test('loader rejects relative, missing, unreadable, malformed, structural, and semantic sources', async () => {
++  await loadErrorCode(
++    loadRecommendationFeatureTokenContract('relative/contract.json'),
++    'CONTRACT_LOAD_INVALID_SOURCE',
++  );
++
++  const temporaryDirectory = await mkdtemp(
++    join(tmpdir(), 'impactloop-feature-contract-'),
++  );
++  try {
++    await loadErrorCode(
++      loadRecommendationFeatureTokenContract(
++        join(temporaryDirectory, 'missing.json'),
++      ),
++      'CONTRACT_LOAD_MISSING',
++    );
++    await loadErrorCode(
++      loadRecommendationFeatureTokenContract(temporaryDirectory),
++      'CONTRACT_LOAD_UNREADABLE',
++    );
++
++    const malformedPath = join(temporaryDirectory, 'malformed.json');
++    await writeFile(malformedPath, '{', 'utf8');
++    await loadErrorCode(
++      loadRecommendationFeatureTokenContract(malformedPath),
++      'CONTRACT_LOAD_MALFORMED_JSON',
++    );
++
++    const structuralPath = join(temporaryDirectory, 'structural.json');
++    await writeFile(structuralPath, '{}', 'utf8');
++    await loadErrorCode(
++      loadRecommendationFeatureTokenContract(structuralPath),
++      'CONTRACT_LOAD_STRUCTURALLY_INVALID',
++    );
++
++    const contractUrl = resolveRecommendationFeatureTokenContractUrl();
++    const semantic = JSON.parse(
++      await readFile(contractUrl, 'utf8'),
++    ) as RecommendationFeatureTokenContract;
++    semantic.taxonomyCompatibility.taxonomyVocabularyFingerprint = '0'.repeat(64);
++    const semanticPath = join(temporaryDirectory, 'semantic.json');
++    await writeFile(semanticPath, JSON.stringify(semantic), 'utf8');
++    await loadErrorCode(
++      loadRecommendationFeatureTokenContract(pathToFileURL(semanticPath)),
++      'CONTRACT_LOAD_SEMANTICALLY_INVALID',
++    );
++  } finally {
++    await rm(temporaryDirectory, { recursive: true, force: true });
++  }
++});
++
++test('taxonomy vocabulary fingerprint covers only concept type and canonical key', () => {
++  assert.equal(
++    computeTaxonomyVocabularyFingerprint(),
++    'c84173df47de8dfc547e5d68277fbf789b9e0a27561be08221e5e0d88d3db370',
++  );
++
++  const labelAndAliasOnlyChange = TAXONOMY_CONCEPT_SEEDS.map((seed, index) =>
++    index === 0
++      ? {
++          ...seed,
++          labelEn: 'Changed display label',
++          labelAr: 'تسمية معدلة',
++          aliases: [],
++          mappingRules: [],
++        }
++      : seed,
++  );
++  assert.equal(
++    computeTaxonomyVocabularyFingerprint(labelAndAliasOnlyChange),
++    computeTaxonomyVocabularyFingerprint(),
++  );
++
++  const canonicalKeyChange = TAXONOMY_CONCEPT_SEEDS.map((seed, index) =>
++    index === 0 ? { ...seed, canonicalKey: 'interest:changed-key' } : seed,
++  );
++  assert.notEqual(
++    computeTaxonomyVocabularyFingerprint(canonicalKeyChange),
++    computeTaxonomyVocabularyFingerprint(),
++  );
++});
++
++test('contract derives complete enum and boolean vocabularies from JSON', async () => {
++  const contract = await loadRecommendationFeatureTokenContract();
++  const condition = contract.namespaces.find(
++    (namespace) => namespace.id === 'material-condition',
++  );
++  const difficulty = contract.namespaces.find(
++    (namespace) => namespace.id === 'project-difficulty',
++  );
++  assert.equal(condition?.valueSource.kind, 'enum');
++  assert.equal(difficulty?.valueSource.kind, 'enum');
++  if (condition?.valueSource.kind === 'enum') {
++    assert.deepEqual(
++      condition.valueSource.values.map((value) => value.sourceValue).sort(),
++      ['GOOD', 'LIKE_NEW', 'NEEDS_REPAIR', 'NEW', 'USED'],
++    );
++  }
++  if (difficulty?.valueSource.kind === 'enum') {
++    assert.deepEqual(
++      difficulty.valueSource.values.map((value) => value.sourceValue).sort(),
++      ['ADVANCED', 'BEGINNER', 'INTERMEDIATE'],
++    );
++  }
++
++  for (const namespace of contract.namespaces.filter(
++    (candidate) => candidate.valueSource.kind === 'boolean',
++  )) {
++    assert.equal(namespace.valueSource.kind, 'boolean');
++    if (namespace.valueSource.kind === 'boolean') {
++      assert.deepEqual(
++        namespace.valueSource.values
++          .map((value) => value.sourceValue)
++          .sort(),
++        [false, true],
++      );
++    }
++  }
++});
++
++test('all valid examples pass and every invalid example is rejected', async () => {
++  const contract = await loadRecommendationFeatureTokenContract();
++  for (const example of contract.validExamples) {
++    assert.deepEqual(validateCanonicalFeatureToken(contract, example), example);
++  }
++  for (const example of contract.invalidExamples) {
++    const { reason: _reason, ...occurrence } = example;
++    assert.throws(
++      () => validateCanonicalFeatureToken(contract, occurrence),
++      RecommendationFeatureTokenContractValidationError,
++    );
++  }
++});
++
++test('Arabic alias normalization remains separate from canonical identity', async () => {
++  const contract = await loadRecommendationFeatureTokenContract();
++  assert.equal(normalizeTaxonomyAlias('أَرْدُوِينُو'), 'اردوينو');
++  assert.doesNotThrow(() =>
++    validateCanonicalFeatureToken(contract, {
++      token: 'interest:arduino',
++      groupId: 'user.declared-interest',
++      side: 'user',
++      domain: 'material',
++      weight: 1,
++    }),
++  );
++  for (const labelToken of ['interest:Arduino', 'interest:إلكترونيات']) {
++    assert.throws(
++      () =>
++        validateCanonicalFeatureToken(contract, {
++          token: labelToken,
++          groupId: 'user.declared-interest',
++          side: 'user',
++          domain: 'material',
++          weight: 1,
++        }),
++      RecommendationFeatureTokenContractValidationError,
++    );
++  }
++});
++
++test('portable rows deduplicate set features and report missing required groups', async () => {
++  const contract = await loadRecommendationFeatureTokenContract();
++  const materialFeatures: PortableFeatureOccurrence[] = [
++    {
++      token: 'material-family:electronics',
++      groupId: 'material.family',
++      side: 'item',
++      domain: 'material',
++      weight: 1,
++    },
++    {
++      token: 'material-condition:needs-repair',
++      groupId: 'material.condition',
++      side: 'item',
++      domain: 'material',
++      weight: 1,
++    },
++    {
++      token: 'material-is-free:false',
++      groupId: 'material.is-free',
++      side: 'item',
++      domain: 'material',
++      weight: 1,
++    },
++    {
++      token: 'material-pickup-allowed:true',
++      groupId: 'material.pickup-allowed',
++      side: 'item',
++      domain: 'material',
++      weight: 1,
++    },
++    {
++      token: 'material-delivery-allowed:false',
++      groupId: 'material.delivery-allowed',
++      side: 'item',
++      domain: 'material',
++      weight: 1,
++    },
++  ];
++
++  const valid = validatePortableFeatureRow(contract, {
++    side: 'item',
++    domain: 'material',
++    features: [...materialFeatures, materialFeatures[0]!],
++  });
++  assert.equal(valid.scoringEligible, true);
++  assert.equal(valid.features.length, materialFeatures.length);
++
++  const missing = validatePortableFeatureRow(contract, {
++    side: 'user',
++    domain: 'project',
++    features: [],
++  });
++  assert.equal(missing.scoringEligible, false);
++  assert.deepEqual(missing.missingRequiredGroupIds, [
++    'user.declared-interest',
++  ]);
++
++  assert.throws(
++    () =>
++      validatePortableFeatureRow(contract, {
++        side: 'item',
++        domain: 'material',
++        features: [
++          ...materialFeatures,
++          {
++            token: 'material-condition:new',
++            groupId: 'material.condition',
++            side: 'item',
++            domain: 'material',
++            weight: 1,
++          },
++        ],
++      }),
++    RecommendationFeatureTokenContractValidationError,
++  );
++});
++
++test('semantic validation is driven by parsed JSON invariants', async () => {
++  const contract = await loadRecommendationFeatureTokenContract();
++
++  const duplicateNamespace = structuredClone(contract);
++  duplicateNamespace.namespaces.push(
++    structuredClone(duplicateNamespace.namespaces[0]!),
++  );
++  assert.throws(
++    () => parseRecommendationFeatureTokenContract(duplicateNamespace),
++    RecommendationFeatureTokenContractValidationError,
++  );
++
++  const incompleteEnum = structuredClone(contract);
++  const condition = incompleteEnum.namespaces.find(
++    (namespace) => namespace.id === 'material-condition',
++  );
++  assert.equal(condition?.valueSource.kind, 'enum');
++  if (condition?.valueSource.kind === 'enum') condition.valueSource.values.pop();
++  assert.throws(
++    () => parseRecommendationFeatureTokenContract(incompleteEnum),
++    RecommendationFeatureTokenContractValidationError,
++  );
++
++  const portableIdentity = structuredClone(contract);
++  const identity = portableIdentity.featureGroups.find(
++    (group) => group.id === 'user.identity',
++  );
++  if (!identity) throw new Error('Expected user.identity feature group.');
++  identity.portableRuntimeEligible = true;
++  assert.throws(
++    () => parseRecommendationFeatureTokenContract(portableIdentity),
++    RecommendationFeatureTokenContractValidationError,
++  );
++});
++
++test('contract helper exports validation only and no alias resolver', async () => {
++  const contractModule = await import(
++    './recommendation-feature-token-contract.js'
++  );
++  assert.equal('resolveTaxonomyAlias' in contractModule, false);
++  assert.equal('resolveInterestKey' in contractModule, false);
++});
+diff --git a/apps/backend/src/modules/recommendations/recommendation-feature-token-contract.ts b/apps/backend/src/modules/recommendations/recommendation-feature-token-contract.ts
+new file mode 100644
+index 00000000..54cdb6c1
+--- /dev/null
++++ b/apps/backend/src/modules/recommendations/recommendation-feature-token-contract.ts
+@@ -0,0 +1,814 @@
++import { createHash } from 'node:crypto';
++import { readFile } from 'node:fs/promises';
++import { isAbsolute } from 'node:path';
++import { pathToFileURL } from 'node:url';
++import { z } from 'zod';
++import {
++  MaterialCondition,
++  ProjectDifficulty,
++} from '../../generated/prisma/client.js';
++import {
++  TAXONOMY_CONCEPT_SEEDS,
++  type TaxonomyConceptSeed,
++} from '../taxonomy/taxonomy-foundation.data.js';
++
++const CONTRACT_RELATIVE_URL =
++  '../../../../../contracts/recommendation/recommendation-feature-token-contract-v3.json';
++
++const domainSchema = z.enum(['material', 'project']);
++const featureSideSchema = z.enum(['user', 'item']);
++const taxonomyValueSourceSchema = z
++  .object({
++    kind: z.literal('taxonomy'),
++    conceptType: z.string().min(1),
++  })
++  .strict();
++const enumValueSourceSchema = z
++  .object({
++    kind: z.literal('enum'),
++    enumName: z.string().min(1),
++    values: z
++      .array(
++        z
++          .object({
++            sourceValue: z.string().min(1),
++            tokenValue: z.string().min(1),
++          })
++          .strict(),
++      )
++      .min(1),
++  })
++  .strict();
++const booleanValueSourceSchema = z
++  .object({
++    kind: z.literal('boolean'),
++    values: z
++      .array(
++        z
++          .object({
++            sourceValue: z.boolean(),
++            tokenValue: z.string().min(1),
++          })
++          .strict(),
++      )
++      .min(1),
++  })
++  .strict();
++const valueSourceSchema = z.discriminatedUnion('kind', [
++  taxonomyValueSourceSchema,
++  enumValueSourceSchema,
++  booleanValueSourceSchema,
++]);
++
++const namespaceSchema = z
++  .object({
++    id: z.string().min(1),
++    tokenPattern: z.string().min(1),
++    valueSource: valueSourceSchema,
++  })
++  .strict();
++
++const cardinalitySchema = z
++  .object({
++    minimum: z.number().int().nonnegative().nullable(),
++    maximum: z.number().int().nonnegative().nullable(),
++  })
++  .strict();
++
++const featureGroupSchema = z
++  .object({
++    id: z.string().min(1),
++    side: featureSideSchema,
++    domains: z.array(domainSchema).min(1),
++    namespaceId: z.string().min(1).nullable(),
++    cardinality: cardinalitySchema,
++    requiredForScoring: z.boolean(),
++    baseWeight: z.number().finite().nonnegative().nullable(),
++    portableRuntimeEligible: z.boolean(),
++    trainingSupport: z.enum([
++      'SUPPORTED',
++      'NOT_SUPPORTED',
++      'WARM_EXPERIMENT_ONLY',
++      'SYNTHETIC_EXPERIMENT_ONLY',
++    ]),
++    classification: z.enum([
++      'SUPPORTED',
++      'TRAINING_ONLY',
++      'DEFERRED',
++      'PROHIBITED',
++    ]),
++  })
++  .strict();
++
++const featureExampleSchema = z
++  .object({
++    token: z.string().min(1),
++    groupId: z.string().min(1),
++    side: featureSideSchema,
++    domain: domainSchema,
++    weight: z.number(),
++  })
++  .strict();
++
++const invalidFeatureExampleSchema = featureExampleSchema.extend({
++  reason: z.string().min(1),
++});
++
++const contractDocumentSchema = z
++  .object({
++    contractId: z.string().min(1),
++    contractVersion: z.string().regex(/^\d+\.\d+\.\d+$/u),
++    status: z
++      .object({
++        lifecycle: z.enum(['SPECIFICATION_ONLY']),
++        runtimeActivation: z.enum(['INACTIVE']),
++        aggregationBlocked: z.boolean(),
++      })
++      .strict(),
++    supportedDomains: z.array(domainSchema).min(1),
++    tokenGrammarVersion: z.string().min(1),
++    taxonomyCompatibility: z
++      .object({
++        sourceId: z.string().min(1),
++        sourceModule: z.string().min(1),
++        membershipMode: z.enum(['EXACT_CANONICAL_KEY_AND_CONCEPT_TYPE']),
++        fingerprintAlgorithm: z.enum(['SHA-256']),
++        fingerprintSerialization: z.string().min(1),
++        taxonomyVocabularyFingerprint: z.string().regex(/^[0-9a-f]{64}$/u),
++      })
++      .strict(),
++    normalization: z
++      .object({
++        inputAliasResolution: z.enum(['OUTSIDE_CONTRACT_UNICODE_SAFE']),
++        canonicalTokenIdentity: z.enum(['EXACT_AFTER_RESOLUTION']),
++        vectorAggregation: z.enum(['CONTRACT_SELECTED_AFTER_VALIDATION']),
++      })
++      .strict(),
++    namespaces: z.array(namespaceSchema).min(1),
++    featureGroups: z.array(featureGroupSchema).min(1),
++    weighting: z
++      .object({
++        portableBaseWeight: z.number().finite().nonnegative(),
++        duplicateMode: z.enum(['SET_DEDUPLICATE']),
++        conflictingDuplicateWeight: z.enum(['REJECT']),
++        nonFiniteWeight: z.enum(['REJECT']),
++        negativeWeight: z.enum(['REJECT']),
++        declaredInterestWeighting: z.enum(['UNIFORM']),
++      })
++      .strict(),
++    aggregation: z
++      .object({
++        status: z.enum(['PENDING_CONTROLLED_EXPERIMENT', 'SELECTED']),
++        selectedMode: z
++          .enum(['weighted-sum', 'weighted-mean', 'l1', 'l2'])
++          .nullable(),
++        candidateModes: z
++          .array(z.enum(['weighted-sum', 'weighted-mean', 'l1', 'l2']))
++          .min(1),
++        scope: z.string().min(1),
++        portableActivationAllowed: z.boolean(),
++      })
++      .strict(),
++    unknownAndUnsupportedPolicy: z
++      .object({
++        unknownNamespace: z.enum(['REJECT']),
++        unknownCanonicalTaxonomyKey: z.enum(['REJECT']),
++        unknownClosedValue: z.enum(['REJECT']),
++        unresolvedHumanInput: z.enum(['OUTSIDE_CONTRACT']),
++        missingRequiredGroup: z.enum(['INELIGIBLE_FOR_PORTABLE_SCORING']),
++        unsupportedPortableGroup: z.enum(['REJECT']),
++        localizedLabelAsIdentity: z.enum(['REJECT']),
++        generatedIdOrHashAsSemanticIdentity: z.enum(['REJECT']),
++      })
++      .strict(),
++    deprecationPolicy: z
++      .object({
++        mode: z.enum(['REJECT_NO_AUTOMATIC_REWRITE']),
++        deprecatedTokens: z.array(z.string()),
++      })
++      .strict(),
++    legacyCompatibility: z
++      .object({
++        v3AcceptsLegacyArtifacts: z.boolean(),
++        historicalArtifactVersions: z.array(z.string().min(1)),
++        historicalFeatureSchemaVersions: z.array(z.string().min(1)),
++        rejectedTokenPrefixes: z.array(z.string().min(1)),
++      })
++      .strict(),
++    validExamples: z.array(featureExampleSchema).min(1),
++    invalidExamples: z.array(invalidFeatureExampleSchema).min(1),
++  })
++  .strict();
++
++export type RecommendationFeatureTokenContract = z.infer<
++  typeof contractDocumentSchema
++>;
++export type RecommendationFeatureDomain = z.infer<typeof domainSchema>;
++export type RecommendationFeatureSide = z.infer<typeof featureSideSchema>;
++export type PortableFeatureOccurrence = z.infer<typeof featureExampleSchema>;
++
++export type ContractValidationPhase = 'STRUCTURAL' | 'SEMANTIC';
++
++export class RecommendationFeatureTokenContractValidationError extends Error {
++  readonly phase: ContractValidationPhase;
++  readonly details?: unknown;
++
++  constructor(
++    phase: ContractValidationPhase,
++    message: string,
++    details?: unknown,
++  ) {
++    super(message);
++    this.name = 'RecommendationFeatureTokenContractValidationError';
++    this.phase = phase;
++    this.details = details;
++  }
++}
++
++export type ContractLoadErrorCode =
++  | 'CONTRACT_LOAD_INVALID_SOURCE'
++  | 'CONTRACT_LOAD_MISSING'
++  | 'CONTRACT_LOAD_UNREADABLE'
++  | 'CONTRACT_LOAD_MALFORMED_JSON'
++  | 'CONTRACT_LOAD_STRUCTURALLY_INVALID'
++  | 'CONTRACT_LOAD_SEMANTICALLY_INVALID';
++
++export class RecommendationFeatureTokenContractLoadError extends Error {
++  readonly code: ContractLoadErrorCode;
++
++  constructor(code: ContractLoadErrorCode, message: string, cause?: unknown) {
++    super(message, { cause });
++    this.name = 'RecommendationFeatureTokenContractLoadError';
++    this.code = code;
++  }
++}
++
++const semanticError = (message: string, details?: unknown): never => {
++  throw new RecommendationFeatureTokenContractValidationError(
++    'SEMANTIC',
++    message,
++    details,
++  );
++};
++
++const assertUnique = (values: readonly string[], label: string): void => {
++  const duplicates = values.filter(
++    (value, index) => values.indexOf(value) !== index,
++  );
++  if (duplicates.length > 0) {
++    semanticError(`${label}_duplicate`, [...new Set(duplicates)]);
++  }
++};
++
++const asciiCompare = (left: string, right: string): number =>
++  left < right ? -1 : left > right ? 1 : 0;
++
++export const computeTaxonomyVocabularyFingerprint = (
++  seeds: readonly TaxonomyConceptSeed[] = TAXONOMY_CONCEPT_SEEDS,
++): string => {
++  const serialized = [...seeds]
++    .sort((left, right) => asciiCompare(left.canonicalKey, right.canonicalKey))
++    .map((seed) => `${seed.conceptType}\t${seed.canonicalKey}`)
++    .join('\n');
++
++  return createHash('sha256').update(serialized, 'utf8').digest('hex');
++};
++
++const enumSources: Readonly<Record<string, readonly string[]>> = Object.freeze({
++  MaterialCondition: Object.freeze(Object.values(MaterialCondition)),
++  ProjectDifficulty: Object.freeze(Object.values(ProjectDifficulty)),
++});
++
++const validateNamespaceValueSources = (
++  contract: RecommendationFeatureTokenContract,
++): void => {
++  const taxonomyTypesInFoundation = new Set<string>(
++    TAXONOMY_CONCEPT_SEEDS.map((seed) => seed.conceptType),
++  );
++  const taxonomyTypesInContract = new Set<string>();
++
++  for (const namespace of contract.namespaces) {
++    let pattern: RegExp;
++    try {
++      pattern = new RegExp(namespace.tokenPattern, 'u');
++    } catch (error) {
++      semanticError('namespace_token_pattern_invalid', {
++        namespaceId: namespace.id,
++        error,
++      });
++    }
++
++    if (namespace.valueSource.kind === 'taxonomy') {
++      const { conceptType } = namespace.valueSource;
++      if (!taxonomyTypesInFoundation.has(conceptType)) {
++        semanticError('taxonomy_concept_type_unknown', {
++          namespaceId: namespace.id,
++          conceptType,
++        });
++      }
++      if (taxonomyTypesInContract.has(conceptType)) {
++        semanticError('taxonomy_concept_type_duplicate', conceptType);
++      }
++      taxonomyTypesInContract.add(conceptType);
++
++      const concepts = TAXONOMY_CONCEPT_SEEDS.filter(
++        (seed) => seed.conceptType === conceptType,
++      );
++      if (
++        concepts.length === 0 ||
++        concepts.some(
++          (seed) =>
++            !seed.canonicalKey.startsWith(`${namespace.id}:`) ||
++            !pattern.test(seed.canonicalKey),
++        )
++      ) {
++        semanticError('taxonomy_namespace_does_not_match_foundation', {
++          namespaceId: namespace.id,
++          conceptType,
++        });
++      }
++      continue;
++    }
++
++    const fullTokens = namespace.valueSource.values.map(
++      (value) => `${namespace.id}:${value.tokenValue}`,
++    );
++    assertUnique(fullTokens, `${namespace.id}_token_value`);
++    if (fullTokens.some((token) => !pattern.test(token))) {
++      semanticError('closed_value_does_not_match_namespace_pattern', {
++        namespaceId: namespace.id,
++      });
++    }
++
++    if (namespace.valueSource.kind === 'enum') {
++      const source = enumSources[namespace.valueSource.enumName];
++      if (!source) {
++        semanticError('enum_source_unknown', namespace.valueSource.enumName);
++      }
++      const declared = namespace.valueSource.values.map(
++        (value) => value.sourceValue,
++      );
++      assertUnique(declared, `${namespace.id}_enum_source_value`);
++      if (
++        [...source].sort(asciiCompare).join('\n') !==
++        [...declared].sort(asciiCompare).join('\n')
++      ) {
++        semanticError('enum_source_incomplete', {
++          namespaceId: namespace.id,
++          expected: source,
++          declared,
++        });
++      }
++      continue;
++    }
++
++    const declaredBooleans = namespace.valueSource.values.map(
++      (value) => value.sourceValue,
++    );
++    if (
++      declaredBooleans.length !== 2 ||
++      !declaredBooleans.includes(true) ||
++      !declaredBooleans.includes(false)
++    ) {
++      semanticError('boolean_source_incomplete', namespace.id);
++    }
++    for (const value of namespace.valueSource.values) {
++      if (value.tokenValue !== String(value.sourceValue)) {
++        semanticError('boolean_token_value_not_literal', {
++          namespaceId: namespace.id,
++          value,
++        });
++      }
++    }
++  }
++
++  const foundationTypes = [...taxonomyTypesInFoundation].sort(asciiCompare);
++  const contractTypes = [...taxonomyTypesInContract].sort(asciiCompare);
++  if (foundationTypes.join('\n') !== contractTypes.join('\n')) {
++    semanticError('taxonomy_concept_type_coverage_incomplete', {
++      foundationTypes,
++      contractTypes,
++    });
++  }
++};
++
++const validateFeatureGroups = (
++  contract: RecommendationFeatureTokenContract,
++): void => {
++  const namespaceIds = new Set(
++    contract.namespaces.map((namespace) => namespace.id),
++  );
++  const supportedDomains = new Set(contract.supportedDomains);
++  const referencedNamespaces = new Set<string>();
++
++  for (const group of contract.featureGroups) {
++    assertUnique(group.domains, `${group.id}_domain`);
++    if (group.domains.some((domain) => !supportedDomains.has(domain))) {
++      semanticError('feature_group_domain_unsupported', group.id);
++    }
++    if (
++      group.cardinality.minimum !== null &&
++      group.cardinality.maximum !== null &&
++      group.cardinality.minimum > group.cardinality.maximum
++    ) {
++      semanticError('feature_group_cardinality_invalid', group.id);
++    }
++    if (
++      group.requiredForScoring &&
++      (group.cardinality.minimum === null || group.cardinality.minimum < 1)
++    ) {
++      semanticError('required_feature_group_has_no_minimum', group.id);
++    }
++
++    if (group.namespaceId !== null) {
++      if (!namespaceIds.has(group.namespaceId)) {
++        semanticError('feature_group_namespace_unknown', group.id);
++      }
++      referencedNamespaces.add(group.namespaceId);
++    }
++
++    if (group.portableRuntimeEligible) {
++      if (
++        group.classification !== 'SUPPORTED' ||
++        group.trainingSupport !== 'SUPPORTED' ||
++        group.namespaceId === null ||
++        group.baseWeight !== contract.weighting.portableBaseWeight
++      ) {
++        semanticError('portable_feature_group_policy_invalid', group.id);
++      }
++    } else if (group.namespaceId !== null || group.baseWeight !== null) {
++      semanticError('non_portable_group_defines_portable_token', group.id);
++    }
++
++    if (
++      group.classification === 'TRAINING_ONLY' &&
++      group.portableRuntimeEligible
++    ) {
++      semanticError('training_only_group_marked_portable', group.id);
++    }
++    if (
++      group.classification === 'DEFERRED' &&
++      group.trainingSupport !== 'NOT_SUPPORTED'
++    ) {
++      semanticError('deferred_group_marked_training_supported', group.id);
++    }
++  }
++
++  const unreferenced = [...namespaceIds].filter(
++    (namespaceId) => !referencedNamespaces.has(namespaceId),
++  );
++  if (unreferenced.length > 0) {
++    semanticError('namespace_unreferenced', unreferenced);
++  }
++};
++
++const taxonomySeedByKey = new Map(
++  TAXONOMY_CONCEPT_SEEDS.map((seed) => [seed.canonicalKey, seed]),
++);
++
++const validateOccurrenceInternal = (
++  contract: RecommendationFeatureTokenContract,
++  occurrence: PortableFeatureOccurrence,
++): PortableFeatureOccurrence => {
++  const group = contract.featureGroups.find(
++    (candidate) => candidate.id === occurrence.groupId,
++  );
++  if (!group) return semanticError('feature_group_unknown', occurrence.groupId);
++  if (
++    !group.portableRuntimeEligible ||
++    group.namespaceId === null ||
++    group.baseWeight === null
++  ) {
++    semanticError('feature_group_not_portable', occurrence.groupId);
++  }
++  if (
++    group.side !== occurrence.side ||
++    !group.domains.includes(occurrence.domain)
++  ) {
++    semanticError('feature_occurrence_context_mismatch', occurrence);
++  }
++  if (
++    !Number.isFinite(occurrence.weight) ||
++    occurrence.weight < 0 ||
++    occurrence.weight !== group.baseWeight ||
++    occurrence.weight !== contract.weighting.portableBaseWeight
++  ) {
++    semanticError('feature_occurrence_weight_invalid', occurrence);
++  }
++
++  const namespace = contract.namespaces.find(
++    (candidate) => candidate.id === group.namespaceId,
++  );
++  if (!namespace) {
++    return semanticError('feature_namespace_missing', group.namespaceId);
++  }
++  if (!new RegExp(namespace.tokenPattern, 'u').test(occurrence.token)) {
++    semanticError('feature_token_grammar_invalid', occurrence.token);
++  }
++
++  if (namespace.valueSource.kind === 'taxonomy') {
++    const seed = taxonomySeedByKey.get(occurrence.token);
++    if (!seed || seed.conceptType !== namespace.valueSource.conceptType) {
++      semanticError('feature_token_taxonomy_membership_invalid', occurrence.token);
++    }
++    return occurrence;
++  }
++
++  const acceptedTokens = new Set(
++    namespace.valueSource.values.map(
++      (value) => `${namespace.id}:${value.tokenValue}`,
++    ),
++  );
++  if (!acceptedTokens.has(occurrence.token)) {
++    semanticError('feature_token_closed_value_invalid', occurrence.token);
++  }
++  return occurrence;
++};
++
++const validateExamples = (
++  contract: RecommendationFeatureTokenContract,
++): void => {
++  const coveredGroups = new Set<string>();
++  for (const example of contract.validExamples) {
++    validateOccurrenceInternal(contract, example);
++    coveredGroups.add(example.groupId);
++  }
++
++  const uncoveredPortableGroups = contract.featureGroups
++    .filter(
++      (group) => group.portableRuntimeEligible && !coveredGroups.has(group.id),
++    )
++    .map((group) => group.id);
++  if (uncoveredPortableGroups.length > 0) {
++    semanticError('portable_feature_group_has_no_valid_example', uncoveredPortableGroups);
++  }
++
++  for (const namespace of contract.namespaces) {
++    if (namespace.valueSource.kind === 'taxonomy') continue;
++    const expected = new Set(
++      namespace.valueSource.values.map(
++        (value) => `${namespace.id}:${value.tokenValue}`,
++      ),
++    );
++    for (const example of contract.validExamples) expected.delete(example.token);
++    if (expected.size > 0) {
++      semanticError('closed_value_has_no_valid_example', {
++        namespaceId: namespace.id,
++        tokens: [...expected],
++      });
++    }
++  }
++
++  for (const example of contract.invalidExamples) {
++    try {
++      validateOccurrenceInternal(contract, example);
++    } catch (error) {
++      if (error instanceof RecommendationFeatureTokenContractValidationError) {
++        continue;
++      }
++      throw error;
++    }
++    semanticError('invalid_example_was_accepted', example.token);
++  }
++};
++
++const validateSemanticContract = (
++  contract: RecommendationFeatureTokenContract,
++): RecommendationFeatureTokenContract => {
++  if (
++    contract.contractId !== 'recommendation-feature-token-contract-v3' ||
++    contract.contractVersion !== '3.0.0'
++  ) {
++    semanticError('contract_identity_invalid');
++  }
++
++  assertUnique(contract.supportedDomains, 'supported_domain');
++  assertUnique(
++    contract.namespaces.map((namespace) => namespace.id),
++    'namespace_id',
++  );
++  assertUnique(
++    contract.featureGroups.map((group) => group.id),
++    'feature_group_id',
++  );
++  assertUnique(contract.aggregation.candidateModes, 'aggregation_candidate_mode');
++  assertUnique(
++    contract.legacyCompatibility.rejectedTokenPrefixes,
++    'legacy_rejected_token_prefix',
++  );
++
++  if (
++    contract.taxonomyCompatibility.taxonomyVocabularyFingerprint !==
++    computeTaxonomyVocabularyFingerprint()
++  ) {
++    semanticError('taxonomy_vocabulary_fingerprint_mismatch');
++  }
++  if (
++    contract.aggregation.status === 'PENDING_CONTROLLED_EXPERIMENT' &&
++    (contract.aggregation.selectedMode !== null ||
++      contract.aggregation.portableActivationAllowed ||
++      !contract.status.aggregationBlocked)
++  ) {
++    semanticError('pending_aggregation_policy_invalid');
++  }
++  if (
++    contract.aggregation.status === 'SELECTED' &&
++    (contract.aggregation.selectedMode === null ||
++      !contract.aggregation.candidateModes.includes(
++        contract.aggregation.selectedMode,
++      ))
++  ) {
++    semanticError('selected_aggregation_policy_invalid');
++  }
++  if (contract.legacyCompatibility.v3AcceptsLegacyArtifacts) {
++    semanticError('legacy_artifacts_must_not_be_v3_compatible');
++  }
++
++  validateNamespaceValueSources(contract);
++  validateFeatureGroups(contract);
++  validateExamples(contract);
++  return contract;
++};
++
++export const parseRecommendationFeatureTokenContract = (
++  raw: unknown,
++): RecommendationFeatureTokenContract => {
++  const parsed = contractDocumentSchema.safeParse(raw);
++  if (!parsed.success) {
++    throw new RecommendationFeatureTokenContractValidationError(
++      'STRUCTURAL',
++      'contract_structure_invalid',
++      parsed.error.issues,
++    );
++  }
++  return validateSemanticContract(parsed.data);
++};
++
++export const resolveRecommendationFeatureTokenContractUrl = (
++  moduleUrl: string | URL = import.meta.url,
++): URL => new URL(CONTRACT_RELATIVE_URL, moduleUrl);
++
++const normalizeExplicitSource = (source: string | URL): URL => {
++  if (source instanceof URL) {
++    if (source.protocol !== 'file:') {
++      throw new RecommendationFeatureTokenContractLoadError(
++        'CONTRACT_LOAD_INVALID_SOURCE',
++        'Contract source URL must use the file protocol.',
++      );
++    }
++    return source;
++  }
++  if (!isAbsolute(source)) {
++    throw new RecommendationFeatureTokenContractLoadError(
++      'CONTRACT_LOAD_INVALID_SOURCE',
++      'Contract source path must be absolute.',
++    );
++  }
++  return pathToFileURL(source);
++};
++
++export const loadRecommendationFeatureTokenContract = async (
++  source?: string | URL,
++): Promise<RecommendationFeatureTokenContract> => {
++  const contractUrl =
++    source === undefined
++      ? resolveRecommendationFeatureTokenContractUrl()
++      : normalizeExplicitSource(source);
++
++  let contents: string;
++  try {
++    contents = await readFile(contractUrl, 'utf8');
++  } catch (error) {
++    const code =
++      error && typeof error === 'object' && 'code' in error
++        ? String(error.code)
++        : undefined;
++    if (code === 'ENOENT') {
++      throw new RecommendationFeatureTokenContractLoadError(
++        'CONTRACT_LOAD_MISSING',
++        `Recommendation feature-token contract is missing: ${contractUrl.href}`,
++        error,
++      );
++    }
++    throw new RecommendationFeatureTokenContractLoadError(
++      'CONTRACT_LOAD_UNREADABLE',
++      `Recommendation feature-token contract is unreadable: ${contractUrl.href}`,
++      error,
++    );
++  }
++
++  let raw: unknown;
++  try {
++    raw = JSON.parse(contents) as unknown;
++  } catch (error) {
++    throw new RecommendationFeatureTokenContractLoadError(
++      'CONTRACT_LOAD_MALFORMED_JSON',
++      `Recommendation feature-token contract contains malformed JSON: ${contractUrl.href}`,
++      error,
++    );
++  }
++
++  try {
++    return parseRecommendationFeatureTokenContract(raw);
++  } catch (error) {
++    if (error instanceof RecommendationFeatureTokenContractValidationError) {
++      throw new RecommendationFeatureTokenContractLoadError(
++        error.phase === 'STRUCTURAL'
++          ? 'CONTRACT_LOAD_STRUCTURALLY_INVALID'
++          : 'CONTRACT_LOAD_SEMANTICALLY_INVALID',
++        `Recommendation feature-token contract is ${error.phase.toLowerCase()}ly invalid: ${contractUrl.href}`,
++        error,
++      );
++    }
++    throw error;
++  }
++};
++
++export const validateCanonicalFeatureToken = (
++  contract: RecommendationFeatureTokenContract,
++  occurrence: PortableFeatureOccurrence,
++): PortableFeatureOccurrence => {
++  const parsed = featureExampleSchema.safeParse(occurrence);
++  if (!parsed.success) {
++    throw new RecommendationFeatureTokenContractValidationError(
++      'STRUCTURAL',
++      'feature_occurrence_structure_invalid',
++      parsed.error.issues,
++    );
++  }
++  return validateOccurrenceInternal(contract, parsed.data);
++};
++
++export type PortableFeatureRowValidation = {
++  features: PortableFeatureOccurrence[];
++  scoringEligible: boolean;
++  missingRequiredGroupIds: string[];
++};
++
++export const validatePortableFeatureRow = (
++  contract: RecommendationFeatureTokenContract,
++  context: {
++    side: RecommendationFeatureSide;
++    domain: RecommendationFeatureDomain;
++    features: readonly PortableFeatureOccurrence[];
++  },
++): PortableFeatureRowValidation => {
++  const deduplicated = new Map<string, PortableFeatureOccurrence>();
++  const groupCounts = new Map<string, number>();
++
++  for (const rawOccurrence of context.features) {
++    if (
++      rawOccurrence.side !== context.side ||
++      rawOccurrence.domain !== context.domain
++    ) {
++      semanticError('feature_row_context_mismatch', rawOccurrence);
++    }
++    const occurrence = validateCanonicalFeatureToken(contract, rawOccurrence);
++    const key = `${occurrence.groupId}\t${occurrence.token}`;
++    const existing = deduplicated.get(key);
++    if (existing) {
++      if (existing.weight !== occurrence.weight) {
++        semanticError('feature_duplicate_weight_conflict', occurrence);
++      }
++      continue;
++    }
++    deduplicated.set(key, occurrence);
++    groupCounts.set(
++      occurrence.groupId,
++      (groupCounts.get(occurrence.groupId) ?? 0) + 1,
++    );
++  }
++
++  const applicableGroups = contract.featureGroups.filter(
++    (group) =>
++      group.portableRuntimeEligible &&
++      group.side === context.side &&
++      group.domains.includes(context.domain),
++  );
++  const missingRequiredGroupIds: string[] = [];
++  for (const group of applicableGroups) {
++    const count = groupCounts.get(group.id) ?? 0;
++    if (
++      group.cardinality.maximum !== null &&
++      count > group.cardinality.maximum
++    ) {
++      semanticError('feature_group_cardinality_exceeded', {
++        groupId: group.id,
++        count,
++      });
++    }
++    if (
++      group.requiredForScoring &&
++      group.cardinality.minimum !== null &&
++      count < group.cardinality.minimum
++    ) {
++      missingRequiredGroupIds.push(group.id);
++    }
++  }
++
++  return {
++    features: [...deduplicated.values()],
++    scoringEligible: missingRequiredGroupIds.length === 0,
++    missingRequiredGroupIds,
++  };
++};
+diff --git a/contracts/recommendation/recommendation-feature-token-contract-v3.json b/contracts/recommendation/recommendation-feature-token-contract-v3.json
+new file mode 100644
+index 00000000..7ddd3633
+--- /dev/null
++++ b/contracts/recommendation/recommendation-feature-token-contract-v3.json
+@@ -0,0 +1,386 @@
++{
++  "contractId": "recommendation-feature-token-contract-v3",
++  "contractVersion": "3.0.0",
++  "status": {
++    "lifecycle": "SPECIFICATION_ONLY",
++    "runtimeActivation": "INACTIVE",
++    "aggregationBlocked": true
++  },
++  "supportedDomains": ["material", "project"],
++  "tokenGrammarVersion": "recommendation-canonical-feature-token-grammar-v1",
++  "taxonomyCompatibility": {
++    "sourceId": "impactloop-taxonomy-foundation",
++    "sourceModule": "apps/backend/src/modules/taxonomy/taxonomy-foundation.data.ts",
++    "membershipMode": "EXACT_CANONICAL_KEY_AND_CONCEPT_TYPE",
++    "fingerprintAlgorithm": "SHA-256",
++    "fingerprintSerialization": "Sort by canonicalKey using ASCII order; serialize each entry as <conceptType>\\t<canonicalKey>; join with LF; encode as UTF-8. Aliases, labels, and mapping rules are excluded.",
++    "taxonomyVocabularyFingerprint": "c84173df47de8dfc547e5d68277fbf789b9e0a27561be08221e5e0d88d3db370"
++  },
++  "normalization": {
++    "inputAliasResolution": "OUTSIDE_CONTRACT_UNICODE_SAFE",
++    "canonicalTokenIdentity": "EXACT_AFTER_RESOLUTION",
++    "vectorAggregation": "CONTRACT_SELECTED_AFTER_VALIDATION"
++  },
++  "namespaces": [
++    {
++      "id": "interest",
++      "tokenPattern": "^interest:[a-z0-9][a-z0-9./-]*$",
++      "valueSource": { "kind": "taxonomy", "conceptType": "INTEREST" }
++    },
++    {
++      "id": "material-family",
++      "tokenPattern": "^material-family:[a-z0-9][a-z0-9./-]*$",
++      "valueSource": { "kind": "taxonomy", "conceptType": "MATERIAL_FAMILY" }
++    },
++    {
++      "id": "material-form",
++      "tokenPattern": "^material-form:[a-z0-9][a-z0-9./-]*$",
++      "valueSource": { "kind": "taxonomy", "conceptType": "MATERIAL_FORM" }
++    },
++    {
++      "id": "project-topic",
++      "tokenPattern": "^project-topic:[a-z0-9][a-z0-9./-]*$",
++      "valueSource": { "kind": "taxonomy", "conceptType": "PROJECT_TOPIC" }
++    },
++    {
++      "id": "component",
++      "tokenPattern": "^component:[a-z0-9][a-z0-9./-]*$",
++      "valueSource": { "kind": "taxonomy", "conceptType": "COMPONENT" }
++    },
++    {
++      "id": "material-condition",
++      "tokenPattern": "^material-condition:[a-z][a-z0-9-]*$",
++      "valueSource": {
++        "kind": "enum",
++        "enumName": "MaterialCondition",
++        "values": [
++          { "sourceValue": "NEW", "tokenValue": "new" },
++          { "sourceValue": "LIKE_NEW", "tokenValue": "like-new" },
++          { "sourceValue": "GOOD", "tokenValue": "good" },
++          { "sourceValue": "USED", "tokenValue": "used" },
++          { "sourceValue": "NEEDS_REPAIR", "tokenValue": "needs-repair" }
++        ]
++      }
++    },
++    {
++      "id": "material-is-free",
++      "tokenPattern": "^material-is-free:(true|false)$",
++      "valueSource": {
++        "kind": "boolean",
++        "values": [
++          { "sourceValue": true, "tokenValue": "true" },
++          { "sourceValue": false, "tokenValue": "false" }
++        ]
++      }
++    },
++    {
++      "id": "material-pickup-allowed",
++      "tokenPattern": "^material-pickup-allowed:(true|false)$",
++      "valueSource": {
++        "kind": "boolean",
++        "values": [
++          { "sourceValue": true, "tokenValue": "true" },
++          { "sourceValue": false, "tokenValue": "false" }
++        ]
++      }
++    },
++    {
++      "id": "material-delivery-allowed",
++      "tokenPattern": "^material-delivery-allowed:(true|false)$",
++      "valueSource": {
++        "kind": "boolean",
++        "values": [
++          { "sourceValue": true, "tokenValue": "true" },
++          { "sourceValue": false, "tokenValue": "false" }
++        ]
++      }
++    },
++    {
++      "id": "project-difficulty",
++      "tokenPattern": "^project-difficulty:[a-z][a-z0-9-]*$",
++      "valueSource": {
++        "kind": "enum",
++        "enumName": "ProjectDifficulty",
++        "values": [
++          { "sourceValue": "BEGINNER", "tokenValue": "beginner" },
++          { "sourceValue": "INTERMEDIATE", "tokenValue": "intermediate" },
++          { "sourceValue": "ADVANCED", "tokenValue": "advanced" }
++        ]
++      }
++    }
++  ],
++  "featureGroups": [
++    {
++      "id": "user.declared-interest",
++      "side": "user",
++      "domains": ["material", "project"],
++      "namespaceId": "interest",
++      "cardinality": { "minimum": 1, "maximum": null },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "user.inferred-affinity",
++      "side": "user",
++      "domains": ["material", "project"],
++      "namespaceId": null,
++      "cardinality": { "minimum": null, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": null,
++      "portableRuntimeEligible": false,
++      "trainingSupport": "NOT_SUPPORTED",
++      "classification": "DEFERRED"
++    },
++    {
++      "id": "user.identity",
++      "side": "user",
++      "domains": ["material", "project"],
++      "namespaceId": null,
++      "cardinality": { "minimum": null, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": null,
++      "portableRuntimeEligible": false,
++      "trainingSupport": "WARM_EXPERIMENT_ONLY",
++      "classification": "TRAINING_ONLY"
++    },
++    {
++      "id": "user.preference",
++      "side": "user",
++      "domains": ["material", "project"],
++      "namespaceId": null,
++      "cardinality": { "minimum": null, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": null,
++      "portableRuntimeEligible": false,
++      "trainingSupport": "NOT_SUPPORTED",
++      "classification": "DEFERRED"
++    },
++    {
++      "id": "request.session-context",
++      "side": "user",
++      "domains": ["material", "project"],
++      "namespaceId": null,
++      "cardinality": { "minimum": null, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": null,
++      "portableRuntimeEligible": false,
++      "trainingSupport": "NOT_SUPPORTED",
++      "classification": "DEFERRED"
++    },
++    {
++      "id": "material.family",
++      "side": "item",
++      "domains": ["material"],
++      "namespaceId": "material-family",
++      "cardinality": { "minimum": 1, "maximum": null },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "material.form",
++      "side": "item",
++      "domains": ["material"],
++      "namespaceId": "material-form",
++      "cardinality": { "minimum": 0, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "material.condition",
++      "side": "item",
++      "domains": ["material"],
++      "namespaceId": "material-condition",
++      "cardinality": { "minimum": 1, "maximum": 1 },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "material.is-free",
++      "side": "item",
++      "domains": ["material"],
++      "namespaceId": "material-is-free",
++      "cardinality": { "minimum": 1, "maximum": 1 },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "material.pickup-allowed",
++      "side": "item",
++      "domains": ["material"],
++      "namespaceId": "material-pickup-allowed",
++      "cardinality": { "minimum": 1, "maximum": 1 },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "material.delivery-allowed",
++      "side": "item",
++      "domains": ["material"],
++      "namespaceId": "material-delivery-allowed",
++      "cardinality": { "minimum": 1, "maximum": 1 },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "project.topic",
++      "side": "item",
++      "domains": ["project"],
++      "namespaceId": "project-topic",
++      "cardinality": { "minimum": 1, "maximum": null },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "project.required-component",
++      "side": "item",
++      "domains": ["project"],
++      "namespaceId": "component",
++      "cardinality": { "minimum": 0, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "project.difficulty",
++      "side": "item",
++      "domains": ["project"],
++      "namespaceId": "project-difficulty",
++      "cardinality": { "minimum": 1, "maximum": 1 },
++      "requiredForScoring": true,
++      "baseWeight": 1.0,
++      "portableRuntimeEligible": true,
++      "trainingSupport": "SUPPORTED",
++      "classification": "SUPPORTED"
++    },
++    {
++      "id": "item.identity",
++      "side": "item",
++      "domains": ["material", "project"],
++      "namespaceId": null,
++      "cardinality": { "minimum": null, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": null,
++      "portableRuntimeEligible": false,
++      "trainingSupport": "WARM_EXPERIMENT_ONLY",
++      "classification": "TRAINING_ONLY"
++    },
++    {
++      "id": "synthetic.persona-attribute",
++      "side": "user",
++      "domains": ["material", "project"],
++      "namespaceId": null,
++      "cardinality": { "minimum": null, "maximum": null },
++      "requiredForScoring": false,
++      "baseWeight": null,
++      "portableRuntimeEligible": false,
++      "trainingSupport": "SYNTHETIC_EXPERIMENT_ONLY",
++      "classification": "TRAINING_ONLY"
++    }
++  ],
++  "weighting": {
++    "portableBaseWeight": 1.0,
++    "duplicateMode": "SET_DEDUPLICATE",
++    "conflictingDuplicateWeight": "REJECT",
++    "nonFiniteWeight": "REJECT",
++    "negativeWeight": "REJECT",
++    "declaredInterestWeighting": "UNIFORM"
++  },
++  "aggregation": {
++    "status": "PENDING_CONTROLLED_EXPERIMENT",
++    "selectedMode": null,
++    "candidateModes": ["weighted-sum", "weighted-mean", "l1", "l2"],
++    "scope": "One global mode applied independently to every user and item feature row in both domains.",
++    "portableActivationAllowed": false
++  },
++  "unknownAndUnsupportedPolicy": {
++    "unknownNamespace": "REJECT",
++    "unknownCanonicalTaxonomyKey": "REJECT",
++    "unknownClosedValue": "REJECT",
++    "unresolvedHumanInput": "OUTSIDE_CONTRACT",
++    "missingRequiredGroup": "INELIGIBLE_FOR_PORTABLE_SCORING",
++    "unsupportedPortableGroup": "REJECT",
++    "localizedLabelAsIdentity": "REJECT",
++    "generatedIdOrHashAsSemanticIdentity": "REJECT"
++  },
++  "deprecationPolicy": {
++    "mode": "REJECT_NO_AUTOMATIC_REWRITE",
++    "deprecatedTokens": []
++  },
++  "legacyCompatibility": {
++    "v3AcceptsLegacyArtifacts": false,
++    "historicalArtifactVersions": ["impactloop-lightfm-portable-v1"],
++    "historicalFeatureSchemaVersions": ["slice-3-approved-features-v1", "runtime-approved-features-v2"],
++    "rejectedTokenPrefixes": [
++      "category:",
++      "concept:",
++      "user_identity:",
++      "item_identity:",
++      "activity:",
++      "free_pref:",
++      "delivery_pref:",
++      "project_tendency:"
++    ]
++  },
++  "validExamples": [
++    { "token": "interest:arduino", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0 },
++    { "token": "material-family:electronics", "groupId": "material.family", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-form:arduino-uno", "groupId": "material.form", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-condition:new", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-condition:like-new", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-condition:good", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-condition:used", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-condition:needs-repair", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-is-free:true", "groupId": "material.is-free", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-is-free:false", "groupId": "material.is-free", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-pickup-allowed:true", "groupId": "material.pickup-allowed", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-pickup-allowed:false", "groupId": "material.pickup-allowed", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-delivery-allowed:true", "groupId": "material.delivery-allowed", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "material-delivery-allowed:false", "groupId": "material.delivery-allowed", "side": "item", "domain": "material", "weight": 1.0 },
++    { "token": "project-topic:robotics", "groupId": "project.topic", "side": "item", "domain": "project", "weight": 1.0 },
++    { "token": "component:dc-gear-motors", "groupId": "project.required-component", "side": "item", "domain": "project", "weight": 1.0 },
++    { "token": "project-difficulty:beginner", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0 },
++    { "token": "project-difficulty:intermediate", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0 },
++    { "token": "project-difficulty:advanced", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0 }
++  ],
++  "invalidExamples": [
++    { "token": "interest:interest:arduino", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0, "reason": "Doubled namespace" },
++    { "token": "concept:material-form:arduino-uno", "groupId": "material.form", "side": "item", "domain": "material", "weight": 1.0, "reason": "Legacy generic concept wrapper" },
++    { "token": "component:component:dc-motor", "groupId": "project.required-component", "side": "item", "domain": "project", "weight": 1.0, "reason": "Doubled namespace" },
++    { "token": "category:material-family:electronics", "groupId": "material.family", "side": "item", "domain": "material", "weight": 1.0, "reason": "Legacy generic category wrapper" },
++    { "token": "interest:Arduino", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0, "reason": "Display label is not canonical identity" },
++    { "token": "interest:إلكترونيات", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0, "reason": "Localized label is not canonical identity" },
++    { "token": "custom:robotics", "groupId": "user.declared-interest", "side": "user", "domain": "project", "weight": 1.0, "reason": "Custom interest is unresolved" },
++    { "token": "material-family:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "groupId": "material.family", "side": "item", "domain": "material", "weight": 1.0, "reason": "Generated hash is not taxonomy membership" },
++    { "token": "material-condition:NEEDS_REPAIR", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0, "reason": "Enum token is not lower-kebab" },
++    { "token": "material-is-free:1", "groupId": "material.is-free", "side": "item", "domain": "material", "weight": 1.0, "reason": "Boolean token must be literal true or false" },
++    { "token": "project-difficulty:expert", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0, "reason": "Unknown closed enum value" },
++    { "token": "user_identity:sim_user_0001", "groupId": "user.identity", "side": "user", "domain": "material", "weight": 1.0, "reason": "Training identity is prohibited from portable features" },
++    { "token": "activity:high", "groupId": "synthetic.persona-attribute", "side": "user", "domain": "material", "weight": 1.0, "reason": "Synthetic feature is prohibited from portable features" }
++  ]
++}
+diff --git a/docs/recommendation/feature-token-contract-v3.md b/docs/recommendation/feature-token-contract-v3.md
+new file mode 100644
+index 00000000..549d6504
+--- /dev/null
++++ b/docs/recommendation/feature-token-contract-v3.md
+@@ -0,0 +1,61 @@
++# Recommendation feature-token contract v3
++
++Status: specification infrastructure only; inactive and aggregation-blocked.
++
++The machine-readable contract is [`recommendation-feature-token-contract-v3.json`](../../contracts/recommendation/recommendation-feature-token-contract-v3.json). Its existence does not activate a recommender or make any existing artifact v3-compatible.
++
++## Authority boundary
++
++The JSON contract is the cross-language authority for token grammar, namespaces, feature groups, side and domain applicability, cardinality, weighting, aggregation status, portable-runtime eligibility, unknown/deprecation behavior, and legacy compatibility.
++
++`TAXONOMY_CONCEPT_SEEDS` remains the authority for exact canonical taxonomy membership. The JSON contract is not a second taxonomy registry and cannot, by itself, give Python the current list of canonical concepts. A later slice must provide Python with an automatically generated or database-exported vocabulary verified against the same fingerprint; it must not introduce a separately maintained copy.
++
++`taxonomyVocabularyFingerprint` covers only entries serialized as `<conceptType>\t<canonicalKey>`, sorted by canonical key using ASCII ordering, joined with LF, and hashed as UTF-8 with SHA-256. Labels, aliases, and mapping rules are deliberately excluded so human-resolution changes do not falsely make the token vocabulary incompatible.
++
++## Identity and resolution
++
++Canonical taxonomy keys are already complete token identities:
++
++- `interest:arduino`
++- `material-family:electronics`
++- `material-form:arduino-uno`
++- `project-topic:robotics`
++- `component:dc-gear-motors`
++
++The validator accepts canonical tokens only after resolution. It does not resolve aliases, map persisted learner interests, normalize display labels into identifiers, or create new taxonomy concepts. An external mapping layer may use the Unicode-safe `normalizeTaxonomyAlias` helper, but must return an exact foundation key. English and Arabic display labels, generated database IDs, and hashes are never token identity.
++
++Generic and doubled wrappers such as `category:material-family:electronics`, `concept:material-form:arduino-uno`, and `component:component:dc-motor` are invalid.
++
++## Portable feature policy
++
++Portable v3 supports equal-weight declared canonical interests and semantic material/project metadata only. Every portable occurrence has weight `1.0`, and duplicate tokens use set semantics.
++
++Material rows require at least one material-family concept and exactly one condition, free/paid state, pickup state, and delivery state. Material-form concepts are optional. The condition vocabulary covers `NEW`, `LIKE_NEW`, `GOOD`, `USED`, and `NEEDS_REPAIR`; each boolean group covers both `true` and `false`.
++
++Project rows require at least one project-topic concept and exactly one difficulty. Required-component concepts are optional. Difficulty covers `BEGINNER`, `INTERMEDIATE`, and `ADVANCED`.
++
++A user with no resolved declared interest, or an item missing a required group, is ineligible for portable scoring. The contract does not invent a replacement token. Future integrations must preserve deterministic fallback.
++
++Identity columns are allowed only in explicitly isolated warm training experiments. Synthetic persona identities, activity bands, preference buckets, project-tendency features, inferred affinities, and session context are not portable v3 features. Generated Prisma IDs and hashed category IDs are prohibited as semantic metadata even when pseudonymized.
++
++## Normalization and aggregation
++
++Three operations remain separate:
++
++1. Human input and aliases are normalized by an external, Unicode-safe resolver.
++2. The resulting canonical feature token is validated byte-for-byte against this contract and, for taxonomy tokens, the foundation vocabulary.
++3. Validated and deduplicated feature rows are aggregated according to the contract-selected vector mode.
++
++No aggregation mode is selected in v3.0.0. Weighted sum, weighted mean, L1, and L2 remain experiment candidates. `portableActivationAllowed` is false until a controlled experiment selects one global mode for user and item rows across both domains and records it in a compatible contract revision.
++
++## Loading and validation
++
++The TypeScript helper uses Zod for generic document structure and derives semantic checks from the parsed JSON. It does not contain a second hard-coded namespace or feature-group table.
++
++Importing the helper performs no file I/O. The explicit loader reads with `node:fs/promises`, resolves the repository contract from `import.meta.url`, and supports an explicit file URL or absolute path for tests. The same relative layout works from both `src/modules/recommendations` and `dist/modules/recommendations`. Missing, unreadable, malformed, structurally invalid, and semantically invalid files have distinct load errors.
++
++## Legacy and activation boundary
++
++`impactloop-lightfm-portable-v1`, `slice-3-approved-features-v1`, and `runtime-approved-features-v2` remain historical experimental contracts. They are not relabeled or automatically rewritten. Future v3 artifacts must explicitly include the v3 contract ID/version, taxonomy vocabulary fingerprint, and selected aggregation mode.
++
++This slice is not consumed by ML shadow, Python training, artifact export, deterministic scoring, database reads, or production APIs. Integrating any of those systems requires a separate reviewed slice.
