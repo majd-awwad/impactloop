@@ -6,11 +6,17 @@ This directory contains the authoritative architecture, evaluation rules, decisi
 
 The recommendation system must optimize for useful and feasible material reuse, successful reservations, and project progress. Clicks, views, likes, and saves are supporting signals, not the final product objective.
 
-## Phase 3C — Final Architecture Freeze
+## Start Here
 
-The graduation-project recommendation architecture is frozen as a deterministic hybrid recommender with the legacy scorer as the active default. Recommendation observability and supported impression/action attribution remain active when the opt-in outbox worker is enabled. The normalized interest scorer remains opt-in only, and the typed taxonomy foundation remains inactive.
+Read [`current-state.md`](current-state.md) first. It is the authority for current implementation, adoption, configuration, blockers, and release policy. Then read [`decisions.md`](decisions.md) for active decisions and [`implementation-status.md`](implementation-status.md) for cumulative historical evidence.
 
-The collection pipeline is technically ready, but real-user pilot execution is deferred because participant recruitment and multi-day collection are outside the current project execution capacity. No real-user evidence exists, and LightFM, ALS, item-KNN, and other collaborative models remain deferred for insufficient real data. See [`final-recommendation-architecture.md`](final-recommendation-architecture.md) and [`phase-3b-real-interaction-pilot.md`](phase-3b-real-interaction-pilot.md).
+## Current State — 2026-07-23
+
+The adopted and default champion remains the deterministic hybrid recommender using `legacy-v1`. The normalized interest scorer remains opt-in, the typed taxonomy foundation remains inactive in adopted ranking, and recommendation outbox materialization remains dependent on an opt-in worker that defaults off.
+
+LightFM training, portable artifacts, in-process TypeScript scoring, shadow comparison, recent intent, confidence-gated rank fusion, and optional material/project serving hooks exist as experimental capabilities behind disabled-by-default flags. Implemented experimental code is not adopted production behavior or proof of recommendation quality. Real attributed evidence remains insufficient, and user-visible ML promotion is blocked pending the semantic, taxonomy, evidence, runtime/artifact, and operational gates in [`current-state.md`](current-state.md).
+
+[`final-recommendation-architecture.md`](final-recommendation-architecture.md) is the preserved 2026-07-18 graduation freeze, not the current implementation inventory. [`slice-4k-controlled-demo-runbook.md`](slice-4k-controlled-demo-runbook.md) exercises experimental serving hooks for a controlled demo; it is not production approval.
 
 ## Mandatory Principles
 
@@ -38,7 +44,7 @@ The collection pipeline is technically ready, but real-user pilot execution is d
 - Redis online features and a separate Python recommendation service are conditional on a demonstrated online inference requirement.
 - The existing weighted recommender is a versioned baseline and reliability fallback, not a protected final design.
 
-The Phase 3C freeze supersedes the current-project execution status of the experimental collaborative-baseline planning items above: they remain future work, are not implemented or trained, and cannot replace the deterministic default without new real-user evidence and a separate decision.
+The current decision is narrower than the implemented code surface: collaborative-model experiments exist, but none may replace the deterministic default without sufficient real attributed evidence, satisfied promotion gates, and a separate recorded decision.
 
 ## Official Execution Order
 
@@ -63,7 +69,7 @@ Recommendation generation, HTTP exposure, bounded candidate trace, impression, a
 
 ## Required Reading Rules
 
-For any recommendation-system task, read this file first.
+For any recommendation-system task, follow this file's link to `current-state.md` first.
 
 Read `recommendation-evaluation-experiment-spec.ar.md` only when the task involves:
 

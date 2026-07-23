@@ -1,3 +1,23 @@
+# Recommendation System Implementation Status
+
+## Latest Current Status — 2026-07-23
+
+The authoritative current classification is [`current-state.md`](current-state.md). This file retains cumulative implementation evidence and historical decisions; a later implementation does not retroactively alter what an earlier dated phase established.
+
+| Capability | Latest status |
+|---|---|
+| Deterministic hybrid recommender | Adopted active/default champion using `legacy-v1` |
+| Normalized interest scorer | Implemented, opt-in only |
+| Typed taxonomy foundation | Implemented; inactive in the adopted ranking path |
+| Recommendation observability/outbox | Infrastructure implemented; materialization worker is opt-in and defaults off; real attributed evidence remains insufficient |
+| LightFM training and portable artifacts | Implemented experimentally; synthetic/local evidence does not prove production quality |
+| TypeScript ML scoring and shadow comparison | Implemented experimentally behind a disabled-by-default shadow flag |
+| Recent intent and confidence-gated rank fusion | Implemented experimentally for materials and projects |
+| Optional material/project ML serving | Code path exists behind disabled-by-default flags; not adopted production behavior |
+| Production ML promotion | Blocked pending semantic, taxonomy, evidence, runtime/artifact, and operational gates |
+
+The deterministic response remains fail-closed when shadow is off or when artifact, scoring, fusion, readiness, or timeout checks fail. Project serving has an additional runtime `READY` gate. Material ML must be evaluated and promoted before project ML; shadow must precede canary; deterministic rollback must remain available.
+
 ## Phase 0 — Learner Home Performance
 
 ### Slice 1: Material relevance candidate query
@@ -298,7 +318,9 @@ Conditions:
 - repeat the paired benchmark and 48/8 parity review before any future default-change proposal;
 - keep component normalization, compatibility relations, typed overlap, semantic retrieval, and learned ranking out of scope.
 
-## Phase 3C — Final Architecture Freeze
+## Historical Snapshot — Phase 3C Final Architecture Freeze (2026-07-18)
+
+The following section preserves the 2026-07-18 graduation-freeze decision and evidence. Its “not implemented or trained” statements describe that dated snapshot; they are not the current implementation inventory. See [`current-state.md`](current-state.md) for the current authority.
 
 Status: FINALIZED_WITH_DEFERRED_REAL_USER_PILOT
 
