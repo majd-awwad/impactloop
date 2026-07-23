@@ -64,18 +64,19 @@ class InviteAcceptRequest {
   final String? availabilityNote;
 
   Map<String, dynamic> toJson() => {
-        'token': token,
-        'fullName': fullName,
-        'email': email,
-        'password': password,
-        'confirmPassword': confirmPassword,
-        if (phone != null && phone!.isNotEmpty) 'phone': phone,
-        if (city != null && city!.isNotEmpty) 'city': city,
-        if (area != null && area!.isNotEmpty) 'area': area,
-        if (addressLine != null && addressLine!.isNotEmpty) 'addressLine': addressLine,
-        if (transportationType != null && transportationType!.isNotEmpty)
-          'transportationType': transportationType,
-        if (availabilityNote != null && availabilityNote!.isNotEmpty)
-          'availabilityNote': availabilityNote,
-      };
+    'token': token,
+    'fullName': fullName,
+    'email': email,
+    'password': password,
+    'confirmPassword': confirmPassword,
+    if (phone != null && phone!.isNotEmpty) 'phone': phone,
+    if (city != null && city!.isNotEmpty) 'city': city,
+    if (area != null && area!.isNotEmpty) 'area': area,
+    if (addressLine != null && addressLine!.isNotEmpty)
+      'addressLine': addressLine,
+    if (transportationType != null && transportationType!.isNotEmpty)
+      'transportationType': transportationType,
+    if (availabilityNote != null && availabilityNote!.isNotEmpty)
+      'availabilityNote': availabilityNote,
+  };
 }

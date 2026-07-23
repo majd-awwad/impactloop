@@ -58,124 +58,138 @@ void main() {
     expect(sessionExpired, isNull);
   });
 
-  test('refresh failure clears session and rejects as session expired', () async {
-    final tokenStorage = _MemoryTokenStorage('refresh-token');
-    final tokenHolder = AccessTokenHolder()..accessToken = 'expired-access';
-    final refreshClient = Dio()
-      ..httpClientAdapter = _RefreshAdapter(shouldFail: true);
-    final apiAdapter = _ApiAdapter();
-    final apiClient = Dio()..httpClientAdapter = apiAdapter;
-    ApiException? sessionExpired;
+  test(
+    'refresh failure clears session and rejects as session expired',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('refresh-token');
+      final tokenHolder = AccessTokenHolder()..accessToken = 'expired-access';
+      final refreshClient = Dio()
+        ..httpClientAdapter = _RefreshAdapter(shouldFail: true);
+      final apiAdapter = _ApiAdapter();
+      final apiClient = Dio()..httpClientAdapter = apiAdapter;
+      ApiException? sessionExpired;
 
-    apiClient.interceptors.add(
-      AuthInterceptor(
-        getAccessToken: () => tokenHolder.accessToken,
-        refreshSession: AuthSessionRefresher(
-          refreshClient: refreshClient,
-          tokenStorage: tokenStorage,
-          accessTokenHolder: tokenHolder,
+      apiClient.interceptors.add(
+        AuthInterceptor(
+          getAccessToken: () => tokenHolder.accessToken,
+          refreshSession: AuthSessionRefresher(
+            refreshClient: refreshClient,
+            tokenStorage: tokenStorage,
+            accessTokenHolder: tokenHolder,
+          ),
+          retryClient: apiClient,
+          onSessionExpired: (error) => sessionExpired = error,
         ),
-        retryClient: apiClient,
-        onSessionExpired: (error) => sessionExpired = error,
-      ),
-    );
+      );
 
-    final error = await _captureDioError(
-      apiClient.get<Map<String, dynamic>>('/api/supplier/dashboard'),
-    );
+      final error = await _captureDioError(
+        apiClient.get<Map<String, dynamic>>('/api/supplier/dashboard'),
+      );
 
-    expect(error.response?.statusCode, 401);
-    expect((error.response?.data as Map<String, dynamic>)['error'], {
-      'code': 'SESSION_EXPIRED',
-    });
-    expect(apiAdapter.supplierCallCount, 1);
-    expect(tokenHolder.accessToken, isNull);
-    expect(await tokenStorage.readRefreshToken(), isNull);
-    expect(sessionExpired?.code, 'SESSION_EXPIRED');
-    expect(
-      classifyLearnerHomeError(sessionExpired!).kind,
-      LearnerHomeErrorKind.sessionExpired,
-    );
-  });
+      expect(error.response?.statusCode, 401);
+      expect((error.response?.data as Map<String, dynamic>)['error'], {
+        'code': 'SESSION_EXPIRED',
+      });
+      expect(apiAdapter.supplierCallCount, 1);
+      expect(tokenHolder.accessToken, isNull);
+      expect(await tokenStorage.readRefreshToken(), isNull);
+      expect(sessionExpired?.code, 'SESSION_EXPIRED');
+      expect(
+        classifyLearnerHomeError(sessionExpired!).kind,
+        LearnerHomeErrorKind.sessionExpired,
+      );
+    },
+  );
 
-  test('retry failure after successful refresh does not clear session', () async {
-    final tokenStorage = _MemoryTokenStorage('refresh-token');
-    final tokenHolder = AccessTokenHolder()..accessToken = 'expired-access';
-    final refreshClient = Dio()..httpClientAdapter = _RefreshAdapter();
-    final apiAdapter = _ApiAdapter(retryStatusCode: 500);
-    final apiClient = Dio()..httpClientAdapter = apiAdapter;
-    ApiException? sessionExpired;
+  test(
+    'retry failure after successful refresh does not clear session',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('refresh-token');
+      final tokenHolder = AccessTokenHolder()..accessToken = 'expired-access';
+      final refreshClient = Dio()..httpClientAdapter = _RefreshAdapter();
+      final apiAdapter = _ApiAdapter(retryStatusCode: 500);
+      final apiClient = Dio()..httpClientAdapter = apiAdapter;
+      ApiException? sessionExpired;
 
-    apiClient.interceptors.add(
-      AuthInterceptor(
-        getAccessToken: () => tokenHolder.accessToken,
-        refreshSession: AuthSessionRefresher(
-          refreshClient: refreshClient,
-          tokenStorage: tokenStorage,
-          accessTokenHolder: tokenHolder,
+      apiClient.interceptors.add(
+        AuthInterceptor(
+          getAccessToken: () => tokenHolder.accessToken,
+          refreshSession: AuthSessionRefresher(
+            refreshClient: refreshClient,
+            tokenStorage: tokenStorage,
+            accessTokenHolder: tokenHolder,
+          ),
+          retryClient: apiClient,
+          onSessionExpired: (error) => sessionExpired = error,
         ),
-        retryClient: apiClient,
-        onSessionExpired: (error) => sessionExpired = error,
-      ),
-    );
+      );
 
-    final error = await _captureDioError(
-      apiClient.get<Map<String, dynamic>>('/api/supplier/dashboard'),
-    );
+      final error = await _captureDioError(
+        apiClient.get<Map<String, dynamic>>('/api/supplier/dashboard'),
+      );
 
-    expect(error.response?.statusCode, 500);
-    expect(apiAdapter.supplierCallCount, 2);
-    expect(tokenHolder.accessToken, 'refreshed-access');
-    expect(await tokenStorage.readRefreshToken(), 'rotated-refresh');
-    expect(sessionExpired, isNull);
-  });
+      expect(error.response?.statusCode, 500);
+      expect(apiAdapter.supplierCallCount, 2);
+      expect(tokenHolder.accessToken, 'refreshed-access');
+      expect(await tokenStorage.readRefreshToken(), 'rotated-refresh');
+      expect(sessionExpired, isNull);
+    },
+  );
 
-  test('refresh unreachable does not clear session or re-enter refresh', () async {
-    final tokenStorage = _MemoryTokenStorage('refresh-token');
-    final tokenHolder = AccessTokenHolder()..accessToken = 'expired-access';
-    final refreshClient = Dio()
-      ..httpClientAdapter = _RefreshAdapter(networkFailure: true);
-    final apiAdapter = _ApiAdapter();
-    final apiClient = Dio()..httpClientAdapter = apiAdapter;
-    ApiException? sessionExpired;
-    final logs = <String>[];
+  test(
+    'refresh unreachable does not clear session or re-enter refresh',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('refresh-token');
+      final tokenHolder = AccessTokenHolder()..accessToken = 'expired-access';
+      final refreshClient = Dio()
+        ..httpClientAdapter = _RefreshAdapter(networkFailure: true);
+      final apiAdapter = _ApiAdapter();
+      final apiClient = Dio()..httpClientAdapter = apiAdapter;
+      ApiException? sessionExpired;
+      final logs = <String>[];
 
-    apiClient.interceptors.add(
-      AuthInterceptor(
-        getAccessToken: () => tokenHolder.accessToken,
-        refreshSession: AuthSessionRefresher(
-          refreshClient: refreshClient,
-          tokenStorage: tokenStorage,
-          accessTokenHolder: tokenHolder,
+      apiClient.interceptors.add(
+        AuthInterceptor(
+          getAccessToken: () => tokenHolder.accessToken,
+          refreshSession: AuthSessionRefresher(
+            refreshClient: refreshClient,
+            tokenStorage: tokenStorage,
+            accessTokenHolder: tokenHolder,
+          ),
+          retryClient: apiClient,
+          onSessionExpired: (error) => sessionExpired = error,
+          log: logs.add,
         ),
-        retryClient: apiClient,
-        onSessionExpired: (error) => sessionExpired = error,
-        log: logs.add,
-      ),
-    );
+      );
 
-    final error = await _captureDioError(
-      apiClient.get<Map<String, dynamic>>('/api/supplier/dashboard'),
-    );
+      final error = await _captureDioError(
+        apiClient.get<Map<String, dynamic>>('/api/supplier/dashboard'),
+      );
 
-    expect(error.response?.statusCode, 503);
-    expect(error.response?.data, {
-      'success': false,
-      'message': 'Could not reach the server',
-      'error': {'code': 'NETWORK_ERROR'},
-    });
-    expect(apiAdapter.supplierCallCount, 1);
-    expect(tokenHolder.accessToken, 'expired-access');
-    expect(await tokenStorage.readRefreshToken(), 'refresh-token');
-    expect(sessionExpired, isNull);
-    expect(logs.any((message) => message.contains('reason=refresh_unreachable')), isTrue);
-    expect(logs.join('\n'), isNot(contains('refresh-token')));
-  });
+      expect(error.response?.statusCode, 503);
+      expect(error.response?.data, {
+        'success': false,
+        'message': 'Could not reach the server',
+        'error': {'code': 'NETWORK_ERROR'},
+      });
+      expect(apiAdapter.supplierCallCount, 1);
+      expect(tokenHolder.accessToken, 'expired-access');
+      expect(await tokenStorage.readRefreshToken(), 'refresh-token');
+      expect(sessionExpired, isNull);
+      expect(
+        logs.any((message) => message.contains('reason=refresh_unreachable')),
+        isTrue,
+      );
+      expect(logs.join('\n'), isNot(contains('refresh-token')));
+    },
+  );
 
   test('concurrent 401s share one refresh call', () async {
     final tokenStorage = _MemoryTokenStorage('refresh-token');
     final tokenHolder = AccessTokenHolder()..accessToken = 'expired-access';
-    final refreshAdapter = _RefreshAdapter(delay: const Duration(milliseconds: 20));
+    final refreshAdapter = _RefreshAdapter(
+      delay: const Duration(milliseconds: 20),
+    );
     final refreshClient = Dio()..httpClientAdapter = refreshAdapter;
     final apiAdapter = _ApiAdapter();
     final apiClient = Dio()..httpClientAdapter = apiAdapter;
@@ -279,60 +293,75 @@ void main() {
     );
   });
 
-  test('Learner Home reaches loaded state when a network retry succeeds', () async {
-    final adapter = _LearnerHomeAdapter(networkFailure: true);
-    final api = LearnerHomeApi(Dio()..httpClientAdapter = adapter);
+  test(
+    'Learner Home reaches loaded state when a network retry succeeds',
+    () async {
+      final adapter = _LearnerHomeAdapter(networkFailure: true);
+      final api = LearnerHomeApi(Dio()..httpClientAdapter = adapter);
 
-    await expectLater(
-      api.fetchHomeFeed(),
-      throwsA(isA<LearnerHomeFailure>()),
-    );
+      await expectLater(
+        api.fetchHomeFeed(),
+        throwsA(isA<LearnerHomeFailure>()),
+      );
 
-    adapter.networkFailure = false;
-    final feed = await api.fetchHomeFeed();
+      adapter.networkFailure = false;
+      final feed = await api.fetchHomeFeed();
 
-    expect(feed.sections, isEmpty);
-    expect(adapter.homeCallCount, 2);
-  });
+      expect(feed.sections, isEmpty);
+      expect(adapter.homeCallCount, 2);
+    },
+  );
 
-  test('stale session error is cleared and learner home reloads after login', () async {
-    final homeApi = _ReloadableLearnerHomeApi(failFirst: true);
-    final repository = _LoginAuthRepository();
-    final container = ProviderContainer(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(repository),
-        learnerHomeApiProvider.overrideWithValue(homeApi),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'stale session error is cleared and learner home reloads after login',
+    () async {
+      final homeApi = _ReloadableLearnerHomeApi(failFirst: true);
+      final repository = _LoginAuthRepository();
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repository),
+          learnerHomeApiProvider.overrideWithValue(homeApi),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final subscription = container.listen(
-      learnerHomeFeedProvider,
-      (_, _) {},
-      fireImmediately: true,
-    );
-    addTearDown(subscription.close);
+      final subscription = container.listen(
+        learnerHomeFeedProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
 
-    await expectLater(
-      container.read(learnerHomeFeedProvider.future),
-      throwsA(isA<ApiException>()),
-    );
+      await expectLater(
+        container.read(learnerHomeFeedProvider.future),
+        throwsA(isA<ApiException>()),
+      );
 
-    final controller = container.read(authControllerProvider.notifier);
-    container.read(authSessionExpiryProvider.notifier).expire(
-      const ApiException(statusCode: 401, code: 'SESSION_EXPIRED', message: 'expired'),
-    );
-    await Future<void>.delayed(Duration.zero);
+      final controller = container.read(authControllerProvider.notifier);
+      container
+          .read(authSessionExpiryProvider.notifier)
+          .expire(
+            const ApiException(
+              statusCode: 401,
+              code: 'SESSION_EXPIRED',
+              message: 'expired',
+            ),
+          );
+      await Future<void>.delayed(Duration.zero);
 
-    await controller.login(email: 'learner@example.test', password: 'password');
-    await container.read(learnerHomeFeedProvider.future);
+      await controller.login(
+        email: 'learner@example.test',
+        password: 'password',
+      );
+      await container.read(learnerHomeFeedProvider.future);
 
-    expect(container.read(authControllerProvider).error, isNull);
-    expect(container.read(authSessionExpiryProvider), isNull);
-    expect(repository.loginCallCount, 1);
-    expect(repository.meCallCount, 1);
-    expect(homeApi.fetchCount, 2);
-  });
+      expect(container.read(authControllerProvider).error, isNull);
+      expect(container.read(authSessionExpiryProvider), isNull);
+      expect(repository.loginCallCount, 1);
+      expect(repository.meCallCount, 1);
+      expect(homeApi.fetchCount, 2);
+    },
+  );
 }
 
 Future<DioException> _captureDioError(Future<Object?> request) async {
@@ -385,27 +414,25 @@ class _ApiAdapter implements HttpClientAdapter {
     supplierCallCount += 1;
 
     if (options.extra[AuthInterceptor.retriedAfterRefreshExtraKey] != true) {
-      return _jsonResponse(
-        401,
-        {'success': false, 'message': 'Unauthorized'},
-      );
+      return _jsonResponse(401, {'success': false, 'message': 'Unauthorized'});
     }
 
     retryAuthorization = options.headers['Authorization'] as String?;
     retryQueryParameters = options.queryParameters;
     retryRequestHeader = options.headers['X-Request-Shape'] as String?;
-    return _jsonResponse(
-      retryStatusCode,
-      {
-        'success': retryStatusCode < 400,
-        'data': {'ok': true},
-      },
-    );
+    return _jsonResponse(retryStatusCode, {
+      'success': retryStatusCode < 400,
+      'data': {'ok': true},
+    });
   }
 }
 
 class _RefreshAdapter implements HttpClientAdapter {
-  _RefreshAdapter({this.shouldFail = false, this.networkFailure = false, this.delay});
+  _RefreshAdapter({
+    this.shouldFail = false,
+    this.networkFailure = false,
+    this.delay,
+  });
 
   final bool shouldFail;
   final bool networkFailure;
@@ -435,22 +462,19 @@ class _RefreshAdapter implements HttpClientAdapter {
     }
 
     if (shouldFail) {
-      return _jsonResponse(
-        401,
-        {'success': false, 'message': 'Refresh failed'},
-      );
+      return _jsonResponse(401, {
+        'success': false,
+        'message': 'Refresh failed',
+      });
     }
 
-    return _jsonResponse(
-      200,
-      {
-        'success': true,
-        'data': {
-          'accessToken': 'refreshed-access',
-          'refreshToken': 'rotated-refresh',
-        },
+    return _jsonResponse(200, {
+      'success': true,
+      'data': {
+        'accessToken': 'refreshed-access',
+        'refreshToken': 'rotated-refresh',
       },
-    );
+    });
   }
 }
 
@@ -480,22 +504,19 @@ class _LearnerHomeAdapter implements HttpClientAdapter {
     }
 
     if (statusCode != 200) {
-      return _jsonResponse(
-        statusCode,
-        {'success': false, 'message': 'Unauthorized'},
-      );
+      return _jsonResponse(statusCode, {
+        'success': false,
+        'message': 'Unauthorized',
+      });
     }
 
-    return _jsonResponse(
-      200,
-      {
-        'success': true,
-        'data': {
-          'profileCompletion': {'percentage': 100},
-          'sections': const [],
-        },
+    return _jsonResponse(200, {
+      'success': true,
+      'data': {
+        'profileCompletion': {'percentage': 100},
+        'sections': const [],
       },
-    );
+    });
   }
 }
 
@@ -521,20 +542,17 @@ class _AlwaysUnauthorizedAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    return _jsonResponse(
-      401,
-      {'success': false, 'message': 'Unauthorized'},
-    );
+    return _jsonResponse(401, {'success': false, 'message': 'Unauthorized'});
   }
 }
 
 class _LoginAuthRepository extends AuthRepository {
   _LoginAuthRepository()
-      : super(
-          api: AuthApi(Dio()),
-          tokenStorage: _MemoryTokenStorage(null),
-          accessTokenHolder: AccessTokenHolder(),
-        );
+    : super(
+        api: AuthApi(Dio()),
+        tokenStorage: _MemoryTokenStorage(null),
+        accessTokenHolder: AccessTokenHolder(),
+      );
 
   final _user = User(
     id: 'learner-1',

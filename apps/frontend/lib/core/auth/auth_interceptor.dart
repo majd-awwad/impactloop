@@ -11,11 +11,11 @@ class AuthInterceptor extends Interceptor {
     required Dio retryClient,
     required void Function(ApiException error) onSessionExpired,
     void Function(String message)? log,
-  })  : _getAccessToken = getAccessToken,
-        _refreshSession = refreshSession,
-        _retryClient = retryClient,
-        _onSessionExpired = onSessionExpired,
-        _log = log ?? debugPrint;
+  }) : _getAccessToken = getAccessToken,
+       _refreshSession = refreshSession,
+       _retryClient = retryClient,
+       _onSessionExpired = onSessionExpired,
+       _log = log ?? debugPrint;
 
   final String? Function() _getAccessToken;
   final AuthSessionRefresher _refreshSession;
@@ -145,15 +145,15 @@ class AuthInterceptor extends Interceptor {
         ),
       );
     } catch (error, stackTrace) {
-      _logRefreshFallback('session_expiry_transition_failed', error, stackTrace);
+      _logRefreshFallback(
+        'session_expiry_transition_failed',
+        error,
+        stackTrace,
+      );
     }
   }
 
-  void _logRefreshFallback(
-    String reason,
-    Object error,
-    StackTrace stackTrace,
-  ) {
+  void _logRefreshFallback(String reason, Object error, StackTrace stackTrace) {
     try {
       final status = error is ApiException ? error.statusCode : null;
       _log(
@@ -174,7 +174,9 @@ class AuthInterceptor extends Interceptor {
   ) {
     final isNetworkFailure = reason == 'refresh_unreachable';
     final statusCode = isNetworkFailure ? 503 : 500;
-    final code = isNetworkFailure ? 'NETWORK_ERROR' : 'AUTH_REFRESH_UNAVAILABLE';
+    final code = isNetworkFailure
+        ? 'NETWORK_ERROR'
+        : 'AUTH_REFRESH_UNAVAILABLE';
 
     return DioException(
       requestOptions: requestOptions,
@@ -202,10 +204,7 @@ class AuthInterceptor extends Interceptor {
    */
   RequestOptions _retryOptions(RequestOptions options, String accessToken) {
     return options.copyWith(
-      headers: {
-        ...options.headers,
-        'Authorization': 'Bearer $accessToken',
-      },
+      headers: {...options.headers, 'Authorization': 'Bearer $accessToken'},
       extra: {
         ...options.extra,
         skipAuthRefreshExtraKey: true,
@@ -252,5 +251,4 @@ class AuthInterceptor extends Interceptor {
         path == '/api/auth/refresh' ||
         path == '/api/auth/logout';
   }
-
 }

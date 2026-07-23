@@ -1,27 +1,29 @@
-import { createHash } from 'node:crypto';
-import path from 'node:path';
+import { createHash } from "node:crypto";
+import path from "node:path";
 
-import type { env as EnvType } from '../src/config/env.js';
-import type { LearnerHomeResponse, LearnerHomeSectionDetails } from '../src/modules/learner-home/learner-home.types.js';
-import { matchLearnerInterestsAgainstMaterial } from '../src/modules/learner-home/learner-interest-taxonomy.js';
-import type { ShadowDiagnostics } from '../src/modules/recommendations/ml-shadow.service.js';
+import type { env as EnvType } from "../src/config/env.js";
+import type {
+  LearnerHomeResponse,
+  LearnerHomeSectionDetails,
+} from "../src/modules/learner-home/learner-home.types.js";
+import { matchLearnerInterestsAgainstMaterial } from "../src/modules/learner-home/learner-interest-taxonomy.js";
+import type { ShadowDiagnostics } from "../src/modules/recommendations/ml-shadow.service.js";
 
-export type EvaluationModeKey = 'A_baseline' | 'B_shadow' | 'C_material' | 'D_project' | 'E_both';
+export type EvaluationModeKey =
+  "A_baseline" | "B_shadow" | "C_material" | "D_project" | "E_both";
 
 export type ArchetypeKey =
-  | 'cold_start'
-  | 'profile_only'
-  | 'material_coherent'
-  | 'material_scattered'
-  | 'project_coherent'
-  | 'project_scattered'
-  | 'mixed'
-  | 'sparse_candidates';
+  | "cold_start"
+  | "profile_only"
+  | "material_coherent"
+  | "material_scattered"
+  | "project_coherent"
+  | "project_scattered"
+  | "mixed"
+  | "sparse_candidates";
 
 export type ReleaseClassification =
-  | 'READY_FOR_CONTROLLED_LOCAL_DEMO'
-  | 'READY_WITH_WARNINGS'
-  | 'NOT_READY';
+  "READY_FOR_CONTROLLED_LOCAL_DEMO" | "READY_WITH_WARNINGS" | "NOT_READY";
 
 export type RecommendationFlagState = {
   shadow: boolean;
@@ -33,7 +35,7 @@ export type RecommendationFlagState = {
 
 export const EVALUATION_MODES: Record<
   EvaluationModeKey,
-  Pick<RecommendationFlagState, 'shadow' | 'materialServing' | 'projectServing'>
+  Pick<RecommendationFlagState, "shadow" | "materialServing" | "projectServing">
 > = {
   A_baseline: { shadow: false, materialServing: false, projectServing: false },
   B_shadow: { shadow: true, materialServing: false, projectServing: false },
@@ -43,34 +45,34 @@ export const EVALUATION_MODES: Record<
 };
 
 export const ARCHETYPE_KEYS: ArchetypeKey[] = [
-  'cold_start',
-  'profile_only',
-  'material_coherent',
-  'material_scattered',
-  'project_coherent',
-  'project_scattered',
-  'mixed',
-  'sparse_candidates',
+  "cold_start",
+  "profile_only",
+  "material_coherent",
+  "material_scattered",
+  "project_coherent",
+  "project_scattered",
+  "mixed",
+  "sparse_candidates",
 ];
 
 export const ML_SHADOW_TIMEOUT_MS = 1_000;
 export const MAX_CANDIDATE_BOUND = 200;
 
 export const REQUIRED_REPORT_KEYS = [
-  'runMetadata',
-  'artifactVersions',
-  'featureSchemaVersions',
-  'evaluatedArchetypes',
-  'modeComparisons',
-  'correctnessInvariants',
-  'qualityProxies',
-  'confidenceDistributions',
-  'latencySummary',
-  'fallbackSummary',
-  'releaseBlockers',
-  'warnings',
-  'finalRecommendation',
-  'determinism',
+  "runMetadata",
+  "artifactVersions",
+  "featureSchemaVersions",
+  "evaluatedArchetypes",
+  "modeComparisons",
+  "correctnessInvariants",
+  "qualityProxies",
+  "confidenceDistributions",
+  "latencySummary",
+  "fallbackSummary",
+  "releaseBlockers",
+  "warnings",
+  "finalRecommendation",
+  "determinism",
 ] as const;
 
 export type LearnerFixtureRow = {
@@ -90,19 +92,17 @@ export type LearnerFixtureRow = {
 };
 
 export type ArchetypeResolution =
-  | 'RESOLVED_CONFIRMED'
-  | 'RESOLVED_UNCONFIRMED'
-  | 'UNRESOLVED';
+  "RESOLVED_CONFIRMED" | "RESOLVED_UNCONFIRMED" | "UNRESOLVED";
 
 export type ArchetypeSelection = {
   archetypeKey: ArchetypeKey;
-  archetypeStatus: 'RESOLVED' | 'UNRESOLVED';
+  archetypeStatus: "RESOLVED" | "UNRESOLVED";
   learnerId?: string;
 };
 
 export type EvaluatedArchetype = {
   archetypeKey: ArchetypeKey;
-  archetypeStatus: 'RESOLVED' | 'UNRESOLVED';
+  archetypeStatus: "RESOLVED" | "UNRESOLVED";
   archetypeResolution: ArchetypeResolution;
   accountCriteriaMatched: boolean;
   behavioralCriteriaMatched: boolean;
@@ -110,7 +110,9 @@ export type EvaluatedArchetype = {
   observedProjectConfidence?: string;
 };
 
-export type ShadowObservation = ShadowDiagnostics & { domain: 'material' | 'project' };
+export type ShadowObservation = ShadowDiagnostics & {
+  domain: "material" | "project";
+};
 
 export type BaselineRequestProof = {
   shadowObservations: number;
@@ -184,11 +186,11 @@ const PRIVACY_PATTERN =
 export const resolveArtifactPaths = (repositoryRoot: string) => ({
   material: path.join(
     repositoryRoot,
-    'ml/recommendation/generated/portable-model/material-hybrid-runtime-v2.json',
+    "ml/recommendation/generated/portable-model/material-hybrid-runtime-v2.json",
   ),
   project: path.join(
     repositoryRoot,
-    'ml/recommendation/generated/portable-model/project-hybrid-runtime-v2.json',
+    "ml/recommendation/generated/portable-model/project-hybrid-runtime-v2.json",
   ),
 });
 
@@ -215,7 +217,9 @@ export const materialActionCount = (learner: LearnerFixtureRow) =>
   learner._count.materialLikes + learner._count.materialViews;
 
 export const projectActionCount = (learner: LearnerFixtureRow) =>
-  learner._count.projectSaves + learner._count.projectLikes + learner._count.projectBuilds;
+  learner._count.projectSaves +
+  learner._count.projectLikes +
+  learner._count.projectBuilds;
 
 export const percentile = (values: number[], fraction: number) => {
   if (!values.length) return 0;
@@ -286,10 +290,13 @@ export const selectLearnerArchetypes = (
     predicate: (learner: LearnerFixtureRow) => boolean,
   ): ArchetypeSelection => {
     const forcedLearnerId = forcedArchetypeLearners?.[archetypeKey];
-    if (forcedLearnerId && learners.some((learner) => learner.id === forcedLearnerId)) {
+    if (
+      forcedLearnerId &&
+      learners.some((learner) => learner.id === forcedLearnerId)
+    ) {
       return {
         archetypeKey,
-        archetypeStatus: 'RESOLVED',
+        archetypeStatus: "RESOLVED",
         learnerId: forcedLearnerId,
       };
     }
@@ -299,49 +306,58 @@ export const selectLearnerArchetypes = (
     if (match) used.add(match.id);
     return {
       archetypeKey,
-      archetypeStatus: match ? 'RESOLVED' : 'UNRESOLVED',
+      archetypeStatus: match ? "RESOLVED" : "UNRESOLVED",
       learnerId: match?.id,
     };
   };
 
   const selections = [
     pick(
-      'cold_start',
+      "cold_start",
       (learner) =>
         (learner.learnerProfile?.interests.length ?? 0) === 0 &&
         engagementScore(learner) === 0,
     ),
     pick(
-      'profile_only',
+      "profile_only",
       (learner) =>
         (learner.learnerProfile?.interests.length ?? 0) > 0 &&
         engagementScore(learner) === 0,
     ),
-    pick('material_coherent', (learner) => {
+    pick("material_coherent", (learner) => {
       const categories = materialCategoryIds(learner);
-      return materialActionCount(learner) >= 3 && categories.size > 0 && categories.size <= 2;
+      return (
+        materialActionCount(learner) >= 3 &&
+        categories.size > 0 &&
+        categories.size <= 2
+      );
     }),
-    pick('material_scattered', (learner) => materialCategoryIds(learner).size >= 4),
-    pick('project_coherent', (learner) => {
+    pick(
+      "material_scattered",
+      (learner) => materialCategoryIds(learner).size >= 4,
+    ),
+    pick("project_coherent", (learner) => {
       const projectIds = projectIdsForLearner(learner);
       return projectIds.size >= 2 && projectActionCount(learner) >= 3;
     }),
-    pick('project_scattered', (learner) => {
+    pick("project_scattered", (learner) => {
       const projectIds = projectIdsForLearner(learner);
       return engagementScore(learner) > 8 && projectIds.size >= 4;
     }),
     pick(
-      'mixed',
+      "mixed",
       (learner) =>
         learner._count.materialViews > 0 &&
         learner._count.projectSaves + learner._count.projectBuilds > 0,
     ),
   ];
 
-  const sparseLearner = learners.find((learner) => learner.id === sparseCandidateLearnerId);
+  const sparseLearner = learners.find(
+    (learner) => learner.id === sparseCandidateLearnerId,
+  );
   selections.push({
-    archetypeKey: 'sparse_candidates',
-    archetypeStatus: sparseLearner ? 'RESOLVED' : 'UNRESOLVED',
+    archetypeKey: "sparse_candidates",
+    archetypeStatus: sparseLearner ? "RESOLVED" : "UNRESOLVED",
     learnerId: sparseLearner?.id,
   });
 
@@ -349,13 +365,13 @@ export const selectLearnerArchetypes = (
 };
 
 export const countRequestFallbacks = (observations: ShadowObservation[]) =>
-  observations.filter((entry) => entry.status === 'FALLBACK').length;
+  observations.filter((entry) => entry.status === "FALLBACK").length;
 
 export const countScorerInvocations = (observations: ShadowObservation[]) =>
   observations.filter(
     (entry) =>
-      entry.status === 'SCORED' ||
-      entry.status === 'FALLBACK' ||
+      entry.status === "SCORED" ||
+      entry.status === "FALLBACK" ||
       (entry.scoringDurationMs ?? 0) > 0,
   ).length;
 
@@ -378,11 +394,12 @@ export const createBaselineRequestProof = (
   requestFallbackCount: countRequestFallbacks(observations),
   artifactLoadsAttributed: Math.max(
     0,
-    artifactStatsAfter.artifactLoadCount - artifactStatsBefore.artifactLoadCount,
+    artifactStatsAfter.artifactLoadCount -
+      artifactStatsBefore.artifactLoadCount,
   ),
   deterministicMode:
     observations.length === 0 ||
-    observations.every((entry) => entry.status === 'DISABLED'),
+    observations.every((entry) => entry.status === "DISABLED"),
 });
 
 export type ComponentConceptInput = {
@@ -399,24 +416,25 @@ export const requiredComponentConceptKeys = (
       component.taxonomyConcepts.map((row) => row.concept.canonicalKey),
     );
 
-export const projectComponentCoverageKeys = (components: ComponentConceptInput[]) =>
-  requiredComponentConceptKeys(components);
+export const projectComponentCoverageKeys = (
+  components: ComponentConceptInput[],
+) => requiredComponentConceptKeys(components);
 
 const hasRecentMaterialEvidence = (diagnostics?: ShadowDiagnostics) =>
   Boolean(
     diagnostics &&
-      ((diagnostics.recentEvidenceCount ?? 0) > 0 ||
-        diagnostics.recentChannelApplied ||
-        (diagnostics.recentEventInputCount ?? 0) > 0),
+    ((diagnostics.recentEvidenceCount ?? 0) > 0 ||
+      diagnostics.recentChannelApplied ||
+      (diagnostics.recentEventInputCount ?? 0) > 0),
   );
 
 const hasRecentProjectEvidence = (diagnostics?: ShadowDiagnostics) =>
   Boolean(
     diagnostics &&
-      ((diagnostics.recentEvidenceCount ?? 0) > 0 ||
-        diagnostics.recentChannelApplied ||
-        (diagnostics.recentHistoryDistinctProjectCount ?? 0) > 0 ||
-        (diagnostics.burstDistinctProjectCount ?? 0) > 0),
+    ((diagnostics.recentEvidenceCount ?? 0) > 0 ||
+      diagnostics.recentChannelApplied ||
+      (diagnostics.recentHistoryDistinctProjectCount ?? 0) > 0 ||
+      (diagnostics.burstDistinctProjectCount ?? 0) > 0),
   );
 
 export const evaluateArchetypeBehavior = (
@@ -428,8 +446,12 @@ export const evaluateArchetypeBehavior = (
   const interests = learner.learnerProfile?.interests.length ?? 0;
   const categories = materialCategoryIds(learner);
   const projects = projectIdsForLearner(learner);
-  const materialConfidence = String(materialDiagnostics?.recentConfidence ?? 'NONE');
-  const projectConfidence = String(projectDiagnostics?.recentConfidence ?? 'NONE');
+  const materialConfidence = String(
+    materialDiagnostics?.recentConfidence ?? "NONE",
+  );
+  const projectConfidence = String(
+    projectDiagnostics?.recentConfidence ?? "NONE",
+  );
   const candidateCount = Math.min(
     materialDiagnostics?.candidateCount ?? Number.MAX_SAFE_INTEGER,
     projectDiagnostics?.runtimeCandidateCount ??
@@ -438,17 +460,17 @@ export const evaluateArchetypeBehavior = (
   );
 
   switch (archetypeKey) {
-    case 'cold_start':
+    case "cold_start":
       return {
         behavioralCriteriaMatched:
           interests === 0 &&
           engagementScore(learner) === 0 &&
-          materialConfidence === 'NONE' &&
-          projectConfidence === 'NONE' &&
+          materialConfidence === "NONE" &&
+          projectConfidence === "NONE" &&
           !hasRecentMaterialEvidence(materialDiagnostics) &&
           !hasRecentProjectEvidence(projectDiagnostics),
       };
-    case 'profile_only':
+    case "profile_only":
       return {
         behavioralCriteriaMatched:
           interests > 0 &&
@@ -456,41 +478,43 @@ export const evaluateArchetypeBehavior = (
           !hasRecentMaterialEvidence(materialDiagnostics) &&
           !hasRecentProjectEvidence(projectDiagnostics),
       };
-    case 'material_coherent':
+    case "material_coherent":
       return {
         behavioralCriteriaMatched:
           materialActionCount(learner) >= 3 &&
           categories.size > 0 &&
           categories.size <= 2 &&
-          (materialConfidence === 'MEDIUM' || materialConfidence === 'HIGH') &&
+          (materialConfidence === "MEDIUM" || materialConfidence === "HIGH") &&
           hasRecentMaterialEvidence(materialDiagnostics) &&
           ((materialDiagnostics?.candidateCount ?? 0) <= 0 ||
             (materialDiagnostics?.recentSlotsUsedTop5 ?? 0) > 0),
       };
-    case 'material_scattered':
+    case "material_scattered":
       return {
         behavioralCriteriaMatched:
           categories.size >= 4 &&
-          (materialConfidence === 'LOW' || hasRecentMaterialEvidence(materialDiagnostics)),
+          (materialConfidence === "LOW" ||
+            hasRecentMaterialEvidence(materialDiagnostics)),
       };
-    case 'project_coherent':
+    case "project_coherent":
       return {
         behavioralCriteriaMatched:
           projects.size >= 2 &&
           projectActionCount(learner) >= 3 &&
           hasRecentProjectEvidence(projectDiagnostics),
       };
-    case 'project_scattered':
+    case "project_scattered":
       return {
         behavioralCriteriaMatched:
           engagementScore(learner) > 8 &&
           projects.size >= 4 &&
-          projectConfidence === 'LOW' &&
-          (projectDiagnostics?.burstDistinctProjectCount ?? projects.size) >= 3 &&
+          projectConfidence === "LOW" &&
+          (projectDiagnostics?.burstDistinctProjectCount ?? projects.size) >=
+            3 &&
           (projectDiagnostics?.recentSlotsUsedTop5 ?? 0) === 0 &&
-          String(projectDiagnostics?.projectReadinessStatus ?? '') === 'READY',
+          String(projectDiagnostics?.projectReadinessStatus ?? "") === "READY",
       };
-    case 'mixed':
+    case "mixed":
       return {
         behavioralCriteriaMatched:
           learner._count.materialViews > 0 &&
@@ -498,7 +522,7 @@ export const evaluateArchetypeBehavior = (
           hasRecentMaterialEvidence(materialDiagnostics) &&
           hasRecentProjectEvidence(projectDiagnostics),
       };
-    case 'sparse_candidates':
+    case "sparse_candidates":
       return {
         behavioralCriteriaMatched: candidateCount < 80,
       };
@@ -516,8 +540,8 @@ export const resolveEvaluatedArchetype = (
   if (!selection.learnerId || !learner) {
     return {
       archetypeKey: selection.archetypeKey,
-      archetypeStatus: 'UNRESOLVED',
-      archetypeResolution: 'UNRESOLVED',
+      archetypeStatus: "UNRESOLVED",
+      archetypeResolution: "UNRESOLVED",
       accountCriteriaMatched: false,
       behavioralCriteriaMatched: false,
     };
@@ -532,21 +556,29 @@ export const resolveEvaluatedArchetype = (
 
   return {
     archetypeKey: selection.archetypeKey,
-    archetypeStatus: 'RESOLVED',
+    archetypeStatus: "RESOLVED",
     archetypeResolution: behavior.behavioralCriteriaMatched
-      ? 'RESOLVED_CONFIRMED'
-      : 'RESOLVED_UNCONFIRMED',
+      ? "RESOLVED_CONFIRMED"
+      : "RESOLVED_UNCONFIRMED",
     accountCriteriaMatched: true,
     behavioralCriteriaMatched: behavior.behavioralCriteriaMatched,
-    observedMaterialConfidence: String(materialDiagnostics?.recentConfidence ?? 'NONE'),
-    observedProjectConfidence: String(projectDiagnostics?.recentConfidence ?? 'NONE'),
+    observedMaterialConfidence: String(
+      materialDiagnostics?.recentConfidence ?? "NONE",
+    ),
+    observedProjectConfidence: String(
+      projectDiagnostics?.recentConfidence ?? "NONE",
+    ),
   };
 };
 
 const hashLabel = (value: string) =>
-  createHash('sha256').update(value).digest('hex').slice(0, 12);
+  createHash("sha256").update(value).digest("hex").slice(0, 12);
 
-export const overlapRatio = (left: string[], right: string[], limit: number) => {
+export const overlapRatio = (
+  left: string[],
+  right: string[],
+  limit: number,
+) => {
   const leftSlice = left.slice(0, limit);
   const rightSet = new Set(right.slice(0, limit));
   if (!leftSlice.length) return 1;
@@ -589,45 +621,53 @@ type ProjectResponseShape = {
   title?: string;
 };
 
-export const extractSectionMaterialIds = (response: LearnerHomeResponse, sectionKey: string) =>
+export const extractSectionMaterialIds = (
+  response: LearnerHomeResponse,
+  sectionKey: string,
+) =>
   response.sections
     .find((section) => section.key === sectionKey)
-    ?.items.filter((item) => item.type === 'material')
-    .map((item) => (item.material as MaterialResponseShape).id ?? '') ?? [];
+    ?.items.filter((item) => item.type === "material")
+    .map((item) => (item.material as MaterialResponseShape).id ?? "") ?? [];
 
-export const extractSectionProjectIds = (response: LearnerHomeResponse, sectionKey: string) =>
+export const extractSectionProjectIds = (
+  response: LearnerHomeResponse,
+  sectionKey: string,
+) =>
   response.sections
     .find((section) => section.key === sectionKey)
-    ?.items.filter((item) => item.type === 'project')
-    .map((item) => (item.project as ProjectResponseShape).id ?? '') ?? [];
+    ?.items.filter((item) => item.type === "project")
+    .map((item) => (item.project as ProjectResponseShape).id ?? "") ?? [];
 
 export const extractSectionMaterials = (
   response: LearnerHomeResponse | LearnerHomeSectionDetails,
-  sectionKey = 'suggested_materials',
+  sectionKey = "suggested_materials",
 ) => {
   const items =
-    'sections' in response
-      ? response.sections.find((section) => section.key === sectionKey)?.items ?? []
+    "sections" in response
+      ? (response.sections.find((section) => section.key === sectionKey)
+          ?.items ?? [])
       : response.key === sectionKey
         ? response.items
         : [];
   return items
-    .filter((item) => item.type === 'material')
+    .filter((item) => item.type === "material")
     .map((item) => item.material as MaterialResponseShape);
 };
 
 export const extractSectionProjects = (
   response: LearnerHomeResponse | LearnerHomeSectionDetails,
-  sectionKey = 'suggested_projects',
+  sectionKey = "suggested_projects",
 ) => {
   const items =
-    'sections' in response
-      ? response.sections.find((section) => section.key === sectionKey)?.items ?? []
+    "sections" in response
+      ? (response.sections.find((section) => section.key === sectionKey)
+          ?.items ?? [])
       : response.key === sectionKey
         ? response.items
         : [];
   return items
-    .filter((item) => item.type === 'project')
+    .filter((item) => item.type === "project")
     .map((item) => item.project as ProjectResponseShape);
 };
 
@@ -646,7 +686,8 @@ export const schemasCompatible = (
   return (
     JSON.stringify(left.topLevel) === JSON.stringify(right.topLevel) &&
     JSON.stringify(left.sectionKeys) === JSON.stringify(right.sectionKeys) &&
-    JSON.stringify(left.profileCompletionKeys) === JSON.stringify(right.profileCompletionKeys)
+    JSON.stringify(left.profileCompletionKeys) ===
+      JSON.stringify(right.profileCompletionKeys)
   );
 };
 
@@ -662,27 +703,33 @@ export const analyzeMaterialEligibility = (
   let unpublishedProjectCount = 0;
   for (const material of materials) {
     const quantity = material.availableQuantity ?? material.quantity ?? 0;
-    if (material.status !== 'AVAILABLE' || quantity <= 0) {
+    if (material.status !== "AVAILABLE" || quantity <= 0) {
       unavailableMaterialCount += 1;
     }
-    if (material.status && material.status !== 'AVAILABLE') {
+    if (material.status && material.status !== "AVAILABLE") {
       ineligibleCandidateCount += 1;
     }
     if (material.id && unpublishedProjectIds.has(material.id)) {
       unpublishedProjectCount += 1;
     }
   }
-  return { ineligibleCandidateCount, unavailableMaterialCount, unpublishedProjectCount };
+  return {
+    ineligibleCandidateCount,
+    unavailableMaterialCount,
+    unpublishedProjectCount,
+  };
 };
 
 export const fallbackReasonCategory = (reason?: string) => {
   if (!reason) return null;
-  if (reason.includes('artifact') || reason.includes('missing')) return 'artifact';
-  if (reason.includes('timeout')) return 'timeout';
-  if (reason.includes('candidate')) return 'candidate';
-  if (reason.includes('fusion')) return 'fusion';
-  if (reason.includes('readiness') || reason.includes('mapping')) return 'readiness';
-  return 'other';
+  if (reason.includes("artifact") || reason.includes("missing"))
+    return "artifact";
+  if (reason.includes("timeout")) return "timeout";
+  if (reason.includes("candidate")) return "candidate";
+  if (reason.includes("fusion")) return "fusion";
+  if (reason.includes("readiness") || reason.includes("mapping"))
+    return "readiness";
+  return "other";
 };
 
 const isPrefixSubsequence = (prefix: string[], sequence: string[]) =>
@@ -702,29 +749,40 @@ export const buildCaseMetrics = (input: {
   deterministicEquivalent: boolean;
   unpublishedProjectIds: Set<string>;
 }): CaseMetrics => {
-  const homeMaterialIds = extractSectionMaterialIds(input.home, 'suggested_materials');
-  const homeProjectIds = extractSectionProjectIds(input.home, 'suggested_projects');
-  const sectionMaterialIds = extractSectionMaterials(input.materialsSection).map(
-    (material) => material.id ?? '',
+  const homeMaterialIds = extractSectionMaterialIds(
+    input.home,
+    "suggested_materials",
   );
+  const homeProjectIds = extractSectionProjectIds(
+    input.home,
+    "suggested_projects",
+  );
+  const sectionMaterialIds = extractSectionMaterials(
+    input.materialsSection,
+  ).map((material) => material.id ?? "");
   const sectionProjectIds = extractSectionProjects(input.projectsSection).map(
-    (project) => project.id ?? '',
+    (project) => project.id ?? "",
   );
   const materials = extractSectionMaterials(input.home);
   const projects = extractSectionProjects(input.home);
-  const eligibility = analyzeMaterialEligibility(materials, input.unpublishedProjectIds);
+  const eligibility = analyzeMaterialEligibility(
+    materials,
+    input.unpublishedProjectIds,
+  );
   const projectEligibility = projects.filter((project) =>
     project.id ? input.unpublishedProjectIds.has(project.id) : false,
   ).length;
 
   const served =
-    input.modeKey === 'C_material' || input.modeKey === 'E_both' || input.modeKey === 'D_project';
+    input.modeKey === "C_material" ||
+    input.modeKey === "E_both" ||
+    input.modeKey === "D_project";
   const baseline = input.baselineHome;
   const overlapTop5 =
     served && baseline
       ? computeTopKOverlap(
-          extractSectionMaterialIds(baseline, 'suggested_materials').concat(
-            extractSectionProjectIds(baseline, 'suggested_projects'),
+          extractSectionMaterialIds(baseline, "suggested_materials").concat(
+            extractSectionProjectIds(baseline, "suggested_projects"),
           ),
           homeMaterialIds.concat(homeProjectIds),
           5,
@@ -733,50 +791,60 @@ export const buildCaseMetrics = (input: {
   const overlapTop10 =
     served && baseline
       ? computeTopKOverlap(
-          extractSectionMaterialIds(baseline, 'suggested_materials').concat(
-            extractSectionProjectIds(baseline, 'suggested_projects'),
+          extractSectionMaterialIds(baseline, "suggested_materials").concat(
+            extractSectionProjectIds(baseline, "suggested_projects"),
           ),
           homeMaterialIds.concat(homeProjectIds),
           10,
         )
       : null;
 
-  const materialFallback = input.materialDiagnostics?.status === 'FALLBACK';
+  const materialFallback = input.materialDiagnostics?.status === "FALLBACK";
   const projectFallback =
-    input.projectDiagnostics?.status === 'FALLBACK' ||
-    input.projectDiagnostics?.projectReadinessStatus === 'FALLBACK';
+    input.projectDiagnostics?.status === "FALLBACK" ||
+    input.projectDiagnostics?.projectReadinessStatus === "FALLBACK";
 
   return {
     archetypeKey: input.archetypeKey,
     modeKey: input.modeKey,
     httpStatus: input.httpStatus,
     requestDurationMs: Math.round(input.requestDurationMs),
-    materialRecommendationStatus: input.materialDiagnostics?.status ?? 'UNKNOWN',
+    materialRecommendationStatus:
+      input.materialDiagnostics?.status ?? "UNKNOWN",
     projectReadinessStatus:
       input.projectDiagnostics?.projectReadinessStatus ??
       input.projectDiagnostics?.status ??
-      'UNKNOWN',
-    materialConfidence: String(input.materialDiagnostics?.recentConfidence ?? 'NONE'),
-    projectConfidence: String(input.projectDiagnostics?.recentConfidence ?? 'NONE'),
-    materialRecentSlotsUsedTop5: input.materialDiagnostics?.recentSlotsUsedTop5 ?? 0,
-    materialRecentSlotsUsedTop10: input.materialDiagnostics?.recentSlotsUsedTop10 ?? 0,
-    projectRecentSlotsUsedTop5: input.projectDiagnostics?.recentSlotsUsedTop5 ?? 0,
-    projectRecentSlotsUsedTop10: input.projectDiagnostics?.recentSlotsUsedTop10 ?? 0,
+      "UNKNOWN",
+    materialConfidence: String(
+      input.materialDiagnostics?.recentConfidence ?? "NONE",
+    ),
+    projectConfidence: String(
+      input.projectDiagnostics?.recentConfidence ?? "NONE",
+    ),
+    materialRecentSlotsUsedTop5:
+      input.materialDiagnostics?.recentSlotsUsedTop5 ?? 0,
+    materialRecentSlotsUsedTop10:
+      input.materialDiagnostics?.recentSlotsUsedTop10 ?? 0,
+    projectRecentSlotsUsedTop5:
+      input.projectDiagnostics?.recentSlotsUsedTop5 ?? 0,
+    projectRecentSlotsUsedTop10:
+      input.projectDiagnostics?.recentSlotsUsedTop10 ?? 0,
     deterministicVsServedTop5Overlap: overlapTop5,
     deterministicVsServedTop10Overlap: overlapTop10,
     duplicateCount:
       countDuplicates(homeMaterialIds) + countDuplicates(homeProjectIds),
     ineligibleCandidateCount: eligibility.ineligibleCandidateCount,
     unavailableMaterialCount: eligibility.unavailableMaterialCount,
-    unpublishedProjectCount: eligibility.unpublishedProjectCount + projectEligibility,
+    unpublishedProjectCount:
+      eligibility.unpublishedProjectCount + projectEligibility,
     hydrationMappingFailureCount:
       (input.materialDiagnostics?.hydratedMappingFailureCount ?? 0) +
       (input.projectDiagnostics?.hydratedMappingFailureCount ?? 0),
     fallbackOccurred: materialFallback || projectFallback,
-    fallbackReasonCategory:
-      fallbackReasonCategory(
-        input.materialDiagnostics?.fallbackReason ?? input.projectDiagnostics?.fallbackReason,
-      ),
+    fallbackReasonCategory: fallbackReasonCategory(
+      input.materialDiagnostics?.fallbackReason ??
+        input.projectDiagnostics?.fallbackReason,
+    ),
     homeBrowseMaterialsConsistent: isPrefixSubsequence(
       homeMaterialIds.slice(0, 4),
       sectionMaterialIds,
@@ -820,10 +888,10 @@ export const computeMaterialQualityProxies = (input: {
       Boolean(
         matchLearnerInterestsAgainstMaterial(
           {
-            title: material.title ?? '',
-            description: '',
-            materialType: '',
-            categoryNameEn: material.category?.id ?? material.categoryId ?? '',
+            title: material.title ?? "",
+            description: "",
+            materialType: "",
+            categoryNameEn: material.category?.id ?? material.categoryId ?? "",
             tags: [],
           },
           input.interests,
@@ -838,15 +906,18 @@ export const computeMaterialQualityProxies = (input: {
     );
     const preferenceFlags = slice.map((material) => {
       if (input.prefersFree && material.isFree) return true;
-      if (input.prefersDelivery && (material.deliveryAvailable ?? material.deliveryAllowed))
+      if (
+        input.prefersDelivery &&
+        (material.deliveryAvailable ?? material.deliveryAllowed)
+      )
         return true;
       return false;
     });
     const likedFlags = slice.map((material) => Boolean(material.isLiked));
     const categories = slice.map(
-      (material) => material.category?.id ?? material.categoryId ?? 'unknown',
+      (material) => material.category?.id ?? material.categoryId ?? "unknown",
     );
-    const suppliers = slice.map((material) => material.ownerId ?? 'unknown');
+    const suppliers = slice.map((material) => material.ownerId ?? "unknown");
     return {
       interestCategoryRelevanceRate: matchedRate(interestFlags),
       savedProjectComponentRelevanceRate: 0,
@@ -869,7 +940,7 @@ export const computeMaterialQualityProxies = (input: {
   return {
     offlineDiagnosticProxy: true,
     disclaimer:
-      'Offline diagnostic proxies only; they do not prove recommendation quality or user satisfaction.',
+      "Offline diagnostic proxies only; they do not prove recommendation quality or user satisfaction.",
     top5: build(5),
     top10: build(10),
   };
@@ -888,21 +959,28 @@ export const computeProjectQualityProxies = (input: {
     const interestFlags = slice.map((project) =>
       Boolean(
         project.category?.id &&
-          input.interests.some((interest) =>
-            (project.title ?? '').toLowerCase().includes(interest.replace(/_/g, ' ')),
-          ),
+        input.interests.some((interest) =>
+          (project.title ?? "")
+            .toLowerCase()
+            .includes(interest.replace(/_/g, " ")),
+        ),
       ),
     );
     const savedFlags = slice.map((project) => Boolean(project.isSaved));
     const likedFlags = slice.map((project) => Boolean(project.isLiked));
-    const categories = slice.map((project) => project.category?.id ?? 'unknown');
+    const categories = slice.map(
+      (project) => project.category?.id ?? "unknown",
+    );
     return {
       learnerInterestConceptRelevanceRate: matchedRate(interestFlags),
       availableMaterialComponentRelevanceRate: 0,
       recentProjectDomainRepresentationRate:
         slice.length > 0 ? input.recentDomainRepresentation / slice.length : 0,
       categoryConceptDiversityRate: uniqueRate(categories),
-      alreadySavedOrLikedProjectRate: matchedRate([...savedFlags, ...likedFlags]),
+      alreadySavedOrLikedProjectRate: matchedRate([
+        ...savedFlags,
+        ...likedFlags,
+      ]),
       buildContinuationRelevanceRate: input.hasContinueProjects ? 1 : 0,
       longTermVsRecentBalance:
         input.recentSlotsUsed > 0
@@ -916,7 +994,7 @@ export const computeProjectQualityProxies = (input: {
   return {
     offlineDiagnosticProxy: true,
     disclaimer:
-      'Offline diagnostic proxies only; they do not prove recommendation quality or user satisfaction.',
+      "Offline diagnostic proxies only; they do not prove recommendation quality or user satisfaction.",
     top5: build(5),
     top10: build(10),
   };
@@ -924,32 +1002,36 @@ export const computeProjectQualityProxies = (input: {
 
 export const aggregateConfidenceDistribution = (
   cases: CaseMetrics[],
-  diagnostics: Array<ShadowDiagnostics & { domain: 'material' | 'project' }>,
+  diagnostics: Array<ShadowDiagnostics & { domain: "material" | "project" }>,
 ) => {
-  const countConfidence = (domain: 'material' | 'project') => {
+  const countConfidence = (domain: "material" | "project") => {
     const levels = { NONE: 0, LOW: 0, MEDIUM: 0, HIGH: 0 };
-    for (const entry of diagnostics.filter((value) => value.domain === domain)) {
-      const level = String(entry.recentConfidence ?? 'NONE') as keyof typeof levels;
+    for (const entry of diagnostics.filter(
+      (value) => value.domain === domain,
+    )) {
+      const level = String(
+        entry.recentConfidence ?? "NONE",
+      ) as keyof typeof levels;
       if (level in levels) levels[level] += 1;
     }
     return levels;
   };
 
-  const domainDiagnostics = (domain: 'material' | 'project') =>
+  const domainDiagnostics = (domain: "material" | "project") =>
     diagnostics.filter((value) => value.domain === domain);
 
-  const burstDominanceAverage = (domain: 'material' | 'project') => {
+  const burstDominanceAverage = (domain: "material" | "project") => {
     const values = domainDiagnostics(domain).map((entry) =>
-      domain === 'material'
-        ? entry.dominantCategoryShare ?? entry.burstDominantConceptShare ?? 0
-        : entry.burstDominantConceptShare ?? entry.dominantConceptShare ?? 0,
+      domain === "material"
+        ? (entry.dominantCategoryShare ?? entry.burstDominantConceptShare ?? 0)
+        : (entry.burstDominantConceptShare ?? entry.dominantConceptShare ?? 0),
     );
     return values.length
       ? values.reduce((sum, value) => sum + value, 0) / values.length
       : 0;
   };
 
-  const recentSlotsAverage = (domain: 'material' | 'project') => {
+  const recentSlotsAverage = (domain: "material" | "project") => {
     const values = domainDiagnostics(domain).map(
       (entry) => entry.recentSlotsUsedTop5 ?? 0,
     );
@@ -958,15 +1040,16 @@ export const aggregateConfidenceDistribution = (
       : 0;
   };
 
-  const mediumHighZeroSlots = (domain: 'material' | 'project') =>
+  const mediumHighZeroSlots = (domain: "material" | "project") =>
     domainDiagnostics(domain).filter(
       (entry) =>
-        (entry.recentConfidence === 'MEDIUM' || entry.recentConfidence === 'HIGH') &&
+        (entry.recentConfidence === "MEDIUM" ||
+          entry.recentConfidence === "HIGH") &&
         (entry.recentSlotsUsedTop5 ?? 0) === 0 &&
         (entry.recentSlotsUsedTop10 ?? 0) === 0,
     ).length;
 
-  const recentAlreadyInLongTerm = (domain: 'material' | 'project') =>
+  const recentAlreadyInLongTerm = (domain: "material" | "project") =>
     domainDiagnostics(domain).filter(
       (entry) => (entry.longTermRecentTop5OverlapCount ?? 0) > 0,
     ).length;
@@ -976,29 +1059,29 @@ export const aggregateConfidenceDistribution = (
       [...new Set(cases.map((entry) => entry.modeKey))].map((modeKey) => [
         modeKey,
         {
-          material: countConfidence('material'),
-          project: countConfidence('project'),
+          material: countConfidence("material"),
+          project: countConfidence("project"),
         },
       ]),
     ),
     aggregate: {
-      material: countConfidence('material'),
-      project: countConfidence('project'),
+      material: countConfidence("material"),
+      project: countConfidence("project"),
       averageBurstDominance: {
-        material: burstDominanceAverage('material'),
-        project: burstDominanceAverage('project'),
+        material: burstDominanceAverage("material"),
+        project: burstDominanceAverage("project"),
       },
       averageRecentSlotsUsed: {
-        material: recentSlotsAverage('material'),
-        project: recentSlotsAverage('project'),
+        material: recentSlotsAverage("material"),
+        project: recentSlotsAverage("project"),
       },
       mediumHighZeroSlotsBecauseUnqualified: {
-        material: mediumHighZeroSlots('material'),
-        project: mediumHighZeroSlots('project'),
+        material: mediumHighZeroSlots("material"),
+        project: mediumHighZeroSlots("project"),
       },
       recentAlreadyRepresentedInLongTermTopK: {
-        material: recentAlreadyInLongTerm('material'),
-        project: recentAlreadyInLongTerm('project'),
+        material: recentAlreadyInLongTerm("material"),
+        project: recentAlreadyInLongTerm("project"),
       },
     },
   };
@@ -1016,13 +1099,24 @@ export const evaluateSafetyInvariants = (input: {
   latencyHangCount: number;
 }): Record<string, boolean> => ({
   noDuplicatesInServedSections: input.cases
-    .filter((entry) => entry.modeKey !== 'A_baseline' && entry.modeKey !== 'B_shadow')
+    .filter(
+      (entry) => entry.modeKey !== "A_baseline" && entry.modeKey !== "B_shadow",
+    )
     .every((entry) => entry.duplicateCount === 0),
-  noIneligibleMaterials: input.cases.every((entry) => entry.ineligibleCandidateCount === 0),
-  noUnavailableMaterials: input.cases.every((entry) => entry.unavailableMaterialCount === 0),
-  noUnpublishedProjects: input.cases.every((entry) => entry.unpublishedProjectCount === 0),
+  noIneligibleMaterials: input.cases.every(
+    (entry) => entry.ineligibleCandidateCount === 0,
+  ),
+  noUnavailableMaterials: input.cases.every(
+    (entry) => entry.unavailableMaterialCount === 0,
+  ),
+  noUnpublishedProjects: input.cases.every(
+    (entry) => entry.unpublishedProjectCount === 0,
+  ),
   materialProjectServingIndependent: input.cases
-    .filter((entry) => entry.modeKey === 'C_material' || entry.modeKey === 'D_project')
+    .filter(
+      (entry) =>
+        entry.modeKey === "C_material" || entry.modeKey === "D_project",
+    )
     .every((entry) => entry.httpStatus === 200),
   materialFallbackDoesNotChangeProjectServing:
     input.fallbackIndependence.materialFallbackProjectUnchanged,
@@ -1031,29 +1125,42 @@ export const evaluateSafetyInvariants = (input: {
   fallbackCasesReturnHttp200:
     input.fallbackIndependence.materialFallbackHttp200 &&
     input.fallbackIndependence.projectFallbackHttp200,
-  homeBrowseAllConsistent: input.cases.every((entry) => entry.homeBrowseProjectsConsistent),
+  homeBrowseAllConsistent: input.cases.every(
+    (entry) => entry.homeBrowseProjectsConsistent,
+  ),
   servingDisabledReturnsDeterministic: input.cases
-    .filter((entry) => entry.modeKey === 'A_baseline' || entry.modeKey === 'B_shadow')
+    .filter(
+      (entry) => entry.modeKey === "A_baseline" || entry.modeKey === "B_shadow",
+    )
     .every((entry) => entry.deterministicEquivalent),
-  responseJsonShapeUnchanged: input.cases.every((entry) => entry.responseSchemaCompatible),
+  responseJsonShapeUnchanged: input.cases.every(
+    (entry) => entry.responseSchemaCompatible,
+  ),
   noRequestHangs: input.latencyHangCount === 0,
-  noCpuBoundLoop: input.cases.every((entry) => entry.candidateCountMax <= MAX_CANDIDATE_BOUND),
+  noCpuBoundLoop: input.cases.every(
+    (entry) => entry.candidateCountMax <= MAX_CANDIDATE_BOUND,
+  ),
   diagnosticFailureCannotAffectResponse:
     input.fallbackIndependence.materialFallbackHttp200 &&
     input.fallbackIndependence.projectFallbackHttp200,
-  noPrivateIdentifiersInReportOrLogs: !PRIVACY_PATTERN.test(input.reportSerialized),
+  noPrivateIdentifiersInReportOrLogs: !PRIVACY_PATTERN.test(
+    input.reportSerialized,
+  ),
 });
 
 export const serializeReportForPrivacyScan = (value: unknown) => {
   const clone = structuredClone(value) as Record<string, unknown>;
-  if (clone.determinism && typeof clone.determinism === 'object') {
-    (clone.determinism as Record<string, unknown>).stableHash = '[redacted-hash]';
+  if (clone.determinism && typeof clone.determinism === "object") {
+    (clone.determinism as Record<string, unknown>).stableHash =
+      "[redacted-hash]";
   }
-  if (clone.runMetadata && typeof clone.runMetadata === 'object') {
+  if (clone.runMetadata && typeof clone.runMetadata === "object") {
     const metadata = clone.runMetadata as Record<string, unknown>;
-    if (typeof metadata.gitHead === 'string') metadata.gitHead = '[redacted-git-head]';
-    if (typeof metadata.gitHeadPrefix === 'string') metadata.gitHeadPrefix = '[redacted-git-head]';
-    if (metadata.restoredFlags && typeof metadata.restoredFlags === 'object') {
+    if (typeof metadata.gitHead === "string")
+      metadata.gitHead = "[redacted-git-head]";
+    if (typeof metadata.gitHeadPrefix === "string")
+      metadata.gitHeadPrefix = "[redacted-git-head]";
+    if (metadata.restoredFlags && typeof metadata.restoredFlags === "object") {
       const flags = metadata.restoredFlags as Record<string, unknown>;
       delete flags.materialPath;
       delete flags.projectPath;
@@ -1064,7 +1171,7 @@ export const serializeReportForPrivacyScan = (value: unknown) => {
 
 export const redactReport = <T>(value: T): T => {
   if (PRIVACY_PATTERN.test(serializeReportForPrivacyScan(value))) {
-    throw new Error('report_contains_private_identifiers');
+    throw new Error("report_contains_private_identifiers");
   }
   return value;
 };
@@ -1090,7 +1197,9 @@ export const buildStableHash = (report: Slice4jAReport) => {
     finalRecommendation: report.finalRecommendation,
     releaseBlockers: report.releaseBlockers,
   };
-  return createHash('sha256').update(JSON.stringify(stablePayload)).digest('hex');
+  return createHash("sha256")
+    .update(JSON.stringify(stablePayload))
+    .digest("hex");
 };
 
 export const classifyReleaseReadiness = (input: {
@@ -1102,73 +1211,86 @@ export const classifyReleaseReadiness = (input: {
   cleanupVerified?: boolean;
   cleanupBlockers?: string[];
 }): ReleaseClassification => {
-  if ((input.cleanupBlockers?.length ?? 0) > 0 || input.cleanupVerified === false) {
-    return 'NOT_READY';
+  if (
+    (input.cleanupBlockers?.length ?? 0) > 0 ||
+    input.cleanupVerified === false
+  ) {
+    return "NOT_READY";
   }
-  if (input.releaseBlockers.length > 0) return 'NOT_READY';
-  const invariantFailures = Object.entries(input.invariants).filter(([, passed]) => !passed);
-  if (invariantFailures.length > 0) return 'NOT_READY';
+  if (input.releaseBlockers.length > 0) return "NOT_READY";
+  const invariantFailures = Object.entries(input.invariants).filter(
+    ([, passed]) => !passed,
+  );
+  if (invariantFailures.length > 0) return "NOT_READY";
   if (
     input.unresolvedArchetypes > 0 ||
     (input.unconfirmedArchetypes ?? 0) > 0 ||
     input.warnings.length > 0
   ) {
-    return 'READY_WITH_WARNINGS';
+    return "READY_WITH_WARNINGS";
   }
-  return 'READY_FOR_CONTROLLED_LOCAL_DEMO';
+  return "READY_FOR_CONTROLLED_LOCAL_DEMO";
 };
 
 export const buildMarkdownSummary = (report: Slice4jAReport) => {
   const lines = [
-    '# Slice 4J-A Evaluation Summary',
-    '',
+    "# Slice 4J-A Evaluation Summary",
+    "",
     `**Classification:** ${report.finalRecommendation}`,
-    '',
-    '## Run metadata',
+    "",
+    "## Run metadata",
     `- Generated at: ${report.runMetadata.generatedAt}`,
     `- Node: ${report.runMetadata.nodeVersion}`,
-    `- Evaluated archetypes: ${report.evaluatedArchetypes.filter((entry) => entry.archetypeStatus === 'RESOLVED').length}/${report.evaluatedArchetypes.length} (${report.evaluatedArchetypes.filter((entry) => entry.archetypeResolution === 'RESOLVED_CONFIRMED').length} confirmed)`,
+    `- Evaluated archetypes: ${report.evaluatedArchetypes.filter((entry) => entry.archetypeStatus === "RESOLVED").length}/${report.evaluatedArchetypes.length} (${report.evaluatedArchetypes.filter((entry) => entry.archetypeResolution === "RESOLVED_CONFIRMED").length} confirmed)`,
     ...(report.runMetadata.fixtureSummary
       ? [
-          `- Fixture mode: ${(report.runMetadata.fixtureSummary as { fixtureMode?: string }).fixtureMode ?? 'unknown'}`,
-          `- Fixture cleanup: ${(report.runMetadata.fixtureSummary as { cleanupStatus?: string }).cleanupStatus ?? 'unknown'}`,
-          `- Post-run fixture records: ${(report.runMetadata.fixtureSummary as { postRunFixtureRecordCount?: number }).postRunFixtureRecordCount ?? 'unknown'}`,
+          `- Fixture mode: ${(report.runMetadata.fixtureSummary as { fixtureMode?: string }).fixtureMode ?? "unknown"}`,
+          `- Fixture cleanup: ${(report.runMetadata.fixtureSummary as { cleanupStatus?: string }).cleanupStatus ?? "unknown"}`,
+          `- Post-run fixture records: ${(report.runMetadata.fixtureSummary as { postRunFixtureRecordCount?: number }).postRunFixtureRecordCount ?? "unknown"}`,
         ]
       : []),
-    '',
-    '## Correctness invariants',
+    "",
+    "## Correctness invariants",
     ...Object.entries(report.correctnessInvariants).map(
-      ([key, passed]) => `- ${key}: ${passed ? 'PASS' : 'FAIL'}`,
+      ([key, passed]) => `- ${key}: ${passed ? "PASS" : "FAIL"}`,
     ),
-    '',
-    '## Quality proxies',
-    'Offline diagnostic proxies only; not user satisfaction metrics.',
-    '',
-    '## Confidence distributions',
+    "",
+    "## Quality proxies",
+    "Offline diagnostic proxies only; not user satisfaction metrics.",
+    "",
+    "## Confidence distributions",
     `- Material NONE/LOW/MEDIUM/HIGH: ${JSON.stringify(report.confidenceDistributions.aggregate ? (report.confidenceDistributions as any).aggregate.material : {})}`,
     `- Project NONE/LOW/MEDIUM/HIGH: ${JSON.stringify(report.confidenceDistributions.aggregate ? (report.confidenceDistributions as any).aggregate.project : {})}`,
-    '',
-    '## Latency summary',
+    "",
+    "## Latency summary",
     `- Modes measured: ${Object.keys(report.latencySummary).length}`,
-    '',
-    '## Fallback summary',
+    "",
+    "## Fallback summary",
     `- Total fallback cases: ${(report.fallbackSummary as { totalFallbackCases?: number }).totalFallbackCases ?? 0}`,
-    '',
+    "",
   ];
 
   if (report.releaseBlockers.length) {
-    lines.push('## Release blockers', ...report.releaseBlockers.map((entry) => `- ${entry}`), '');
+    lines.push(
+      "## Release blockers",
+      ...report.releaseBlockers.map((entry) => `- ${entry}`),
+      "",
+    );
   }
   if (report.warnings.length) {
-    lines.push('## Warnings', ...report.warnings.map((entry) => `- ${entry}`), '');
+    lines.push(
+      "## Warnings",
+      ...report.warnings.map((entry) => `- ${entry}`),
+      "",
+    );
   }
 
   lines.push(
-    '## Note',
-    'This classification is for controlled academic/demo use only, not production rollout.',
+    "## Note",
+    "This classification is for controlled academic/demo use only, not production rollout.",
   );
 
-  return `${lines.join('\n')}\n`;
+  return `${lines.join("\n")}\n`;
 };
 
 export const homeSectionsEqualExcept = (
@@ -1178,5 +1300,8 @@ export const homeSectionsEqualExcept = (
 ) => {
   const filterSections = (response: LearnerHomeResponse) =>
     response.sections.filter((section) => !excludedKeys.includes(section.key));
-  return JSON.stringify(filterSections(left)) === JSON.stringify(filterSections(right));
+  return (
+    JSON.stringify(filterSections(left)) ===
+    JSON.stringify(filterSections(right))
+  );
 };

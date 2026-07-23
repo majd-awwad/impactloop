@@ -15,9 +15,9 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 
 final learnerInterestOptionsProvider =
     FutureProvider<LearnerInterestOptionsResponse>((ref) async {
-  try {
-    return await ref.watch(profileApiProvider).getLearnerInterestOptions();
-  } catch (_) {
-    return fallbackLearnerInterestOptions;
-  }
-});
+      try {
+        return await ref.watch(profileApiProvider).getLearnerInterestOptions();
+      } catch (_) {
+        return fallbackLearnerInterestOptions;
+      }
+    });

@@ -93,7 +93,8 @@ class AdminCategoryRequestListItem {
   final List<String> similarCategories;
 
   factory AdminCategoryRequestListItem.fromJson(Map<String, dynamic> json) {
-    double? numToDouble(Object? value) => (value is num) ? value.toDouble() : null;
+    double? numToDouble(Object? value) =>
+        (value is num) ? value.toDouble() : null;
 
     return AdminCategoryRequestListItem(
       id: json['id'] as String,
@@ -114,9 +115,9 @@ class AdminCategoryRequestListItem {
       locationLabel: json['locationLabel'] as String?,
       categoryRequestReason: json['categoryRequestReason'] as String?,
       similarCategories: json['similarCategories'] is List
-          ? (json['similarCategories'] as List)
-              .whereType<String>()
-              .toList(growable: false)
+          ? (json['similarCategories'] as List).whereType<String>().toList(
+              growable: false,
+            )
           : const [],
     );
   }
@@ -162,7 +163,8 @@ class AdminPriceRequestListItem {
   final String? adminNote;
 
   factory AdminPriceRequestListItem.fromJson(Map<String, dynamic> json) {
-    double? numToDouble(Object? value) => (value is num) ? value.toDouble() : null;
+    double? numToDouble(Object? value) =>
+        (value is num) ? value.toDouble() : null;
 
     return AdminPriceRequestListItem(
       id: json['id'] as String,
@@ -177,8 +179,12 @@ class AdminPriceRequestListItem {
       condition: json['condition'] as String?,
       quantity: numToDouble(json['quantity']),
       supplierPriceNis: numToDouble(json['supplierPriceNis']),
-      aiSuggestedMaxUnitPriceNis: numToDouble(json['aiSuggestedMaxUnitPriceNis']),
-      aiSuggestedMaxTotalPriceNis: numToDouble(json['aiSuggestedMaxTotalPriceNis']),
+      aiSuggestedMaxUnitPriceNis: numToDouble(
+        json['aiSuggestedMaxUnitPriceNis'],
+      ),
+      aiSuggestedMaxTotalPriceNis: numToDouble(
+        json['aiSuggestedMaxTotalPriceNis'],
+      ),
       conditionMultiplier: numToDouble(json['conditionMultiplier']),
       adjustedMaxUnitPriceNis: numToDouble(json['adjustedMaxUnitPriceNis']),
       adminNote: json['adminNote'] as String?,
@@ -187,7 +193,10 @@ class AdminPriceRequestListItem {
 }
 
 class AdminApprovalsListResponse<T> {
-  const AdminApprovalsListResponse({required this.items, required this.pagination});
+  const AdminApprovalsListResponse({
+    required this.items,
+    required this.pagination,
+  });
 
   final List<T> items;
   final AdminApprovalsPagination pagination;
@@ -205,7 +214,9 @@ class AdminApprovalsApi {
       );
       final body = response.data;
       if (body == null || body['success'] != true) {
-        throw ApiException(message: body?['message'] as String? ?? 'Request failed');
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Request failed',
+        );
       }
       final data = body['data'];
       if (data is! Map<String, dynamic>) {
@@ -224,7 +235,7 @@ class AdminApprovalsApi {
   }
 
   Future<AdminApprovalsListResponse<AdminCategoryRequestListItem>>
-      fetchCategoryRequests({
+  fetchCategoryRequests({
     required String status,
     required String search,
     required int page,
@@ -242,16 +253,22 @@ class AdminApprovalsApi {
       );
       final body = response.data;
       if (body == null || body['success'] != true) {
-        throw ApiException(message: body?['message'] as String? ?? 'Request failed');
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Request failed',
+        );
       }
       final data = body['data'] as Map<String, dynamic>? ?? const {};
       final itemsJson = data['items'];
       return AdminApprovalsListResponse(
         items: itemsJson is List
             ? itemsJson
-                .whereType<Map>()
-                .map((e) => AdminCategoryRequestListItem.fromJson(Map<String, dynamic>.from(e)))
-                .toList(growable: false)
+                  .whereType<Map>()
+                  .map(
+                    (e) => AdminCategoryRequestListItem.fromJson(
+                      Map<String, dynamic>.from(e),
+                    ),
+                  )
+                  .toList(growable: false)
             : const [],
         pagination: AdminApprovalsPagination.fromJson(
           data['pagination'] as Map<String, dynamic>? ?? const {},
@@ -262,7 +279,8 @@ class AdminApprovalsApi {
     }
   }
 
-  Future<AdminApprovalsListResponse<AdminPriceRequestListItem>> fetchPriceRequests({
+  Future<AdminApprovalsListResponse<AdminPriceRequestListItem>>
+  fetchPriceRequests({
     required String status,
     required String search,
     required int page,
@@ -280,16 +298,22 @@ class AdminApprovalsApi {
       );
       final body = response.data;
       if (body == null || body['success'] != true) {
-        throw ApiException(message: body?['message'] as String? ?? 'Request failed');
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Request failed',
+        );
       }
       final data = body['data'] as Map<String, dynamic>? ?? const {};
       final itemsJson = data['items'];
       return AdminApprovalsListResponse(
         items: itemsJson is List
             ? itemsJson
-                .whereType<Map>()
-                .map((e) => AdminPriceRequestListItem.fromJson(Map<String, dynamic>.from(e)))
-                .toList(growable: false)
+                  .whereType<Map>()
+                  .map(
+                    (e) => AdminPriceRequestListItem.fromJson(
+                      Map<String, dynamic>.from(e),
+                    ),
+                  )
+                  .toList(growable: false)
             : const [],
         pagination: AdminApprovalsPagination.fromJson(
           data['pagination'] as Map<String, dynamic>? ?? const {},
@@ -306,13 +330,16 @@ class AdminApprovalsApi {
     String? parentCategoryId,
     String? adminNote,
   }) async {
-    await _patch('/api/admin/approvals/category-requests/$id/approve', data: {
-      'finalName': finalName.trim(),
-      if (parentCategoryId != null && parentCategoryId.trim().isNotEmpty)
-        'parentCategoryId': parentCategoryId.trim(),
-      if (adminNote != null && adminNote.trim().isNotEmpty)
-        'adminNote': adminNote.trim(),
-    });
+    await _patch(
+      '/api/admin/approvals/category-requests/$id/approve',
+      data: {
+        'finalName': finalName.trim(),
+        if (parentCategoryId != null && parentCategoryId.trim().isNotEmpty)
+          'parentCategoryId': parentCategoryId.trim(),
+        if (adminNote != null && adminNote.trim().isNotEmpty)
+          'adminNote': adminNote.trim(),
+      },
+    );
   }
 
   Future<void> rejectCategoryRequest({
@@ -320,17 +347,28 @@ class AdminApprovalsApi {
     required String adminNote,
     String? suggestedCategoryId,
   }) async {
-    await _patch('/api/admin/approvals/category-requests/$id/reject', data: {
-      'adminNote': adminNote.trim(),
-      if (suggestedCategoryId != null && suggestedCategoryId.trim().isNotEmpty)
-        'suggestedCategoryId': suggestedCategoryId.trim(),
-    });
+    await _patch(
+      '/api/admin/approvals/category-requests/$id/reject',
+      data: {
+        'adminNote': adminNote.trim(),
+        if (suggestedCategoryId != null &&
+            suggestedCategoryId.trim().isNotEmpty)
+          'suggestedCategoryId': suggestedCategoryId.trim(),
+      },
+    );
   }
 
-  Future<void> approvePriceRequest({required String id, String? adminNote}) async {
-    await _patch('/api/admin/approvals/price-requests/$id/approve', data: {
-      if (adminNote != null && adminNote.trim().isNotEmpty) 'adminNote': adminNote.trim(),
-    });
+  Future<void> approvePriceRequest({
+    required String id,
+    String? adminNote,
+  }) async {
+    await _patch(
+      '/api/admin/approvals/price-requests/$id/approve',
+      data: {
+        if (adminNote != null && adminNote.trim().isNotEmpty)
+          'adminNote': adminNote.trim(),
+      },
+    );
   }
 
   Future<void> rejectPriceRequest({
@@ -338,10 +376,10 @@ class AdminApprovalsApi {
     required String adminNote,
     required double maxAllowedPrice,
   }) async {
-    await _patch('/api/admin/approvals/price-requests/$id/reject', data: {
-      'adminNote': adminNote.trim(),
-      'maxAllowedPrice': maxAllowedPrice,
-    });
+    await _patch(
+      '/api/admin/approvals/price-requests/$id/reject',
+      data: {'adminNote': adminNote.trim(), 'maxAllowedPrice': maxAllowedPrice},
+    );
   }
 
   Future<void> _patch(String path, {required Map<String, dynamic> data}) async {
@@ -352,7 +390,9 @@ class AdminApprovalsApi {
       );
       final body = response.data;
       if (body == null || body['success'] != true) {
-        throw ApiException(message: body?['message'] as String? ?? 'Request failed');
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Request failed',
+        );
       }
     } on DioException catch (error) {
       throw mapDioException(error);
@@ -363,4 +403,3 @@ class AdminApprovalsApi {
 final adminApprovalsApiProvider = Provider<AdminApprovalsApi>((ref) {
   return AdminApprovalsApi(ref.watch(apiClientProvider));
 });
-

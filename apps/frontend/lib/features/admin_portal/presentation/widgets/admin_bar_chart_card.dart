@@ -53,11 +53,11 @@ class AdminBarChartCard extends StatelessWidget {
               subtitle: emptySubtitle,
             )
           : horizontal
-              ? _HorizontalBars(items: trimmed, palette: palette)
-              : SizedBox(
-                  height: 230,
-                  child: BarChart(_buildVerticalData(trimmed, palette)),
-                ),
+          ? _HorizontalBars(items: trimmed, palette: palette)
+          : SizedBox(
+              height: 230,
+              child: BarChart(_buildVerticalData(trimmed, palette)),
+            ),
     );
   }
 
@@ -74,15 +74,15 @@ class AdminBarChartCard extends StatelessWidget {
         show: true,
         drawVerticalLine: false,
         horizontalInterval: top <= 4 ? 1 : (top / 4).ceilToDouble(),
-        getDrawingHorizontalLine: (value) => FlLine(
-          color: palette.chartGrid,
-          strokeWidth: 1,
-        ),
+        getDrawingHorizontalLine: (value) =>
+            FlLine(color: palette.chartGrid, strokeWidth: 1),
       ),
       borderData: FlBorderData(show: false),
       titlesData: FlTitlesData(
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -90,10 +90,7 @@ class AdminBarChartCard extends StatelessWidget {
             interval: top <= 4 ? 1 : (top / 4).ceilToDouble(),
             getTitlesWidget: (value, meta) => Text(
               value.toInt().toString(),
-              style: TextStyle(
-                color: palette.textMuted,
-                fontSize: 10,
-              ),
+              style: TextStyle(color: palette.textMuted, fontSize: 10),
             ),
           ),
         ),
@@ -107,7 +104,9 @@ class AdminBarChartCard extends StatelessWidget {
                 return const SizedBox.shrink();
               }
               final label = items[index].label;
-              final short = label.length > 8 ? '${label.substring(0, 7)}…' : label;
+              final short = label.length > 8
+                  ? '${label.substring(0, 7)}…'
+                  : label;
               return Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
@@ -147,18 +146,20 @@ class AdminBarChartCard extends StatelessWidget {
               BarChartRodData(
                 toY: items[i].value.toDouble(),
                 width: 18,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(6),
+                ),
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
                   colors: [
                     (items[i].color ??
-                            palette.categoryBarColors[
-                                i % palette.categoryBarColors.length])
+                            palette.categoryBarColors[i %
+                                palette.categoryBarColors.length])
                         .withValues(alpha: 0.75),
                     items[i].color ??
-                        palette.categoryBarColors[
-                            i % palette.categoryBarColors.length],
+                        palette.categoryBarColors[i %
+                            palette.categoryBarColors.length],
                   ],
                 ),
               ),
@@ -187,8 +188,10 @@ class _HorizontalBars extends StatelessWidget {
             child: _HorizontalBarRow(
               item: items[i],
               maxValue: max,
-              color: items[i].color ??
-                  palette.categoryBarColors[i % palette.categoryBarColors.length],
+              color:
+                  items[i].color ??
+                  palette.categoryBarColors[i %
+                      palette.categoryBarColors.length],
             ),
           ),
       ],
@@ -221,9 +224,9 @@ class _HorizontalBarRow extends StatelessWidget {
               child: Text(
                 item.label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: palette.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: palette.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -231,9 +234,9 @@ class _HorizontalBarRow extends StatelessWidget {
             Text(
               item.value.toString(),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: palette.textPrimary,
-                  ),
+                fontWeight: FontWeight.w800,
+                color: palette.textPrimary,
+              ),
             ),
           ],
         ),

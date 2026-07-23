@@ -25,7 +25,8 @@ class SupplierRecentReservationRequest {
       requesterName: json['requesterName'] as String?,
       status: json['status'] as String? ?? '',
       quantityRequested: (json['quantityRequested'] as num?)?.toDouble() ?? 0,
-      requestedAt: DateTime.tryParse(json['requestedAt'] as String? ?? '') ??
+      requestedAt:
+          DateTime.tryParse(json['requestedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -50,9 +51,7 @@ class SupplierDashboardMaterialInsight {
   final int viewsCount;
   final int demandCount;
 
-  factory SupplierDashboardMaterialInsight.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory SupplierDashboardMaterialInsight.fromJson(Map<String, dynamic> json) {
     return SupplierDashboardMaterialInsight(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? '',

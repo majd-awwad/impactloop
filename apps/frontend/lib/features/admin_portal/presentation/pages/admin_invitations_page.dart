@@ -71,8 +71,7 @@ bool _canActOnInvitation(AdminInvitationItem item) =>
     item.status != 'USED' && item.status != 'REVOKED';
 
 bool _hasSendError(AdminInvitationItem item) =>
-    item.status == 'FAILED' &&
-    (item.sendError?.trim().isNotEmpty ?? false);
+    item.status == 'FAILED' && (item.sendError?.trim().isNotEmpty ?? false);
 
 typedef _ExpiryInfo = ({String label, AppStatusTone tone});
 
@@ -85,11 +84,17 @@ _ExpiryInfo _expiryInfo(DateTime createdAt, DateTime expiresAt) {
     final elapsed = now.difference(expiresLocal);
     if (elapsed.inDays >= 1) {
       final days = elapsed.inDays;
-      return (label: 'Expired $days day${days == 1 ? '' : 's'} ago', tone: AppStatusTone.danger);
+      return (
+        label: 'Expired $days day${days == 1 ? '' : 's'} ago',
+        tone: AppStatusTone.danger,
+      );
     }
     if (elapsed.inHours >= 1) {
       final hours = elapsed.inHours;
-      return (label: 'Expired $hours hour${hours == 1 ? '' : 's'} ago', tone: AppStatusTone.danger);
+      return (
+        label: 'Expired $hours hour${hours == 1 ? '' : 's'} ago',
+        tone: AppStatusTone.danger,
+      );
     }
     return (label: 'Expired today', tone: AppStatusTone.danger);
   }
@@ -112,7 +117,10 @@ _ExpiryInfo _expiryInfo(DateTime createdAt, DateTime expiresAt) {
     label = minutes >= 1 ? 'Expires in $minutes min' : 'Expires soon';
   }
 
-  return (label: label, tone: nearExpiry ? AppStatusTone.warning : AppStatusTone.neutral);
+  return (
+    label: label,
+    tone: nearExpiry ? AppStatusTone.warning : AppStatusTone.neutral,
+  );
 }
 
 AdminInvitationItem? _parseExistingInvitation(ApiException error) {
@@ -475,10 +483,7 @@ class _InvitationsPageHeader extends StatelessWidget {
         children: [
           titleBlock,
           const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: sendButton,
-          ),
+          Align(alignment: AlignmentDirectional.centerStart, child: sendButton),
         ],
       );
     }
@@ -574,7 +579,10 @@ class _InvitationsKpiRow extends StatelessWidget {
       );
     }
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows,
+    );
   }
 }
 
@@ -614,7 +622,9 @@ class _FiltersPanel extends StatelessWidget {
         border: Border.all(color: colors.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow.withValues(alpha: palette.isDark ? 0.16 : 0.05),
+            color: colors.shadow.withValues(
+              alpha: palette.isDark ? 0.16 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -661,7 +671,10 @@ class _FiltersPanel extends StatelessWidget {
               expandedInsets: EdgeInsets.zero,
               dropdownMenuEntries: [
                 DropdownMenuEntry(value: 'ALL', label: l.t('All', 'الكل')),
-                DropdownMenuEntry(value: 'DRIVER', label: l.t('Driver', 'سائق')),
+                DropdownMenuEntry(
+                  value: 'DRIVER',
+                  label: l.t('Driver', 'سائق'),
+                ),
                 DropdownMenuEntry(
                   value: 'MODERATOR',
                   label: l.t('Moderator', 'مشرف'),
@@ -849,7 +862,9 @@ class _InvitationsResultsContainer extends ConsumerWidget {
         border: Border.all(color: colors.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow.withValues(alpha: palette.isDark ? 0.16 : 0.05),
+            color: colors.shadow.withValues(
+              alpha: palette.isDark ? 0.16 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -942,7 +957,10 @@ class _InvitationsResultsContainer extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md - AppSpacing.xs),
             FilledButton.icon(
               onPressed: onSendInvitation,
-              style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               icon: const Icon(Icons.mail_outline, size: 18),
               label: Text(l.t('Send Invitation', 'إرسال دعوة')),
             ),
@@ -956,15 +974,13 @@ class _InvitationsResultsContainer extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String id,
-  ) =>
-      _resendInvitation(context, ref, id);
+  ) => _resendInvitation(context, ref, id);
 
   Future<AdminInvitationItem?> _revoke(
     BuildContext context,
     WidgetRef ref,
     String id,
-  ) =>
-      _revokeInvitation(context, ref, id);
+  ) => _revokeInvitation(context, ref, id);
 
   Future<void> _showSendError(
     BuildContext context,
@@ -1241,9 +1257,9 @@ class _InvitationDateCell extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           DateFormat.jm().format(local),
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: colors.textMuted,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
         ),
       ],
     );
@@ -1278,7 +1294,9 @@ class _InvitationExpiryCell extends StatelessWidget {
         Text(
           info.label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: info.tone == AppStatusTone.neutral ? colors.textMuted : toneColor,
+            color: info.tone == AppStatusTone.neutral
+                ? colors.textMuted
+                : toneColor,
             fontWeight: info.tone == AppStatusTone.neutral
                 ? FontWeight.w500
                 : FontWeight.w700,
@@ -1304,9 +1322,9 @@ class _InvitationCreatedByCell extends StatelessWidget {
     if (!hasName && !hasEmail) {
       return Text(
         '—',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: colors.textMuted,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
       );
     }
 
@@ -1331,9 +1349,9 @@ class _InvitationCreatedByCell extends StatelessWidget {
             creator.email,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.textMuted,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
           ),
         ],
       ],
@@ -1362,24 +1380,28 @@ class _InvitationActionsCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AdminL10n.of(context);
     final hasOverflow =
-        onCopyLink != null || onResend != null || onRevoke != null || onViewError != null;
+        onCopyLink != null ||
+        onResend != null ||
+        onRevoke != null ||
+        onViewError != null;
 
     final detailsButton = OutlinedButton.icon(
       onPressed: onDetails,
       icon: const Icon(Icons.visibility_outlined, size: 16),
       label: Text(l.t('View details', 'عرض التفاصيل')),
-      style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary).merge(
-        OutlinedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-          textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w600,
+      style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary)
+          .merge(
+            OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.sm + 2,
+                vertical: AppSpacing.xs,
+              ),
+            ),
           ),
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.sm + 2,
-            vertical: AppSpacing.xs,
-          ),
-        ),
-      ),
     );
 
     final overflowButton = hasOverflow
@@ -1445,10 +1467,7 @@ class _InvitationActionsCell extends StatelessWidget {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        detailsButton,
-        ?overflowButton,
-      ],
+      children: [detailsButton, ?overflowButton],
     );
   }
 }
@@ -1903,10 +1922,7 @@ class _InvitationValidityBanner extends StatelessWidget {
       case 'EXPIRED':
         tone = AppStatusTone.neutral;
         icon = Icons.event_busy_outlined;
-        title = l.t(
-          'Invitation link has expired',
-          'انتهت صلاحية رابط الدعوة',
-        );
+        title = l.t('Invitation link has expired', 'انتهت صلاحية رابط الدعوة');
         break;
       case 'FAILED':
         tone = AppStatusTone.danger;
@@ -2113,10 +2129,7 @@ class _InvitationAuditCard extends StatelessWidget {
 /// Fixed footer with a neutral Close action on one side and status-aware
 /// actions on the other, wrapping cleanly on narrow widths.
 class _InvitationDialogFooter extends StatelessWidget {
-  const _InvitationDialogFooter({
-    required this.onClose,
-    required this.actions,
-  });
+  const _InvitationDialogFooter({required this.onClose, required this.actions});
 
   final VoidCallback? onClose;
   final List<Widget> actions;

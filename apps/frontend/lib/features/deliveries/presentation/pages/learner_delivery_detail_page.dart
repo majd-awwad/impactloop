@@ -178,9 +178,9 @@ class _Header extends StatelessWidget {
             Text(
               delivery.status.toUpperCase() == 'ARRIVED_PICKUP'
                   ? 'Pickup was not completed before the supplier window ended. '
-                      'An admin may review if no one reports the issue.'
+                        'An admin may review if no one reports the issue.'
                   : 'The assigned driver has not completed supplier pickup before '
-                      'the window ended. An admin may review if no one reports the issue.',
+                        'the window ended. An admin may review if no one reports the issue.',
               style: AppTextStyles.label(context).copyWith(
                 color: colors.warningText,
                 fontWeight: FontWeight.w600,

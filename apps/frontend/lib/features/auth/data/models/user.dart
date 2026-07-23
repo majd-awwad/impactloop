@@ -53,7 +53,8 @@ class SupplierProfile {
       publicName: json['publicName'] as String? ?? '',
       description: json['description'] as String?,
       pickupAreaLabel: json['pickupAreaLabel'] as String?,
-      verificationStatus: json['verificationStatus'] as String? ?? 'NOT_REQUIRED',
+      verificationStatus:
+          json['verificationStatus'] as String? ?? 'NOT_REQUIRED',
       verificationAdminNote: json['verificationAdminNote'] as String?,
       verificationSubmittedAt: json['verificationSubmittedAt'] == null
           ? null
@@ -128,13 +129,13 @@ class User {
       accountStatus: json['accountStatus'] as String? ?? 'PENDING_VERIFICATION',
       profileImageUrl: json['profileImageUrl'] as String?,
       roles: parsedRoles,
-      activeRole: (json['activeRole'] as String?)?.trim().toUpperCase() ??
+      activeRole:
+          (json['activeRole'] as String?)?.trim().toUpperCase() ??
           (parsedRoles.isNotEmpty ? parsedRoles.first : 'LEARNER'),
       canSwitchToLearner: json['canSwitchToLearner'] as bool? ?? false,
       canSwitchToSupplier: json['canSwitchToSupplier'] as bool? ?? false,
       canBecomeLearner: json['canBecomeLearner'] as bool? ?? false,
-      defaultPortalRoute:
-          json['defaultPortalRoute'] as String? ?? '/home',
+      defaultPortalRoute: json['defaultPortalRoute'] as String? ?? '/home',
       learnerProfile: learnerProfileJson is Map<String, dynamic>
           ? LearnerProfile.fromJson(learnerProfileJson)
           : null,

@@ -477,9 +477,8 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
             _UsersFilterPanel(
               searchController: _searchController,
               statusFilter: filters.status,
-              onStatusChanged: (value) => ref
-                  .read(_peopleFiltersProvider.notifier)
-                  .setStatus(value),
+              onStatusChanged: (value) =>
+                  ref.read(_peopleFiltersProvider.notifier).setStatus(value),
               onSearch: _applySearch,
               onReset: _resetFilters,
             ),
@@ -528,13 +527,13 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
                   onReactivate: _confirmReactivate,
                   onPreviousPage: canGoPrevious
                       ? () => ref
-                          .read(_peopleFiltersProvider.notifier)
-                          .setPage(pagination.page - 1)
+                            .read(_peopleFiltersProvider.notifier)
+                            .setPage(pagination.page - 1)
                       : null,
                   onNextPage: canGoNext
                       ? () => ref
-                          .read(_peopleFiltersProvider.notifier)
-                          .setPage(pagination.page + 1)
+                            .read(_peopleFiltersProvider.notifier)
+                            .setPage(pagination.page + 1)
                       : null,
                 );
               },
@@ -600,7 +599,10 @@ class _UsersPageHeader extends StatelessWidget {
         children: [
           titleBlock,
           const SizedBox(height: AppSpacing.md),
-          Align(alignment: AlignmentDirectional.centerStart, child: inviteButton),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: inviteButton,
+          ),
         ],
       );
     }
@@ -689,7 +691,9 @@ class _UsersKpiGrid extends StatelessWidget {
       AdminKpiCard(
         label: 'Suspended',
         value: '${summary.suspended}',
-        helper: summary.suspended > 0 ? 'Currently suspended' : 'None suspended',
+        helper: summary.suspended > 0
+            ? 'Currently suspended'
+            : 'None suspended',
         icon: Icons.block_outlined,
         accent: palette.red,
       ),
@@ -794,8 +798,9 @@ class _RoleFilterTabs extends StatelessWidget {
                           color: isSelected
                               ? primaryStyle.foreground
                               : colors.textSecondary,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                         ),
                       ),
                     ],
@@ -841,7 +846,9 @@ class _UsersFilterPanel extends StatelessWidget {
         border: Border.all(color: colors.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow.withValues(alpha: palette.isDark ? 0.16 : 0.05),
+            color: colors.shadow.withValues(
+              alpha: palette.isDark ? 0.16 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1005,9 +1012,9 @@ class _UsersList extends StatelessWidget {
           const Spacer(),
           Text(
             rangeLabel,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: colors.textMuted,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: colors.textMuted),
           ),
           const SizedBox(width: AppSpacing.sm),
           _PaginationArrow(
@@ -1041,7 +1048,9 @@ class _UsersList extends StatelessWidget {
           for (var i = 0; i < items.length; i++)
             Padding(
               padding: EdgeInsets.only(
-                bottom: i < items.length - 1 ? AppSpacing.md - AppSpacing.xs : 0,
+                bottom: i < items.length - 1
+                    ? AppSpacing.md - AppSpacing.xs
+                    : 0,
               ),
               child: _UserRow(
                 item: items[i],
@@ -1066,7 +1075,9 @@ class _UsersList extends StatelessWidget {
         border: Border.all(color: colors.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: colors.shadow.withValues(alpha: palette.isDark ? 0.16 : 0.05),
+            color: colors.shadow.withValues(
+              alpha: palette.isDark ? 0.16 : 0.05,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1085,9 +1096,7 @@ class _UsersList extends StatelessWidget {
               compact: false,
               showDivider: i < items.length - 1,
               onDetails: () => onDetails(items[i]),
-              onSuspend: items[i].canSuspend
-                  ? () => onSuspend(items[i])
-                  : null,
+              onSuspend: items[i].canSuspend ? () => onSuspend(items[i]) : null,
               onReactivate: items[i].canReactivate
                   ? () => onReactivate(items[i])
                   : null,
@@ -1130,7 +1139,9 @@ class _PaginationArrow extends StatelessWidget {
           child: Icon(
             icon,
             size: 18,
-            color: onPressed != null ? colors.textPrimary : colors.textMuted.withValues(alpha: 0.4),
+            color: onPressed != null
+                ? colors.textPrimary
+                : colors.textMuted.withValues(alpha: 0.4),
           ),
         ),
       ),
@@ -1170,11 +1181,7 @@ class _UsersColumnHeaderRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           SizedBox(
             width: _actionsColumnWidth,
-            child: Text(
-              'ACTIONS',
-              textAlign: TextAlign.end,
-              style: labelStyle,
-            ),
+            child: Text('ACTIONS', textAlign: TextAlign.end, style: labelStyle),
           ),
         ],
       ),
@@ -1352,10 +1359,7 @@ String? _formatPeopleLocationLabel(AdminPeopleListItem item) {
 
   final city = item.locationCity?.trim();
   final area = item.locationArea?.trim();
-  if (city != null &&
-      city.isNotEmpty &&
-      area != null &&
-      area.isNotEmpty) {
+  if (city != null && city.isNotEmpty && area != null && area.isNotEmpty) {
     return '$city · $area';
   }
   if (city != null && city.isNotEmpty) {
@@ -1368,10 +1372,7 @@ String? _formatPeopleLocationLabel(AdminPeopleListItem item) {
 }
 
 class _UserIdentityBlock extends StatelessWidget {
-  const _UserIdentityBlock({
-    required this.item,
-    required this.joinedLabel,
-  });
+  const _UserIdentityBlock({required this.item, required this.joinedLabel});
 
   final AdminPeopleListItem item;
   final String joinedLabel;
@@ -1411,9 +1412,9 @@ class _UserIdentityBlock extends StatelessWidget {
           item.email,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: colors.textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
         ),
         if (locationLabel != null) ...[
           const SizedBox(height: 2),
@@ -1430,9 +1431,9 @@ class _UserIdentityBlock extends StatelessWidget {
                   locationLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.textMuted,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
                 ),
               ),
             ],
@@ -1441,9 +1442,9 @@ class _UserIdentityBlock extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           joinedLabel,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: colors.textMuted,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
         ),
       ],
     );
@@ -1506,13 +1507,14 @@ class _UserExtraInfo extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final lastActive = _formatRelativeLogin(item.lastLoginAt);
     final hasVerification =
-        item.verificationStatus != null && item.verificationStatus!.trim().isNotEmpty;
+        item.verificationStatus != null &&
+        item.verificationStatus!.trim().isNotEmpty;
     final hasDriverStatus =
         item.driverStatus != null && item.driverStatus!.trim().isNotEmpty;
 
-    final dashStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: colors.textMuted,
-    );
+    final dashStyle = Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(color: colors.textMuted);
 
     final Widget statusLine;
     if (hasVerification) {
@@ -1645,9 +1647,9 @@ class _UserMetricCluster extends StatelessWidget {
         message: 'No recorded activity',
         child: Text(
           '—',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: colors.textMuted,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
         ),
       );
     }
@@ -1725,18 +1727,19 @@ class _UserActionArea extends StatelessWidget {
       onPressed: onDetails,
       icon: const Icon(Icons.visibility_outlined, size: 16),
       label: const Text('View details'),
-      style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary).merge(
-        OutlinedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-          textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w600,
+      style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary)
+          .merge(
+            OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.sm + 2,
+                vertical: AppSpacing.xs,
+              ),
+            ),
           ),
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.sm + 2,
-            vertical: AppSpacing.xs,
-          ),
-        ),
-      ),
     );
 
     final overflowButton = hasOverflow
@@ -1784,10 +1787,7 @@ class _UserActionArea extends StatelessWidget {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        detailsButton,
-        ?overflowButton,
-      ],
+      children: [detailsButton, ?overflowButton],
     );
   }
 }
@@ -1839,7 +1839,8 @@ class _PersonDetailDialog extends StatelessWidget {
     final isSuspended = accountStatus == 'SUSPENDED';
     final displayName = detail['displayName'] as String? ?? 'Account details';
     final locationLabel = detail['locationLabel'] as String?;
-    final hasActivityMetrics = _detailMetric(detail, 'materialsCount') > 0 ||
+    final hasActivityMetrics =
+        _detailMetric(detail, 'materialsCount') > 0 ||
         _detailMetric(detail, 'reservationsAsRequesterCount') > 0 ||
         _detailMetric(detail, 'reservationsAsOwnerCount') > 0 ||
         _detailMetric(detail, 'submittedLearningProjectsCount') > 0 ||
@@ -1847,9 +1848,7 @@ class _PersonDetailDialog extends StatelessWidget {
         _detailMetric(detail, 'assignedDeliveriesCount') > 0 ||
         _detailMetric(detail, 'verifiedStrikeCount') > 0 ||
         _detailMetric(detail, 'pendingNoShowReportsCount') > 0 ||
-        roles.any(
-          (role) => ['LEARNER', 'SUPPLIER', 'DRIVER'].contains(role),
-        );
+        roles.any((role) => ['LEARNER', 'SUPPLIER', 'DRIVER'].contains(role));
 
     return AppDialogShell(
       title: AppDialogTitleBlock(
@@ -1885,53 +1884,55 @@ class _PersonDetailDialog extends StatelessWidget {
                   if (locationLabel != null && locationLabel.trim().isNotEmpty)
                     _DetailRow('Location', locationLabel),
                   if (isSuspended) ...[
-                const SizedBox(height: AppSpacing.md - AppSpacing.xs),
-                Text(
-                  'Suspension',
-                  style: AdminTypography.sectionTitle(palette),
-                ),
-                const SizedBox(height: AppSpacing.sm - 2),
-                _DetailRow('Status', 'Suspended'),
-                _AlwaysShowDetailRow(
-                  'Reason',
-                  _suspensionReasonText(detail['suspensionReason']),
-                ),
-                _DetailRow(
-                  'Suspended by',
-                  _formatSuspendedBy(detail['suspendedBy']),
-                ),
-                _DetailRow(
-                  'Suspended at',
-                  _formatDetailDate(detail['suspendedAt']),
-                ),
-                if (detail['reactivatedAt'] != null) ...[
-                  _DetailRow(
-                    'Last reactivated at',
-                    _formatDetailDate(detail['reactivatedAt']),
-                  ),
-                  _DetailRow(
-                    'Reactivated by',
-                    _formatSuspendedBy(detail['reactivatedBy']),
-                  ),
-                ],
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Text(
-                    'Suspension blocks important actions but does not delete this account or its data.',
-                    style: AdminTypography.kpiHelper(palette),
-                  ),
-                ),
-              ],
-              if (detail['isProtectedAdmin'] == true)
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.md - AppSpacing.xs),
-                  child: Text(
-                    'This admin account is protected. Status and role changes are not available in People Management.',
-                    style: AdminTypography.kpiHelper(
-                      palette,
-                    ).copyWith(color: palette.amber),
-                  ),
-                ),
+                    const SizedBox(height: AppSpacing.md - AppSpacing.xs),
+                    Text(
+                      'Suspension',
+                      style: AdminTypography.sectionTitle(palette),
+                    ),
+                    const SizedBox(height: AppSpacing.sm - 2),
+                    _DetailRow('Status', 'Suspended'),
+                    _AlwaysShowDetailRow(
+                      'Reason',
+                      _suspensionReasonText(detail['suspensionReason']),
+                    ),
+                    _DetailRow(
+                      'Suspended by',
+                      _formatSuspendedBy(detail['suspendedBy']),
+                    ),
+                    _DetailRow(
+                      'Suspended at',
+                      _formatDetailDate(detail['suspendedAt']),
+                    ),
+                    if (detail['reactivatedAt'] != null) ...[
+                      _DetailRow(
+                        'Last reactivated at',
+                        _formatDetailDate(detail['reactivatedAt']),
+                      ),
+                      _DetailRow(
+                        'Reactivated by',
+                        _formatSuspendedBy(detail['reactivatedBy']),
+                      ),
+                    ],
+                    Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text(
+                        'Suspension blocks important actions but does not delete this account or its data.',
+                        style: AdminTypography.kpiHelper(palette),
+                      ),
+                    ),
+                  ],
+                  if (detail['isProtectedAdmin'] == true)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        top: AppSpacing.md - AppSpacing.xs,
+                      ),
+                      child: Text(
+                        'This admin account is protected. Status and role changes are not available in People Management.',
+                        style: AdminTypography.kpiHelper(
+                          palette,
+                        ).copyWith(color: palette.amber),
+                      ),
+                    ),
                 ],
               ),
             ),

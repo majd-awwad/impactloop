@@ -39,9 +39,9 @@ class RequestDeliveryRequest {
     this.saveDropoffAddressLabel,
     this.learnerNote,
   }) : assert(
-          (dropoffLocation != null) ^ (savedDropoffAddressId != null),
-          'Provide either dropoffLocation or savedDropoffAddressId.',
-        );
+         (dropoffLocation != null) ^ (savedDropoffAddressId != null),
+         'Provide either dropoffLocation or savedDropoffAddressId.',
+       );
 
   final DeliveryLocationInput? dropoffLocation;
   final String? savedDropoffAddressId;
@@ -50,8 +50,7 @@ class RequestDeliveryRequest {
 
   Map<String, dynamic> toJson() {
     return {
-      if (dropoffLocation != null)
-        'dropoffLocation': dropoffLocation!.toJson(),
+      if (dropoffLocation != null) 'dropoffLocation': dropoffLocation!.toJson(),
       if (savedDropoffAddressId != null)
         'savedDropoffAddressId': savedDropoffAddressId,
       if (saveDropoffAddressLabel != null &&

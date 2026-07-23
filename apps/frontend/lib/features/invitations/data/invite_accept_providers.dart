@@ -15,5 +15,5 @@ final inviteAcceptRepositoryProvider = Provider<InviteAcceptRepository>((ref) {
 
 final inviteValidationProvider = FutureProvider.autoDispose
     .family<InviteValidationResult, String>((ref, token) {
-  return ref.watch(inviteAcceptRepositoryProvider).validateToken(token);
-});
+      return ref.watch(inviteAcceptRepositoryProvider).validateToken(token);
+    });

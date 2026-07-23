@@ -37,10 +37,7 @@ class SupplierTypeSelector extends StatelessWidget {
       value: value,
       items: [
         for (final type in supplierTypeValues)
-          DropdownMenuItem(
-            value: type,
-            child: Text(l.supplierTypeLabel(type)),
-          ),
+          DropdownMenuItem(value: type, child: Text(l.supplierTypeLabel(type))),
       ],
       onChanged: (value) {
         if (value != null) {

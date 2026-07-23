@@ -85,10 +85,7 @@ void main() {
       ),
     );
 
-    expect(
-      needsAction.badgeForeground,
-      AppThemeColors.light.accentAmber,
-    );
+    expect(needsAction.badgeForeground, AppThemeColors.light.accentAmber);
     expect(waiting.badgeForeground, AppThemeColors.light.info);
     expect(update.badgeForeground, AppThemeColors.light.accentMint);
     expect(unknown.badgeForeground, AppThemeColors.light.textSecondary);

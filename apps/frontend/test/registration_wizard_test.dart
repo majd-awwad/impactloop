@@ -103,10 +103,7 @@ void main() {
       expect(keys, contains('art_crafts'));
       expect(keys, contains('custom:solar_energy'));
       expect(keys, contains('custom:cnc_machining'));
-      expect(
-        learnerInterestLabel('custom:solar_energy'),
-        'Solar Energy',
-      );
+      expect(learnerInterestLabel('custom:solar_energy'), 'Solar Energy');
     });
   });
 }

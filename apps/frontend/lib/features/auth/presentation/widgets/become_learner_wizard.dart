@@ -12,9 +12,7 @@ class BecomeLearnerPage extends StatelessWidget {
     return const AuthOnboardingShell(
       showSignIn: false,
       showCreateAccount: false,
-      child: RegistrationWizard(
-        mode: LearnerSetupMode.addToExistingAccount,
-      ),
+      child: RegistrationWizard(mode: LearnerSetupMode.addToExistingAccount),
     );
   }
 }

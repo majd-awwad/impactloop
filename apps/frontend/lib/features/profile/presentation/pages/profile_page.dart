@@ -211,9 +211,9 @@ class _ProfileContent extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
           child: Text(
             'Organization supplier accounts stay in supplier mode.',
-            style: AppTextStyles.body(context).copyWith(
-              color: AppThemeColors.of(context).textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: AppThemeColors.of(context).textSecondary),
           ),
         ),
       );
@@ -323,7 +323,9 @@ class _ProfileContent extends ConsumerWidget {
             icon: _hasSupplierAccess
                 ? Icons.storefront_outlined
                 : Icons.add_business_outlined,
-            title: _hasSupplierAccess ? 'Supplier profile' : 'Become a supplier',
+            title: _hasSupplierAccess
+                ? 'Supplier profile'
+                : 'Become a supplier',
             subtitle: _hasSupplierAccess
                 ? 'Manage your supplier details.'
                 : 'Start sharing reusable materials.',
@@ -380,15 +382,13 @@ class _ProfileContent extends ConsumerWidget {
     const settings = _SettingsSection();
     final logout = OutlinedButton.icon(
       onPressed: () => _logout(context, ref),
-      style: AppStatusButtonStyle.outlined(
-        context,
-        AppStatusTone.danger,
-      ).copyWith(
-        minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
-        ),
-      ),
+      style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger)
+          .copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            ),
+          ),
       icon: const Icon(Icons.logout_rounded),
       label: const Text('Logout'),
     );
@@ -886,11 +886,7 @@ class _StatusLine extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(
-          icon,
-          color: accent,
-          size: 18,
-        ),
+        Icon(icon, color: accent, size: 18),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(

@@ -57,9 +57,7 @@ class LearnerHomeItemMapper {
           score: score,
           reasons: reasons,
           projectId:
-              build['projectId'] as String? ??
-              project['id'] as String? ??
-              '',
+              build['projectId'] as String? ?? project['id'] as String? ?? '',
           projectTitle: project['title'] as String? ?? 'Project',
           shortDescription: project['shortDescription'] as String? ?? '',
           coverImageUrl: project['coverImageUrl'] as String?,

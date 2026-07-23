@@ -86,16 +86,21 @@ Widget buildSupplierMaterialCard({
   List<Widget>? actions,
   String? createdAtLabel,
 }) {
-  final condition = SupplierMaterialLabelHelper.conditionMeta(material.condition);
+  final condition = SupplierMaterialLabelHelper.conditionMeta(
+    material.condition,
+  );
   final status = SupplierMaterialLabelHelper.statusMeta(material.status);
-  final category =
-      isArabic ? material.category.nameAr : material.category.nameEn;
+  final category = isArabic
+      ? material.category.nameAr
+      : material.category.nameEn;
   final imageUrl = material.coverImageUrl == null
       ? null
       : ApiConfig.resolveMediaUrl(material.coverImageUrl!);
   final compactBadges = <String>[];
   if (material.totalActiveRequests > 0) {
-    compactBadges.add(context.s.materialRequestsBadge(material.totalActiveRequests));
+    compactBadges.add(
+      context.s.materialRequestsBadge(material.totalActiveRequests),
+    );
   }
   if (material.demandScorePercent > 0) {
     compactBadges.add(context.s.highDemandBadge);
@@ -109,10 +114,15 @@ Widget buildSupplierMaterialCard({
   return SupplierMaterialCard(
     title: material.title,
     categoryLabel: category,
-    conditionLabel:
-        SupplierMaterialLabelHelper.resolveText(condition.label, isArabic),
+    conditionLabel: SupplierMaterialLabelHelper.resolveText(
+      condition.label,
+      isArabic,
+    ),
     conditionTone: condition.tone,
-    statusLabel: SupplierMaterialLabelHelper.resolveText(status.label, isArabic),
+    statusLabel: SupplierMaterialLabelHelper.resolveText(
+      status.label,
+      isArabic,
+    ),
     statusTone: status.tone,
     quantityLabel: SupplierMaterialLabelHelper.resolveText(
       SupplierMaterialLabelHelper.stockLabel(
@@ -146,7 +156,9 @@ Widget buildSupplierMaterialCard({
     ),
     isFree: material.isFree,
     imageUrl: imageUrl,
-    engagementLabel: engagementParts.isEmpty ? null : engagementParts.join(' · '),
+    engagementLabel: engagementParts.isEmpty
+        ? null
+        : engagementParts.join(' · '),
     compactBadgeLabels: compactBadges,
     createdAtLabel: createdAtLabel,
     onTap: onTap,
@@ -169,13 +181,13 @@ List<Widget> buildSupplierMaterialCardActions({
 }) {
   const actionSize = 44.0;
   ButtonStyle squareActionStyle(ButtonStyle base) => base.copyWith(
-        fixedSize: const WidgetStatePropertyAll(Size.square(actionSize)),
-        minimumSize: const WidgetStatePropertyAll(Size.square(actionSize)),
-        maximumSize: const WidgetStatePropertyAll(Size.square(actionSize)),
-        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-        alignment: Alignment.center,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      );
+    fixedSize: const WidgetStatePropertyAll(Size.square(actionSize)),
+    minimumSize: const WidgetStatePropertyAll(Size.square(actionSize)),
+    maximumSize: const WidgetStatePropertyAll(Size.square(actionSize)),
+    padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+    alignment: Alignment.center,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  );
 
   final actions = <Widget>[
     Tooltip(
@@ -214,7 +226,9 @@ List<Widget> buildSupplierMaterialCardActions({
   if (deleteLabel != null) {
     actions.add(
       Tooltip(
-        message: canDelete ? deleteLabel : (deleteBlockedMessage ?? deleteLabel),
+        message: canDelete
+            ? deleteLabel
+            : (deleteBlockedMessage ?? deleteLabel),
         child: Semantics(
           label: deleteLabel,
           button: true,

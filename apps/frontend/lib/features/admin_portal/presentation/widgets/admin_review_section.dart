@@ -84,17 +84,20 @@ class AdminReviewSection extends StatelessWidget {
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton(
                         onPressed: () => context.push('/admin/audit-logs'),
-                        style: AppStatusButtonStyle.text(
-                          context,
-                          AppStatusTone.neutral,
-                        ).copyWith(
-                          padding: const WidgetStatePropertyAll(
-                            EdgeInsets.symmetric(horizontal: 6),
-                          ),
-                          minimumSize: const WidgetStatePropertyAll(Size.zero),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                        ),
+                        style:
+                            AppStatusButtonStyle.text(
+                              context,
+                              AppStatusTone.neutral,
+                            ).copyWith(
+                              padding: const WidgetStatePropertyAll(
+                                EdgeInsets.symmetric(horizontal: 6),
+                              ),
+                              minimumSize: const WidgetStatePropertyAll(
+                                Size.zero,
+                              ),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ),
                         child: Text(
                           l.viewAllAuditLogs,
                           style: Theme.of(context).textTheme.labelSmall
@@ -249,16 +252,14 @@ class _SupplierVerificationPreviewRow extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => context.push('/admin/supplier-verification'),
-            style: AppStatusButtonStyle.text(
-              context,
-              AppStatusTone.warning,
-            ).copyWith(
-              padding: const WidgetStatePropertyAll(
-                EdgeInsets.symmetric(horizontal: 8),
-              ),
-              minimumSize: const WidgetStatePropertyAll(Size.zero),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.warning)
+                .copyWith(
+                  padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                  minimumSize: const WidgetStatePropertyAll(Size.zero),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
             child: const Text('Review'),
           ),
         ],

@@ -22,20 +22,29 @@ void main() {
         LearningProjectStepText.stripStepPrefix('Step 2 - Mount parts'),
         'Mount parts',
       );
-      expect(LearningProjectStepText.stripStepPrefix('1. Solder pins'), 'Solder pins');
-      expect(LearningProjectStepText.stripStepPrefix('1) Test output'), 'Test output');
-    });
-
-    test('parseStepsFromText stores clean descriptions with generated titles', () {
-      final steps = LearningProjectStepText.parseStepsFromText(
-        'Step 1: Prepare\nFinal testing',
+      expect(
+        LearningProjectStepText.stripStepPrefix('1. Solder pins'),
+        'Solder pins',
       );
-
-      expect(steps, hasLength(2));
-      expect(steps[0]['title'], 'Step 1');
-      expect(steps[0]['description'], 'Prepare');
-      expect(steps[1]['title'], 'Step 2');
-      expect(steps[1]['description'], 'Final testing');
+      expect(
+        LearningProjectStepText.stripStepPrefix('1) Test output'),
+        'Test output',
+      );
     });
+
+    test(
+      'parseStepsFromText stores clean descriptions with generated titles',
+      () {
+        final steps = LearningProjectStepText.parseStepsFromText(
+          'Step 1: Prepare\nFinal testing',
+        );
+
+        expect(steps, hasLength(2));
+        expect(steps[0]['title'], 'Step 1');
+        expect(steps[0]['description'], 'Prepare');
+        expect(steps[1]['title'], 'Step 2');
+        expect(steps[1]['description'], 'Final testing');
+      },
+    );
   });
 }

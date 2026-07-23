@@ -24,7 +24,8 @@ class AdminLearningProjectsApi {
       'page': page,
       'limit': limit,
       if (search != null && search.isNotEmpty) 'search': search,
-      if (status != null && status.isNotEmpty && status != 'ALL') 'status': status,
+      if (status != null && status.isNotEmpty && status != 'ALL')
+        'status': status,
       if (categoryId != null && categoryId.isNotEmpty && categoryId != 'ALL')
         'categoryId': categoryId,
       if (difficulty != null && difficulty.isNotEmpty && difficulty != 'ALL')

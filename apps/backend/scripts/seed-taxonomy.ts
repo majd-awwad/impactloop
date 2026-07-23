@@ -1,5 +1,5 @@
-import { prisma } from '../src/database/prisma.js';
-import { seedTaxonomyFoundation } from '../src/modules/taxonomy/taxonomy-foundation.repository.js';
+import { prisma } from "../src/database/prisma.js";
+import { seedTaxonomyFoundation } from "../src/modules/taxonomy/taxonomy-foundation.repository.js";
 
 try {
   const result = await seedTaxonomyFoundation();

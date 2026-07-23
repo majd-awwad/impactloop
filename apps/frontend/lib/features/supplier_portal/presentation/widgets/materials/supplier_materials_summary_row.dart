@@ -15,23 +15,48 @@ class SupplierMaterialsSummaryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
     final items = <(String, int, IconData, AppStatusTone)>[
-      (l.myMaterialsStatTotal, summary.total, Icons.inventory_2_outlined,
-          AppStatusTone.primary),
-      (l.myMaterialsStatAvailable, summary.available,
-          Icons.check_circle_outline, AppStatusTone.success),
-      (l.myMaterialsStatPendingReserved, summary.pendingOrReserved,
-          Icons.schedule_outlined, AppStatusTone.warning),
-      (l.myMaterialsStatReused, summary.reused, Icons.recycling_outlined,
-          AppStatusTone.success),
-      (l.myMaterialsStatUnavailable, summary.unavailable,
-          Icons.remove_circle_outline, AppStatusTone.neutral),
+      (
+        l.myMaterialsStatTotal,
+        summary.total,
+        Icons.inventory_2_outlined,
+        AppStatusTone.primary,
+      ),
+      (
+        l.myMaterialsStatAvailable,
+        summary.available,
+        Icons.check_circle_outline,
+        AppStatusTone.success,
+      ),
+      (
+        l.myMaterialsStatPendingReserved,
+        summary.pendingOrReserved,
+        Icons.schedule_outlined,
+        AppStatusTone.warning,
+      ),
+      (
+        l.myMaterialsStatReused,
+        summary.reused,
+        Icons.recycling_outlined,
+        AppStatusTone.success,
+      ),
+      (
+        l.myMaterialsStatUnavailable,
+        summary.unavailable,
+        Icons.remove_circle_outline,
+        AppStatusTone.neutral,
+      ),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final columns =
-            width >= 1000 ? 5 : width >= 600 ? 3 : width >= 340 ? 2 : 1;
+        final columns = width >= 1000
+            ? 5
+            : width >= 600
+            ? 3
+            : width >= 340
+            ? 2
+            : 1;
         final tileWidth = (width - (columns - 1) * AppSpacing.sm) / columns;
         return Wrap(
           spacing: AppSpacing.sm,

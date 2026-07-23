@@ -1,10 +1,10 @@
-import type { PrismaClient } from '../../src/generated/prisma/client.js';
-import { SEED_ADMIN_EMAIL } from './seed-admin.js';
+import type { PrismaClient } from "../../src/generated/prisma/client.js";
+import { SEED_ADMIN_EMAIL } from "./seed-admin.js";
 
-export const SEED_ADMIN_DASHBOARD_MARKER = '[seed-admin-dashboard]';
+export const SEED_ADMIN_DASHBOARD_MARKER = "[seed-admin-dashboard]";
 
 const shouldForceReseed = (): boolean =>
-  process.env.SEED_FORCE_ADMIN_DASHBOARD === 'true';
+  process.env.SEED_FORCE_ADMIN_DASHBOARD === "true";
 
 export type SeedAdminDashboardResult = {
   skipped: boolean;
@@ -44,7 +44,7 @@ export async function seedAdminDashboard(
       where: { materialName: { startsWith: SEED_ADMIN_DASHBOARD_MARKER } },
     });
     await prisma.roleInvitation.deleteMany({
-      where: { targetEmail: { contains: 'seed-admin-dashboard' } },
+      where: { targetEmail: { contains: "seed-admin-dashboard" } },
     });
     await prisma.material.deleteMany({
       where: { title: { startsWith: SEED_ADMIN_DASHBOARD_MARKER } },
@@ -58,15 +58,15 @@ export async function seedAdminDashboard(
 
   const supplier = await prisma.user.findFirst({
     where: {
-      roles: { some: { role: 'SUPPLIER' } },
+      roles: { some: { role: "SUPPLIER" } },
       supplierProfile: { isNot: null },
     },
     select: { id: true, supplierProfile: { select: { id: true } } },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
   });
 
   if (!supplier?.supplierProfile) {
-    console.log('[seed] Skipping admin dashboard seed: no supplier found.');
+    console.log("[seed] Skipping admin dashboard seed: no supplier found.");
     return {
       skipped: true,
       forceApplied: force,
@@ -79,7 +79,7 @@ export async function seedAdminDashboard(
 
   const categories = await prisma.category.findMany({
     where: {
-      categoryType: { in: ['MATERIAL', 'BOTH'] },
+      categoryType: { in: ["MATERIAL", "BOTH"] },
       isActive: true,
     },
     select: { id: true, nameEn: true },
@@ -87,12 +87,14 @@ export async function seedAdminDashboard(
   });
 
   const location = await prisma.location.findFirst({
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
     select: { id: true },
   });
 
   if (!location || categories.length === 0) {
-    console.log('[seed] Skipping admin dashboard seed: missing category/location.');
+    console.log(
+      "[seed] Skipping admin dashboard seed: missing category/location.",
+    );
     return {
       skipped: true,
       forceApplied: force,
@@ -113,7 +115,7 @@ export async function seedAdminDashboard(
       requestedName: `${SEED_ADMIN_DASHBOARD_MARKER} Lab Glassware`,
       normalizedRequestedName: `${SEED_ADMIN_DASHBOARD_MARKER} lab glassware`,
       requestedByUserId: supplier.id,
-      status: 'PENDING',
+      status: "PENDING",
     },
   });
   categoryRequests += 1;
@@ -123,7 +125,7 @@ export async function seedAdminDashboard(
       materialName: `${SEED_ADMIN_DASHBOARD_MARKER} Acrylic Sheets`,
       normalizedMaterialName: `${SEED_ADMIN_DASHBOARD_MARKER} acrylic sheets`,
       requestedByUserId: supplier.id,
-      status: 'PENDING',
+      status: "PENDING",
     },
   });
   priceRequests += 1;
@@ -133,10 +135,10 @@ export async function seedAdminDashboard(
     await prisma.roleInvitation.create({
       data: {
         targetEmail: `moderator.${SEED_ADMIN_DASHBOARD_MARKER}@impactloop.test`,
-        targetRole: 'MODERATOR',
+        targetRole: "MODERATOR",
         tokenHash,
         invitedBy: admin.id,
-        status: 'PENDING',
+        status: "PENDING",
         expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         notes: SEED_ADMIN_DASHBOARD_MARKER,
       },
@@ -145,10 +147,30 @@ export async function seedAdminDashboard(
   }
 
   const reusedSeeds = [
-    { categoryIndex: 0, title: 'Reused Arduino boards', quantity: 2, unit: 'piece' },
-    { categoryIndex: 1 % categories.length, title: 'Reused wood panels', quantity: 4, unit: 'sheet' },
-    { categoryIndex: 2 % categories.length, title: 'Reused acrylic offcuts', quantity: 3, unit: 'piece' },
-    { categoryIndex: 3 % categories.length, title: 'Reused fabric bundles', quantity: 2, unit: 'kg' },
+    {
+      categoryIndex: 0,
+      title: "Reused Arduino boards",
+      quantity: 2,
+      unit: "piece",
+    },
+    {
+      categoryIndex: 1 % categories.length,
+      title: "Reused wood panels",
+      quantity: 4,
+      unit: "sheet",
+    },
+    {
+      categoryIndex: 2 % categories.length,
+      title: "Reused acrylic offcuts",
+      quantity: 3,
+      unit: "piece",
+    },
+    {
+      categoryIndex: 3 % categories.length,
+      title: "Reused fabric bundles",
+      quantity: 2,
+      unit: "kg",
+    },
   ];
 
   for (const item of reusedSeeds) {
@@ -162,13 +184,13 @@ export async function seedAdminDashboard(
         categoryId: category.id,
         locationId: location.id,
         title: `${SEED_ADMIN_DASHBOARD_MARKER} ${item.title}`,
-        description: 'Admin dashboard seed reused material for impact metrics.',
-        materialType: 'Seed material',
+        description: "Admin dashboard seed reused material for impact metrics.",
+        materialType: "Seed material",
         quantity: item.quantity,
         unit: item.unit,
-        condition: 'GOOD',
-        sourceType: 'WORKSHOP_SURPLUS',
-        status: 'REUSED',
+        condition: "GOOD",
+        sourceType: "WORKSHOP_SURPLUS",
+        status: "REUSED",
         isFree: true,
         reusedAt: new Date(),
       },

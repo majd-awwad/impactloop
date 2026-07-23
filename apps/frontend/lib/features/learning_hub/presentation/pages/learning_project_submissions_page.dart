@@ -518,8 +518,7 @@ class _LearningProjectSubmissionEditPageState
                       projectCategoriesAsync.value ??
                       const <MaterialCategory>[];
                   final materialCategories = materialSelectableCategories(
-                    materialCategoriesAsync.value ??
-                        const <MaterialCategory>[],
+                    materialCategoriesAsync.value ?? const <MaterialCategory>[],
                   );
                   _selectedCategoryId ??= submission.category.resolve(context);
 
@@ -667,14 +666,17 @@ class _LearningProjectSubmissionEditPageState
     return {
       'title': _titleController.text.trim(),
       'shortDescription': shortDescription,
-      'description':
-          fullDescription.isNotEmpty ? fullDescription : shortDescription,
+      'description': fullDescription.isNotEmpty
+          ? fullDescription
+          : shortDescription,
       'categoryId': categoryId,
       'difficulty': _selectedDifficulty,
       if (duration != null && duration > 0)
         'estimatedDurationMinutes': duration,
       'requiredComponents': _buildComponentsPayload(),
-      'steps': LearningProjectStepText.parseStepsFromText(_stepsController.text),
+      'steps': LearningProjectStepText.parseStepsFromText(
+        _stepsController.text,
+      ),
       'links': _parseLinks(_linksController.text),
     };
   }
@@ -1357,11 +1359,13 @@ class _StatePanel extends StatelessWidget {
   }
 }
 
-Color _toneColor(BuildContext context, LearningProjectSubmissionStatus status) =>
-    AppStatusStyle.of(
-      context,
-      learningProjectStatusTone(status.apiValue),
-    ).foreground;
+Color _toneColor(
+  BuildContext context,
+  LearningProjectSubmissionStatus status,
+) => AppStatusStyle.of(
+  context,
+  learningProjectStatusTone(status.apiValue),
+).foreground;
 
 String _formatDateLabel(DateTime? date, String prefix) {
   if (date == null) {

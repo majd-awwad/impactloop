@@ -23,21 +23,19 @@ void main() {
     expect(find.text('L'), findsNothing);
   });
 
-  testWidgets('UserAvatar falls back to initial when profileImageUrl is empty', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: UserAvatar(
-            displayName: 'Learner User',
-            radius: 20,
+  testWidgets(
+    'UserAvatar falls back to initial when profileImageUrl is empty',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: UserAvatar(displayName: 'Learner User', radius: 20),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.byType(Image), findsNothing);
-    expect(find.text('L'), findsOneWidget);
-  });
+      expect(find.byType(Image), findsNothing);
+      expect(find.text('L'), findsOneWidget);
+    },
+  );
 }

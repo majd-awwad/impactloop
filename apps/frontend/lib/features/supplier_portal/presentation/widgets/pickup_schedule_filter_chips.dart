@@ -73,8 +73,9 @@ class _FilterChip extends StatelessWidget {
                 : statusStyle.background,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
-              color:
-                  isSelected ? statusStyle.selectedBorder : statusStyle.border,
+              color: isSelected
+                  ? statusStyle.selectedBorder
+                  : statusStyle.border,
             ),
           ),
           child: Text(

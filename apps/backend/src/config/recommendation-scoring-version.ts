@@ -1,6 +1,6 @@
 export const RECOMMENDATION_SCORER_VERSIONS = [
-  'legacy-v1',
-  'normalized-interests-v2',
+  "legacy-v1",
+  "normalized-interests-v2",
 ] as const;
 
 export type RecommendationScorerVersion =
@@ -9,14 +9,14 @@ export type RecommendationScorerVersion =
 export const parseRecommendationScorerVersion = (
   value: string | undefined,
 ): RecommendationScorerVersion => {
-  const normalized = value?.trim() || 'legacy-v1';
+  const normalized = value?.trim() || "legacy-v1";
   if (
     !RECOMMENDATION_SCORER_VERSIONS.includes(
       normalized as RecommendationScorerVersion,
     )
   ) {
     throw new Error(
-      `Invalid RECOMMENDATION_SCORER_VERSION "${normalized}". Expected one of: ${RECOMMENDATION_SCORER_VERSIONS.join(', ')}`,
+      `Invalid RECOMMENDATION_SCORER_VERSION "${normalized}". Expected one of: ${RECOMMENDATION_SCORER_VERSIONS.join(", ")}`,
     );
   }
 

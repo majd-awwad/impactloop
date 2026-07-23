@@ -10,9 +10,9 @@ class ReservationCancelController extends Notifier<AsyncValue<void>> {
     state = const AsyncLoading();
 
     try {
-      await ref.read(reservationsRepositoryProvider).cancelReservation(
-            reservationId,
-          );
+      await ref
+          .read(reservationsRepositoryProvider)
+          .cancelReservation(reservationId);
       state = const AsyncData(null);
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);

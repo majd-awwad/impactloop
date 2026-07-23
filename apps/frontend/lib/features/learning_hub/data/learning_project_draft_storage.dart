@@ -33,7 +33,9 @@ class LearningProjectDraftData {
     'title': title,
     'summary': summary,
     'fullDescription': fullDescription,
-    'componentEntries': components.map((component) => component.toJson()).toList(),
+    'componentEntries': components
+        .map((component) => component.toJson())
+        .toList(),
     'steps': steps,
     'links': links,
     'categoryId': categoryId,

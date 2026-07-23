@@ -230,7 +230,9 @@ class _UploadDropZone extends StatelessWidget {
               vertical: AppSpacing.xl,
             ),
             decoration: BoxDecoration(
-              color: context.supplierColors.backgroundElevated.withValues(alpha: 0.55),
+              color: context.supplierColors.backgroundElevated.withValues(
+                alpha: 0.55,
+              ),
               borderRadius: AppRadius.lgAll,
             ),
             child: Column(
@@ -286,7 +288,9 @@ class _UploadDropZone extends StatelessWidget {
                       horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
                     ),
-                    shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.mdAll,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),

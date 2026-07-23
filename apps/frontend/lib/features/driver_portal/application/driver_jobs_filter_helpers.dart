@@ -193,8 +193,9 @@ AvailableJobsEmptyStateCopy availableJobsEmptyStateCopy({
 
 int radiusStepIndex(double? radiusKm) {
   if (radiusKm == null) {
-    return DriverJobsFilterConstants.radiusStepsKm
-        .indexOf(DriverJobsFilterConstants.defaultRadiusKm);
+    return DriverJobsFilterConstants.radiusStepsKm.indexOf(
+      DriverJobsFilterConstants.defaultRadiusKm,
+    );
   }
 
   final index = DriverJobsFilterConstants.radiusStepsKm.indexOf(radiusKm);
@@ -202,8 +203,9 @@ int radiusStepIndex(double? radiusKm) {
     return index;
   }
 
-  return DriverJobsFilterConstants.radiusStepsKm
-      .indexOf(DriverJobsFilterConstants.defaultRadiusKm);
+  return DriverJobsFilterConstants.radiusStepsKm.indexOf(
+    DriverJobsFilterConstants.defaultRadiusKm,
+  );
 }
 
 double radiusKmForStepIndex(int index) {

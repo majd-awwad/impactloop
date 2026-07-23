@@ -25,9 +25,7 @@ class ApiSupplierPickupScheduleRepository
   final SupplierPickupScheduleApi _api;
 
   @override
-  Future<SupplierSchedulePage> fetchSchedule(
-    SupplierScheduleQuery query,
-  ) {
+  Future<SupplierSchedulePage> fetchSchedule(SupplierScheduleQuery query) {
     return _api.fetchSchedule(query);
   }
 }

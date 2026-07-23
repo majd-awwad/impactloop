@@ -8,15 +8,12 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_lo
 
 void main() {
   test('keeps grouped supplier destinations discoverable on mobile', () {
-    expect(
-      supplierMobileNavItems.map((item) => item.route).toList(),
-      <String>[
-        '/supplier',
-        '/supplier/materials',
-        '/supplier/materials/new',
-        '/supplier/reservations',
-      ],
-    );
+    expect(supplierMobileNavItems.map((item) => item.route).toList(), <String>[
+      '/supplier',
+      '/supplier/materials',
+      '/supplier/materials/new',
+      '/supplier/reservations',
+    ]);
     expect(
       supplierMobileMoreNavItems.map((item) => item.route).toList(),
       <String>[
@@ -57,77 +54,78 @@ void main() {
     );
   });
 
-  testWidgets('renders compact mobile destinations in all supported phone modes', (
-    tester,
-  ) async {
-    for (final width in <double>[360, 400, 412]) {
-      for (final direction in <TextDirection>[
-        TextDirection.ltr,
-        TextDirection.rtl,
-      ]) {
-        for (final brightness in Brightness.values) {
-          final isArabic = direction == TextDirection.rtl;
-          final labels = isArabic
-              ? <String>['الرئيسية', 'المواد', 'إضافة', 'الطلبات', 'المزيد']
-              : <String>['Home', 'Materials', 'Add', 'Requests', 'More'];
-          final moreLabels = isArabic
-              ? <String>['جدول الاستلام', 'الإشعارات', 'الملف الشخصي']
-              : <String>['Pickup Schedule', 'Notifications', 'Profile'];
+  testWidgets(
+    'renders compact mobile destinations in all supported phone modes',
+    (tester) async {
+      for (final width in <double>[360, 400, 412]) {
+        for (final direction in <TextDirection>[
+          TextDirection.ltr,
+          TextDirection.rtl,
+        ]) {
+          for (final brightness in Brightness.values) {
+            final isArabic = direction == TextDirection.rtl;
+            final labels = isArabic
+                ? <String>['الرئيسية', 'المواد', 'إضافة', 'الطلبات', 'المزيد']
+                : <String>['Home', 'Materials', 'Add', 'Requests', 'More'];
+            final moreLabels = isArabic
+                ? <String>['جدول الاستلام', 'الإشعارات', 'الملف الشخصي']
+                : <String>['Pickup Schedule', 'Notifications', 'Profile'];
 
-          await tester.binding.setSurfaceSize(Size(width, 800));
-          await tester.pumpWidget(
-            MaterialApp(
-              theme: brightness == Brightness.dark
-                  ? AppTheme.dark
-                  : AppTheme.light,
-              home: SupplierLocaleScope(
-                languageCode: isArabic ? 'ar' : 'en',
-                child: Directionality(
-                  textDirection: direction,
-                  child: Scaffold(
-                    bottomNavigationBar: const SupplierMobileNav(
-                      currentLocation: '/supplier',
+            await tester.binding.setSurfaceSize(Size(width, 800));
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: brightness == Brightness.dark
+                    ? AppTheme.dark
+                    : AppTheme.light,
+                home: SupplierLocaleScope(
+                  languageCode: isArabic ? 'ar' : 'en',
+                  child: Directionality(
+                    textDirection: direction,
+                    child: Scaffold(
+                      bottomNavigationBar: const SupplierMobileNav(
+                        currentLocation: '/supplier',
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-          await tester.pumpAndSettle();
-
-          expect(tester.takeException(), isNull);
-          for (final label in labels) {
-            expect(
-              find.text(label),
-              findsOneWidget,
-              reason: '$width $direction $brightness',
             );
-          }
+            await tester.pumpAndSettle();
 
-          await tester.tap(find.text(labels.last));
-          await tester.pumpAndSettle();
-          for (final label in moreLabels) {
-            expect(
-              find.text(label),
-              findsOneWidget,
-              reason: '$width $direction $brightness',
-            );
-          }
-          expect(tester.takeException(), isNull);
+            expect(tester.takeException(), isNull);
+            for (final label in labels) {
+              expect(
+                find.text(label),
+                findsOneWidget,
+                reason: '$width $direction $brightness',
+              );
+            }
 
-          Navigator.of(tester.element(find.text(moreLabels.first))).pop();
-          await tester.pumpAndSettle();
-          for (final label in moreLabels) {
-            expect(
-              find.text(label),
-              findsNothing,
-              reason: '$width $direction $brightness',
-            );
+            await tester.tap(find.text(labels.last));
+            await tester.pumpAndSettle();
+            for (final label in moreLabels) {
+              expect(
+                find.text(label),
+                findsOneWidget,
+                reason: '$width $direction $brightness',
+              );
+            }
+            expect(tester.takeException(), isNull);
+
+            Navigator.of(tester.element(find.text(moreLabels.first))).pop();
+            await tester.pumpAndSettle();
+            for (final label in moreLabels) {
+              expect(
+                find.text(label),
+                findsNothing,
+                reason: '$width $direction $brightness',
+              );
+            }
           }
         }
       }
-    }
 
-    await tester.binding.setSurfaceSize(null);
-  });
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
 }

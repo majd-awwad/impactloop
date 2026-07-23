@@ -110,10 +110,9 @@ class _LearnerReservationMessagesPanelState
       children: [
         Text(
           'Follow-up messages',
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: AppSpacing.sm),
         if (_loading)
@@ -138,7 +137,9 @@ class _LearnerReservationMessagesPanelState
         else if (_messages.isEmpty)
           Text(
             'No follow-up messages yet.',
-            style: AppTextStyles.body(context).copyWith(color: palette.textMuted),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textMuted),
           )
         else
           ..._messages.map(
@@ -157,17 +158,16 @@ class _LearnerReservationMessagesPanelState
                     children: [
                       Text(
                         message.sender.displayName,
-                        style: AppTextStyles.label(context).copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         message.body,
-                        style: AppTextStyles.body(context).copyWith(
-                          color: palette.textPrimary,
-                        ),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textPrimary),
                       ),
                     ],
                   ),

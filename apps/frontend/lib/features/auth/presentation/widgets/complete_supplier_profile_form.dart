@@ -178,7 +178,9 @@ class _CompleteSupplierProfileFormState
     _clearErrors();
 
     if (_isOrganizationSupplier) {
-      final documentError = _validateVerificationDocument(_verificationDocument);
+      final documentError = _validateVerificationDocument(
+        _verificationDocument,
+      );
       if (documentError != null) {
         setState(() => _verificationDocumentError = documentError);
         return;
@@ -196,7 +198,9 @@ class _CompleteSupplierProfileFormState
 
     try {
       if (isAuthenticated) {
-        await ref.read(authControllerProvider.notifier).becomeSupplier(
+        await ref
+            .read(authControllerProvider.notifier)
+            .becomeSupplier(
               BecomeSupplierRequest(
                 supplierType: _supplierType!,
                 publicName: _publicNameController.text.trim(),
@@ -475,8 +479,8 @@ class _VerificationDocumentField extends StatelessWidget {
             child: Text(
               hasFile ? fileName! : 'No file selected',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: hasFile ? null : Theme.of(context).hintColor,
-                  ),
+                color: hasFile ? null : Theme.of(context).hintColor,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),

@@ -28,10 +28,7 @@ class LearnerHomeApi {
       return unwrapApiResponse(
         _client.get<Map<String, dynamic>>(
           '/api/learner/home/sections/${sectionKey.apiValue}',
-          queryParameters: {
-            'limit': limit,
-            if (offset > 0) 'offset': offset,
-          },
+          queryParameters: {'limit': limit, if (offset > 0) 'offset': offset},
         ),
         _mapSectionDetails,
       );

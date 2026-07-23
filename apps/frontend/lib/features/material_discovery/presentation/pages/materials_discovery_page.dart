@@ -592,10 +592,7 @@ class _InitialLoadErrorState extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           FilledButton.icon(
             onPressed: onRetry,
-            style: AppStatusButtonStyle.filled(
-              context,
-              AppStatusTone.primary,
-            ),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
             icon: const Icon(Icons.refresh_rounded),
             label: Text(
               const LocalizedText(

@@ -1,8 +1,5 @@
 class ReservationPreferredWindow {
-  const ReservationPreferredWindow({
-    required this.start,
-    required this.end,
-  });
+  const ReservationPreferredWindow({required this.start, required this.end});
 
   final DateTime start;
   final DateTime end;

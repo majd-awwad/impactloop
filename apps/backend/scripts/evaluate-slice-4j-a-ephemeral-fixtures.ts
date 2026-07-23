@@ -1,19 +1,20 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
-import { prisma } from '../src/database/prisma.js';
-import type { ShadowDiagnostics } from '../src/modules/recommendations/ml-shadow.service.js';
+import { prisma } from "../src/database/prisma.js";
+import type { ShadowDiagnostics } from "../src/modules/recommendations/ml-shadow.service.js";
 import type {
   ArchetypeKey,
   EvaluatedArchetype,
   LearnerFixtureRow,
-} from './evaluate-slice-4j-a-report.js';
+} from "./evaluate-slice-4j-a-report.js";
 
 export const MATERIAL_BURST_WINDOW_HOURS = 24;
 export const PROJECT_BURST_WINDOW_HOURS = 72;
 
-export type EphemeralArchetypeKey = 'cold_start' | 'material_coherent' | 'project_scattered';
+export type EphemeralArchetypeKey =
+  "cold_start" | "material_coherent" | "project_scattered";
 
-export type FixtureCleanupStatus = 'SUCCESS' | 'FAILED' | 'SKIPPED';
+export type FixtureCleanupStatus = "SUCCESS" | "FAILED" | "SKIPPED";
 
 export type FixtureRunState = {
   runId: string;
@@ -67,7 +68,7 @@ export type ArchetypeBehavioralEvidence = {
 };
 
 export type FixtureSummary = {
-  fixtureMode: 'EPHEMERAL';
+  fixtureMode: "EPHEMERAL";
   fixturesCreated: number;
   fixturesCleaned: boolean;
   cleanupStatus: FixtureCleanupStatus;
@@ -105,7 +106,9 @@ const learnerSelect = {
 
 export const createFixtureRunId = () => randomUUID();
 
-export const createFixtureRunState = (runId = createFixtureRunId()): FixtureRunState => ({
+export const createFixtureRunState = (
+  runId = createFixtureRunId(),
+): FixtureRunState => ({
   runId,
   marker: `slice4j-eval-${runId}`,
   evaluationNow: new Date(),
@@ -143,12 +146,10 @@ export const isTimestampInsideBurstWindow = (
 };
 
 export const isMaterialCandidateEligible = (row: MaterialCandidateRow) =>
-  row.status === 'AVAILABLE' &&
-  row.quantity > 0 &&
-  Boolean(row.conceptKey);
+  row.status === "AVAILABLE" && row.quantity > 0 && Boolean(row.conceptKey);
 
 export const isProjectCandidateEligible = (row: ProjectCandidateRow) =>
-  row.status === 'PUBLISHED' &&
+  row.status === "PUBLISHED" &&
   row.hiddenAt === null &&
   row.archivedAt === null &&
   Boolean(row.conceptKey);
@@ -181,7 +182,9 @@ export const selectScatteredProjectCandidates = (
   return selected.length >= 4 ? selected : null;
 };
 
-export const buildColdStartFixtureRow = (userId: string): LearnerFixtureRow => ({
+export const buildColdStartFixtureRow = (
+  userId: string,
+): LearnerFixtureRow => ({
   id: userId,
   learnerProfile: { interests: [] },
   _count: {
@@ -206,11 +209,11 @@ const createLearnerUser = async (
     data: {
       displayName: `Slice4J Eval ${archetype}`,
       email: `slice4j-${state.runId}-${archetype}@evaluation.invalid`,
-      passwordHash: 'evaluation-only-hash',
-      accountStatus: 'ACTIVE',
+      passwordHash: "evaluation-only-hash",
+      accountStatus: "ACTIVE",
       emailVerifiedAt: state.evaluationNow,
-      activeRole: 'LEARNER',
-      roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
+      activeRole: "LEARNER",
+      roles: { create: [{ role: "LEARNER", isPrimary: true }] },
       learnerProfile: { create: { interests } },
     },
     select: { id: true },
@@ -229,7 +232,7 @@ const createTrackedMaterialView = async (
     data: {
       materialId,
       viewerUserId: userId,
-      viewSource: 'evaluation_fixture',
+      viewSource: "evaluation_fixture",
       createdAt,
     },
     select: { id: true },
@@ -271,13 +274,15 @@ const createTrackedProjectFollow = async (
   state.createdRowIds.projectFollows.push(row.id);
 };
 
-const findCoherentMaterialCandidates = async (): Promise<MaterialCandidateRow[]> => {
+const findCoherentMaterialCandidates = async (): Promise<
+  MaterialCandidateRow[]
+> => {
   const materials = await prisma.material.findMany({
     where: {
-      status: 'AVAILABLE',
+      status: "AVAILABLE",
       quantity: { gt: 0 },
-      category: { isActive: true, categoryType: { in: ['MATERIAL', 'BOTH'] } },
-      taxonomyConcepts: { some: { concept: { status: 'ACTIVE' } } },
+      category: { isActive: true, categoryType: { in: ["MATERIAL", "BOTH"] } },
+      taxonomyConcepts: { some: { concept: { status: "ACTIVE" } } },
     },
     select: {
       id: true,
@@ -285,12 +290,12 @@ const findCoherentMaterialCandidates = async (): Promise<MaterialCandidateRow[]>
       quantity: true,
       categoryId: true,
       taxonomyConcepts: {
-        where: { concept: { status: 'ACTIVE' } },
+        where: { concept: { status: "ACTIVE" } },
         select: { concept: { select: { canonicalKey: true } } },
         take: 1,
       },
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
     take: 200,
   });
   const rows: MaterialCandidateRow[] = materials.map((material) => ({
@@ -303,22 +308,24 @@ const findCoherentMaterialCandidates = async (): Promise<MaterialCandidateRow[]>
   const group = groupCoherentMaterialCandidates(rows);
   if (!group) {
     throw new Error(
-      'fixture_candidate_insufficient:material_coherent:need_4_materials_same_category_concept',
+      "fixture_candidate_insufficient:material_coherent:need_4_materials_same_category_concept",
     );
   }
   return group;
 };
 
-const findScatteredProjectCandidates = async (): Promise<ProjectCandidateRow[]> => {
+const findScatteredProjectCandidates = async (): Promise<
+  ProjectCandidateRow[]
+> => {
   const projects = await prisma.learningProject.findMany({
     where: {
-      status: 'PUBLISHED',
+      status: "PUBLISHED",
       hiddenAt: null,
       archivedAt: null,
-      category: { isActive: true, categoryType: { in: ['PROJECT', 'BOTH'] } },
-      taxonomyConcepts: { some: { concept: { status: 'ACTIVE' } } },
+      category: { isActive: true, categoryType: { in: ["PROJECT", "BOTH"] } },
+      taxonomyConcepts: { some: { concept: { status: "ACTIVE" } } },
       requiredComponents: {
-        some: { taxonomyConcepts: { some: { concept: { status: 'ACTIVE' } } } },
+        some: { taxonomyConcepts: { some: { concept: { status: "ACTIVE" } } } },
       },
     },
     select: {
@@ -327,12 +334,12 @@ const findScatteredProjectCandidates = async (): Promise<ProjectCandidateRow[]> 
       hiddenAt: true,
       archivedAt: true,
       taxonomyConcepts: {
-        where: { concept: { status: 'ACTIVE' } },
+        where: { concept: { status: "ACTIVE" } },
         select: { concept: { select: { canonicalKey: true } } },
         take: 1,
       },
     },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
     take: 120,
   });
   const rows: ProjectCandidateRow[] = projects.map((project) => ({
@@ -345,7 +352,7 @@ const findScatteredProjectCandidates = async (): Promise<ProjectCandidateRow[]> 
   const selected = selectScatteredProjectCandidates(rows);
   if (!selected) {
     throw new Error(
-      'fixture_candidate_insufficient:project_scattered:need_4_distinct_concept_projects',
+      "fixture_candidate_insufficient:project_scattered:need_4_distinct_concept_projects",
     );
   }
   return selected;
@@ -354,12 +361,12 @@ const findScatteredProjectCandidates = async (): Promise<ProjectCandidateRow[]> 
 const findDistinctMaterialCandidates = async (count: number) => {
   const materials = await prisma.material.findMany({
     where: {
-      status: 'AVAILABLE',
+      status: "AVAILABLE",
       quantity: { gt: 0 },
-      category: { isActive: true, categoryType: { in: ['MATERIAL', 'BOTH'] } },
+      category: { isActive: true, categoryType: { in: ["MATERIAL", "BOTH"] } },
     },
     select: { id: true },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
     take: count + 10,
   });
   if (materials.length < count) {
@@ -383,16 +390,27 @@ export const createEphemeralFixtures = async (
   const scatteredProjects = await findScatteredProjectCandidates();
   const engagementMaterials = await findDistinctMaterialCandidates(5);
 
-  const materialBurstAt = fixtureTimestampInsideMaterialBurst(runState.evaluationNow, 2);
-  const projectBurstAt = fixtureTimestampInsideProjectBurst(runState.evaluationNow, 12);
+  const materialBurstAt = fixtureTimestampInsideMaterialBurst(
+    runState.evaluationNow,
+    2,
+  );
+  const projectBurstAt = fixtureTimestampInsideProjectBurst(
+    runState.evaluationNow,
+    12,
+  );
   const saveAt = fixtureTimestampInsideProjectBurst(runState.evaluationNow, 48);
 
-  const coldUserId = await createLearnerUser(runState, 'cold_start');
-  const materialUserId = await createLearnerUser(runState, 'material_coherent');
-  const projectUserId = await createLearnerUser(runState, 'project_scattered');
+  const coldUserId = await createLearnerUser(runState, "cold_start");
+  const materialUserId = await createLearnerUser(runState, "material_coherent");
+  const projectUserId = await createLearnerUser(runState, "project_scattered");
 
   for (const material of coherentMaterials) {
-    await createTrackedMaterialView(runState, material.id, materialUserId, materialBurstAt);
+    await createTrackedMaterialView(
+      runState,
+      material.id,
+      materialUserId,
+      materialBurstAt,
+    );
   }
 
   for (const project of scatteredProjects) {
@@ -407,7 +425,12 @@ export const createEphemeralFixtures = async (
     );
   }
   for (const project of scatteredProjects.slice(0, 3)) {
-    await createTrackedProjectFollow(runState, project.id, projectUserId, projectBurstAt);
+    await createTrackedProjectFollow(
+      runState,
+      project.id,
+      projectUserId,
+      projectBurstAt,
+    );
   }
 
   const learnerRows = await loadLearnerFixtureRows([
@@ -437,7 +460,7 @@ export const syncOutboxIdsForFixtureUsers = async (state: FixtureRunState) => {
     if (known.has(row.id)) continue;
     const payload = row.payload as { learnerId?: unknown };
     if (
-      typeof payload.learnerId === 'string' &&
+      typeof payload.learnerId === "string" &&
       state.createdUserIds.includes(payload.learnerId)
     ) {
       state.createdRowIds.outboxIds.push(row.id);
@@ -461,22 +484,34 @@ export const countFixtureRecords = async (state: FixtureRunState) => {
       ? prisma.user.count({ where: { id: { in: state.createdUserIds } } })
       : 0,
     state.createdRowIds.materialViews.length
-      ? prisma.materialView.count({ where: { id: { in: state.createdRowIds.materialViews } } })
+      ? prisma.materialView.count({
+          where: { id: { in: state.createdRowIds.materialViews } },
+        })
       : 0,
     state.createdRowIds.materialLikes.length
-      ? prisma.materialLike.count({ where: { id: { in: state.createdRowIds.materialLikes } } })
+      ? prisma.materialLike.count({
+          where: { id: { in: state.createdRowIds.materialLikes } },
+        })
       : 0,
     state.createdRowIds.projectSaves.length
-      ? prisma.projectSave.count({ where: { id: { in: state.createdRowIds.projectSaves } } })
+      ? prisma.projectSave.count({
+          where: { id: { in: state.createdRowIds.projectSaves } },
+        })
       : 0,
     state.createdRowIds.projectLikes.length
-      ? prisma.projectLike.count({ where: { id: { in: state.createdRowIds.projectLikes } } })
+      ? prisma.projectLike.count({
+          where: { id: { in: state.createdRowIds.projectLikes } },
+        })
       : 0,
     state.createdRowIds.projectFollows.length
-      ? prisma.projectFollow.count({ where: { id: { in: state.createdRowIds.projectFollows } } })
+      ? prisma.projectFollow.count({
+          where: { id: { in: state.createdRowIds.projectFollows } },
+        })
       : 0,
     state.createdRowIds.projectBuilds.length
-      ? prisma.projectBuild.count({ where: { id: { in: state.createdRowIds.projectBuilds } } })
+      ? prisma.projectBuild.count({
+          where: { id: { in: state.createdRowIds.projectBuilds } },
+        })
       : 0,
     state.createdRowIds.outboxIds.length
       ? prisma.recommendationEventOutbox.count({
@@ -549,7 +584,9 @@ export const cleanupEphemeralFixtures = async (state: FixtureRunState) => {
   }
 
   if (state.createdUserIds.length) {
-    await prisma.user.deleteMany({ where: { id: { in: state.createdUserIds } } });
+    await prisma.user.deleteMany({
+      where: { id: { in: state.createdUserIds } },
+    });
   }
 
   state.cleaned = true;
@@ -561,16 +598,16 @@ export const buildArchetypeBehavioralEvidence = (
   materialDiagnostics?: ShadowDiagnostics,
   projectDiagnostics?: ShadowDiagnostics,
 ): ArchetypeBehavioralEvidence => ({
-  confirmed: evaluated?.archetypeResolution === 'RESOLVED_CONFIRMED',
+  confirmed: evaluated?.archetypeResolution === "RESOLVED_CONFIRMED",
   materialConfidence: String(
     evaluated?.observedMaterialConfidence ??
       materialDiagnostics?.recentConfidence ??
-      'NONE',
+      "NONE",
   ),
   projectConfidence: String(
     evaluated?.observedProjectConfidence ??
       projectDiagnostics?.recentConfidence ??
-      'NONE',
+      "NONE",
   ),
   recentSlotsUsedTop5: Math.max(
     materialDiagnostics?.recentSlotsUsedTop5 ?? 0,
@@ -588,21 +625,28 @@ export const buildArchetypeBehavioralEvidence = (
 export const buildFixtureSummary = (input: {
   runState?: FixtureRunState;
   evaluatedArchetypes: EvaluatedArchetype[];
-  materialDiagnosticsByArchetype?: Partial<Record<EphemeralArchetypeKey, ShadowDiagnostics>>;
-  projectDiagnosticsByArchetype?: Partial<Record<EphemeralArchetypeKey, ShadowDiagnostics>>;
+  materialDiagnosticsByArchetype?: Partial<
+    Record<EphemeralArchetypeKey, ShadowDiagnostics>
+  >;
+  projectDiagnosticsByArchetype?: Partial<
+    Record<EphemeralArchetypeKey, ShadowDiagnostics>
+  >;
   cleanupStatus: FixtureCleanupStatus;
   cleanupFailureCategory?: string;
   preRunFixtureRecordCount: number;
   postRunFixtureRecordCount: number;
 }): FixtureSummary => {
   const ephemeralKeys: EphemeralArchetypeKey[] = [
-    'cold_start',
-    'material_coherent',
-    'project_scattered',
+    "cold_start",
+    "material_coherent",
+    "project_scattered",
   ];
-  const archetypeBehavioralConfirmation: FixtureSummary['archetypeBehavioralConfirmation'] = {};
+  const archetypeBehavioralConfirmation: FixtureSummary["archetypeBehavioralConfirmation"] =
+    {};
   for (const key of ephemeralKeys) {
-    const evaluated = input.evaluatedArchetypes.find((entry) => entry.archetypeKey === key);
+    const evaluated = input.evaluatedArchetypes.find(
+      (entry) => entry.archetypeKey === key,
+    );
     archetypeBehavioralConfirmation[key] = buildArchetypeBehavioralEvidence(
       key,
       evaluated,
@@ -611,9 +655,9 @@ export const buildFixtureSummary = (input: {
     );
   }
   return {
-    fixtureMode: 'EPHEMERAL',
+    fixtureMode: "EPHEMERAL",
     fixturesCreated: input.runState?.createdUserIds.length ?? 0,
-    fixturesCleaned: input.cleanupStatus === 'SUCCESS',
+    fixturesCleaned: input.cleanupStatus === "SUCCESS",
     cleanupStatus: input.cleanupStatus,
     cleanupFailureCategory: input.cleanupFailureCategory,
     preRunFixtureRecordCount: input.preRunFixtureRecordCount,

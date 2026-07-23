@@ -81,6 +81,10 @@ Read `implementation-status.md` before claiming that a feature or phase is imple
 
 Do not read the complete experiment specification for unrelated frontend, reservation, delivery, authentication, supplier, or administration tasks.
 
+## Slice 4K — Controlled Demo Preflight
+
+Controlled demo preflight command, operator runbook, and accepted policy freeze: [`slice-4k-controlled-demo-runbook.md`](slice-4k-controlled-demo-runbook.md)
+
 ## Decision Outcomes
 
 Every experimental phase must end with one of:

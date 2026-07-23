@@ -48,10 +48,8 @@ class SupplierOwnedMaterialDetailPage extends ConsumerWidget {
               ref.invalidate(supplierMyMaterialByIdProvider(materialId));
             },
           ),
-          data: (material) => _MaterialWorkspace(
-            material: material,
-            materialId: materialId,
-          ),
+          data: (material) =>
+              _MaterialWorkspace(material: material, materialId: materialId),
         ),
       ),
     );
@@ -108,9 +106,9 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
           .restoreMaterialAvailable(widget.materialId);
       await _refreshMaterial();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.s.restoreAvailableAction)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.s.restoreAvailableAction)));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -167,7 +165,8 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
               deleteBlockedMessage: deleteBlockedMessage,
               editBlockedMessage: editBlockedMessage,
               onBack: _goBack,
-              onEdit: () => context.push('/supplier/materials/${material.id}/edit'),
+              onEdit: () =>
+                  context.push('/supplier/materials/${material.id}/edit'),
               onDelete: () => handleSupplierMaterialDelete(
                 context: context,
                 ref: ref,
@@ -354,7 +353,11 @@ class _MaterialHero extends StatelessWidget {
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [imagePanel, const SizedBox(height: AppSpacing.lg), details],
+              children: [
+                imagePanel,
+                const SizedBox(height: AppSpacing.lg),
+                details,
+              ],
             ),
     );
   }
@@ -488,12 +491,42 @@ class _MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
     final metrics = [
-      _Metric(Icons.visibility_outlined, '${material.viewsCount}', l.viewsLabel, _MetricTone.green),
-      _Metric(Icons.favorite_border, '${material.likesCount}', l.likesLabel, _MetricTone.pink),
-      _Metric(Icons.swap_horiz_rounded, '${material.totalActiveRequests}', l.totalActiveRequestsLabel, _MetricTone.amber),
-      _Metric(Icons.schedule_outlined, '${material.pendingReservationsCount}', l.pendingReservationsLabel, _MetricTone.blue),
-      _Metric(Icons.bookmark_border_rounded, '${material.reservedReservationsCount}', l.reservedReservationsLabel, _MetricTone.teal),
-      _Metric(Icons.trending_up_rounded, l.overallDemandScoreValue(material.demandScorePercent), l.overallDemandScoreLabel, _MetricTone.green),
+      _Metric(
+        Icons.visibility_outlined,
+        '${material.viewsCount}',
+        l.viewsLabel,
+        _MetricTone.green,
+      ),
+      _Metric(
+        Icons.favorite_border,
+        '${material.likesCount}',
+        l.likesLabel,
+        _MetricTone.pink,
+      ),
+      _Metric(
+        Icons.swap_horiz_rounded,
+        '${material.totalActiveRequests}',
+        l.totalActiveRequestsLabel,
+        _MetricTone.amber,
+      ),
+      _Metric(
+        Icons.schedule_outlined,
+        '${material.pendingReservationsCount}',
+        l.pendingReservationsLabel,
+        _MetricTone.blue,
+      ),
+      _Metric(
+        Icons.bookmark_border_rounded,
+        '${material.reservedReservationsCount}',
+        l.reservedReservationsLabel,
+        _MetricTone.teal,
+      ),
+      _Metric(
+        Icons.trending_up_rounded,
+        l.overallDemandScoreValue(material.demandScorePercent),
+        l.overallDemandScoreLabel,
+        _MetricTone.green,
+      ),
     ];
 
     return LayoutBuilder(
@@ -506,15 +539,18 @@ class _MetricGrid extends StatelessWidget {
             ? 2
             : 1;
         const gap = AppSpacing.sm;
-        final itemWidth = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        final itemWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
         return Wrap(
           spacing: gap,
           runSpacing: gap,
           children: metrics
-              .map((metric) => SizedBox(
-                    width: itemWidth,
-                    child: _MetricCard(metric: metric),
-                  ))
+              .map(
+                (metric) => SizedBox(
+                  width: itemWidth,
+                  child: _MetricCard(metric: metric),
+                ),
+              )
               .toList(growable: false),
         );
       },
@@ -562,7 +598,9 @@ class _MetricCard extends StatelessWidget {
                     metric.value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: context.supplierSectionTitle().copyWith(fontSize: 19),
+                    style: context.supplierSectionTitle().copyWith(
+                      fontSize: 19,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -646,11 +684,25 @@ class _ActiveDemandCard extends StatelessWidget {
       title: l.activeDemandSectionTitle,
       child: Column(
         children: [
-          _MetricRow(label: l.pendingReservationsLabel, value: '${material.pendingReservationsCount}'),
-          _MetricRow(label: l.reservedReservationsLabel, value: '${material.reservedReservationsCount}'),
+          _MetricRow(
+            label: l.pendingReservationsLabel,
+            value: '${material.pendingReservationsCount}',
+          ),
+          _MetricRow(
+            label: l.reservedReservationsLabel,
+            value: '${material.reservedReservationsCount}',
+          ),
           const Divider(height: AppSpacing.lg),
-          _MetricRow(label: l.totalActiveRequestsLabel, value: '${material.totalActiveRequests}', emphasized: true),
-          _MetricRow(label: l.activeDemandScoreLabel, value: '${material.activeDemandScore}', emphasized: true),
+          _MetricRow(
+            label: l.totalActiveRequestsLabel,
+            value: '${material.totalActiveRequests}',
+            emphasized: true,
+          ),
+          _MetricRow(
+            label: l.activeDemandScoreLabel,
+            value: '${material.activeDemandScore}',
+            emphasized: true,
+          ),
         ],
       ),
     );
@@ -667,7 +719,8 @@ class _DemandScoreCard extends StatelessWidget {
     final l = context.s;
     final colors = context.supplierColors;
     final score = material.demandScorePercent.clamp(0, 100);
-    final hasDemand = material.totalActiveRequests > 0 ||
+    final hasDemand =
+        material.totalActiveRequests > 0 ||
         material.demandScorePercent > 0 ||
         material.completedReservationsCount > 0;
 
@@ -694,7 +747,8 @@ class _DemandScoreCard extends StatelessWidget {
                 Text(
                   l.materialDemandStatusMessage(
                     activeRequestsCount: material.totalActiveRequests,
-                    completedReservationsCount: material.completedReservationsCount,
+                    completedReservationsCount:
+                        material.completedReservationsCount,
                     demandScorePercent: material.demandScorePercent,
                     viewsCount: material.viewsCount,
                     likesCount: material.likesCount,
@@ -709,7 +763,8 @@ class _DemandScoreCard extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.md),
           Semantics(
-            label: '${l.overallDemandScoreLabel}: ${l.overallDemandScoreValue(material.demandScorePercent)}',
+            label:
+                '${l.overallDemandScoreLabel}: ${l.overallDemandScoreValue(material.demandScorePercent)}',
             child: SizedBox(
               width: 94,
               height: 94,
@@ -728,7 +783,9 @@ class _DemandScoreCard extends StatelessWidget {
                   ),
                   Text(
                     l.overallDemandScoreValue(material.demandScorePercent),
-                    style: context.supplierSectionTitle().copyWith(fontSize: 16),
+                    style: context.supplierSectionTitle().copyWith(
+                      fontSize: 16,
+                    ),
                   ),
                 ],
               ),
@@ -748,14 +805,21 @@ class _ReuseHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final empty = material.completedReservationsCount == 0 && material.reusedCount == 0;
+    final empty =
+        material.completedReservationsCount == 0 && material.reusedCount == 0;
     return _SectionCard(
       icon: Icons.recycling_outlined,
       title: l.reuseHistorySectionTitle,
       child: Column(
         children: [
-          _MetricRow(label: l.completedReservationsMetricLabel, value: '${material.completedReservationsCount}'),
-          _MetricRow(label: l.completedReusesMetricLabel, value: '${material.reusedCount}'),
+          _MetricRow(
+            label: l.completedReservationsMetricLabel,
+            value: '${material.completedReservationsCount}',
+          ),
+          _MetricRow(
+            label: l.completedReusesMetricLabel,
+            value: '${material.reusedCount}',
+          ),
           if (material.lastCompletedAt != null)
             _MetricRow(
               label: l.lastCompletedLabel,
@@ -786,10 +850,17 @@ class _ReservationsCard extends StatelessWidget {
       icon: Icons.event_note_outlined,
       title: l.reservationsSectionTitle,
       child: material.reservations.isEmpty
-          ? _InfoBanner(icon: Icons.info_outline_rounded, text: l.noMaterialReservationsYet)
+          ? _InfoBanner(
+              icon: Icons.info_outline_rounded,
+              text: l.noMaterialReservationsYet,
+            )
           : Column(
               children: [
-                for (var index = 0; index < material.reservations.length; index++) ...[
+                for (
+                  var index = 0;
+                  index < material.reservations.length;
+                  index++
+                ) ...[
                   _ReservationCard(reservation: material.reservations[index]),
                   if (index < material.reservations.length - 1)
                     const SizedBox(height: AppSpacing.sm),
@@ -811,7 +882,10 @@ class _ReservationCard extends StatelessWidget {
     final colors = context.supplierColors;
     final learner = reservation.learnerDisplayName?.trim();
     final status = _reservationStatusLabel(reservation.status, l.isArabic);
-    final fulfillment = _humanizeLabel(reservation.fulfillmentLabel, l.isArabic);
+    final fulfillment = _humanizeLabel(
+      reservation.fulfillmentLabel,
+      l.isArabic,
+    );
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -830,7 +904,9 @@ class _ReservationCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   learner == null || learner.isEmpty ? l.learnerLabel : learner,
-                  style: context.supplierBody().copyWith(fontWeight: FontWeight.w700),
+                  style: context.supplierBody().copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               _ReservationStatusBadge(label: status),
@@ -967,7 +1043,9 @@ class _ActionFooter extends StatelessWidget {
                     children: [
                       if (material.canMarkUnavailable)
                         OutlinedButton(
-                          onPressed: statusSubmitting ? null : onMarkUnavailable,
+                          onPressed: statusSubmitting
+                              ? null
+                              : onMarkUnavailable,
                           style: AppStatusButtonStyle.outlined(
                             context,
                             AppStatusTone.danger,
@@ -978,7 +1056,9 @@ class _ActionFooter extends StatelessWidget {
                         ),
                       if (material.canRestoreAvailable)
                         OutlinedButton(
-                          onPressed: statusSubmitting ? null : onRestoreAvailable,
+                          onPressed: statusSubmitting
+                              ? null
+                              : onRestoreAvailable,
                           style: AppStatusButtonStyle.outlined(
                             context,
                             AppStatusTone.primary,
@@ -1028,10 +1108,10 @@ class _SmallProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SizedBox(
-        width: 18,
-        height: 18,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
+    width: 18,
+    height: 18,
+    child: CircularProgressIndicator(strokeWidth: 2),
+  );
 }
 
 class _SectionCard extends StatelessWidget {
@@ -1064,7 +1144,9 @@ class _SectionCard extends StatelessWidget {
                 child: Icon(icon, size: 18, color: colors.accent),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: Text(title, style: context.supplierSectionTitle())),
+              Expanded(
+                child: Text(title, style: context.supplierSectionTitle()),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1108,19 +1190,19 @@ class _MetricRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-        child: Row(
-          children: [
-            Expanded(child: Text(label, style: context.supplierBody())),
-            Text(
-              value,
-              style: context.supplierBody().copyWith(
-                fontWeight: emphasized ? FontWeight.w800 : FontWeight.w700,
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+    child: Row(
+      children: [
+        Expanded(child: Text(label, style: context.supplierBody())),
+        Text(
+          value,
+          style: context.supplierBody().copyWith(
+            fontWeight: emphasized ? FontWeight.w800 : FontWeight.w700,
+          ),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 class _InfoBanner extends StatelessWidget {
@@ -1166,12 +1248,12 @@ class _WorkspaceSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
     Widget block({double? height}) => Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: colors.chipUnselected,
-            borderRadius: AppRadius.lgAll,
-          ),
-        );
+      height: height,
+      decoration: BoxDecoration(
+        color: colors.chipUnselected,
+        borderRadius: AppRadius.lgAll,
+      ),
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1225,7 +1307,11 @@ class _ErrorPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 48, color: context.supplierColors.textMuted),
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 48,
+              color: context.supplierColors.textMuted,
+            ),
             const SizedBox(height: AppSpacing.md),
             Text(
               isNotFound ? l.materialNotFoundTitle : message,
@@ -1271,19 +1357,42 @@ class _Metric {
 
 String _formatDate(DateTime date, bool isArabic) {
   const englishMonths = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   const arabicMonths = [
-    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+    'يناير',
+    'فبراير',
+    'مارس',
+    'أبريل',
+    'مايو',
+    'يونيو',
+    'يوليو',
+    'أغسطس',
+    'سبتمبر',
+    'أكتوبر',
+    'نوفمبر',
+    'ديسمبر',
   ];
   final month = (isArabic ? arabicMonths : englishMonths)[date.month - 1];
-  return isArabic ? '${date.day} $month ${date.year}' : '$month ${date.day}, ${date.year}';
+  return isArabic
+      ? '${date.day} $month ${date.year}'
+      : '$month ${date.day}, ${date.year}';
 }
 
-String _formatQuantity(double value) =>
-    value == value.roundToDouble() ? value.toInt().toString() : value.toString();
+String _formatQuantity(double value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toString();
 
 String _reuseHistoryEmptyMessage(bool isArabic) => isArabic
     ? 'سيظهر سجل إعادة الاستخدام هنا بعد اكتمال الحجوزات.'
@@ -1318,6 +1427,10 @@ String _humanizeLabel(String value, bool isArabic) {
   return normalized
       .toLowerCase()
       .split('_')
-      .map((word) => word.isEmpty ? word : '${word[0].toUpperCase()}${word.substring(1)}')
+      .map(
+        (word) => word.isEmpty
+            ? word
+            : '${word[0].toUpperCase()}${word.substring(1)}',
+      )
       .join(' ');
 }

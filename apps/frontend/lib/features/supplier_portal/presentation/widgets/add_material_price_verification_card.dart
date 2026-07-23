@@ -38,9 +38,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            allowed
-                ? l.priceVerified
-                : _blockedTitle(context, result.reason),
+            allowed ? l.priceVerified : _blockedTitle(context, result.reason),
             style: context.supplierSectionTitle().copyWith(
               color: allowed
                   ? context.supplierColors.accent
@@ -98,10 +96,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
             ),
           if (result.candidates.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            Text(
-              l.didYouMeanThese,
-              style: context.supplierLabel(),
-            ),
+            Text(l.didYouMeanThese, style: context.supplierLabel()),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
               spacing: AppSpacing.sm,
@@ -110,7 +105,8 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
                   .map(
                     (candidate) => ActionChip(
                       label: Text(candidate.displayLabel),
-                      onPressed: () => onSelectSuggestion(candidate.displayLabel),
+                      onPressed: () =>
+                          onSelectSuggestion(candidate.displayLabel),
                     ),
                   )
                   .toList(),
@@ -129,9 +125,7 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
               onPressed: isRequestingPriceReview ? null : onSubmitPriceReview,
               icon: const Icon(Icons.request_quote_outlined),
               label: Text(
-                isRequestingPriceReview
-                    ? l.sending
-                    : l.submitPriceReview,
+                isRequestingPriceReview ? l.sending : l.submitPriceReview,
               ),
             ),
             if (priceReviewMessage != null) ...[
@@ -150,8 +144,8 @@ class AddMaterialPriceVerificationCard extends StatelessWidget {
       'PAID_OTHER_NOT_ALLOWED' => l.paidCannotUseOther,
       'AMBIGUOUS_MATERIAL_MATCH' => l.clarifyMaterialName,
       'PRICE_TOO_HIGH' => l.priceBlockedReason('PRICE_TOO_HIGH'),
-      'PRICE_RULE_REQUIRED' || 'MATERIAL_REVIEW_REQUIRED' =>
-        l.priceVerificationRequired,
+      'PRICE_RULE_REQUIRED' ||
+      'MATERIAL_REVIEW_REQUIRED' => l.priceVerificationRequired,
       _ => l.priceVerificationRequired,
     };
   }

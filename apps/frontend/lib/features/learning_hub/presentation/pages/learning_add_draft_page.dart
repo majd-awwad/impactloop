@@ -147,7 +147,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     final componentError = _validateComponentEntries(
       requireNamedComponents: true,
       materialCategories: materialSelectableCategories(
-        ref.read(materialCategoriesProvider).value ?? const <MaterialCategory>[],
+        ref.read(materialCategoriesProvider).value ??
+            const <MaterialCategory>[],
       ),
     );
     if (componentError != null) {
@@ -181,7 +182,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         difficulty: _mapDifficulty(_selectedDifficulty),
         estimatedDurationMinutes: _mapDurationMinutes(_selectedDuration),
         requiredComponents: _buildSubmitComponents(),
-        steps: LearningProjectStepText.parseStepsFromText(_stepsController.text),
+        steps: LearningProjectStepText.parseStepsFromText(
+          _stepsController.text,
+        ),
         links: _parseLinks(_linksController.text),
       );
       await ref.read(learningProjectDraftStorageProvider).clearDraft();
@@ -276,7 +279,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return LearningProjectSubmitSummary(
       componentCount: namedComponents.length,
       toolCount: namedComponents
-          .where((component) => component.role == LearningProjectComponentRole.tool)
+          .where(
+            (component) => component.role == LearningProjectComponentRole.tool,
+          )
           .length,
       stepCount: _nonEmptyLines(_stepsController.text).length,
     );
@@ -327,7 +332,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return _validateComponentEntries(
       requireNamedComponents: false,
       materialCategories: materialSelectableCategories(
-        ref.read(materialCategoriesProvider).value ?? const <MaterialCategory>[],
+        ref.read(materialCategoriesProvider).value ??
+            const <MaterialCategory>[],
       ),
     );
   }
@@ -378,7 +384,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) return 'Short description is required.';
     if (trimmed.length < 10) return 'Use at least 10 characters.';
-    if (trimmed.length > 500) return 'Keep the short description under 500 characters.';
+    if (trimmed.length > 500)
+      return 'Keep the short description under 500 characters.';
     return null;
   }
 
@@ -690,9 +697,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               _componentValidationMessage!,
-              style: AppTextStyles.body(context).copyWith(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: Theme.of(context).colorScheme.error),
             ),
           ],
           const SizedBox(height: AppSpacing.md),

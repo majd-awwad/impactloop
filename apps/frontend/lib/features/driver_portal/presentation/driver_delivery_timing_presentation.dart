@@ -115,7 +115,8 @@ DriverActionTimingGate evaluatePickupHandoverTiming(
     return DriverActionTimingGate(
       isBlocked: true,
       title: 'Pickup confirmation is not available yet',
-      body: 'Pickup can be confirmed from ${formatDriverTime(allowedStart)} '
+      body:
+          'Pickup can be confirmed from ${formatDriverTime(allowedStart)} '
           '(30 minutes before the supplier window).',
       availableAt: allowedStart,
       remainingLabel: formatRemainingDuration(remaining),

@@ -70,7 +70,8 @@ class _SupplierVerificationPendingPageState
   @override
   Widget build(BuildContext context) {
     final asyncStatus = ref.watch(supplierVerificationStatusProvider);
-    final compact = MediaQuery.sizeOf(context).width < AppSpacing.authLayoutBreakpoint;
+    final compact =
+        MediaQuery.sizeOf(context).width < AppSpacing.authLayoutBreakpoint;
 
     return AuthShell(
       layout: compact ? AuthShellLayout.mobile : AuthShellLayout.webSplit,
@@ -127,7 +128,9 @@ class _SupplierVerificationPendingPageState
                     if (status.verificationSubmittedAt != null)
                       _InfoTile(
                         label: 'Submitted',
-                        value: dateFormat.format(status.verificationSubmittedAt!),
+                        value: dateFormat.format(
+                          status.verificationSubmittedAt!,
+                        ),
                       ),
                     if (status.verificationDocumentName != null)
                       _InfoTile(
@@ -189,16 +192,10 @@ class _InfoTile extends StatelessWidget {
         children: [
           SizedBox(
             width: 110,
-            child: Text(
-              label,
-              style: AppTextStyles.subtitle(context),
-            ),
+            child: Text(label, style: AppTextStyles.subtitle(context)),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: Text(value, style: Theme.of(context).textTheme.bodyMedium),
           ),
         ],
       ),

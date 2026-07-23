@@ -152,10 +152,9 @@ class _LearnerAwaitingConfirmationPanelState
         children: [
           Text(
             'Action required',
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.sm),
           if (reservation.isPickupFulfillment) ...[
@@ -163,9 +162,9 @@ class _LearnerAwaitingConfirmationPanelState
                 case final preferred?) ...[
               Text(
                 preferred,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
@@ -173,9 +172,9 @@ class _LearnerAwaitingConfirmationPanelState
                 case final proposed?) ...[
               Text(
                 proposed,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
               const SizedBox(height: AppSpacing.sm),
             ],
@@ -212,9 +211,9 @@ class _LearnerAwaitingConfirmationPanelState
                 case final supplierPickup?) ...[
               Text(
                 supplierPickup,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
@@ -222,9 +221,9 @@ class _LearnerAwaitingConfirmationPanelState
                 case final earliest?) ...[
               Text(
                 earliest,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
@@ -232,9 +231,9 @@ class _LearnerAwaitingConfirmationPanelState
                 case final preferred?) ...[
               Text(
                 preferred,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
@@ -242,9 +241,9 @@ class _LearnerAwaitingConfirmationPanelState
                 case final proposedDelivery?) ...[
               Text(
                 proposedDelivery,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
@@ -252,9 +251,9 @@ class _LearnerAwaitingConfirmationPanelState
                 case final conflict?) ...[
               Text(
                 conflict,
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textMuted,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textMuted),
               ),
               const SizedBox(height: AppSpacing.sm),
             ],
@@ -272,7 +271,8 @@ class _LearnerAwaitingConfirmationPanelState
                 });
               },
             ),
-            if (_deliveryWindow.start != null && _deliveryWindow.end != null) ...[
+            if (_deliveryWindow.start != null &&
+                _deliveryWindow.end != null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
                 formatPreferredWindowRange(
@@ -282,9 +282,9 @@ class _LearnerAwaitingConfirmationPanelState
                   ),
                   prefix: 'Selected delivery window',
                 ),
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
             ],
             const SizedBox(height: AppSpacing.sm),
@@ -321,9 +321,9 @@ class _LearnerAwaitingConfirmationPanelState
             const SizedBox(height: AppSpacing.sm),
             Text(
               _errorMessage!,
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.danger,
-              ),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: colors.danger),
             ),
           ],
         ],

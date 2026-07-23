@@ -45,7 +45,9 @@ void main() {
       await tester.pumpWidget(const _Harness());
       await tester.pumpAndSettle();
       final desktopWidth = tester
-          .renderObject<RenderBox>(find.byKey(const ValueKey('location-mode-width')))
+          .renderObject<RenderBox>(
+            find.byKey(const ValueKey('location-mode-width')),
+          )
           .size
           .width;
       expect(desktopWidth, 480);
@@ -54,7 +56,9 @@ void main() {
       await tester.pumpWidget(const _Harness());
       await tester.pumpAndSettle();
       final mobileWidth = tester
-          .renderObject<RenderBox>(find.byKey(const ValueKey('location-mode-width')))
+          .renderObject<RenderBox>(
+            find.byKey(const ValueKey('location-mode-width')),
+          )
           .size
           .width;
       expect(mobileWidth, lessThan(360));

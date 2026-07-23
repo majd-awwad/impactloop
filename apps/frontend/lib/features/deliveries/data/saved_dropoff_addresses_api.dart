@@ -10,9 +10,7 @@ class SavedDropoffAddressesApi {
 
   Future<List<SavedDropoffAddress>> fetchSavedAddresses() {
     return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>(
-        '/api/learner/saved-dropoff-addresses',
-      ),
+      _client.get<Map<String, dynamic>>('/api/learner/saved-dropoff-addresses'),
       (json) {
         final items = json['items'];
         if (items is! List) {
@@ -22,9 +20,8 @@ class SavedDropoffAddressesApi {
         return items
             .whereType<Map>()
             .map(
-              (item) => SavedDropoffAddress.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  SavedDropoffAddress.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList(growable: false);
       },

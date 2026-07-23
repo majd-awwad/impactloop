@@ -236,7 +236,8 @@ class _SupplierMyMaterialsPageState
                             priceFilter: priceFilter,
                             categories: categories,
                             selectedCategoryId: query.categoryId,
-                            filtersActive: query.search.trim().isNotEmpty ||
+                            filtersActive:
+                                query.search.trim().isNotEmpty ||
                                 query.status != null ||
                                 query.isFree != null ||
                                 query.categoryId != null,
@@ -251,8 +252,9 @@ class _SupplierMyMaterialsPageState
                             shownCount: result.items.length,
                             totalCount: result.pagination.totalItems,
                             activeFilterLabels: activeFilterLabels,
-                            onClearFilters:
-                                activeFilterLabels.isEmpty ? null : _clearFilters,
+                            onClearFilters: activeFilterLabels.isEmpty
+                                ? null
+                                : _clearFilters,
                           ),
                           const SizedBox(height: AppSpacing.md),
                           if (result.pagination.totalItems == 0)
@@ -342,10 +344,7 @@ class _SupplierMyMaterialsPageState
 }
 
 class _PageHeader extends StatelessWidget {
-  const _PageHeader({
-    required this.actionLabel,
-    required this.onAction,
-  });
+  const _PageHeader({required this.actionLabel, required this.onAction});
 
   final String actionLabel;
   final VoidCallback onAction;
@@ -359,9 +358,9 @@ class _PageHeader extends StatelessWidget {
         Text(
           'Inventory overview',
           style: context.supplierSectionTitle().copyWith(
-                color: colors.textPrimary,
-                fontSize: 18,
-              ),
+            color: colors.textPrimary,
+            fontSize: 18,
+          ),
         ),
         const SizedBox(height: 3),
         Text(
@@ -389,7 +388,11 @@ class _PageHeader extends StatelessWidget {
         if (constraints.maxWidth < 560) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [text, const SizedBox(height: AppSpacing.sm), action],
+            children: [
+              text,
+              const SizedBox(height: AppSpacing.sm),
+              action,
+            ],
           );
         }
         return Row(
@@ -455,7 +458,9 @@ class _FilterToolbar extends StatelessWidget {
               style: context.supplierBody().copyWith(color: colors.textPrimary),
               decoration: InputDecoration(
                 hintText: searchHint,
-                hintStyle: context.supplierBody().copyWith(color: colors.textMuted),
+                hintStyle: context.supplierBody().copyWith(
+                  color: colors.textMuted,
+                ),
                 prefixIcon: Icon(Icons.search, color: colors.accent),
                 suffixIcon: value.text.isEmpty
                     ? null
@@ -483,7 +488,10 @@ class _FilterToolbar extends StatelessWidget {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: AppRadius.lgAll,
-                  borderSide: BorderSide(color: colors.borderFocused, width: 1.5),
+                  borderSide: BorderSide(
+                    color: colors.borderFocused,
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -527,29 +535,30 @@ class _FilterToolbar extends StatelessWidget {
 
           return Column(
             children: [
-              if (medium)
-                ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 3, child: search),
-                      if (categories.isNotEmpty) ...[
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(flex: 2, child: category),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(width: 344, child: filters),
+              if (medium) ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: search),
+                    if (categories.isNotEmpty) ...[
                       const SizedBox(width: AppSpacing.sm),
-                      Padding(padding: const EdgeInsets.only(top: 5), child: reset),
+                      Expanded(flex: 2, child: category),
                     ],
-                  ),
-                ]
-              else ...[
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 344, child: filters),
+                    const SizedBox(width: AppSpacing.sm),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5),
+                      child: reset,
+                    ),
+                  ],
+                ),
+              ] else ...[
                 search,
                 const SizedBox(height: AppSpacing.sm),
                 filters,
@@ -590,9 +599,9 @@ class _ResultsHeader extends StatelessWidget {
         Text(
           'Materials',
           style: context.supplierSectionTitle().copyWith(
-                color: colors.textPrimary,
-                fontSize: 17,
-              ),
+            color: colors.textPrimary,
+            fontSize: 17,
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
@@ -619,9 +628,9 @@ class _ResultsHeader extends StatelessWidget {
             child: Text(
               filter,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colors.accent,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: colors.accent,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         if (onClearFilters != null)
@@ -635,11 +644,19 @@ class _ResultsHeader extends StatelessWidget {
         if (constraints.maxWidth < 720) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [label, const SizedBox(height: AppSpacing.sm), activeFilters],
+            children: [
+              label,
+              const SizedBox(height: AppSpacing.sm),
+              activeFilters,
+            ],
           );
         }
         return Row(
-          children: [label, const Spacer(), Flexible(child: activeFilters)],
+          children: [
+            label,
+            const Spacer(),
+            Flexible(child: activeFilters),
+          ],
         );
       },
     );
@@ -659,8 +676,13 @@ class _LoadingBody extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 1000 ? 5 : compact ? 2 : 3;
-            final width = (constraints.maxWidth - (columns - 1) * AppSpacing.sm) /
+            final columns = constraints.maxWidth >= 1000
+                ? 5
+                : compact
+                ? 2
+                : 3;
+            final width =
+                (constraints.maxWidth - (columns - 1) * AppSpacing.sm) /
                 columns;
             return Wrap(
               spacing: AppSpacing.sm,
@@ -723,7 +745,9 @@ class _PaginationBar extends StatelessWidget {
     final l = context.s;
 
     final first = totalItems == 0 ? 0 : ((page - 1) * pageSize) + 1;
-    final last = totalItems == 0 ? 0 : (first + pageSize - 1).clamp(0, totalItems);
+    final last = totalItems == 0
+        ? 0
+        : (first + pageSize - 1).clamp(0, totalItems);
     final countLabel = '$first–$last / $totalItems';
 
     final controls = Row(
@@ -731,7 +755,10 @@ class _PaginationBar extends StatelessWidget {
       children: [
         OutlinedButton(onPressed: onPrevious, child: Text(l.previousPage)),
         const SizedBox(width: AppSpacing.sm),
-        Text(l.paginationLabel(page, totalPages), style: context.supplierBody()),
+        Text(
+          l.paginationLabel(page, totalPages),
+          style: context.supplierBody(),
+        ),
         const SizedBox(width: AppSpacing.sm),
         OutlinedButton(onPressed: onNext, child: Text(l.nextPage)),
       ],

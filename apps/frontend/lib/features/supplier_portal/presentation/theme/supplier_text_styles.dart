@@ -27,13 +27,12 @@ abstract final class SupplierTextStyles {
         color: c.textSecondary,
       );
 
-  static TextStyle body(BuildContext context, SupplierUiPalette c) =>
-      TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w400,
-        height: 1.45,
-        color: c.textSecondary,
-      );
+  static TextStyle body(BuildContext context, SupplierUiPalette c) => TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.45,
+    color: c.textSecondary,
+  );
 
   static TextStyle label(BuildContext context, SupplierUiPalette c) =>
       TextStyle(
@@ -43,18 +42,13 @@ abstract final class SupplierTextStyles {
       );
 
   static TextStyle link(BuildContext context, SupplierUiPalette c) =>
-      TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: c.link,
-      );
+      TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: c.link);
 
-  static TextStyle chip(BuildContext context, SupplierUiPalette c) =>
-      TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w500,
-        color: c.textPrimary,
-      );
+  static TextStyle chip(BuildContext context, SupplierUiPalette c) => TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    color: c.textPrimary,
+  );
 
   static TextStyle navBrand(BuildContext context, SupplierUiPalette c) =>
       TextStyle(

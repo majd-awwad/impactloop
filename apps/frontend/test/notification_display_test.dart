@@ -33,32 +33,30 @@ void main() {
         NotificationVisualCategory.deliveryUpdate,
       );
       expect(
-        notificationTypeChipLabel(
-          categoryForNotification(notification),
-        ),
+        notificationTypeChipLabel(categoryForNotification(notification)),
         'Delivery update',
       );
       expect(sanitized.title, 'Delivery moved to admin review');
-      expect(
-        sanitized.body,
-        contains('pickup was not completed'),
-      );
+      expect(sanitized.body, contains('pickup was not completed'));
       expect(sanitized.title, isNot(contains('DRIVER_DELIVERY_MOVED')));
     });
 
-    test('uses inactive delivery detail route for moved-to-admin-review tap', () {
-      final notification = _deliveryNotification(
-        notificationType: 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW',
-        deliveryId: 'delivery-42',
-      );
+    test(
+      'uses inactive delivery detail route for moved-to-admin-review tap',
+      () {
+        final notification = _deliveryNotification(
+          notificationType: 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW',
+          deliveryId: 'delivery-42',
+        );
 
-      expect(notificationHasNavigationTarget(notification), isTrue);
-      expect(notificationActionLabel(notification), 'View details');
-      expect(
-        driverDeliveryNotificationRoute(notification),
-        '/driver/deliveries/delivery-42',
-      );
-    });
+        expect(notificationHasNavigationTarget(notification), isTrue);
+        expect(notificationActionLabel(notification), 'View details');
+        expect(
+          driverDeliveryNotificationRoute(notification),
+          '/driver/deliveries/delivery-42',
+        );
+      },
+    );
 
     test('new job notifications still route to jobs board', () {
       final notification = _deliveryNotification(
@@ -67,10 +65,7 @@ void main() {
       );
 
       expect(notificationActionLabel(notification), 'View jobs');
-      expect(
-        driverDeliveryNotificationRoute(notification),
-        '/driver/jobs',
-      );
+      expect(driverDeliveryNotificationRoute(notification), '/driver/jobs');
     });
 
     test('unknown notification types keep safe fallback labels', () {
@@ -87,7 +82,10 @@ void main() {
         categoryForNotification(notification),
         NotificationVisualCategory.general,
       );
-      expect(notificationTypeChipLabel(NotificationVisualCategory.general), 'Update');
+      expect(
+        notificationTypeChipLabel(NotificationVisualCategory.general),
+        'Update',
+      );
       expect(notificationActionLabel(notification), 'Open');
       expect(notificationHasNavigationTarget(notification), isFalse);
       expect(driverDeliveryNotificationRoute(notification), isNull);

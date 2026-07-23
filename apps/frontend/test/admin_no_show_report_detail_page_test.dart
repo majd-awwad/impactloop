@@ -55,7 +55,9 @@ AdminNoShowReportDetail _detail({
 }
 
 void main() {
-  testWidgets('renders a full incident workspace from contract actions', (tester) async {
+  testWidgets('renders a full incident workspace from contract actions', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1600, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final detail = _detail();

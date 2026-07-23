@@ -62,36 +62,83 @@ class AddMaterialPreviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(Icons.visibility_outlined, size: 20, color: colors.accent),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Text(context.s.listingPreview, style: context.supplierTitle())),
-          ]),
+          Row(
+            children: [
+              Icon(Icons.visibility_outlined, size: 20, color: colors.accent),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  context.s.listingPreview,
+                  style: context.supplierTitle(),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xs),
-          Text('This is how your material will appear to learners.', style: context.supplierBody().copyWith(color: colors.textMuted)),
+          Text(
+            'This is how your material will appear to learners.',
+            style: context.supplierBody().copyWith(color: colors.textMuted),
+          ),
           const SizedBox(height: AppSpacing.md),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: SizedBox(height: 168, width: double.infinity, child: _coverImage(context)),
+            child: SizedBox(
+              height: 168,
+              width: double.infinity,
+              child: _coverImage(context),
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
-          Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
-            _PreviewBadge(label: category?.nameEn ?? 'Category'),
-            _PreviewBadge(label: context.s.conditionLabel(condition)),
-            _PreviewBadge(label: isFree ? context.s.free : '₪${price?.isEmpty ?? true ? '—' : price}'),
-          ]),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: [
+              _PreviewBadge(label: category?.nameEn ?? 'Category'),
+              _PreviewBadge(label: context.s.conditionLabel(condition)),
+              _PreviewBadge(
+                label: isFree
+                    ? context.s.free
+                    : '₪${price?.isEmpty ?? true ? '—' : price}',
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           Text(
             title.isEmpty ? 'Material title will appear here' : title,
             style: context.supplierSectionTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(description.isEmpty ? 'Short description of your material will appear here.' : description, maxLines: 3, overflow: TextOverflow.ellipsis, style: context.supplierBody().copyWith(color: colors.textMuted)),
+          Text(
+            description.isEmpty
+                ? 'Short description of your material will appear here.'
+                : description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: context.supplierBody().copyWith(color: colors.textMuted),
+          ),
           const SizedBox(height: AppSpacing.md),
-          _PreviewMetadata(icon: Icons.grid_view_outlined, value: quantity.isEmpty || unit.isEmpty ? 'Quantity will appear here' : '$quantity $unit'),
-          _PreviewMetadata(icon: Icons.location_on_outlined, value: pickupLabel?.isNotEmpty == true ? pickupLabel! : 'Pickup location will appear here'),
-          _PreviewMetadata(icon: Icons.inventory_2_outlined, value: pickupAllowed ? 'Pickup available' : 'Pickup unavailable'),
-          _PreviewMetadata(icon: Icons.local_shipping_outlined, value: deliveryAllowed ? 'Internal delivery available' : 'Delivery unavailable'),
+          _PreviewMetadata(
+            icon: Icons.grid_view_outlined,
+            value: quantity.isEmpty || unit.isEmpty
+                ? 'Quantity will appear here'
+                : '$quantity $unit',
+          ),
+          _PreviewMetadata(
+            icon: Icons.location_on_outlined,
+            value: pickupLabel?.isNotEmpty == true
+                ? pickupLabel!
+                : 'Pickup location will appear here',
+          ),
+          _PreviewMetadata(
+            icon: Icons.inventory_2_outlined,
+            value: pickupAllowed ? 'Pickup available' : 'Pickup unavailable',
+          ),
+          _PreviewMetadata(
+            icon: Icons.local_shipping_outlined,
+            value: deliveryAllowed
+                ? 'Internal delivery available'
+                : 'Delivery unavailable',
+          ),
           if (!isFree && priceStatus != null) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
@@ -114,9 +161,14 @@ class AddMaterialPreviewCard extends StatelessWidget {
   }
 
   Widget _coverImage(BuildContext context) {
-    if (coverImageBytes != null) return Image.memory(coverImageBytes!, fit: BoxFit.cover);
+    if (coverImageBytes != null)
+      return Image.memory(coverImageBytes!, fit: BoxFit.cover);
     if (coverImageUrl != null && coverImageUrl!.isNotEmpty) {
-      return Image.network(ApiConfig.resolveMediaUrl(coverImageUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => _emptyImage(context));
+      return Image.network(
+        ApiConfig.resolveMediaUrl(coverImageUrl!),
+        fit: BoxFit.cover,
+        errorBuilder: (_, _, _) => _emptyImage(context),
+      );
     }
     return _emptyImage(context);
   }
@@ -124,12 +176,24 @@ class AddMaterialPreviewCard extends StatelessWidget {
   Widget _emptyImage(BuildContext context) => Container(
     color: context.supplierColors.surfaceSolid,
     alignment: Alignment.center,
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.image_outlined, color: context.supplierColors.textSecondary, size: 34),
-      const SizedBox(height: AppSpacing.xs),
-      Text('No image yet', style: context.supplierLabel()),
-      Text('Add photos to see preview', style: context.supplierBody().copyWith(color: context.supplierColors.textMuted)),
-    ]),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.image_outlined,
+          color: context.supplierColors.textSecondary,
+          size: 34,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text('No image yet', style: context.supplierLabel()),
+        Text(
+          'Add photos to see preview',
+          style: context.supplierBody().copyWith(
+            color: context.supplierColors.textMuted,
+          ),
+        ),
+      ],
+    ),
   );
 
   String _priceStatusMessage(
@@ -164,7 +228,12 @@ class _PreviewMetadata extends StatelessWidget {
           Icon(icon, size: 17, color: context.supplierColors.textSecondary),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.supplierBody()),
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.supplierBody(),
+            ),
           ),
         ],
       ),

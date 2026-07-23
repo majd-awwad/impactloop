@@ -31,29 +31,34 @@ class _IncidentQuery {
 
 final _incidentReportsProvider = FutureProvider.autoDispose
     .family<AdminNoShowReportsListResponse, _IncidentQuery>((ref, query) {
-  return ref.watch(adminNoShowReportsApiProvider).fetchReports(
-        status: query.status,
-        page: query.page,
-        limit: _pageSize,
-      );
-});
+      return ref
+          .watch(adminNoShowReportsApiProvider)
+          .fetchReports(
+            status: query.status,
+            page: query.page,
+            limit: _pageSize,
+          );
+    });
 
 final _incidentSummaryProvider = FutureProvider.autoDispose
     .family<_IncidentSummary, String?>((ref, selectedStatus) async {
-  final api = ref.watch(adminNoShowReportsApiProvider);
-  if (selectedStatus != null) {
-    final response = await api.fetchReports(status: selectedStatus, limit: 100);
-    return _IncidentSummary.fromScopedResponse(response, selectedStatus);
-  }
-  final responses = await Future.wait([
-    api.fetchReports(status: 'PENDING_REVIEW', limit: 1),
-    api.fetchReports(status: 'VERIFIED', limit: 1),
-    api.fetchReports(status: 'REJECTED', limit: 1),
-    api.fetchReports(status: 'RESOLVED_NO_STRIKE', limit: 1),
-    api.fetchReports(limit: 100),
-  ]);
-  return _IncidentSummary.fromAllResponses(responses);
-});
+      final api = ref.watch(adminNoShowReportsApiProvider);
+      if (selectedStatus != null) {
+        final response = await api.fetchReports(
+          status: selectedStatus,
+          limit: 100,
+        );
+        return _IncidentSummary.fromScopedResponse(response, selectedStatus);
+      }
+      final responses = await Future.wait([
+        api.fetchReports(status: 'PENDING_REVIEW', limit: 1),
+        api.fetchReports(status: 'VERIFIED', limit: 1),
+        api.fetchReports(status: 'REJECTED', limit: 1),
+        api.fetchReports(status: 'RESOLVED_NO_STRIKE', limit: 1),
+        api.fetchReports(limit: 100),
+      ]);
+      return _IncidentSummary.fromAllResponses(responses);
+    });
 
 class _IncidentSummary {
   const _IncidentSummary({
@@ -79,8 +84,8 @@ class _IncidentSummary {
       resolved: status == 'PENDING_REVIEW' ? 0 : response.total,
       operationalRequired: complete
           ? response.items
-              .where((item) => item.operationalState == 'REQUIRES_RESOLUTION')
-              .length
+                .where((item) => item.operationalState == 'REQUIRES_RESOLUTION')
+                .length
           : null,
     );
   }
@@ -99,8 +104,8 @@ class _IncidentSummary {
       resolved: (total - responses.first.total).clamp(0, total),
       operationalRequired: complete
           ? allReports.items
-              .where((item) => item.operationalState == 'REQUIRES_RESOLUTION')
-              .length
+                .where((item) => item.operationalState == 'REQUIRES_RESOLUTION')
+                .length
           : null,
     );
   }
@@ -146,10 +151,8 @@ class _AdminNoShowReportsPageState
     super.dispose();
   }
 
-  _IncidentQuery get _query => _IncidentQuery(
-        status: _status == 'ALL' ? null : _status,
-        page: _page,
-      );
+  _IncidentQuery get _query =>
+      _IncidentQuery(status: _status == 'ALL' ? null : _status, page: _page);
 
   String? get _summaryStatus => _status == 'ALL' ? null : _status;
 
@@ -202,25 +205,28 @@ class _AdminNoShowReportsPageState
     List<AdminNoShowReportItem> reports,
   ) {
     final search = _searchController.text.trim().toLowerCase();
-    return reports.where((report) {
-      final searchable = [
-        report.id,
-        report.materialTitle,
-        report.learnerName,
-        report.supplierName,
-        report.targetName,
-      ].join(' ').toLowerCase();
-      final date = report.createdAt.toLocal();
-      final matchesDate = _dateRange == null ||
-          (!date.isBefore(_dateRange!.start) &&
-              date.isBefore(_dateRange!.end.add(const Duration(days: 1))));
-      return (search.isEmpty || searchable.contains(search)) &&
-          (_workflow == 'ALL' || report.workflowType == _workflow) &&
-          (_target == 'ALL' || report.targetRole == _target) &&
-          (_operational == 'ALL' ||
-              report.operationalState == _operational) &&
-          matchesDate;
-    }).toList(growable: false);
+    return reports
+        .where((report) {
+          final searchable = [
+            report.id,
+            report.materialTitle,
+            report.learnerName,
+            report.supplierName,
+            report.targetName,
+          ].join(' ').toLowerCase();
+          final date = report.createdAt.toLocal();
+          final matchesDate =
+              _dateRange == null ||
+              (!date.isBefore(_dateRange!.start) &&
+                  date.isBefore(_dateRange!.end.add(const Duration(days: 1))));
+          return (search.isEmpty || searchable.contains(search)) &&
+              (_workflow == 'ALL' || report.workflowType == _workflow) &&
+              (_target == 'ALL' || report.targetRole == _target) &&
+              (_operational == 'ALL' ||
+                  report.operationalState == _operational) &&
+              matchesDate;
+        })
+        .toList(growable: false);
   }
 
   @override
@@ -325,7 +331,9 @@ class _KpiSection extends StatelessWidget {
       _KpiData(
         'Operational required',
         data?.operationalRequired?.toString() ?? '—',
-        data?.operationalRequired == null ? 'Unavailable in summary' : 'Need recovery action',
+        data?.operationalRequired == null
+            ? 'Unavailable in summary'
+            : 'Need recovery action',
         Icons.health_and_safety_outlined,
         scheme.secondary,
       ),
@@ -337,9 +345,12 @@ class _KpiSection extends StatelessWidget {
         context.adminPalette.purple,
       ),
     ];
-    final columns = width >= 980 ? 4 : width >= 520 ? 2 : 1;
-    final cardWidth =
-        (width - ((columns - 1) * AppSpacing.md)) / columns;
+    final columns = width >= 980
+        ? 4
+        : width >= 520
+        ? 2
+        : 1;
+    final cardWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
     return Wrap(
       spacing: AppSpacing.md,
       runSpacing: AppSpacing.md,
@@ -408,7 +419,9 @@ class _CompactKpiCard extends StatelessWidget {
                 const SizedBox(height: 1),
                 Text(
                   data.value,
-                  style: AdminTypography.kpiValue(palette).copyWith(fontSize: 22),
+                  style: AdminTypography.kpiValue(
+                    palette,
+                  ).copyWith(fontSize: 22),
                 ),
                 Text(
                   data.helper,
@@ -612,18 +625,18 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 52,
-        child: TextField(
-          controller: controller,
-          onChanged: onChanged,
-          maxLines: 1,
-          decoration: const InputDecoration(
-            hintText: 'Search by material, learner, supplier, or report ID...',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
-          ),
-        ),
-      );
+    height: 52,
+    child: TextField(
+      controller: controller,
+      onChanged: onChanged,
+      maxLines: 1,
+      decoration: const InputDecoration(
+        hintText: 'Search by material, learner, supplier, or report ID...',
+        prefixIcon: Icon(Icons.search),
+        border: OutlineInputBorder(),
+      ),
+    ),
+  );
 }
 
 class _FilterDropdown extends StatelessWidget {
@@ -640,28 +653,28 @@ class _FilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: 52,
-        child: DropdownButtonFormField<String>(
-          key: ValueKey('$label:$value'),
-          initialValue: value,
-          isExpanded: true,
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-          ),
-          items: entries.entries
-              .map(
-                (entry) => DropdownMenuItem(
-                  value: entry.key,
-                  child: Text(entry.value, overflow: TextOverflow.ellipsis),
-                ),
-              )
-              .toList(growable: false),
-          onChanged: (next) {
-            if (next != null) onChanged(next);
-          },
-        ),
-      );
+    height: 52,
+    child: DropdownButtonFormField<String>(
+      key: ValueKey('$label:$value'),
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+      ),
+      items: entries.entries
+          .map(
+            (entry) => DropdownMenuItem(
+              value: entry.key,
+              child: Text(entry.value, overflow: TextOverflow.ellipsis),
+            ),
+          )
+          .toList(growable: false),
+      onChanged: (next) {
+        if (next != null) onChanged(next);
+      },
+    ),
+  );
 }
 
 class _DateRangeField extends StatelessWidget {
@@ -710,61 +723,66 @@ class _IncidentResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: context.adminPalette.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: context.adminPalette.cardBorder),
-        ),
-        child: Column(
-          children: [
-            if (desktopTable) ...[
-              const _TableHeader(),
-              ...items.map(
-                (report) => _TableRow(report: report, onView: onView),
-              ),
-            ] else
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: items
-                      .map(
-                        (report) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _IncidentCard(report: report, onView: onView),
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-              ),
-            _PaginationFooter(
-              response: response,
-              shown: items.length,
-              locallyRefined: localFiltersActive,
-              onPage: onPage,
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: context.adminPalette.cardBackground,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: context.adminPalette.cardBorder),
+    ),
+    child: Column(
+      children: [
+        if (desktopTable) ...[
+          const _TableHeader(),
+          ...items.map((report) => _TableRow(report: report, onView: onView)),
+        ] else
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: items
+                  .map(
+                    (report) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _IncidentCard(report: report, onView: onView),
+                    ),
+                  )
+                  .toList(growable: false),
             ),
-          ],
+          ),
+        _PaginationFooter(
+          response: response,
+          shown: items.length,
+          locallyRefined: localFiltersActive,
+          onPage: onPage,
         ),
-      );
+      ],
+    ),
+  );
 }
 
 List<Widget> _tableCells(List<Widget> children) => List.generate(
-      children.length,
-      (index) => Expanded(
-        flex: _tableFlexes[index],
-        child: Padding(
-          padding: const EdgeInsetsDirectional.only(end: 10),
-          child: children[index],
-        ),
-      ),
-    );
+  children.length,
+  (index) => Expanded(
+    flex: _tableFlexes[index],
+    child: Padding(
+      padding: const EdgeInsetsDirectional.only(end: 10),
+      child: children[index],
+    ),
+  ),
+);
 
 class _TableHeader extends StatelessWidget {
   const _TableHeader();
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    const labels = ['Incident', 'Target', 'Workflow', 'Status', 'Created', 'Actions'];
+    const labels = [
+      'Incident',
+      'Target',
+      'Workflow',
+      'Status',
+      'Created',
+      'Actions',
+    ];
     return Container(
       height: 46,
       padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 12, 0),
@@ -797,32 +815,34 @@ class _TableRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: () => onView(report.id),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 72),
-          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 12, 10),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: context.adminPalette.cardBorder)),
-          ),
-          child: Row(
-            children: _tableCells([
-              _IncidentIdentity(report: report),
-              _TargetCell(report: report),
-              _WorkflowCell(report: report),
-              _StatusCell(status: report.status),
-              _CreatedCell(createdAt: report.createdAt),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: IconButton(
-                  tooltip: 'View incident',
-                  onPressed: () => onView(report.id),
-                  icon: const Icon(Icons.visibility_outlined),
-                ),
-              ),
-            ]),
-          ),
+    onTap: () => onView(report.id),
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 72),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 12, 10),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: context.adminPalette.cardBorder),
         ),
-      );
+      ),
+      child: Row(
+        children: _tableCells([
+          _IncidentIdentity(report: report),
+          _TargetCell(report: report),
+          _WorkflowCell(report: report),
+          _StatusCell(status: report.status),
+          _CreatedCell(createdAt: report.createdAt),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: IconButton(
+              tooltip: 'View incident',
+              onPressed: () => onView(report.id),
+              icon: const Icon(Icons.visibility_outlined),
+            ),
+          ),
+        ]),
+      ),
+    ),
+  );
 }
 
 class _IncidentCard extends StatelessWidget {
@@ -832,32 +852,41 @@ class _IncidentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          border: Border.all(color: context.adminPalette.cardBorder),
-          borderRadius: BorderRadius.circular(12),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      border: Border.all(color: context.adminPalette.cardBorder),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _IncidentIdentity(report: report),
+        const SizedBox(height: 12),
+        _WorkflowCell(report: report),
+        const SizedBox(height: 12),
+        _CardLine(
+          label: 'Target',
+          child: _TargetCell(report: report),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _IncidentIdentity(report: report),
-            const SizedBox(height: 12),
-            _WorkflowCell(report: report),
-            const SizedBox(height: 12),
-            _CardLine(label: 'Target', child: _TargetCell(report: report)),
-            _CardLine(label: 'Status', child: _StatusCell(status: report.status)),
-            _CardLine(label: 'Created', child: _CreatedCell(createdAt: report.createdAt)),
-            Align(
-              alignment: AlignmentDirectional.centerEnd,
-              child: IconButton(
-                tooltip: 'View incident',
-                onPressed: () => onView(report.id),
-                icon: const Icon(Icons.visibility_outlined),
-              ),
-            ),
-          ],
+        _CardLine(
+          label: 'Status',
+          child: _StatusCell(status: report.status),
         ),
-      );
+        _CardLine(
+          label: 'Created',
+          child: _CreatedCell(createdAt: report.createdAt),
+        ),
+        Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: IconButton(
+            tooltip: 'View incident',
+            onPressed: () => onView(report.id),
+            icon: const Icon(Icons.visibility_outlined),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _IncidentIdentity extends StatelessWidget {
@@ -895,7 +924,9 @@ class _IncidentIdentity extends StatelessWidget {
                 incidentReasonTitle(report.reasonCode),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AdminTypography.sectionTitle(palette).copyWith(fontSize: 14),
+                style: AdminTypography.sectionTitle(
+                  palette,
+                ).copyWith(fontSize: 14),
               ),
               const SizedBox(height: 2),
               Tooltip(
@@ -925,8 +956,8 @@ class _TargetCell extends StatelessWidget {
     final name = isSystem
         ? 'System'
         : isAvailable
-            ? report.targetName
-            : 'Target unavailable';
+        ? report.targetName
+        : 'Target unavailable';
     final role = isSystem
         ? 'No individual target'
         : incidentTargetRoleLabel(report.targetRole);
@@ -947,8 +978,9 @@ class _TargetCell extends StatelessWidget {
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AdminTypography.pageSubtitle(context.adminPalette)
-                    .copyWith(fontSize: 13),
+                style: AdminTypography.pageSubtitle(
+                  context.adminPalette,
+                ).copyWith(fontSize: 13),
               ),
               Text(
                 role,
@@ -969,23 +1001,23 @@ class _WorkflowCell extends StatelessWidget {
   final AdminNoShowReportItem report;
   @override
   Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: incidentWorkflowLabel(report.workflowType),
-            child: AppStatusBadge(
-              label: incidentWorkflowLabel(report.workflowType),
-              tone: incidentWorkflowTone(report.workflowType),
-            ),
-          ),
-          const SizedBox(height: 5),
-          AppStatusBadge(
-            label: incidentOperationalStateLabel(report.operationalState),
-            tone: incidentOperationalStateTone(report.operationalState),
-          ),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Tooltip(
+        message: incidentWorkflowLabel(report.workflowType),
+        child: AppStatusBadge(
+          label: incidentWorkflowLabel(report.workflowType),
+          tone: incidentWorkflowTone(report.workflowType),
+        ),
+      ),
+      const SizedBox(height: 5),
+      AppStatusBadge(
+        label: incidentOperationalStateLabel(report.operationalState),
+        tone: incidentOperationalStateTone(report.operationalState),
+      ),
+    ],
+  );
 }
 
 class _StatusCell extends StatelessWidget {
@@ -993,12 +1025,12 @@ class _StatusCell extends StatelessWidget {
   final String status;
   @override
   Widget build(BuildContext context) => Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: AppStatusBadge(
-          label: incidentReportStatusLabel(status),
-          tone: incidentReportStatusTone(status),
-        ),
-      );
+    alignment: AlignmentDirectional.centerStart,
+    child: AppStatusBadge(
+      label: incidentReportStatusLabel(status),
+      tone: incidentReportStatusTone(status),
+    ),
+  );
 }
 
 class _CreatedCell extends StatelessWidget {
@@ -1025,21 +1057,21 @@ class _CardLine extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 88,
-              child: Text(
-                label,
-                style: AdminTypography.kpiHelper(context.adminPalette),
-              ),
-            ),
-            Expanded(child: child),
-          ],
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 88,
+          child: Text(
+            label,
+            style: AdminTypography.kpiHelper(context.adminPalette),
+          ),
         ),
-      );
+        Expanded(child: child),
+      ],
+    ),
+  );
 }
 
 class _PaginationFooter extends StatelessWidget {
@@ -1056,9 +1088,15 @@ class _PaginationFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalPages = response.totalPages ??
-        ((response.total + response.limit - 1) ~/ response.limit).clamp(1, 9999);
-    final first = response.total == 0 ? 0 : (response.page - 1) * response.limit + 1;
+    final totalPages =
+        response.totalPages ??
+        ((response.total + response.limit - 1) ~/ response.limit).clamp(
+          1,
+          9999,
+        );
+    final first = response.total == 0
+        ? 0
+        : (response.page - 1) * response.limit + 1;
     final last = (first + shown - 1).clamp(0, response.total);
     final pageNumbers = <int>{1, totalPages, response.page}
       ..addAll([
@@ -1167,23 +1205,24 @@ class _IncidentEmptyState extends StatelessWidget {
   final VoidCallback onReset;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          border: Border.all(color: context.adminPalette.cardBorder),
-          borderRadius: BorderRadius.circular(16),
+    padding: const EdgeInsets.all(32),
+    decoration: BoxDecoration(
+      border: Border.all(color: context.adminPalette.cardBorder),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      children: [
+        const AdminEmptyState(
+          icon: Icons.report_outlined,
+          title: 'No incident reports found',
+          subtitle:
+              'Try adjusting the current filters or review incidents again later.',
         ),
-        child: Column(
-          children: [
-            const AdminEmptyState(
-              icon: Icons.report_outlined,
-              title: 'No incident reports found',
-              subtitle: 'Try adjusting the current filters or review incidents again later.',
-            ),
-            if (hasFilters)
-              TextButton(onPressed: onReset, child: const Text('Reset filters')),
-          ],
-        ),
-      );
+        if (hasFilters)
+          TextButton(onPressed: onReset, child: const Text('Reset filters')),
+      ],
+    ),
+  );
 }
 
 class _ErrorPanel extends StatelessWidget {
@@ -1191,20 +1230,20 @@ class _ErrorPanel extends StatelessWidget {
   final VoidCallback onRetry;
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: Theme.of(context).colorScheme.error),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline),
-            const SizedBox(width: 10),
-            const Expanded(child: Text('Could not load incident reports.')),
-            TextButton(onPressed: onRetry, child: const Text('Retry')),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      border: Border.all(color: Theme.of(context).colorScheme.error),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.error_outline),
+        const SizedBox(width: 10),
+        const Expanded(child: Text('Could not load incident reports.')),
+        TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ],
+    ),
+  );
 }
 
 String shortIdentifier(String id) {

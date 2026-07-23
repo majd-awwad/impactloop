@@ -25,7 +25,8 @@ class ProfileMaterialPreviewCard extends StatefulWidget {
       _ProfileMaterialPreviewCardState();
 }
 
-class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard> {
+class _ProfileMaterialPreviewCardState
+    extends State<ProfileMaterialPreviewCard> {
   bool _hovered = false;
 
   @override
@@ -33,10 +34,13 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
     final material = widget.material;
     final colors = context.supplierColors;
     final isArabic = context.isSupplierArabic;
-    final imageUrl = (material.imageUrl != null && material.imageUrl!.trim().isNotEmpty)
+    final imageUrl =
+        (material.imageUrl != null && material.imageUrl!.trim().isNotEmpty)
         ? ApiConfig.resolveMediaUrl(material.imageUrl!)
         : null;
-    final condition = SupplierMaterialLabelHelper.conditionMeta(material.condition);
+    final condition = SupplierMaterialLabelHelper.conditionMeta(
+      material.condition,
+    );
     final priceLabel = SupplierMaterialLabelHelper.resolveText(
       SupplierMaterialLabelHelper.priceLabel(
         isFree: material.isFree,
@@ -47,7 +51,10 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
     );
     final categoryLabel = material.categoryName ?? '—';
     final quantityLabel = SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.quantityLabel(material.quantity, material.unit),
+      SupplierMaterialLabelHelper.quantityLabel(
+        material.quantity,
+        material.unit,
+      ),
       isArabic,
     );
     final city = material.locationCity?.trim() ?? '';
@@ -165,10 +172,10 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             categoryLabel,
                             style: context.supplierChip().copyWith(
-                                  color: colors.accent,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                              color: colors.accent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -176,11 +183,11 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             material.title,
                             style: context.supplierSectionTitle().copyWith(
-                                  color: colors.textPrimary,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.2,
-                                ),
+                              color: colors.textPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -189,7 +196,9 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                             spacing: AppSpacing.xs,
                             runSpacing: AppSpacing.xs,
                             children: [
-                              _ProfilePreviewStatusBadge(status: material.status),
+                              _ProfilePreviewStatusBadge(
+                                status: material.status,
+                              ),
                               MaterialConditionBadge(
                                 label: SupplierMaterialLabelHelper.resolveText(
                                   condition.label,
@@ -207,17 +216,17 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             quantityLabel,
                             style: context.supplierBody().copyWith(
-                                  color: colors.textSecondary,
-                                  fontSize: 13,
-                                ),
+                              color: colors.textSecondary,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             locationLabel,
                             style: context.supplierBody().copyWith(
-                                  color: colors.textMuted,
-                                  fontSize: 12.5,
-                                ),
+                              color: colors.textMuted,
+                              fontSize: 12.5,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -225,18 +234,18 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             availabilityLabel,
                             style: context.supplierBody().copyWith(
-                                  color: colors.textMuted,
-                                  fontSize: 12,
-                                ),
+                              color: colors.textMuted,
+                              fontSize: 12,
+                            ),
                           ),
                           const Spacer(),
                           if (footerParts.isNotEmpty)
                             Text(
                               footerParts.join(' · '),
                               style: context.supplierBody().copyWith(
-                                    color: colors.textMuted,
-                                    fontSize: 11.5,
-                                  ),
+                                color: colors.textMuted,
+                                fontSize: 11.5,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),

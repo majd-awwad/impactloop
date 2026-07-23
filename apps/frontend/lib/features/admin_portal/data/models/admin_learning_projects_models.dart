@@ -294,13 +294,11 @@ class AdminLearningProjectComponentQuality {
 
 bool adminApproveBlockedByComponentQuality(
   AdminLearningProjectComponentQuality quality,
-) =>
-    !quality.canApprove;
+) => !quality.canApprove;
 
 bool adminApproveNeedsSoftWarningConfirmation(
   AdminLearningProjectComponentQuality quality,
-) =>
-    quality.canApprove && quality.softWarnings.isNotEmpty;
+) => quality.canApprove && quality.softWarnings.isNotEmpty;
 
 class AdminLearningProjectImage {
   const AdminLearningProjectImage({
@@ -657,7 +655,9 @@ class AdminLearningProjectsListResponse {
   final AdminLearningProjectsPagination pagination;
   final AdminLearningProjectsFilterOptions filterOptions;
 
-  factory AdminLearningProjectsListResponse.fromJson(Map<String, dynamic> json) {
+  factory AdminLearningProjectsListResponse.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return AdminLearningProjectsListResponse(
       summary: AdminLearningProjectsSummary.fromJson(
         json['summary'] as Map<String, dynamic>? ?? const {},

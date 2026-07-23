@@ -27,7 +27,9 @@ class MaterialReportsApi {
           if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
         },
       ),
-      (json) => json['message'] as String? ?? 'Report submitted. Admin will review this material.',
+      (json) =>
+          json['message'] as String? ??
+          'Report submitted. Admin will review this material.',
     );
   }
 }

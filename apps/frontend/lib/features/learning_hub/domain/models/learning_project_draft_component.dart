@@ -13,7 +13,8 @@ List<MaterialCategory> materialSelectableCategories(
 }
 
 class LearningProjectDraftComponent {
-  const LearningProjectDraftComponent({    this.name = '',
+  const LearningProjectDraftComponent({
+    this.name = '',
     this.quantity = 1,
     this.unit = 'piece',
     this.role = LearningProjectComponentRole.material,
@@ -65,10 +66,11 @@ class LearningProjectDraftComponent {
       return value == null || value.trim().isEmpty;
     }
 
-    return materialSelectableCategories(categories).any(
-      (category) => category.id == normalized,
-    );
+    return materialSelectableCategories(
+      categories,
+    ).any((category) => category.id == normalized);
   }
+
   static String materialCategoryDropdownValue(String? categoryId) {
     return normalizeMaterialCategoryId(categoryId) ?? noMaterialCategoryValue;
   }
@@ -212,6 +214,7 @@ class LearningProjectDraftComponent {
   List<String> resolvedKeywords() {
     return mergeKeywords(existing: keywords, draft: keywordDraft);
   }
+
   Map<String, dynamic> toSubmitPayload() {
     final payload = <String, dynamic>{
       'name': name.trim(),
@@ -273,7 +276,9 @@ class LearningProjectDraftComponent {
         return 'Keep each keyword under 80 characters.';
       }
     }
-    final normalizedCategoryId = normalizeMaterialCategoryId(materialCategoryId);
+    final normalizedCategoryId = normalizeMaterialCategoryId(
+      materialCategoryId,
+    );
     if (materialCategoryId != null &&
         materialCategoryId!.trim().isNotEmpty &&
         normalizedCategoryId == null) {

@@ -23,7 +23,9 @@ class SupplierMaterialCategoryFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
     final colors = context.supplierColors;
-    final selected = categories.cast<SupplierMyMaterialsCategoryOption?>().firstWhere(
+    final selected = categories
+        .cast<SupplierMyMaterialsCategoryOption?>()
+        .firstWhere(
           (category) => category?.id == selectedCategoryId,
           orElse: () => null,
         );
@@ -52,7 +54,10 @@ class SupplierMaterialCategoryFilter extends StatelessWidget {
         ),
       ),
       items: [
-        DropdownMenuItem<String?>(value: null, child: Text(l.filterAllCategories)),
+        DropdownMenuItem<String?>(
+          value: null,
+          child: Text(l.filterAllCategories),
+        ),
         for (final category in categories)
           DropdownMenuItem<String?>(
             value: category.id,

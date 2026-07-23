@@ -61,7 +61,10 @@ void main() {
     expect(overdue.dayStart, isNotNull);
     expect(overdue.dayEnd, isNotNull);
     expect(overdue.toQueryParameters(), containsPair('category', 'OVERDUE'));
-    expect(overdue.toQueryParameters(), containsPair('dayStart', isA<String>()));
+    expect(
+      overdue.toQueryParameters(),
+      containsPair('dayStart', isA<String>()),
+    );
     expect(overdue.toQueryParameters(), containsPair('dayEnd', isA<String>()));
 
     await tester.tap(find.text('All').first);

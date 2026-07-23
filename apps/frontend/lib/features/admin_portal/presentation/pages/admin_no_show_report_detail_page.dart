@@ -14,7 +14,9 @@ import '../widgets/admin_monitoring_utils.dart';
 
 final adminNoShowReportDetailProvider = FutureProvider.autoDispose
     .family<AdminNoShowReportDetail, String>((ref, reportId) {
-      return ref.watch(adminNoShowReportsApiProvider).fetchReportDetail(reportId);
+      return ref
+          .watch(adminNoShowReportsApiProvider)
+          .fetchReportDetail(reportId);
     });
 
 class AdminNoShowReportDetailPage extends ConsumerStatefulWidget {
@@ -81,9 +83,9 @@ class _AdminNoShowReportDetailPageState
       }
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.displayMessage)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.displayMessage)));
       }
     } catch (_) {
       if (mounted) {
@@ -98,7 +100,9 @@ class _AdminNoShowReportDetailPageState
 
   @override
   Widget build(BuildContext context) {
-    final detailAsync = ref.watch(adminNoShowReportDetailProvider(widget.reportId));
+    final detailAsync = ref.watch(
+      adminNoShowReportDetailProvider(widget.reportId),
+    );
     return detailAsync.when(
       loading: () => _DetailScaffold(
         onBack: _goBack,
@@ -245,7 +249,8 @@ class _IncidentHeader extends StatelessWidget {
                   if (report.targetRole.toUpperCase() != 'SYSTEM')
                     _HeaderMeta(
                       icon: Icons.person_pin_outlined,
-                      text: 'Target: ${report.hasIndividualTarget ? report.targetName : 'Unavailable'}',
+                      text:
+                          'Target: ${report.hasIndividualTarget ? report.targetName : 'Unavailable'}',
                     ),
                 ],
               ),
@@ -259,12 +264,20 @@ class _IncidentHeader extends StatelessWidget {
           if (constraints.maxWidth < 940) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [heading, const SizedBox(height: AppSpacing.md), actions],
+              children: [
+                heading,
+                const SizedBox(height: AppSpacing.md),
+                actions,
+              ],
             );
           }
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [Expanded(child: heading), const SizedBox(width: AppSpacing.md), actions],
+            children: [
+              Expanded(child: heading),
+              const SizedBox(width: AppSpacing.md),
+              actions,
+            ],
           );
         },
       ),
@@ -282,7 +295,11 @@ class _HeaderMeta extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(icon, size: 15, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      Icon(
+        icon,
+        size: 15,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
       const SizedBox(width: AppSpacing.xs),
       Text(text, style: Theme.of(context).textTheme.bodySmall),
     ],
@@ -305,10 +322,16 @@ class _IncidentActions extends StatelessWidget {
     final valid = actions.where(_supportedAction).toList(growable: false);
     if (valid.isEmpty) return const SizedBox.shrink();
     final primary = valid
-        .where((action) => action != 'REJECT' && action != 'RESOLVE_WITHOUT_STRIKE')
+        .where(
+          (action) => action != 'REJECT' && action != 'RESOLVE_WITHOUT_STRIKE',
+        )
         .toList(growable: false);
-    final inline = primary.isEmpty ? valid.take(2).toList(growable: false) : primary;
-    final overflow = valid.where((action) => !inline.contains(action)).toList(growable: false);
+    final inline = primary.isEmpty
+        ? valid.take(2).toList(growable: false)
+        : primary;
+    final overflow = valid
+        .where((action) => !inline.contains(action))
+        .toList(growable: false);
     return Wrap(
       alignment: WrapAlignment.end,
       spacing: AppSpacing.sm,
@@ -318,7 +341,12 @@ class _IncidentActions extends StatelessWidget {
           PopupMenuButton<String>(
             onSelected: onAction,
             itemBuilder: (_) => overflow
-                .map((action) => PopupMenuItem(value: action, child: Text(_actionLabel(action))))
+                .map(
+                  (action) => PopupMenuItem(
+                    value: action,
+                    child: Text(_actionLabel(action)),
+                  ),
+                )
                 .toList(growable: false),
             child: IgnorePointer(
               child: OutlinedButton.icon(
@@ -341,7 +369,11 @@ class _IncidentActions extends StatelessWidget {
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.action, required this.busy, required this.onPressed});
+  const _ActionButton({
+    required this.action,
+    required this.busy,
+    required this.onPressed,
+  });
 
   final String action;
   final bool busy;
@@ -350,7 +382,10 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = busy
-        ? const SizedBox.square(dimension: 16, child: CircularProgressIndicator(strokeWidth: 2))
+        ? const SizedBox.square(
+            dimension: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
         : Text(_actionLabel(action));
     return switch (action) {
       'VERIFY' => FilledButton(
@@ -415,7 +450,10 @@ class _IncidentGrid extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(flex: 22, child: reservation),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(flex: 27, child: _StackedCards(cards: [activity, ?delivery])),
+          Expanded(
+            flex: 27,
+            child: _StackedCards(cards: [activity, ?delivery]),
+          ),
         ],
       );
     }
@@ -423,13 +461,19 @@ class _IncidentGrid extends StatelessWidget {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: _StackedCards(cards: [overview, reservation, messages])),
+          Expanded(
+            child: _StackedCards(cards: [overview, reservation, messages]),
+          ),
           const SizedBox(width: AppSpacing.md),
-          Expanded(child: _StackedCards(cards: [happened, activity, ?delivery])),
+          Expanded(
+            child: _StackedCards(cards: [happened, activity, ?delivery]),
+          ),
         ],
       );
     }
-    return _StackedCards(cards: [overview, happened, reservation, messages, activity, ?delivery]);
+    return _StackedCards(
+      cards: [overview, happened, reservation, messages, activity, ?delivery],
+    );
   }
 }
 
@@ -441,10 +485,11 @@ class _StackedCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: cards
-        .expand((card) => [card, const SizedBox(height: AppSpacing.sm)])
-        .toList()
-      ..removeLast(),
+    children:
+        cards
+            .expand((card) => [card, const SizedBox(height: AppSpacing.sm)])
+            .toList()
+          ..removeLast(),
   );
 }
 
@@ -463,8 +508,16 @@ class _WorkspaceCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            if (icon != null) ...[Icon(icon, size: 17), const SizedBox(width: AppSpacing.xs)],
-            Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+            if (icon != null) ...[
+              Icon(icon, size: 17),
+              const SizedBox(width: AppSpacing.xs),
+            ],
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -507,13 +560,20 @@ class _IncidentOverviewCard extends StatelessWidget {
               ? 'Not reviewed'
               : '${report.reviewedByName?.trim().isNotEmpty == true ? report.reviewedByName : 'Admin'} · ${_formatDateTime(report.reviewedAt!)}',
         ),
-        _KeyValue(label: 'Reservation', value: '#${_shortId(report.reservationId)}'),
+        _KeyValue(
+          label: 'Reservation',
+          value: '#${_shortId(report.reservationId)}',
+        ),
         _KeyValue(
           label: 'Delivery',
-          value: report.deliveryId == null ? '—' : '#${_shortId(report.deliveryId!)}',
+          value: report.deliveryId == null
+              ? '—'
+              : '#${_shortId(report.deliveryId!)}',
           link: report.deliveryId == null
               ? null
-              : () => context.push('/admin/deliveries?open=${Uri.encodeComponent(report.deliveryId!)}'),
+              : () => context.push(
+                  '/admin/deliveries?open=${Uri.encodeComponent(report.deliveryId!)}',
+                ),
         ),
         _KeyValue(label: 'Material', value: report.materialTitle),
         _KeyValue(
@@ -529,7 +589,12 @@ class _IncidentOverviewCard extends StatelessWidget {
 }
 
 class _KeyValue extends StatelessWidget {
-  const _KeyValue({required this.label, required this.value, this.link, this.last = false});
+  const _KeyValue({
+    required this.label,
+    required this.value,
+    this.link,
+    this.last = false,
+  });
   final String label;
   final String value;
   final VoidCallback? link;
@@ -539,18 +604,36 @@ class _KeyValue extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
     margin: EdgeInsetsDirectional.only(bottom: last ? 0 : AppSpacing.sm),
-    decoration: last ? null : BoxDecoration(border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor))),
+    decoration: last
+        ? null
+        : BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: Text(label, style: Theme.of(context).textTheme.labelSmall)),
+        Expanded(
+          child: Text(label, style: Theme.of(context).textTheme.labelSmall),
+        ),
         const SizedBox(width: AppSpacing.sm),
         Flexible(
           child: link == null
-              ? Text(value, textAlign: TextAlign.end, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600))
+              ? Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                )
               : TextButton(
                   onPressed: link,
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   child: Text(value, textAlign: TextAlign.end),
                 ),
         ),
@@ -572,14 +655,20 @@ class _WhatHappenedCardState extends State<_WhatHappenedCard> {
   @override
   Widget build(BuildContext context) {
     final report = widget.report;
-    final note = report.note?.trim().isNotEmpty == true ? report.note!.trim() : 'No description recorded.';
+    final note = report.note?.trim().isNotEmpty == true
+        ? report.note!.trim()
+        : 'No description recorded.';
     return _WorkspaceCard(
       title: 'What happened',
       icon: Icons.info_outline_rounded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(note, maxLines: _expanded ? null : 4, overflow: _expanded ? null : TextOverflow.ellipsis),
+          Text(
+            note,
+            maxLines: _expanded ? null : 4,
+            overflow: _expanded ? null : TextOverflow.ellipsis,
+          ),
           if (report.reviewNote?.trim().isNotEmpty == true) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -600,12 +689,22 @@ class _WhatHappenedCardState extends State<_WhatHappenedCard> {
               final vertical = constraints.maxWidth < 460;
               final items = [
                 _MetaTile(label: 'Pickup window', value: _pickupWindow(report)),
-                _MetaTile(label: 'Fulfillment', value: _fulfillmentLabel(report.fulfillmentMethod)),
-                _MetaTile(label: 'Reported reason', value: humanizeEnum(report.reasonCode)),
+                _MetaTile(
+                  label: 'Fulfillment',
+                  value: _fulfillmentLabel(report.fulfillmentMethod),
+                ),
+                _MetaTile(
+                  label: 'Reported reason',
+                  value: humanizeEnum(report.reasonCode),
+                ),
               ];
               return vertical
                   ? Column(children: items)
-                  : Row(children: items.map((item) => Expanded(child: item)).toList(growable: false));
+                  : Row(
+                      children: items
+                          .map((item) => Expanded(child: item))
+                          .toList(growable: false),
+                    );
             },
           ),
         ],
@@ -620,13 +719,21 @@ class _MetaTile extends StatelessWidget {
   final String value;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm, top: AppSpacing.sm),
+    padding: const EdgeInsetsDirectional.only(
+      end: AppSpacing.sm,
+      top: AppSpacing.sm,
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.labelSmall),
         const SizedBox(height: AppSpacing.xs),
-        Text(value, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ],
     ),
   );
@@ -640,19 +747,48 @@ class _MessagesCard extends StatelessWidget {
     title: 'Messages',
     icon: Icons.chat_bubble_outline_rounded,
     child: messages.isEmpty
-        ? Text('No messages recorded', style: Theme.of(context).textTheme.bodySmall)
+        ? Text(
+            'No messages recorded',
+            style: Theme.of(context).textTheme.bodySmall,
+          )
         : Column(
-            children: messages.take(5).map((message) => Padding(
-              padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [Expanded(child: Text(message.senderName, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800))), Text(_formatDateTime(message.createdAt), style: Theme.of(context).textTheme.labelSmall)]),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(message.body, maxLines: 3, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            )).toList(growable: false),
+            children: messages
+                .take(5)
+                .map(
+                  (message) => Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      bottom: AppSpacing.md,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                message.senderName,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            Text(
+                              _formatDateTime(message.createdAt),
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          message.body,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(growable: false),
           ),
   );
 }
@@ -667,21 +803,49 @@ class _ReservationStatusCard extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppStatusBadge(label: monitoringStatusLabel(report.reservationStatus), tone: _reservationTone(report.reservationStatus)),
+        AppStatusBadge(
+          label: monitoringStatusLabel(report.reservationStatus),
+          tone: _reservationTone(report.reservationStatus),
+        ),
         const SizedBox(height: AppSpacing.sm),
-        Text(_reservationExplanation(report), style: Theme.of(context).textTheme.bodySmall),
+        Text(
+          _reservationExplanation(report),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: AppSpacing.md),
-        _KeyValue(label: 'Pending reschedule', value: _pendingReschedule(report.pendingReschedule)),
-        _KeyValue(label: 'Hold status', value: report.quantityStatus == null ? '—' : '${_quantity(report.quantityStatus!.heldQuantity)} held · ${_quantity(report.quantityStatus!.availableQuantity)} available'),
-        _KeyValue(label: 'Fulfillment method', value: _fulfillmentLabel(report.fulfillmentMethod)),
-        _KeyValue(label: 'Assigned driver', value: report.assignedDriverName?.trim().isNotEmpty == true ? report.assignedDriverName! : '—', last: true),
+        _KeyValue(
+          label: 'Pending reschedule',
+          value: _pendingReschedule(report.pendingReschedule),
+        ),
+        _KeyValue(
+          label: 'Hold status',
+          value: report.quantityStatus == null
+              ? '—'
+              : '${_quantity(report.quantityStatus!.heldQuantity)} held · ${_quantity(report.quantityStatus!.availableQuantity)} available',
+        ),
+        _KeyValue(
+          label: 'Fulfillment method',
+          value: _fulfillmentLabel(report.fulfillmentMethod),
+        ),
+        _KeyValue(
+          label: 'Assigned driver',
+          value: report.assignedDriverName?.trim().isNotEmpty == true
+              ? report.assignedDriverName!
+              : '—',
+          last: true,
+        ),
       ],
     ),
   );
 }
 
 class _TimelineCard extends StatelessWidget {
-  const _TimelineCard({required this.title, required this.entries, required this.emptyText, required this.delivery});
+  const _TimelineCard({
+    required this.title,
+    required this.entries,
+    required this.emptyText,
+    required this.delivery,
+  });
   final String title;
   final List<AdminNoShowReportActivityEntry> entries;
   final String emptyText;
@@ -694,7 +858,11 @@ class _TimelineCard extends StatelessWidget {
     child: entries.isEmpty
         ? Text(emptyText, style: Theme.of(context).textTheme.bodySmall)
         : Column(
-            children: entries.map((entry) => _TimelineEntry(entry: entry, delivery: delivery)).toList(growable: false),
+            children: entries
+                .map(
+                  (entry) => _TimelineEntry(entry: entry, delivery: delivery),
+                )
+                .toList(growable: false),
           ),
   );
 }
@@ -711,16 +879,39 @@ class _TimelineEntry extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(children: [Icon(_timelineIcon(entry.newStatus, delivery), size: 18), Container(width: 1, height: 32, color: Theme.of(context).dividerColor)]),
+          Column(
+            children: [
+              Icon(_timelineIcon(entry.newStatus, delivery), size: 18),
+              Container(
+                width: 1,
+                height: 32,
+                color: Theme.of(context).dividerColor,
+              ),
+            ],
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(state, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800)),
-                if (entry.note?.trim().isNotEmpty == true) Text(entry.note!.trim(), maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  state,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                if (entry.note?.trim().isNotEmpty == true)
+                  Text(
+                    entry.note!.trim(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 const SizedBox(height: AppSpacing.xs),
-                Text('${_formatDateTime(entry.createdAt)}${entry.changedByName?.trim().isNotEmpty == true ? ' · ${entry.changedByName}' : ''}', style: Theme.of(context).textTheme.labelSmall),
+                Text(
+                  '${_formatDateTime(entry.createdAt)}${entry.changedByName?.trim().isNotEmpty == true ? ' · ${entry.changedByName}' : ''}',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
               ],
             ),
           ),
@@ -741,8 +932,27 @@ class _IncidentDetailSkeleton extends StatelessWidget {
         child: LayoutBuilder(
           builder: (_, constraints) => SingleChildScrollView(
             child: constraints.maxWidth > 900
-                ? const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: _SkeletonCard(height: 360)), SizedBox(width: AppSpacing.sm), Expanded(child: _SkeletonCard(height: 420)), SizedBox(width: AppSpacing.sm), Expanded(child: _SkeletonCard(height: 340)), SizedBox(width: AppSpacing.sm), Expanded(child: _SkeletonCard(height: 440))])
-                : const Column(children: [_SkeletonCard(height: 260), SizedBox(height: AppSpacing.sm), _SkeletonCard(height: 300), SizedBox(height: AppSpacing.sm), _SkeletonCard(height: 260)]),
+                ? const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _SkeletonCard(height: 360)),
+                      SizedBox(width: AppSpacing.sm),
+                      Expanded(child: _SkeletonCard(height: 420)),
+                      SizedBox(width: AppSpacing.sm),
+                      Expanded(child: _SkeletonCard(height: 340)),
+                      SizedBox(width: AppSpacing.sm),
+                      Expanded(child: _SkeletonCard(height: 440)),
+                    ],
+                  )
+                : const Column(
+                    children: [
+                      _SkeletonCard(height: 260),
+                      SizedBox(height: AppSpacing.sm),
+                      _SkeletonCard(height: 300),
+                      SizedBox(height: AppSpacing.sm),
+                      _SkeletonCard(height: 260),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -754,11 +964,16 @@ class _SkeletonCard extends StatelessWidget {
   const _SkeletonCard({required this.height});
   final double height;
   @override
-  Widget build(BuildContext context) => AppSectionCard(height: height, child: const SizedBox.shrink());
+  Widget build(BuildContext context) =>
+      AppSectionCard(height: height, child: const SizedBox.shrink());
 }
 
 class _DetailFailure extends StatelessWidget {
-  const _DetailFailure({required this.notFound, required this.onRetry, required this.onBack});
+  const _DetailFailure({
+    required this.notFound,
+    required this.onRetry,
+    required this.onBack,
+  });
   final bool notFound;
   final VoidCallback onRetry;
   final VoidCallback onBack;
@@ -770,13 +985,36 @@ class _DetailFailure extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(notFound ? Icons.search_off_rounded : Icons.error_outline_rounded, size: 38),
+            Icon(
+              notFound ? Icons.search_off_rounded : Icons.error_outline_rounded,
+              size: 38,
+            ),
             const SizedBox(height: AppSpacing.md),
-            Text(notFound ? 'Incident report not found' : 'Could not load incident report', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              notFound
+                  ? 'Incident report not found'
+                  : 'Could not load incident report',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: AppSpacing.sm),
-            Text(notFound ? 'This report may have been removed or the link is incorrect.' : 'Please retry or return to Incident Reports.', textAlign: TextAlign.center),
+            Text(
+              notFound
+                  ? 'This report may have been removed or the link is incorrect.'
+                  : 'Please retry or return to Incident Reports.',
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AppSpacing.md),
-            Wrap(spacing: AppSpacing.sm, children: [if (!notFound) FilledButton(onPressed: onRetry, child: const Text('Retry')), OutlinedButton(onPressed: onBack, child: const Text('Back to Incident Reports'))]),
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: [
+                if (!notFound)
+                  FilledButton(onPressed: onRetry, child: const Text('Retry')),
+                OutlinedButton(
+                  onPressed: onBack,
+                  child: const Text('Back to Incident Reports'),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -784,24 +1022,42 @@ class _DetailFailure extends StatelessWidget {
   );
 }
 
-Future<bool?> _confirmAction(BuildContext context, AdminNoShowReportDetail report, String action) {
+Future<bool?> _confirmAction(
+  BuildContext context,
+  AdminNoShowReportDetail report,
+  String action,
+) {
   final impact = _strikeLabel(report);
   final content = switch (action) {
-    'VERIFY' => impact == 'No individual strike' ? 'Verify this report. No individual strike will be applied.' : 'Verify responsibility. ${impact.isEmpty ? '' : '$impact.'}',
-    'REJECT' => 'Reject this report. The reported responsibility will not be verified.',
-    'RESOLVE_WITHOUT_STRIKE' => 'Resolve this report without applying a strike.',
-    'REQUEST_SUPPLIER_RESCHEDULE' => 'Ask the supplier to provide a new pickup window. The reservation remains in its returned operational state.',
-    'CANCEL_AND_RELEASE_HOLD' => 'Cancel the linked reservation and release its material hold. This cannot be undone from this page.',
+    'VERIFY' =>
+      impact == 'No individual strike'
+          ? 'Verify this report. No individual strike will be applied.'
+          : 'Verify responsibility. ${impact.isEmpty ? '' : '$impact.'}',
+    'REJECT' =>
+      'Reject this report. The reported responsibility will not be verified.',
+    'RESOLVE_WITHOUT_STRIKE' =>
+      'Resolve this report without applying a strike.',
+    'REQUEST_SUPPLIER_RESCHEDULE' =>
+      'Ask the supplier to provide a new pickup window. The reservation remains in its returned operational state.',
+    'CANCEL_AND_RELEASE_HOLD' =>
+      'Cancel the linked reservation and release its material hold. This cannot be undone from this page.',
     _ => 'Continue with this incident action?',
   };
-  final tone = action == 'CANCEL_AND_RELEASE_HOLD' || action == 'REJECT' ? AppStatusTone.danger : action == 'REQUEST_SUPPLIER_RESCHEDULE' ? AppStatusTone.warning : AppStatusTone.success;
+  final tone = action == 'CANCEL_AND_RELEASE_HOLD' || action == 'REJECT'
+      ? AppStatusTone.danger
+      : action == 'REQUEST_SUPPLIER_RESCHEDULE'
+      ? AppStatusTone.warning
+      : AppStatusTone.success;
   return showDialog<bool>(
     context: context,
     builder: (dialogContext) => AppDialogShell(
       title: Text('${_actionLabel(action)}?'),
       content: Text(content),
       footer: AppDialogFooter.decision(
-        secondaryAction: TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
         primaryAction: FilledButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
           style: AppStatusButtonStyle.filled(dialogContext, tone),
@@ -826,7 +1082,8 @@ String _strikeLabel(AdminNoShowReportItem report) => incidentStrikeLabel(
       report.targetRole.toUpperCase() == 'SYSTEM' || report.hasIndividualTarget,
 );
 
-String _fulfillmentLabel(String? value) => value == null || value.trim().isEmpty ? '—' : _label(value);
+String _fulfillmentLabel(String? value) =>
+    value == null || value.trim().isEmpty ? '—' : _label(value);
 
 String _reservationExplanation(AdminNoShowReportDetail report) {
   switch (report.reservationStatus.toUpperCase()) {
@@ -846,45 +1103,84 @@ String _reservationExplanation(AdminNoShowReportDetail report) {
 
 String _pendingReschedule(AdminNoShowReportPendingReschedule? value) {
   if (value == null) return 'No pending reschedule';
-  if (value.proposedPickupWindowStart != null && value.proposedPickupWindowEnd != null) {
+  if (value.proposedPickupWindowStart != null &&
+      value.proposedPickupWindowEnd != null) {
     return '${_formatDateTime(value.proposedPickupWindowStart!)} – ${_formatTime(value.proposedPickupWindowEnd!)}';
   }
-  return value.note?.trim().isNotEmpty == true ? value.note!.trim() : 'Pending reschedule';
+  return value.note?.trim().isNotEmpty == true
+      ? value.note!.trim()
+      : 'Pending reschedule';
 }
 
 String _pickupWindow(AdminNoShowReportDetail report) {
-  if (report.pickupWindowStart == null || report.pickupWindowEnd == null) return '—';
+  if (report.pickupWindowStart == null || report.pickupWindowEnd == null)
+    return '—';
   return '${_formatDateTime(report.pickupWindowStart!)} – ${_formatTime(report.pickupWindowEnd!)}';
 }
 
 AppStatusTone _reservationTone(String status) {
   final normalized = status.toUpperCase();
-  if (normalized.contains('AWAITING') || normalized.contains('PENDING')) return AppStatusTone.warning;
-  if (normalized.contains('CANCEL') || normalized.contains('EXPIRE') || normalized.contains('FAIL')) return AppStatusTone.danger;
-  if (normalized.contains('COMPLETE') || normalized.contains('ACCEPT')) return AppStatusTone.success;
+  if (normalized.contains('AWAITING') || normalized.contains('PENDING'))
+    return AppStatusTone.warning;
+  if (normalized.contains('CANCEL') ||
+      normalized.contains('EXPIRE') ||
+      normalized.contains('FAIL'))
+    return AppStatusTone.danger;
+  if (normalized.contains('COMPLETE') || normalized.contains('ACCEPT'))
+    return AppStatusTone.success;
   return AppStatusTone.neutral;
 }
 
 IconData _timelineIcon(String status, bool delivery) {
   final normalized = status.toUpperCase();
-  if (normalized.contains('FAIL') || normalized.contains('CANCEL')) return Icons.error_outline_rounded;
-  if (normalized.contains('COMPLETE') || normalized.contains('DELIVER') || normalized.contains('PICKED')) return Icons.check_circle_outline_rounded;
-  if (normalized.contains('ASSIGN') || normalized.contains('SCHEDULE')) return delivery ? Icons.local_shipping_outlined : Icons.assignment_ind_outlined;
+  if (normalized.contains('FAIL') || normalized.contains('CANCEL'))
+    return Icons.error_outline_rounded;
+  if (normalized.contains('COMPLETE') ||
+      normalized.contains('DELIVER') ||
+      normalized.contains('PICKED'))
+    return Icons.check_circle_outline_rounded;
+  if (normalized.contains('ASSIGN') || normalized.contains('SCHEDULE'))
+    return delivery
+        ? Icons.local_shipping_outlined
+        : Icons.assignment_ind_outlined;
   return Icons.circle_outlined;
 }
 
-String _shortId(String id) => id.length <= 8 ? id : id.substring(0, 8).toUpperCase();
+String _shortId(String id) =>
+    id.length <= 8 ? id : id.substring(0, 8).toUpperCase();
 
-String _quantity(double value) => value == value.roundToDouble() ? value.toInt().toString() : value.toStringAsFixed(1);
+String _quantity(double value) => value == value.roundToDouble()
+    ? value.toInt().toString()
+    : value.toStringAsFixed(1);
 
 String _label(String value) {
-  final words = value.trim().split(RegExp(r'[_\s]+')).where((word) => word.isNotEmpty);
-  return words.map((word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}').join(' ');
+  final words = value
+      .trim()
+      .split(RegExp(r'[_\s]+'))
+      .where((word) => word.isNotEmpty);
+  return words
+      .map(
+        (word) => '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}',
+      )
+      .join(' ');
 }
 
 String _formatDateTime(DateTime value) {
   final local = value.toLocal();
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
   return '${months[local.month - 1]} ${local.day}, ${local.year} ${_formatTime(local)}';
 }
 

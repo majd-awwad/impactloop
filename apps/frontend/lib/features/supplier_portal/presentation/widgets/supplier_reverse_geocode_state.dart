@@ -1,6 +1,1 @@
-enum SupplierReverseGeocodeState {
-  idle,
-  loading,
-  success,
-  failure,
-}
+enum SupplierReverseGeocodeState { idle, loading, success, failure }

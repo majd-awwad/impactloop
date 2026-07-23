@@ -187,9 +187,7 @@ class SupplierNotificationStyle {
       SupplierNotificationCategory.deliveryRecovery => _fromAccent(
         theme.accentMint,
       ),
-      SupplierNotificationCategory.account => _fromAccent(
-        colors.textSecondary,
-      ),
+      SupplierNotificationCategory.account => _fromAccent(colors.textSecondary),
       SupplierNotificationCategory.system ||
       SupplierNotificationCategory.unknown => _NotificationColorSet(
         background: colors.chipUnselected,

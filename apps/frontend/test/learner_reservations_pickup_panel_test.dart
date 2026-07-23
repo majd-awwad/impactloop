@@ -73,10 +73,7 @@ void main() {
           title: 'Wood panels',
           status: 'RESERVED',
         ),
-        supplier: LearnerDeliverySupplier(
-          id: 'sup-1',
-          displayName: 'Supplier',
-        ),
+        supplier: LearnerDeliverySupplier(id: 'sup-1', displayName: 'Supplier'),
       ),
       pickupLocation: const LearnerDeliveryLocation(
         id: 'pickup-1',
@@ -101,12 +98,8 @@ void main() {
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(_LearnerAuthController.new),
-          myReservationsProvider.overrideWith(
-            (ref) async => reservations,
-          ),
-          learnerDeliveriesProvider.overrideWith(
-            (ref) async => deliveries,
-          ),
+          myReservationsProvider.overrideWith((ref) async => reservations),
+          learnerDeliveriesProvider.overrideWith((ref) async => deliveries),
         ],
         child: const MaterialApp(home: LearnerReservationsPage()),
       ),

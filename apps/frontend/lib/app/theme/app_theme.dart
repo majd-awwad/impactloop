@@ -83,11 +83,7 @@ class AppTheme {
   }
 
   static DividerThemeData _dividerTheme(AppThemeColors colors) {
-    return DividerThemeData(
-      color: colors.borderSubtle,
-      thickness: 1,
-      space: 1,
-    );
+    return DividerThemeData(color: colors.borderSubtle, thickness: 1, space: 1);
   }
 
   static MenuThemeData _menuTheme(AppThemeColors colors) {
@@ -118,7 +114,9 @@ class AppTheme {
       ),
       border: baseBorder,
       enabledBorder: baseBorder,
-      disabledBorder: _outlineBorder(colors.borderSubtle.withValues(alpha: 0.6)),
+      disabledBorder: _outlineBorder(
+        colors.borderSubtle.withValues(alpha: 0.6),
+      ),
       focusedBorder: _outlineBorder(colors.primary, width: 1.5),
       errorBorder: _outlineBorder(colors.danger),
       focusedErrorBorder: _outlineBorder(colors.danger, width: 1.5),
@@ -217,7 +215,9 @@ class AppTheme {
         }),
         side: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.disabled)) {
-            return BorderSide(color: colors.borderSubtle.withValues(alpha: 0.6));
+            return BorderSide(
+              color: colors.borderSubtle.withValues(alpha: 0.6),
+            );
           }
           if (states.contains(WidgetState.focused) ||
               states.contains(WidgetState.hovered)) {

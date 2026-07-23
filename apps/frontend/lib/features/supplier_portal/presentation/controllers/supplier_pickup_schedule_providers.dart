@@ -23,14 +23,12 @@ final pickupScheduleFilterProvider =
       SupplierPickupScheduleFilter
     >(PickupScheduleFilterNotifier.new);
 
-final pickupSchedulePageProvider = FutureProvider.autoDispose.family<
-  SupplierSchedulePage,
-  SupplierScheduleQuery
->((ref, query) async {
-  watchSupplierPortalSessionFromRef(ref);
-  final repository = ref.read(supplierPickupScheduleRepositoryProvider);
-  return repository.fetchSchedule(query);
-});
+final pickupSchedulePageProvider = FutureProvider.autoDispose
+    .family<SupplierSchedulePage, SupplierScheduleQuery>((ref, query) async {
+      watchSupplierPortalSessionFromRef(ref);
+      final repository = ref.read(supplierPickupScheduleRepositoryProvider);
+      return repository.fetchSchedule(query);
+    });
 
 /// One canonical server query shared by the list, summary, retry, and refresh
 /// consumers. The selected filter changes the backend query; it is not a

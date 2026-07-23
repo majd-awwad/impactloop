@@ -20,8 +20,9 @@ class AdminShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
     final languageCode = settings.languageCode;
-    final direction =
-        languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+    final direction = languageCode == 'ar'
+        ? TextDirection.rtl
+        : TextDirection.ltr;
     final location = GoRouterState.of(context).matchedLocation;
     final compact = MediaQuery.sizeOf(context).width < _mobileBreakpoint;
     final l = AdminL10n.of(context);

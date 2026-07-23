@@ -359,34 +359,41 @@ void main() {
     expect(action.isExecutable, isFalse);
   });
 
-  test('filter queries use server categories and absolute local boundaries', () {
-    final selected = DateTime(2026, 7, 15, 9);
-    final today = SupplierScheduleQuery.forFilter(
-      SupplierPickupScheduleFilter.today,
-      selectedDay: selected,
-    );
-    final params = today.toQueryParameters();
+  test(
+    'filter queries use server categories and absolute local boundaries',
+    () {
+      final selected = DateTime(2026, 7, 15, 9);
+      final today = SupplierScheduleQuery.forFilter(
+        SupplierPickupScheduleFilter.today,
+        selectedDay: selected,
+      );
+      final params = today.toQueryParameters();
 
-    expect(params['scope'], 'ACTIVE');
-    expect(params['category'], 'TODAY');
-    expect(params['dayStart'], isA<String>());
-    expect(params['dayEnd'], isA<String>());
-    expect(
-      DateTime.parse(params['dayEnd'] as String).isAfter(
-        DateTime.parse(params['dayStart'] as String),
-      ),
-      isTrue,
-    );
+      expect(params['scope'], 'ACTIVE');
+      expect(params['category'], 'TODAY');
+      expect(params['dayStart'], isA<String>());
+      expect(params['dayEnd'], isA<String>());
+      expect(
+        DateTime.parse(
+          params['dayEnd'] as String,
+        ).isAfter(DateTime.parse(params['dayStart'] as String)),
+        isTrue,
+      );
 
-    final changed = today.copyWith(page: 4, filter: SupplierPickupScheduleFilter.upcoming);
-    expect(changed.page, 1);
-    expect(changed.filter, SupplierPickupScheduleFilter.upcoming);
-    expect(
-      SupplierScheduleQuery.forFilter(SupplierPickupScheduleFilter.completed)
-          .scope,
-      'HISTORY',
-    );
-  });
+      final changed = today.copyWith(
+        page: 4,
+        filter: SupplierPickupScheduleFilter.upcoming,
+      );
+      expect(changed.page, 1);
+      expect(changed.filter, SupplierPickupScheduleFilter.upcoming);
+      expect(
+        SupplierScheduleQuery.forFilter(
+          SupplierPickupScheduleFilter.completed,
+        ).scope,
+        'HISTORY',
+      );
+    },
+  );
 
   test('invalid effective windows are not fabricated', () {
     expect(

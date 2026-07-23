@@ -17,22 +17,22 @@ enum SupplierMaterialPriceFilter { all, free, paid }
 
 extension SupplierMaterialStatusFilterX on SupplierMaterialStatusFilter {
   String? get apiValue => switch (this) {
-        SupplierMaterialStatusFilter.available => 'AVAILABLE',
-        SupplierMaterialStatusFilter.pending => 'PENDING_RESERVATION',
-        SupplierMaterialStatusFilter.reserved => 'RESERVED',
-        SupplierMaterialStatusFilter.reused => 'REUSED',
-        SupplierMaterialStatusFilter.unavailable => 'UNAVAILABLE',
-        SupplierMaterialStatusFilter.all => null,
-      };
+    SupplierMaterialStatusFilter.available => 'AVAILABLE',
+    SupplierMaterialStatusFilter.pending => 'PENDING_RESERVATION',
+    SupplierMaterialStatusFilter.reserved => 'RESERVED',
+    SupplierMaterialStatusFilter.reused => 'REUSED',
+    SupplierMaterialStatusFilter.unavailable => 'UNAVAILABLE',
+    SupplierMaterialStatusFilter.all => null,
+  };
 
   String label(SupplierL10n l) => switch (this) {
-        SupplierMaterialStatusFilter.all => l.filterAll,
-        SupplierMaterialStatusFilter.available => l.filterAvailable,
-        SupplierMaterialStatusFilter.pending => l.filterPending,
-        SupplierMaterialStatusFilter.reserved => l.filterReserved,
-        SupplierMaterialStatusFilter.reused => l.filterReused,
-        SupplierMaterialStatusFilter.unavailable => l.filterUnavailable,
-      };
+    SupplierMaterialStatusFilter.all => l.filterAll,
+    SupplierMaterialStatusFilter.available => l.filterAvailable,
+    SupplierMaterialStatusFilter.pending => l.filterPending,
+    SupplierMaterialStatusFilter.reserved => l.filterReserved,
+    SupplierMaterialStatusFilter.reused => l.filterReused,
+    SupplierMaterialStatusFilter.unavailable => l.filterUnavailable,
+  };
 }
 
 SupplierMaterialStatusFilter statusFilterFromQuery(String? status) =>
@@ -49,16 +49,16 @@ SupplierMaterialPriceFilter priceFilterFromQuery(bool? isFree) =>
 
 extension SupplierMaterialPriceFilterX on SupplierMaterialPriceFilter {
   bool? get apiValue => switch (this) {
-        SupplierMaterialPriceFilter.free => true,
-        SupplierMaterialPriceFilter.paid => false,
-        SupplierMaterialPriceFilter.all => null,
-      };
+    SupplierMaterialPriceFilter.free => true,
+    SupplierMaterialPriceFilter.paid => false,
+    SupplierMaterialPriceFilter.all => null,
+  };
 
   String label(SupplierL10n l) => switch (this) {
-        SupplierMaterialPriceFilter.all => l.filterAllPrices,
-        SupplierMaterialPriceFilter.free => l.free,
-        SupplierMaterialPriceFilter.paid => l.paid,
-      };
+    SupplierMaterialPriceFilter.all => l.filterAllPrices,
+    SupplierMaterialPriceFilter.free => l.free,
+    SupplierMaterialPriceFilter.paid => l.paid,
+  };
 }
 
 /// Compact server-backed status and price selectors for the materials toolbar.

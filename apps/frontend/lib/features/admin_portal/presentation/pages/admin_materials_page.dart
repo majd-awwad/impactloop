@@ -797,7 +797,10 @@ class _MaterialsKpiRow extends StatelessWidget {
           );
         }
 
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows,
+        );
       },
     );
   }
@@ -859,9 +862,10 @@ class _KpiCard extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AdminTypography.kpiHelper(
-                    palette,
-                  ).copyWith(fontWeight: FontWeight.w700, color: palette.textSecondary),
+                  style: AdminTypography.kpiHelper(palette).copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: palette.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text('$value', style: AdminTypography.kpiValue(palette)),
@@ -971,7 +975,11 @@ class _TabSegment extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: selected ? Colors.white : palette.textSecondary),
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? Colors.white : palette.textSecondary,
+              ),
               const SizedBox(width: 6),
               Text(
                 label,
@@ -1028,7 +1036,10 @@ class _FiltersPanel extends StatelessWidget {
         fillColor: palette.cardBackground,
         hintText: 'Search materials, suppliers, categories...',
         prefixIcon: Icon(Icons.search, size: 19, color: palette.textSecondary),
-        contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 13,
+          horizontal: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: palette.cardBorder),
@@ -1184,7 +1195,11 @@ class _FilterField extends StatelessWidget {
           key: ValueKey('$label-$value'),
           initialValue: value,
           isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down, size: 18, color: palette.textSecondary),
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            size: 18,
+            color: palette.textSecondary,
+          ),
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -1194,7 +1209,10 @@ class _FilterField extends StatelessWidget {
             isDense: true,
             filled: true,
             fillColor: palette.cardBackground,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: palette.cardBorder),
@@ -1364,7 +1382,10 @@ class _ListShell extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: rows),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: rows,
+      ),
     );
   }
 }
@@ -1454,7 +1475,10 @@ class _MaterialRowState extends State<_MaterialRow> {
                 ),
                 const SizedBox(width: AppSpacing.lg),
                 ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 280, maxWidth: 340),
+                  constraints: const BoxConstraints(
+                    minWidth: 280,
+                    maxWidth: 340,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1471,7 +1495,9 @@ class _MaterialRowState extends State<_MaterialRow> {
 
     final row = Container(
       decoration: BoxDecoration(
-        color: _hovered ? colors.surfaceMuted.withValues(alpha: 0.5) : Colors.transparent,
+        color: _hovered
+            ? colors.surfaceMuted.withValues(alpha: 0.5)
+            : Colors.transparent,
         border: widget.showDivider
             ? Border(bottom: BorderSide(color: colors.borderSubtle))
             : null,
@@ -1516,8 +1542,11 @@ class _RowImage extends StatelessWidget {
                 width: 140,
                 height: 96,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    Icon(Icons.broken_image_outlined, color: colors.textMuted, size: 26),
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.broken_image_outlined,
+                  color: colors.textMuted,
+                  size: 26,
+                ),
               ),
       ),
     );
@@ -1622,8 +1651,10 @@ class _MetadataLine extends StatelessWidget {
 
     final parts = <Widget>[
       if (location.isNotEmpty) chip(Icons.location_on_outlined, location),
-      if (quantity.trim().isNotEmpty) chip(Icons.inventory_2_outlined, quantity),
-      if (condition.trim().isNotEmpty) Text(_displayEnum(condition), style: style),
+      if (quantity.trim().isNotEmpty)
+        chip(Icons.inventory_2_outlined, quantity),
+      if (condition.trim().isNotEmpty)
+        Text(_displayEnum(condition), style: style),
       chip(Icons.calendar_today_outlined, date),
     ];
 
@@ -1632,10 +1663,7 @@ class _MetadataLine extends StatelessWidget {
       runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        for (var i = 0; i < parts.length; i++) ...[
-          if (i > 0) dot(),
-          parts[i],
-        ],
+        for (var i = 0; i < parts.length; i++) ...[if (i > 0) dot(), parts[i]],
       ],
     );
   }
@@ -1722,7 +1750,9 @@ class _MaterialManagementSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final verificationTone = supplierVerificationStatusTone(item.supplierVerificationStatus);
+    final verificationTone = supplierVerificationStatusTone(
+      item.supplierVerificationStatus,
+    );
     final verificationStyle = AppStatusStyle.of(context, verificationTone);
 
     return Row(
@@ -1730,7 +1760,11 @@ class _MaterialManagementSummary extends StatelessWidget {
       children: [
         if (item.reportCount > 0) _ReportsMetric(item: item),
         const Spacer(),
-        Icon(Icons.verified_outlined, size: 14, color: verificationStyle.foreground),
+        Icon(
+          Icons.verified_outlined,
+          size: 14,
+          color: verificationStyle.foreground,
+        ),
         const SizedBox(width: 6),
         AppStatusBadge(
           label: _displayEnum(item.supplierVerificationStatus),
@@ -1776,9 +1810,10 @@ class _ReportsMetric extends StatelessWidget {
             ),
             Text(
               'Reports',
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: colors.textMuted, height: 1),
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.textMuted,
+                height: 1,
+              ),
             ),
           ],
         ),
@@ -1954,7 +1989,9 @@ class _ReportRowState extends State<_ReportRow> {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final report = widget.report;
-    final canHideMaterial = AdminMaterialModerationPolicy.canHide(report.materialStatus);
+    final canHideMaterial = AdminMaterialModerationPolicy.canHide(
+      report.materialStatus,
+    );
 
     const image = _ReportThumb();
     final identity = _ReportIdentityBlock(report: report);
@@ -2025,7 +2062,9 @@ class _ReportRowState extends State<_ReportRow> {
 
     final row = Container(
       decoration: BoxDecoration(
-        color: _hovered ? colors.surfaceMuted.withValues(alpha: 0.5) : Colors.transparent,
+        color: _hovered
+            ? colors.surfaceMuted.withValues(alpha: 0.5)
+            : Colors.transparent,
         border: widget.showDivider
             ? Border(bottom: BorderSide(color: colors.borderSubtle))
             : null,
@@ -2111,7 +2150,10 @@ class _ReportIdentityBlock extends StatelessWidget {
           runSpacing: 4,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _SemanticBadge(label: _formatReportReason(report.reason), tone: _BadgeTone.warning),
+            _SemanticBadge(
+              label: _formatReportReason(report.reason),
+              tone: _BadgeTone.warning,
+            ),
             Text('·', style: dateStyle),
             Text('Submitted $created', style: dateStyle),
           ],
@@ -2157,7 +2199,9 @@ class _ReportMetricsBlock extends StatelessWidget {
         _CompactStatusChip(
           icon: Icons.inventory_2_outlined,
           label: _displayEnum(report.materialStatus),
-          tone: materialLifecycleStatusTone(report.materialStatus).appStatusTone,
+          tone: materialLifecycleStatusTone(
+            report.materialStatus,
+          ).appStatusTone,
         ),
       ],
     );

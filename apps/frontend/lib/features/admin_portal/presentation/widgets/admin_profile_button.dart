@@ -71,9 +71,9 @@ class AdminProfileButton extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: palette.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: palette.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -108,17 +108,17 @@ class AdminProfileButton extends ConsumerWidget {
                 Text(
                   displayName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: palette.textPrimary,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: palette.textPrimary,
+                  ),
                 ),
                 if (email != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     email!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: palette.textSecondary,
-                        ),
+                      color: palette.textSecondary,
+                    ),
                   ),
                 ],
                 if (compact || showSettingsControls) ...[

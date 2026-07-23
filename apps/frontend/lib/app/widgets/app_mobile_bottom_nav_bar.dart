@@ -21,12 +21,7 @@ EdgeInsetsDirectional appMobileAwareScrollPadding(
       ? appMobileBottomNavReservedHeight
       : 0.0;
 
-  return EdgeInsetsDirectional.fromSTEB(
-    start,
-    top,
-    end,
-    bottom + extraBottom,
-  );
+  return EdgeInsetsDirectional.fromSTEB(start, top, end, bottom + extraBottom);
 }
 
 class AppMobileBottomNavBar extends ConsumerWidget {
@@ -56,7 +51,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         label: 'Materials',
         icon: Icons.inventory_2_rounded,
         route: '/materials',
-        selected: currentPath == '/materials' ||
+        selected:
+            currentPath == '/materials' ||
             currentPath.startsWith('/materials/'),
       ),
       _MobileNavDestination(
@@ -70,7 +66,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         label: 'Reservations',
         icon: Icons.receipt_long_rounded,
         route: '/learner/reservations',
-        selected: currentPath == '/learner/reservations' ||
+        selected:
+            currentPath == '/learner/reservations' ||
             currentPath.startsWith('/learner/reservations/') ||
             currentPath.startsWith('/learner/deliveries/'),
       ),
@@ -78,7 +75,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         label: 'Profile',
         icon: Icons.person_rounded,
         route: profileRoute,
-        selected: currentPath == '/profile' || currentPath.startsWith('/profile/'),
+        selected:
+            currentPath == '/profile' || currentPath.startsWith('/profile/'),
       ),
     ];
 

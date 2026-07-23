@@ -27,10 +27,7 @@ class SupplierMobileNav extends StatelessWidget {
                 Expanded(
                   child: _MobileNavButton(
                     item: item,
-                    isActive: isSupplierMobileNavActive(
-                      currentLocation,
-                      item,
-                    ),
+                    isActive: isSupplierMobileNavActive(currentLocation, item),
                     onTap: () => context.go(item.route),
                   ),
                 ),
@@ -82,10 +79,7 @@ class SupplierMobileNav extends StatelessWidget {
                   _MoreDestinationTile(
                     item: item,
                     label: item.label(context),
-                    isActive: isSupplierNavActive(
-                      currentLocation,
-                      item.route,
-                    ),
+                    isActive: isSupplierNavActive(currentLocation, item.route),
                     onTap: () {
                       Navigator.of(sheetContext).pop();
                       context.go(item.route);

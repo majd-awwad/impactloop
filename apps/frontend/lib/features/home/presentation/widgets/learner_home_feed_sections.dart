@@ -15,10 +15,7 @@ import 'home_section_header.dart';
 import 'learning_spotlight_section.dart';
 
 class LearnerHomeFeedSections extends StatelessWidget {
-  const LearnerHomeFeedSections({
-    super.key,
-    required this.feed,
-  });
+  const LearnerHomeFeedSections({super.key, required this.feed});
 
   final LearnerHomeFeed feed;
 
@@ -88,10 +85,9 @@ class _ProfilePromptBanner extends StatelessWidget {
               children: [
                 Text(
                   message,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                    height: 1.45,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary, height: 1.45),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 TextButton(
@@ -125,20 +121,19 @@ class _LearnerHomeSectionView extends StatelessWidget {
     return switch (section.key) {
       LearnerHomeSectionKey.suggestedMaterials ||
       LearnerHomeSectionKey.materialsForSavedProjects ||
-      LearnerHomeSectionKey.freeMaterialsNearYou =>
-        _MaterialSection(
-          section: section,
-          profileCompletion: profileCompletion,
-        ),
+      LearnerHomeSectionKey.freeMaterialsNearYou => _MaterialSection(
+        section: section,
+        profileCompletion: profileCompletion,
+      ),
       LearnerHomeSectionKey.suggestedProjects ||
       LearnerHomeSectionKey.savedProjects ||
-      LearnerHomeSectionKey.popularProjects =>
-        _ProjectSection(
-          section: section,
-          profileCompletion: profileCompletion,
-        ),
-      LearnerHomeSectionKey.continueProjects =>
-        _ContinueProjectsSection(section: section),
+      LearnerHomeSectionKey.popularProjects => _ProjectSection(
+        section: section,
+        profileCompletion: profileCompletion,
+      ),
+      LearnerHomeSectionKey.continueProjects => _ContinueProjectsSection(
+        section: section,
+      ),
     };
   }
 }
@@ -158,12 +153,14 @@ class _MaterialSection extends StatelessWidget {
     }
 
     return switch (section.key) {
-      LearnerHomeSectionKey.suggestedMaterials =>
-        _suggestedMaterialsSubtitle(materials),
+      LearnerHomeSectionKey.suggestedMaterials => _suggestedMaterialsSubtitle(
+        materials,
+      ),
       LearnerHomeSectionKey.materialsForSavedProjects =>
         'Materials that match components in your saved learning projects.',
-      LearnerHomeSectionKey.freeMaterialsNearYou =>
-        _freeMaterialsSubtitle(materials),
+      LearnerHomeSectionKey.freeMaterialsNearYou => _freeMaterialsSubtitle(
+        materials,
+      ),
       _ => section.emptyState,
     };
   }
@@ -203,7 +200,9 @@ class _MaterialSection extends StatelessWidget {
         normalized.contains('because you are building');
   }
 
-  String _freeMaterialsSubtitle(List<LearnerHomeMaterialRecommendation> materials) {
+  String _freeMaterialsSubtitle(
+    List<LearnerHomeMaterialRecommendation> materials,
+  ) {
     final hasNearReason = materials.any(
       (item) => item.reasons.any(
         (reason) => reason.toLowerCase().contains('near your saved location'),
@@ -247,10 +246,7 @@ class _MaterialSection extends StatelessWidget {
                 context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
           )
         else
-          HomeMaterialRecommendationGrid(
-            items: materials,
-            maxItems: 4,
-          ),
+          HomeMaterialRecommendationGrid(items: materials, maxItems: 4),
       ],
     );
   }
@@ -280,9 +276,10 @@ class _ProjectSection extends StatelessWidget {
         profileCompletion.hasInterests
             ? 'Personalized from your interests and available matching materials.'
             : 'Popular and beginner-friendly projects to help you start.',
-      _ => profileCompletion.hasInterests
-          ? 'Based on your interests and learner activity.'
-          : 'Popular and beginner-friendly projects to help you start.',
+      _ =>
+        profileCompletion.hasInterests
+            ? 'Based on your interests and learner activity.'
+            : 'Popular and beginner-friendly projects to help you start.',
     };
   }
 
@@ -332,7 +329,9 @@ class _ProjectSection extends StatelessWidget {
                     width: itemWidth,
                     child: HomeLearningProjectCard(
                       project: item.project,
-                      reason: item.reasons.isNotEmpty ? item.reasons.first : null,
+                      reason: item.reasons.isNotEmpty
+                          ? item.reasons.first
+                          : null,
                     ),
                   );
                 }).toList(),
@@ -364,9 +363,8 @@ class _ContinueProjectsSection extends StatelessWidget {
               ? 'Pick up where you left off.'
               : section.emptyState,
           action: HomeSectionActionButton(
-            onPressed: () => context.go(
-              LearnerHomeBrowseRoutes.forSection(section.key),
-            ),
+            onPressed: () =>
+                context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: 'Browse projects',
           ),
@@ -400,24 +398,17 @@ class _CompactContinueEmptyState extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
 
     return Padding(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-      ),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.sm),
       child: Row(
         children: [
-          Icon(
-            Icons.build_outlined,
-            size: 18,
-            color: palette.textSecondary,
-          ),
+          Icon(Icons.build_outlined, size: 18, color: palette.textSecondary),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               message,
-              style: AppTextStyles.label(context).copyWith(
-                color: palette.textSecondary,
-                height: 1.35,
-              ),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textSecondary, height: 1.35),
             ),
           ),
         ],

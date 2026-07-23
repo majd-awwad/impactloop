@@ -134,29 +134,32 @@ void main() {
       expect(profile.completion.missingFields, ['DESCRIPTION', 'FUTURE_FIELD']);
     });
 
-    test('keeps public approximation and supported visibility values separate', () {
-      for (final visibility in ['PUBLIC', 'ORDER_ONLY', 'PRIVATE']) {
-        final profile = SupplierProfileManagement.fromJson({
-          'hasSupplierProfile': true,
-          'pickupLocation': {
-            'id': 'location_$visibility',
-            'country': 'Palestine',
-            'city': 'Nablus',
-            'latitude': 32.22,
-            'longitude': '35.26',
-            'visibility': visibility,
-            'isApproximate': visibility == 'PUBLIC',
-          },
-          'verification': {},
-          'completion': {},
-        });
+    test(
+      'keeps public approximation and supported visibility values separate',
+      () {
+        for (final visibility in ['PUBLIC', 'ORDER_ONLY', 'PRIVATE']) {
+          final profile = SupplierProfileManagement.fromJson({
+            'hasSupplierProfile': true,
+            'pickupLocation': {
+              'id': 'location_$visibility',
+              'country': 'Palestine',
+              'city': 'Nablus',
+              'latitude': 32.22,
+              'longitude': '35.26',
+              'visibility': visibility,
+              'isApproximate': visibility == 'PUBLIC',
+            },
+            'verification': {},
+            'completion': {},
+          });
 
-        expect(profile.pickupLocation?.visibility, visibility);
-        expect(profile.pickupLocation?.isApproximate, visibility == 'PUBLIC');
-        expect(profile.pickupLocation?.latitude, 32.22);
-        expect(profile.pickupLocation?.longitude, 35.26);
-      }
-    });
+          expect(profile.pickupLocation?.visibility, visibility);
+          expect(profile.pickupLocation?.isApproximate, visibility == 'PUBLIC');
+          expect(profile.pickupLocation?.latitude, 32.22);
+          expect(profile.pickupLocation?.longitude, 35.26);
+        }
+      },
+    );
 
     test('supports a missing organization and zero completion response', () {
       final profile = SupplierProfileManagement.fromJson({
@@ -198,23 +201,26 @@ void main() {
     expect(adapter.path, '/api/supplier/profile/manage');
   });
 
-  test('profile image upload uses profile storage and the image field', () async {
-    final dio = Dio();
-    final adapter = _UploadAdapter();
-    dio.httpClientAdapter = adapter;
+  test(
+    'profile image upload uses profile storage and the image field',
+    () async {
+      final dio = Dio();
+      final adapter = _UploadAdapter();
+      dio.httpClientAdapter = adapter;
 
-    final image = await ProfileApi(dio).uploadProfileImage(
-      const PendingProfileImage(
-        bytes: [1, 2, 3],
-        fileName: 'avatar.png',
-        mimeType: 'image/png',
-      ),
-    );
+      final image = await ProfileApi(dio).uploadProfileImage(
+        const PendingProfileImage(
+          bytes: [1, 2, 3],
+          fileName: 'avatar.png',
+          mimeType: 'image/png',
+        ),
+      );
 
-    expect(adapter.path, '/api/uploads/profile-image');
-    expect(adapter.formData?.files.single.key, 'image');
-    expect(image.url, '/uploads/profiles/avatar.png');
-  });
+      expect(adapter.path, '/api/uploads/profile-image');
+      expect(adapter.formData?.files.single.key, 'image');
+      expect(image.url, '/uploads/profiles/avatar.png');
+    },
+  );
 
   test('profile image patch sends only the selected profile field', () async {
     final dio = Dio();

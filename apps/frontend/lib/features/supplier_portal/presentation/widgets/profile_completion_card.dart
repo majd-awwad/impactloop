@@ -5,11 +5,7 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_th
 import '../../data/models/supplier_profile.dart';
 
 class ProfileCompletionCard extends StatelessWidget {
-  const ProfileCompletionCard({
-    super.key,
-    required this.profile,
-    this.draft,
-  });
+  const ProfileCompletionCard({super.key, required this.profile, this.draft});
 
   final SupplierProfileResponse profile;
   final SupplierProfileDraft? draft;
@@ -26,8 +22,8 @@ class ProfileCompletionCard extends StatelessWidget {
     final city = draft?.city ?? supplier?.defaultPickupLocation?.city ?? '';
     final visibility =
         draft?.visibility ?? supplier?.defaultPickupLocation?.visibility ?? '';
-    final pickupCoordinatesComplete = draft?.usesCurrentLocationCoordinates ==
-            true &&
+    final pickupCoordinatesComplete =
+        draft?.usesCurrentLocationCoordinates == true &&
         draft?.latitude != null &&
         draft?.longitude != null;
 
@@ -46,7 +42,8 @@ class ProfileCompletionCard extends StatelessWidget {
       ),
       _CompletionItem(
         label: context.s.pickupCountryCity,
-        complete: pickupCoordinatesComplete ||
+        complete:
+            pickupCoordinatesComplete ||
             (country.trim().isNotEmpty && city.trim().isNotEmpty),
       ),
       _CompletionItem(
@@ -103,9 +100,7 @@ class ProfileCompletionCard extends StatelessWidget {
                         ? Icons.check_circle_outline
                         : Icons.radio_button_unchecked,
                     size: 16,
-                    color: item.complete
-                        ? colors.accent
-                        : colors.textMuted,
+                    color: item.complete ? colors.accent : colors.textMuted,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(

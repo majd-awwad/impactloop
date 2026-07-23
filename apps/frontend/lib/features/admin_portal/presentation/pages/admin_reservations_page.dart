@@ -263,9 +263,7 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
           children: [
             Text(
               'Reservations',
-              style: AdminTypography.pageTitle(
-                palette,
-              ).copyWith(fontSize: 24),
+              style: AdminTypography.pageTitle(palette).copyWith(fontSize: 24),
             ),
             const SizedBox(height: 4),
             Text(
@@ -413,8 +411,7 @@ class _KpiRow extends StatelessWidget {
                 (stat) => SizedBox(
                   width: columns == 1
                       ? double.infinity
-                      : (constraints.maxWidth - (columns - 1) * gap) /
-                            columns,
+                      : (constraints.maxWidth - (columns - 1) * gap) / columns,
                   child: _KpiCard(
                     label: stat.$1,
                     value: stat.$2,
@@ -591,11 +588,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
           fillColor: palette.isDark
               ? palette.cardBackground
               : const Color(0xFFF9FAFB),
-          prefixIcon: Icon(
-            Icons.search,
-            size: 20,
-            color: palette.textMuted,
-          ),
+          prefixIcon: Icon(Icons.search, size: 20, color: palette.textMuted),
           hintText: 'Search material, learner, or supplier...',
           hintStyle: AdminTypography.pageSubtitle(
             palette,
@@ -929,10 +922,7 @@ class _ReservationsResults extends StatelessWidget {
             ],
             Divider(height: 1, color: palette.cardBorder),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               child: _ResultsFooter(
                 rangeStart: rangeStart,
                 rangeEnd: rangeEnd,
@@ -959,10 +949,9 @@ class _TableHeader extends StatelessWidget {
     Widget label(String text, {TextAlign align = TextAlign.start}) => Text(
       text,
       textAlign: align,
-      style: AdminTypography.kpiLabel(palette).copyWith(
-        fontSize: 12,
-        color: palette.textSecondary,
-      ),
+      style: AdminTypography.kpiLabel(
+        palette,
+      ).copyWith(fontSize: 12, color: palette.textSecondary),
     );
 
     return Container(
@@ -1031,17 +1020,13 @@ class _ReservationTableRow extends StatelessWidget {
           ),
           learner: Text(
             learnerLabel,
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              fontSize: 13,
-            ),
+            style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           supplier: Text(
             supplierLabel,
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              fontSize: 13,
-            ),
+            style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1051,9 +1036,7 @@ class _ReservationTableRow extends StatelessWidget {
           ),
           qty: Text(
             _formatQuantity(item.quantityRequested, item.unit),
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              fontSize: 13,
-            ),
+            style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1067,10 +1050,7 @@ class _ReservationTableRow extends StatelessWidget {
             alignment: AlignmentDirectional.centerStart,
             child: deliveryStatus != null && deliveryStatus.isNotEmpty
                 ? _StatusBadge(status: deliveryStatus, isDelivery: true)
-                : Text(
-                    '—',
-                    style: AdminTypography.kpiHelper(palette),
-                  ),
+                : Text('—', style: AdminTypography.kpiHelper(palette)),
           ),
           actions: Center(
             child: IconButton(
@@ -1221,9 +1201,7 @@ class _MobileMetaRow extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: AdminTypography.pageSubtitle(palette).copyWith(
-              fontSize: 13,
-            ),
+            style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -1349,15 +1327,13 @@ class _Pagination extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final neutralStyle = AppStatusButtonStyle.outlined(
-      context,
-      AppStatusTone.neutral,
-    ).copyWith(
-      minimumSize: const WidgetStatePropertyAll(Size(0, 40)),
-      padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 14),
-      ),
-    );
+    final neutralStyle =
+        AppStatusButtonStyle.outlined(context, AppStatusTone.neutral).copyWith(
+          minimumSize: const WidgetStatePropertyAll(Size(0, 40)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 14),
+          ),
+        );
 
     return Wrap(
       spacing: 6,
@@ -1765,7 +1741,8 @@ class _ReservationDetailBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           _TwoColRow(
             leftLabel: 'Last updated',
-            leftValue: formatAdminDateTime(detail.updatedAt) ?? detail.updatedAt,
+            leftValue:
+                formatAdminDateTime(detail.updatedAt) ?? detail.updatedAt,
             rightLabel: 'Accepted',
             rightValue: acceptedLabel,
           ),
@@ -1972,7 +1949,11 @@ class _DetailCardRow extends StatelessWidget {
         if (constraints.maxWidth < 640) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [left, const SizedBox(height: AppSpacing.md), right!],
+            children: [
+              left,
+              const SizedBox(height: AppSpacing.md),
+              right!,
+            ],
           );
         }
 
@@ -2050,7 +2031,10 @@ class _SectionIconTile extends StatelessWidget {
       width: 32,
       height: 32,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: background, borderRadius: AppRadius.mdAll),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AppRadius.mdAll,
+      ),
       child: Icon(icon, size: 18, color: foreground),
     );
   }
@@ -2139,7 +2123,10 @@ class _MetaItem extends StatelessWidget {
           width: 30,
           height: 30,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: background, borderRadius: AppRadius.mdAll),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: AppRadius.mdAll,
+          ),
           child: Icon(icon, size: 16, color: foreground),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -2251,7 +2238,9 @@ class _TwoColRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.md),
-        Expanded(child: _MiniField(label: rightLabel, value: rightValue)),
+        Expanded(
+          child: _MiniField(label: rightLabel, value: rightValue),
+        ),
       ],
     );
   }

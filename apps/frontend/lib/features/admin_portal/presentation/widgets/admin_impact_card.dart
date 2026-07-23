@@ -47,9 +47,9 @@ class AdminImpactCard extends StatelessWidget {
                   children: [
                     Text(
                       l.estimatedCo2Avoided,
-                      style: AdminTypography.kpiLabel(palette).copyWith(
-                        fontSize: 14,
-                      ),
+                      style: AdminTypography.kpiLabel(
+                        palette,
+                      ).copyWith(fontSize: 14),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -162,8 +162,8 @@ class AdminImpactCard extends StatelessWidget {
                     top == null
                         ? l.impactTopCategoryEmpty
                         : (l.isArabic
-                            ? '${l.impactTopCategory}: ${top.nameAr} (${top.reusedCount})'
-                            : '${l.impactTopCategory}: ${top.nameEn} (${top.reusedCount})'),
+                              ? '${l.impactTopCategory}: ${top.nameAr} (${top.reusedCount})'
+                              : '${l.impactTopCategory}: ${top.nameEn} (${top.reusedCount})'),
                     style: AdminTypography.kpiHelper(palette).copyWith(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w600,
@@ -215,9 +215,9 @@ class _ImpactMetric extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: AdminTypography.kpiValue(palette).copyWith(
-                    fontSize: 18,
-                  ),
+                  style: AdminTypography.kpiValue(
+                    palette,
+                  ).copyWith(fontSize: 18),
                 ),
                 Text(
                   label,

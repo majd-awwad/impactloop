@@ -36,198 +36,193 @@ class SupplierNotificationCard extends StatelessWidget {
     );
 
     return Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: colors.surfaceSolid,
-          borderRadius: AppRadius.lgAll,
-          border: Border.all(color: borderColor),
-          boxShadow: [
-            BoxShadow(
-              color: colors.cardShadow,
-              blurRadius: colors.isDark ? 12 : 8,
-              offset: const Offset(0, 4),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: colors.surfaceSolid,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: colors.cardShadow,
+            blurRadius: colors.isDark ? 12 : 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              color: style.accent.withValues(alpha: muted ? 0.4 : 1),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.md,
+                  AppSpacing.sm + 2,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: style.badgeBackground,
+                            borderRadius: AppRadius.mdAll,
+                          ),
+                          child: Icon(
+                            _iconFor(notification, style.icon),
+                            color: style.accent,
+                            size: 15,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  if (!notification.isRead) ...[
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: colors.accent,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.xs),
+                                  ],
+                                  Flexible(
+                                    child: Text(
+                                      notification.title,
+                                      style: context.supplierTitle().copyWith(
+                                        fontSize: compact ? 14 : 15,
+                                        fontWeight: notification.isRead
+                                            ? FontWeight.w600
+                                            : FontWeight.w700,
+                                        color: muted
+                                            ? colors.textSecondary
+                                            : colors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatTimestamp(
+                                  context,
+                                  notification.createdAt,
+                                ),
+                                style: context.supplierBody().copyWith(
+                                  fontSize: 11,
+                                  color: colors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        _StatusBadge(notification: notification, style: style),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        _TypeBadge(
+                          label: _categoryLabel(context, notification, style),
+                          muted: muted,
+                          style: style,
+                        ),
+                        if (notification.maxAllowedUnitPriceNis != null &&
+                            notification.unit != null)
+                          _TypeBadge(
+                            label: l.maxPriceLabel(
+                              notification.maxAllowedUnitPriceNis!,
+                              notification.unit!,
+                            ),
+                            muted: muted,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      notification.body,
+                      style: context.supplierBody().copyWith(
+                        color: muted ? colors.textMuted : colors.textSecondary,
+                        fontSize: 13,
+                        height: 1.45,
+                      ),
+                    ),
+                    if (showAction) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TextButton(
+                          onPressed: onAction,
+                          style: TextButton.styleFrom(
+                            backgroundColor:
+                                notification.action.type ==
+                                    SupplierNotificationActionType
+                                        .reviewReservation
+                                ? colors.accent
+                                : colors.surfaceSolid,
+                            foregroundColor:
+                                notification.action.type ==
+                                    SupplierNotificationActionType
+                                        .reviewReservation
+                                ? colors.textOnAccent
+                                : colors.accent,
+                            minimumSize: Size(
+                              compact ? double.infinity : 0,
+                              36,
+                            ),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.xs,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppRadius.mdAll,
+                              side: BorderSide(
+                                color: colors.accent.withValues(alpha: 0.55),
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            l.supplierNotificationActionLabel(
+                              notification.action.type,
+                              labelKey: notification.action.labelKey,
+                            ),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                width: 4,
-                color: style.accent.withValues(alpha: muted ? 0.4 : 1),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.md,
-                    AppSpacing.sm + 2,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: style.badgeBackground,
-                              borderRadius: AppRadius.mdAll,
-                            ),
-                            child: Icon(
-                              _iconFor(notification, style.icon),
-                              color: style.accent,
-                              size: 15,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    if (!notification.isRead) ...[
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
-                                          color: colors.accent,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                      const SizedBox(width: AppSpacing.xs),
-                                    ],
-                                    Flexible(
-                                      child: Text(
-                                        notification.title,
-                                        style: context.supplierTitle().copyWith(
-                                          fontSize: compact ? 14 : 15,
-                                          fontWeight: notification.isRead
-                                              ? FontWeight.w600
-                                              : FontWeight.w700,
-                                          color: muted
-                                              ? colors.textSecondary
-                                              : colors.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _formatTimestamp(
-                                    context,
-                                    notification.createdAt,
-                                  ),
-                                  style: context.supplierBody().copyWith(
-                                    fontSize: 11,
-                                    color: colors.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          _StatusBadge(
-                            notification: notification,
-                            style: style,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: AppSpacing.xs,
-                        runSpacing: AppSpacing.xs,
-                        children: [
-                          _TypeBadge(
-                            label: _categoryLabel(context, notification, style),
-                            muted: muted,
-                            style: style,
-                          ),
-                          if (notification.maxAllowedUnitPriceNis != null &&
-                              notification.unit != null)
-                            _TypeBadge(
-                              label: l.maxPriceLabel(
-                                notification.maxAllowedUnitPriceNis!,
-                                notification.unit!,
-                              ),
-                              muted: muted,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        notification.body,
-                        style: context.supplierBody().copyWith(
-                          color: muted
-                              ? colors.textMuted
-                              : colors.textSecondary,
-                          fontSize: 13,
-                          height: 1.45,
-                        ),
-                      ),
-                      if (showAction) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: TextButton(
-                            onPressed: onAction,
-                            style: TextButton.styleFrom(
-                              backgroundColor:
-                                  notification.action.type ==
-                                      SupplierNotificationActionType
-                                          .reviewReservation
-                                  ? colors.accent
-                                  : colors.surfaceSolid,
-                              foregroundColor:
-                                  notification.action.type ==
-                                      SupplierNotificationActionType
-                                          .reviewReservation
-                                  ? colors.textOnAccent
-                                  : colors.accent,
-                              minimumSize: Size(
-                                compact ? double.infinity : 0,
-                                36,
-                              ),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppRadius.mdAll,
-                                side: BorderSide(
-                                  color: colors.accent.withValues(alpha: 0.55),
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              l.supplierNotificationActionLabel(
-                                notification.action.type,
-                                labelKey: notification.action.labelKey,
-                              ),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      ),
+    );
   }
 
   IconData _iconFor(

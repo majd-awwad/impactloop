@@ -20,21 +20,31 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
     required int limit,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    final items = _requests
-        .where(
-          (request) =>
-              (status == null || status == 'all' || request.status.apiValue == status) &&
-              (search == null ||
-                  search.isEmpty ||
-                  request.materialTitle.toLowerCase().contains(search.toLowerCase()) ||
-                  request.learnerName.toLowerCase().contains(search.toLowerCase())) &&
-              (fulfillmentMethod == null || request.fulfillmentMethod == fulfillmentMethod),
-        )
-        .toList()
-      ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    final items =
+        _requests
+            .where(
+              (request) =>
+                  (status == null ||
+                      status == 'all' ||
+                      request.status.apiValue == status) &&
+                  (search == null ||
+                      search.isEmpty ||
+                      request.materialTitle.toLowerCase().contains(
+                        search.toLowerCase(),
+                      ) ||
+                      request.learnerName.toLowerCase().contains(
+                        search.toLowerCase(),
+                      )) &&
+                  (fulfillmentMethod == null ||
+                      request.fulfillmentMethod == fulfillmentMethod),
+            )
+            .toList()
+          ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
     final start = (page - 1) * limit;
     return SupplierReservationListResponse(
-      items: start >= items.length ? const [] : items.skip(start).take(limit).toList(),
+      items: start >= items.length
+          ? const []
+          : items.skip(start).take(limit).toList(),
       pagination: SupplierReservationPagination(
         page: page,
         limit: limit,
@@ -45,7 +55,9 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   }
 
   @override
-  Future<SupplierReservationDetail> fetchReservationDetail(String requestId) async =>
+  Future<SupplierReservationDetail> fetchReservationDetail(
+    String requestId,
+  ) async =>
       throw UnsupportedError('Mock reservation details are not configured.');
 
   @override

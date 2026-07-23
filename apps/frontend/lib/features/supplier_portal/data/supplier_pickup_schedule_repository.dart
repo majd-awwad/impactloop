@@ -2,7 +2,9 @@ import 'models/supplier_pickup_schedule_item.dart';
 
 /// API-ready contract for supplier pickup schedule.
 abstract class SupplierPickupScheduleRepository {
-  Future<SupplierSchedulePage> fetchSchedule(SupplierScheduleQuery query) async {
+  Future<SupplierSchedulePage> fetchSchedule(
+    SupplierScheduleQuery query,
+  ) async {
     // ignore: deprecated_member_use_from_same_package
     final items = await fetchPickupSchedule(query.filter);
     return SupplierSchedulePage(

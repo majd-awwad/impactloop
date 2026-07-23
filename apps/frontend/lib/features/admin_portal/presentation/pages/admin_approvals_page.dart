@@ -2181,10 +2181,7 @@ class _CategoryDialogBody extends StatelessWidget {
                 label: 'Condition',
                 value: _formatCondition(item.condition),
               ),
-              _DetailRow(
-                label: 'Location',
-                value: _dashOr(item.locationLabel),
-              ),
+              _DetailRow(label: 'Location', value: _dashOr(item.locationLabel)),
               _DetailRow(
                 label: 'Reason',
                 value: _dashOr(item.categoryRequestReason),
@@ -2290,9 +2287,7 @@ class _DetailRow extends StatelessWidget {
         children: [
           Text(
             label,
-            style: AdminTypography.kpiHelper(
-              palette,
-            ).copyWith(fontSize: 13),
+            style: AdminTypography.kpiHelper(palette).copyWith(fontSize: 13),
           ),
           const Spacer(),
           Flexible(
@@ -2503,7 +2498,10 @@ class _CategoryDialogFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final colors = AppThemeColors.of(context);
-    final dangerColor = AppStatusStyle.of(context, AppStatusTone.danger).foreground;
+    final dangerColor = AppStatusStyle.of(
+      context,
+      AppStatusTone.danger,
+    ).foreground;
 
     final closeButton = SizedBox(
       height: 46,
@@ -2513,7 +2511,9 @@ class _CategoryDialogFooter extends StatelessWidget {
           foregroundColor: palette.textSecondary,
           side: BorderSide(color: palette.cardBorder),
           padding: const EdgeInsets.symmetric(horizontal: 22),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
         child: const Text('Close'),
       ),
@@ -2910,10 +2910,7 @@ class _PriceDialogHeader extends StatelessWidget {
 
 /// Horizontal three-section strip: Status | Supplier | Material category.
 class _PriceMetadataStrip extends StatelessWidget {
-  const _PriceMetadataStrip({
-    required this.item,
-    required this.supplierLabel,
-  });
+  const _PriceMetadataStrip({required this.item, required this.supplierLabel});
 
   final AdminPriceRequestListItem item;
   final String supplierLabel;
@@ -3011,7 +3008,8 @@ class _PriceComparison {
   bool get hasComparison =>
       supplierPrice != null && adjustedMax != null && adjustedMax! > 0;
 
-  double? get difference => hasComparison ? supplierPrice! - adjustedMax! : null;
+  double? get difference =>
+      hasComparison ? supplierPrice! - adjustedMax! : null;
 
   bool get exceedsMax => hasComparison && difference! > 0;
 
@@ -3075,11 +3073,7 @@ class _PriceDialogBody extends StatelessWidget {
                 value: _formatMoney(item.adjustedMaxUnitPriceNis),
                 pillTone: AppStatusTone.success,
               ),
-              _DetailRow(
-                label: 'Quantity',
-                value: quantityValue,
-                isLast: true,
-              ),
+              _DetailRow(label: 'Quantity', value: quantityValue, isLast: true),
               const SizedBox(height: 18),
               _PriceComparisonSection(comparison: comparison),
             ],
@@ -3141,9 +3135,7 @@ class _PriceComparisonSection extends StatelessWidget {
       children: [
         Text(
           'Price comparison (per unit)',
-          style: AdminTypography.sectionTitle(
-            palette,
-          ).copyWith(fontSize: 13.5),
+          style: AdminTypography.sectionTitle(palette).copyWith(fontSize: 13.5),
         ),
         const SizedBox(height: 14),
         Row(
@@ -3309,11 +3301,7 @@ class _PriceAdminGuidanceCard extends StatelessWidget {
               color: style.background,
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(
-              Icons.info_outline,
-              size: 17,
-              color: style.foreground,
-            ),
+            child: Icon(Icons.info_outline, size: 17, color: style.foreground),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -3581,8 +3569,10 @@ class _PriceDialogFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final colors = AppThemeColors.of(context);
-    final dangerColor =
-        AppStatusStyle.of(context, AppStatusTone.danger).foreground;
+    final dangerColor = AppStatusStyle.of(
+      context,
+      AppStatusTone.danger,
+    ).foreground;
 
     final closeButton = SizedBox(
       height: 46,
@@ -3612,9 +3602,7 @@ class _PriceDialogFooter extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 20),
               ),
               shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
       ),
@@ -3630,9 +3618,7 @@ class _PriceDialogFooter extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 20),
               ),
               shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
         child: submitting

@@ -10,21 +10,18 @@ final learnerHomeApiProvider = Provider<LearnerHomeApi>((ref) {
   return LearnerHomeApi(ref.watch(apiClientProvider));
 });
 
-final learnerHomeFeedProvider = FutureProvider.autoDispose<LearnerHomeFeed>(
-  (ref) async {
-    return ref.watch(learnerHomeApiProvider).fetchHomeFeed();
-  },
-  retry: _noAutomaticLearnerHomeRetry,
-);
+final learnerHomeFeedProvider = FutureProvider.autoDispose<LearnerHomeFeed>((
+  ref,
+) async {
+  return ref.watch(learnerHomeApiProvider).fetchHomeFeed();
+}, retry: _noAutomaticLearnerHomeRetry);
 
 final learnerHomeSectionDetailsProvider = FutureProvider.autoDispose
     .family<LearnerHomeSectionDetails, LearnerHomeSectionKey>((
       ref,
       sectionKey,
     ) async {
-      return ref
-          .watch(learnerHomeApiProvider)
-          .fetchSectionDetails(sectionKey);
+      return ref.watch(learnerHomeApiProvider).fetchSectionDetails(sectionKey);
     }, retry: _noAutomaticLearnerHomeRetry);
 
 void invalidateLearnerHomeProviders(Ref ref) {

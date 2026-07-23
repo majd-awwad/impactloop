@@ -9,8 +9,7 @@ class SupplierRequestsApi {
 
   final Dio _client;
 
-  Future<SupplierReservationListResponse> fetchIncomingRequestsResponse(
-    {
+  Future<SupplierReservationListResponse> fetchIncomingRequestsResponse({
     String? status,
     String? search,
     String? attentionState,
@@ -20,13 +19,9 @@ class SupplierRequestsApi {
     DateTime? dateTo,
     required int page,
     required int limit,
-  }
-  ) async {
+  }) async {
     try {
-      final queryParameters = <String, dynamic>{
-        'page': page,
-        'limit': limit,
-      };
+      final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
       if (status != null) queryParameters['status'] = status;
       if (search != null && search.trim().isNotEmpty) {
         queryParameters['search'] = search.trim();

@@ -299,7 +299,8 @@ class SupplierNotificationDestinationMapper {
       case SupplierNotificationDestination.supplierProfile:
         return true;
       case SupplierNotificationDestination.supplierReservationDetail:
-        return target?.entityType == 'RESERVATION' && _validId(target?.entityId);
+        return target?.entityType == 'RESERVATION' &&
+            _validId(target?.entityId);
       case SupplierNotificationDestination.supplierAddMaterialCategoryRequest:
         return target?.entityType == 'CATEGORY_REQUEST' &&
             _validId(target?.entityId);

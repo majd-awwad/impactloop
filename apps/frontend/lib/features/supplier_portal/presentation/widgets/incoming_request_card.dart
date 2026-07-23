@@ -42,8 +42,10 @@ class IncomingRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isTerminal = _isQuietTerminal(request);
     final desktop =
-        MediaQuery.sizeOf(context).width >= IncomingRequestDesktopGrid.breakpoint;
-    final effectiveLabel = primaryLabel ??
+        MediaQuery.sizeOf(context).width >=
+        IncomingRequestDesktopGrid.breakpoint;
+    final effectiveLabel =
+        primaryLabel ??
         (request.status == SupplierIncomingRequestStatus.accepted &&
                 request.canSupplierComplete &&
                 onMarkCompleted != null
@@ -64,7 +66,10 @@ class IncomingRequestCard extends StatelessWidget {
           child: Container(
             width: double.infinity,
             constraints: BoxConstraints(minHeight: isTerminal ? 96 : 108),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 12,
+            ),
             decoration: BoxDecoration(
               color: context.supplierColors.surfaceSolid,
               borderRadius: AppRadius.mdAll,
@@ -178,12 +183,18 @@ class _Identity extends StatelessWidget {
                 '${request.learnerName} · $quantity ${request.unit}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: context.supplierBody().copyWith(color: colors.textSecondary, fontSize: 13),
+                style: context.supplierBody().copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 3),
               Text(
                 'RSV-${_shortId(request.id)}',
-                style: context.supplierLabel().copyWith(fontSize: 11, color: colors.textMuted),
+                style: context.supplierLabel().copyWith(
+                  fontSize: 11,
+                  color: colors.textMuted,
+                ),
               ),
             ],
           ),
@@ -203,11 +214,23 @@ class _Thumbnail extends StatelessWidget {
       height: 56,
       width: 56,
       child: imageUrl == null || imageUrl!.isEmpty
-          ? ColoredBox(color: context.supplierColors.backgroundElevated, child: Icon(Icons.inventory_2_outlined, color: context.supplierColors.textSecondary))
+          ? ColoredBox(
+              color: context.supplierColors.backgroundElevated,
+              child: Icon(
+                Icons.inventory_2_outlined,
+                color: context.supplierColors.textSecondary,
+              ),
+            )
           : Image.network(
               ApiConfig.resolveMediaUrl(imageUrl!),
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => ColoredBox(color: context.supplierColors.backgroundElevated, child: Icon(Icons.broken_image_outlined, color: context.supplierColors.textSecondary)),
+              errorBuilder: (_, _, _) => ColoredBox(
+                color: context.supplierColors.backgroundElevated,
+                child: Icon(
+                  Icons.broken_image_outlined,
+                  color: context.supplierColors.textSecondary,
+                ),
+              ),
             ),
     ),
   );
@@ -223,13 +246,21 @@ class _Schedule extends StatelessWidget {
     final terminal = _isQuietTerminal(request);
     final isDelivery = request.isDeliveryFulfillment || request.hasDelivery;
     final heading = isDelivery ? 'Delivery' : 'Self pickup';
-    final date = window?.start == null || window?.end == null ? null : _formatWindow(window!.start!, window.end!);
+    final date = window?.start == null || window?.end == null
+        ? null
+        : _formatWindow(window!.start!, window.end!);
     final recovery = summary?.recoveryContext != null;
-    final deliveryState = request.deliverySummary?.status ?? request.activeDelivery?.status;
+    final deliveryState =
+        request.deliverySummary?.status ?? request.activeDelivery?.status;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(heading, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.supplierLabel()),
+        Text(
+          heading,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: context.supplierLabel(),
+        ),
         const SizedBox(height: 3),
         Text(
           terminal
@@ -243,9 +274,18 @@ class _Schedule extends StatelessWidget {
               : '',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: context.supplierBody().copyWith(color: context.supplierColors.textSecondary, fontSize: 13),
+          style: context.supplierBody().copyWith(
+            color: context.supplierColors.textSecondary,
+            fontSize: 13,
+          ),
         ),
-        if (date != null) Text(date, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.supplierBody().copyWith(fontSize: 13)),
+        if (date != null)
+          Text(
+            date,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.supplierBody().copyWith(fontSize: 13),
+          ),
       ],
     );
   }
@@ -256,10 +296,15 @@ class _OperationalState extends StatelessWidget {
   final SupplierIncomingRequest request;
   @override
   Widget build(BuildContext context) {
-    final style = IncomingRequestStatusStyle.forStatus(request.status).resolve(context);
+    final style = IncomingRequestStatusStyle.forStatus(
+      request.status,
+    ).resolve(context);
     final terminal = _isQuietTerminal(request);
     final nextActor = request.nextActor?.value;
-    final isAdminReview = request.attentionState?.value == SupplierAttentionState.adminReviewRequired || request.summaryBucket?.value == SupplierSummaryBucket.adminReview;
+    final isAdminReview =
+        request.attentionState?.value ==
+            SupplierAttentionState.adminReviewRequired ||
+        request.summaryBucket?.value == SupplierSummaryBucket.adminReview;
     final supporting = terminal
         ? _terminalOutcome(request.status)
         : isAdminReview
@@ -272,8 +317,21 @@ class _OperationalState extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(color: style.background, borderRadius: AppRadius.pillAll, border: Border.all(color: style.border)),
-          child: Text(request.status.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.supplierChip().copyWith(color: style.foreground, fontSize: 11, fontWeight: FontWeight.w600)),
+          decoration: BoxDecoration(
+            color: style.background,
+            borderRadius: AppRadius.pillAll,
+            border: Border.all(color: style.border),
+          ),
+          child: Text(
+            request.status.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: context.supplierChip().copyWith(
+              color: style.foreground,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         if (supporting != null) ...[
           const SizedBox(height: 5),
@@ -283,7 +341,9 @@ class _OperationalState extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: context.supplierBody().copyWith(
               fontSize: 13,
-              color: request.attentionState?.value == SupplierAttentionState.supplierActionRequired
+              color:
+                  request.attentionState?.value ==
+                      SupplierAttentionState.supplierActionRequired
                   ? context.supplierColors.accent
                   : context.supplierColors.textSecondary,
             ),
@@ -311,10 +371,21 @@ class _Actions extends StatelessWidget {
   Widget build(BuildContext context) {
     final style = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(84, 40)),
-      padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: 8),
+      ),
       visualDensity: VisualDensity.compact,
     );
-    final primary = label == null ? const SizedBox.shrink() : Tooltip(message: label!, child: FilledButton(onPressed: onPrimary, style: style, child: Text(label!, maxLines: 1, overflow: TextOverflow.ellipsis)));
+    final primary = label == null
+        ? const SizedBox.shrink()
+        : Tooltip(
+            message: label!,
+            child: FilledButton(
+              onPressed: onPrimary,
+              style: style,
+              child: Text(label!, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          );
     final view = Tooltip(
       message: detailsLabel,
       child: IconButton(
@@ -323,43 +394,64 @@ class _Actions extends StatelessWidget {
         icon: const Icon(Icons.chevron_right_rounded),
       ),
     );
-    if (expanded) return Row(children: [if (label != null) Expanded(child: primary), if (label != null) const SizedBox(width: AppSpacing.sm), Expanded(child: view)]);
-    return Align(alignment: AlignmentDirectional.centerStart, child: label == null ? view : primary);
+    if (expanded)
+      return Row(
+        children: [
+          if (label != null) Expanded(child: primary),
+          if (label != null) const SizedBox(width: AppSpacing.sm),
+          Expanded(child: view),
+        ],
+      );
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: label == null ? view : primary,
+    );
   }
 }
 
-String _shortId(String id) => id.length <= 8 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();
+String _shortId(String id) =>
+    id.length <= 8 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();
 
-String _formatWindow(DateTime start, DateTime end) => '${DateFormat('MMM d · h:mm a').format(start.toLocal())}–${DateFormat('h:mm a').format(end.toLocal())}';
+String _formatWindow(DateTime start, DateTime end) =>
+    '${DateFormat('MMM d · h:mm a').format(start.toLocal())}–${DateFormat('h:mm a').format(end.toLocal())}';
 
-String _attentionLabel(SupplierAttentionState? attention) => switch (attention) {
-  SupplierAttentionState.supplierActionRequired => 'Needs your response',
-  SupplierAttentionState.waitingForLearner => 'Waiting for learner',
-  SupplierAttentionState.fulfillmentInProgress => 'Fulfillment active',
-  SupplierAttentionState.adminReviewRequired => 'Admin review',
-  SupplierAttentionState.terminal => 'No further action',
-  _ => 'Review request',
-};
+String _attentionLabel(SupplierAttentionState? attention) =>
+    switch (attention) {
+      SupplierAttentionState.supplierActionRequired => 'Needs your response',
+      SupplierAttentionState.waitingForLearner => 'Waiting for learner',
+      SupplierAttentionState.fulfillmentInProgress => 'Fulfillment active',
+      SupplierAttentionState.adminReviewRequired => 'Admin review',
+      SupplierAttentionState.terminal => 'No further action',
+      _ => 'Review request',
+    };
 
-String? _terminalOutcome(SupplierIncomingRequestStatus status) => switch (status) {
-  SupplierIncomingRequestStatus.completed => 'Completed successfully',
-  SupplierIncomingRequestStatus.expired => 'No response before the deadline',
-  _ => null,
-};
+String? _terminalOutcome(SupplierIncomingRequestStatus status) =>
+    switch (status) {
+      SupplierIncomingRequestStatus.completed => 'Completed successfully',
+      SupplierIncomingRequestStatus.expired =>
+        'No response before the deadline',
+      _ => null,
+    };
 
-String _terminalFulfillmentLine(SupplierIncomingRequestStatus status) => switch (status) {
-  SupplierIncomingRequestStatus.completed => 'Completed fulfillment',
-  SupplierIncomingRequestStatus.cancelled => 'Cancelled before fulfillment',
-  SupplierIncomingRequestStatus.expired => 'Expired before fulfillment',
-  SupplierIncomingRequestStatus.noShow => 'Closed after no-show',
-  SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
-  SupplierIncomingRequestStatus.declined => 'Rejected before fulfillment',
-  _ => 'Final reservation outcome',
-};
+String _terminalFulfillmentLine(SupplierIncomingRequestStatus status) =>
+    switch (status) {
+      SupplierIncomingRequestStatus.completed => 'Completed fulfillment',
+      SupplierIncomingRequestStatus.cancelled => 'Cancelled before fulfillment',
+      SupplierIncomingRequestStatus.expired => 'Expired before fulfillment',
+      SupplierIncomingRequestStatus.noShow => 'Closed after no-show',
+      SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
+      SupplierIncomingRequestStatus.declined => 'Rejected before fulfillment',
+      _ => 'Final reservation outcome',
+    };
 
 bool _isQuietTerminal(SupplierIncomingRequest request) {
-  final adminReview = request.attentionState?.value == SupplierAttentionState.adminReviewRequired || request.summaryBucket?.value == SupplierSummaryBucket.adminReview;
-  return !adminReview && (request.attentionState?.value == SupplierAttentionState.terminal || request.isReadOnlyFinalState);
+  final adminReview =
+      request.attentionState?.value ==
+          SupplierAttentionState.adminReviewRequired ||
+      request.summaryBucket?.value == SupplierSummaryBucket.adminReview;
+  return !adminReview &&
+      (request.attentionState?.value == SupplierAttentionState.terminal ||
+          request.isReadOnlyFinalState);
 }
 
 String _actorLabel(SupplierNextActor actor) => switch (actor) {

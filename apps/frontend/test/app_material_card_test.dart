@@ -68,10 +68,7 @@ void main() {
                 availabilityLabel: 'Delivery available',
                 deliveryAvailable: true,
                 isFree: true,
-                gradientColors: const [
-                  Color(0xFF1C3F66),
-                  Color(0xFF121E2D),
-                ],
+                gradientColors: const [Color(0xFF1C3F66), Color(0xFF121E2D)],
                 imageUrl: 'https://example.com/material.jpg',
                 fallbackIcon: Icons.memory_rounded,
                 variant: AppMaterialCardVariant.compact,

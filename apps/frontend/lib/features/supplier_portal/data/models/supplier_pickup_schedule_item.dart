@@ -9,8 +9,7 @@ Map<String, dynamic>? _scheduleMap(Object? value) =>
 DateTime? _scheduleDate(Object? value) =>
     value is String ? DateTime.tryParse(value) : null;
 
-List<T> _scheduleList<T>(Iterable<T> values) =>
-    List<T>.unmodifiable(values);
+List<T> _scheduleList<T>(Iterable<T> values) => List<T>.unmodifiable(values);
 
 /// Absolute UTC boundaries for a selected local calendar day.
 ///
@@ -688,10 +687,8 @@ class SupplierScheduleEffectiveWindow {
     );
   }
 
-  SupplierPickupWindow toCompatibilityWindow() => SupplierPickupWindow(
-        start: start,
-        end: end,
-      );
+  SupplierPickupWindow toCompatibilityWindow() =>
+      SupplierPickupWindow(start: start, end: end);
 }
 
 class SupplierScheduleMaterial {
@@ -803,9 +800,13 @@ class SupplierScheduleApiEntry {
       group: _scheduleMap(json['group']) is Map<String, dynamic>
           ? SupplierScheduleGroup.fromJson(_scheduleMap(json['group'])!)
           : null,
-      material: SupplierScheduleMaterial.fromJson(_scheduleMap(json['material'])),
+      material: SupplierScheduleMaterial.fromJson(
+        _scheduleMap(json['material']),
+      ),
       learner: SupplierScheduleLearner.fromJson(_scheduleMap(json['learner'])),
-      quantity: SupplierScheduleQuantity.fromJson(_scheduleMap(json['quantity'])),
+      quantity: SupplierScheduleQuantity.fromJson(
+        _scheduleMap(json['quantity']),
+      ),
       fulfillmentMethod: json['fulfillmentMethod'] as String? ?? 'UNKNOWN',
       effectiveWindow: SupplierScheduleEffectiveWindow.tryFromJson(
         _scheduleMap(json['effectiveWindow']),
@@ -834,7 +835,8 @@ class SupplierScheduleApiEntry {
   SupplierPickupScheduleItem? toCompatibilityItem() {
     if (!category.isKnown || !type.isKnown) return null;
 
-    final terminal = category.value == SupplierScheduleCategory.completed ||
+    final terminal =
+        category.value == SupplierScheduleCategory.completed ||
         category.value == SupplierScheduleCategory.closed;
     final actionValues = availableActions.map((item) => item.value).toSet();
     final deliverySummary = delivery == null
@@ -858,12 +860,14 @@ class SupplierScheduleApiEntry {
           ? 'Delivery pickup'
           : 'Self pickup',
       activeDelivery: deliverySummary,
-      canSupplierComplete:
-          actionValues.contains(SupplierReservationAction.completeSelfPickup),
+      canSupplierComplete: actionValues.contains(
+        SupplierReservationAction.completeSelfPickup,
+      ),
       isOverdue: category.value == SupplierScheduleCategory.overdue,
       needsFollowUp: needsAttention,
-      canSupplierCloseOverduePickup:
-          actionValues.contains(SupplierReservationAction.closeReservation),
+      canSupplierCloseOverduePickup: actionValues.contains(
+        SupplierReservationAction.closeReservation,
+      ),
       canSupplierReportAndCloseOverduePickup:
           actionValues.contains(SupplierReservationAction.reportIncident) ||
           actionValues.contains(SupplierReservationAction.markLearnerNoShow),
@@ -872,13 +876,15 @@ class SupplierScheduleApiEntry {
           actionValues.contains(
             SupplierReservationAction.acceptLearnerReschedule,
           ),
-      canReportNoDriverAvailable:
-          actionValues.contains(SupplierReservationAction.reportNoDriver),
+      canReportNoDriverAvailable: actionValues.contains(
+        SupplierReservationAction.reportNoDriver,
+      ),
       canSupplierMarkDeliveryPickupExpired: actionValues.contains(
         SupplierReservationAction.markDeliveryPickupExpired,
       ),
-      canSupplierReportDriverNoShow:
-          actionValues.contains(SupplierReservationAction.reportDriverNoShow),
+      canSupplierReportDriverNoShow: actionValues.contains(
+        SupplierReservationAction.reportDriverNoShow,
+      ),
       pickupWindow: effectiveWindow,
       completedAt: historyTimestamp,
       groupId: group?.groupId,
@@ -1026,9 +1032,9 @@ class SupplierSchedulePage {
       legacyCompatibilityItems.isNotEmpty
       ? legacyCompatibilityItems
       : items
-          .map((entry) => entry.toCompatibilityItem())
-          .whereType<SupplierPickupScheduleItem>()
-          .toList(growable: false);
+            .map((entry) => entry.toCompatibilityItem())
+            .whereType<SupplierPickupScheduleItem>()
+            .toList(growable: false);
 }
 
 class SupplierScheduleQuery {
@@ -1139,21 +1145,21 @@ class SupplierScheduleQuery {
         (selectedDay != null && selectedDay != this.selectedDay) ||
         (filter != null && filter != this.filter);
     return SupplierScheduleQuery(
-        page: filterChanged ? 1 : page ?? this.page,
-        limit: limit ?? this.limit,
-        scope: scope ?? this.scope,
-        category: category ?? this.category,
-        needsAttention: needsAttention ?? this.needsAttention,
-        fulfillmentMethod: fulfillmentMethod ?? this.fulfillmentMethod,
-        search: search ?? this.search,
-        rangeStart: rangeStart ?? this.rangeStart,
-        rangeEnd: rangeEnd ?? this.rangeEnd,
-        dayStart: dayStart ?? this.dayStart,
-        dayEnd: dayEnd ?? this.dayEnd,
-        materialId: materialId ?? this.materialId,
-        selectedDay: selectedDay ?? this.selectedDay,
-        filter: filter ?? this.filter,
-      );
+      page: filterChanged ? 1 : page ?? this.page,
+      limit: limit ?? this.limit,
+      scope: scope ?? this.scope,
+      category: category ?? this.category,
+      needsAttention: needsAttention ?? this.needsAttention,
+      fulfillmentMethod: fulfillmentMethod ?? this.fulfillmentMethod,
+      search: search ?? this.search,
+      rangeStart: rangeStart ?? this.rangeStart,
+      rangeEnd: rangeEnd ?? this.rangeEnd,
+      dayStart: dayStart ?? this.dayStart,
+      dayEnd: dayEnd ?? this.dayEnd,
+      materialId: materialId ?? this.materialId,
+      selectedDay: selectedDay ?? this.selectedDay,
+      filter: filter ?? this.filter,
+    );
   }
 
   Map<String, dynamic> toQueryParameters() {
@@ -1204,19 +1210,19 @@ class SupplierScheduleQuery {
 
   @override
   int get hashCode => Object.hash(
-        page,
-        limit,
-        scope,
-        category,
-        needsAttention,
-        fulfillmentMethod,
-        search,
-        rangeStart,
-        rangeEnd,
-        dayStart,
-        dayEnd,
-        materialId,
-        selectedDay,
-        filter,
-      );
+    page,
+    limit,
+    scope,
+    category,
+    needsAttention,
+    fulfillmentMethod,
+    search,
+    rangeStart,
+    rangeEnd,
+    dayStart,
+    dayEnd,
+    materialId,
+    selectedDay,
+    filter,
+  );
 }

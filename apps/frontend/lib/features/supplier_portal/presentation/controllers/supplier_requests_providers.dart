@@ -118,11 +118,11 @@ final incomingRequestsProvider =
 
 final supplierReservationDetailProvider = FutureProvider.autoDispose
     .family<SupplierReservationDetail, String>((ref, reservationId) async {
-  watchSupplierPortalSessionFromRef(ref);
-  return ref
-      .read(supplierRequestsRepositoryProvider)
-      .fetchReservationDetail(reservationId);
-});
+      watchSupplierPortalSessionFromRef(ref);
+      return ref
+          .read(supplierRequestsRepositoryProvider)
+          .fetchReservationDetail(reservationId);
+    });
 
 Future<SupplierIncomingRequest> acceptIncomingRequest(
   WidgetRef ref, {
@@ -168,10 +168,7 @@ Future<SupplierIncomingRequest> completeIncomingRequest(
 }) async {
   final result = await ref
       .read(supplierRequestsRepositoryProvider)
-      .completeRequest(
-        requestId,
-        confirmationCode: confirmationCode,
-      );
+      .completeRequest(requestId, confirmationCode: confirmationCode);
   invalidateReservationSyncProviders(ref);
   return result;
 }
@@ -188,7 +185,9 @@ Future<void> rescheduleIncomingRequest(
   String? messageToLearner,
   String? note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).rescheduleRequest(
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .rescheduleRequest(
         requestId,
         pickupWindow,
         reason: reason,
@@ -213,10 +212,9 @@ Future<void> submitNoDriverPickupWindow(
   required String requestId,
   required SupplierPickupWindow pickupWindow,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).submitNoDriverPickupWindow(
-        requestId,
-        pickupWindow,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .submitNoDriverPickupWindow(requestId, pickupWindow);
   _invalidateReservationFollowUp(ref);
 }
 
@@ -237,11 +235,9 @@ Future<void> reportNoShowForRequest(
   required String reasonCode,
   String? note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).submitNoShowReport(
-        requestId,
-        reasonCode: reasonCode,
-        note: note,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .submitNoShowReport(requestId, reasonCode: reasonCode, note: note);
   _invalidateReservationFollowUp(ref);
 }
 
@@ -249,10 +245,9 @@ Future<void> markLearnerNoShowForRequest(
   WidgetRef ref, {
   required String requestId,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).markLearnerNoShow(
-        requestId,
-        reason: 'LEARNER_DID_NOT_ARRIVE',
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .markLearnerNoShow(requestId, reason: 'LEARNER_DID_NOT_ARRIVE');
   _invalidateReservationFollowUp(ref);
 }
 
@@ -271,10 +266,9 @@ Future<void> reportNoDriverAvailableForRequest(
   required String requestId,
   required String note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).reportNoDriverAvailable(
-        requestId,
-        note: note,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .reportNoDriverAvailable(requestId, note: note);
   _invalidateReservationFollowUp(ref);
 }
 
@@ -283,9 +277,8 @@ Future<void> markDriverNoShowForDelivery(
   required String deliveryId,
   required String note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).markDriverNoShow(
-        deliveryId,
-        note: note,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .markDriverNoShow(deliveryId, note: note);
   _invalidateReservationFollowUp(ref);
 }

@@ -22,7 +22,8 @@ class SupplierResponsiveChipRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
+        final maxWidth =
+            constraints.maxWidth.isFinite && constraints.maxWidth > 0
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
         final compact = maxWidth < breakpoint;

@@ -242,10 +242,7 @@ class _MaterialDetailsGalleryState extends State<MaterialDetailsGallery> {
                             end: AlignmentDirectional.bottomEnd,
                             colors: canShowThumb
                                 ? widget.gradientColors
-                                : [
-                                    palette.fallbackStart,
-                                    palette.fallbackMid,
-                                  ],
+                                : [palette.fallbackStart, palette.fallbackMid],
                           ),
                         ),
                         child: ClipRRect(
@@ -256,9 +253,10 @@ class _MaterialDetailsGalleryState extends State<MaterialDetailsGallery> {
                                   fit: BoxFit.cover,
                                   semanticLabel: _altTextForIndex(index),
                                   errorBuilder: (context, error, stackTrace) {
-                                    WidgetsBinding.instance.addPostFrameCallback(
-                                      (_) => _markImageFailed(index),
-                                    );
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback(
+                                          (_) => _markImageFailed(index),
+                                        );
                                     return Center(
                                       child: Icon(
                                         widget.fallbackIcon,

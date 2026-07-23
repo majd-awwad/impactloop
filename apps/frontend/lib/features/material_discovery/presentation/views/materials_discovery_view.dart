@@ -615,10 +615,7 @@ class _RefetchErrorBanner extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             TextButton(
               onPressed: onRetry,
-              style: AppStatusButtonStyle.text(
-                context,
-                AppStatusTone.primary,
-              ),
+              style: AppStatusButtonStyle.text(context, AppStatusTone.primary),
               child: Text(
                 const LocalizedText(
                   en: 'Retry',

@@ -229,7 +229,9 @@ class _ImageSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(AppRadius.lg),
+      ),
       child: SizedBox(
         height: _imageHeight,
         child: Stack(
@@ -286,9 +288,9 @@ class _MetadataLine extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.textMuted,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
           ),
         ),
       ],
@@ -304,7 +306,10 @@ class _CompactBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: colors.surfaceSolid.withValues(alpha: .9),
         borderRadius: AppRadius.pillAll,
@@ -357,9 +362,9 @@ class _Placeholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: colors.chipUnselected,
-        child: Center(
-          child: Icon(Icons.image_outlined, size: 40, color: colors.textMuted),
-        ),
-      );
+    color: colors.chipUnselected,
+    child: Center(
+      child: Icon(Icons.image_outlined, size: 40, color: colors.textMuted),
+    ),
+  );
 }

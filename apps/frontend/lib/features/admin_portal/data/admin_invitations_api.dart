@@ -11,8 +11,9 @@ class AdminInvitationsApi {
 
   Future<List<AdminInvitationItem>> fetchInvitations() async {
     try {
-      final response =
-          await _client.get<Map<String, dynamic>>('/api/admin/invitations');
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/admin/invitations',
+      );
       final body = response.data;
 
       if (body == null || body['success'] != true) {

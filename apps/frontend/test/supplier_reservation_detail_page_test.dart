@@ -11,7 +11,7 @@ import 'package:frontend/features/supplier_portal/presentation/pages/supplier_re
 
 class _DetailRepository extends MockSupplierRequestsRepository {
   _DetailRepository({Map<String, dynamic>? payload})
-      : _payload = payload ?? _pendingPayload();
+    : _payload = payload ?? _pendingPayload();
 
   final Map<String, dynamic> _payload;
 
@@ -19,48 +19,45 @@ class _DetailRepository extends MockSupplierRequestsRepository {
   Future<SupplierReservationDetail> fetchReservationDetail(
     String requestId,
   ) async {
-    return SupplierReservationDetail.fromJson({
-      ..._payload,
-      'id': requestId,
-    });
+    return SupplierReservationDetail.fromJson({..._payload, 'id': requestId});
   }
 }
 
 Map<String, dynamic> _pendingPayload() => {
-      'materialTitle': 'SG90 Micro Servo Motors',
-      'learnerName': 'Majd Learner',
-      'quantityRequested': 2,
-      'unit': 'pieces',
-      'status': 'PENDING',
-      'requestedAt': '2026-07-12T18:22:00.000Z',
-      'workflowPhase': 'INITIAL_DECISION',
-      'attentionState': 'SUPPLIER_ACTION_REQUIRED',
-      'nextActor': 'SUPPLIER',
-      'availableActions': ['ACCEPT', 'DECLINE', 'SEND_MESSAGE'],
-      'request': {
-        'originalLearnerNote': 'I need them for my robotics project.',
-        'fulfillmentMethod': 'PICKUP',
+  'materialTitle': 'SG90 Micro Servo Motors',
+  'learnerName': 'Majd Learner',
+  'quantityRequested': 2,
+  'unit': 'pieces',
+  'status': 'PENDING',
+  'requestedAt': '2026-07-12T18:22:00.000Z',
+  'workflowPhase': 'INITIAL_DECISION',
+  'attentionState': 'SUPPLIER_ACTION_REQUIRED',
+  'nextActor': 'SUPPLIER',
+  'availableActions': ['ACCEPT', 'DECLINE', 'SEND_MESSAGE'],
+  'request': {
+    'originalLearnerNote': 'I need them for my robotics project.',
+    'fulfillmentMethod': 'PICKUP',
+  },
+  'messages': {
+    'count': 1,
+    'items': [
+      {
+        'id': 'message-1',
+        'senderRole': 'LEARNER',
+        'body': 'Can I pick them up tomorrow?',
+        'createdAt': '2026-07-12T18:22:00.000Z',
       },
-      'messages': {
-        'count': 1,
-        'items': [
-          {
-            'id': 'message-1',
-            'senderRole': 'LEARNER',
-            'body': 'Can I pick them up tomorrow?',
-            'createdAt': '2026-07-12T18:22:00.000Z',
-          },
-        ],
-      },
-      'history': [
-        {
-          'id': 'history-1',
-          'newStatus': 'PENDING',
-          'createdAt': '2026-07-12T18:22:00.000Z',
-          'actor': {'displayName': 'Majd Learner', 'role': 'LEARNER'},
-        },
-      ],
-    };
+    ],
+  },
+  'history': [
+    {
+      'id': 'history-1',
+      'newStatus': 'PENDING',
+      'createdAt': '2026-07-12T18:22:00.000Z',
+      'actor': {'displayName': 'Majd Learner', 'role': 'LEARNER'},
+    },
+  ],
+};
 
 Future<void> _pumpDetail(
   WidgetTester tester,
@@ -82,61 +79,62 @@ Future<void> _pumpDetail(
     ProviderScope(
       overrides: [
         supplierRequestsRepositoryProvider.overrideWithValue(
-          _DetailRepository(payload: {
-            'materialTitle': detail.reservation.materialTitle,
-            'learnerName': detail.reservation.learnerName,
-            'quantityRequested': detail.reservation.quantityRequested,
-            'unit': detail.reservation.unit,
-            'status': detail.reservation.status.apiValue,
-            'requestedAt': detail.reservation.requestedAt.toIso8601String(),
-            'workflowPhase': detail.reservation.workflowPhase?.rawValue,
-            'attentionState': detail.reservation.attentionState?.rawValue,
-            'nextActor': detail.reservation.nextActor?.rawValue,
-            'availableActions': detail.reservation.availableActions
-                .map((action) => action.rawValue)
-                .toList(),
-            'request': {
-              'fulfillmentMethod': detail.reservation.fulfillmentMethod,
+          _DetailRepository(
+            payload: {
+              'materialTitle': detail.reservation.materialTitle,
+              'learnerName': detail.reservation.learnerName,
+              'quantityRequested': detail.reservation.quantityRequested,
+              'unit': detail.reservation.unit,
+              'status': detail.reservation.status.apiValue,
+              'requestedAt': detail.reservation.requestedAt.toIso8601String(),
+              'workflowPhase': detail.reservation.workflowPhase?.rawValue,
+              'attentionState': detail.reservation.attentionState?.rawValue,
+              'nextActor': detail.reservation.nextActor?.rawValue,
+              'availableActions': detail.reservation.availableActions
+                  .map((action) => action.rawValue)
+                  .toList(),
+              'request': {
+                'fulfillmentMethod': detail.reservation.fulfillmentMethod,
+              },
+              if (detail.identity != null)
+                'identity': {
+                  'createdAt': detail.identity!.createdAt?.toIso8601String(),
+                  'updatedAt': detail.identity!.updatedAt?.toIso8601String(),
+                },
+              if (detail.schedule != null)
+                'schedule': {
+                  if (detail.schedule!.confirmedPickupWindow != null)
+                    'confirmedPickupWindow': _windowJson(
+                      detail.schedule!.confirmedPickupWindow!,
+                    ),
+                  if (detail.schedule!.supplierDeliveryPickupWindow != null)
+                    'supplierDeliveryPickupWindow': _windowJson(
+                      detail.schedule!.supplierDeliveryPickupWindow!,
+                    ),
+                  if (detail.schedule!.confirmedDeliveryWindow != null)
+                    'confirmedDeliveryWindow': _windowJson(
+                      detail.schedule!.confirmedDeliveryWindow!,
+                    ),
+                },
             },
-            if (detail.identity != null)
-              'identity': {
-                'createdAt': detail.identity!.createdAt?.toIso8601String(),
-                'updatedAt': detail.identity!.updatedAt?.toIso8601String(),
-              },
-            if (detail.schedule != null)
-              'schedule': {
-                if (detail.schedule!.confirmedPickupWindow != null)
-                  'confirmedPickupWindow': _windowJson(
-                    detail.schedule!.confirmedPickupWindow!,
-                  ),
-                if (detail.schedule!.supplierDeliveryPickupWindow != null)
-                  'supplierDeliveryPickupWindow': _windowJson(
-                    detail.schedule!.supplierDeliveryPickupWindow!,
-                  ),
-                if (detail.schedule!.confirmedDeliveryWindow != null)
-                  'confirmedDeliveryWindow': _windowJson(
-                    detail.schedule!.confirmedDeliveryWindow!,
-                  ),
-              },
-          }),
+          ),
         ),
       ],
-      child: MaterialApp.router(
-        theme: AppTheme.light,
-        routerConfig: router,
-      ),
+      child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
     ),
   );
   await tester.pumpAndSettle();
 }
 
 Map<String, dynamic> _windowJson(SupplierScheduleWindow window) => {
-      'start': window.start?.toIso8601String(),
-      'end': window.end?.toIso8601String(),
-    };
+  'start': window.start?.toIso8601String(),
+  'end': window.end?.toIso8601String(),
+};
 
 void main() {
-  testWidgets('deep-linked route renders the supplier workspace', (tester) async {
+  testWidgets('deep-linked route renders the supplier workspace', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -156,37 +154,45 @@ void main() {
     expect(find.textContaining('Messages'), findsOneWidget);
   });
 
-  testWidgets('terminal cancelled pickup uses adaptive facts and schedule history',
-      (tester) async {
-    tester.view.physicalSize = const Size(900, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'terminal cancelled pickup uses adaptive facts and schedule history',
+    (tester) async {
+      tester.view.physicalSize = const Size(900, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    final detail = SupplierReservationDetail.fromJson({
-      ..._pendingPayload(),
-      'status': 'CANCELLED',
-      'workflowPhase': 'CLOSED',
-      'attentionState': 'TERMINAL',
-      'nextActor': 'NONE',
-      'availableActions': const [],
-      'identity': {
-        'createdAt': '2026-07-12T18:22:00.000Z',
-        'updatedAt': '2026-07-12T18:22:00.000Z',
-      },
-    });
-    await _pumpDetail(tester, detail);
+      final detail = SupplierReservationDetail.fromJson({
+        ..._pendingPayload(),
+        'status': 'CANCELLED',
+        'workflowPhase': 'CLOSED',
+        'attentionState': 'TERMINAL',
+        'nextActor': 'NONE',
+        'availableActions': const [],
+        'identity': {
+          'createdAt': '2026-07-12T18:22:00.000Z',
+          'updatedAt': '2026-07-12T18:22:00.000Z',
+        },
+      });
+      await _pumpDetail(tester, detail);
 
-    expect(find.text('Outcome'), findsOneWidget);
-    expect(find.text('Schedule history'), findsOneWidget);
-    expect(find.text('No pickup window was confirmed before this request was cancelled.'), findsOneWidget);
-    expect(find.text('Not proposed'), findsNothing);
-  });
+      expect(find.text('Outcome'), findsOneWidget);
+      expect(find.text('Schedule history'), findsOneWidget);
+      expect(
+        find.text(
+          'No pickup window was confirmed before this request was cancelled.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Not proposed'), findsNothing);
+    },
+  );
 
-  testWidgets('pickup requests suppress stale delivery schedule windows',
-      (tester) async {
+  testWidgets('pickup requests suppress stale delivery schedule windows', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(900, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -208,6 +214,9 @@ void main() {
     await _pumpDetail(tester, detail);
 
     expect(find.text('Supplier delivery pickup window'), findsNothing);
-    expect(find.text('No pickup or delivery window is currently proposed.'), findsOneWidget);
+    expect(
+      find.text('No pickup or delivery window is currently proposed.'),
+      findsOneWidget,
+    );
   });
 }

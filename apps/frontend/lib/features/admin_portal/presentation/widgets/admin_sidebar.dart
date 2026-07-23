@@ -82,7 +82,10 @@ class AdminSidebar extends ConsumerWidget {
                 AppSpacing.lg,
                 AppSpacing.md,
               ),
-              child: Text('ImpactLoop', style: AdminTypography.sidebarBrand(palette)),
+              child: Text(
+                'ImpactLoop',
+                style: AdminTypography.sidebarBrand(palette),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -205,10 +208,7 @@ class _NavItem extends StatelessWidget {
 }
 
 class _SidebarProfileCard extends StatelessWidget {
-  const _SidebarProfileCard({
-    required this.name,
-    required this.subtitle,
-  });
+  const _SidebarProfileCard({required this.name, required this.subtitle});
 
   final String name;
   final String subtitle;
@@ -256,9 +256,9 @@ class _SidebarProfileCard extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AdminTypography.kpiHelper(palette).copyWith(
-                    color: palette.sidebarTextSecondary,
-                  ),
+                  style: AdminTypography.kpiHelper(
+                    palette,
+                  ).copyWith(color: palette.sidebarTextSecondary),
                 ),
               ],
             ),

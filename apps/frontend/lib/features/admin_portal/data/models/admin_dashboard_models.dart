@@ -35,42 +35,49 @@ class AdminDashboardResponse {
       materialsByCategory:
           (json['materialsByCategory'] as List<dynamic>? ?? const [])
               .whereType<Map>()
-              .map((item) => AdminCategoryCount.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ))
+              .map(
+                (item) => AdminCategoryCount.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
               .toList(),
       reservationStatusBreakdown:
           (json['reservationStatusBreakdown'] as List<dynamic>? ?? const [])
               .whereType<Map>()
-              .map((item) => AdminStatusCount.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ))
+              .map(
+                (item) =>
+                    AdminStatusCount.fromJson(Map<String, dynamic>.from(item)),
+              )
               .toList(),
       recentInvitations:
           (json['recentInvitations'] as List<dynamic>? ?? const [])
               .whereType<Map>()
-              .map((item) => AdminInvitationPreview.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ))
+              .map(
+                (item) => AdminInvitationPreview.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
               .toList(),
       supplierVerificationPendingCount:
           (json['supplierVerificationPendingCount'] as num?)?.toInt() ??
-              (json['pendingActions']?['supplierVerifications'] as num?)?.toInt() ??
-              0,
+          (json['pendingActions']?['supplierVerifications'] as num?)?.toInt() ??
+          0,
       supplierVerificationPreview:
           (json['supplierVerificationPreview'] as List<dynamic>? ?? const [])
               .whereType<Map>()
-              .map((item) => AdminSupplierVerificationPreview.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ))
+              .map(
+                (item) => AdminSupplierVerificationPreview.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
               .toList(),
-      recentActivity:
-          (json['recentActivity'] as List<dynamic>? ?? const [])
-              .whereType<Map>()
-              .map((item) => AdminActivityPreview.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ))
-              .toList(),
+      recentActivity: (json['recentActivity'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map(
+            (item) =>
+                AdminActivityPreview.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
     );
   }
 }
@@ -125,7 +132,8 @@ class AdminPendingActions {
 
   factory AdminPendingActions.fromJson(Map<String, dynamic> json) {
     return AdminPendingActions(
-      supplierVerifications: (json['supplierVerifications'] as num?)?.toInt() ?? 0,
+      supplierVerifications:
+          (json['supplierVerifications'] as num?)?.toInt() ?? 0,
       categoryRequests: (json['categoryRequests'] as num?)?.toInt() ?? 0,
       priceRequests: (json['priceRequests'] as num?)?.toInt() ?? 0,
       reports: (json['reports'] as num?)?.toInt() ?? 0,
@@ -164,26 +172,26 @@ class AdminImpactSnapshot {
     final rawTop = json['topCategory'];
     return AdminImpactSnapshot(
       reusedMaterials: (json['reusedMaterials'] as num?)?.toInt() ?? 0,
-      completedReservations: (json['completedReservations'] as num?)?.toInt() ?? 0,
+      completedReservations:
+          (json['completedReservations'] as num?)?.toInt() ?? 0,
       learnersBenefited: (json['learnersBenefited'] as num?)?.toInt() ?? 0,
-      suppliersContributed: (json['suppliersContributed'] as num?)?.toInt() ?? 0,
+      suppliersContributed:
+          (json['suppliersContributed'] as num?)?.toInt() ?? 0,
       topCategory: rawTop is Map<String, dynamic>
           ? AdminTopCategory.fromJson(rawTop)
           : null,
       reuseByMonth: (json['reuseByMonth'] as List<dynamic>? ?? const [])
           .whereType<Map>()
-          .map((item) => AdminMonthCount.fromJson(
-                Map<String, dynamic>.from(item),
-              ))
+          .map(
+            (item) => AdminMonthCount.fromJson(Map<String, dynamic>.from(item)),
+          )
           .toList(),
       estimatedCo2Kg: (json['estimatedCo2Kg'] as num?)?.toDouble() ?? 0,
-      estimatedCo2Label:
-          json['estimatedCo2Label'] as String? ?? '0 kg CO₂e',
+      estimatedCo2Label: json['estimatedCo2Label'] as String? ?? '0 kg CO₂e',
       estimatedCo2Method: json['estimatedCo2Method'] as String? ?? '',
       reuseCompletionRate:
           (json['reuseCompletionRate'] as num?)?.toDouble() ?? 0,
-      co2ReuseProgress:
-          (json['co2ReuseProgress'] as num?)?.toDouble() ?? 0,
+      co2ReuseProgress: (json['co2ReuseProgress'] as num?)?.toDouble() ?? 0,
     );
   }
 }
@@ -314,8 +322,8 @@ class AdminSupplierVerificationPreview {
       ownerName: json['ownerName'] as String? ?? '',
       organizationName: json['organizationName'] as String? ?? '',
       supplierType: json['supplierType'] as String? ?? '',
-      verificationStatus:
-          (json['verificationStatus'] as String? ?? '').toUpperCase(),
+      verificationStatus: (json['verificationStatus'] as String? ?? '')
+          .toUpperCase(),
       submittedAt: json['submittedAt'] as String?,
     );
   }
@@ -352,4 +360,3 @@ class AdminActivityPreview {
     );
   }
 }
-

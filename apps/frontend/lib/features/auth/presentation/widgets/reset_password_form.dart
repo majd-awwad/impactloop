@@ -56,7 +56,9 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
     setState(() => _isSubmitting = true);
 
     try {
-      await ref.read(authRepositoryProvider).resetPassword(
+      await ref
+          .read(authRepositoryProvider)
+          .resetPassword(
             token: widget.token!.trim(),
             newPassword: _passwordController.text,
           );

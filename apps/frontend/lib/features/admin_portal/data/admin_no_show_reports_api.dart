@@ -63,6 +63,7 @@ class AdminNoShowReportItem {
   final String? reviewedByName;
   final AdminNoShowReportPendingReschedule? pendingReschedule;
   final String? targetUserId;
+
   /// These optional values are additive contract fields.  The current API
   /// omits them for some older reports, so presentation must fail closed.
   final String? fulfillmentMethod;
@@ -101,8 +102,8 @@ class AdminNoShowReportItem {
       targetName: target is Map
           ? target['displayName'] as String? ?? 'Target unavailable'
           : json['targetRole'] == 'SYSTEM'
-              ? 'System / no driver'
-              : 'Target unavailable',
+          ? 'System / no driver'
+          : 'Target unavailable',
       materialTitle: material is Map
           ? material['title'] as String? ?? 'Material'
           : 'Material',
@@ -116,16 +117,19 @@ class AdminNoShowReportItem {
           ? reservation['status'] as String? ?? 'PENDING'
           : 'PENDING',
       workflowType: json['workflowType'] as String? ?? 'ACCOUNTABILITY',
-      availableActions: (json['availableActions'] as List?)
-              ?.whereType<String>()
-              .toList(growable: false) ??
+      availableActions:
+          (json['availableActions'] as List?)?.whereType<String>().toList(
+            growable: false,
+          ) ??
           const [],
       strikeImpact: json['strikeImpact'] as String? ?? 'NONE',
       operationalState: json['operationalState'] as String? ?? 'NOT_REQUIRED',
-      pickupWindowStart:
-          DateTime.tryParse(json['pickupWindowStart'] as String? ?? ''),
-      pickupWindowEnd:
-          DateTime.tryParse(json['pickupWindowEnd'] as String? ?? ''),
+      pickupWindowStart: DateTime.tryParse(
+        json['pickupWindowStart'] as String? ?? '',
+      ),
+      pickupWindowEnd: DateTime.tryParse(
+        json['pickupWindowEnd'] as String? ?? '',
+      ),
       reviewedAt: DateTime.tryParse(json['reviewedAt'] as String? ?? ''),
       reviewNote: json['reviewNote'] as String?,
       reviewedBy: reviewedBy is Map
@@ -149,8 +153,7 @@ class AdminNoShowReportItem {
           ? assignedDriver['displayName'] as String?
           : null,
       hasIndividualTarget:
-          target is Map &&
-          (target['id'] as String?)?.trim().isNotEmpty == true,
+          target is Map && (target['id'] as String?)?.trim().isNotEmpty == true,
     );
   }
 }
@@ -188,15 +191,13 @@ class AdminNoShowReportsListResponse {
       total: pagination is Map
           ? (pagination['total'] as num?)?.toInt() ?? 0
           : 0,
-      page: pagination is Map
-          ? (pagination['page'] as num?)?.toInt() ?? 1
-          : 1,
+      page: pagination is Map ? (pagination['page'] as num?)?.toInt() ?? 1 : 1,
       limit: pagination is Map
           ? (pagination['limit'] as num?)?.toInt() ?? 50
           : 50,
       totalPages: pagination is Map
           ? (pagination['totalPages'] as num?)?.toInt() ??
-              (pagination['pages'] as num?)?.toInt()
+                (pagination['pages'] as num?)?.toInt()
           : null,
     );
   }
@@ -348,7 +349,10 @@ class AdminNoShowReportDetail extends AdminNoShowReportItem {
 }
 
 class AdminNoShowReportReviewer {
-  const AdminNoShowReportReviewer({required this.id, required this.displayName});
+  const AdminNoShowReportReviewer({
+    required this.id,
+    required this.displayName,
+  });
 
   final String id;
   final String displayName;
@@ -381,10 +385,12 @@ class AdminNoShowReportPendingReschedule {
     requestedBy: json['requestedBy'] as String?,
     reason: json['reason'] as String?,
     note: json['note'] as String?,
-    proposedPickupWindowStart:
-        DateTime.tryParse(json['proposedPickupWindowStart'] as String? ?? ''),
-    proposedPickupWindowEnd:
-        DateTime.tryParse(json['proposedPickupWindowEnd'] as String? ?? ''),
+    proposedPickupWindowStart: DateTime.tryParse(
+      json['proposedPickupWindowStart'] as String? ?? '',
+    ),
+    proposedPickupWindowEnd: DateTime.tryParse(
+      json['proposedPickupWindowEnd'] as String? ?? '',
+    ),
   );
 }
 

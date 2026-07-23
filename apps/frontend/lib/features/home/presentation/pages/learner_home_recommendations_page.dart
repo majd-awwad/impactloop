@@ -18,10 +18,7 @@ import '../widgets/home_section_header.dart';
 import '../widgets/learning_spotlight_section.dart';
 
 class LearnerHomeRecommendationsPage extends ConsumerStatefulWidget {
-  const LearnerHomeRecommendationsPage({
-    super.key,
-    required this.sectionKey,
-  });
+  const LearnerHomeRecommendationsPage({super.key, required this.sectionKey});
 
   final LearnerHomeSectionKey sectionKey;
 
@@ -61,7 +58,9 @@ class _LearnerHomeRecommendationsPageState
     }
 
     try {
-      final section = await ref.read(learnerHomeApiProvider).fetchSectionDetails(
+      final section = await ref
+          .read(learnerHomeApiProvider)
+          .fetchSectionDetails(
             widget.sectionKey,
             limit: _pageSize,
             offset: reset ? 0 : _offset,
@@ -142,9 +141,7 @@ class _LearnerHomeRecommendationsPageState
               showCreateAccount: false,
               homeRoute: '/home',
             ),
-            Expanded(
-              child: _buildBody(context),
-            ),
+            Expanded(child: _buildBody(context)),
           ],
         ),
       ),
@@ -166,8 +163,7 @@ class _LearnerHomeRecommendationsPageState
           child: EmptyActivityCard(
             icon: Icons.cloud_off_outlined,
             title: 'Could not load recommendations',
-            description:
-                'Try again in a moment or return to your home feed.',
+            description: 'Try again in a moment or return to your home feed.',
             actionLabel: 'Retry',
             onAction: () => _loadSection(reset: true),
           ),
@@ -334,10 +330,12 @@ class _SectionItemsView extends StatelessWidget {
         HomeMaterialRecommendationGrid(items: _materialItems(section.items)),
       LearnerHomeSectionKey.suggestedProjects ||
       LearnerHomeSectionKey.savedProjects ||
-      LearnerHomeSectionKey.popularProjects =>
-        _ProjectRecommendationsList(items: _projectItems(section.items)),
-      LearnerHomeSectionKey.continueProjects =>
-        _ContinueProjectsList(items: _continueItems(section.items)),
+      LearnerHomeSectionKey.popularProjects => _ProjectRecommendationsList(
+        items: _projectItems(section.items),
+      ),
+      LearnerHomeSectionKey.continueProjects => _ContinueProjectsList(
+        items: _continueItems(section.items),
+      ),
     };
   }
 
@@ -369,8 +367,7 @@ class _SectionItemsView extends StatelessWidget {
     return switch (key) {
       LearnerHomeSectionKey.suggestedMaterials ||
       LearnerHomeSectionKey.materialsForSavedProjects ||
-      LearnerHomeSectionKey.freeMaterialsNearYou =>
-        Icons.inventory_2_outlined,
+      LearnerHomeSectionKey.freeMaterialsNearYou => Icons.inventory_2_outlined,
       LearnerHomeSectionKey.continueProjects => Icons.build_outlined,
       _ => Icons.school_outlined,
     };

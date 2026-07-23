@@ -26,7 +26,8 @@ class AppNotification {
       title: json['title'] as String? ?? '',
       body: json['body'] as String? ?? '',
       isRead: json['isRead'] == true,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       relatedEntityType: json['relatedEntityType'] as String?,
       relatedEntityId: json['relatedEntityId'] as String?,
@@ -82,18 +83,19 @@ class AppNotificationsPage {
           ? itemsJson
                 .whereType<Map>()
                 .map(
-                  (item) => AppNotification.fromJson(
-                    Map<String, dynamic>.from(item),
-                  ),
+                  (item) =>
+                      AppNotification.fromJson(Map<String, dynamic>.from(item)),
                 )
                 .toList(growable: false)
           : const [],
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
       page: pagination is Map ? (pagination['page'] as num?)?.toInt() ?? 1 : 1,
-      limit:
-          pagination is Map ? (pagination['limit'] as num?)?.toInt() ?? 20 : 20,
-      total:
-          pagination is Map ? (pagination['total'] as num?)?.toInt() ?? 0 : 0,
+      limit: pagination is Map
+          ? (pagination['limit'] as num?)?.toInt() ?? 20
+          : 20,
+      total: pagination is Map
+          ? (pagination['total'] as num?)?.toInt() ?? 0
+          : 0,
       totalPages: pagination is Map
           ? (pagination['totalPages'] as num?)?.toInt() ?? 0
           : 0,

@@ -99,19 +99,20 @@ class _WelcomeHero extends StatelessWidget {
         maxWidth: 220,
         child: FilledButton.icon(
           onPressed: () => context.go('/materials'),
-          style: AppStatusButtonStyle.filled(
-            context,
-            AppStatusTone.primary,
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
-            ),
-          ).copyWith(
-            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
-            ),
-          ),
+          style:
+              AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+                padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+              ).copyWith(
+                minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+                shape: WidgetStatePropertyAll(
+                  RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+                ),
+              ),
           icon: const Icon(Icons.search_rounded),
           label: const Text('Browse Materials'),
         ),
@@ -121,24 +122,22 @@ class _WelcomeHero extends StatelessWidget {
         maxWidth: 248,
         child: OutlinedButton.icon(
           onPressed: () => context.go('/learning'),
-          style: AppStatusButtonStyle.outlined(
-            context,
-            AppStatusTone.neutral,
-          ).copyWith(
-            backgroundColor: WidgetStatePropertyAll(
-              palette.cardSurface.withValues(alpha: 0.7),
-            ),
-            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-            padding: const WidgetStatePropertyAll(
-              EdgeInsetsDirectional.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.sm,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral)
+              .copyWith(
+                backgroundColor: WidgetStatePropertyAll(
+                  palette.cardSurface.withValues(alpha: 0.7),
+                ),
+                minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                ),
+                shape: WidgetStatePropertyAll(
+                  RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+                ),
               ),
-            ),
-            shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
-            ),
-          ),
           icon: const Icon(Icons.school_outlined),
           label: const Text('Explore Learning Hub'),
         ),
@@ -378,7 +377,8 @@ class _QuickActionsSection extends ConsumerWidget {
                       ? 'Profile'
                       : null,
                   compact: useCompactActions,
-                  onPressed: () => context.push(supplierEntryRouteForUser(user)),
+                  onPressed: () =>
+                      context.push(supplierEntryRouteForUser(user)),
                 ),
             ];
 

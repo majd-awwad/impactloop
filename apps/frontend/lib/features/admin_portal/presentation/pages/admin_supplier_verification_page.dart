@@ -353,10 +353,22 @@ class _FiltersBar extends StatelessWidget {
       border: OutlineInputBorder(borderRadius: _fieldBorderRadius),
     ),
     items: [
-      DropdownMenuItem(value: 'ALL', child: Text(l.t('All statuses', 'كل الحالات'))),
-      DropdownMenuItem(value: 'PENDING', child: Text(l.t('Pending', 'قيد الانتظار'))),
-      DropdownMenuItem(value: 'APPROVED', child: Text(l.t('Approved', 'موافق عليه'))),
-      DropdownMenuItem(value: 'REJECTED', child: Text(l.t('Rejected', 'مرفوض'))),
+      DropdownMenuItem(
+        value: 'ALL',
+        child: Text(l.t('All statuses', 'كل الحالات')),
+      ),
+      DropdownMenuItem(
+        value: 'PENDING',
+        child: Text(l.t('Pending', 'قيد الانتظار')),
+      ),
+      DropdownMenuItem(
+        value: 'APPROVED',
+        child: Text(l.t('Approved', 'موافق عليه')),
+      ),
+      DropdownMenuItem(
+        value: 'REJECTED',
+        child: Text(l.t('Rejected', 'مرفوض')),
+      ),
       DropdownMenuItem(
         value: 'CHANGES_REQUESTED',
         child: Text(l.t('Changes requested', 'طلب تعديلات')),
@@ -376,7 +388,10 @@ class _FiltersBar extends StatelessWidget {
       border: OutlineInputBorder(borderRadius: _fieldBorderRadius),
     ),
     items: [
-      DropdownMenuItem(value: 'ALL', child: Text(l.t('All types', 'كل الأنواع'))),
+      DropdownMenuItem(
+        value: 'ALL',
+        child: Text(l.t('All types', 'كل الأنواع')),
+      ),
       DropdownMenuItem(value: 'WORKSHOP', child: Text(l.t('Workshop', 'ورشة'))),
       DropdownMenuItem(value: 'FACTORY', child: Text(l.t('Factory', 'مصنع'))),
       DropdownMenuItem(
@@ -622,10 +637,15 @@ class _SupplierListHeaderBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final total = pagination.total;
-    final rangeStart = total == 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
+    final rangeStart = total == 0
+        ? 0
+        : (pagination.page - 1) * pagination.limit + 1;
     final rangeEnd = total == 0
         ? 0
-        : ((pagination.page - 1) * pagination.limit + itemCount).clamp(0, total);
+        : ((pagination.page - 1) * pagination.limit + itemCount).clamp(
+            0,
+            total,
+          );
     final totalPages = total == 0 ? 1 : (total / pagination.limit).ceil();
 
     final trailing = Row(
@@ -867,7 +887,9 @@ class _SupplierRowState extends State<_SupplierRow> {
             ),
           )
         : ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _kSupplierRowMinHeight),
+            constraints: const BoxConstraints(
+              minHeight: _kSupplierRowMinHeight,
+            ),
             child: Padding(
               padding: const EdgeInsetsDirectional.symmetric(
                 horizontal: AppSpacing.md,
@@ -1044,10 +1066,9 @@ class _SupplierContactBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final rowStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-      color: colors.textSecondary,
-      height: 1.3,
-    );
+    final rowStyle = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: colors.textSecondary, height: 1.3);
 
     Widget line(IconData icon, String text) => Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1114,10 +1135,9 @@ class _SupplierDateBlock extends StatelessWidget {
           DateFormat.jm().format(date!),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: colors.textMuted,
-            height: 1.3,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.textMuted, height: 1.3),
         ),
       ],
     );
