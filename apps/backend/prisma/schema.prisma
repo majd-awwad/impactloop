@@ -703,12 +703,16 @@ model Category {
   nameEn                    String                     @map("name_en")
   nameAr                    String                     @map("name_ar")
   parentId                  String?                    @map("parent_id")
+  materialFamilyConceptId   String?                    @map("material_family_concept_id")
+  projectTopicConceptId     String?                    @map("project_topic_concept_id")
   categoryType              CategoryType               @map("category_type")
   iconUrl                   String?                    @map("icon_url")
   isActive                  Boolean                    @default(true) @map("is_active")
   createdAt                 DateTime                   @default(now()) @map("created_at")
   parent                    Category?                  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children                  Category[]                 @relation("CategoryHierarchy")
+  materialFamilyConcept     TaxonomyConcept?           @relation("CategoryMaterialFamilyConcept", fields: [materialFamilyConceptId], references: [id], onDelete: Restrict)
+  projectTopicConcept       TaxonomyConcept?           @relation("CategoryProjectTopicConcept", fields: [projectTopicConceptId], references: [id], onDelete: Restrict)
   materials                 Material[]
   learningProjects          LearningProject[]
   projectRequiredComponents ProjectRequiredComponent[]
@@ -718,6 +722,8 @@ model Category {
 
   @@index([parentId])
   @@index([categoryType, isActive])
+  @@index([materialFamilyConceptId])
+  @@index([projectTopicConceptId])
   @@map("categories")
 }
 
@@ -878,6 +884,8 @@ model TaxonomyConcept {
   materials         MaterialConcept[]
   projects          LearningProjectConcept[]
   projectComponents ProjectComponentConcept[]
+  materialFamilyCategories Category[]                  @relation("CategoryMaterialFamilyConcept")
+  projectTopicCategories   Category[]                  @relation("CategoryProjectTopicConcept")
 
   @@index([conceptType, status])
   @@index([parentId])
