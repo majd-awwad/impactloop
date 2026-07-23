@@ -56,15 +56,97 @@ async function seedSupplierUser() {
   });
 }
 
+type ApprovalTestResources = {
+  adminUserId?: string;
+  supplierUserId?: string;
+  categoryRequestId?: string;
+  approvedCategoryId?: string;
+};
+
+const cleanupApprovalTestExecution = async (resources: ApprovalTestResources) => {
+  await prisma.$transaction(
+    async (tx) => {
+      let approvedCategoryId = resources.approvedCategoryId;
+
+      if (resources.categoryRequestId) {
+        const request = await tx.categoryRequest.findUnique({
+          where: { id: resources.categoryRequestId },
+          select: { id: true, requestedByUserId: true, approvedCategoryId: true },
+        });
+        assert.ok(request, 'The exact category request created by this test is missing.');
+        assert.equal(request.requestedByUserId, resources.supplierUserId);
+        approvedCategoryId ??= request.approvedCategoryId ?? undefined;
+
+        await tx.notification.deleteMany({
+          where: {
+            userId: resources.supplierUserId,
+            notificationType: 'CATEGORY_REQUEST_UPDATE',
+            relatedEntityType: 'CATEGORY_REQUEST',
+            relatedEntityId: request.id,
+            entityType: 'CATEGORY_REQUEST',
+            entityId: request.id,
+          },
+        });
+        await tx.adminActivityLog.deleteMany({
+          where: {
+            actorUserId: resources.adminUserId,
+            action: 'CATEGORY_REQUEST_APPROVED',
+            targetType: 'CATEGORY_REQUEST',
+            targetId: request.id,
+          },
+        });
+
+        const deletedRequest = await tx.categoryRequest.deleteMany({
+          where: {
+            id: request.id,
+            requestedByUserId: resources.supplierUserId,
+          },
+        });
+        assert.equal(deletedRequest.count, 1, 'Failed to delete this test invocation\'s category request.');
+      }
+
+      if (approvedCategoryId) {
+        const deletedCategory = await tx.category.deleteMany({
+          where: { id: approvedCategoryId },
+        });
+        assert.equal(deletedCategory.count, 1, 'Failed to delete this test invocation\'s category.');
+      }
+
+      if (resources.supplierUserId) {
+        const deletedSupplier = await tx.user.deleteMany({
+          where: { id: resources.supplierUserId },
+        });
+        assert.equal(deletedSupplier.count, 1, 'Failed to delete this test invocation\'s supplier.');
+      }
+      if (resources.adminUserId) {
+        const deletedAdmin = await tx.user.deleteMany({
+          where: { id: resources.adminUserId },
+        });
+        assert.equal(deletedAdmin.count, 1, 'Failed to delete this test invocation\'s admin.');
+      }
+    },
+    {
+      isolationLevel: 'Serializable',
+      maxWait: 5_000,
+      timeout: 30_000,
+    },
+  );
+};
+
 describe('admin approvals', () => {
   test('summary counts pending approvals', async () => {
     const summary = await getApprovalsSummary();
     assert.ok(typeof summary.pendingTotal === 'number');
   });
 
-  test('category approve creates category and marks request approved', async () => {
+  test('category approve creates category and marks request approved', async (context) => {
+    const resources: ApprovalTestResources = {};
+    context.after(() => cleanupApprovalTestExecution(resources));
+
     const admin = await createAdminUser();
+    resources.adminUserId = admin.id;
     const supplier = await seedSupplierUser();
+    resources.supplierUserId = supplier.id;
 
     const categoryRequest = await prisma.categoryRequest.create({
       data: {
@@ -74,10 +156,12 @@ describe('admin approvals', () => {
         status: 'PENDING',
       },
     });
+    resources.categoryRequestId = categoryRequest.id;
 
     const approved = await approveCategoryRequest(admin.id, categoryRequest.id, {
       finalName: `${TEST_MARKER} Final Category`,
     });
+    resources.approvedCategoryId = approved.createdCategory.id;
 
     assert.equal(approved.request.status, 'APPROVED');
     assert.ok(approved.createdCategory.id);
