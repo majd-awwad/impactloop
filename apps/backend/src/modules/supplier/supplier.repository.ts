@@ -929,37 +929,98 @@ export const countBlockingReservationsForMaterial = async (
   });
 };
 
-export const updateSupplierOwnedMaterial = async (
-  scope: SupplierMaterialScope,
-  materialId: string,
-  data: {
-    title: string;
-    description: string;
-    quantity: number;
-    unit: string;
-    condition: MaterialCondition;
-    pickupAllowed: boolean;
-    deliveryAllowed: boolean;
-    pickupNotes: string | null;
-    suggestedUses: string | null;
-  },
-) => {
-  const existing = await prisma.material.findFirst({
+export type SupplierMaterialScalarUpdateData = {
+  title: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  condition: MaterialCondition;
+  pickupAllowed: boolean;
+  deliveryAllowed: boolean;
+  pickupNotes: string | null;
+  suggestedUses: string | null;
+};
+
+export type UpdateSupplierMaterialWithConceptsResult =
+  | {
+      status: "ok";
+      material: Prisma.MaterialGetPayload<{
+        select: typeof supplierMaterialMutationSelect;
+      }>;
+    }
+  | { status: "stale" }
+  | { status: "not_found" };
+
+/**
+ * Conditional owned-material update with optional exact MaterialConcept sync.
+ * `replaceConceptIds: undefined` preserves all concept rows.
+ * Caller must provide the transaction client; all queries run sequentially.
+ */
+export const updateSupplierMaterialWithConcepts = async (input: {
+  client: Prisma.TransactionClient;
+  scope: SupplierMaterialScope;
+  materialId: string;
+  expectedUpdatedAt: Date;
+  updateData: SupplierMaterialScalarUpdateData;
+  replaceConceptIds?: readonly string[];
+}): Promise<UpdateSupplierMaterialWithConceptsResult> => {
+  const replaceConceptIds =
+    input.replaceConceptIds === undefined
+      ? undefined
+      : assertMaterialConceptWriteContract([...input.replaceConceptIds]);
+
+  const updated = await input.client.material.updateMany({
     where: {
-      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+      AND: [
+        { id: input.materialId },
+        buildSupplierMaterialWhere(input.scope),
+        { updatedAt: input.expectedUpdatedAt },
+      ],
     },
-    select: { id: true },
+    data: input.updateData,
   });
 
-  if (!existing) {
-    return null;
+  if (updated.count === 0) {
+    const owned = await input.client.material.findFirst({
+      where: {
+        AND: [{ id: input.materialId }, buildSupplierMaterialWhere(input.scope)],
+      },
+      select: { id: true },
+    });
+    return owned ? { status: "stale" } : { status: "not_found" };
   }
 
-  return prisma.material.update({
-    where: { id: materialId },
-    data,
+  if (replaceConceptIds !== undefined) {
+    const currentRows = await input.client.materialConcept.findMany({
+      where: { materialId: input.materialId },
+      select: { conceptId: true },
+    });
+    const currentIds = currentRows.map((row) => row.conceptId);
+    const currentSet = new Set(currentIds);
+    const desiredSet = new Set(replaceConceptIds);
+    const setsEqual =
+      currentSet.size === desiredSet.size &&
+      replaceConceptIds.every((conceptId) => currentSet.has(conceptId));
+
+    if (!setsEqual) {
+      await input.client.materialConcept.deleteMany({
+        where: { materialId: input.materialId },
+      });
+      await input.client.materialConcept.createMany({
+        data: replaceConceptIds.map((conceptId) => ({
+          materialId: input.materialId,
+          conceptId,
+        })),
+      });
+    }
+  }
+
+  const material = await input.client.material.findUniqueOrThrow({
+    where: { id: input.materialId },
     select: supplierMaterialMutationSelect,
   });
+
+  return { status: "ok", material };
 };
 
 export const deleteSupplierOwnedMaterial = async (materialId: string) => {

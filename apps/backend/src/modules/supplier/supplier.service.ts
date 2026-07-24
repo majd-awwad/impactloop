@@ -289,7 +289,8 @@ const markSourceRequestPublished = async (
   }
 };
 
-const resolveCreateMaterialConceptIds = async (input: {
+/** Shared DB orchestration for create + semantic title update concept persistence. */
+const loadMaterialConceptIdsForPersistence = async (input: {
   client: Prisma.TransactionClient;
   finalCategoryId: string;
   finalMaterialType: string;
@@ -913,7 +914,7 @@ export const createSupplierMaterial = async (
         client,
       );
 
-      const conceptIds = await resolveCreateMaterialConceptIds({
+      const conceptIds = await loadMaterialConceptIdsForPersistence({
         client,
         finalCategoryId,
         finalMaterialType: displayMaterialType,
@@ -1290,7 +1291,7 @@ export const createSupplierMaterial = async (
       client,
     );
 
-    const conceptIds = await resolveCreateMaterialConceptIds({
+    const conceptIds = await loadMaterialConceptIdsForPersistence({
       client,
       finalCategoryId,
       finalMaterialType,
@@ -1846,6 +1847,9 @@ export const EDIT_REUSED_MATERIAL_MESSAGE =
 export const EDIT_ACTIVE_REQUESTS_MESSAGE =
   "Cannot edit a material with active requests or blocked status.";
 
+export const STALE_MATERIAL_UPDATE_MESSAGE =
+  "This material was updated elsewhere. Refresh and try again.";
+
 const resolveSupplierMaterialMutationEligibility = (
   status: string,
   blockingReservationCount: number,
@@ -2271,28 +2275,51 @@ export const updateSupplierMaterial = async (
     );
   }
 
-  const updatedScalars = await supplierRepository.updateSupplierOwnedMaterial(
-    scope,
-    materialId,
-    {
-      title: input.title,
-      description: input.description,
-      quantity: input.quantity,
-      unit: input.unit,
-      condition: input.condition,
-      pickupAllowed: input.pickupAllowed,
-      deliveryAllowed: input.deliveryAllowed,
-      pickupNotes: input.pickupNotes ?? null,
-      suggestedUses: input.suggestedUses ?? null,
-    },
-  );
+  const finalTitle = input.title;
+  const titleChanged = material.title !== finalTitle;
+  const expectedUpdatedAt = material.updatedAt;
+  const updateData = {
+    title: finalTitle,
+    description: input.description,
+    quantity: input.quantity,
+    unit: input.unit,
+    condition: input.condition,
+    pickupAllowed: input.pickupAllowed,
+    deliveryAllowed: input.deliveryAllowed,
+    pickupNotes: input.pickupNotes ?? null,
+    suggestedUses: input.suggestedUses ?? null,
+  };
 
-  if (!updatedScalars) {
+  const updateResult = await prisma.$transaction(async (client) => {
+    const replaceConceptIds = titleChanged
+      ? await loadMaterialConceptIdsForPersistence({
+          client,
+          finalCategoryId: material.categoryId,
+          finalMaterialType: material.materialType,
+          finalTitle,
+        })
+      : undefined;
+
+    return supplierRepository.updateSupplierMaterialWithConcepts({
+      client,
+      scope,
+      materialId,
+      expectedUpdatedAt,
+      updateData,
+      replaceConceptIds,
+    });
+  });
+
+  if (updateResult.status === "not_found") {
     throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
+  if (updateResult.status === "stale") {
+    throw new AppError(STALE_MATERIAL_UPDATE_MESSAGE, 409, "CONFLICT");
+  }
+
   return mapSupplierOwnedMaterial(
-    { ...material, ...updatedScalars },
+    { ...material, ...updateResult.material },
     blockingReservationCount,
     0,
     {},

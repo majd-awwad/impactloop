@@ -12,6 +12,7 @@ import {
   getSupplierMaterials,
   markSupplierMaterialUnavailable,
   restoreSupplierMaterialAvailable,
+  STALE_MATERIAL_UPDATE_MESSAGE,
   updateSupplierMaterial,
 } from "./supplier.service.js";
 import * as supplierRepository from "./supplier.repository.js";
@@ -3293,9 +3294,103 @@ describe("updateSupplierMaterial", () => {
     learnerId: "",
   };
 
+  const buildUpdatePayload = (
+    material: {
+      title: string;
+      description: string;
+      quantity: { toNumber(): number } | number;
+      unit: string;
+      condition: "NEW" | "LIKE_NEW" | "GOOD" | "USED" | "NEEDS_REPAIR";
+      pickupAllowed: boolean;
+      deliveryAllowed: boolean;
+      pickupNotes?: string | null;
+      suggestedUses?: string | null;
+    },
+    overrides: Partial<{
+      title: string;
+      description: string;
+      quantity: number;
+      unit: string;
+      condition: "NEW" | "LIKE_NEW" | "GOOD" | "USED" | "NEEDS_REPAIR";
+      pickupAllowed: boolean;
+      deliveryAllowed: boolean;
+      pickupNotes: string | null;
+      suggestedUses: string | null;
+    }> = {},
+  ) => ({
+    title: material.title,
+    description: material.description,
+    quantity:
+      typeof material.quantity === "number"
+        ? material.quantity
+        : material.quantity.toNumber(),
+    unit: material.unit,
+    condition: material.condition,
+    pickupAllowed: material.pickupAllowed,
+    deliveryAllowed: material.deliveryAllowed,
+    pickupNotes: material.pickupNotes ?? null,
+    suggestedUses: material.suggestedUses ?? null,
+    ...overrides,
+  });
+
+  const loadMaterialForUpdate = async (materialId: string) => {
+    const material = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        quantity: true,
+        unit: true,
+        condition: true,
+        pickupAllowed: true,
+        deliveryAllowed: true,
+        pickupNotes: true,
+        suggestedUses: true,
+        materialType: true,
+        updatedAt: true,
+      },
+    });
+    return material;
+  };
+
+  const createFreeOwnedMaterial = async (input: {
+    materialName: string;
+    title: string;
+    description?: string;
+  }) => {
+    const created = await createSupplierMaterial(ctx.supplierId, {
+      materialName: input.materialName,
+      title: input.title,
+      description:
+        input.description ?? `${TEST_MARKER} ${input.title} description`,
+      categoryId: ctx.categoryId,
+      quantity: 2,
+      unit: "piece",
+      condition: "GOOD",
+      isFree: true,
+      price: null,
+      currency: "NIS",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: [],
+      useDefaultPickupLocation: true,
+    });
+    ctx.createdMaterialIds.push(created.id);
+    return loadMaterialForUpdate(created.id);
+  };
+
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
+      where: {
+        categoryType: { in: ["MATERIAL", "BOTH"] },
+        isActive: true,
+        materialFamilyConceptId: { not: null },
+        materialFamilyConcept: {
+          status: "ACTIVE",
+          conceptType: "MATERIAL_FAMILY",
+        },
+      },
       select: { id: true },
     });
     const location = await prisma.location.create({
@@ -3323,6 +3418,21 @@ describe("updateSupplierMaterial", () => {
     ctx.otherSupplierId = otherSupplier.id;
     ctx.learnerId = learner.id;
     ctx.createdUserIds.push(supplier.id, otherSupplier.id);
+
+    await prisma.supplierProfile.update({
+      where: { userId: supplier.id },
+      data: {
+        supplierType: "WORKSHOP",
+        defaultPickupLocationId: location.id,
+      },
+    });
+    await prisma.supplierProfile.update({
+      where: { userId: otherSupplier.id },
+      data: {
+        supplierType: "WORKSHOP",
+        defaultPickupLocationId: location.id,
+      },
+    });
   });
 
   after(async () => {
@@ -3661,6 +3771,397 @@ describe("updateSupplierMaterial", () => {
       deliveryAllowed: false,
     });
     assert.equal(updated.title, 'Updated after completed reservation');
+  });
+
+  test("title fallback adds MATERIAL_FORM when materialType is unknown", async () => {
+    const seeded = await createFreeOwnedMaterial({
+      materialName: "Unmatched update fallback seed",
+      title: `${TEST_MARKER} update-fallback-seed`,
+    });
+
+    const beforeConcepts = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      include: { concept: { select: { conceptType: true } } },
+    });
+    assert.equal(beforeConcepts.length, 1);
+    assert.equal(beforeConcepts[0]?.concept.conceptType, "MATERIAL_FAMILY");
+
+    await updateSupplierMaterial(
+      ctx.supplierId,
+      seeded.id,
+      buildUpdatePayload(seeded, { title: "Arduino Uno" }),
+    );
+
+    const afterConcepts = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      include: {
+        concept: { select: { conceptType: true, canonicalKey: true } },
+      },
+    });
+    assert.equal(afterConcepts.length, 2);
+    const types = afterConcepts.map((row) => row.concept.conceptType).sort();
+    assert.deepEqual(types, ["MATERIAL_FAMILY", "MATERIAL_FORM"]);
+    assert.ok(
+      afterConcepts.some(
+        (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+      ),
+    );
+  });
+
+  test("title fallback removal returns to family-only", async () => {
+    const seeded = await createFreeOwnedMaterial({
+      materialName: "Unmatched update fallback remove",
+      title: "Arduino Uno",
+    });
+
+    const withForm = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+    });
+    assert.equal(withForm.length, 2);
+
+    await updateSupplierMaterial(
+      ctx.supplierId,
+      seeded.id,
+      buildUpdatePayload(seeded, {
+        title: `${TEST_MARKER} unmatched title after fallback`,
+      }),
+    );
+
+    const after = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      include: { concept: { select: { conceptType: true } } },
+    });
+    assert.equal(after.length, 1);
+    assert.equal(after[0]?.concept.conceptType, "MATERIAL_FAMILY");
+  });
+
+  test("known materialType remains primary under conflicting title", async () => {
+    const seeded = await createFreeOwnedMaterial({
+      materialName: "Arduino Uno",
+      title: `${TEST_MARKER} arduino primary seed`,
+    });
+    assert.equal(seeded.materialType, "Arduino Uno");
+
+    await updateSupplierMaterial(
+      ctx.supplierId,
+      seeded.id,
+      buildUpdatePayload(seeded, { title: "Breadboard" }),
+    );
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      include: {
+        concept: { select: { conceptType: true, canonicalKey: true } },
+      },
+    });
+    assert.equal(concepts.length, 2);
+    assert.ok(
+      concepts.some(
+        (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+      ),
+    );
+    assert.equal(
+      concepts.some(
+        (row) => row.concept.canonicalKey === "material-form:breadboard",
+      ),
+      false,
+    );
+  });
+
+  test("title semantic no-op preserves MaterialConcept row ids and createdAt", async () => {
+    const seeded = await createFreeOwnedMaterial({
+      materialName: "Arduino Uno",
+      title: `${TEST_MARKER} noop title seed`,
+    });
+
+    const before = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      orderBy: { conceptId: "asc" },
+      select: { id: true, conceptId: true, createdAt: true },
+    });
+    assert.equal(before.length, 2);
+
+    await updateSupplierMaterial(
+      ctx.supplierId,
+      seeded.id,
+      buildUpdatePayload(seeded, {
+        description: `${TEST_MARKER} noop description updated`,
+      }),
+    );
+
+    const after = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      orderBy: { conceptId: "asc" },
+      select: { id: true, conceptId: true, createdAt: true },
+    });
+    assert.deepEqual(after, before);
+  });
+
+  test("non-semantic update does not backfill zero concepts", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "zero-concepts-preserve",
+      "AVAILABLE",
+      true,
+    );
+
+    const beforeCount = await prisma.materialConcept.count({
+      where: { materialId: material.id },
+    });
+    assert.equal(beforeCount, 0);
+
+    await updateSupplierMaterial(
+      ctx.supplierId,
+      material.id,
+      buildUpdatePayload(material, {
+        description: `${TEST_MARKER} zero-concepts description only`,
+        quantity: 3,
+      }),
+    );
+
+    const afterCount = await prisma.materialConcept.count({
+      where: { materialId: material.id },
+    });
+    assert.equal(afterCount, 0);
+  });
+
+  test("real title change repairs missing MaterialConcept assignment", async () => {
+    const material = await createMaterial(
+      ctx,
+      ctx.supplierId,
+      "repair-missing-concepts",
+      "AVAILABLE",
+      true,
+    );
+    await prisma.material.update({
+      where: { id: material.id },
+      data: { materialType: "Arduino Uno" },
+    });
+
+    assert.equal(
+      await prisma.materialConcept.count({ where: { materialId: material.id } }),
+      0,
+    );
+
+    await updateSupplierMaterial(
+      ctx.supplierId,
+      material.id,
+      buildUpdatePayload(material, {
+        title: `${TEST_MARKER} repair-missing-concepts-updated`,
+      }),
+    );
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      include: {
+        concept: { select: { conceptType: true, canonicalKey: true } },
+      },
+    });
+    assert.equal(concepts.length, 2);
+    assert.ok(
+      concepts.some((row) => row.concept.conceptType === "MATERIAL_FAMILY"),
+    );
+    assert.ok(
+      concepts.some(
+        (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+      ),
+    );
+  });
+
+  test("stale non-semantic request cannot overwrite concurrent semantic title", async () => {
+    const seeded = await createFreeOwnedMaterial({
+      materialName: "Unmatched concurrent seed",
+      title: `${TEST_MARKER} concurrent-old-title`,
+    });
+
+    const profile = await prisma.supplierProfile.findUniqueOrThrow({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const scope = {
+      userId: ctx.supplierId,
+      supplierProfileId: profile.id,
+    };
+
+    const preloaded = await loadMaterialForUpdate(seeded.id);
+
+    const newTitle = "Arduino Uno";
+    await updateSupplierMaterial(
+      ctx.supplierId,
+      seeded.id,
+      buildUpdatePayload(preloaded, { title: newTitle }),
+    );
+
+    const winnerConcepts = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      orderBy: { conceptId: "asc" },
+      select: { conceptId: true },
+    });
+
+    const staleResult = await prisma.$transaction((client) =>
+      supplierRepository.updateSupplierMaterialWithConcepts({
+        client,
+        scope,
+        materialId: seeded.id,
+        expectedUpdatedAt: preloaded.updatedAt,
+        updateData: {
+          title: preloaded.title,
+          description: `${TEST_MARKER} stale description-only`,
+          quantity: preloaded.quantity.toNumber(),
+          unit: preloaded.unit,
+          condition: preloaded.condition,
+          pickupAllowed: preloaded.pickupAllowed,
+          deliveryAllowed: preloaded.deliveryAllowed,
+          pickupNotes: preloaded.pickupNotes,
+          suggestedUses: preloaded.suggestedUses,
+        },
+        replaceConceptIds: undefined,
+      }),
+    );
+
+    assert.equal(staleResult.status, "stale");
+
+    const finalMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: seeded.id },
+      select: { title: true, description: true },
+    });
+    assert.equal(finalMaterial.title, newTitle);
+    assert.notEqual(
+      finalMaterial.description,
+      `${TEST_MARKER} stale description-only`,
+    );
+
+    const finalConcepts = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      orderBy: { conceptId: "asc" },
+      select: { conceptId: true },
+    });
+    assert.deepEqual(finalConcepts, winnerConcepts);
+
+    await assert.rejects(
+      async () => {
+        await prisma.$transaction(async (client) => {
+          const result =
+            await supplierRepository.updateSupplierMaterialWithConcepts({
+              client,
+              scope,
+              materialId: seeded.id,
+              expectedUpdatedAt: preloaded.updatedAt,
+              updateData: {
+                title: preloaded.title,
+                description: "again",
+                quantity: 2,
+                unit: "piece",
+                condition: "GOOD",
+                pickupAllowed: true,
+                deliveryAllowed: false,
+                pickupNotes: null,
+                suggestedUses: null,
+              },
+            });
+          if (result.status === "stale") {
+            throw new AppError(STALE_MATERIAL_UPDATE_MESSAGE, 409, "CONFLICT");
+          }
+        });
+      },
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, "CONFLICT");
+        assert.equal(error.message, STALE_MATERIAL_UPDATE_MESSAGE);
+        return true;
+      },
+    );
+  });
+
+  test("repository late concept-write failure rolls back title and concepts", async () => {
+    const seeded = await createFreeOwnedMaterial({
+      materialName: "Unmatched late-write seed",
+      title: `${TEST_MARKER} late-write-old-title`,
+      description: `${TEST_MARKER} late-write old description`,
+    });
+
+    const profile = await prisma.supplierProfile.findUniqueOrThrow({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const owned = await prisma.category.findUniqueOrThrow({
+      where: { id: ctx.categoryId },
+      select: { materialFamilyConceptId: true },
+    });
+    assert.ok(owned.materialFamilyConceptId);
+
+    const beforeMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: seeded.id },
+    });
+    const beforeConcepts = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      orderBy: { conceptId: "asc" },
+      select: { id: true, conceptId: true, createdAt: true },
+    });
+
+    const nonexistentConceptId = "cmRp024LateWriteMissingConcept0001";
+
+    await assert.rejects(
+      () =>
+        prisma.$transaction((client) =>
+          supplierRepository.updateSupplierMaterialWithConcepts({
+            client,
+            scope: {
+              userId: ctx.supplierId,
+              supplierProfileId: profile.id,
+            },
+            materialId: seeded.id,
+            expectedUpdatedAt: beforeMaterial.updatedAt,
+            updateData: {
+              title: `${TEST_MARKER} late-write-new-title`,
+              description: `${TEST_MARKER} late-write new description`,
+              quantity: 9,
+              unit: "box",
+              condition: "USED",
+              pickupAllowed: false,
+              deliveryAllowed: true,
+              pickupNotes: "should roll back",
+              suggestedUses: "should roll back",
+            },
+            replaceConceptIds: [
+              owned.materialFamilyConceptId!,
+              nonexistentConceptId,
+            ],
+          }),
+        ),
+    );
+
+    const afterMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: seeded.id },
+    });
+    assert.equal(afterMaterial.title, beforeMaterial.title);
+    assert.equal(afterMaterial.description, beforeMaterial.description);
+    assert.equal(
+      afterMaterial.quantity.toString(),
+      beforeMaterial.quantity.toString(),
+    );
+    assert.equal(afterMaterial.unit, beforeMaterial.unit);
+    assert.equal(afterMaterial.condition, beforeMaterial.condition);
+    assert.equal(afterMaterial.pickupAllowed, beforeMaterial.pickupAllowed);
+    assert.equal(afterMaterial.deliveryAllowed, beforeMaterial.deliveryAllowed);
+
+    const afterConcepts = await prisma.materialConcept.findMany({
+      where: { materialId: seeded.id },
+      orderBy: { conceptId: "asc" },
+      select: { id: true, conceptId: true, createdAt: true },
+    });
+    assert.deepEqual(afterConcepts, beforeConcepts);
+    assert.equal(
+      await prisma.materialConcept.count({
+        where: {
+          materialId: seeded.id,
+          conceptId: nonexistentConceptId,
+        },
+      }),
+      0,
+    );
   });
 });
 
