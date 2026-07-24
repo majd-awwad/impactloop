@@ -63,6 +63,7 @@ const PRIMARY_SEVERITY: Record<MaterialPrimaryClassification, number> = {
 };
 const HEALTHY_PRIMARIES = new Set<MaterialPrimaryClassification>(['EXACT_FAMILY_ONLY', 'EXACT_FAMILY_AND_FORM']);
 const OPERATIONAL_SET = new Set<string>(OPERATIONAL_MATERIAL_STATUSES);
+const CHECK_STATUS_SET = new Set<string>(CHECK_MATERIAL_STATUSES);
 const asciiCompare = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 const toIso = (value: string | Date) => value instanceof Date ? value.toISOString() : value;
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -128,6 +129,24 @@ export const resolveMaterialTypeMatchKind = (desired: DesiredAssignmentSuccess):
 };
 export const classifyCatalogDesiredFailure = (desired: DesiredAssignmentBlocker): 'ambiguous' | 'invalid' =>
   desired.reason === 'AMBIGUOUS_MAPPING' || desired.reason === 'REGISTRY_CONFLICT' ? 'ambiguous' : 'invalid';
+
+export type MaterialTypeCatalogResolutionKind =
+  | 'resolveToReviewedForm'
+  | 'resolveFamilyOnly'
+  | 'ambiguous'
+  | 'invalidOrMissingTarget';
+
+/** Catalog coverage counts a reviewed form only when evidence came from material.materialType. */
+export const classifyMaterialTypeCatalogResolution = (
+  desired: DesiredAssignmentOutcome,
+): MaterialTypeCatalogResolutionKind => {
+  if (!desired.ok) {
+    return classifyCatalogDesiredFailure(desired) === 'ambiguous' ? 'ambiguous' : 'invalidOrMissingTarget';
+  }
+  const formFromMaterialType = desired.form?.evidence.some((entry) => entry.field === 'material.materialType') ?? false;
+  if (desired.form && formFromMaterialType) return 'resolveToReviewedForm';
+  return 'resolveFamilyOnly';
+};
 
 export const classifyMaterialTaxonomyAssignment = (input: { material: AuditMaterialInput; desired: DesiredAssignmentOutcome }): MaterialClassificationResult => {
   const material = input.material, stored = [...material.storedConcepts].sort((a, b) => asciiCompare(a.conceptId, b.conceptId));
@@ -199,35 +218,88 @@ export const buildMaterialEvidenceAliasUniverse = (concepts: readonly MaterialCo
   return values;
 };
 export type RegistryHealth = { criticalIssueCount: number; warningIssueCount: number; criticalByCode: Record<string, number>; warningByCode: Record<string, number>; byCode: Record<string, BoundedIssueBucket<RegistryHealthSample>> };
+
+export const compareRegistryHealthSample = (a: RegistryHealthSample, b: RegistryHealthSample): number =>
+  asciiCompare(a.detail, b.detail)
+  || asciiCompare(a.reach, b.reach)
+  || asciiCompare(a.normalizedAlias ?? '', b.normalizedAlias ?? '')
+  || asciiCompare(a.mappingValueHash ?? '', b.mappingValueHash ?? '')
+  || asciiCompare((a.canonicalKeys ?? []).join('\u0000'), (b.canonicalKeys ?? []).join('\u0000'))
+  || asciiCompare((a.conceptIds ?? []).join('\u0000'), (b.conceptIds ?? []).join('\u0000'));
+
+const namespaceTypeMismatch = (concept: MaterialConceptAssignmentRegistryConcept): boolean => {
+  const expected = expectedNamespaceForType(concept.conceptType);
+  if (!expected || !isValidTaxonomyCanonicalKey(concept.canonicalKey)) return false;
+  return !concept.canonicalKey.startsWith(expected);
+};
+
+export const classifyReviewedMappingTargetState = (input: {
+  canonicalKey: string;
+  conflicts: ReadonlySet<string>;
+  targets: readonly MaterialConceptAssignmentRegistryConcept[];
+}): 'CONFLICTED' | 'INVALID_CANONICAL' | 'MISSING' | 'INACTIVE' | 'WRONG_TYPE' | null => {
+  if (input.conflicts.has(input.canonicalKey)) return 'CONFLICTED';
+  if (!isValidTaxonomyCanonicalKey(input.canonicalKey) || !input.canonicalKey.startsWith('material-form:')) {
+    return 'INVALID_CANONICAL';
+  }
+  if (!input.targets.length) return 'MISSING';
+  if (input.targets.some((target) => target.status !== 'ACTIVE')) return 'INACTIVE';
+  if (input.targets.some((target) => target.conceptType !== 'MATERIAL_FORM')) return 'WRONG_TYPE';
+  return null;
+};
+
 export const auditRegistryHealth = (input: { concepts: readonly MaterialConceptAssignmentRegistryConcept[]; reachedNormalizedEvidence: ReadonlySet<string>; sampleLimit?: number }): RegistryHealth => {
   const sampleLimit = input.sampleLimit ?? 20;
   const criticalByCode: Record<string, number> = {}, warningByCode: Record<string, number> = {};
   const buckets = new Map<string, RegistryHealthSample[]>();
   const totals = new Map<string, number>();
   const add = (sample: RegistryHealthSample) => {
-    const counts = sample.severity === 'critical' ? criticalByCode : warningByCode;
-    counts[sample.code] = (counts[sample.code] ?? 0) + 1; totals.set(sample.code, (totals.get(sample.code) ?? 0) + 1);
-    const bucket = buckets.get(sample.code) ?? []; insertBounded(bucket, sample, sampleLimit, (a, b) => asciiCompare(a.detail, b.detail)); buckets.set(sample.code, bucket);
+    const normalized: RegistryHealthSample = {
+      code: sample.code,
+      severity: sample.severity,
+      reach: sample.reach,
+      detail: sample.detail,
+    };
+    if (sample.normalizedAlias !== undefined) normalized.normalizedAlias = sample.normalizedAlias;
+    if (sample.mappingValueHash !== undefined) normalized.mappingValueHash = sample.mappingValueHash;
+    if (sample.canonicalKeys !== undefined) normalized.canonicalKeys = [...sample.canonicalKeys].sort(asciiCompare);
+    if (sample.conceptIds !== undefined) normalized.conceptIds = [...sample.conceptIds].sort(asciiCompare);
+    const counts = normalized.severity === 'critical' ? criticalByCode : warningByCode;
+    counts[normalized.code] = (counts[normalized.code] ?? 0) + 1;
+    totals.set(normalized.code, (totals.get(normalized.code) ?? 0) + 1);
+    const bucket = buckets.get(normalized.code) ?? [];
+    insertBounded(bucket, normalized, sampleLimit, compareRegistryHealthSample);
+    buckets.set(normalized.code, bucket);
   };
   const conflicts = collectConflictedCanonicalKeys(input.concepts), byKey = new Map<string, MaterialConceptAssignmentRegistryConcept[]>();
   for (const concept of input.concepts) {
     const rows = byKey.get(concept.canonicalKey) ?? []; rows.push(concept); byKey.set(concept.canonicalKey, rows);
-    if (!isValidTaxonomyCanonicalKey(concept.canonicalKey)) add({ code: 'MALFORMED_CANONICAL_KEY', severity: 'critical', reach: 'GLOBAL', canonicalKeys: [concept.canonicalKey], conceptIds: [concept.id], detail: 'Persisted concept has malformed canonical key' });
-    if (concept.canonicalKey.startsWith('material-form:') && concept.conceptType !== 'MATERIAL_FORM') add({ code: 'MATERIAL_FORM_NAMESPACE_TYPE_CONFLICT', severity: 'critical', reach: 'GLOBAL', canonicalKeys: [concept.canonicalKey], conceptIds: [concept.id], detail: 'material-form namespace has non-form type' });
+    if (!isValidTaxonomyCanonicalKey(concept.canonicalKey)) {
+      add({ code: 'MALFORMED_CANONICAL_KEY', severity: 'critical', reach: 'GLOBAL', canonicalKeys: [concept.canonicalKey], conceptIds: [concept.id], detail: 'Persisted concept has malformed canonical key' });
+    } else if (namespaceTypeMismatch(concept)) {
+      add({
+        code: 'CANONICAL_NAMESPACE_TYPE_MISMATCH',
+        severity: 'critical',
+        reach: 'GLOBAL',
+        canonicalKeys: [concept.canonicalKey],
+        conceptIds: [concept.id],
+        detail: `Concept type ${concept.conceptType} does not match canonical namespace`,
+      });
+    }
     for (const alias of concept.aliases) if (alias.isActive && concept.status === 'INACTIVE') add({ code: 'ACTIVE_ALIAS_INACTIVE_TARGET', severity: concept.conceptType === 'MATERIAL_FORM' && isEngineAliasSource(alias.source) ? 'critical' : 'warning', reach: input.reachedNormalizedEvidence.has(alias.normalizedAlias) ? 'CURRENTLY_REACHED' : 'DORMANT', normalizedAlias: alias.normalizedAlias, canonicalKeys: [concept.canonicalKey], conceptIds: [concept.id], detail: `Active alias targets inactive ${concept.conceptType}` });
   }
-  for (const key of conflicts) add({ code: 'CONFLICTED_CANONICAL_KEY', severity: 'critical', reach: 'GLOBAL', canonicalKeys: [key], detail: 'Conflicting persisted definitions for canonical key' });
+  for (const key of [...conflicts].sort(asciiCompare)) add({ code: 'CONFLICTED_CANONICAL_KEY', severity: 'critical', reach: 'GLOBAL', canonicalKeys: [key], detail: 'Conflicting persisted definitions for canonical key' });
   const mappingKeys = new Map<string, Set<string>>();
   for (const mapping of reviewedMappings()) {
     const keys = mappingKeys.get(normalizeTaxonomyAlias(mapping.value)) ?? new Set<string>(); keys.add(mapping.canonicalKey); mappingKeys.set(normalizeTaxonomyAlias(mapping.value), keys);
     const targets = byKey.get(mapping.canonicalKey) ?? [];
-    const state = conflicts.has(mapping.canonicalKey) ? 'CONFLICTED' : !targets.length ? 'MISSING' : targets.some((t) => t.status !== 'ACTIVE') ? 'INACTIVE' : targets.some((t) => t.conceptType !== 'MATERIAL_FORM') ? 'WRONG_TYPE' : null;
+    const state = classifyReviewedMappingTargetState({ canonicalKey: mapping.canonicalKey, conflicts, targets });
     if (state) add({ code: `REVIEWED_MAPPING_TARGET_${state}`, severity: 'critical', reach: 'GLOBAL', canonicalKeys: [mapping.canonicalKey], mappingValueHash: hashTaxonomyEvidence(mapping.value), detail: `Reviewed materialType mapping target is ${state.toLowerCase()}` });
   }
-  for (const [value, keys] of mappingKeys) if (keys.size > 1) add({ code: 'REVIEWED_MAPPING_TARGET_CONFLICTED', severity: 'critical', reach: 'GLOBAL', canonicalKeys: [...keys].sort(asciiCompare), mappingValueHash: hashTaxonomyEvidence(value), detail: 'Reviewed materialType mapping resolves to multiple canonical keys' });
+  for (const [value, keys] of [...mappingKeys.entries()].sort(([a], [b]) => asciiCompare(a, b))) if (keys.size > 1) add({ code: 'REVIEWED_MAPPING_TARGET_CONFLICTED', severity: 'critical', reach: 'GLOBAL', canonicalKeys: [...keys].sort(asciiCompare), mappingValueHash: hashTaxonomyEvidence(value), detail: 'Reviewed materialType mapping resolves to multiple canonical keys' });
   const aliases = new Map<string, Map<string, { concept: MaterialConceptAssignmentRegistryConcept; source: string }>>();
   for (const concept of input.concepts) for (const alias of concept.aliases) if (alias.isActive && isEngineAliasSource(alias.source)) { const targets = aliases.get(alias.normalizedAlias) ?? new Map(); if (!targets.has(concept.id)) targets.set(concept.id, { concept, source: alias.source }); aliases.set(alias.normalizedAlias, targets); }
-  for (const [alias, targets] of aliases) {
+  for (const [alias, targets] of [...aliases.entries()].sort(([a], [b]) => asciiCompare(a, b))) {
     const forms = [...targets.values()].filter(({ concept }) => concept.conceptType === 'MATERIAL_FORM');
     const others = [...targets.values()].filter(({ concept }) => concept.conceptType !== 'MATERIAL_FORM');
     const reach: RegistryIssueReach = input.reachedNormalizedEvidence.has(alias) ? 'CURRENTLY_REACHED' : 'DORMANT';
@@ -237,7 +309,10 @@ export const auditRegistryHealth = (input: { concepts: readonly MaterialConceptA
     else if (!forms.length && others.length > 1) add({ code: 'NON_FORM_SHARED_ALIAS', severity: 'warning', reach, normalizedAlias: alias, conceptIds: ids, canonicalKeys: keys, detail: 'Engine-indexed alias is shared only by non-form concepts' });
   }
   const byCode: RegistryHealth['byCode'] = {};
-  for (const [code, samples] of buckets) byCode[code] = { total: totals.get(code) ?? 0, sampleLimit, truncated: (totals.get(code) ?? 0) > samples.length, samples };
+  for (const code of [...buckets.keys()].sort(asciiCompare)) {
+    const samples = buckets.get(code) ?? [];
+    byCode[code] = { total: totals.get(code) ?? 0, sampleLimit, truncated: (totals.get(code) ?? 0) > samples.length, samples };
+  }
   return { criticalIssueCount: Object.values(criticalByCode).reduce((a, b) => a + b, 0), warningIssueCount: Object.values(warningByCode).reduce((a, b) => a + b, 0), criticalByCode, warningByCode, byCode };
 };
 
@@ -252,7 +327,15 @@ export const accumulateMaterialClassification = (acc: MaterialTaxonomyAuditAccum
   acc.totalMaterials++; acc.statusTotals[classification.status]++; acc.repairTotals[classification.repairReadiness]++; acc.materialTypeMatchCounts[classification.materialTypeMatchKind]++;
   acc.primaryTotals.set(classification.primary, (acc.primaryTotals.get(classification.primary) ?? 0) + 1);
   const sample = toSample(classification), primarySamples = acc.primaryBuckets.get(classification.primary) ?? []; insertBounded(primarySamples, sample, acc.sampleLimit, compareSample); acc.primaryBuckets.set(classification.primary, primarySamples);
-  for (const issue of classification.allIssues) { acc.issueTotals.set(issue, (acc.issueTotals.get(issue) ?? 0) + 1); if (classification.gatedCritical) acc.gatedIssueTotals.set(issue, (acc.gatedIssueTotals.get(issue) ?? 0) + 1); const samples = acc.issueBuckets.get(issue) ?? []; insertBounded(samples, sample, acc.sampleLimit, compareSample); acc.issueBuckets.set(issue, samples); }
+  for (const issue of classification.allIssues) {
+    acc.issueTotals.set(issue, (acc.issueTotals.get(issue) ?? 0) + 1);
+    if (CHECK_STATUS_SET.has(classification.status)) {
+      acc.gatedIssueTotals.set(issue, (acc.gatedIssueTotals.get(issue) ?? 0) + 1);
+    }
+    const samples = acc.issueBuckets.get(issue) ?? [];
+    insertBounded(samples, sample, acc.sampleLimit, compareSample);
+    acc.issueBuckets.set(issue, samples);
+  }
   if (classification.gatedCritical) acc.statusFailureTotals[classification.status]++;
   if (classification.formFromTitleFallback) acc.titleFallbackFormCount++; if (classification.titleFallbackUnknown) acc.titleFallbackUnknownCount++;
   const type = normalizeTaxonomyAlias(materialTypeRaw), title = normalizeTaxonomyAlias(titleRaw);
@@ -265,7 +348,7 @@ export type MaterialTaxonomyAuditReport = {
   schemaVersion: typeof MATERIAL_TAXONOMY_AUDIT_SCHEMA_VERSION; generatedAt: string; evidenceHashVersion: typeof MATERIAL_TAXONOMY_AUDIT_EVIDENCE_HASH_VERSION;
   scope: { populations: { operational: readonly MaterialAuditStatus[]; historical: readonly MaterialAuditStatus[]; publicDiscoverable: readonly MaterialAuditStatus[]; all: readonly MaterialAuditStatus[] }; checkStatuses: readonly MaterialAuditStatus[]; reportedOnlyStatuses: readonly MaterialAuditStatus[]; consistency: { isolation: 'RepeatableRead'; limitation: string }; sampleLimit: number; publicDiscoverabilityNotes: string };
   execution: { batchSize: number; timeoutMs: number; checkMode: boolean; outputMode: 'json' | 'text' };
-  summary: { totalMaterials: number; operationalMaterials: number; historicalMaterials: number; gatedCriticalFailures: number; perStatusTotals: Record<MaterialAuditStatus, number>; perStatusFailureTotals: Record<MaterialAuditStatus, number>; perPrimaryCounts: Record<string, number>; perIssueCounts: Record<string, number>; checkPassed: boolean };
+  summary: { totalMaterials: number; operationalMaterials: number; historicalMaterials: number; gatedCriticalFailures: number; perStatusTotals: Record<MaterialAuditStatus, number>; perStatusFailureTotals: Record<MaterialAuditStatus, number>; perPrimaryCounts: Record<string, number>; perIssueCounts: Record<string, number>; perGatedIssueCounts: Record<string, number>; checkPassed: boolean };
   assignmentCoverage: { exactFamilyOnly: number; exactFamilyAndForm: number; missingAll: number; missingFamily: number; missingExpectedForm: number };
   staleness: { staleFamily: number; staleForm: number; unexpectedForm: number; extraAssignments: number; duplicateSemantic: number; inactiveStored: number; wrongOrUnsupportedStored: number; blockers: number };
   registryHealth: RegistryHealth; ruleCoverage: { materialTypeCatalog: MaterialTypeCatalogCoverage; persistedMaterialTypes: { distinctNormalizedValues: number; matchCounts: Record<MaterialTypeMatchKind, number> }; titleFallback: { desiredFormsFromTitleFallback: number; titleFallbackUnknown: number } }; repairReadiness: Record<RepairReadiness, number>; samples: { byPrimary: Record<string, BoundedIssueBucket<MaterialAuditSample>>; byIssue: Record<string, BoundedIssueBucket<MaterialAuditSample>> }; contentHash: string;
@@ -275,13 +358,14 @@ export const buildMaterialTaxonomyAuditReport = (input: { generatedAt?: string; 
   const acc = input.accumulator, registryHealth = auditRegistryHealth({ concepts: input.concepts, reachedNormalizedEvidence: acc.reachedNormalizedEvidence, sampleLimit: input.sampleLimit });
   const perPrimaryCounts = Object.fromEntries(Object.keys(PRIMARY_SEVERITY).map((code) => [code, acc.primaryTotals.get(code) ?? 0]));
   const perIssueCounts = Object.fromEntries([...acc.issueTotals].sort(([a], [b]) => asciiCompare(a, b)));
+  const perGatedIssueCounts = Object.fromEntries([...acc.gatedIssueTotals].sort(([a], [b]) => asciiCompare(a, b)));
   const issue = (code: string) => acc.issueTotals.get(code) ?? 0;
   const operationalMaterials = OPERATIONAL_MATERIAL_STATUSES.reduce((sum, status) => sum + acc.statusTotals[status], 0), historicalMaterials = HISTORICAL_MATERIAL_STATUSES.reduce((sum, status) => sum + acc.statusTotals[status], 0), gatedCriticalFailures = OPERATIONAL_MATERIAL_STATUSES.reduce((sum, status) => sum + acc.statusFailureTotals[status], 0);
   const report = {
     schemaVersion: MATERIAL_TAXONOMY_AUDIT_SCHEMA_VERSION, generatedAt: input.generatedAt ?? new Date().toISOString(), evidenceHashVersion: MATERIAL_TAXONOMY_AUDIT_EVIDENCE_HASH_VERSION,
     scope: { populations: { operational: OPERATIONAL_MATERIAL_STATUSES, historical: HISTORICAL_MATERIAL_STATUSES, publicDiscoverable: PUBLIC_DISCOVERABLE_MATERIAL_STATUSES, all: ALL_MATERIAL_STATUSES }, checkStatuses: CHECK_MATERIAL_STATUSES, reportedOnlyStatuses: REPORTED_ONLY_MATERIAL_STATUSES, consistency: { isolation: 'RepeatableRead' as const, limitation: 'Report reflects a single Prisma RepeatableRead snapshot. Timeout fails the command instead of returning a partial report.' }, sampleLimit: input.sampleLimit, publicDiscoverabilityNotes: 'Public list/detail require public status and an active MATERIAL or BOTH category.' },
     execution: { batchSize: input.batchSize, timeoutMs: input.timeoutMs, checkMode: input.checkMode, outputMode: input.outputMode },
-    summary: { totalMaterials: acc.totalMaterials, operationalMaterials, historicalMaterials, gatedCriticalFailures, perStatusTotals: { ...acc.statusTotals }, perStatusFailureTotals: { ...acc.statusFailureTotals }, perPrimaryCounts, perIssueCounts, checkPassed: gatedCriticalFailures === 0 && registryHealth.criticalIssueCount === 0 },
+    summary: { totalMaterials: acc.totalMaterials, operationalMaterials, historicalMaterials, gatedCriticalFailures, perStatusTotals: { ...acc.statusTotals }, perStatusFailureTotals: { ...acc.statusFailureTotals }, perPrimaryCounts, perIssueCounts, perGatedIssueCounts, checkPassed: gatedCriticalFailures === 0 && registryHealth.criticalIssueCount === 0 },
     assignmentCoverage: { exactFamilyOnly: acc.primaryTotals.get('EXACT_FAMILY_ONLY') ?? 0, exactFamilyAndForm: acc.primaryTotals.get('EXACT_FAMILY_AND_FORM') ?? 0, missingAll: issue('MISSING_ALL_ASSIGNMENTS'), missingFamily: issue('MISSING_FAMILY'), missingExpectedForm: issue('MISSING_EXPECTED_FORM') },
     staleness: { staleFamily: issue('STALE_FAMILY'), staleForm: issue('STALE_FORM'), unexpectedForm: issue('UNEXPECTED_FORM'), extraAssignments: issue('EXTRA_ASSIGNMENTS'), duplicateSemantic: issue('DUPLICATE_SEMANTIC_ASSIGNMENT'), inactiveStored: issue('INACTIVE_STORED_CONCEPT'), wrongOrUnsupportedStored: issue('WRONG_STORED_CONCEPT_TYPE') + issue('UNSUPPORTED_STORED_CONCEPT_TYPE') + issue('MALFORMED_STORED_CANONICAL_KEY'), blockers: issue('CATEGORY_OWNERSHIP_BLOCKED') + issue('MATERIAL_EVIDENCE_STRUCTURAL_ERROR') + issue('INTERNAL_ASSIGNMENT_INVARIANT') },
     registryHealth, ruleCoverage: { materialTypeCatalog: input.materialTypeCatalog, persistedMaterialTypes: { distinctNormalizedValues: acc.distinctMaterialTypes.size, matchCounts: { ...acc.materialTypeMatchCounts } }, titleFallback: { desiredFormsFromTitleFallback: acc.titleFallbackFormCount, titleFallbackUnknown: acc.titleFallbackUnknownCount } }, repairReadiness: { ...acc.repairTotals }, samples: { byPrimary: bucketsToReport(acc.primaryBuckets, acc.primaryTotals, input.sampleLimit), byIssue: bucketsToReport(acc.issueBuckets, acc.issueTotals, input.sampleLimit) },

@@ -53,6 +53,13 @@ For every operational material whose desired assignment resolves successfully, t
 
 Optional form coverage is reported; unknown form evidence alone does not fail the gate.
 
+Issue totals:
+
+- `summary.perIssueCounts` — issue codes across **all** materials, including historical `REUSED`.
+- `summary.perGatedIssueCounts` — the same issue codes restricted to `CHECK_MATERIAL_STATUSES` only (`AVAILABLE`, `PENDING_RESERVATION`, `RESERVED`, `UNAVAILABLE`).
+
+`--check` fails when `gatedCriticalFailures > 0` or registry critical issues exist. Historical materials can inflate `perIssueCounts` without contributing to `perGatedIssueCounts`.
+
 ## Flags
 
 - `--json`

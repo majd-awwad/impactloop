@@ -8,6 +8,7 @@ import {
   buildMaterialTaxonomyAuditReport,
   classifyCatalogDesiredFailure,
   classifyMaterialTaxonomyAssignment,
+  classifyMaterialTypeCatalogResolution,
   createMaterialTaxonomyAuditAccumulator,
   evaluateCheckGate,
   renderMaterialTaxonomyAuditTextReport,
@@ -366,7 +367,9 @@ const buildMaterialTypeCatalogCoverage = async (
       }
       continue;
     }
-    if (desired.form) {
+
+    const resolution = classifyMaterialTypeCatalogResolution(desired);
+    if (resolution === 'resolveToReviewedForm') {
       catalog.resolveToReviewedForm += 1;
     } else {
       catalog.resolveFamilyOnly += 1;

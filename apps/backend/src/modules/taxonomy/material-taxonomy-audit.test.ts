@@ -10,6 +10,8 @@ import {
   buildMaterialEvidenceAliasUniverse,
   buildMaterialTaxonomyAuditReport,
   classifyMaterialTaxonomyAssignment,
+  classifyMaterialTypeCatalogResolution,
+  classifyReviewedMappingTargetState,
   createMaterialTaxonomyAuditAccumulator,
   hashTaxonomyEvidence,
   mapPersistenceAppErrorToAuditBlocker,
@@ -388,6 +390,33 @@ describe('material taxonomy audit registry health', () => {
     );
   });
 
+  test('reviewed mapping invalid-canonical diagnostic is distinct', () => {
+    assert.equal(
+      classifyReviewedMappingTargetState({
+        canonicalKey: 'component:wrong',
+        conflicts: new Set(),
+        targets: [],
+      }),
+      'INVALID_CANONICAL',
+    );
+    assert.equal(
+      classifyReviewedMappingTargetState({
+        canonicalKey: 'material-form:board',
+        conflicts: new Set(),
+        targets: [formBoard],
+      }),
+      null,
+    );
+    assert.equal(
+      classifyReviewedMappingTargetState({
+        canonicalKey: 'not a key',
+        conflicts: new Set(),
+        targets: [],
+      }),
+      'INVALID_CANONICAL',
+    );
+  });
+
   test('reviewed material-form namespace conflict remains critical', () => {
     const wrong = concept({
       id: 'wrong-form-key',
@@ -399,7 +428,194 @@ describe('material taxonomy audit registry health', () => {
       reachedNormalizedEvidence: new Set(),
       sampleLimit: 5,
     });
-    assert.ok((health.criticalByCode.MATERIAL_FORM_NAMESPACE_TYPE_CONFLICT ?? 0) > 0);
+    assert.ok((health.criticalByCode.CANONICAL_NAMESPACE_TYPE_MISMATCH ?? 0) > 0);
+  });
+
+  test('bidirectional namespace/type mismatches are registry-critical', () => {
+    const formWrongNs = concept({
+      id: 'form-wrong-ns',
+      canonicalKey: 'component:wrong',
+      conceptType: 'MATERIAL_FORM',
+    });
+    const familyWrongNs = concept({
+      id: 'family-wrong-ns',
+      canonicalKey: 'component:wrong-family',
+      conceptType: 'MATERIAL_FAMILY',
+    });
+    const health = auditRegistryHealth({
+      concepts: [formWrongNs, familyWrongNs],
+      reachedNormalizedEvidence: new Set(),
+      sampleLimit: 10,
+    });
+    assert.equal(health.criticalByCode.CANONICAL_NAMESPACE_TYPE_MISMATCH ?? 0, 2);
+    assert.equal(health.criticalByCode.MALFORMED_CANONICAL_KEY ?? 0, 0);
+  });
+
+  test('reviewed mapping invalid canonical is critical and separate from malformed syntax', () => {
+    const malformedConcept = concept({
+      id: 'bad-syntax',
+      canonicalKey: 'not a canonical key',
+      conceptType: 'MATERIAL_FORM',
+    });
+    const health = auditRegistryHealth({
+      concepts: [family, malformedConcept],
+      reachedNormalizedEvidence: new Set(),
+      sampleLimit: 10,
+    });
+    assert.ok((health.criticalByCode.MALFORMED_CANONICAL_KEY ?? 0) >= 1);
+    assert.equal(health.criticalByCode.CANONICAL_NAMESPACE_TYPE_MISMATCH ?? 0, 0);
+  });
+
+  test('registry health samples and contentHash are order-independent', () => {
+    const shared = 'order-token';
+    const form = concept({
+      id: 'form-order',
+      canonicalKey: 'material-form:order',
+      conceptType: 'MATERIAL_FORM',
+      aliases: [{
+        normalizedAlias: shared,
+        source: TAXONOMY_ALIAS_SOURCE.REVIEWED_EXPLICIT,
+        isActive: true,
+      }],
+    });
+    const component = concept({
+      id: 'comp-order',
+      canonicalKey: 'component:order',
+      conceptType: 'COMPONENT',
+      aliases: [{
+        normalizedAlias: shared,
+        source: TAXONOMY_ALIAS_SOURCE.REVIEWED_EXPLICIT,
+        isActive: true,
+      }],
+    });
+    const wrongNs = concept({
+      id: 'wrong-ns-order',
+      canonicalKey: 'component:as-form',
+      conceptType: 'MATERIAL_FORM',
+    });
+    const normal = [family, form, component, wrongNs, formBoard];
+    const reversed = [...normal].reverse();
+    const permuted = [wrongNs, formBoard, component, family, form];
+    const run = (concepts: MaterialConceptAssignmentRegistryConcept[]) => {
+      const health = auditRegistryHealth({
+        concepts,
+        reachedNormalizedEvidence: new Set([shared, 'board']),
+        sampleLimit: 20,
+      });
+      const acc = createMaterialTaxonomyAuditAccumulator(
+        20,
+        buildMaterialEvidenceAliasUniverse(concepts),
+      );
+      const mat = material({
+        materialType: 'board',
+        stored: [stored(family), stored(formBoard)],
+      });
+      const desired = resolveDesiredMaterialAssignment({
+        category: ownedCategory(),
+        materialType: mat.materialType,
+        title: mat.title,
+        concepts,
+      });
+      accumulateMaterialClassification(
+        acc,
+        classifyMaterialTaxonomyAssignment({ material: mat, desired }),
+        mat.materialType,
+        mat.title,
+      );
+      const report = buildMaterialTaxonomyAuditReport({
+        generatedAt: '2026-07-24T00:00:00.000Z',
+        sampleLimit: 20,
+        batchSize: 10,
+        timeoutMs: 60_000,
+        checkMode: false,
+        outputMode: 'json',
+        accumulator: acc,
+        concepts,
+        materialTypeCatalog: {
+          totalActive: 0,
+          withAtLeastOneMaterial: 0,
+          withActivePaidPriceRule: 0,
+          resolveToReviewedForm: 0,
+          resolveFamilyOnly: 0,
+          ambiguous: 0,
+          invalidOrMissingTarget: 0,
+        },
+      });
+      return { health, report };
+    };
+
+    const a = run(normal);
+    const b = run(reversed);
+    const c = run(permuted);
+    assert.deepEqual(a.health.criticalByCode, b.health.criticalByCode);
+    assert.deepEqual(a.health.warningByCode, b.health.warningByCode);
+    assert.deepEqual(a.health.byCode, b.health.byCode);
+    assert.deepEqual(a.health, c.health);
+    assert.equal(a.report.contentHash, b.report.contentHash);
+    assert.equal(a.report.contentHash, c.report.contentHash);
+    assert.deepEqual(a.report.registryHealth, b.report.registryHealth);
+  });
+});
+
+describe('material taxonomy audit gated issue totals', () => {
+  test('perGatedIssueCounts exclude historical REUSED materials', () => {
+    const concepts = [family, formBoard];
+    const acc = createMaterialTaxonomyAuditAccumulator(
+      20,
+      buildMaterialEvidenceAliasUniverse(concepts),
+    );
+    const operational = material({
+      id: 'op-missing',
+      status: 'AVAILABLE',
+      materialType: 'totally-unknown',
+      stored: [],
+    });
+    const historical = material({
+      id: 'hist-missing',
+      status: 'REUSED',
+      materialType: 'totally-unknown',
+      stored: [],
+      updatedAt: '2026-07-20T00:00:00.000Z',
+    });
+    for (const mat of [operational, historical]) {
+      const desired = resolveDesiredMaterialAssignment({
+        category: ownedCategory(),
+        materialType: mat.materialType,
+        title: mat.title,
+        concepts,
+      });
+      accumulateMaterialClassification(
+        acc,
+        classifyMaterialTaxonomyAssignment({ material: mat, desired }),
+        mat.materialType,
+        mat.title,
+      );
+    }
+    const report = buildMaterialTaxonomyAuditReport({
+      generatedAt: '2026-07-24T00:00:00.000Z',
+      sampleLimit: 20,
+      batchSize: 10,
+      timeoutMs: 60_000,
+      checkMode: true,
+      outputMode: 'json',
+      accumulator: acc,
+      concepts,
+      materialTypeCatalog: {
+        totalActive: 0,
+        withAtLeastOneMaterial: 0,
+        withActivePaidPriceRule: 0,
+        resolveToReviewedForm: 0,
+        resolveFamilyOnly: 0,
+        ambiguous: 0,
+        invalidOrMissingTarget: 0,
+      },
+    });
+    assert.equal(report.summary.perIssueCounts.MISSING_ALL_ASSIGNMENTS, 2);
+    assert.equal(report.summary.perIssueCounts.MISSING_FAMILY, 2);
+    assert.equal(report.summary.perGatedIssueCounts.MISSING_ALL_ASSIGNMENTS, 1);
+    assert.equal(report.summary.perGatedIssueCounts.MISSING_FAMILY, 1);
+    assert.equal(report.summary.gatedCriticalFailures, 1);
+    assert.equal(report.summary.checkPassed, false);
   });
 });
 
@@ -437,6 +653,34 @@ describe('material taxonomy audit streaming and coverage', () => {
     assert.equal(acc.materialTypeMatchCounts.unknown, 1);
     assert.equal(acc.materialTypeMatchCounts.reviewed_mapping, 0);
     assert.equal(acc.materialTypeMatchCounts.reviewed_explicit_alias, 0);
+  });
+
+  test('catalog probe title fallback does not count as MaterialType form coverage', () => {
+    const titled = concept({
+      id: 'form-probe',
+      canonicalKey: 'material-form:probe',
+      conceptType: 'MATERIAL_FORM',
+      aliases: [{
+        normalizedAlias: 'catalog-probe-title',
+        source: TAXONOMY_ALIAS_SOURCE.REVIEWED_EXPLICIT,
+        isActive: true,
+      }],
+    });
+    const desired = resolveDesiredMaterialAssignment({
+      category: ownedCategory(),
+      materialType: 'unknown-catalog-type',
+      title: 'catalog-probe-title',
+      concepts: [family, titled],
+    });
+    assert.equal(desired.ok, true);
+    if (desired.ok) {
+      assert.ok(desired.form);
+      assert.equal(desired.formFromTitleFallback, true);
+    }
+    assert.equal(
+      classifyMaterialTypeCatalogResolution(desired),
+      'resolveFamilyOnly',
+    );
   });
 
   test('streaming totals and samples respect sampleLimit and batch independence', () => {
