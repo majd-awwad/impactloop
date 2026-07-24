@@ -18,6 +18,7 @@
     "evaluate:4j-a": "tsx scripts/evaluate-slice-4j-a.ts",
     "recommendations:demo:preflight": "tsx scripts/recommendations-demo-preflight.ts",
     "taxonomy:category-ownership": "tsx scripts/category-taxonomy-ownership.ts",
+    "taxonomy:material-audit": "tsx scripts/material-taxonomy-audit.ts",
     "clean-dev-notifications": "tsx ../../scripts/clean-dev-notifications.ts",
     "clean-driver-notifications": "tsx ../../scripts/clean-driver-notifications.ts",
     "backfill-driver-new-job-notifications": "tsx ../../scripts/backfill-driver-new-job-notifications.ts",
