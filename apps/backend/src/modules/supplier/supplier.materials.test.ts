@@ -14,6 +14,7 @@ import {
   restoreSupplierMaterialAvailable,
   updateSupplierMaterial,
 } from "./supplier.service.js";
+import * as supplierRepository from "./supplier.repository.js";
 import { AppError } from "../../utils/app-error.js";
 import {
   SUPPLIER_CREATE_MATERIAL_SCOPE,
@@ -419,8 +420,21 @@ describe("createSupplierMaterial", () => {
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
-      select: { id: true },
+      where: {
+        categoryType: { in: ["MATERIAL", "BOTH"] },
+        isActive: true,
+        materialFamilyConceptId: { not: null },
+        materialFamilyConcept: {
+          status: "ACTIVE",
+          conceptType: "MATERIAL_FAMILY",
+        },
+      },
+      select: {
+        id: true,
+        materialFamilyConcept: {
+          select: { id: true, canonicalKey: true },
+        },
+      },
     });
     const location = await prisma.location.create({
       data: {
@@ -436,6 +450,7 @@ describe("createSupplierMaterial", () => {
     const otherSupplier = await createSupplierUser("create-other");
 
     assert.ok(category);
+    assert.ok(category.materialFamilyConcept);
     ctx.categoryId = category.id;
     ctx.locationId = location.id;
     ctx.supplierId = supplier.id;
@@ -960,6 +975,684 @@ describe("createSupplierMaterial", () => {
     assert.equal(materialLocation?.locationType, "MATERIAL_PICKUP");
   });
 
+  test("free create with unknown materialType persists family-only MaterialConcept", async () => {
+    const material = await createSupplierMaterial(
+      ctx.supplierId,
+      buildCreatePayload("rp022-family-only"),
+    );
+    ctx.createdMaterialIds.push(material.id);
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      include: {
+        concept: {
+          select: { conceptType: true, status: true, canonicalKey: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.concept.conceptType, "MATERIAL_FAMILY");
+    assert.equal(concepts[0]?.concept.status, "ACTIVE");
+    assert.equal(material.isFree, true);
+    assert.equal(material.images.length, 1);
+  });
+
+  test("free create with reviewed materialType persists family and form concepts", async () => {
+    const material = await createSupplierMaterial(
+      ctx.supplierId,
+      buildCreatePayload("rp022-family-form", {
+        materialName: "Arduino Uno",
+        title: `${TEST_MARKER} rp022 arduino form`,
+      }),
+    );
+    ctx.createdMaterialIds.push(material.id);
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      include: {
+        concept: {
+          select: { conceptType: true, canonicalKey: true },
+        },
+      },
+    });
+
+    assert.equal(material.materialType, "Arduino Uno");
+    assert.equal(concepts.length, 2);
+    const types = concepts.map((row) => row.concept.conceptType).sort();
+    assert.deepEqual(types, ["MATERIAL_FAMILY", "MATERIAL_FORM"]);
+    assert.ok(
+      concepts.some(
+        (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+      ),
+    );
+  });
+
+  test("free create uses final category ownership for family concept", async () => {
+    const owned = await prisma.category.findUnique({
+      where: { id: ctx.categoryId },
+      select: {
+        materialFamilyConceptId: true,
+        materialFamilyConcept: { select: { canonicalKey: true } },
+      },
+    });
+    assert.ok(owned?.materialFamilyConceptId);
+
+    const material = await createSupplierMaterial(
+      ctx.supplierId,
+      buildCreatePayload("rp022-final-category"),
+    );
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(material.category.id, ctx.categoryId);
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      select: { conceptId: true },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.conceptId, owned.materialFamilyConceptId);
+  });
+
+  test("free create rejects category without taxonomy ownership", async () => {
+    const orphan = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} orphan category ${Date.now()}`,
+        nameAr: `${TEST_MARKER} orphan ar`,
+        categoryType: "MATERIAL",
+        isActive: true,
+        materialFamilyConceptId: null,
+      },
+      select: { id: true },
+    });
+
+    try {
+      await assert.rejects(
+        () =>
+          createSupplierMaterial(
+            ctx.supplierId,
+            buildCreatePayload("rp022-orphan-category", {
+              categoryId: orphan.id,
+            }),
+          ),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.code, "CATEGORY_TAXONOMY_NOT_READY");
+          assert.equal(error.statusCode, 409);
+          return true;
+        },
+      );
+
+      assert.equal(
+        await prisma.material.count({
+          where: { title: `${TEST_MARKER} rp022-orphan-category` },
+        }),
+        0,
+      );
+    } finally {
+      await prisma.category.delete({ where: { id: orphan.id } });
+    }
+  });
+
+  test("free taxonomy failure without injected tx does not leave orphan pickup Location", async () => {
+    const locationMarker = `${TEST_MARKER}-rp022-orphan-loc-${Date.now()}`;
+    const title = `${TEST_MARKER} rp022-location-atomicity`;
+    const temporaryCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} loc atomicity ${Date.now()}`,
+        nameAr: `${TEST_MARKER} loc atomicity ar`,
+        categoryType: "MATERIAL",
+        isActive: true,
+        materialFamilyConceptId: null,
+      },
+      select: { id: true },
+    });
+
+    await prisma.supplierProfile.update({
+      where: { userId: ctx.supplierId },
+      data: { supplierType: "INDIVIDUAL_SUPPLIER" },
+    });
+
+    try {
+      await assert.rejects(
+        () =>
+          createSupplierMaterial(ctx.supplierId, {
+            materialName: "Unmatched create material",
+            title,
+            description: `${title} description`,
+            categoryId: temporaryCategory.id,
+            quantity: 1,
+            unit: "piece",
+            condition: "GOOD",
+            isFree: true,
+            price: null,
+            currency: "NIS",
+            pickupAllowed: true,
+            deliveryAllowed: false,
+            imageUrls: ["/uploads/materials/rp022-location-atomicity.jpg"],
+            useDefaultPickupLocation: false,
+            pickupLocation: {
+              country: "Palestine",
+              city: "Nablus",
+              area: locationMarker,
+              addressLine: `${locationMarker} address`,
+              visibility: "ORDER_ONLY",
+              isApproximate: true,
+            },
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.code, "CATEGORY_TAXONOMY_NOT_READY");
+          return true;
+        },
+      );
+
+      assert.equal(await prisma.material.count({ where: { title } }), 0);
+      assert.equal(
+        await prisma.materialImage.count({
+          where: { material: { title } },
+        }),
+        0,
+      );
+      assert.equal(
+        await prisma.materialConcept.count({
+          where: { material: { title } },
+        }),
+        0,
+      );
+      assert.equal(
+        await prisma.location.count({
+          where: {
+            OR: [
+              { area: locationMarker },
+              { addressLine: `${locationMarker} address` },
+            ],
+          },
+        }),
+        0,
+      );
+    } finally {
+      await prisma.supplierProfile.update({
+        where: { userId: ctx.supplierId },
+        data: { supplierType: "WORKSHOP" },
+      });
+      await prisma.category.delete({ where: { id: temporaryCategory.id } });
+    }
+  });
+
+  test("idempotent free create replay keeps concept row count stable", async () => {
+    const key = `test-create-${Date.now()}-rp022-concepts`;
+    const payload = buildCreatePayload("rp022-idempotent-concepts");
+
+    const first = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    ctx.createdMaterialIds.push(first.response.id);
+
+    const before = await prisma.materialConcept.count({
+      where: { materialId: first.response.id },
+    });
+    assert.equal(before, 1);
+
+    const second = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    assert.equal(second.replayed, true);
+    assert.equal(second.response.id, first.response.id);
+
+    const after = await prisma.materialConcept.count({
+      where: { materialId: first.response.id },
+    });
+    assert.equal(after, 1);
+  });
+
+  test("repository free create without conceptIds fails before Material write", async () => {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    assert.ok(profile);
+
+    const title = `${TEST_MARKER} rp022-repo-no-concepts`;
+    await assert.rejects(
+      () =>
+        supplierRepository.createSupplierMaterial({
+          ownerId: ctx.supplierId,
+          supplierProfileId: profile.id,
+          categoryId: ctx.categoryId,
+          locationId: ctx.locationId,
+          title,
+          description: `${title} description`,
+          materialType: "Unmatched",
+          quantity: 1,
+          unit: "piece",
+          condition: "GOOD",
+          sourceType: "WORKSHOP_SURPLUS",
+          isFree: true,
+          price: null,
+          currency: "NIS",
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ["/uploads/materials/rp022-no-concepts.jpg"],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "INTERNAL_ERROR");
+        return true;
+      },
+    );
+
+    assert.equal(await prisma.material.count({ where: { title } }), 0);
+  });
+
+  test("repository free create rejects duplicate conceptIds before Material write", async () => {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const family = await prisma.taxonomyConcept.findFirst({
+      where: { conceptType: "MATERIAL_FAMILY", status: "ACTIVE" },
+      select: { id: true },
+    });
+    assert.ok(profile);
+    assert.ok(family);
+
+    const title = `${TEST_MARKER} rp022-repo-dup-concepts`;
+    await assert.rejects(
+      () =>
+        supplierRepository.createSupplierMaterial({
+          ownerId: ctx.supplierId,
+          supplierProfileId: profile.id,
+          categoryId: ctx.categoryId,
+          locationId: ctx.locationId,
+          title,
+          description: `${title} description`,
+          materialType: "Unmatched",
+          quantity: 1,
+          unit: "piece",
+          condition: "GOOD",
+          sourceType: "WORKSHOP_SURPLUS",
+          isFree: true,
+          price: null,
+          currency: "NIS",
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ["/uploads/materials/rp022-dup.jpg"],
+          conceptIds: [family.id, family.id],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "INTERNAL_ERROR");
+        return true;
+      },
+    );
+
+    assert.equal(await prisma.material.count({ where: { title } }), 0);
+  });
+
+  test("repository paid create rejects conceptIds", async () => {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const family = await prisma.taxonomyConcept.findFirst({
+      where: { conceptType: "MATERIAL_FAMILY", status: "ACTIVE" },
+      select: { id: true },
+    });
+    assert.ok(profile);
+    assert.ok(family);
+
+    const title = `${TEST_MARKER} rp022-paid-concepts-rejected`;
+    await assert.rejects(
+      () =>
+        supplierRepository.createSupplierMaterial({
+          ownerId: ctx.supplierId,
+          supplierProfileId: profile.id,
+          categoryId: ctx.categoryId,
+          locationId: ctx.locationId,
+          title,
+          description: `${title} description`,
+          materialType: "Paid widget",
+          quantity: 1,
+          unit: "piece",
+          condition: "GOOD",
+          sourceType: "WORKSHOP_SURPLUS",
+          isFree: false,
+          price: 10,
+          currency: "NIS",
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ["/uploads/materials/rp022-paid-concepts.jpg"],
+          conceptIds: [family.id],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "INTERNAL_ERROR");
+        return true;
+      },
+    );
+
+    assert.equal(await prisma.material.count({ where: { title } }), 0);
+  });
+
+  test("repository paid create rejects empty conceptIds array before Material write", async () => {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    assert.ok(profile);
+
+    const title = `${TEST_MARKER} rp022-paid-empty-concepts`;
+    await assert.rejects(
+      () =>
+        supplierRepository.createSupplierMaterial({
+          ownerId: ctx.supplierId,
+          supplierProfileId: profile.id,
+          categoryId: ctx.categoryId,
+          locationId: ctx.locationId,
+          title,
+          description: `${title} description`,
+          materialType: "Paid widget",
+          quantity: 1,
+          unit: "piece",
+          condition: "GOOD",
+          sourceType: "WORKSHOP_SURPLUS",
+          isFree: false,
+          price: 10,
+          currency: "NIS",
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ["/uploads/materials/rp022-paid-empty.jpg"],
+          conceptIds: [],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "INTERNAL_ERROR");
+        assert.equal(
+          (error.details as { reason?: string } | undefined)?.reason,
+          "PAID_CONCEPT_IDS_NOT_ALLOWED",
+        );
+        return true;
+      },
+    );
+
+    assert.equal(await prisma.material.count({ where: { title } }), 0);
+  });
+
+  test("repository free create rejects blank concept IDs before Material write", async () => {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    assert.ok(profile);
+
+    const title = `${TEST_MARKER} rp022-repo-blank-concepts`;
+    await assert.rejects(
+      () =>
+        supplierRepository.createSupplierMaterial({
+          ownerId: ctx.supplierId,
+          supplierProfileId: profile.id,
+          categoryId: ctx.categoryId,
+          locationId: ctx.locationId,
+          title,
+          description: `${title} description`,
+          materialType: "Unmatched",
+          quantity: 1,
+          unit: "piece",
+          condition: "GOOD",
+          sourceType: "WORKSHOP_SURPLUS",
+          isFree: true,
+          price: null,
+          currency: "NIS",
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ["/uploads/materials/rp022-blank.jpg"],
+          conceptIds: ["   "],
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, "INTERNAL_ERROR");
+        assert.equal(
+          (error.details as { reason?: string } | undefined)?.reason,
+          "FREE_CONCEPT_IDS_BLANK",
+        );
+        return true;
+      },
+    );
+
+    assert.equal(await prisma.material.count({ where: { title } }), 0);
+  });
+
+  test("paid create does not persist MaterialConcept rows", async () => {
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} rp022 paid no concepts`,
+        normalizedMaterialName: "rp022-paid-no-concepts",
+        unit: "piece",
+        supplierPriceNis: 12,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 20,
+      },
+    });
+
+    const material = await createSupplierMaterial(ctx.supplierId, {
+      materialName: `${TEST_MARKER} rp022 paid no concepts`,
+      title: `${TEST_MARKER} rp022 paid no concepts`,
+      description: `${TEST_MARKER} rp022 paid no concepts description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: "piece",
+      condition: "GOOD",
+      isFree: false,
+      price: 10,
+      currency: "NIS",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ["/uploads/materials/rp022-paid-none.jpg"],
+      useDefaultPickupLocation: true,
+      sourcePriceRuleRequestId: priceRuleRequest.id,
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(
+      await prisma.materialConcept.count({ where: { materialId: material.id } }),
+      0,
+    );
+
+    await prisma.priceRuleRequest.delete({
+      where: { id: priceRuleRequest.id },
+    });
+  });
+
+  test("repository free create rolls back Material and images when concept write fails", async () => {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const family = await prisma.taxonomyConcept.findFirst({
+      where: { conceptType: "MATERIAL_FAMILY", status: "ACTIVE" },
+      select: { id: true },
+    });
+    assert.ok(profile);
+    assert.ok(family);
+
+    const title = `${TEST_MARKER} rp022-repo-concept-rollback`;
+    await assert.rejects(
+      () =>
+        supplierRepository.createSupplierMaterial({
+          ownerId: ctx.supplierId,
+          supplierProfileId: profile.id,
+          categoryId: ctx.categoryId,
+          locationId: ctx.locationId,
+          title,
+          description: `${title} description`,
+          materialType: "Unmatched",
+          quantity: 1,
+          unit: "piece",
+          condition: "GOOD",
+          sourceType: "WORKSHOP_SURPLUS",
+          isFree: true,
+          price: null,
+          currency: "NIS",
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          imageUrls: ["/uploads/materials/rp022-repo-rollback.jpg"],
+          conceptIds: [family.id, "missing-concept-id-for-repo-rollback"],
+        }),
+      () => true,
+    );
+
+    assert.equal(await prisma.material.count({ where: { title } }), 0);
+    assert.equal(
+      await prisma.materialImage.count({
+        where: { material: { title } },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.materialConcept.count({
+        where: { material: { title } },
+      }),
+      0,
+    );
+  });
+
+  test("failed taxonomy assignment leaves key free for corrected same-key retry", async () => {
+    const key = `test-create-${Date.now()}-rp022-taxonomy-retry`;
+    const temporaryCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} temp taxonomy ${Date.now()}`,
+        nameAr: `${TEST_MARKER} temp taxonomy ar`,
+        categoryType: "MATERIAL",
+        isActive: true,
+        materialFamilyConceptId: null,
+      },
+      select: { id: true },
+    });
+    const payload = buildCreatePayload("rp022-taxonomy-retry", {
+      categoryId: temporaryCategory.id,
+    });
+
+    try {
+      await assert.rejects(
+        () => createSupplierMaterialIdempotent(ctx.supplierId, payload, key),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.code, "CATEGORY_TAXONOMY_NOT_READY");
+          return true;
+        },
+      );
+
+      assert.equal(
+        await prisma.material.count({
+          where: { title: payload.title },
+        }),
+        0,
+      );
+      assert.equal(
+        await prisma.idempotencyRecord.findUnique({
+          where: {
+            userId_scope_key: {
+              userId: ctx.supplierId,
+              scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+              key,
+            },
+          },
+        }),
+        null,
+      );
+
+      const family = await prisma.taxonomyConcept.findFirst({
+        where: { conceptType: "MATERIAL_FAMILY", status: "ACTIVE" },
+        select: { id: true },
+      });
+      assert.ok(family);
+
+      await prisma.category.update({
+        where: { id: temporaryCategory.id },
+        data: { materialFamilyConceptId: family.id },
+      });
+
+      const created = await createSupplierMaterialIdempotent(
+        ctx.supplierId,
+        payload,
+        key,
+      );
+      const createdMaterialId = created.response.id;
+
+      assert.equal(created.replayed, false);
+      assert.equal(
+        await prisma.material.count({ where: { title: payload.title } }),
+        1,
+      );
+      assert.equal(
+        await prisma.materialConcept.count({
+          where: { materialId: createdMaterialId },
+        }),
+        1,
+      );
+
+      const replay = await createSupplierMaterialIdempotent(
+        ctx.supplierId,
+        payload,
+        key,
+      );
+      assert.equal(replay.replayed, true);
+      assert.equal(replay.response.id, createdMaterialId);
+      assert.equal(
+        await prisma.material.count({ where: { title: payload.title } }),
+        1,
+      );
+      assert.equal(
+        await prisma.materialConcept.count({
+          where: { materialId: createdMaterialId },
+        }),
+        1,
+      );
+    } finally {
+      const leftoverMaterials = await prisma.material.findMany({
+        where: { categoryId: temporaryCategory.id },
+        select: { id: true, locationId: true },
+      });
+      const leftoverMaterialIds = leftoverMaterials.map((row) => row.id);
+      const leftoverLocationIds = [
+        ...new Set(leftoverMaterials.map((row) => row.locationId)),
+      ];
+
+      if (leftoverMaterialIds.length > 0) {
+        await prisma.materialConcept.deleteMany({
+          where: { materialId: { in: leftoverMaterialIds } },
+        });
+        await prisma.materialImage.deleteMany({
+          where: { materialId: { in: leftoverMaterialIds } },
+        });
+        await prisma.material.deleteMany({
+          where: { id: { in: leftoverMaterialIds } },
+        });
+      }
+      if (leftoverLocationIds.length > 0) {
+        await prisma.location.deleteMany({
+          where: { id: { in: leftoverLocationIds } },
+        });
+      }
+      await prisma.idempotencyRecord.deleteMany({
+        where: {
+          userId: ctx.supplierId,
+          scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+          key,
+        },
+      });
+      await prisma.category.delete({ where: { id: temporaryCategory.id } });
+    }
+  });
+
   test("publishes paid material with approved price rule request when price is within max", async () => {
     const priceRuleRequest = await prisma.priceRuleRequest.create({
       data: {
@@ -1116,7 +1809,15 @@ describe("createSupplierMaterial pickup for individual suppliers", () => {
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
+      where: {
+        categoryType: { in: ["MATERIAL", "BOTH"] },
+        isActive: true,
+        materialFamilyConceptId: { not: null },
+        materialFamilyConcept: {
+          status: "ACTIVE",
+          conceptType: "MATERIAL_FAMILY",
+        },
+      },
       select: { id: true },
     });
     const location = await prisma.location.create({
@@ -1257,7 +1958,15 @@ describe("createSupplierMaterial public location redaction", () => {
 
   before(async () => {
     const category = await prisma.category.findFirst({
-      where: { categoryType: { in: ["MATERIAL", "BOTH"] } },
+      where: {
+        categoryType: { in: ["MATERIAL", "BOTH"] },
+        isActive: true,
+        materialFamilyConceptId: { not: null },
+        materialFamilyConcept: {
+          status: "ACTIVE",
+          conceptType: "MATERIAL_FAMILY",
+        },
+      },
       select: { id: true },
     });
     const location = await prisma.location.create({

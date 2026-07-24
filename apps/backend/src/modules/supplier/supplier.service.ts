@@ -46,6 +46,11 @@ import {
 import * as supplierRepository from "./supplier.repository.js";
 import { computeMaterialDemandMetrics } from "./supplier.material-demand-metrics.js";
 import { mapReservationFulfillmentLabel } from "../reservations/reservation-delivery.js";
+import { TaxonomyFoundationRepository } from "../taxonomy/taxonomy-foundation.repository.js";
+import {
+  projectLoadedConceptsForAssignment,
+  resolveFreeMaterialConceptIds,
+} from "../taxonomy/material-concept-assignment-publish.js";
 import {
   assertCanMarkMaterialUnavailable,
   assertCanRestoreMaterial,
@@ -565,12 +570,6 @@ export const createSupplierMaterial = async (
     );
   }
 
-  const materialLocationId = await resolveMaterialPickupLocationId(
-    supplierProfile,
-    input,
-    tx,
-  );
-
   await assertSourceRequestPublishable(userId, input);
   const sourceType = deriveMaterialSourceType(supplierProfile.supplierType);
 
@@ -604,36 +603,92 @@ export const createSupplierMaterial = async (
 
     const matchedType = resolved.materialType;
     const displayMaterialType = matchedType?.nameEn ?? materialName;
+    const finalCategoryId = matchedType?.categoryId ?? input.categoryId;
+    const finalTitle = input.title;
 
-    const material = await supplierRepository.createSupplierMaterial({
-      ownerId: userId,
-      supplierProfileId: supplierProfile.id,
-      categoryId: matchedType?.categoryId ?? input.categoryId,
-      locationId: materialLocationId,
-      title: input.title,
-      description: input.description,
-      materialType: displayMaterialType,
-      materialTypeId: matchedType?.id ?? null,
-      customMaterialType: matchedType ? null : materialName,
-      quantity: input.quantity,
-      unit: input.unit,
-      condition: input.condition,
-      sourceType,
-      isFree: true,
-      price: null,
-      currency: "NIS",
-      pickupAllowed: input.pickupAllowed,
-      deliveryAllowed: input.deliveryAllowed,
-      pickupNotes: input.pickupNotes ?? null,
-      suggestedUses: input.suggestedUses ?? null,
-      imageUrls: input.imageUrls,
-      client: tx,
-    });
+    const persistFreeMaterial = async (client: Prisma.TransactionClient) => {
+      const materialLocationId = await resolveMaterialPickupLocationId(
+        supplierProfile,
+        input,
+        client,
+      );
 
-    await markSourceRequestPublished(material.id, input, tx);
+      const taxonomyRepository = new TaxonomyFoundationRepository();
+      const ownedCategory =
+        await taxonomyRepository.findCategoryForMaterialConceptAssignment(
+          finalCategoryId,
+          client,
+        );
+      const loadedConcepts =
+        await taxonomyRepository.loadMaterialConceptAssignmentConcepts(client);
 
-    return mapCreatedMaterial(material);
+      if (!ownedCategory) {
+        throw new AppError("Category not found", 404, "NOT_FOUND");
+      }
+
+      const conceptIds = resolveFreeMaterialConceptIds({
+        category: {
+          id: ownedCategory.id,
+          categoryType: ownedCategory.categoryType,
+          isActive: ownedCategory.isActive,
+          materialFamilyConceptId: ownedCategory.materialFamilyConceptId,
+          materialFamilyConcept: ownedCategory.materialFamilyConcept
+            ? {
+                id: ownedCategory.materialFamilyConcept.id,
+                canonicalKey: ownedCategory.materialFamilyConcept.canonicalKey,
+                conceptType: ownedCategory.materialFamilyConcept.conceptType,
+                status: ownedCategory.materialFamilyConcept.status,
+              }
+            : null,
+        },
+        materialType: displayMaterialType,
+        title: finalTitle,
+        concepts: projectLoadedConceptsForAssignment(loadedConcepts),
+      });
+
+      const material = await supplierRepository.createSupplierMaterial({
+        ownerId: userId,
+        supplierProfileId: supplierProfile.id,
+        categoryId: finalCategoryId,
+        locationId: materialLocationId,
+        title: finalTitle,
+        description: input.description,
+        materialType: displayMaterialType,
+        materialTypeId: matchedType?.id ?? null,
+        customMaterialType: matchedType ? null : materialName,
+        quantity: input.quantity,
+        unit: input.unit,
+        condition: input.condition,
+        sourceType,
+        isFree: true,
+        price: null,
+        currency: "NIS",
+        pickupAllowed: input.pickupAllowed,
+        deliveryAllowed: input.deliveryAllowed,
+        pickupNotes: input.pickupNotes ?? null,
+        suggestedUses: input.suggestedUses ?? null,
+        imageUrls: input.imageUrls,
+        conceptIds,
+        client,
+      });
+
+      await markSourceRequestPublished(material.id, input, client);
+
+      return mapCreatedMaterial(material);
+    };
+
+    if (tx) {
+      return persistFreeMaterial(tx);
+    }
+
+    return prisma.$transaction((client) => persistFreeMaterial(client));
   }
+
+  const materialLocationId = await resolveMaterialPickupLocationId(
+    supplierProfile,
+    input,
+    tx,
+  );
 
   if (requestedOtherCategory) {
     throw new AppError(

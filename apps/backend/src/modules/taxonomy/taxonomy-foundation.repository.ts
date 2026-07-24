@@ -185,6 +185,33 @@ const componentWhereForRule = (rule: TaxonomyMappingRule): Prisma.ProjectRequire
   ],
 });
 
+type TaxonomyReadClient = typeof prisma | Prisma.TransactionClient;
+
+export type MaterialConceptAssignmentLoadedConcept = {
+  id: string;
+  canonicalKey: string;
+  conceptType: TaxonomyConceptType;
+  status: 'ACTIVE' | 'INACTIVE';
+  aliases: {
+    normalizedAlias: string;
+    source: string;
+    isActive: boolean;
+  }[];
+};
+
+export type CategoryMaterialOwnershipProjection = {
+  id: string;
+  categoryType: 'MATERIAL' | 'PROJECT' | 'BOTH';
+  isActive: boolean;
+  materialFamilyConceptId: string | null;
+  materialFamilyConcept: {
+    id: string;
+    canonicalKey: string;
+    conceptType: TaxonomyConceptType;
+    status: 'ACTIVE' | 'INACTIVE';
+  } | null;
+};
+
 export class TaxonomyFoundationRepository {
   async loadLearnerInterestResolutionRegistry(): Promise<LearnerInterestRegistryConcept[]> {
     const concepts = await prisma.taxonomyConcept.findMany({
@@ -251,6 +278,76 @@ export class TaxonomyFoundationRepository {
     }
 
     return concepts;
+  }
+
+  async loadMaterialConceptAssignmentConcepts(
+    client: TaxonomyReadClient = prisma,
+  ): Promise<MaterialConceptAssignmentLoadedConcept[]> {
+    const concepts = await client.taxonomyConcept.findMany({
+      select: {
+        id: true,
+        canonicalKey: true,
+        conceptType: true,
+        status: true,
+        aliases: {
+          where: { isActive: true },
+          select: {
+            normalizedAlias: true,
+            source: true,
+            isActive: true,
+          },
+          orderBy: [
+            { normalizedAlias: 'asc' },
+            { language: 'asc' },
+            { id: 'asc' },
+          ],
+          take: MAX_TAXONOMY_BATCH_SIZE + 1,
+        },
+      },
+      orderBy: [
+        { canonicalKey: 'asc' },
+        { id: 'asc' },
+      ],
+      take: MAX_TAXONOMY_BATCH_SIZE + 1,
+    });
+
+    if (concepts.length > MAX_TAXONOMY_BATCH_SIZE) {
+      throw new Error(
+        `Material-concept assignment taxonomy registry exceeds ${MAX_TAXONOMY_BATCH_SIZE} concepts.`,
+      );
+    }
+    for (const concept of concepts) {
+      if (concept.aliases.length > MAX_TAXONOMY_BATCH_SIZE) {
+        throw new Error(
+          `Taxonomy concept ${concept.canonicalKey} exceeds ${MAX_TAXONOMY_BATCH_SIZE} active aliases.`,
+        );
+      }
+    }
+
+    return concepts;
+  }
+
+  async findCategoryForMaterialConceptAssignment(
+    categoryId: string,
+    client: TaxonomyReadClient = prisma,
+  ): Promise<CategoryMaterialOwnershipProjection | null> {
+    return client.category.findUnique({
+      where: { id: categoryId },
+      select: {
+        id: true,
+        categoryType: true,
+        isActive: true,
+        materialFamilyConceptId: true,
+        materialFamilyConcept: {
+          select: {
+            id: true,
+            canonicalKey: true,
+            conceptType: true,
+            status: true,
+          },
+        },
+      },
+    });
   }
 
   async resolveConceptByKey(canonicalKey: string) {

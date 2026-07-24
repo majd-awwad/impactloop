@@ -1,6 +1,6 @@
 # Recommendation System Current State
 
-Date: 2026-07-23
+Date: 2026-07-24
 Scope: authoritative current implementation, adoption, and release status
 
 This document is the first authority for the current state of ImpactLoop recommendations. Dated architecture freezes and slice reports remain evidence of what was true or accepted within their original scope, but they do not override this document's current-status classifications.
@@ -12,7 +12,7 @@ ImpactLoop's adopted and default recommender remains the deterministic hybrid us
 | Layer | Current status | Included capabilities |
 |---|---|---|
 | Active production/default behavior | Adopted champion and fail-closed default | Deterministic hybrid candidate retrieval and ranking, hard eligibility and business rules, caching, `legacy-v1`, and deterministic fallback |
-| Implemented but inactive foundation | Retained behind opt-in activation or not read by active ranking | Typed taxonomy concepts, aliases, and mappings; canonical learner-interest resolution with explicit unmapped diagnostics; pure material family/form assignment with deterministic provenance and diagnostics; `normalized-interests-v2`; durable recommendation observability/outbox infrastructure; opt-in outbox materialization worker |
+| Implemented but inactive foundation | Retained behind opt-in activation or not read by active ranking | Typed taxonomy concepts, aliases, and mappings; canonical learner-interest resolution with explicit unmapped diagnostics; pure material family/form assignment (active on free supplier material create only; paid/update/backfill/recommendation paths inactive); `normalized-interests-v2`; durable recommendation observability/outbox infrastructure; opt-in outbox materialization worker |
 | Experimental ML/runtime capabilities | Implemented for offline, shadow, controlled-demo, and guarded runtime evaluation; not production-adopted | LightFM training and export, portable artifacts, TypeScript scoring, shadow comparison, recent intent, material and project rank fusion, privacy-safe diagnostics, controlled-demo preflight, and optional serving hooks |
 | Evidence-dependent/deferred capabilities | Blocked pending explicit gates and a separate promotion decision | User-visible production ML serving, sufficient real attributed evidence, taxonomy lifecycle and crosswalk completion, reproducible artifact deployment, registry and monitoring readiness, canary rollout, and project ML promotion |
 
@@ -22,7 +22,7 @@ The typed taxonomy foundation is implemented but inactive in the adopted ranking
 
 The canonical learner-interest resolver reads the persisted typed-taxonomy registry and resolves stored profile values to active `INTEREST` canonical keys with deterministic provenance, status, type, ambiguity, and custom-interest diagnostics. It is not called by Learner Home, profile APIs, feature generation, or ML shadow in RP-01.3; deterministic and experimental recommendation outputs therefore remain unchanged.
 
-The pure material-concept assignment engine validates persisted category ownership and resolves finalized material-type/title evidence to one `MATERIAL_FAMILY` and at most one `MATERIAL_FORM`, with canonical-key identity, reviewed provenance, explicit conflicts, and deterministic diagnostics. RP-02.1 performs no database reads or writes and is not called by supplier material creation, update, taxonomy persistence, recommendation retrieval, feature generation, or ML shadow; current material lifecycles and recommendation outputs therefore remain unchanged.
+Free supplier material creation (`POST /api/supplier/materials` with `isFree: true`) now calls the pure material-concept assignment engine after final category/materialType/title resolution, loads category-owned `MATERIAL_FAMILY` authority and a bounded full taxonomy registry for diagnostics, applies evidence-scoped publish preflight (not a global taxonomy-health gate), and persists `MaterialConcept` family (and optional form) rows in the same idempotency transaction. Paid material creation, material update, historical backfill, recommendation consumption, and ML shadow do not yet call the engine; those remain later tasks (RP-02.3+).
 
 ## Configuration Defaults
 
@@ -92,9 +92,9 @@ Use `recommendation-evaluation-experiment-spec.ar.md` when designing experiments
 
 ## Last Verified Against Code
 
-Verified on 2026-07-23 against:
+Verified on 2026-07-24 against:
 
 - `apps/backend/src/config/env.ts` — recommendation defaults and worker settings.
 - `apps/backend/src/modules/recommendations/ml-shadow.service.ts` — shadow-disabled behavior, independent material/project serving gates, project readiness requirements, and fail-closed fallback.
 - `apps/backend/src/modules/taxonomy/learner-interest-resolver.ts` — inactive canonical stored-interest resolution contract.
-- `apps/backend/src/modules/taxonomy/material-concept-assignment.ts` — inactive pure category-owned material family/form assignment contract.
+- `apps/backend/src/modules/taxonomy/material-concept-assignment.ts` — pure category-owned material family/form assignment contract; integrated into free supplier material create (RP-02.2); paid/update/backfill/recommendation paths remain inactive.

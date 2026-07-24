@@ -6,6 +6,7 @@ import type {
 } from "../../generated/prisma/client.js";
 
 import { prisma } from "../../database/prisma.js";
+import { AppError } from "../../utils/app-error.js";
 import type { UpdateSupplierProfileInput } from "./supplier.validation.js";
 import {
   buildSupplierMaterialWhere,
@@ -20,6 +21,48 @@ import {
   type MaterialReservationStatusCounts,
 } from "./supplier.material-demand-metrics.js";
 type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
+
+const CONCEPT_WRITE_INTERNAL_MESSAGE =
+  "Material concept assignment failed due to an internal error.";
+
+const assertMaterialConceptWriteContract = (input: {
+  isFree: boolean;
+  conceptIds?: string[];
+}): string[] | undefined => {
+  const conceptIds = input.conceptIds;
+
+  if (input.isFree) {
+    if (!conceptIds || conceptIds.length < 1 || conceptIds.length > 2) {
+      throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+        reason: "FREE_CONCEPT_IDS_CARDINALITY",
+      });
+    }
+    if (
+      conceptIds.some(
+        (conceptId) =>
+          typeof conceptId !== "string" || conceptId.trim().length === 0,
+      )
+    ) {
+      throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+        reason: "FREE_CONCEPT_IDS_BLANK",
+      });
+    }
+    if (new Set(conceptIds).size !== conceptIds.length) {
+      throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+        reason: "FREE_CONCEPT_IDS_DUPLICATE",
+      });
+    }
+    return conceptIds;
+  }
+
+  if (conceptIds !== undefined) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "PAID_CONCEPT_IDS_NOT_ALLOWED",
+    });
+  }
+
+  return undefined;
+};
 
 const decimalToNumber = (value: { toNumber(): number } | number): number => {
   if (typeof value === "number") {
@@ -1115,10 +1158,17 @@ export const createSupplierMaterial = async (input: {
   priceCheckedAt?: Date | null;
   maxAllowedPriceAtCheck?: number | null;
   imageUrls: string[];
+  /** Free create: exactly 1–2 ordered IDs (family, optional form). Paid: omit. */
+  conceptIds?: string[];
   client?: PrismaClientLike;
 }) => {
-  const createMaterial = (client: PrismaClientLike) =>
-    client.material.create({
+  const conceptIds = assertMaterialConceptWriteContract({
+    isFree: input.isFree,
+    conceptIds: input.conceptIds,
+  });
+
+  const createMaterial = async (client: PrismaClientLike) => {
+    const material = await client.material.create({
       data: {
         ownerId: input.ownerId,
         supplierProfileId: input.supplierProfileId,
@@ -1169,11 +1219,27 @@ export const createSupplierMaterial = async (input: {
       },
     });
 
+    if (conceptIds && conceptIds.length > 0) {
+      await client.materialConcept.createMany({
+        data: conceptIds.map((conceptId) => ({
+          materialId: material.id,
+          conceptId,
+        })),
+      });
+    }
+
+    return material;
+  };
+
   if (input.client) {
     return createMaterial(input.client);
   }
 
-  return prisma.$transaction((tx) => createMaterial(tx));
+  if (input.isFree) {
+    return prisma.$transaction((tx) => createMaterial(tx));
+  }
+
+  return createMaterial(prisma);
 };
 
 export type MaterialReservationDemandCounts = MaterialReservationStatusCounts;
