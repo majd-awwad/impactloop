@@ -4,6 +4,17 @@ import { env } from "../../config/env.js";
 import { logger } from "../../observability/logger.js";
 import { redactErrorMessage } from "../../observability/redact.js";
 import type { LogContext } from "../../observability/log-types.js";
+import type {
+  LearnerInterestRegistryConcept,
+  LearnerInterestResolutionStatus,
+  LearnerInterestUnmappedReason,
+} from "../taxonomy/learner-interest-resolver.js";
+import { TaxonomyFoundationRepository } from "../taxonomy/taxonomy-foundation.repository.js";
+import {
+  computeArtifactUserFeatureOverlap,
+  resolveCanonicalShadowUserFeatures,
+  type ArtifactUserFeatureOverlapStatus,
+} from "./canonical-shadow-user-features.js";
 import {
   combineNormalizedScores,
   scorePortableLightFm,
@@ -35,6 +46,29 @@ import {
   type ProjectRecentIntentConfidence,
 } from "./project-recent-intent.js";
 import { fuseProjectRankings } from "./project-rank-fusion.js";
+
+const CANONICAL_USER_FEATURES_SHADOW_ONLY =
+  "CANONICAL_USER_FEATURES_SHADOW_ONLY" as const;
+
+type InterestRegistryLoader = () => Promise<
+  readonly LearnerInterestRegistryConcept[]
+>;
+
+const defaultInterestRegistryLoader: InterestRegistryLoader = () =>
+  new TaxonomyFoundationRepository().loadLearnerInterestResolutionRegistry();
+
+let interestRegistryLoaderForTests: InterestRegistryLoader | undefined;
+
+export const setMlShadowInterestRegistryLoaderForTests = (
+  loader?: InterestRegistryLoader,
+): void => {
+  interestRegistryLoaderForTests = loader;
+};
+
+const loadInterestRegistry = (): Promise<
+  readonly LearnerInterestRegistryConcept[]
+> =>
+  (interestRegistryLoaderForTests ?? defaultInterestRegistryLoader)();
 
 export type ShadowCandidate = {
   candidateKey: string;
@@ -163,6 +197,19 @@ export type ShadowDiagnostics = {
   artifactVersion?: string;
   featureSchemaVersion?: string;
   missingFeatureCount?: number;
+  resolutionStatus?: LearnerInterestResolutionStatus;
+  canonicalFeatureCount?: number;
+  mappedInputCount?: number;
+  unmappedInputCount?: number;
+  unmappedReasonCounts?: Partial<
+    Record<LearnerInterestUnmappedReason, number>
+  >;
+  candidateIndependent?: true;
+  canonicalUserFeatureCount?: number;
+  artifactMatchedUserFeatureCount?: number;
+  artifactMissingUserFeatureCount?: number;
+  artifactUserFeatureOverlapStatus?: ArtifactUserFeatureOverlapStatus;
+  servingSuppressedReason?: typeof CANONICAL_USER_FEATURES_SHADOW_ONLY;
   featureCoverage?: ShadowFeatureCoverage;
   currentTop5Keys?: string[];
   shadowTop5Keys?: string[];
@@ -318,16 +365,11 @@ export const resetMlShadowTestStateForTests = (): void => {
   setMlShadowObserverForTests(undefined);
   setMlShadowFailureForTests(undefined);
   setMlShadowNeverSettleForTests(undefined);
+  setMlShadowInterestRegistryLoaderForTests(undefined);
 };
 
 const categoryKey = (id: string) =>
   createHash("sha256").update(`impactloop-category:${id}`).digest("hex");
-const normalize = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
 const overlap = (left: string[], right: string[], k: number) => {
   const a = new Set(left.slice(0, k));
   return (
@@ -1000,20 +1042,34 @@ const runMlShadowComparisonInternal = async <T>(
 
     observeMaterialStage(input, started, "portable_artifact_scoring", "start");
 
-    const model = await artifact(path, input.domain);
-    const labels = new Map(
-      input.candidates.map((value) => [
-        normalize(value.categoryLabel),
-        categoryKey(value.categoryId),
-      ]),
-    );
-
-    const userFeatures: WeightedFeature[] = [];
-
-    for (const interest of input.interests) {
-      const key = labels.get(normalize(interest));
-      if (key) userFeatures.push([`interest:${key}`, 1]);
-    }
+    const [model, canonicalUser] = await Promise.all([
+      artifact(path, input.domain),
+      resolveCanonicalShadowUserFeatures({
+        storedInterests: input.interests,
+        loadRegistry: loadInterestRegistry,
+      }),
+    ]);
+    const userFeatures = canonicalUser.features;
+    const artifactOverlap = computeArtifactUserFeatureOverlap({
+      runtimeFeatures: userFeatures,
+      artifactUserFeatureNames: model.user_features.map((entry) => entry.name),
+    });
+    const canonicalUserDiagnostics = {
+      resolutionStatus: canonicalUser.resolutionStatus,
+      canonicalFeatureCount: canonicalUser.canonicalFeatureCount,
+      mappedInputCount: canonicalUser.mappedInputCount,
+      unmappedInputCount: canonicalUser.unmappedInputCount,
+      unmappedReasonCounts: canonicalUser.unmappedReasonCounts,
+      candidateIndependent: canonicalUser.candidateIndependent,
+      canonicalUserFeatureCount: artifactOverlap.canonicalUserFeatureCount,
+      artifactMatchedUserFeatureCount:
+        artifactOverlap.artifactMatchedUserFeatureCount,
+      artifactMissingUserFeatureCount:
+        artifactOverlap.artifactMissingUserFeatureCount,
+      artifactUserFeatureOverlapStatus:
+        artifactOverlap.artifactUserFeatureOverlapStatus,
+      servingSuppressedReason: CANONICAL_USER_FEATURES_SHADOW_ONLY,
+    };
 
     const candidates = input.candidates.map((value) => ({
       candidateKey: value.candidateKey,
@@ -1040,36 +1096,25 @@ const runMlShadowComparisonInternal = async <T>(
         scorerDurationMs,
       );
 
-      const { diagnostics } = projectDecision;
+      const diagnostics: ShadowDiagnostics = {
+        ...projectDecision.diagnostics,
+        ...canonicalUserDiagnostics,
+      };
 
       injectFailure("diagnostics");
       injectFailure("redaction");
       injectFailure("logger");
 
       const projectMode: ProjectDecisionMode =
-        diagnostics.status === "FALLBACK"
-          ? "FALLBACK"
-          : diagnostics.projectReadinessStatus === "READY" &&
-              env.recommendationMlProjectServingEnabled
-            ? "SERVED"
-            : "SHADOW";
+        diagnostics.status === "FALLBACK" ? "FALLBACK" : "SHADOW";
 
       safeWriteProjectDecisionLog(input, diagnostics, started, projectMode);
       safeObserve({ ...diagnostics, domain: input.domain });
 
-      const serveEligible =
-        env.recommendationMlShadowEnabled &&
-        env.recommendationMlProjectServingEnabled &&
-        diagnostics.status === "SCORED" &&
-        diagnostics.projectReadinessStatus === "READY" &&
-        projectDecision.fusedRankingKeys !== undefined;
-
+      // RP-01.4: canonical user features are shadow-only; never attach serve keys.
       return {
         response: input.response,
         diagnostics,
-        ...(serveEligible
-          ? { rankedCandidateKeys: projectDecision.fusedRankingKeys }
-          : {}),
       };
     }
 
@@ -1353,10 +1398,12 @@ const runMlShadowComparisonInternal = async <T>(
       artifactVersion: model.model_version,
       featureSchemaVersion: model.feature_schema_version,
       missingFeatureCount: longTerm.missingFeatures.length,
+      ...canonicalUserDiagnostics,
       currentTop5Keys: deduplicatedCurrent.slice(0, 5).map(privacyKey),
       shadowTop5Keys: shadowTop.slice(0, 5).map(privacyKey),
       linearBlendTop5Keys: linearBlendTop.slice(0, 5).map(privacyKey),
       featureCoverage: {
+        // Runtime input length only — not artifact intersection (see overlap fields).
         activeUserFeatures: userFeatures.length,
         zeroFeatureUser: userFeatures.length === 0,
         itemFeatureTotal: itemFeatureCounts.reduce(
@@ -1429,7 +1476,7 @@ const runMlShadowComparisonInternal = async <T>(
         input,
         diagnostics,
         started,
-        env.recommendationMlMaterialServingEnabled ? "SERVED" : "SHADOW",
+        "SHADOW",
       );
 
       observeMaterialStage(input, started, "diagnostics_logging", "complete");
@@ -1455,14 +1502,10 @@ const runMlShadowComparisonInternal = async <T>(
 
     observeMaterialStage(input, started, "material_shadow", "complete");
 
+    // RP-01.4: canonical user features are shadow-only; never attach serve keys.
     return {
       response: input.response,
       diagnostics,
-      ...(input.domain === "material" &&
-      env.recommendationMlShadowEnabled &&
-      env.recommendationMlMaterialServingEnabled
-        ? { rankedCandidateKeys: shadowTop }
-        : {}),
     };
   } catch (error) {
     const diagnostics = reportMlShadowFallback(

@@ -11,6 +11,7 @@ import { loadPortableModelArtifact } from './ml-model-artifact.js';
 import {
   clearMlArtifactCacheForTests,
   runMlShadowComparison,
+  setMlShadowInterestRegistryLoaderForTests,
 } from './ml-shadow.service.js';
 import {
   countArtifactMappedCandidates,
@@ -24,6 +25,7 @@ const root = process.cwd().endsWith(path.join('apps', 'backend'))
   : process.cwd();
 const portableRoot = path.join(root, 'ml/recommendation/generated/portable-model');
 const projectKey = (id: string) => createHash('sha256').update(`impactloop-project:${id}`).digest('hex');
+const emptyInterestRegistry = async () => [];
 
 test('required-only component concepts match catalog export eligibility', () => {
   const keys = selectRequiredComponentConceptKeys([
@@ -71,8 +73,13 @@ test('optional component concepts never enter required runtime mapping', () => {
 });
 
 isolatedRecommendationTest('missing eligible runtime mappings preserve NOT_READY', async () => {
-  const prior = env.recommendationMlProjectArtifactPath;
+  const prior = {
+    shadow: env.recommendationMlShadowEnabled,
+    path: env.recommendationMlProjectArtifactPath,
+  };
+  env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const response = { unchanged: true };
@@ -97,14 +104,20 @@ isolatedRecommendationTest('missing eligible runtime mappings preserve NOT_READY
     assert.equal(result.diagnostics.runtimeCandidatesMissingFromArtifact, 1);
     assert.equal(result.diagnostics.recentFusionDurationMs, 0);
   } finally {
-    env.recommendationMlProjectArtifactPath = prior;
+    env.recommendationMlShadowEnabled = prior.shadow;
+    env.recommendationMlProjectArtifactPath = prior.path;
     clearMlArtifactCacheForTests();
   }
 });
 
 isolatedRecommendationTest('duplicate runtime keys preserve NOT_READY', async () => {
-  const prior = env.recommendationMlProjectArtifactPath;
+  const prior = {
+    shadow: env.recommendationMlShadowEnabled,
+    path: env.recommendationMlProjectArtifactPath,
+  };
+  env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const duplicate = { candidateKey: 'project-dup', categoryId: 'fixture-category', categoryLabel: 'Fixture', difficulty: 'BEGINNER' };
@@ -121,7 +134,8 @@ isolatedRecommendationTest('duplicate runtime keys preserve NOT_READY', async ()
     assert.equal(result.diagnostics.projectReadinessStatus, 'NOT_READY');
     assert.equal(result.diagnostics.duplicateRuntimeCandidateCount, 1);
   } finally {
-    env.recommendationMlProjectArtifactPath = prior;
+    env.recommendationMlShadowEnabled = prior.shadow;
+    env.recommendationMlProjectArtifactPath = prior.path;
     clearMlArtifactCacheForTests();
   }
 });
@@ -157,6 +171,7 @@ isolatedRecommendationTest('READY executes recent intent and fusion and exposes 
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const projects = await loadProjectPool(120);
@@ -184,8 +199,11 @@ isolatedRecommendationTest('READY executes recent intent and fusion and exposes 
     assert.equal(profileOnly.diagnostics.projectReadinessStatus, 'READY');
     assert.equal(profileOnly.diagnostics.recentConfidence, 'NONE');
     assert.equal(profileOnly.diagnostics.recentSlotsUsedTop5, 0);
-    assert.ok(Array.isArray(profileOnly.rankedCandidateKeys));
-    assert.equal(profileOnly.rankedCandidateKeys!.length, candidates.length);
+    assert.equal(profileOnly.rankedCandidateKeys, undefined);
+    assert.equal(
+      profileOnly.diagnostics.servingSuppressedReason,
+      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+    );
 
     const coherent = await runMlShadowComparison({
       response,
@@ -205,8 +223,7 @@ isolatedRecommendationTest('READY executes recent intent and fusion and exposes 
     assert.equal(coherent.diagnostics.projectReadinessStatus, 'READY');
     assert.ok(['MEDIUM', 'HIGH'].includes(String(coherent.diagnostics.recentConfidence)));
     assert.ok((coherent.diagnostics.recentFusionDurationMs ?? 0) > 0);
-    assert.ok(Array.isArray(coherent.rankedCandidateKeys));
-    assert.equal(coherent.rankedCandidateKeys!.length, candidates.length);
+    assert.equal(coherent.rankedCandidateKeys, undefined);
     assert.strictEqual(coherent.response, response);
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;

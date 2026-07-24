@@ -9,6 +9,7 @@ import type { LearnerHomeProjectItem } from '../learner-home/learner-home.types.
 import {
   clearMlArtifactCacheForTests,
   runMlShadowComparison,
+  setMlShadowInterestRegistryLoaderForTests,
 } from './ml-shadow.service.js';
 import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
 import { buildServedSuggestedProjectsItems } from './project-runtime-candidate-mapping.js';
@@ -17,6 +18,7 @@ const root = process.cwd().endsWith(path.join('apps', 'backend'))
   ? path.resolve(process.cwd(), '../..')
   : process.cwd();
 const portableRoot = path.join(root, 'ml/recommendation/generated/portable-model');
+const emptyInterestRegistry = async () => [];
 
 const projectItem = (id: string, saved = false): LearnerHomeProjectItem => ({
   type: 'project',
@@ -62,6 +64,7 @@ isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero r
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const projects = await loadProjectPool(120);
@@ -88,7 +91,11 @@ isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero r
     assert.equal(profileOnly.diagnostics.projectReadinessStatus, 'READY');
     assert.equal(profileOnly.diagnostics.recentConfidence, 'NONE');
     assert.equal(profileOnly.diagnostics.recentSlotsUsedTop5, 0);
-    assert.ok((profileOnly.rankedCandidateKeys?.length ?? 0) === candidates.length);
+    assert.equal(profileOnly.rankedCandidateKeys, undefined);
+    assert.equal(
+      profileOnly.diagnostics.servingSuppressedReason,
+      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+    );
 
     const scattered = await runMlShadowComparison({
       response,
@@ -104,7 +111,7 @@ isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero r
     });
     assert.ok(['NONE', 'LOW'].includes(String(scattered.diagnostics.recentConfidence)));
     assert.equal(scattered.diagnostics.recentSlotsUsedTop5, 0);
-    assert.ok((scattered.rankedCandidateKeys?.length ?? 0) === candidates.length);
+    assert.equal(scattered.rankedCandidateKeys, undefined);
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
     env.recommendationMlProjectServingEnabled = prior.projectServing;
@@ -122,6 +129,7 @@ isolatedRecommendationTest('READY MEDIUM and HIGH respect frozen recent slot cap
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const candidates = Array.from({ length: 8 }, (_, index) => ({

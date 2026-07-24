@@ -8,9 +8,55 @@ import { env } from '../../config/env.js';
 import { resetLoggerForTests, setLoggerDestinationForTests } from '../../observability/logger.js';
 import { combineNormalizedScores, scorePortableLightFm } from './ml-lightfm-scorer.js';
 import { loadPortableModelArtifact, validatePortableModelArtifact } from './ml-model-artifact.js';
-import { calculateProjectTop10RankMovement, calculateProjectTopKOverlap, clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
+import { calculateProjectTop10RankMovement, calculateProjectTopKOverlap, clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowInterestRegistryLoaderForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
 import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
 import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG } from './short-term-intent.js';
+import {
+  TAXONOMY_ALIAS_SOURCE,
+  type LearnerInterestRegistryConcept,
+} from '../taxonomy/learner-interest-resolver.js';
+import { normalizeTaxonomyAlias } from '../taxonomy/taxonomy-normalization.js';
+
+const emptyInterestRegistry = async (): Promise<
+  readonly LearnerInterestRegistryConcept[]
+> => [];
+
+const fixtureInterestRegistry = async (): Promise<
+  readonly LearnerInterestRegistryConcept[]
+> => [
+  {
+    id: 'concept-arduino',
+    canonicalKey: 'interest:arduino',
+    conceptType: 'INTEREST',
+    status: 'ACTIVE',
+    labelEn: 'Arduino',
+    labelAr: 'أردوينو',
+    aliases: [
+      {
+        id: 'alias-arduino-en',
+        alias: 'Arduino',
+        normalizedAlias: normalizeTaxonomyAlias('Arduino'),
+        language: 'EN',
+        aliasType: 'CANONICAL',
+        source: TAXONOMY_ALIAS_SOURCE.REVIEWED_LABEL_EN,
+        isActive: true,
+      },
+    ],
+    learnerInterests: [{ id: 'legacy-arduino', learnerInterestKey: 'arduino' }],
+  },
+  {
+    id: 'concept-robotics',
+    canonicalKey: 'interest:robotics',
+    conceptType: 'INTEREST',
+    status: 'ACTIVE',
+    labelEn: 'Robotics',
+    labelAr: 'الروبوتات',
+    aliases: [],
+    learnerInterests: [
+      { id: 'legacy-robotics', learnerInterestKey: 'robotics' },
+    ],
+  },
+];
 
 const repositoryRoot = process.cwd().endsWith(path.join('apps', 'backend')) ? path.resolve(process.cwd(), '../..') : process.cwd();
 const portableRoot = path.join(repositoryRoot, 'ml/recommendation/generated/portable-model');
@@ -98,6 +144,7 @@ isolatedRecommendationTest('project shadow recent intent diagnostics stay privac
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
   setMlShadowObserverForTests((value) => observations.push(value));
@@ -168,6 +215,7 @@ isolatedRecommendationTest('project shadow failure does not change material serv
   env.recommendationMlMaterialServingEnabled = true;
   env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json');
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'missing-project-artifact.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const response = { visible: ['material-x'] };
@@ -181,7 +229,12 @@ isolatedRecommendationTest('project shadow failure does not change material serv
       recentEvents: [],
       evaluationTimestamp: '2026-08-10T00:00:00Z',
     });
-    assert.deepEqual(material.rankedCandidateKeys, ['material-x']);
+    assert.equal(material.rankedCandidateKeys, undefined);
+    assert.equal(
+      material.diagnostics.servingSuppressedReason,
+      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+    );
+    assert.equal(material.diagnostics.status, 'SCORED');
     const project = await runMlShadowComparison({
       response: { visible: ['project-y'] },
       domain: 'project',
@@ -234,6 +287,7 @@ isolatedRecommendationTest('project serving returns fused ranking only when shad
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectServingEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const response = { sections: [{ key: 'suggested_projects', items: ['deterministic-a', 'deterministic-b'] }] };
@@ -295,6 +349,7 @@ isolatedRecommendationTest('project readiness exposes candidate and artifact cov
   const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const response = { unchanged: true };
@@ -323,6 +378,7 @@ isolatedRecommendationTest('project duplicate runtime candidates are reported as
   const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   try {
     const response = { unchanged: true };
@@ -344,6 +400,7 @@ isolatedRecommendationTest('project shadow failures and timeout preserve the exa
   const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   const response = { sections: [{ key: 'suggested_projects', items: ['deterministic'] }] };
   const input = {
@@ -384,12 +441,14 @@ isolatedRecommendationTest('project shadow failures and timeout preserve the exa
 
 isolatedRecommendationTest('enabled shadow scores bounded candidates and failures safely fall back', async () => {
   const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled, projectServing: env.recommendationMlProjectServingEnabled, materialPath: env.recommendationMlMaterialArtifactPath, projectPath: env.recommendationMlProjectArtifactPath };
-  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialServingEnabled = true; env.recommendationMlProjectServingEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json'); clearMlArtifactCacheForTests();
+  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialServingEnabled = true; env.recommendationMlProjectServingEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+  clearMlArtifactCacheForTests();
   const response = { visible: ['x'] };
   const input = { response, domain: 'material' as const, interests: ['Electronics & Components'], candidates: [{ candidateKey: 'x', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', condition: 'GOOD', isFree: true, pickupAllowed: true, deliveryAllowed: false }], activeCandidateKeys: ['x'], currentTopKeys: ['x'], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' };
-  const scored = await runMlShadowComparison(input); assert.strictEqual(scored.response, response); assert.equal(scored.diagnostics.status, 'SCORED'); assert.deepEqual(scored.rankedCandidateKeys, ['x']);
+  const scored = await runMlShadowComparison(input); assert.strictEqual(scored.response, response); assert.equal(scored.diagnostics.status, 'SCORED'); assert.equal(scored.rankedCandidateKeys, undefined); assert.equal(scored.diagnostics.servingSuppressedReason, 'CANONICAL_USER_FEATURES_SHADOW_ONLY');
   const projectScored = await runMlShadowComparison({ ...input, response: { visible: ['project'] }, domain: 'project', candidates: [{ candidateKey: 'p', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', difficulty: 'BEGINNER' }], activeCandidateKeys: ['p'], currentTopKeys: ['p'] });
-  assert.equal(projectScored.diagnostics.status, 'SCORED'); assert.equal(projectScored.rankedCandidateKeys, undefined);
+  assert.equal(projectScored.diagnostics.status, 'SCORED'); assert.equal(projectScored.rankedCandidateKeys, undefined); assert.equal(projectScored.diagnostics.servingSuppressedReason, 'CANONICAL_USER_FEATURES_SHADOW_ONLY');
   env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'missing.json'); clearMlArtifactCacheForTests();
   const failed = await runMlShadowComparison(input); assert.strictEqual(failed.response, response); assert.equal(failed.diagnostics.status, 'FALLBACK');
   env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialServingEnabled = prior.materialServing; env.recommendationMlProjectServingEnabled = prior.projectServing; env.recommendationMlMaterialArtifactPath = prior.materialPath; env.recommendationMlProjectArtifactPath = prior.projectPath; clearMlArtifactCacheForTests();
@@ -399,7 +458,9 @@ isolatedRecommendationTest('material development diagnostics are sanitized and p
   const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
   const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
   const logLines: string[] = []; const logStream = new PassThrough(); logStream.on('data', (chunk) => logLines.push(chunk.toString())); setLoggerDestinationForTests(logStream); resetLoggerForTests();
-  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); clearMlArtifactCacheForTests();
+  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+  clearMlArtifactCacheForTests();
   setMlShadowObserverForTests((value) => observations.push(value));
   const response = { sections: [{ key: 'suggested_materials', materials: ['visible-id'] }] };
   const candidates = Array.from({ length: 12 }, (_, index) => ({ candidateKey: `candidate-${index}`, categoryId: 'recent-category', categoryLabel: 'Recent category', conceptKeys: ['recent-concept'], condition: 'GOOD', isFree: true, pickupAllowed: true, deliveryAllowed: false }));
@@ -429,6 +490,7 @@ isolatedRecommendationTest('real learner-home shadow shape fails safe across con
   const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
   env.recommendationMlShadowEnabled = true;
   env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   clearMlArtifactCacheForTests();
   const response = { profileCompletion: { hasInterests: true }, sections: [{ key: 'suggested_materials', items: ['deterministic'] }] };
   const candidates = Array.from({ length: 107 }, (_, index) => ({ candidateKey: `real-material-${index}`, categoryId: `real-category-${index % 9}`, categoryLabel: `Category ${index % 9}`, conceptKeys: index % 3 === 0 ? [`concept-${index % 11}`] : [], condition: 'GOOD', isFree: index % 2 === 0, pickupAllowed: true, deliveryAllowed: index % 4 === 0 }));
@@ -497,7 +559,266 @@ isolatedRecommendationTest('candidate duplicates disable shadow and cached catal
   console.log(JSON.stringify({ slice4aPerformance: { materialArtifactLoadMs: loadMs, projectArtifactLoadMs: projectLoadMs, artifactSizeBytes: (await readFile(path.join(portableRoot, 'material-hybrid.json'))).byteLength, material161P50Ms: p50, material161P95Ms: p95, project29P50Ms: projectTimings[49], project29P95Ms: projectTimings[94], shortTermProfileMs, combinedRerankMs, memoryIncreaseBytes } }));
   assert.ok(p95 < 50, `material scoring p95 ${p95}ms`);
   const prior = env.recommendationMlShadowEnabled; env.recommendationMlShadowEnabled = true;
+  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
   const response = { unchanged: true }; const duplicate = { candidateKey: 'same', categoryId: 'category', categoryLabel: 'Category' };
   const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates: [duplicate, duplicate], activeCandidateKeys: ['same'], currentTopKeys: [], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' });
   assert.strictEqual(result.response, response); assert.equal(result.diagnostics.fallbackReason, 'candidate_mismatch'); env.recommendationMlShadowEnabled = prior;
+});
+
+isolatedRecommendationTest('RP-01.4 canonical user features are candidate-independent and serve-suppressed', async () => {
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlMaterialServingEnabled = true;
+  env.recommendationMlProjectServingEnabled = true;
+  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+  clearMlArtifactCacheForTests();
+
+  const materialCandidates = [
+    {
+      candidateKey: 'm1',
+      categoryId: 'cat-a',
+      categoryLabel: 'Electronics & Components',
+      condition: 'GOOD',
+      isFree: true,
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    },
+  ];
+  const emptyPool = await runMlShadowComparison({
+    response: { domain: 'material-empty' },
+    domain: 'material',
+    interests: ['arduino', 'robotics'],
+    candidates: [],
+    activeCandidateKeys: [],
+    currentTopKeys: [],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  const populated = await runMlShadowComparison({
+    response: { domain: 'material-populated' },
+    domain: 'material',
+    interests: ['arduino', 'robotics'],
+    candidates: materialCandidates,
+    activeCandidateKeys: ['m1'],
+    currentTopKeys: ['m1'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  const reordered = await runMlShadowComparison({
+    response: { domain: 'material-reordered' },
+    domain: 'material',
+    interests: ['robotics', 'arduino'],
+    candidates: [
+      {
+        candidateKey: 'm2',
+        categoryId: 'different-cat',
+        categoryLabel: 'Wood & Boards',
+        condition: 'NEW',
+        isFree: false,
+        pickupAllowed: false,
+        deliveryAllowed: true,
+      },
+      ...materialCandidates,
+    ],
+    activeCandidateKeys: ['m2', 'm1'],
+    currentTopKeys: ['m2', 'm1'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  const project = await runMlShadowComparison({
+    response: { domain: 'project' },
+    domain: 'project',
+    interests: ['arduino', 'robotics'],
+    candidates: [
+      {
+        candidateKey: 'p1',
+        categoryId: 'proj-cat',
+        categoryLabel: 'Robotics Projects',
+        difficulty: 'BEGINNER',
+        conceptKeys: ['project-topic:robotics'],
+        componentConceptKeys: ['component:arduino-board'],
+      },
+    ],
+    activeCandidateKeys: ['p1'],
+    currentTopKeys: ['p1'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+
+  for (const result of [emptyPool, populated, reordered, project]) {
+    assert.equal(result.diagnostics.status, 'SCORED');
+    assert.equal(result.rankedCandidateKeys, undefined);
+    assert.equal(
+      result.diagnostics.servingSuppressedReason,
+      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+    );
+    assert.equal(result.diagnostics.resolutionStatus, 'FULLY_MAPPED');
+    assert.equal(result.diagnostics.canonicalUserFeatureCount, 2);
+    assert.equal(result.diagnostics.candidateIndependent, true);
+    assert.equal(
+      result.diagnostics.artifactUserFeatureOverlapStatus,
+      'ZERO_OVERLAP',
+    );
+    assert.equal(result.diagnostics.artifactMatchedUserFeatureCount, 0);
+    assert.equal(result.diagnostics.artifactMissingUserFeatureCount, 2);
+    assert.doesNotMatch(
+      JSON.stringify(result.diagnostics),
+      /interest:[0-9a-f]{64}/,
+    );
+  }
+
+  assert.equal(emptyPool.diagnostics.canonicalFeatureCount, populated.diagnostics.canonicalFeatureCount);
+  assert.equal(populated.diagnostics.canonicalFeatureCount, project.diagnostics.canonicalFeatureCount);
+  assert.equal(reordered.diagnostics.canonicalFeatureCount, 2);
+
+  let registryLoads = 0;
+  setMlShadowInterestRegistryLoaderForTests(async () => {
+    registryLoads += 1;
+    throw new Error('taxonomy_registry_should_not_load_for_empty_interests');
+  });
+
+  const noInterests = await runMlShadowComparison({
+    response: { domain: 'no-interests' },
+    domain: 'material',
+    interests: [],
+    candidates: materialCandidates,
+    activeCandidateKeys: ['m1'],
+    currentTopKeys: ['m1'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  assert.equal(registryLoads, 0);
+  assert.equal(noInterests.diagnostics.status, 'SCORED');
+  assert.equal(noInterests.diagnostics.resolutionStatus, 'NO_INTERESTS');
+  assert.equal(
+    noInterests.diagnostics.artifactUserFeatureOverlapStatus,
+    'NO_RUNTIME_FEATURES',
+  );
+  assert.equal(noInterests.rankedCandidateKeys, undefined);
+
+  registryLoads = 0;
+  const noInterestsProject = await runMlShadowComparison({
+    response: { domain: 'no-interests-project' },
+    domain: 'project',
+    interests: [],
+    candidates: [
+      {
+        candidateKey: 'p-empty',
+        categoryId: 'proj-cat',
+        categoryLabel: 'Robotics Projects',
+        difficulty: 'BEGINNER',
+      },
+    ],
+    activeCandidateKeys: ['p-empty'],
+    currentTopKeys: ['p-empty'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  assert.equal(registryLoads, 0);
+  assert.equal(noInterestsProject.diagnostics.status, 'SCORED');
+  assert.equal(noInterestsProject.diagnostics.resolutionStatus, 'NO_INTERESTS');
+  assert.equal(
+    noInterestsProject.diagnostics.artifactUserFeatureOverlapStatus,
+    'NO_RUNTIME_FEATURES',
+  );
+
+  setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+  const unmapped = await runMlShadowComparison({
+    response: { domain: 'unmapped' },
+    domain: 'material',
+    interests: ['totally-unknown-interest-xyz'],
+    candidates: materialCandidates,
+    activeCandidateKeys: ['m1'],
+    currentTopKeys: ['m1'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  assert.equal(unmapped.diagnostics.resolutionStatus, 'UNMAPPED_INTERESTS');
+  assert.equal(
+    unmapped.diagnostics.artifactUserFeatureOverlapStatus,
+    'NO_RUNTIME_FEATURES',
+  );
+  assert.notEqual(
+    unmapped.diagnostics.resolutionStatus,
+    noInterests.diagnostics.resolutionStatus,
+  );
+
+  setMlShadowInterestRegistryLoaderForTests(async () => {
+    throw new Error('taxonomy_registry_unavailable');
+  });
+  const response = { deterministic: true };
+  const failed = await runMlShadowComparison({
+    response,
+    domain: 'material',
+    interests: ['arduino'],
+    candidates: materialCandidates,
+    activeCandidateKeys: ['m1'],
+    currentTopKeys: ['m1'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  assert.strictEqual(failed.response, response);
+  assert.equal(failed.diagnostics.status, 'FALLBACK');
+  assert.equal(failed.rankedCandidateKeys, undefined);
+
+  // Partial / full overlap against synthetic in-memory artifact names via diagnostics helper path:
+  // covered in canonical-shadow-user-features.test.ts; runtime-v2 proven ZERO_OVERLAP above.
+});
+
+isolatedRecommendationTest('RP-01.4 material and project canonical features match and ignore candidate labels', async () => {
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlMaterialServingEnabled = true;
+  env.recommendationMlProjectServingEnabled = true;
+  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+  clearMlArtifactCacheForTests();
+
+  const interests = ['arduino'];
+  const material = await runMlShadowComparison({
+    response: { section: 'materials' },
+    domain: 'material',
+    interests,
+    candidates: [
+      {
+        candidateKey: 'm-hash-trap',
+        categoryId: 'would-have-produced-hash',
+        categoryLabel: 'arduino',
+        condition: 'GOOD',
+        isFree: true,
+        pickupAllowed: true,
+        deliveryAllowed: false,
+      },
+    ],
+    activeCandidateKeys: ['m-hash-trap'],
+    currentTopKeys: ['m-hash-trap'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+  const project = await runMlShadowComparison({
+    response: { section: 'projects' },
+    domain: 'project',
+    interests,
+    candidates: [
+      {
+        candidateKey: 'p-other',
+        categoryId: 'other-id',
+        categoryLabel: 'Completely Different Label',
+        difficulty: 'BEGINNER',
+      },
+    ],
+    activeCandidateKeys: ['p-other'],
+    currentTopKeys: ['p-other'],
+    recentEvents: [],
+    evaluationTimestamp: '2026-08-10T00:00:00Z',
+  });
+
+  assert.equal(material.diagnostics.canonicalUserFeatureCount, 1);
+  assert.equal(project.diagnostics.canonicalUserFeatureCount, 1);
+  assert.equal(material.diagnostics.resolutionStatus, project.diagnostics.resolutionStatus);
+  assert.equal(material.rankedCandidateKeys, undefined);
+  assert.equal(project.rankedCandidateKeys, undefined);
+  assert.equal(material.diagnostics.artifactUserFeatureOverlapStatus, 'ZERO_OVERLAP');
+  assert.equal(project.diagnostics.artifactUserFeatureOverlapStatus, 'ZERO_OVERLAP');
 });
