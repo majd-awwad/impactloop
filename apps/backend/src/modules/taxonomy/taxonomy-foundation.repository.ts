@@ -8,6 +8,10 @@ import {
   type TaxonomyConceptSeed,
   type TaxonomyMappingRule,
 } from './taxonomy-foundation.data.js';
+import {
+  TAXONOMY_ALIAS_SOURCE,
+  type LearnerInterestRegistryConcept,
+} from './learner-interest-resolver.js';
 import { normalizeTaxonomyAlias, isValidTaxonomyCanonicalKey } from './taxonomy-normalization.js';
 
 export const MAX_TAXONOMY_BATCH_SIZE = 500;
@@ -38,13 +42,13 @@ const getSeedAliases = (seed: TaxonomyConceptSeed) => {
       alias: seed.labelEn,
       language: 'EN' as const,
       aliasType: 'CANONICAL' as const,
-      source: 'phase-2b-reviewed-vocabulary.canonical-label-en',
+      source: TAXONOMY_ALIAS_SOURCE.REVIEWED_LABEL_EN,
     },
     {
       alias: seed.labelAr,
       language: 'AR' as const,
       aliasType: 'TRANSLATION' as const,
-      source: 'phase-2b-reviewed-vocabulary.canonical-label-ar',
+      source: TAXONOMY_ALIAS_SOURCE.REVIEWED_LABEL_AR,
     },
     ...seed.aliases,
   ];
@@ -182,6 +186,73 @@ const componentWhereForRule = (rule: TaxonomyMappingRule): Prisma.ProjectRequire
 });
 
 export class TaxonomyFoundationRepository {
+  async loadLearnerInterestResolutionRegistry(): Promise<LearnerInterestRegistryConcept[]> {
+    const concepts = await prisma.taxonomyConcept.findMany({
+      select: {
+        id: true,
+        canonicalKey: true,
+        conceptType: true,
+        status: true,
+        labelEn: true,
+        labelAr: true,
+        aliases: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            alias: true,
+            normalizedAlias: true,
+            language: true,
+            aliasType: true,
+            source: true,
+            isActive: true,
+          },
+          orderBy: [
+            { normalizedAlias: 'asc' },
+            { language: 'asc' },
+            { id: 'asc' },
+          ],
+          take: MAX_TAXONOMY_BATCH_SIZE + 1,
+        },
+        learnerInterests: {
+          select: {
+            id: true,
+            learnerInterestKey: true,
+          },
+          orderBy: [
+            { learnerInterestKey: 'asc' },
+            { id: 'asc' },
+          ],
+          take: MAX_TAXONOMY_BATCH_SIZE + 1,
+        },
+      },
+      orderBy: [
+        { canonicalKey: 'asc' },
+        { id: 'asc' },
+      ],
+      take: MAX_TAXONOMY_BATCH_SIZE + 1,
+    });
+
+    if (concepts.length > MAX_TAXONOMY_BATCH_SIZE) {
+      throw new Error(
+        `Learner-interest taxonomy registry exceeds ${MAX_TAXONOMY_BATCH_SIZE} concepts.`,
+      );
+    }
+    for (const concept of concepts) {
+      if (concept.aliases.length > MAX_TAXONOMY_BATCH_SIZE) {
+        throw new Error(
+          `Taxonomy concept ${concept.canonicalKey} exceeds ${MAX_TAXONOMY_BATCH_SIZE} active aliases.`,
+        );
+      }
+      if (concept.learnerInterests.length > MAX_TAXONOMY_BATCH_SIZE) {
+        throw new Error(
+          `Taxonomy concept ${concept.canonicalKey} exceeds ${MAX_TAXONOMY_BATCH_SIZE} learner-interest keys.`,
+        );
+      }
+    }
+
+    return concepts;
+  }
+
   async resolveConceptByKey(canonicalKey: string) {
     return prisma.taxonomyConcept.findFirst({ where: { canonicalKey, status: 'ACTIVE' } });
   }
