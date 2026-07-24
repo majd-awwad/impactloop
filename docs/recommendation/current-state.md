@@ -22,7 +22,7 @@ The typed taxonomy foundation is implemented but inactive in the adopted ranking
 
 The canonical learner-interest resolver reads the persisted typed-taxonomy registry and resolves stored profile values to active `INTEREST` canonical keys with deterministic provenance, status, type, ambiguity, and custom-interest diagnostics. It is not called by Learner Home, profile APIs, feature generation, or ML shadow in RP-01.3; deterministic and experimental recommendation outputs therefore remain unchanged.
 
-Free supplier material creation (`POST /api/supplier/materials` with `isFree: true`) now calls the pure material-concept assignment engine after final category/materialType/title resolution, loads category-owned `MATERIAL_FAMILY` authority and a bounded full taxonomy registry for diagnostics, applies evidence-scoped publish preflight (not a global taxonomy-health gate), and persists `MaterialConcept` family (and optional form) rows in the same idempotency transaction. Paid material creation, material update, historical backfill, recommendation consumption, and ML shadow do not yet call the engine; those remain later tasks (RP-02.3+).
+Free and paid supplier material creation (`POST /api/supplier/materials`) now call the pure material-concept assignment engine after final category/materialType/title resolution, load category-owned `MATERIAL_FAMILY` authority and a bounded full taxonomy registry for diagnostics, apply evidence-scoped publish preflight (not a global taxonomy-health gate), and persist `MaterialConcept` family (and optional form) rows in the same create/idempotency transaction. Paid branches re-authorize price-rule / approved-request decisions inside that transaction and consume source requests with conditional unpublished updates. Material update, historical backfill, recommendation consumption, and ML shadow do not yet call the engine; those remain later tasks (RP-02.4+).
 
 ## Configuration Defaults
 
@@ -97,4 +97,4 @@ Verified on 2026-07-24 against:
 - `apps/backend/src/config/env.ts` — recommendation defaults and worker settings.
 - `apps/backend/src/modules/recommendations/ml-shadow.service.ts` — shadow-disabled behavior, independent material/project serving gates, project readiness requirements, and fail-closed fallback.
 - `apps/backend/src/modules/taxonomy/learner-interest-resolver.ts` — inactive canonical stored-interest resolution contract.
-- `apps/backend/src/modules/taxonomy/material-concept-assignment.ts` — pure category-owned material family/form assignment contract; integrated into free supplier material create (RP-02.2); paid/update/backfill/recommendation paths remain inactive.
+- `apps/backend/src/modules/taxonomy/material-concept-assignment.ts` — pure category-owned material family/form assignment contract; integrated into free and paid supplier material create (RP-02.2 / RP-02.3); update/backfill/recommendation paths remain inactive.

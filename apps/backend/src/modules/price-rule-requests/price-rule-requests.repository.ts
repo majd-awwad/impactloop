@@ -190,8 +190,9 @@ export const listPriceRuleRequestsForSupplier = async (userId: string) => {
 export const findPriceRuleRequestByIdForOwner = async (
   id: string,
   userId: string,
+  client?: PrismaClientLike,
 ) => {
-  return prisma.priceRuleRequest.findFirst({
+  return (client ?? prisma).priceRuleRequest.findFirst({
     where: {
       id,
       requestedByUserId: userId,
@@ -213,13 +214,26 @@ export const updatePriceRuleRequestDraftJson = async (input: {
   });
 };
 
+/**
+ * Atomically consumes an unpublished owner-scoped price-rule request.
+ * Binds to the exact authorized snapshot via expectedUpdatedAt.
+ * Returns the number of rows updated; callers must treat 0 as conflict and
+ * roll back the surrounding transaction.
+ */
 export const markPriceRuleRequestPublished = async (input: {
   id: string;
   materialId: string;
+  requestedByUserId: string;
+  expectedUpdatedAt: Date;
   client?: PrismaClientLike;
-}) => {
-  return (input.client ?? prisma).priceRuleRequest.update({
-    where: { id: input.id },
+}): Promise<{ count: number }> => {
+  return (input.client ?? prisma).priceRuleRequest.updateMany({
+    where: {
+      id: input.id,
+      requestedByUserId: input.requestedByUserId,
+      publishedMaterialId: null,
+      updatedAt: input.expectedUpdatedAt,
+    },
     data: {
       publishedMaterialId: input.materialId,
       publishedAt: new Date(),

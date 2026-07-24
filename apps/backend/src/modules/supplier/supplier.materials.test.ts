@@ -27,6 +27,9 @@ import {
   createSupplierMaterialSchema,
   updateSupplierMaterialSchema,
 } from "./supplier.validation.js";
+import { matchMaterialReference } from "../../services/material-reference-matching.service.js";
+import * as priceRuleRequestsRepository from "../price-rule-requests/price-rule-requests.repository.js";
+import * as categoryRequestsRepository from "../category-requests/category-requests.repository.js";
 
 const TEST_MARKER = "[test-supplier-materials]";
 
@@ -496,14 +499,20 @@ describe("createSupplierMaterial", () => {
   });
 
   after(async () => {
-    const materials = await prisma.material.findMany({
-      where: { id: { in: ctx.createdMaterialIds } },
-      select: { locationId: true },
-    });
+    const materialIds = ctx.createdMaterialIds.filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    );
+    const materials = materialIds.length
+      ? await prisma.material.findMany({
+          where: { id: { in: materialIds } },
+          select: { locationId: true },
+        })
+      : [];
     const materialLocationIds = materials.map(
       (material) => material.locationId,
     );
 
+    ctx.createdMaterialIds = materialIds;
     await cleanup(ctx);
     await prisma.location.deleteMany({
       where: {
@@ -594,7 +603,7 @@ describe("createSupplierMaterial", () => {
 
   test("creates one material and reuses the same response for repeated idempotency key", async () => {
     const key = `test-create-${Date.now()}-same-key`;
-    const payload = buildCreatePayload("idempotent-same-key");
+    const payload = buildCreatePayload(`idempotent-same-key-${Date.now()}`);
 
     const first = await createSupplierMaterialIdempotent(
       ctx.supplierId,
@@ -620,7 +629,7 @@ describe("createSupplierMaterial", () => {
 
   test("two rapid same-key creates do not create duplicate materials", async () => {
     const key = `test-create-${Date.now()}-rapid`;
-    const payload = buildCreatePayload("idempotent-rapid");
+    const payload = buildCreatePayload(`idempotent-rapid-${Date.now()}`);
 
     const results = await Promise.allSettled([
       createSupplierMaterialIdempotent(ctx.supplierId, payload, key),
@@ -735,7 +744,7 @@ describe("createSupplierMaterial", () => {
 
   test("post-insert failure rolls back material and idempotency record before retry", async () => {
     const key = `test-create-${Date.now()}-post-insert-failure`;
-    const title = `${TEST_MARKER} idempotent-post-insert-failure`;
+    const title = `${TEST_MARKER} idempotent-post-insert-failure-${Date.now()}`;
 
     await assert.rejects(
       () =>
@@ -1239,6 +1248,7 @@ describe("createSupplierMaterial", () => {
           pickupAllowed: true,
           deliveryAllowed: false,
           imageUrls: ["/uploads/materials/rp022-no-concepts.jpg"],
+          conceptIds: undefined as unknown as string[],
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
@@ -1295,19 +1305,14 @@ describe("createSupplierMaterial", () => {
     assert.equal(await prisma.material.count({ where: { title } }), 0);
   });
 
-  test("repository paid create rejects conceptIds", async () => {
+  test("repository paid create without conceptIds fails before Material write", async () => {
     const profile = await prisma.supplierProfile.findUnique({
       where: { userId: ctx.supplierId },
       select: { id: true },
     });
-    const family = await prisma.taxonomyConcept.findFirst({
-      where: { conceptType: "MATERIAL_FAMILY", status: "ACTIVE" },
-      select: { id: true },
-    });
     assert.ok(profile);
-    assert.ok(family);
 
-    const title = `${TEST_MARKER} rp022-paid-concepts-rejected`;
+    const title = `${TEST_MARKER} rp023-paid-repo-no-concepts`;
     await assert.rejects(
       () =>
         supplierRepository.createSupplierMaterial({
@@ -1327,12 +1332,16 @@ describe("createSupplierMaterial", () => {
           currency: "NIS",
           pickupAllowed: true,
           deliveryAllowed: false,
-          imageUrls: ["/uploads/materials/rp022-paid-concepts.jpg"],
-          conceptIds: [family.id],
+          imageUrls: ["/uploads/materials/rp023-paid-no-concepts.jpg"],
+          conceptIds: undefined as unknown as string[],
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
         assert.equal(error.code, "INTERNAL_ERROR");
+        assert.equal(
+          (error.details as { reason?: string } | undefined)?.reason,
+          "CONCEPT_IDS_CARDINALITY",
+        );
         return true;
       },
     );
@@ -1347,7 +1356,7 @@ describe("createSupplierMaterial", () => {
     });
     assert.ok(profile);
 
-    const title = `${TEST_MARKER} rp022-paid-empty-concepts`;
+    const title = `${TEST_MARKER} rp023-paid-empty-concepts`;
     await assert.rejects(
       () =>
         supplierRepository.createSupplierMaterial({
@@ -1367,7 +1376,7 @@ describe("createSupplierMaterial", () => {
           currency: "NIS",
           pickupAllowed: true,
           deliveryAllowed: false,
-          imageUrls: ["/uploads/materials/rp022-paid-empty.jpg"],
+          imageUrls: ["/uploads/materials/rp023-paid-empty.jpg"],
           conceptIds: [],
         }),
       (error: unknown) => {
@@ -1375,13 +1384,54 @@ describe("createSupplierMaterial", () => {
         assert.equal(error.code, "INTERNAL_ERROR");
         assert.equal(
           (error.details as { reason?: string } | undefined)?.reason,
-          "PAID_CONCEPT_IDS_NOT_ALLOWED",
+          "CONCEPT_IDS_CARDINALITY",
         );
         return true;
       },
     );
 
     assert.equal(await prisma.material.count({ where: { title } }), 0);
+  });
+
+  test("repository paid create with family conceptIds succeeds", async () => {
+    const profile = await prisma.supplierProfile.findUnique({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const family = await prisma.taxonomyConcept.findFirst({
+      where: { conceptType: "MATERIAL_FAMILY", status: "ACTIVE" },
+      select: { id: true },
+    });
+    assert.ok(profile);
+    assert.ok(family);
+
+    const title = `${TEST_MARKER} rp023-paid-repo-family`;
+    const material = await supplierRepository.createSupplierMaterial({
+      ownerId: ctx.supplierId,
+      supplierProfileId: profile.id,
+      categoryId: ctx.categoryId,
+      locationId: ctx.locationId,
+      title,
+      description: `${title} description`,
+      materialType: "Paid widget",
+      quantity: 1,
+      unit: "piece",
+      condition: "GOOD",
+      sourceType: "WORKSHOP_SURPLUS",
+      isFree: false,
+      price: 10,
+      currency: "NIS",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ["/uploads/materials/rp023-paid-repo-family.jpg"],
+      conceptIds: [family.id],
+    });
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(
+      await prisma.materialConcept.count({ where: { materialId: material.id } }),
+      1,
+    );
   });
 
   test("repository free create rejects blank concept IDs before Material write", async () => {
@@ -1419,7 +1469,7 @@ describe("createSupplierMaterial", () => {
         assert.equal(error.code, "INTERNAL_ERROR");
         assert.equal(
           (error.details as { reason?: string } | undefined)?.reason,
-          "FREE_CONCEPT_IDS_BLANK",
+          "CONCEPT_IDS_BLANK",
         );
         return true;
       },
@@ -1428,11 +1478,11 @@ describe("createSupplierMaterial", () => {
     assert.equal(await prisma.material.count({ where: { title } }), 0);
   });
 
-  test("paid create does not persist MaterialConcept rows", async () => {
+  test("S3 paid PRR custom unmatched persists family-only MaterialConcept", async () => {
     const priceRuleRequest = await prisma.priceRuleRequest.create({
       data: {
-        materialName: `${TEST_MARKER} rp022 paid no concepts`,
-        normalizedMaterialName: "rp022-paid-no-concepts",
+        materialName: `${TEST_MARKER} rp023 s3 custom`,
+        normalizedMaterialName: "rp023-s3-custom",
         unit: "piece",
         supplierPriceNis: 12,
         categoryId: ctx.categoryId,
@@ -1443,9 +1493,9 @@ describe("createSupplierMaterial", () => {
     });
 
     const material = await createSupplierMaterial(ctx.supplierId, {
-      materialName: `${TEST_MARKER} rp022 paid no concepts`,
-      title: `${TEST_MARKER} rp022 paid no concepts`,
-      description: `${TEST_MARKER} rp022 paid no concepts description`,
+      materialName: `${TEST_MARKER} rp023 s3 custom`,
+      title: `${TEST_MARKER} rp023 s3 custom`,
+      description: `${TEST_MARKER} rp023 s3 custom description`,
       categoryId: ctx.categoryId,
       quantity: 1,
       unit: "piece",
@@ -1455,16 +1505,33 @@ describe("createSupplierMaterial", () => {
       currency: "NIS",
       pickupAllowed: true,
       deliveryAllowed: false,
-      imageUrls: ["/uploads/materials/rp022-paid-none.jpg"],
+      imageUrls: ["/uploads/materials/rp023-s3.jpg"],
       useDefaultPickupLocation: true,
       sourcePriceRuleRequestId: priceRuleRequest.id,
     });
     ctx.createdMaterialIds.push(material.id);
 
-    assert.equal(
-      await prisma.materialConcept.count({ where: { materialId: material.id } }),
-      0,
-    );
+    assert.equal(material.category.id, ctx.categoryId);
+    assert.equal(material.materialType, `${TEST_MARKER} rp023 s3 custom`);
+    assert.equal(material.customMaterialType, `${TEST_MARKER} rp023 s3 custom`);
+    assert.equal(material.price, 10);
+    assert.equal(material.priceRuleId, null);
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      include: {
+        concept: { select: { conceptType: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.concept.conceptType, "MATERIAL_FAMILY");
+
+    const updatedRequest = await prisma.priceRuleRequest.findUnique({
+      where: { id: priceRuleRequest.id },
+      select: { publishedMaterialId: true },
+    });
+    assert.equal(updatedRequest?.publishedMaterialId, material.id);
 
     await prisma.priceRuleRequest.delete({
       where: { id: priceRuleRequest.id },
@@ -1689,6 +1756,14 @@ describe("createSupplierMaterial", () => {
     assert.equal(material.price, 13);
     assert.equal(material.maxAllowedPriceAtCheck, 13.65);
 
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      include: { concept: { select: { conceptType: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.concept.conceptType, "MATERIAL_FAMILY");
+
     const updatedRequest = await prisma.priceRuleRequest.findUnique({
       where: { id: priceRuleRequest.id },
       select: { publishedMaterialId: true },
@@ -1792,6 +1867,1085 @@ describe("createSupplierMaterial", () => {
     await prisma.priceRuleRequest.delete({
       where: { id: priceRuleRequest.id },
     });
+  });
+
+  test("S1 paid PRR with active linked MaterialType persists family and form concepts", async () => {
+    const arduino = await prisma.materialType.findFirst({
+      where: { nameEn: "Arduino Uno", isActive: true },
+      select: { id: true, nameEn: true, categoryId: true, defaultUnit: true },
+    });
+    assert.ok(arduino, "Expected seeded Arduino Uno MaterialType");
+
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: "Arduino Uno",
+        normalizedMaterialName: "arduino-uno",
+        materialTypeId: arduino.id,
+        unit: arduino.defaultUnit || "piece",
+        supplierPriceNis: 10,
+        categoryId: arduino.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 50,
+      },
+    });
+
+    const key = `test-create-${Date.now()}-rp023-s1`;
+    const payload: CreateSupplierMaterialInput = {
+      materialName: "Arduino Uno",
+      title: `${TEST_MARKER} rp023 s1 arduino`,
+      description: `${TEST_MARKER} rp023 s1 description`,
+      categoryId: arduino.categoryId,
+      quantity: 1,
+      unit: arduino.defaultUnit || "piece",
+      condition: "GOOD",
+      isFree: false,
+      price: 10,
+      currency: "NIS",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ["/uploads/materials/rp023-s1.jpg"],
+      useDefaultPickupLocation: true,
+      sourcePriceRuleRequestId: priceRuleRequest.id,
+    };
+
+    const created = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    const material = created.response;
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(material.materialType, "Arduino Uno");
+    assert.equal(material.category.id, arduino.categoryId);
+    assert.equal(material.customMaterialType, null);
+    assert.equal(material.price, 10);
+    assert.equal(material.priceRuleId, null);
+    assert.ok(material.maxAllowedPriceAtCheck != null);
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      include: {
+        concept: { select: { conceptType: true, canonicalKey: true } },
+      },
+    });
+    assert.equal(concepts.length, 2);
+    assert.deepEqual(
+      concepts.map((row) => row.concept.conceptType).sort(),
+      ["MATERIAL_FAMILY", "MATERIAL_FORM"],
+    );
+    assert.ok(
+      concepts.some(
+        (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+      ),
+    );
+
+    const beforeCount = await prisma.materialConcept.count({
+      where: { materialId: material.id },
+    });
+    const replay = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    assert.equal(replay.response.id, material.id);
+    assert.equal(
+      await prisma.materialConcept.count({ where: { materialId: material.id } }),
+      beforeCount,
+    );
+
+    await prisma.priceRuleRequest.delete({
+      where: { id: priceRuleRequest.id },
+    });
+  });
+
+  test("S2 paid PRR inactive linked MaterialType falls back to matched active type", async () => {
+    const arduino = await prisma.materialType.findFirst({
+      where: { nameEn: "Arduino Uno", isActive: true },
+      select: { id: true, nameEn: true, categoryId: true, defaultUnit: true },
+    });
+    assert.ok(arduino);
+
+    const inactiveType = await prisma.materialType.create({
+      data: {
+        categoryId: arduino.categoryId,
+        nameEn: `${TEST_MARKER} inactive s2 type ${Date.now()}`,
+        normalizedName: `inactive-s2-${Date.now()}`,
+        defaultUnit: "piece",
+        isActive: false,
+      },
+      select: { id: true },
+    });
+
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: "Arduino Uno",
+        normalizedMaterialName: "arduino-uno-s2",
+        materialTypeId: inactiveType.id,
+        unit: "piece",
+        supplierPriceNis: 10,
+        categoryId: arduino.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 50,
+      },
+    });
+
+    try {
+      const material = await createSupplierMaterial(ctx.supplierId, {
+        materialName: "Arduino Uno",
+        title: `${TEST_MARKER} rp023 s2 fallback`,
+        description: `${TEST_MARKER} rp023 s2 description`,
+        categoryId: arduino.categoryId,
+        quantity: 1,
+        unit: "piece",
+        condition: "GOOD",
+        isFree: false,
+        price: 10,
+        currency: "NIS",
+        pickupAllowed: true,
+        deliveryAllowed: false,
+        imageUrls: ["/uploads/materials/rp023-s2.jpg"],
+        useDefaultPickupLocation: true,
+        sourcePriceRuleRequestId: priceRuleRequest.id,
+      });
+      ctx.createdMaterialIds.push(material.id);
+
+      assert.equal(material.materialType, "Arduino Uno");
+      assert.equal(material.materialTypeId, arduino.id);
+      assert.equal(material.category.id, arduino.categoryId);
+      assert.equal(material.customMaterialType, null);
+      assert.equal(material.priceRuleId, null);
+
+      const concepts = await prisma.materialConcept.findMany({
+        where: { materialId: material.id },
+        include: {
+          concept: { select: { conceptType: true, canonicalKey: true } },
+        },
+      });
+      assert.equal(concepts.length, 2);
+      assert.ok(
+        concepts.some(
+          (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+        ),
+      );
+
+      const published = await prisma.priceRuleRequest.findUnique({
+        where: { id: priceRuleRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(published?.publishedMaterialId, material.id);
+    } finally {
+      await prisma.priceRuleRequest.delete({
+        where: { id: priceRuleRequest.id },
+      });
+      await prisma.materialType.delete({ where: { id: inactiveType.id } });
+    }
+  });
+
+  test("S4 ordinary paid create through active price rule persists concepts", async () => {
+    const arduino = await prisma.materialType.findFirst({
+      where: { nameEn: "Arduino Uno", isActive: true },
+      select: { id: true, nameEn: true, categoryId: true, defaultUnit: true },
+    });
+    assert.ok(arduino);
+
+    const rule = await prisma.materialPriceRule.findFirst({
+      where: {
+        materialTypeId: arduino.id,
+        isActive: true,
+        status: "ACTIVE",
+        currency: "NIS",
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    assert.ok(rule, "Expected active price rule for Arduino Uno");
+    assert.ok(rule.maxAllowedUnitPriceNis != null);
+
+    const baseMax = Number(rule.maxAllowedUnitPriceNis);
+    const adjustedMax = Math.round(baseMax * 0.65 * 100) / 100;
+    const price = Math.min(adjustedMax, baseMax * 0.5);
+
+    const key = `test-create-${Date.now()}-rp023-s4`;
+    const payload: CreateSupplierMaterialInput = {
+      materialName: "Arduino Uno",
+      title: `${TEST_MARKER} rp023 s4 ordinary`,
+      description: `${TEST_MARKER} rp023 s4 description`,
+      categoryId: arduino.categoryId,
+      quantity: 1,
+      unit: rule.unit,
+      condition: "GOOD",
+      isFree: false,
+      price,
+      currency: "NIS",
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ["/uploads/materials/rp023-s4.jpg"],
+      useDefaultPickupLocation: true,
+    };
+
+    const created = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    const material = created.response;
+    ctx.createdMaterialIds.push(material.id);
+
+    assert.equal(material.materialType, "Arduino Uno");
+    assert.equal(material.materialTypeId, arduino.id);
+    assert.equal(material.category.id, arduino.categoryId);
+    assert.equal(material.price, price);
+    assert.equal(material.priceRuleId, rule.id);
+    assert.ok(material.maxAllowedPriceAtCheck != null);
+
+    const concepts = await prisma.materialConcept.findMany({
+      where: { materialId: material.id },
+      include: {
+        concept: { select: { conceptType: true, canonicalKey: true } },
+      },
+    });
+    assert.equal(concepts.length, 2);
+    assert.ok(
+      concepts.some(
+        (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+      ),
+    );
+
+    const beforeCount = await prisma.materialConcept.count({
+      where: { materialId: material.id },
+    });
+    const replay = await createSupplierMaterialIdempotent(
+      ctx.supplierId,
+      payload,
+      key,
+    );
+    assert.equal(replay.response.id, material.id);
+    assert.equal(
+      await prisma.materialConcept.count({ where: { materialId: material.id } }),
+      beforeCount,
+    );
+  });
+
+  test("two different idempotency keys cannot both consume one approved PRR", async () => {
+    const stamp = Date.now();
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} rp023 race prr ${stamp}`,
+        normalizedMaterialName: `rp023-race-${stamp}`,
+        unit: "piece",
+        supplierPriceNis: 12,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 30,
+      },
+    });
+
+    const basePayload = {
+      materialName: `${TEST_MARKER} rp023 race prr ${stamp}`,
+      description: `${TEST_MARKER} rp023 race description`,
+      categoryId: ctx.categoryId,
+      quantity: 1,
+      unit: "piece",
+      condition: "GOOD" as const,
+      isFree: false as const,
+      price: 10,
+      currency: "NIS" as const,
+      pickupAllowed: true,
+      deliveryAllowed: false,
+      imageUrls: ["/uploads/materials/rp023-race.jpg"],
+      useDefaultPickupLocation: true,
+      sourcePriceRuleRequestId: priceRuleRequest.id,
+    };
+
+    const keyA = `test-create-${stamp}-rp023-race-a`;
+    const keyB = `test-create-${stamp}-rp023-race-b`;
+    const titleA = `${TEST_MARKER} rp023 race a ${stamp}`;
+    const titleB = `${TEST_MARKER} rp023 race b ${stamp}`;
+
+    const results = await Promise.allSettled([
+      createSupplierMaterialIdempotent(
+        ctx.supplierId,
+        { ...basePayload, title: titleA },
+        keyA,
+      ),
+      createSupplierMaterialIdempotent(
+        ctx.supplierId,
+        { ...basePayload, title: titleB },
+        keyB,
+      ),
+    ]);
+
+    const fulfilled = results.filter(
+      (
+        result,
+      ): result is PromiseFulfilledResult<
+        Awaited<ReturnType<typeof createSupplierMaterialIdempotent>>
+      > => result.status === "fulfilled",
+    );
+    const rejected = results.filter((r) => r.status === "rejected");
+
+    assert.equal(
+      fulfilled.length,
+      1,
+      `expected one winner, got fulfilled=${fulfilled.length} rejected=${rejected.length} reasons=${rejected
+        .map((r) =>
+          r.status === "rejected" && r.reason instanceof AppError
+            ? `${r.reason.code}:${r.reason.message}`
+            : String(r.reason),
+        )
+        .join(" | ")}`,
+    );
+    assert.equal(rejected.length, 1);
+
+    const winner = fulfilled[0]!.value.response;
+    ctx.createdMaterialIds.push(winner.id);
+
+    const loserError = (rejected[0] as PromiseRejectedResult).reason;
+    assert.ok(loserError instanceof AppError);
+    assert.ok(
+      loserError.code === "CONFLICT" ||
+        (loserError.details as { reason?: string } | undefined)?.reason ===
+          "PRICE_TOO_HIGH" ||
+        loserError.statusCode === 409,
+      `loser code=${loserError.code}`,
+    );
+
+    assert.equal(
+      await prisma.material.count({
+        where: { title: { in: [titleA, titleB] } },
+      }),
+      1,
+    );
+    assert.equal(
+      await prisma.materialConcept.count({
+        where: { materialId: winner.id },
+      }),
+      1,
+    );
+
+    const published = await prisma.priceRuleRequest.findUnique({
+      where: { id: priceRuleRequest.id },
+      select: { publishedMaterialId: true },
+    });
+    assert.equal(published?.publishedMaterialId, winner.id);
+
+    const loserKey = results[0]?.status === "rejected" ? keyA : keyB;
+    const loserRecord = await prisma.idempotencyRecord.findUnique({
+      where: {
+        userId_scope_key: {
+          userId: ctx.supplierId,
+          scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
+          key: loserKey,
+        },
+      },
+    });
+    assert.notEqual(loserRecord?.status, "SUCCEEDED");
+
+    await prisma.priceRuleRequest.delete({
+      where: { id: priceRuleRequest.id },
+    });
+  });
+
+  test("paid taxonomy failure with custom pickup leaves no orphan Location", async () => {
+    const locationMarker = `${TEST_MARKER}-rp023-orphan-loc-${Date.now()}`;
+    const title = `${TEST_MARKER} rp023 paid location atomicity`;
+    const temporaryCategory = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} paid loc atomicity ${Date.now()}`,
+        nameAr: `${TEST_MARKER} paid loc atomicity ar`,
+        categoryType: "MATERIAL",
+        isActive: true,
+        materialFamilyConceptId: null,
+      },
+      select: { id: true },
+    });
+
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} paid loc widget`,
+        normalizedMaterialName: `paid-loc-${Date.now()}`,
+        unit: "piece",
+        supplierPriceNis: 10,
+        categoryId: temporaryCategory.id,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 20,
+      },
+    });
+
+    await prisma.supplierProfile.update({
+      where: { userId: ctx.supplierId },
+      data: { supplierType: "INDIVIDUAL_SUPPLIER" },
+    });
+
+    try {
+      await assert.rejects(
+        () =>
+          createSupplierMaterial(ctx.supplierId, {
+            materialName: `${TEST_MARKER} paid loc widget`,
+            title,
+            description: `${title} description`,
+            categoryId: temporaryCategory.id,
+            quantity: 1,
+            unit: "piece",
+            condition: "GOOD",
+            isFree: false,
+            price: 10,
+            currency: "NIS",
+            pickupAllowed: true,
+            deliveryAllowed: false,
+            imageUrls: ["/uploads/materials/rp023-location-atomicity.jpg"],
+            useDefaultPickupLocation: false,
+            pickupLocation: {
+              country: "Palestine",
+              city: "Nablus",
+              area: locationMarker,
+              addressLine: `${locationMarker} address`,
+              visibility: "PRIVATE" as const,
+              isApproximate: true,
+            },
+            sourcePriceRuleRequestId: priceRuleRequest.id,
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.code, "CATEGORY_TAXONOMY_NOT_READY");
+          return true;
+        },
+      );
+
+      assert.equal(await prisma.material.count({ where: { title } }), 0);
+      assert.equal(
+        await prisma.location.count({ where: { area: locationMarker } }),
+        0,
+      );
+      assert.equal(
+        await prisma.materialConcept.count({
+          where: { material: { title } },
+        }),
+        0,
+      );
+      const request = await prisma.priceRuleRequest.findUnique({
+        where: { id: priceRuleRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(request?.publishedMaterialId, null);
+    } finally {
+      await prisma.supplierProfile.update({
+        where: { userId: ctx.supplierId },
+        data: { supplierType: "WORKSHOP" },
+      });
+      await prisma.priceRuleRequest.delete({
+        where: { id: priceRuleRequest.id },
+      });
+      await prisma.category.delete({ where: { id: temporaryCategory.id } });
+    }
+  });
+
+  test("matchMaterialReference respects uncommitted MaterialType state on transaction client", async () => {
+    const arduino = await prisma.materialType.findFirst({
+      where: { nameEn: "Arduino Uno", isActive: true },
+      select: { id: true, categoryId: true },
+    });
+    assert.ok(arduino);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.materialType.update({
+        where: { id: arduino.id },
+        data: { isActive: false },
+      });
+
+      const inTx = await matchMaterialReference({
+        materialName: "Arduino Uno",
+        categoryId: arduino.categoryId,
+        client: tx,
+      });
+      assert.notEqual(inTx.status, "MATCHED");
+
+      throw new Error("rollback-fixture");
+    }).catch((error: unknown) => {
+      assert.ok(error instanceof Error);
+      assert.equal(error.message, "rollback-fixture");
+    });
+
+    const after = await matchMaterialReference({
+      materialName: "Arduino Uno",
+      categoryId: arduino.categoryId,
+    });
+    assert.equal(after.status, "MATCHED");
+    if (after.status === "MATCHED") {
+      assert.equal(after.materialType.id, arduino.id);
+    }
+  });
+
+  test("PRR NO_APPROVED_MAX falls through to ordinary branch inside transaction", async () => {
+    const arduino = await prisma.materialType.findFirst({
+      where: { nameEn: "Arduino Uno", isActive: true },
+      select: { id: true, nameEn: true, categoryId: true, defaultUnit: true },
+    });
+    assert.ok(arduino);
+
+    const rule = await prisma.materialPriceRule.findFirst({
+      where: {
+        materialTypeId: arduino.id,
+        isActive: true,
+        status: "ACTIVE",
+        currency: "NIS",
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    assert.ok(rule);
+    assert.ok(rule.maxAllowedUnitPriceNis != null);
+
+    const baseMax = Number(rule.maxAllowedUnitPriceNis);
+    const price = Math.round(baseMax * 0.5 * 100) / 100;
+
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: "Arduino Uno",
+        normalizedMaterialName: `arduino-no-max-${Date.now()}`,
+        materialTypeId: arduino.id,
+        unit: rule.unit,
+        supplierPriceNis: price,
+        categoryId: arduino.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "PENDING",
+        aiSuggestedMaxUnitPriceNis: null,
+        adminApprovedMaxUnitPriceNis: null,
+      },
+    });
+
+    try {
+      const material = await createSupplierMaterial(ctx.supplierId, {
+        materialName: "Arduino Uno",
+        title: `${TEST_MARKER} rp023 no-approved-max`,
+        description: `${TEST_MARKER} rp023 no-approved-max description`,
+        categoryId: arduino.categoryId,
+        quantity: 1,
+        unit: rule.unit,
+        condition: "GOOD",
+        isFree: false,
+        price,
+        currency: "NIS",
+        pickupAllowed: true,
+        deliveryAllowed: false,
+        imageUrls: ["/uploads/materials/rp023-no-max.jpg"],
+        useDefaultPickupLocation: true,
+        sourcePriceRuleRequestId: priceRuleRequest.id,
+      });
+      ctx.createdMaterialIds.push(material.id);
+
+      assert.equal(material.materialType, "Arduino Uno");
+      assert.equal(material.materialTypeId, arduino.id);
+      assert.equal(material.priceRuleId, rule.id);
+      assert.ok(material.maxAllowedPriceAtCheck != null);
+
+      const concepts = await prisma.materialConcept.findMany({
+        where: { materialId: material.id },
+        include: {
+          concept: { select: { conceptType: true, canonicalKey: true } },
+        },
+      });
+      assert.equal(concepts.length, 2);
+      assert.ok(
+        concepts.some(
+          (row) => row.concept.canonicalKey === "material-form:arduino-uno",
+        ),
+      );
+
+      const published = await prisma.priceRuleRequest.findUnique({
+        where: { id: priceRuleRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(published?.publishedMaterialId, material.id);
+    } finally {
+      await prisma.priceRuleRequest.delete({
+        where: { id: priceRuleRequest.id },
+      });
+    }
+  });
+
+  test("markPriceRuleRequestPublished rejects stale expectedUpdatedAt", async () => {
+    const request = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} stale prr`,
+        normalizedMaterialName: `stale-prr-${Date.now()}`,
+        unit: "piece",
+        supplierPriceNis: 10,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 20,
+      },
+    });
+
+    const snapshot = await prisma.priceRuleRequest.findUniqueOrThrow({
+      where: { id: request.id },
+      select: { id: true, updatedAt: true },
+    });
+
+    await prisma.priceRuleRequest.update({
+      where: { id: request.id },
+      data: { moderatorNote: `changed-${Date.now()}` },
+    });
+
+    const result = await priceRuleRequestsRepository.markPriceRuleRequestPublished({
+      id: snapshot.id,
+      materialId: "00000000-0000-0000-0000-000000000001",
+      requestedByUserId: ctx.supplierId,
+      expectedUpdatedAt: snapshot.updatedAt,
+    });
+    assert.equal(result.count, 0);
+
+    const after = await prisma.priceRuleRequest.findUniqueOrThrow({
+      where: { id: request.id },
+      select: { publishedMaterialId: true },
+    });
+    assert.equal(after.publishedMaterialId, null);
+
+    await prisma.priceRuleRequest.delete({ where: { id: request.id } });
+  });
+
+  test("markCategoryRequestPublished rejects stale expectedUpdatedAt", async () => {
+    const request = await prisma.categoryRequest.create({
+      data: {
+        requestedName: `${TEST_MARKER} stale category`,
+        normalizedRequestedName: `stale-cat-${Date.now()}`,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        approvedCategoryId: ctx.categoryId,
+      },
+    });
+
+    const snapshot = await prisma.categoryRequest.findUniqueOrThrow({
+      where: { id: request.id },
+      select: { id: true, updatedAt: true, approvedCategoryId: true },
+    });
+
+    await prisma.categoryRequest.update({
+      where: { id: request.id },
+      data: { moderatorNote: `changed-${Date.now()}` },
+    });
+
+    const result = await categoryRequestsRepository.markCategoryRequestPublished({
+      id: snapshot.id,
+      materialId: "00000000-0000-0000-0000-000000000001",
+      requestedByUserId: ctx.supplierId,
+      expectedUpdatedAt: snapshot.updatedAt,
+      expectedApprovedCategoryId: snapshot.approvedCategoryId!,
+    });
+    assert.equal(result.count, 0);
+
+    const after = await prisma.categoryRequest.findUniqueOrThrow({
+      where: { id: request.id },
+      select: { publishedMaterialId: true },
+    });
+    assert.equal(after.publishedMaterialId, null);
+
+    await prisma.categoryRequest.delete({ where: { id: request.id } });
+  });
+
+  test("PENDING category request with null approvedCategoryId rejects free create", async () => {
+    const categoryRequest = await prisma.categoryRequest.create({
+      data: {
+        requestedName: `${TEST_MARKER} pending null approved`,
+        normalizedRequestedName: `pending-null-${Date.now()}`,
+        requestedByUserId: ctx.supplierId,
+        status: "PENDING",
+        approvedCategoryId: null,
+      },
+    });
+
+    const title = `${TEST_MARKER} rp023 pending category request`;
+    const locationMarker = `${TEST_MARKER}-pending-cat-${Date.now()}`;
+    await prisma.supplierProfile.update({
+      where: { userId: ctx.supplierId },
+      data: { supplierType: "INDIVIDUAL_SUPPLIER" },
+    });
+
+    try {
+      await assert.rejects(
+        () =>
+          createSupplierMaterial(ctx.supplierId, {
+            materialName: `${TEST_MARKER} pending cat material`,
+            title,
+            description: `${title} description`,
+            categoryId: ctx.categoryId,
+            quantity: 1,
+            unit: "piece",
+            condition: "GOOD",
+            isFree: true,
+            price: null,
+            currency: "NIS",
+            pickupAllowed: true,
+            deliveryAllowed: false,
+            imageUrls: ["/uploads/materials/rp023-pending-cat.jpg"],
+            useDefaultPickupLocation: false,
+            pickupLocation: {
+              country: "Palestine",
+              city: "Nablus",
+              area: locationMarker,
+              addressLine: `${locationMarker} address`,
+              visibility: "PRIVATE",
+              isApproximate: true,
+            },
+            sourceCategoryRequestId: categoryRequest.id,
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          assert.equal(error.code, "CONFLICT");
+          assert.equal(
+            (error.details as { reason?: string } | undefined)?.reason,
+            "CATEGORY_REQUEST_NOT_APPROVED",
+          );
+          return true;
+        },
+      );
+
+      assert.equal(await prisma.material.count({ where: { title } }), 0);
+      assert.equal(
+        await prisma.location.count({ where: { area: locationMarker } }),
+        0,
+      );
+      assert.equal(
+        await prisma.materialConcept.count({
+          where: { material: { title } },
+        }),
+        0,
+      );
+      const request = await prisma.categoryRequest.findUnique({
+        where: { id: categoryRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(request?.publishedMaterialId, null);
+    } finally {
+      await prisma.supplierProfile.update({
+        where: { userId: ctx.supplierId },
+        data: { supplierType: "WORKSHOP" },
+      });
+      await prisma.categoryRequest.delete({
+        where: { id: categoryRequest.id },
+      });
+    }
+  });
+
+  test("APPROVED category request with null approvedCategoryId rejects before persistence", async () => {
+    const categoryRequest = await prisma.categoryRequest.create({
+      data: {
+        requestedName: `${TEST_MARKER} approved null category`,
+        normalizedRequestedName: `approved-null-${Date.now()}`,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        approvedCategoryId: null,
+      },
+    });
+
+    const title = `${TEST_MARKER} rp023 approved null category`;
+    try {
+      await assert.rejects(
+        () =>
+          createSupplierMaterial(ctx.supplierId, {
+            materialName: `${TEST_MARKER} approved null material`,
+            title,
+            description: `${title} description`,
+            categoryId: ctx.categoryId,
+            quantity: 1,
+            unit: "piece",
+            condition: "GOOD",
+            isFree: true,
+            price: null,
+            currency: "NIS",
+            pickupAllowed: true,
+            deliveryAllowed: false,
+            imageUrls: ["/uploads/materials/rp023-approved-null.jpg"],
+            useDefaultPickupLocation: true,
+            sourceCategoryRequestId: categoryRequest.id,
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          assert.equal(error.code, "CONFLICT");
+          assert.equal(
+            (error.details as { reason?: string } | undefined)?.reason,
+            "CATEGORY_REQUEST_MISSING_APPROVED_CATEGORY",
+          );
+          return true;
+        },
+      );
+
+      assert.equal(await prisma.material.count({ where: { title } }), 0);
+      const request = await prisma.categoryRequest.findUnique({
+        where: { id: categoryRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(request?.publishedMaterialId, null);
+    } finally {
+      await prisma.categoryRequest.delete({
+        where: { id: categoryRequest.id },
+      });
+    }
+  });
+
+  test("REJECTED category request rejects paid create before persistence", async () => {
+    const categoryRequest = await prisma.categoryRequest.create({
+      data: {
+        requestedName: `${TEST_MARKER} rejected category`,
+        normalizedRequestedName: `rejected-cat-${Date.now()}`,
+        requestedByUserId: ctx.supplierId,
+        status: "REJECTED",
+        approvedCategoryId: ctx.categoryId,
+      },
+    });
+
+    const priceRuleRequest = await prisma.priceRuleRequest.create({
+      data: {
+        materialName: `${TEST_MARKER} rejected-cat paid`,
+        normalizedMaterialName: `rejected-cat-paid-${Date.now()}`,
+        unit: "piece",
+        supplierPriceNis: 10,
+        categoryId: ctx.categoryId,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        aiSuggestedMaxUnitPriceNis: 20,
+      },
+    });
+
+    const title = `${TEST_MARKER} rp023 rejected category paid`;
+    try {
+      await assert.rejects(
+        () =>
+          createSupplierMaterial(ctx.supplierId, {
+            materialName: `${TEST_MARKER} rejected-cat paid`,
+            title,
+            description: `${title} description`,
+            categoryId: ctx.categoryId,
+            quantity: 1,
+            unit: "piece",
+            condition: "GOOD",
+            isFree: false,
+            price: 10,
+            currency: "NIS",
+            pickupAllowed: true,
+            deliveryAllowed: false,
+            imageUrls: ["/uploads/materials/rp023-rejected-cat.jpg"],
+            useDefaultPickupLocation: true,
+            sourceCategoryRequestId: categoryRequest.id,
+            sourcePriceRuleRequestId: priceRuleRequest.id,
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          assert.equal(error.code, "CONFLICT");
+          assert.equal(
+            (error.details as { reason?: string } | undefined)?.reason,
+            "CATEGORY_REQUEST_NOT_APPROVED",
+          );
+          return true;
+        },
+      );
+
+      assert.equal(await prisma.material.count({ where: { title } }), 0);
+      assert.equal(
+        await prisma.materialConcept.count({
+          where: { material: { title } },
+        }),
+        0,
+      );
+      const cat = await prisma.categoryRequest.findUnique({
+        where: { id: categoryRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(cat?.publishedMaterialId, null);
+      const prr = await prisma.priceRuleRequest.findUnique({
+        where: { id: priceRuleRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(prr?.publishedMaterialId, null);
+    } finally {
+      await prisma.priceRuleRequest.delete({
+        where: { id: priceRuleRequest.id },
+      });
+      await prisma.categoryRequest.delete({
+        where: { id: categoryRequest.id },
+      });
+    }
+  });
+
+  test("markCategoryRequestPublished conditional consume binds status and approved category", async () => {
+    const pending = await prisma.categoryRequest.create({
+      data: {
+        requestedName: `${TEST_MARKER} consume pending`,
+        normalizedRequestedName: `consume-pending-${Date.now()}`,
+        requestedByUserId: ctx.supplierId,
+        status: "PENDING",
+        approvedCategoryId: null,
+      },
+    });
+    const approved = await prisma.categoryRequest.create({
+      data: {
+        requestedName: `${TEST_MARKER} consume approved`,
+        normalizedRequestedName: `consume-approved-${Date.now()}`,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        approvedCategoryId: ctx.categoryId,
+      },
+    });
+    const profile = await prisma.supplierProfile.findUniqueOrThrow({
+      where: { userId: ctx.supplierId },
+      select: { id: true },
+    });
+    const consumeMaterial = await prisma.material.create({
+      data: {
+        ownerId: ctx.supplierId,
+        supplierProfileId: profile.id,
+        categoryId: ctx.categoryId,
+        locationId: ctx.locationId,
+        title: `${TEST_MARKER} consume mark material`,
+        description: `${TEST_MARKER} consume mark description`,
+        materialType: "Test material",
+        quantity: 1,
+        unit: "piece",
+        condition: "GOOD",
+        sourceType: "WORKSHOP_SURPLUS",
+        status: "AVAILABLE",
+        isFree: true,
+        price: null,
+      },
+      select: { id: true },
+    });
+    ctx.createdMaterialIds.push(consumeMaterial.id);
+
+    try {
+      const pendingSnapshot = await prisma.categoryRequest.findUniqueOrThrow({
+        where: { id: pending.id },
+        select: { updatedAt: true },
+      });
+      const pendingResult =
+        await categoryRequestsRepository.markCategoryRequestPublished({
+          id: pending.id,
+          materialId: consumeMaterial.id,
+          requestedByUserId: ctx.supplierId,
+          expectedUpdatedAt: pendingSnapshot.updatedAt,
+          expectedApprovedCategoryId: ctx.categoryId,
+        });
+      assert.equal(pendingResult.count, 0);
+
+      const approvedSnapshot = await prisma.categoryRequest.findUniqueOrThrow({
+        where: { id: approved.id },
+        select: { updatedAt: true, approvedCategoryId: true },
+      });
+      const wrongCategory =
+        await categoryRequestsRepository.markCategoryRequestPublished({
+          id: approved.id,
+          materialId: consumeMaterial.id,
+          requestedByUserId: ctx.supplierId,
+          expectedUpdatedAt: approvedSnapshot.updatedAt,
+          expectedApprovedCategoryId: "00000000-0000-0000-0000-000000000099",
+        });
+      assert.equal(wrongCategory.count, 0);
+
+      const success = await categoryRequestsRepository.markCategoryRequestPublished(
+        {
+          id: approved.id,
+          materialId: consumeMaterial.id,
+          requestedByUserId: ctx.supplierId,
+          expectedUpdatedAt: approvedSnapshot.updatedAt,
+          expectedApprovedCategoryId: approvedSnapshot.approvedCategoryId!,
+        },
+      );
+      assert.equal(success.count, 1);
+
+      const after = await prisma.categoryRequest.findUniqueOrThrow({
+        where: { id: approved.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(after.publishedMaterialId, consumeMaterial.id);
+    } finally {
+      await prisma.categoryRequest.updateMany({
+        where: { id: { in: [pending.id, approved.id] } },
+        data: { publishedMaterialId: null },
+      });
+      await prisma.categoryRequest.deleteMany({
+        where: { id: { in: [pending.id, approved.id] } },
+      });
+    }
+  });
+
+  test("category request authority mismatch rejects before persistence", async () => {
+    const otherCategory = await prisma.category.findFirst({
+      where: {
+        id: { not: ctx.categoryId },
+        categoryType: { in: ["MATERIAL", "BOTH"] },
+        isActive: true,
+        materialFamilyConceptId: { not: null },
+      },
+      select: { id: true },
+    });
+    assert.ok(otherCategory);
+
+    const categoryRequest = await prisma.categoryRequest.create({
+      data: {
+        requestedName: `${TEST_MARKER} authority mismatch`,
+        normalizedRequestedName: `authority-mismatch-${Date.now()}`,
+        requestedByUserId: ctx.supplierId,
+        status: "APPROVED",
+        approvedCategoryId: otherCategory.id,
+      },
+    });
+
+    const title = `${TEST_MARKER} rp023 category authority mismatch`;
+    try {
+      await assert.rejects(
+        () =>
+          createSupplierMaterial(ctx.supplierId, {
+            materialName: `${TEST_MARKER} authority mismatch material`,
+            title,
+            description: `${title} description`,
+            categoryId: ctx.categoryId,
+            quantity: 1,
+            unit: "piece",
+            condition: "GOOD",
+            isFree: true,
+            price: null,
+            currency: "NIS",
+            pickupAllowed: true,
+            deliveryAllowed: false,
+            imageUrls: ["/uploads/materials/rp023-cat-auth.jpg"],
+            useDefaultPickupLocation: true,
+            sourceCategoryRequestId: categoryRequest.id,
+          }),
+        (error: unknown) => {
+          assert.ok(error instanceof AppError);
+          assert.equal(error.statusCode, 409);
+          assert.equal(error.code, "CONFLICT");
+          assert.equal(
+            (error.details as { reason?: string } | undefined)?.reason,
+            "CATEGORY_REQUEST_AUTHORITY_MISMATCH",
+          );
+          return true;
+        },
+      );
+
+      assert.equal(await prisma.material.count({ where: { title } }), 0);
+      assert.equal(
+        await prisma.materialConcept.count({
+          where: { material: { title } },
+        }),
+        0,
+      );
+      const request = await prisma.categoryRequest.findUnique({
+        where: { id: categoryRequest.id },
+        select: { publishedMaterialId: true },
+      });
+      assert.equal(request?.publishedMaterialId, null);
+    } finally {
+      await prisma.categoryRequest.delete({
+        where: { id: categoryRequest.id },
+      });
+    }
   });
 });
 

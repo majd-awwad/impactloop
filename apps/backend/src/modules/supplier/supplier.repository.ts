@@ -25,43 +25,29 @@ type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 const CONCEPT_WRITE_INTERNAL_MESSAGE =
   "Material concept assignment failed due to an internal error.";
 
-const assertMaterialConceptWriteContract = (input: {
-  isFree: boolean;
-  conceptIds?: string[];
-}): string[] | undefined => {
-  const conceptIds = input.conceptIds;
-
-  if (input.isFree) {
-    if (!conceptIds || conceptIds.length < 1 || conceptIds.length > 2) {
-      throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
-        reason: "FREE_CONCEPT_IDS_CARDINALITY",
-      });
-    }
-    if (
-      conceptIds.some(
-        (conceptId) =>
-          typeof conceptId !== "string" || conceptId.trim().length === 0,
-      )
-    ) {
-      throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
-        reason: "FREE_CONCEPT_IDS_BLANK",
-      });
-    }
-    if (new Set(conceptIds).size !== conceptIds.length) {
-      throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
-        reason: "FREE_CONCEPT_IDS_DUPLICATE",
-      });
-    }
-    return conceptIds;
-  }
-
-  if (conceptIds !== undefined) {
+/** Structural create-assignment contract: 1–2 nonblank unique concept IDs. */
+const assertMaterialConceptWriteContract = (conceptIds?: string[]): string[] => {
+  if (!conceptIds || conceptIds.length < 1 || conceptIds.length > 2) {
     throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
-      reason: "PAID_CONCEPT_IDS_NOT_ALLOWED",
+      reason: "CONCEPT_IDS_CARDINALITY",
     });
   }
-
-  return undefined;
+  if (
+    conceptIds.some(
+      (conceptId) =>
+        typeof conceptId !== "string" || conceptId.trim().length === 0,
+    )
+  ) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_BLANK",
+    });
+  }
+  if (new Set(conceptIds).size !== conceptIds.length) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_DUPLICATE",
+    });
+  }
+  return conceptIds;
 };
 
 const decimalToNumber = (value: { toNumber(): number } | number): number => {
@@ -1158,14 +1144,11 @@ export const createSupplierMaterial = async (input: {
   priceCheckedAt?: Date | null;
   maxAllowedPriceAtCheck?: number | null;
   imageUrls: string[];
-  /** Free create: exactly 1–2 ordered IDs (family, optional form). Paid: omit. */
-  conceptIds?: string[];
+  /** Exactly 1–2 ordered concept IDs (family, optional form). Required for all creates. */
+  conceptIds: string[];
   client?: PrismaClientLike;
 }) => {
-  const conceptIds = assertMaterialConceptWriteContract({
-    isFree: input.isFree,
-    conceptIds: input.conceptIds,
-  });
+  const conceptIds = assertMaterialConceptWriteContract(input.conceptIds);
 
   const createMaterial = async (client: PrismaClientLike) => {
     const material = await client.material.create({
@@ -1219,14 +1202,12 @@ export const createSupplierMaterial = async (input: {
       },
     });
 
-    if (conceptIds && conceptIds.length > 0) {
-      await client.materialConcept.createMany({
-        data: conceptIds.map((conceptId) => ({
-          materialId: material.id,
-          conceptId,
-        })),
-      });
-    }
+    await client.materialConcept.createMany({
+      data: conceptIds.map((conceptId) => ({
+        materialId: material.id,
+        conceptId,
+      })),
+    });
 
     return material;
   };
@@ -1235,11 +1216,7 @@ export const createSupplierMaterial = async (input: {
     return createMaterial(input.client);
   }
 
-  if (input.isFree) {
-    return prisma.$transaction((tx) => createMaterial(tx));
-  }
-
-  return createMaterial(prisma);
+  return prisma.$transaction((tx) => createMaterial(tx));
 };
 
 export type MaterialReservationDemandCounts = MaterialReservationStatusCounts;
