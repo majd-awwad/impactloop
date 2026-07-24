@@ -621,26 +621,24 @@ const fetchCandidateMaterials = async (where: Prisma.MaterialWhereInput) =>
     take: CANDIDATE_POOL_LIMIT,
   });
 
-export const getBuildItemMaterialCandidates = async (input: {
-  projectId: string;
+type RequiredComponentForMatching = {
+  id: string;
+  componentRole: string;
+  categoryId: string | null;
+  componentName: string;
+  materialType: string;
+  searchKeywords: Prisma.JsonValue | null;
+  alternativeKeywords?: Prisma.JsonValue | null;
+};
+
+const listMaterialCandidatesForRequiredComponent = async (input: {
   learnerId: string;
-  itemId: string;
+  component: RequiredComponentForMatching;
 }) => {
-  const buildItem = await learningProjectsRepository.findLearnerBuildItem({
-    projectId: input.projectId,
-    learnerId: input.learnerId,
-    itemId: input.itemId,
-  });
-
-  if (!buildItem) {
-    throw new AppError('Project build item not found', 404, 'NOT_FOUND');
-  }
-
-  const component = buildItem.requiredComponent;
+  const component = input.component;
 
   if (component.componentRole === 'TOOL') {
     return {
-      itemId: buildItem.id,
       componentId: component.id,
       searchTerm: component.componentName.trim(),
       items: [],
@@ -683,7 +681,6 @@ export const getBuildItemMaterialCandidates = async (input: {
   );
 
   return {
-    itemId: buildItem.id,
     componentId: component.id,
     searchTerm,
     items: mapRankedCandidateItems({
@@ -693,6 +690,74 @@ export const getBuildItemMaterialCandidates = async (input: {
       learner,
       ownerCompletedHandoversByOwnerId,
     }),
+  };
+};
+
+export const getRequiredComponentMaterialCandidates = async (input: {
+  projectId: string;
+  learnerId: string;
+  componentId: string;
+}) => {
+  const component = await prisma.projectRequiredComponent.findFirst({
+    where: {
+      id: input.componentId,
+      projectId: input.projectId,
+      project: {
+        status: 'PUBLISHED',
+        category: {
+          isActive: true,
+          categoryType: {
+            in: ['PROJECT', 'BOTH'],
+          },
+        },
+      },
+    },
+    select: {
+      id: true,
+      componentRole: true,
+      categoryId: true,
+      componentName: true,
+      materialType: true,
+      searchKeywords: true,
+      alternativeKeywords: true,
+    },
+  });
+
+  if (!component) {
+    throw new AppError('Required component not found', 404, 'NOT_FOUND');
+  }
+
+  return listMaterialCandidatesForRequiredComponent({
+    learnerId: input.learnerId,
+    component,
+  });
+};
+
+export const getBuildItemMaterialCandidates = async (input: {
+  projectId: string;
+  learnerId: string;
+  itemId: string;
+}) => {
+  const buildItem = await learningProjectsRepository.findLearnerBuildItem({
+    projectId: input.projectId,
+    learnerId: input.learnerId,
+    itemId: input.itemId,
+  });
+
+  if (!buildItem) {
+    throw new AppError('Project build item not found', 404, 'NOT_FOUND');
+  }
+
+  const matched = await listMaterialCandidatesForRequiredComponent({
+    learnerId: input.learnerId,
+    component: buildItem.requiredComponent,
+  });
+
+  return {
+    itemId: buildItem.id,
+    componentId: matched.componentId,
+    searchTerm: matched.searchTerm,
+    items: matched.items,
   };
 };
 

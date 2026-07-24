@@ -120,7 +120,7 @@ export const aiComponentMatchesBlockSchema = z.object({
       z.object({
         componentId: z.string().trim().min(1),
         componentName: z.string().trim().min(1),
-        materials: z.array(aiMaterialCardSchema).min(1).max(5),
+        materials: z.array(aiMaterialCardSchema).max(5),
       }),
     )
     .min(1)

@@ -10,6 +10,7 @@ import {
   detectMaterialSearchIntent,
   detectOwnedMaterialsProjectIntent,
   detectProjectComponentsIntent,
+  detectProjectMaterialAvailabilityIntent,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
 import { stripBenignListPrefixForParsing } from './ai-agent-number-parser.service.js';
@@ -239,6 +240,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
     };
   }
 
+  if (detectProjectMaterialAvailabilityIntent(text)) {
+    return {
+      route: 'PROJECT_MATERIAL_AVAILABILITY',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'match_available_materials_for_project',
+    };
+  }
+
   if (detectProjectComponentsIntent(text)) {
     return {
       route: 'PROJECT_COMPONENTS',
@@ -304,6 +314,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
 };
 
 const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
+  if (detectProjectMaterialAvailabilityIntent(text)) {
+    return {
+      route: 'PROJECT_MATERIAL_AVAILABILITY',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'match_available_materials_for_project',
+    };
+  }
+
   const normalized = normalize(text);
 
   for (const candidate of PLATFORM_ROUTE_PATTERNS) {

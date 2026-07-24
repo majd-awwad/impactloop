@@ -960,10 +960,19 @@ class _AiComponentMatchesBlock extends StatelessWidget {
               style: AppTextStyles.label(context).copyWith(fontSize: 13),
             ),
             const SizedBox(height: AppSpacing.xs),
-            for (var j = 0; j < groups[i].materials.length; j++) ...[
-              if (j > 0) const SizedBox(height: AppSpacing.xs),
-              _AiMaterialCompactCard(item: groups[i].materials[j]),
-            ],
+            if (groups[i].materials.isEmpty)
+              Text(
+                AiL10n.componentMatchesNoListing.resolve(context),
+                style: AppTextStyles.body(context).copyWith(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              for (var j = 0; j < groups[i].materials.length; j++) ...[
+                if (j > 0) const SizedBox(height: AppSpacing.xs),
+                _AiMaterialCompactCard(item: groups[i].materials[j]),
+              ],
           ],
         ],
       ),

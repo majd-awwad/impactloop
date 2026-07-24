@@ -2091,4 +2091,461 @@ describe('ai agent http closure', () => {
 
     await assertTurnBasics(conversationId, messageClientId);
   });
+
+  test('project material availability resolves published project without creating build', async () => {
+    const ultrasonicMaterial = await createMaterial({
+      locationId: (
+        await prisma.location.findFirst({
+          where: { city: { contains: `${TEST_MARKER}-Nablus` } },
+        })
+      )!.id,
+      title: `${SEED_TOKEN} HC-SR04 Ultrasonic Sensor`,
+    });
+    const motorMaterial = await createMaterial({
+      locationId: (
+        await prisma.location.findFirst({
+          where: { city: { contains: `${TEST_MARKER}-Nablus` } },
+        })
+      )!.id,
+      title: `${SEED_TOKEN} DC Motor Gearbox`,
+    });
+    ids.availableMaterialIds.add(ultrasonicMaterial.id);
+    ids.availableMaterialIds.add(motorMaterial.id);
+
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const buildsBefore = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    const reservationsBefore = await prisma.reservation.count({
+      where: { requesterId: ids.learnerBId },
+    });
+    const pendingBefore = await prisma.aiPendingAction.count({
+      where: { conversation: { userId: ids.learnerBId } },
+    });
+
+    const messageClientId = clientId('proj-mat-avail-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي أعمل Obstacle Avoidance Robot، شو المواد المتوفرة؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const projectItems = results.items as Array<{ projectId: string; title: string }>;
+    assert.ok(
+      projectItems.some((item) => item.projectId === ids.obstacleProjectId),
+    );
+
+    const matches = blocks.find((block) => block.type === 'component_matches');
+    assert.ok(matches, 'expected component_matches block');
+    const groups = matches.groups as Array<{
+      componentName: string;
+      materials: Array<{ materialId: string }>;
+    }>;
+    assert.ok(groups.length >= 2);
+    assert.ok(
+      groups.some(
+        (group) =>
+          group.componentName === 'Ultrasonic Sensor' &&
+          group.materials.some((material) => material.materialId === ultrasonicMaterial.id),
+      ),
+    );
+    assert.ok(
+      groups.some(
+        (group) =>
+          group.componentName === 'DC Motor' &&
+          group.materials.some((material) => material.materialId === motorMaterial.id),
+      ),
+    );
+
+    const buildsAfter = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    const reservationsAfter = await prisma.reservation.count({
+      where: { requesterId: ids.learnerBId },
+    });
+    const pendingAfter = await prisma.aiPendingAction.count({
+      where: { conversation: { userId: ids.learnerBId } },
+    });
+    assert.equal(buildsAfter, buildsBefore);
+    assert.equal(reservationsAfter, reservationsBefore);
+    assert.equal(pendingAfter, pendingBefore);
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('project material availability returns ambiguity choices for robot car query', async () => {
+    const robotCarA = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: 'Robot Car Explorer',
+        shortDescription: `${TEST_MARKER} robot car a`,
+        description: `${TEST_MARKER} robot car a`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['arduino'],
+            },
+          ],
+        },
+      },
+    });
+    const robotCarB = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: 'Robot Car Racer',
+        shortDescription: `${TEST_MARKER} robot car b`,
+        description: `${TEST_MARKER} robot car b`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['arduino'],
+            },
+          ],
+        },
+      },
+    });
+    ids.projects.push(robotCarA.id, robotCarB.id);
+
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('proj-mat-ambig-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي أعمل Robot Car، شو المواد المتوفرة؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{ projectId: string; title: string }>;
+    assert.ok(items.length >= 2);
+    assert.ok(items.some((item) => item.title.includes('Robot Car')));
+    assert.equal(
+      blocks.some((block) => block.type === 'component_matches'),
+      false,
+    );
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('project material availability uses recent project context on follow-up', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const firstClientId = clientId('proj-mat-ctx-001');
+    const first = await sendAgentMessage(
+      token,
+      conversationId,
+      'شو مكونات مشروع Obstacle Avoidance Robot؟',
+      firstClientId,
+    );
+    assert.equal(first.response.status, 201);
+    const firstBlocks = parseBlocks(first.json);
+    assert.ok(
+      firstBlocks.some(
+        (block) => block.type === 'component_list' || block.type === 'project_results',
+      ),
+      'expected grounded project context from first turn',
+    );
+
+    const buildsBefore = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    const followClientId = clientId('proj-mat-ctx-002');
+    const followUp = await sendAgentMessage(
+      token,
+      conversationId,
+      'طيب شو المواد المتوفرة إله؟',
+      followClientId,
+    );
+    assert.equal(followUp.response.status, 201);
+
+    const blocks = parseBlocks(followUp.json);
+    assert.ok(blocks.some((block) => block.type === 'component_matches'));
+    const buildsAfter = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    assert.equal(buildsAfter, buildsBefore);
+
+    await assertTurnBasics(conversationId, followClientId);
+  });
+
+  test('explicit mixed-language project search resolves one real project', async () => {
+    let ledDice = await prisma.learningProject.findFirst({
+      where: {
+        title: 'Electronic LED Dice',
+        status: 'PUBLISHED',
+        hiddenAt: null,
+        archivedAt: null,
+      },
+    });
+    if (!ledDice) {
+      ledDice = await prisma.learningProject.create({
+        data: {
+          categoryId: ids.projectCategoryId,
+          createdBy: ids.learnerAId,
+          title: 'Electronic LED Dice',
+          shortDescription: `${TEST_MARKER} led dice`,
+          description: `${TEST_MARKER} led dice project`,
+          difficulty: 'BEGINNER',
+          status: 'PUBLISHED',
+          requiredComponents: {
+            create: [
+              {
+                componentName: 'Arduino Uno',
+                materialType: 'Microcontroller',
+                quantity: 1,
+                unit: 'piece',
+                componentRole: 'REQUIRED_MATERIAL',
+                categoryId: ids.materialCategoryId,
+                searchKeywords: ['arduino'],
+              },
+            ],
+          },
+        },
+      });
+      ids.projects.push(ledDice.id);
+    }
+
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const messageClientId = clientId('proj-search-led-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضلي مشروع Electronic LED Dice',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{ projectId: string; title: string }>;
+    assert.equal(items.length, 1);
+    assert.equal(items[0]?.title, 'Electronic LED Dice');
+    assert.equal(items[0]?.projectId, ledDice.id);
+
+    const buildsBefore = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    const followClientId = clientId('proj-search-led-002');
+    const followUp = await sendAgentMessage(
+      token,
+      conversationId,
+      'طيب شو المواد المتوفرة إله؟',
+      followClientId,
+    );
+    assert.equal(followUp.response.status, 201);
+    const followBlocks = parseBlocks(followUp.json);
+    assert.ok(followBlocks.some((block) => block.type === 'component_matches'));
+    const buildsAfter = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    assert.equal(buildsAfter, buildsBefore);
+
+    await assertTurnBasics(conversationId, followClientId);
+  });
+
+  test('robot car token fallback returns grounded robotics project choices', async () => {
+    await prisma.learningProject.deleteMany({
+      where: {
+        title: {
+          in: ['Robot Car Explorer', 'Robot Car Racer'],
+        },
+      },
+    });
+
+    const lineFollower = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: 'Line Follower Robot',
+        shortDescription: `${TEST_MARKER} line follower robot`,
+        description: `${TEST_MARKER} line follower robot`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        tags: { create: [{ tag: 'robotics' }, { tag: 'robot' }] },
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['arduino'],
+            },
+          ],
+        },
+      },
+    });
+    ids.projects.push(lineFollower.id);
+
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي أعمل Robot Car، شو المواد المتوفرة؟',
+      clientId('proj-robot-token-fallback-001'),
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{ projectId: string; title: string }>;
+    assert.ok(items.length >= 2);
+    assert.ok(items.some((item) => item.projectId === ids.obstacleProjectId));
+    assert.ok(
+      items.some(
+        (item) =>
+          item.projectId === lineFollower.id || item.title === 'Line Follower Robot',
+      ),
+    );
+    assert.equal(
+      blocks.some((block) => block.type === 'component_matches'),
+      false,
+    );
+    const clarification = blocks.find(
+      (block) =>
+        block.type === 'text' &&
+        (block.purpose === 'clarification' ||
+          String(block.text ?? '').includes('Robot Car')),
+    );
+    assert.match(String(clarification?.text ?? ''), /Robot Car/i);
+  });
+
+  test('ordinal selects first robot car choice for material availability', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const first = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي أعمل Robot Car، شو المواد المتوفرة؟',
+      clientId('proj-robot-ordinal-001'),
+    );
+    assert.equal(first.response.status, 201);
+    const firstBlocks = parseBlocks(first.json);
+    const firstResults = projectResultsBlock(firstBlocks);
+    const firstItems = firstResults.items as Array<{ projectId: string; title: string }>;
+    assert.ok(firstItems.length >= 2);
+
+    const buildsBefore = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    const followUp = await sendAgentMessage(
+      token,
+      conversationId,
+      'الأول',
+      clientId('proj-robot-ordinal-002'),
+    );
+    assert.equal(followUp.response.status, 201);
+
+    const followBlocks = parseBlocks(followUp.json);
+    assert.ok(followBlocks.some((block) => block.type === 'component_matches'));
+    assert.equal(
+      followBlocks.some((block) => block.type === 'project_results'),
+      true,
+    );
+    const buildsAfter = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    assert.equal(buildsAfter, buildsBefore);
+  });
+
+  test('ambiguous robot car project query returns bounded choices', async () => {
+    const robotCarA = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: 'Robot Car Explorer',
+        shortDescription: `${TEST_MARKER} robot car a`,
+        description: `${TEST_MARKER} robot car a`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['arduino'],
+            },
+          ],
+        },
+      },
+    });
+    const robotCarB = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: 'Robot Car Racer',
+        shortDescription: `${TEST_MARKER} robot car b`,
+        description: `${TEST_MARKER} robot car b`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino Uno',
+              materialType: 'Microcontroller',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.materialCategoryId,
+              searchKeywords: ['arduino'],
+            },
+          ],
+        },
+      },
+    });
+    ids.projects.push(robotCarA.id, robotCarB.id);
+
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي أعمل Robot Car، شو المواد المتوفرة؟',
+      clientId('proj-robot-car-audit-001'),
+    );
+    assert.equal(sent.response.status, 201);
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{ title: string }>;
+    assert.ok(items.length >= 2);
+    assert.ok(items.some((item) => item.title.includes('Robot Car')));
+    assert.equal(
+      blocks.some((block) => block.type === 'component_matches'),
+      false,
+    );
+  });
 });

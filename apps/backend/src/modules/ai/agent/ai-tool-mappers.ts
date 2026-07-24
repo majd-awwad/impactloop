@@ -395,6 +395,21 @@ export const buildComponentMatchesIntro = (
     : `I found matching materials for missing components: ${joined}.`;
 };
 
+export const buildProjectMaterialAvailabilityIntro = (
+  locale: AiLocale,
+  projectTitle?: string,
+): string => {
+  if (projectTitle) {
+    return locale === 'ar'
+      ? `المواد المتوفرة حالياً على ImpactLoop لمشروع ${projectTitle}:`
+      : `Currently available ImpactLoop materials for ${projectTitle}:`;
+  }
+
+  return locale === 'ar'
+    ? 'المواد المتوفرة حالياً على ImpactLoop لمكونات هذا المشروع:'
+    : 'Currently available ImpactLoop materials for this project:';
+};
+
 export const mergeAgentBlocks = (
   text: string,
   blocks: AiContentBlock[],

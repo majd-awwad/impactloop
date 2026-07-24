@@ -62,7 +62,11 @@ import {
   type AiToolExecutionContext,
 } from './ai-agent.types.js';
 import { AiToolExecutor } from './ai-tool-executor.service.js';
-import { mergeAgentBlocks, buildComponentMatchesIntro } from './ai-tool-mappers.js';
+import {
+  mergeAgentBlocks,
+  buildComponentMatchesIntro,
+  buildProjectMaterialAvailabilityIntro,
+} from './ai-tool-mappers.js';
 import {
   buildExternalSourcesBlock,
   searchExternalDomainKnowledge,
@@ -2131,6 +2135,26 @@ const buildGracefulToolFailureResult = (input: {
       };
     }
 
+    if (input.route === 'PROJECT_MATERIAL_AVAILABILITY') {
+      return {
+        blocks: [
+          textBlock(
+            input.responseLocale === 'ar'
+              ? 'لم أجد مشروعاً منشوراً على ImpactLoop يطابق الاسم الذي ذكرته.'
+              : 'I could not find a published ImpactLoop project matching the name you provided.',
+            'answer',
+          ),
+        ],
+        usedProvider: false,
+        providerName: 'system',
+        model: null,
+        latencyMs: null,
+        inputTokens: null,
+        outputTokens: null,
+        route: input.route,
+      };
+    }
+
     return {
       blocks: [
         textBlock(buildNoResultsIntro(input.responseLocale), 'answer'),
@@ -2491,6 +2515,29 @@ const resolveToolInput = async (input: {
     throw new AppError('No active project build found.', 404, 'BUILD_NOT_FOUND');
   }
 
+  if (input.route === 'PROJECT_MATERIAL_AVAILABILITY') {
+    const projectMatch = await resolveProjectFromMessage({
+      conversationId: input.conversationId,
+      userMessage: input.userMessage,
+      explicitQuery: extractProjectTitleQuery(input.userMessage),
+    });
+
+    if (projectMatch) {
+      return { projectId: projectMatch.entity.id, limitPerComponent: 3 };
+    }
+
+    const projectQuery = extractProjectTitleQuery(input.userMessage);
+    if (projectQuery) {
+      return { projectQuery, limitPerComponent: 3 };
+    }
+
+    throw new AppError(
+      'Tell me which learning project you mean.',
+      400,
+      'AI_ROUTE_UNCLEAR',
+    );
+  }
+
   if (input.route === 'PROJECT_COMPONENTS') {
     const parsed = parseProjectComponentsInput(input.userMessage);
     const projectMatch = await resolveProjectFromMessage({
@@ -2802,7 +2849,8 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       executionPlan.toolInput.componentId != null;
     const mustResolveToolInput =
       routeDecision.route === 'COMPONENT_MATERIAL_MATCHING' ||
-      routeDecision.route === 'PROJECT_MATERIAL_MATCHING';
+      routeDecision.route === 'PROJECT_MATERIAL_MATCHING' ||
+      routeDecision.route === 'PROJECT_MATERIAL_AVAILABILITY';
 
     toolInput =
       !mustResolveToolInput &&
@@ -2921,6 +2969,18 @@ export const executeLearnerAgentPlatformTurn = async (input: {
             : undefined,
         ),
       ),
+    ];
+  } else if (
+    routeDecision.route === 'PROJECT_MATERIAL_AVAILABILITY' &&
+    trustedBlocks.some((block) => block.type === 'component_matches')
+  ) {
+    const projectBlock = trustedBlocks.find((block) => block.type === 'project_results');
+    const title =
+      projectBlock?.type === 'project_results'
+        ? projectBlock.items[0]?.title
+        : undefined;
+    explanationBlocks = [
+      textBlock(buildProjectMaterialAvailabilityIntro(responseLocale, title)),
     ];
   } else if (
     trustedBlocks.length > 0 &&

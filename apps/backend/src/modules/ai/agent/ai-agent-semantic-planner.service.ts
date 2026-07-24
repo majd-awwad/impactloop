@@ -17,6 +17,7 @@ import {
   normalizeMaterialItemQuery,
   parseOwnedMaterialsProjectInput,
   resolveOwnedMaterialsFromConversation,
+  extractProjectTitleQuery,
 } from './ai-agent-filter-extractor.service.js';
 import {
   summarizePlannerContextForPrompt,
@@ -30,6 +31,7 @@ const PLANNER_ROUTES = [
   'PROJECT_SEARCH',
   'PROJECT_DETAILS',
   'PROJECT_COMPONENTS',
+  'PROJECT_MATERIAL_AVAILABILITY',
   'OWNED_MATERIALS_PROJECT_MATCH',
   'SAVED_PROJECTS',
   'ACTIVE_PROJECT_BUILDS',
@@ -136,6 +138,8 @@ const buildPlannerPrompt = (input: {
     '- "Obstacle Robot شو مكونات مشروع ال" with recent project "Obstacle Avoidance Robot" -> PROJECT_COMPONENTS, entity mention Obstacle Robot, referenceType RECENT_RESULT',
     '- "لقيت Arduino وشوية أسلاك، في إشي بالمشاريع الموجودة بقدر أعمله؟" -> OWNED_MATERIALS_PROJECT_MATCH, tool match_projects_by_owned_materials, materials ["Arduino","wires"]',
     '- "I have leftover LEDs, resistors and wires. Could I reuse them here?" -> OWNED_MATERIALS_PROJECT_MATCH, tool match_projects_by_owned_materials, materials ["LEDs","resistors","wires"]',
+    '- "بدي أعمل Obstacle Avoidance Robot، شو المواد المتوفرة؟" -> PROJECT_MATERIAL_AVAILABILITY, tool match_available_materials_for_project, projectQuery "Obstacle Avoidance Robot"',
+    '- "What available materials can help me build the Line Follower Robot?" -> PROJECT_MATERIAL_AVAILABILITY, tool match_available_materials_for_project, projectQuery "Line Follower Robot"',
     '- "اشرحلي كيف Arduino بشتغل" -> GENERAL_LEARNING',
     'Do not copy the full user sentence into query.',
     'Use trustedEntities IDs only when referenceType is RECENT_RESULT/RESULT_INDEX and the entity is clearly identified.',
@@ -164,6 +168,7 @@ const buildPlannerPrompt = (input: {
     '- find_materials_for_component',
     '- get_personalized_recommendations',
     '- match_projects_by_owned_materials: use when the learner mentions materials/components they have or found and wants to know what they can build, make, reuse, or which published ImpactLoop Learning Hub projects fit those materials. Accept indirect/conversational wording, dialect, and follow-ups where materials appear in recent messages. Extract only material/component names from the current message and bounded recent context; never invent materials, projects, ownership records, reservations, or readiness scores. toolCall.arguments shape: { materials: string[], category?: string, difficulty?: "BEGINNER"|"INTERMEDIATE"|"ADVANCED", limit?: number }.',
+    '- match_available_materials_for_project: use when the learner names or refers to a published Learning Hub project and wants to know which currently available ImpactLoop material listings match its required components, without starting a build. Never invent a project ID. toolCall.arguments shape: { projectQuery?: string, limitPerComponent?: number }.',
     'For bare possession statements without a clear build/project intent (for example only "I have Arduino and wires"), set route CLARIFICATION with clarificationNeeded true and ask whether to show ImpactLoop projects that use those materials.',
     'Never include userId, coordinates, conversationId, or arbitrary database IDs in filters.',
     `Locale: ${input.locale}`,
@@ -478,5 +483,37 @@ export const ownedMaterialsPlanFromPlanner = (
       (toolArgs.limit as number | undefined) ??
       deterministic.limit ??
       10,
+  });
+};
+
+export const projectMaterialAvailabilityPlanFromPlanner = (
+  userMessage: string,
+  planner: AgentPlannerOutput,
+): Record<string, unknown> | null => {
+  if (
+    planner.route !== 'PROJECT_MATERIAL_AVAILABILITY' &&
+    planner.toolCall?.name !== 'match_available_materials_for_project'
+  ) {
+    return null;
+  }
+
+  const toolArgs =
+    planner.toolCall?.name === 'match_available_materials_for_project'
+      ? planner.toolCall.arguments
+      : {};
+  const projectQuery =
+    (typeof toolArgs.projectQuery === 'string' ? toolArgs.projectQuery.trim() : '') ||
+    extractProjectTitleQuery(userMessage);
+
+  if (!projectQuery) {
+    return null;
+  }
+
+  return sanitizePlannerArguments('match_available_materials_for_project', {
+    projectQuery: projectQuery.slice(0, 120),
+    limitPerComponent:
+      typeof toolArgs.limitPerComponent === 'number'
+        ? toolArgs.limitPerComponent
+        : 3,
   });
 };

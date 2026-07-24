@@ -20,6 +20,7 @@ import {
   detectOwnedMaterialsProjectIntent,
   detectOwnedMaterialsSemanticParaphrase,
   detectProjectComponentsIntent,
+  detectProjectMaterialAvailabilityIntent,
   extractProjectTitleQuery,
   hasRecentOwnedMaterialsProjectContext,
   isAffirmativeOwnedMaterialsContinuation,
@@ -29,6 +30,7 @@ import {
   parseOwnedMaterialsProjectInput,
   resolveOwnedMaterialsFromConversation,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
+  shouldDeferMaterialSearchForProjectMaterialAvailability,
 } from './ai-agent-filter-extractor.service.js';
 import { buildToolInputForRoute, parseRecommendationInput } from './ai-agent-input-parser.service.js';
 import {
@@ -38,6 +40,7 @@ import {
 import {
   materialSearchPlanFromPlanner,
   ownedMaterialsPlanFromPlanner,
+  projectMaterialAvailabilityPlanFromPlanner,
   planLearnerAgentTurn,
   type AgentPlannerOutput,
 } from './ai-agent-semantic-planner.service.js';
@@ -264,6 +267,10 @@ const isHighConfidenceDeterministicPlatformPlan = (input: {
       shouldDeferMaterialSearchForOwnedMaterialsProjectUse(input.userMessage) &&
       !isExplicitMaterialSearchCommand(input.userMessage)
     ) {
+      return false;
+    }
+
+    if (shouldDeferMaterialSearchForProjectMaterialAvailability(input.userMessage)) {
       return false;
     }
 
@@ -669,6 +676,10 @@ const applyPlannerPlan = (input: {
         input.planner,
         input.conversationContext,
       ) ?? buildToolInputForRoute(route, input.userMessage);
+  } else if (route === 'PROJECT_MATERIAL_AVAILABILITY') {
+    toolInput =
+      projectMaterialAvailabilityPlanFromPlanner(input.userMessage, input.planner) ??
+      buildToolInputForRoute(route, input.userMessage);
   } else if (input.planner.toolCall) {
     route = input.planner.route as AiAgentRouteType;
     toolInput = { ...input.planner.toolCall.arguments };
@@ -859,6 +870,28 @@ const reconcilePlannerWithPlatformIntent = (input: {
   }
 
   if (
+    detectProjectMaterialAvailabilityIntent(input.userMessage) &&
+    (input.plan.route === 'GENERAL_LEARNING' ||
+      input.plan.route === 'CLARIFICATION' ||
+      input.plan.route === 'MATERIAL_SEARCH')
+  ) {
+    const fallback = buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        ...input.routeDecision,
+        route: 'PROJECT_MATERIAL_AVAILABILITY',
+        suggestedTool: 'match_available_materials_for_project',
+        confidence: 0.94,
+      },
+      locale: input.locale,
+      conversationContext: input.conversationContext,
+    });
+    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
+    return fallback;
+  }
+
+  if (
     input.plan.route !== 'GENERAL_LEARNING' &&
     input.plan.route !== 'CLARIFICATION'
   ) {
@@ -948,6 +981,23 @@ const reconcilePlannerWithPlatformIntent = (input: {
         ...input.routeDecision,
         route: 'PROJECT_COMPONENTS',
         suggestedTool: 'get_project_required_components',
+        confidence: 0.94,
+      },
+      locale: input.locale,
+      conversationContext: input.conversationContext,
+    });
+    fallback.diagnostics.semanticPlannerUsed = input.plan.diagnostics.semanticPlannerUsed;
+    fallback.diagnostics.semanticRoute = input.plan.diagnostics.semanticRoute;
+    return fallback;
+  }
+
+  if (detectProjectMaterialAvailabilityIntent(input.userMessage)) {
+    const fallback = buildDeterministicFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        ...input.routeDecision,
+        route: 'PROJECT_MATERIAL_AVAILABILITY',
+        suggestedTool: 'match_available_materials_for_project',
         confidence: 0.94,
       },
       locale: input.locale,

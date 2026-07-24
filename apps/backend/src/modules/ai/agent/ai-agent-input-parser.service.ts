@@ -29,9 +29,15 @@ export const parseProjectSearchInput = (
 ): z.infer<typeof searchLearningProjectsInputSchema> => {
   const normalized = userMessage.toLowerCase();
   const requestedCount = extractRequestedResultCount(userMessage);
+  const explicitTitle = extractProjectTitleQuery(userMessage);
   const input: z.infer<typeof searchLearningProjectsInputSchema> = {
-    limit: requestedCount ?? 10,
+    limit: requestedCount ?? (explicitTitle ? 5 : 10),
   };
+
+  if (explicitTitle) {
+    input.query = explicitTitle;
+    return input;
+  }
 
   if (includesAny(normalized, ['beginner', 'مبتدئ', 'مبتدئين'])) {
     input.difficulty = 'BEGINNER';
@@ -91,6 +97,12 @@ export const buildToolInputForRoute = (
       return parseRecommendationInput(userMessage);
     case 'OWNED_MATERIALS_PROJECT_MATCH':
       return parseOwnedMaterialsProjectInput(userMessage);
+    case 'PROJECT_MATERIAL_AVAILABILITY': {
+      const projectQuery = extractProjectTitleQuery(userMessage);
+      return projectQuery
+        ? { projectQuery, limitPerComponent: 3 }
+        : {};
+    }
     case 'SAVED_PROJECTS':
     case 'ACTIVE_PROJECT_BUILDS':
       return {};

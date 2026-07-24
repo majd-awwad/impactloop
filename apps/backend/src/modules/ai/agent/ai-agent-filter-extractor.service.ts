@@ -574,6 +574,16 @@ export const detectMaterialSearchIntent = (userMessage: string): {
     return { detected: false, confidence: 0.1 };
   }
 
+  if (
+    /(مواد|materials?).*(متوفرة|متاحة|available|موجود)/i.test(userMessage) &&
+    (/(مشروع|project)/i.test(userMessage) ||
+      /(?:بدي|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(userMessage) ||
+      /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(userMessage) ||
+      /(هاد المشروع|هذا المشروع|this project|إله|له)/i.test(userMessage))
+  ) {
+    return { detected: false, confidence: 0.12 };
+  }
+
   const normalized = normalize(userMessage);
   const hasMaterialNoun = includesAny(normalized, MATERIAL_NOUNS);
   const hasSearchVerb = includesAny(normalized, SEARCH_VERBS);
@@ -630,6 +640,19 @@ export const detectMaterialSearchIntent = (userMessage: string): {
 export const isExplicitMaterialSearchCommand = (userMessage: string): boolean => {
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const normalized = normalize(parsedMessage);
+
+  if (
+    (/(مواد|materials?).*(متوفرة|متاحة|available|موجود)/i.test(normalized) ||
+      (/\b(available|currently available)\b/i.test(normalized) &&
+        /\b(materials?|listings?)\b/i.test(normalized))) &&
+    (/(مشروع|project)/i.test(normalized) ||
+      /(?:بدي|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(parsedMessage) ||
+      /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(parsedMessage) ||
+      /(إله|له|this project|the project)/i.test(parsedMessage) ||
+      /\bhelp\s+me\s+(?:build|make)\b/i.test(parsedMessage))
+  ) {
+    return false;
+  }
 
   if (
     /(?:اعرض|ورجيني|وريني|ورّيني|طلعلي|هاتلي|دور(?:لي)?\s+على|show\s+me|find|search\s+for|list|browse)\s+.*(?:مواد|مادة|materials?)/iu.test(
@@ -818,6 +841,78 @@ export const detectComponentMaterialMatchingIntent = (
   );
 };
 
+const hasContextualProjectMaterialReference = (userMessage: string): boolean =>
+  /(هاد المشروع|هذا المشروع|هالمشروع|the project|this project|إله|له|له؟)/i.test(
+    userMessage,
+  );
+
+export const detectProjectMaterialAvailabilityIntent = (
+  userMessage: string,
+): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+  if (detectOwnedMaterialsProjectIntent(userMessage)) {
+    return false;
+  }
+  if (detectBuildGapIntent(userMessage)) {
+    return false;
+  }
+  if (detectComponentMaterialMatchingIntent(userMessage)) {
+    return false;
+  }
+  if (
+    isExplicitMaterialSearchCommand(userMessage) &&
+    !hasContextualProjectMaterialReference(userMessage)
+  ) {
+    return false;
+  }
+  if (/(احجز|reserve|book)\b/i.test(userMessage)) {
+    return false;
+  }
+
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalize(parsedMessage);
+
+  if (
+    /(مشروعي|my project|my build|بنيت|build checklist|قائمة البناء)/i.test(
+      normalized,
+    ) &&
+    /(ناقص|missing|checklist|قائمة)/i.test(normalized)
+  ) {
+    return false;
+  }
+
+  const isSelectionFollowUp =
+    detectProjectMaterialAvailabilitySelectionFollowUp(userMessage);
+
+  const asksAvailableMaterials =
+    /(مواد|materials?|listings?|مكونات).*(متوفرة|متاحة|available|موجود)/i.test(
+      normalized,
+    ) ||
+    /(شو|what).*(موجود|available|can i get|can get|بلاقي|find).*(مواد|materials?|listings?|مكونات|platform|منصة|impactloop)/i.test(
+      normalized,
+    ) ||
+    (/(بالمنصة|on impactloop|on the platform|here|عندكم)/i.test(normalized) &&
+      /(مواد|materials?|listings?|مكونات)/i.test(normalized)) ||
+    isSelectionFollowUp;
+
+  const asksForProject =
+    /(مشروع|project)/i.test(normalized) ||
+    extractProjectTitleQuery(userMessage) != null ||
+    hasContextualProjectMaterialReference(userMessage) ||
+    /(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(parsedMessage) ||
+    /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(parsedMessage) ||
+    /\bhelp\s+me\s+(?:build|make)\b/i.test(parsedMessage) ||
+    isSelectionFollowUp;
+
+  return asksAvailableMaterials && asksForProject;
+};
+
+export const shouldDeferMaterialSearchForProjectMaterialAvailability = (
+  userMessage: string,
+): boolean => detectProjectMaterialAvailabilityIntent(userMessage);
+
 const GENERIC_COMPONENT_DESCRIPTOR_TITLES = new Set([
   'الناقصة',
   'الناقص',
@@ -829,6 +924,81 @@ const GENERIC_COMPONENT_DESCRIPTOR_TITLES = new Set([
   'the missing',
   'the required',
 ]);
+
+const PROJECT_QUERY_STOPWORDS = new Set(
+  [
+    'project',
+    'projects',
+    'build',
+    'make',
+    'available',
+    'materials',
+    'material',
+    'the',
+    'a',
+    'an',
+    'for',
+    'مشروع',
+    'مشاريع',
+    'أعمل',
+    'اعمل',
+    'المواد',
+    'المتوفرة',
+    'متوفرة',
+    'متاحة',
+    'بدي',
+    'شو',
+    'ما',
+    'لمشروع',
+    'something',
+    'anything',
+    'available',
+    'nice',
+    'حلو',
+    'حلوة',
+    'beautiful',
+    'cool',
+  ].map((term) => term.toLowerCase()),
+);
+
+export const normalizeProjectQueryText = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+export const tokenizeProjectQuery = (query: string): string[] => {
+  const normalized = normalizeProjectQueryText(query);
+  if (!normalized) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      normalized
+        .split(' ')
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2 && !PROJECT_QUERY_STOPWORDS.has(token)),
+    ),
+  ];
+};
+
+export const isGenericProjectBrowseQuery = (query: string): boolean => {
+  const tokens = tokenizeProjectQuery(query);
+  return tokens.length === 0;
+};
+
+export const detectProjectMaterialAvailabilitySelectionFollowUp = (
+  userMessage: string,
+): boolean => {
+  const trimmed = stripBenignListPrefixForParsing(userMessage).trim();
+  return /^(?:الأول|الاول|اول|أول|first|second|ثاني|الثاني|third|ثالث|الثالث|fourth|رابع)$/iu.test(
+    trimmed,
+  );
+};
 
 const isGenericComponentDescriptorTitle = (candidate: string): boolean => {
   const normalized = candidate
@@ -860,6 +1030,9 @@ export const extractProjectTitleQuery = (userMessage: string): string | undefine
   }
 
   const patterns = [
+    /(?:اعرض|افتح|ورجيني|ورّيني|وريني|اطلعلي|هاتلي|بدي\s+أشوف|بدي\s+اشوف)\s+(?:لي\s+)?(?:مشروع|project)\s+(.+?)(?:\?|$)/iu,
+    /(?:show\s+me|open)\s+(?:the\s+)?(?:مشروع|project)\s+(.+?)(?:\?|$)/i,
+    /(?:بدي|بدك|biddi|want to|i want to)\s+(?:أعمل|اعمل|build|make)\s+(.+?)(?:[،,]|$|\?|شو|what|ما)/i,
     /^(.+?)\s*:\s*(?:لاقي|لاقيلي|find|match)/i,
     /^(.+?)\s+(?:شو|ما|أي|اي)\s+(?:لازم|محتاج|بده|بتحتاج|قطع|مكونات)/i,
     /^(.+?)[؟?]\s*(?:أي|اي|what|which)/i,

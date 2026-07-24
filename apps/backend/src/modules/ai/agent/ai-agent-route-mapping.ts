@@ -21,6 +21,7 @@ export const routeToToolName = (
     BUILD_GAP_ANALYSIS: 'analyze_build_gaps',
     COMPONENT_MATERIAL_MATCHING: 'find_materials_for_component',
     PROJECT_MATERIAL_MATCHING: 'find_materials_for_project',
+    PROJECT_MATERIAL_AVAILABILITY: 'match_available_materials_for_project',
     OWNED_MATERIALS_PROJECT_MATCH: 'match_projects_by_owned_materials',
     MATERIAL_COMPARISON: 'compare_materials',
     PROJECT_COMPARISON: 'compare_projects',

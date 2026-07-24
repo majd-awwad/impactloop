@@ -6,17 +6,25 @@ import {
   detectMaterialSearchIntent,
   detectOwnedMaterialsProjectIntent,
   detectProjectComponentsIntent,
+  detectProjectMaterialAvailabilityIntent,
+  detectProjectMaterialAvailabilitySelectionFollowUp,
   extractMaterialSearchFilters,
+  extractProjectTitleQuery,
+  isGenericProjectBrowseQuery,
   isExplicitMaterialSearchCommand,
   parseOwnedMaterialsFromMessage,
   parseOwnedMaterialsProjectInput,
   resolveOwnedMaterialsFromConversation,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
+  tokenizeProjectQuery,
 } from './ai-agent-filter-extractor.service.js';
 import { extractBoundedMaxPrice } from './ai-agent-number-parser.service.js';
+import { parseProjectSearchInput } from './ai-agent-input-parser.service.js';
 import { resolveAgentExecutionPlan } from './ai-agent-plan-resolver.service.js';
+import { resolveAgentRoute } from './ai-agent-router.service.js';
 import {
   ownedMaterialsPlanFromPlanner,
+  projectMaterialAvailabilityPlanFromPlanner,
   setSemanticPlannerOverrideForTests,
   validatePlannerOutput,
 } from './ai-agent-semantic-planner.service.js';
@@ -629,6 +637,109 @@ describe('acceptance: project components intent', () => {
       assert.equal(plan.toolName, 'get_project_required_components');
     });
   }
+});
+
+describe('acceptance: project material availability', () => {
+  test('detects Arabic and English availability phrasing', () => {
+    assert.equal(
+      detectProjectMaterialAvailabilityIntent(
+        'بدي أعمل Obstacle Avoidance Robot، شو المواد المتوفرة؟',
+      ),
+      true,
+    );
+    assert.equal(
+      detectProjectMaterialAvailabilityIntent(
+        'What available materials can help me build the Line Follower Robot?',
+      ),
+      true,
+    );
+  });
+
+  test('semantic planner maps natural wording to availability tool', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'PROJECT_MATERIAL_AVAILABILITY',
+      confidence: 0.94,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'match_available_materials_for_project',
+        arguments: { projectQuery: 'Smart Plant Moisture Monitor', limitPerComponent: 3 },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'شو موجود بالمنصة لمشروع Smart Plant Moisture Monitor؟',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'PROJECT_MATERIAL_AVAILABILITY');
+    assert.equal(plan.toolName, 'match_available_materials_for_project');
+    assert.equal(plan.toolInput.projectQuery, 'Smart Plant Moisture Monitor');
+  });
+
+  test('planner helper extracts project query', () => {
+    const validated = validatePlannerOutput({
+      route: 'PROJECT_MATERIAL_AVAILABILITY',
+      confidence: 0.93,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'match_available_materials_for_project',
+        arguments: { projectQuery: 'Electronic LED Dice' },
+      },
+    });
+    assert.ok(validated);
+    const plan = projectMaterialAvailabilityPlanFromPlanner(
+      'What can I get here to build Electronic LED Dice?',
+      validated!,
+    );
+    assert.equal(plan?.projectQuery, 'Electronic LED Dice');
+  });
+
+  test('tokenizes natural project queries without command stop words', () => {
+    assert.deepEqual(tokenizeProjectQuery('Robot Car'), ['robot', 'car']);
+    assert.deepEqual(tokenizeProjectQuery('plant monitor'), ['plant', 'monitor']);
+    assert.deepEqual(tokenizeProjectQuery('LED game'), ['led', 'game']);
+  });
+
+  test('rejects generic browse-only project queries for fallback', () => {
+    assert.equal(isGenericProjectBrowseQuery('بدي مشروع'), true);
+    assert.equal(isGenericProjectBrowseQuery('available project'), true);
+    assert.equal(isGenericProjectBrowseQuery('something'), true);
+    assert.equal(isGenericProjectBrowseQuery('Robot Car'), false);
+  });
+
+  test('routes ordinal selection follow-up to material availability', () => {
+    assert.equal(detectProjectMaterialAvailabilitySelectionFollowUp('الأول'), true);
+    const route = resolveAgentRoute({ userMessage: 'الأول', locale: 'ar' });
+    assert.equal(route.route, 'PROJECT_MATERIAL_AVAILABILITY');
+  });
+
+  test('does not treat generic project browse as material availability', () => {
+    assert.equal(detectProjectMaterialAvailabilityIntent('بدي مشروع'), false);
+    assert.equal(detectProjectMaterialAvailabilityIntent('شو في مشروع حلو؟'), false);
+    assert.equal(detectProjectMaterialAvailabilityIntent('I want to build something'), false);
+  });
+});
+
+describe('acceptance: explicit project title extraction', () => {
+  test('extracts mixed Arabic command and English project titles', () => {
+    const cases = [
+      ['اعرضلي مشروع Electronic LED Dice', 'Electronic LED Dice'],
+      ['افتح مشروع Obstacle Avoidance Robot', 'Obstacle Avoidance Robot'],
+      ['ورجيني مشروع Smart Plant Moisture Monitor', 'Smart Plant Moisture Monitor'],
+      ['بدي أشوف مشروع Line Follower Robot', 'Line Follower Robot'],
+      ['Show me مشروع Electronic LED Dice', 'Electronic LED Dice'],
+    ] as const;
+
+    for (const [message, expected] of cases) {
+      assert.equal(extractProjectTitleQuery(message), expected, message);
+    }
+  });
+
+  test('parseProjectSearchInput preserves explicit project query', () => {
+    const parsed = parseProjectSearchInput('اعرضلي مشروع Electronic LED Dice');
+    assert.equal(parsed.query, 'Electronic LED Dice');
+    assert.equal(parsed.limit, 5);
+  });
 });
 
 describe('acceptance: fuzzy project references', () => {

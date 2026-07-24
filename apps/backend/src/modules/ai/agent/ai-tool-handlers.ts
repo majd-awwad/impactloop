@@ -4,6 +4,7 @@ import { getCategories } from '../../categories/categories.service.js';
 import { getLearnerHomeSection } from '../../learner-home/learner-home.service.js';
 import { normalizeMaterialTitleKey } from '../../learner-home/learner-home.deduplication.js';
 import type { LearnerHomeSectionItem } from '../../learner-home/learner-home.types.js';
+import { getRequiredComponentMaterialCandidates } from '../../learning-projects/learning-projects.build-material-linking.js';
 import {
   getBuildItemMaterialCandidatesById,
   getLearningProjectById,
@@ -20,8 +21,10 @@ import type { LearningProjectsQuery } from '../../learning-projects/learning-pro
 import type { AiContentBlock } from '../ai.content-blocks.js';
 import type { AiLocale } from '../ai.types.js';
 import {
+  isGenericProjectBrowseQuery,
   normalizeOwnedMaterialForMatching,
   ownedMaterialAliasGroups,
+  tokenizeProjectQuery,
 } from './ai-agent-filter-extractor.service.js';
 import type { AiToolExecutionContext } from './ai-agent.types.js';
 import { shouldHideE2eFixtureTitle } from '../e2e-fixture-guard.js';
@@ -49,6 +52,7 @@ import {
   compareProjectIdsInputSchema,
   componentIdInputSchema,
   findMaterialsForProjectInputSchema,
+  matchAvailableMaterialsForProjectInputSchema,
   materialIdInputSchema,
   matchProjectsByOwnedMaterialsInputSchema,
   personalizedRecommendationsInputSchema,
@@ -485,6 +489,236 @@ const buildOwnedMaterialsMatchExplanation = (
     ? `${title} — تقدير تغطية المكونات: ${readinessPercent}%`
     : `${title} — estimated component coverage: ${readinessPercent}%`;
 
+const normalizeProjectTitleKey = (value: string) =>
+  value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+type ResolvedPublishedLearnerProject =
+  | { kind: 'exact'; project: Awaited<ReturnType<typeof getLearningProjectById>> }
+  | {
+      kind: 'ambiguous';
+      projects: Awaited<ReturnType<typeof getLearningProjects>>['items'];
+      projectQuery: string;
+      usedTokenFallback: boolean;
+    };
+
+type LearningProjectListItem = Awaited<
+  ReturnType<typeof getLearningProjects>
+>['items'][number];
+
+const collectProjectEvidenceTokens = (project: LearningProjectListItem): Set<string> => {
+  const tokens = new Set<string>();
+  const parts = [
+    project.title,
+    project.shortDescription ?? '',
+    ...(project.tags ?? []),
+    project.category?.nameEn ?? '',
+    project.category?.nameAr ?? '',
+  ];
+
+  for (const part of parts) {
+    for (const token of tokenizeProjectQuery(part)) {
+      tokens.add(token);
+    }
+  }
+
+  return tokens;
+};
+
+const scoreProjectQueryTokenEvidence = (
+  queryTokens: string[],
+  project: LearningProjectListItem,
+): { matchedTokens: number; longestMatched: boolean } => {
+  if (queryTokens.length === 0) {
+    return { matchedTokens: 0, longestMatched: false };
+  }
+
+  const evidence = collectProjectEvidenceTokens(project);
+  let matchedTokens = 0;
+  for (const token of queryTokens) {
+    if (evidence.has(token)) {
+      matchedTokens += 1;
+    }
+  }
+
+  const longestToken = [...queryTokens].sort((left, right) => right.length - left.length)[0]!;
+  return {
+    matchedTokens,
+    longestMatched: evidence.has(longestToken),
+  };
+};
+
+const passesProjectQueryTokenThreshold = (
+  queryTokens: string[],
+  evidence: { matchedTokens: number; longestMatched: boolean },
+): boolean => {
+  if (queryTokens.length === 0) {
+    return false;
+  }
+
+  if (queryTokens.length === 1) {
+    return evidence.matchedTokens >= 1;
+  }
+
+  return (
+    evidence.longestMatched &&
+    evidence.matchedTokens / queryTokens.length >= 0.5
+  );
+};
+
+const findBoundedTokenFallbackCandidates = async (
+  query: string,
+  viewer: ReturnType<typeof buildLearnerViewer>,
+): Promise<LearningProjectListItem[]> => {
+  const queryTokens = tokenizeProjectQuery(query);
+  if (queryTokens.length === 0 || isGenericProjectBrowseQuery(query)) {
+    return [];
+  }
+
+  const candidateMap = new Map<string, LearningProjectListItem>();
+  for (const token of queryTokens) {
+    if (token.length < 3) {
+      continue;
+    }
+
+    const searchResult = await getLearningProjects(
+      { page: 1, limit: 20, q: token },
+      viewer,
+    );
+    for (const project of searchResult.items) {
+      candidateMap.set(project.id, project);
+    }
+  }
+
+  return [...candidateMap.values()]
+    .map((project) => ({
+      project,
+      evidence: scoreProjectQueryTokenEvidence(queryTokens, project),
+    }))
+    .filter(({ evidence }) => passesProjectQueryTokenThreshold(queryTokens, evidence))
+    .sort((left, right) => {
+      if (right.evidence.matchedTokens !== left.evidence.matchedTokens) {
+        return right.evidence.matchedTokens - left.evidence.matchedTokens;
+      }
+
+      return left.project.title.localeCompare(right.project.title);
+    })
+    .slice(0, 5)
+    .map((entry) => entry.project);
+};
+
+const buildAmbiguousProjectChoiceMessage = (
+  projectQuery: string,
+  locale: AiLocale,
+  usedTokenFallback: boolean,
+): string => {
+  if (usedTokenFallback) {
+    return locale === 'ar'
+      ? `وجدت عدة مشاريع حقيقية على ImpactLoop قد تطابق "${projectQuery}". أي مشروع تقصد؟`
+      : `I found multiple real ImpactLoop projects that may match "${projectQuery}". Which one do you mean?`;
+  }
+
+  return locale === 'ar'
+    ? 'وجدت أكثر من مشروع يطابق طلبك. اختر المشروع الذي تقصده:'
+    : 'I found more than one matching project. Please choose the project you mean:';
+};
+
+const resolvePublishedLearnerProjectQuery = async (
+  input: { projectId?: string; projectQuery?: string },
+  viewer: ReturnType<typeof buildLearnerViewer>,
+): Promise<ResolvedPublishedLearnerProject> => {
+  if (input.projectId) {
+    const project = await getLearningProjectById(input.projectId, viewer);
+    return { kind: 'exact', project };
+  }
+
+  const query = input.projectQuery!.trim();
+  const normalizedQuery = normalizeProjectTitleKey(query);
+  const searchResult = await getLearningProjects({ page: 1, limit: 8, q: query }, viewer);
+
+  const exactMatches = searchResult.items.filter(
+    (project) => normalizeProjectTitleKey(project.title) === normalizedQuery,
+  );
+  if (exactMatches.length >= 1) {
+    return {
+      kind: 'exact',
+      project: await getLearningProjectById(exactMatches[0]!.id, viewer),
+    };
+  }
+
+  if (searchResult.items.length === 0) {
+    const fallbackCandidates = await findBoundedTokenFallbackCandidates(query, viewer);
+    if (fallbackCandidates.length === 0) {
+      throw new AppError(
+        'No published learning project found.',
+        404,
+        'NO_MATCHING_RESULTS',
+      );
+    }
+
+    return {
+      kind: 'ambiguous',
+      projects: fallbackCandidates,
+      projectQuery: query,
+      usedTokenFallback: true,
+    };
+  }
+
+  if (searchResult.items.length === 1) {
+    const only = searchResult.items[0]!;
+    if (normalizeProjectTitleKey(only.title) === normalizedQuery) {
+      return {
+        kind: 'exact',
+        project: await getLearningProjectById(only.id, viewer),
+      };
+    }
+    return {
+      kind: 'ambiguous',
+      projects: [only],
+      projectQuery: query,
+      usedTokenFallback: false,
+    };
+  }
+
+  return {
+    kind: 'ambiguous',
+    projects: searchResult.items.slice(0, 5),
+    projectQuery: query,
+    usedTokenFallback: false,
+  };
+};
+
+const resolvePublishedProjectForMaterialAvailability = async (
+  input: { projectId?: string; projectQuery?: string },
+  viewer: ReturnType<typeof buildLearnerViewer>,
+) => resolvePublishedLearnerProjectQuery(input, viewer);
+
+const mapCandidateMaterialToCardInput = (material: {
+  id: string;
+  title: string;
+  condition: string | null;
+  isFree: boolean;
+  price: number | null;
+  currency: string | null;
+  category: { id: string; nameEn: string; nameAr: string };
+  city?: string | null;
+  area?: string | null;
+  imageUrl: string | null;
+  pickupAllowed: boolean;
+  deliveryAllowed: boolean;
+}) => ({
+  id: material.id,
+  title: material.title,
+  condition: material.condition,
+  isFree: material.isFree,
+  price: material.price,
+  currency: material.currency,
+  category: material.category,
+  location: { city: material.city ?? null, area: material.area ?? null },
+  imageUrl: material.imageUrl,
+  pickupAllowed: material.pickupAllowed,
+  deliveryAllowed: material.deliveryAllowed,
+});
+
 const matchProjectsByOwnedMaterials = async (
   input: ReturnType<typeof matchProjectsByOwnedMaterialsInputSchema.parse>,
   locale: AiLocale,
@@ -715,6 +949,38 @@ export const executeLearnerAgentTool = async (
 
     case 'search_learning_projects': {
       const input = searchLearningProjectsInputSchema.parse(rawInput ?? {});
+      const explicitQuery = input.query?.trim();
+
+      if (explicitQuery && explicitQuery.length >= 2) {
+        const resolved = await resolvePublishedLearnerProjectQuery(
+          { projectQuery: explicitQuery },
+          viewer,
+        );
+
+        if (resolved.kind === 'exact') {
+          return {
+            block: toProjectResultsBlock([resolved.project], locale),
+            count: 1,
+          };
+        }
+
+        return {
+          blocks: [
+            {
+              type: 'text' as const,
+              text: buildAmbiguousProjectChoiceMessage(
+                explicitQuery,
+                locale,
+                resolved.usedTokenFallback,
+              ),
+              purpose: 'clarification' as const,
+            },
+            toProjectResultsBlock(resolved.projects, locale),
+          ],
+          count: resolved.projects.length,
+        };
+      }
+
       const limit = Math.min(input.limit ?? 10, 10);
       const result = await getLearningProjects(mapLearningProjectsQuery(input), viewer);
       const items = result.items.slice(0, limit);
@@ -993,6 +1259,99 @@ export const executeLearnerAgentTool = async (
 
       return {
         block: toComponentMatchesBlock(groups, locale, build?.id),
+      };
+    }
+
+    case 'match_available_materials_for_project': {
+      const input = matchAvailableMaterialsForProjectInputSchema.parse(rawInput);
+      const resolved = await resolvePublishedProjectForMaterialAvailability(
+        input,
+        viewer,
+      );
+
+      if (resolved.kind === 'ambiguous') {
+        return {
+          blocks: [
+            {
+              type: 'text' as const,
+              text: buildAmbiguousProjectChoiceMessage(
+                input.projectQuery ?? resolved.projectQuery,
+                locale,
+                resolved.usedTokenFallback,
+              ),
+              purpose: 'clarification' as const,
+            },
+            toProjectResultsBlock(resolved.projects, locale),
+          ],
+        };
+      }
+
+      const project = await getLearningProjectById(resolved.project.id, viewer);
+      const requiredComponents = project.requiredComponents.filter(
+        (component) => component.isRequired !== false,
+      );
+
+      if (requiredComponents.length === 0) {
+        return {
+          blocks: [
+            {
+              type: 'text' as const,
+              text:
+                locale === 'ar'
+                  ? `مشروع ${project.title} لا يتضمن مكونات مطلوبة مسجّلة حالياً على ImpactLoop.`
+                  : `${project.title} does not list any required components on ImpactLoop yet.`,
+              purpose: 'answer' as const,
+            },
+            toProjectResultsBlock([project], locale),
+          ],
+        };
+      }
+
+      const limitPerComponent = input.limitPerComponent ?? 3;
+      const groups: Array<{
+        componentId: string;
+        componentName: string;
+        materials: ReturnType<typeof mapCandidateMaterialToCardInput>[];
+      }> = [];
+
+      for (const component of requiredComponents.slice(0, 12)) {
+        const candidates = await getRequiredComponentMaterialCandidates({
+          projectId: project.id,
+          learnerId: context.authenticatedUserId,
+          componentId: component.id,
+        });
+
+        const seen = new Set<string>();
+        const materials: ReturnType<typeof mapCandidateMaterialToCardInput>[] = [];
+        for (const material of candidates.items) {
+          if (seen.has(material.id)) {
+            continue;
+          }
+          seen.add(material.id);
+          materials.push(
+            mapCandidateMaterialToCardInput({
+              ...material,
+              city: material.city,
+              area: material.area,
+            }),
+          );
+          if (materials.length >= limitPerComponent) {
+            break;
+          }
+        }
+
+        groups.push({
+          componentId: component.id,
+          componentName: component.componentName,
+          materials,
+        });
+      }
+
+      return {
+        blocks: [
+          toProjectResultsBlock([project], locale),
+          toComponentMatchesBlock(groups, locale),
+        ],
       };
     }
 

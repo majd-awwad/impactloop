@@ -8,6 +8,7 @@ import {
   componentIdInputSchema,
   emptyObjectSchema,
   findMaterialsForProjectInputSchema,
+  matchAvailableMaterialsForProjectInputSchema,
   materialIdInputSchema,
   personalizedRecommendationsInputSchema,
   projectIdInputSchema,
@@ -152,6 +153,17 @@ export const AI_TOOL_REGISTRY = {
     maxOutputBytes: 48_768,
     handler: (input, context) =>
       executeLearnerAgentTool('find_materials_for_project', input, context),
+  }),
+  match_available_materials_for_project: defineReadTool({
+    name: 'match_available_materials_for_project',
+    kind: 'read',
+    description:
+      'List currently available ImpactLoop materials that match a published learning project required components without starting a build',
+    inputSchema: matchAvailableMaterialsForProjectInputSchema,
+    timeoutMs: 15_000,
+    maxOutputBytes: 48_768,
+    handler: (input, context) =>
+      executeLearnerAgentTool('match_available_materials_for_project', input, context),
   }),
   compare_materials: defineReadTool({
     name: 'compare_materials',

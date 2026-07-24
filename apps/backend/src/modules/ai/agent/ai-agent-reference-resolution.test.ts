@@ -219,6 +219,65 @@ const referenceCases: Array<{
   },
 ];
 
+const contextualMaterialAvailabilityCases: Array<{
+  name: string;
+  userMessage: string;
+  recentProjects: RecentEntityRecord[];
+  expectedProjectId: string | null;
+  expectClarification?: boolean;
+}> = [
+  {
+    name: 'contextual pronoun resolves single latest project result',
+    userMessage: 'طيب شو المواد المتوفرة إله؟',
+    recentProjects: buildRecentProjects([
+      {
+        id: 'proj-led-dice',
+        title: 'Electronic LED Dice',
+        blockType: 'project_results',
+        resultIndex: 0,
+        recencyOrder: 3,
+      },
+    ]),
+    expectedProjectId: 'proj-led-dice',
+  },
+  {
+    name: 'contextual pronoun resolves single latest component list project',
+    userMessage: 'طيب شو المواد المتوفرة إله؟',
+    recentProjects: buildRecentProjects([
+      {
+        id: 'proj-obstacle',
+        title: 'Obstacle Avoidance Robot',
+        blockType: 'component_list',
+        resultIndex: 0,
+        recencyOrder: 5,
+      },
+    ]),
+    expectedProjectId: 'proj-obstacle',
+  },
+  {
+    name: 'contextual pronoun stays ambiguous with multiple latest project results',
+    userMessage: 'طيب شو المواد المتوفرة إله؟',
+    recentProjects: buildRecentProjects([
+      {
+        id: 'proj-robot-a',
+        title: 'Robot Car Explorer',
+        blockType: 'project_results',
+        resultIndex: 0,
+        recencyOrder: 4,
+      },
+      {
+        id: 'proj-robot-b',
+        title: 'Robot Car Racer',
+        blockType: 'project_results',
+        resultIndex: 1,
+        recencyOrder: 4,
+      },
+    ]),
+    expectedProjectId: null,
+    expectClarification: true,
+  },
+];
+
 describe('reference resolution from trusted blocks', () => {
   test('extracts projects from multiple trusted block types', () => {
     const blocks = [
@@ -269,6 +328,23 @@ describe('reference resolution from trusted blocks', () => {
       });
       assert.equal(route.route, 'PROJECT_COMPONENTS');
 
+      const resolved = resolveProjectFromRecentEntities({
+        userMessage: row.userMessage,
+        recentProjects: row.recentProjects,
+      });
+
+      if (row.expectClarification) {
+        assert.equal(resolved, null);
+        return;
+      }
+
+      assert.ok(resolved, `expected project resolution for: ${row.userMessage}`);
+      assert.equal(resolved.entity.id, row.expectedProjectId);
+    });
+  }
+
+  for (const row of contextualMaterialAvailabilityCases) {
+    test(`contextual material availability: ${row.name}`, () => {
       const resolved = resolveProjectFromRecentEntities({
         userMessage: row.userMessage,
         recentProjects: row.recentProjects,

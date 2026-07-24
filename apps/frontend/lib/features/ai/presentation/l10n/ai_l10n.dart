@@ -771,6 +771,11 @@ class AiL10n {
     ar: 'مواد مطابقة',
   );
 
+  static const componentMatchesNoListing = LocalizedText(
+    en: 'No currently available ImpactLoop listing was found.',
+    ar: 'لا توجد حالياً أي قائمة متاحة على ImpactLoop.',
+  );
+
   static const materialComparisonSection = LocalizedText(
     en: 'Material comparison',
     ar: 'مقارنة المواد',

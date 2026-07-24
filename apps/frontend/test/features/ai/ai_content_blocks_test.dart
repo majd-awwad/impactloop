@@ -239,6 +239,23 @@ void main() {
       expect(block.matchGroups.first.materials.first.materialId, 'mat-3');
     });
 
+    test('parses component_matches block with empty materials', () {
+      final block = AiContentBlock.fromJson({
+        'type': 'component_matches',
+        'groups': [
+          {
+            'componentId': 'cmp-3',
+            'componentName': 'Ultrasonic sensor',
+            'materials': [],
+          },
+        ],
+      });
+
+      expect(block.type, 'component_matches');
+      expect(block.matchGroups, hasLength(1));
+      expect(block.matchGroups.first.materials, isEmpty);
+    });
+
     test('parses comparison block', () {
       final block = AiContentBlock.fromJson({
         'type': 'comparison',

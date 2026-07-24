@@ -125,3 +125,19 @@ export const matchProjectsByOwnedMaterialsInputSchema = z
     limit: z.number().int().min(1).max(10).optional(),
   })
   .strict();
+
+export const matchAvailableMaterialsForProjectInputSchema = z
+  .object({
+    projectId: z.string().trim().min(1).optional(),
+    projectQuery: z.string().trim().min(1).max(120).optional(),
+    limitPerComponent: z.number().int().min(1).max(5).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (!value.projectId && !value.projectQuery) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'projectId or projectQuery is required',
+      });
+    }
+  });

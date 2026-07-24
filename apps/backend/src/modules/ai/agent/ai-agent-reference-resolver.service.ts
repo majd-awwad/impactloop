@@ -382,11 +382,45 @@ const extractMentionCandidates = (userMessage: string): string[] => {
   return [...new Set(candidates.map((value) => value.trim()))];
 };
 
+const GROUNDED_PROJECT_CONTEXT_BLOCK_TYPES = new Set([
+  'project_results',
+  'component_list',
+  'project_details',
+]);
+
 const hasContextualProjectReference = (userMessage: string): boolean =>
   /(عرضته|السابق|اللي\s+عرضته|الي\s+عرضته|اللي\s+فوق|فوق|هذا\s+المشروع|هذا\s+الروبوت|the\s+one|recent)/i.test(
     userMessage,
   ) ||
+  /(?:^|[\s،,.!?])?(?:إله|له|لها)(?:$|[\s،,.!?؟])?/u.test(userMessage) ||
+  /(?:this project|the project)/i.test(userMessage) ||
   /(obstacle|robot|روبوت|بوت|عوائق)/i.test(userMessage);
+
+const resolveSingleContextualProjectFromCandidates = (
+  projectCandidates: RecentEntityRecord[],
+): EntityMatchResult | null => {
+  const grounded = projectCandidates.filter((candidate) =>
+    GROUNDED_PROJECT_CONTEXT_BLOCK_TYPES.has(candidate.blockType),
+  );
+  if (grounded.length === 0) {
+    return null;
+  }
+
+  const latestOrder = Math.max(...grounded.map((candidate) => candidate.recencyOrder));
+  const latestGrounded = [
+    ...new Map(
+      grounded
+        .filter((candidate) => candidate.recencyOrder === latestOrder)
+        .map((project) => [project.id, project]),
+    ).values(),
+  ];
+
+  if (latestGrounded.length === 1) {
+    return { entity: toTrustedProject(latestGrounded[0]!), score: 0.85 };
+  }
+
+  return null;
+};
 
 export const resolveEntityFromContext = (input: {
   context: PlannerConversationContext;
@@ -486,9 +520,9 @@ export const resolveProjectFromRecentEntities = (input: {
         return null;
       }
     } else {
-      const recent = projectCandidates[0];
-      if (recent) {
-        return { entity: toTrustedProject(recent), score: 0.85 };
+      const contextual = resolveSingleContextualProjectFromCandidates(projectCandidates);
+      if (contextual) {
+        return contextual;
       }
     }
   }
@@ -537,6 +571,10 @@ export const resolveProjectFromMessage = async (input: {
         ? 'RECENT_RESULT'
         : 'EXPLICIT_NAME',
     });
+  }
+
+  if (hasContextualProjectReference(input.userMessage)) {
+    return resolveSingleContextualProjectFromCandidates(projectCandidates);
   }
 
   return null;
