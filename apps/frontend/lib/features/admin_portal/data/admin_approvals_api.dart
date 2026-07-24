@@ -5,6 +5,90 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
 
+String _normalizeCategoryDisplayName(String value) =>
+    value.trim().replaceAll(RegExp(r'\s+'), ' ');
+
+class AdminTaxonomyOption {
+  const AdminTaxonomyOption({
+    required this.id,
+    required this.canonicalKey,
+    required this.conceptType,
+    required this.status,
+    required this.labelEn,
+    required this.labelAr,
+  });
+
+  final String id;
+  final String canonicalKey;
+  final String conceptType;
+  final String status;
+  final String labelEn;
+  final String labelAr;
+
+  bool get isActiveMaterialFamily =>
+      conceptType == 'MATERIAL_FAMILY' && status == 'ACTIVE';
+
+  factory AdminTaxonomyOption.fromJson(Map<String, dynamic> json) {
+    return AdminTaxonomyOption(
+      id: json['id'] as String? ?? '',
+      canonicalKey: json['canonicalKey'] as String? ?? '',
+      conceptType: json['conceptType'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      labelEn: json['labelEn'] as String? ?? '',
+      labelAr: json['labelAr'] as String? ?? '',
+    );
+  }
+}
+
+class AdminApprovalCategoryOption {
+  const AdminApprovalCategoryOption({
+    required this.id,
+    required this.nameEn,
+    required this.nameAr,
+    required this.categoryType,
+    required this.status,
+    required this.materialCount,
+    this.materialFamily,
+    this.matchType,
+  });
+
+  final String id;
+  final String nameEn;
+  final String nameAr;
+  final String categoryType;
+  final String status;
+  final int materialCount;
+  final AdminTaxonomyOption? materialFamily;
+  final String? matchType;
+
+  bool get isExactNameSuggestion => matchType == 'EXACT_NAME';
+
+  bool get canResolveMaterialRequest =>
+      status == 'ACTIVE' &&
+      (categoryType == 'MATERIAL' || categoryType == 'BOTH') &&
+      materialFamily?.isActiveMaterialFamily == true;
+
+  factory AdminApprovalCategoryOption.fromJson(Map<String, dynamic> json) {
+    final family = json['materialFamily'];
+    return AdminApprovalCategoryOption(
+      id: json['id'] as String? ?? '',
+      nameEn: json['nameEn'] as String? ?? '',
+      nameAr: json['nameAr'] as String? ?? '',
+      categoryType: json['categoryType'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      materialCount: (json['materialCount'] as num?)?.toInt() ?? 0,
+      matchType: json['matchType'] as String?,
+      materialFamily: family is Map
+          ? AdminTaxonomyOption.fromJson({
+              ...Map<String, dynamic>.from(family),
+              'conceptType': 'MATERIAL_FAMILY',
+              'status': 'ACTIVE',
+            })
+          : null,
+    );
+  }
+}
+
 class AdminApprovalsSummary {
   const AdminApprovalsSummary({
     required this.pendingTotal,
@@ -71,6 +155,7 @@ class AdminCategoryRequestListItem {
     this.locationLabel,
     this.categoryRequestReason,
     this.similarCategories = const [],
+    this.suggestedCategory,
   });
 
   final String id;
@@ -91,6 +176,7 @@ class AdminCategoryRequestListItem {
   final String? locationLabel;
   final String? categoryRequestReason;
   final List<String> similarCategories;
+  final AdminApprovalCategoryOption? suggestedCategory;
 
   factory AdminCategoryRequestListItem.fromJson(Map<String, dynamic> json) {
     double? numToDouble(Object? value) =>
@@ -119,6 +205,11 @@ class AdminCategoryRequestListItem {
               growable: false,
             )
           : const [],
+      suggestedCategory: json['suggestedCategory'] is Map
+          ? AdminApprovalCategoryOption.fromJson(
+              Map<String, dynamic>.from(json['suggestedCategory'] as Map),
+            )
+          : null,
     );
   }
 }
@@ -206,6 +297,62 @@ class AdminApprovalsApi {
   const AdminApprovalsApi(this._client);
 
   final Dio _client;
+
+  Future<List<AdminTaxonomyOption>> fetchMaterialFamilyOptions() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/admin/approvals/material-family-options',
+      );
+      final body = response.data;
+      if (body == null || body['success'] != true) {
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Request failed',
+        );
+      }
+      final data = body['data'];
+      final items = data is Map<String, dynamic> ? data['items'] : null;
+      if (items is! List) return const [];
+      return items
+          .whereType<Map>()
+          .map(
+            (item) =>
+                AdminTaxonomyOption.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .where((item) => item.isActiveMaterialFamily)
+          .toList(growable: false);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<List<AdminApprovalCategoryOption>>
+  fetchMaterialCategoryOptions() async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/admin/approvals/material-category-options',
+      );
+      final body = response.data;
+      if (body == null || body['success'] != true) {
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Request failed',
+        );
+      }
+      final data = body['data'];
+      final items = data is Map<String, dynamic> ? data['items'] : null;
+      if (items is! List) return const [];
+      return items
+          .whereType<Map>()
+          .map(
+            (item) => AdminApprovalCategoryOption.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((item) => item.canResolveMaterialRequest)
+          .toList(growable: false);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
 
   Future<AdminApprovalsSummary> fetchSummary() async {
     try {
@@ -324,20 +471,37 @@ class AdminApprovalsApi {
     }
   }
 
-  Future<void> approveCategoryRequest({
+  Future<void> approveCategoryRequestWithExisting({
     required String id,
-    required String finalName,
-    String? parentCategoryId,
-    String? adminNote,
+    required String existingCategoryId,
   }) async {
     await _patch(
       '/api/admin/approvals/category-requests/$id/approve',
       data: {
-        'finalName': finalName.trim(),
-        if (parentCategoryId != null && parentCategoryId.trim().isNotEmpty)
-          'parentCategoryId': parentCategoryId.trim(),
-        if (adminNote != null && adminNote.trim().isNotEmpty)
-          'adminNote': adminNote.trim(),
+        'resolution': 'USE_EXISTING_CATEGORY',
+        'existingCategoryId': existingCategoryId.trim(),
+      },
+    );
+  }
+
+  Future<void> createAndApproveCategoryRequest({
+    required String id,
+    required String nameEn,
+    required String nameAr,
+    required String materialFamilyConceptId,
+    String? adminJustification,
+    bool sharedNameAcknowledged = false,
+  }) async {
+    await _patch(
+      '/api/admin/approvals/category-requests/$id/approve',
+      data: {
+        'resolution': 'CREATE_NEW_CATEGORY',
+        'nameEn': _normalizeCategoryDisplayName(nameEn),
+        'nameAr': _normalizeCategoryDisplayName(nameAr),
+        'materialFamilyConceptId': materialFamilyConceptId.trim(),
+        if (adminJustification != null && adminJustification.trim().isNotEmpty)
+          'adminJustification': adminJustification.trim(),
+        if (sharedNameAcknowledged) 'sharedNameAcknowledged': true,
       },
     );
   }

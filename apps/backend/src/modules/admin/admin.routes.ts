@@ -40,6 +40,8 @@ import {
   approveAdminPriceRequest,
   getAdminApprovalsSummary,
   listAdminCategoryRequests,
+  listAdminMaterialFamilyOptions,
+  listAdminMaterialCategoryOptions,
   listAdminPriceRequests,
   rejectAdminCategoryRequest,
   rejectAdminPriceRequest,
@@ -263,6 +265,20 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(approvalsListQuerySchema, 'query'),
   asyncHandler(listAdminCategoryRequests),
+);
+
+adminRouter.get(
+  '/approvals/material-family-options',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  asyncHandler(listAdminMaterialFamilyOptions),
+);
+
+adminRouter.get(
+  '/approvals/material-category-options',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  asyncHandler(listAdminMaterialCategoryOptions),
 );
 
 adminRouter.patch(

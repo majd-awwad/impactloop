@@ -8,6 +8,7 @@ import { AppError } from '../../utils/app-error.js';
 import { prisma } from '../../database/prisma.js';
 import { decimalToNumber } from '../../utils/decimal.js';
 import { createNotification } from '../notifications/notifications.repository.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import {
   ADMIN_ACTIVITY_ACTIONS,
@@ -21,6 +22,10 @@ import type {
   ApprovePriceRequestInput,
   RejectCategoryRequestInput,
   RejectPriceRequestInput,
+} from './admin-approvals.validation.js';
+import {
+  isAllowedIdenticalSharedTechnicalName,
+  normalizeCategoryNameForDisplay,
 } from './admin-approvals.validation.js';
 
 type ApprovalSummaryDto = {
@@ -94,7 +99,45 @@ type CategoryRequestListItemDto = {
   locationLabel: string | null;
   categoryRequestReason: string | null;
   similarCategories: string[];
+  suggestedCategory: ApprovalCategoryOptionDto | null;
 };
+
+type ApprovalCategoryOptionDto = {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  categoryType: string;
+  status: 'ACTIVE';
+  materialCount: number;
+  materialFamily: {
+    id: string;
+    canonicalKey: string;
+    labelEn: string;
+    labelAr: string;
+  } | null;
+  matchType?: repository.ApprovalCategoryMatchType;
+};
+
+const mapApprovalCategoryOption = (
+  category: repository.ApprovalCategoryRecord,
+  matchType?: repository.ApprovalCategoryMatchType,
+): ApprovalCategoryOptionDto => ({
+  id: category.id,
+  nameEn: category.nameEn,
+  nameAr: category.nameAr,
+  categoryType: category.categoryType,
+  status: 'ACTIVE',
+  materialCount: category._count.materials,
+  materialFamily: category.materialFamilyConcept
+    ? {
+        id: category.materialFamilyConcept.id,
+        canonicalKey: category.materialFamilyConcept.canonicalKey,
+        labelEn: category.materialFamilyConcept.labelEn,
+        labelAr: category.materialFamilyConcept.labelAr,
+      }
+    : null,
+  ...(matchType ? { matchType } : {}),
+});
 
 const readDraftString = (draft: unknown, key: string): string | null => {
   if (!draft || typeof draft !== 'object' || Array.isArray(draft)) {
@@ -148,34 +191,6 @@ const mapCategoryRequestContext = (listingDraftJson: unknown) => {
   };
 };
 
-const findSimilarCategoryNames = async (requestedName: string): Promise<string[]> => {
-  const normalized = requestedName.trim();
-  if (!normalized) {
-    return [];
-  }
-
-  const firstToken = normalized.split(/\s+/).find((part) => part.length >= 3) ?? normalized;
-  const categories = await prisma.category.findMany({
-    where: {
-      isActive: true,
-      categoryType: 'MATERIAL',
-      nameEn: {
-        contains: firstToken,
-        mode: 'insensitive',
-      },
-    },
-    select: { nameEn: true },
-    take: 8,
-    orderBy: { nameEn: 'asc' },
-  });
-
-  const requestedLower = normalized.toLowerCase();
-  return categories
-    .map((category) => category.nameEn)
-    .filter((name) => name.toLowerCase() !== requestedLower)
-    .slice(0, 3);
-};
-
 export const listCategoryRequestsForAdmin = async (query: ApprovalsListQuery) => {
   const skip = (query.page - 1) * query.limit;
 
@@ -210,10 +225,14 @@ export const listCategoryRequestsForAdmin = async (query: ApprovalsListQuery) =>
     take: query.limit,
   });
 
-  const mapped: CategoryRequestListItemDto[] = await Promise.all(
-    items.map(async (item) => {
+  const activeMaterialCategories =
+    await repository.listActiveMaterialCategoryOptions();
+  const mapped: CategoryRequestListItemDto[] = items.map((item) => {
       const context = mapCategoryRequestContext(item.listingDraftJson);
-      const similarCategories = await findSimilarCategoryNames(item.requestedName);
+      const suggested = repository.findSuggestedCategoryForApproval(
+        activeMaterialCategories,
+        item.requestedName,
+      );
 
       return {
         id: item.id,
@@ -229,10 +248,14 @@ export const listCategoryRequestsForAdmin = async (query: ApprovalsListQuery) =>
         adminNote: item.moderatorNote,
         approvedCategoryId: item.approvedCategoryId,
         ...context,
-        similarCategories,
+        similarCategories: suggested
+          ? [...new Set([suggested.category.nameEn, suggested.category.nameAr])]
+          : [],
+        suggestedCategory: suggested
+          ? mapApprovalCategoryOption(suggested.category, suggested.matchType)
+          : null,
       };
-    }),
-  );
+    });
 
   return {
     items: mapped,
@@ -240,81 +263,330 @@ export const listCategoryRequestsForAdmin = async (query: ApprovalsListQuery) =>
   };
 };
 
-export const approveCategoryRequest = async (
-  adminId: string,
-  id: string,
-  input: ApproveCategoryRequestInput,
+export const listMaterialFamilyOptions = async () => ({
+  items: await repository.listActiveMaterialFamilyOptions(),
+});
+
+export const listMaterialCategoryOptions = async () => ({
+  items: (await repository.listActiveMaterialCategoryOptions()).map(
+    (category) => mapApprovalCategoryOption(category),
+  ),
+});
+
+type CategoryApprovalDependencies = {
+  runTransaction: <T>(
+    operation: (tx: Prisma.TransactionClient) => Promise<T>,
+  ) => Promise<T>;
+  findRequest: typeof repository.findCategoryRequestByIdForApproval;
+  findConcept: typeof repository.findTaxonomyConceptByIdForApproval;
+  findExistingCategory: typeof repository.findExistingCategoryByIdForApproval;
+  listActiveCategories: typeof repository.listActiveMaterialCategoryOptions;
+  findSuggestedCategory: typeof repository.findSuggestedCategoryForApproval;
+  findNameConflict: typeof repository.findCategoryNameConflictForApproval;
+  createCategory: typeof repository.createOwnedMaterialCategoryForApproval;
+  approveRequest: typeof repository.markPendingCategoryRequestApproved;
+  createNotification: typeof repository.createCategoryApprovalNotification;
+  createActivity: typeof repository.createCategoryApprovalActivity;
+};
+
+const categoryApprovalDependencies: CategoryApprovalDependencies = {
+  runTransaction: runSerializableTransaction,
+  findRequest: repository.findCategoryRequestByIdForApproval,
+  findConcept: repository.findTaxonomyConceptByIdForApproval,
+  findExistingCategory: repository.findExistingCategoryByIdForApproval,
+  listActiveCategories: repository.listActiveMaterialCategoryOptions,
+  findSuggestedCategory: repository.findSuggestedCategoryForApproval,
+  findNameConflict: repository.findCategoryNameConflictForApproval,
+  createCategory: repository.createOwnedMaterialCategoryForApproval,
+  approveRequest: repository.markPendingCategoryRequestApproved,
+  createNotification: repository.createCategoryApprovalNotification,
+  createActivity: repository.createCategoryApprovalActivity,
+};
+
+const fieldError = (
+  message: string,
+  code: string,
+  path:
+    | 'materialFamilyConceptId'
+    | 'existingCategoryId'
+    | 'nameEn'
+    | 'nameAr'
+    | 'adminJustification'
+    | 'sharedNameAcknowledged',
+  statusCode = 400,
+  details: Record<string, unknown> = {},
+) =>
+  new AppError(message, statusCode, code, {
+    issues: [{ path, message, code }],
+    ...details,
+  });
+
+export const createCategoryRequestApprover = (
+  overrides: Partial<CategoryApprovalDependencies> = {},
 ) => {
-  const existing = await repository.findCategoryRequestByIdForAdmin(id);
-  if (!existing) {
-    throw new AppError('Category request not found', 404, 'NOT_FOUND');
-  }
+  const dependencies = { ...categoryApprovalDependencies, ...overrides };
 
-  if (existing.status !== 'PENDING') {
-    throw new AppError('Only pending requests can be approved', 409, 'CONFLICT');
-  }
+  return async (
+    adminId: string,
+    id: string,
+    input: ApproveCategoryRequestInput,
+  ) => {
+    return dependencies.runTransaction(async (tx) => {
+      const existing = await dependencies.findRequest(tx, id);
+      if (!existing) {
+        throw new AppError('Category request not found', 404, 'NOT_FOUND');
+      }
+      if (existing.status !== 'PENDING') {
+        throw new AppError(
+          'Only pending category requests can be approved.',
+          409,
+          'CATEGORY_REQUEST_NOT_PENDING',
+        );
+      }
 
-  const finalName = input.finalName.trim();
-  const adminNote = input.adminNote?.trim() || null;
+      let resolutionMode: 'USE_EXISTING_CATEGORY' | 'CREATE_NEW_CATEGORY';
+      let approvedCategoryId: string;
+      let categoryNameEn: string;
+      let categoryNameAr: string;
+      let concept: NonNullable<
+        Awaited<ReturnType<typeof repository.findTaxonomyConceptByIdForApproval>>
+      >;
+      let responseCategory: Record<string, unknown>;
+      let adminJustification: string | null = null;
+      let sharedNameAcknowledged = false;
 
-  const { createdCategory, updatedRequest } = await repository.approveCategoryRequest({
-    requestId: existing.id,
-    category: {
-      nameEn: finalName,
-      nameAr: finalName,
-      parentId: input.parentCategoryId?.trim() || null,
-    },
-    adminNote,
-  });
+      if (input.resolution === 'USE_EXISTING_CATEGORY') {
+        resolutionMode = input.resolution;
+        const selected = await dependencies.findExistingCategory(
+          tx,
+          input.existingCategoryId.trim(),
+        );
+        if (!selected) {
+          throw fieldError(
+            'Selected existing category was not found.',
+            'EXISTING_CATEGORY_NOT_FOUND',
+            'existingCategoryId',
+          );
+        }
+        if (
+          selected.categoryType !== 'MATERIAL' &&
+          selected.categoryType !== 'BOTH'
+        ) {
+          throw fieldError(
+            'Selected category cannot be used for materials.',
+            'EXISTING_CATEGORY_TYPE_MISMATCH',
+            'existingCategoryId',
+          );
+        }
+        if (!selected.isActive) {
+          throw fieldError(
+            'Selected existing category is inactive.',
+            'EXISTING_CATEGORY_INACTIVE',
+            'existingCategoryId',
+          );
+        }
+        if (!selected.materialFamilyConceptId || !selected.materialFamilyConcept) {
+          throw fieldError(
+            'Selected category does not have material-family ownership.',
+            'EXISTING_CATEGORY_UNOWNED',
+            'existingCategoryId',
+          );
+        }
+        if (selected.materialFamilyConcept.conceptType !== 'MATERIAL_FAMILY') {
+          throw fieldError(
+            'Selected category has invalid material-family ownership.',
+            'EXISTING_CATEGORY_FAMILY_TYPE_MISMATCH',
+            'existingCategoryId',
+          );
+        }
+        if (selected.materialFamilyConcept.status !== 'ACTIVE') {
+          throw fieldError(
+            'Selected category material family is inactive.',
+            'EXISTING_CATEGORY_FAMILY_INACTIVE',
+            'existingCategoryId',
+          );
+        }
+        approvedCategoryId = selected.id;
+        categoryNameEn = selected.nameEn;
+        categoryNameAr = selected.nameAr;
+        concept = selected.materialFamilyConcept;
+        responseCategory = mapApprovalCategoryOption(selected);
+      } else {
+        resolutionMode = input.resolution;
+        const nameEn = normalizeCategoryNameForDisplay(input.nameEn);
+        const nameAr = normalizeCategoryNameForDisplay(input.nameAr);
+        const sharedTechnicalName = isAllowedIdenticalSharedTechnicalName(
+          nameEn,
+          nameAr,
+        );
+        if (sharedTechnicalName && input.sharedNameAcknowledged !== true) {
+          throw fieldError(
+            'Confirm that the identical technical term is intentionally used in both language fields.',
+            'SHARED_CATEGORY_NAME_ACKNOWLEDGEMENT_REQUIRED',
+            'sharedNameAcknowledged',
+          );
+        }
+        sharedNameAcknowledged = input.sharedNameAcknowledged === true;
+        const materialFamilyConceptId = input.materialFamilyConceptId.trim();
+        const selectedConcept = await dependencies.findConcept(
+          tx,
+          materialFamilyConceptId,
+        );
+        if (!selectedConcept) {
+          throw fieldError(
+            'Selected material family was not found.',
+            'MATERIAL_FAMILY_NOT_FOUND',
+            'materialFamilyConceptId',
+          );
+        }
+        if (selectedConcept.conceptType !== 'MATERIAL_FAMILY') {
+          throw fieldError(
+            'Selected taxonomy concept is not a material family.',
+            'TAXONOMY_CONCEPT_TYPE_MISMATCH',
+            'materialFamilyConceptId',
+          );
+        }
+        if (selectedConcept.status !== 'ACTIVE') {
+          throw fieldError(
+            'Selected material family is inactive.',
+            'MATERIAL_FAMILY_INACTIVE',
+            'materialFamilyConceptId',
+          );
+        }
+        concept = selectedConcept;
 
-  await createNotification({
-      userId: existing.requestedByUserId,
-      notificationType: 'CATEGORY_REQUEST_UPDATE',
-      title: 'Category request approved',
-      body: `Your category request "${existing.requestedName}" was approved.`,
-      relatedEntityType: 'CATEGORY_REQUEST',
-      relatedEntityId: existing.id,
-      eventKey: `material-review:category:${existing.id}:APPROVED`,
-      entityType: 'CATEGORY_REQUEST',
-      entityId: existing.id,
-      actionType: 'CONTINUE_LISTING',
-      actorId: adminId,
-  });
+        const activeMaterialCategories =
+          await dependencies.listActiveCategories(tx);
+        const suggested = dependencies.findSuggestedCategory(
+          activeMaterialCategories,
+          existing.requestedName,
+        );
+        adminJustification = input.adminJustification?.trim() || null;
+        if (suggested?.matchType === 'EXACT_NAME' && !adminJustification) {
+          throw fieldError(
+            'Explain why the suggested existing category does not fit.',
+            'CREATE_CATEGORY_JUSTIFICATION_REQUIRED',
+            'adminJustification',
+          );
+        }
 
-  await logAdminActivity({
-    actorUserId: adminId,
-    action: ADMIN_ACTIVITY_ACTIONS.CATEGORY_REQUEST_APPROVED,
-    targetType: ADMIN_ACTIVITY_TARGET_TYPES.CATEGORY_REQUEST,
-    targetId: existing.id,
-    targetLabel: finalName,
-    metadata: {
-      requestedName: existing.requestedName,
-      finalName,
-      parentCategoryId: input.parentCategoryId?.trim() || null,
-      adminNote,
-      approvedCategoryId: createdCategory.id,
-      supplierEmail: existing.requestedBy.email,
-    },
-  });
+        const conflict = await dependencies.findNameConflict(tx, {
+          nameEn,
+          nameAr,
+        });
+        if (conflict) {
+          const conflictingCategory = conflict.category;
+          const family = conflictingCategory.materialFamilyConcept;
+          const canUseExisting =
+            conflictingCategory.isActive &&
+            (conflictingCategory.categoryType === 'MATERIAL' ||
+              conflictingCategory.categoryType === 'BOTH') &&
+            family?.conceptType === 'MATERIAL_FAMILY' &&
+            family.status === 'ACTIVE';
+          throw fieldError(
+            'A category with this name already exists.',
+            'CATEGORY_NAME_CONFLICT',
+            conflict.proposedField,
+            409,
+            {
+              matchedProposedField: conflict.proposedField,
+              matchedStoredField: conflict.storedField,
+              conflictingCategory: {
+                id: conflictingCategory.id,
+                nameEn: conflictingCategory.nameEn,
+                nameAr: conflictingCategory.nameAr,
+                canUseExisting,
+                materialFamily: family
+                  ? {
+                      canonicalKey: family.canonicalKey,
+                      labelEn: family.labelEn,
+                      labelAr: family.labelAr,
+                    }
+                  : null,
+              },
+            },
+          );
+        }
 
-  return {
-    request: {
-      id: updatedRequest.id,
-      requestedName: updatedRequest.requestedName,
-      status: updatedRequest.status,
-      adminNote: updatedRequest.moderatorNote,
-      approvedCategoryId: updatedRequest.approvedCategoryId,
-      createdAt: updatedRequest.createdAt.toISOString(),
-      updatedAt: updatedRequest.updatedAt.toISOString(),
-    },
-    createdCategory: {
-      id: createdCategory.id,
-      nameEn: createdCategory.nameEn,
-      nameAr: createdCategory.nameAr,
-      parentId: createdCategory.parentId,
-    },
+        const createdCategory = await dependencies.createCategory(tx, {
+          nameEn,
+          nameAr,
+          materialFamilyConceptId: concept.id,
+        });
+        approvedCategoryId = createdCategory.id;
+        categoryNameEn = createdCategory.nameEn;
+        categoryNameAr = createdCategory.nameAr;
+        responseCategory = {
+          id: createdCategory.id,
+          nameEn: createdCategory.nameEn,
+          nameAr: createdCategory.nameAr,
+          categoryType: createdCategory.categoryType,
+          status: 'ACTIVE',
+          materialCount: 0,
+          materialFamily: {
+            id: concept.id,
+            canonicalKey: concept.canonicalKey,
+            labelEn: concept.labelEn,
+            labelAr: concept.labelAr,
+          },
+          materialFamilyConceptId: createdCategory.materialFamilyConceptId,
+          projectTopicConceptId: createdCategory.projectTopicConceptId,
+        };
+      }
+
+      const updatedRequest = await dependencies.approveRequest(tx, {
+        requestId: existing.id,
+        approvedCategoryId,
+      });
+      if (!updatedRequest) {
+        throw new AppError(
+          'Only pending category requests can be approved.',
+          409,
+          'CATEGORY_REQUEST_NOT_PENDING',
+        );
+      }
+
+      await dependencies.createNotification(tx, {
+        userId: existing.requestedByUserId,
+        requestId: existing.id,
+        requestedName: existing.requestedName,
+        adminId,
+        resolutionMode,
+        categoryNameEn,
+        categoryNameAr,
+      });
+      await dependencies.createActivity(tx, {
+        adminId,
+        requestId: existing.id,
+        requestedName: existing.requestedName,
+        resolutionMode,
+        categoryNameEn,
+        categoryNameAr,
+        approvedCategoryId,
+        supplierEmail: existing.requestedBy.email,
+        adminJustification,
+        sharedNameAcknowledged,
+        concept,
+      });
+
+      return {
+        request: {
+          id: updatedRequest.id,
+          requestedName: updatedRequest.requestedName,
+          status: updatedRequest.status,
+          adminNote: updatedRequest.moderatorNote,
+          approvedCategoryId: updatedRequest.approvedCategoryId,
+          createdAt: updatedRequest.createdAt.toISOString(),
+          updatedAt: updatedRequest.updatedAt.toISOString(),
+        },
+        resolution: resolutionMode,
+        category: responseCategory,
+      };
+    });
   };
 };
+
+export const approveCategoryRequest = createCategoryRequestApprover();
 
 export const rejectCategoryRequest = async (
   adminId: string,

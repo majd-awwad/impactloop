@@ -11,12 +11,13 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../../materials/application/material_listing_providers.dart';
-import '../../../materials/data/models/category.dart';
 import '../../data/admin_approvals_api.dart';
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
+import '../widgets/category_request_approval_dialog.dart';
 
 const _kApprovalsPageSize = 10;
 
@@ -154,15 +155,22 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final filters = ref.watch(_approvalsFiltersProvider);
 
     return ListView(
       padding: const EdgeInsetsDirectional.only(bottom: 24),
       children: [
-        Text('Approvals', style: AdminTypography.pageTitle(palette)),
+        Text(
+          l.t('Approvals', 'الموافقات'),
+          style: AdminTypography.pageTitle(palette),
+        ),
         const SizedBox(height: 6),
         Text(
-          'Review supplier requests for new categories and price approvals before they affect the marketplace.',
+          l.t(
+            'Review supplier requests for new categories and price approvals before they affect the marketplace.',
+            'راجع طلبات الموردين للفئات الجديدة وموافقات الأسعار قبل أن تؤثر في المنصة.',
+          ),
           style: AdminTypography.pageSubtitle(palette),
         ),
         const SizedBox(height: 18),
@@ -188,6 +196,7 @@ class _ApprovalsSummaryStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final asyncSummary = ref.watch(adminApprovalsSummaryProvider);
 
     return asyncSummary.when(
@@ -221,31 +230,31 @@ class _ApprovalsSummaryStrip extends ConsumerWidget {
       data: (summary) {
         final tiles = [
           _ApprovalKpiTile(
-            label: 'Pending',
+            label: l.t('All pending approvals', 'جميع الموافقات المعلّقة'),
             value: summary.pendingTotal,
             icon: Icons.outlined_flag,
             color: palette.amber,
           ),
           _ApprovalKpiTile(
-            label: 'Approved',
+            label: l.t('Approved', 'تمت الموافقة'),
             value: summary.approvedTotal,
             icon: Icons.check_circle_outline,
             color: palette.green,
           ),
           _ApprovalKpiTile(
-            label: 'Rejected',
+            label: l.t('Rejected', 'مرفوضة'),
             value: summary.rejectedTotal,
             icon: Icons.cancel_outlined,
             color: palette.red,
           ),
           _ApprovalKpiTile(
-            label: 'Category',
+            label: l.t('Pending category requests', 'طلبات الفئات المعلّقة'),
             value: summary.categoryPending,
             icon: Icons.sell_outlined,
             color: palette.blue,
           ),
           _ApprovalKpiTile(
-            label: 'Price',
+            label: l.t('Pending price requests', 'طلبات الأسعار المعلّقة'),
             value: summary.pricePending,
             icon: Icons.attach_money,
             color: palette.purple,
@@ -313,6 +322,7 @@ class _ApprovalKpiTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -353,7 +363,10 @@ class _ApprovalKpiTile extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text('$value', style: AdminTypography.kpiValue(palette)),
-                    Text('Requests', style: AdminTypography.kpiHelper(palette)),
+                    Text(
+                      l.t('Requests', 'طلبات'),
+                      style: AdminTypography.kpiHelper(palette),
+                    ),
                   ],
                 ),
               ),
@@ -373,6 +386,7 @@ class _ApprovalsSegmentedTabs extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
 
     void select(String tab) =>
         ref.read(_approvalsFiltersProvider.notifier).setTab(tab);
@@ -387,7 +401,7 @@ class _ApprovalsSegmentedTabs extends ConsumerWidget {
         children: [
           Expanded(
             child: _ApprovalsTabItem(
-              label: 'Category Requests',
+              label: l.t('Category requests', 'طلبات الفئات'),
               icon: Icons.category_outlined,
               isSelected: selected == 'CATEGORY',
               onTap: () => select('CATEGORY'),
@@ -396,7 +410,7 @@ class _ApprovalsSegmentedTabs extends ConsumerWidget {
           Container(width: 1, height: 26, color: palette.cardBorder),
           Expanded(
             child: _ApprovalsTabItem(
-              label: 'Price Requests',
+              label: l.t('Price requests', 'طلبات الأسعار'),
               icon: Icons.price_check_outlined,
               isSelected: selected == 'PRICE',
               onTap: () => select('PRICE'),
@@ -493,15 +507,19 @@ class _ApprovalsFilterBarState extends ConsumerState<_ApprovalsFilterBar> {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final filters = ref.watch(_approvalsFiltersProvider);
     final compact = MediaQuery.sizeOf(context).width < 640;
 
     final searchField = TextField(
       controller: _controller,
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.search),
-        hintText: 'Search by supplier or material...',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        hintText: l.t(
+          'Search by supplier or material…',
+          'ابحث حسب المورد أو المادة…',
+        ),
+        border: const OutlineInputBorder(),
         isDense: true,
       ),
       onSubmitted: (value) =>
@@ -509,16 +527,26 @@ class _ApprovalsFilterBarState extends ConsumerState<_ApprovalsFilterBar> {
     );
 
     final statusField = DropdownButtonFormField<String>(
+      isExpanded: true,
       initialValue: filters.status,
-      items: const [
-        DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-        DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
-        DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-        DropdownMenuItem(value: 'ALL', child: Text('All')),
+      items: [
+        DropdownMenuItem(
+          value: 'PENDING',
+          child: Text(l.t('Pending', 'معلّق')),
+        ),
+        DropdownMenuItem(
+          value: 'APPROVED',
+          child: Text(l.t('Approved', 'تمت الموافقة')),
+        ),
+        DropdownMenuItem(
+          value: 'REJECTED',
+          child: Text(l.t('Rejected', 'مرفوض')),
+        ),
+        DropdownMenuItem(value: 'ALL', child: Text(l.t('All', 'الكل'))),
       ],
-      decoration: const InputDecoration(
-        labelText: 'Status',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: l.status,
+        border: const OutlineInputBorder(),
         isDense: true,
       ),
       onChanged: (value) {
@@ -536,7 +564,7 @@ class _ApprovalsFilterBarState extends ConsumerState<_ApprovalsFilterBar> {
         context.go('/admin/approvals');
       },
       icon: const Icon(Icons.restart_alt, size: 18),
-      label: const Text('Reset'),
+      label: Text(l.t('Reset', 'إعادة ضبط')),
       style: OutlinedButton.styleFrom(foregroundColor: palette.textSecondary),
     );
 
@@ -547,7 +575,10 @@ class _ApprovalsFilterBarState extends ConsumerState<_ApprovalsFilterBar> {
         ref.invalidate(adminApprovalsPriceRequestsProvider);
       },
       icon: Icon(Icons.refresh, size: 18, color: palette.primaryTeal),
-      label: Text('Refresh', style: TextStyle(color: palette.primaryTeal)),
+      label: Text(
+        l.t('Refresh', 'تحديث'),
+        style: TextStyle(color: palette.primaryTeal),
+      ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(color: palette.primaryTeal.withValues(alpha: 0.5)),
       ),
@@ -845,42 +876,52 @@ class _CategoryRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final dateFormat = DateFormat.yMMMd();
     final supplierLabel = _supplierLabel(
       item.supplierOrganization,
       item.supplierName,
       item.supplierEmail,
     );
-    final suggestedCategory = item.similarCategories.isEmpty
-        ? 'No suggested existing category'
-        : item.similarCategories.first;
+    final suggested = item.suggestedCategory;
+    final suggestedCategory = suggested == null
+        ? l.noSimilarCategories
+        : (l.isArabic ? suggested.nameAr : suggested.nameEn);
 
     final keyFacts = <Widget>[
       if (item.materialTitle?.trim().isNotEmpty == true)
-        _ApprovalKeyFact(label: 'Material', value: item.materialTitle!),
-      _ApprovalKeyFact(label: 'Suggested category', value: suggestedCategory),
+        _ApprovalKeyFact(label: l.material, value: item.materialTitle!),
+      _ApprovalKeyFact(
+        label: l.suggestedExistingCategory,
+        value: suggestedCategory,
+        onTap: suggested == null ? null : onApprove,
+        actionLabel: suggested == null
+            ? l.t('Unavailable', 'غير متاحة')
+            : l.useThisCategory,
+      ),
     ];
 
     final reason = item.categoryRequestReason?.trim();
 
     return _ApprovalCard(
+      cardKey: Key('category-request-card-${item.id}'),
       icon: Icons.category_outlined,
       iconColor: palette.blue,
       title: item.requestedName,
-      typeLabel: 'Category request',
+      typeLabel: l.categoryRequest,
       typeColor: palette.blue,
       submittedLabel: dateFormat.format(item.createdAt),
       supplierLabel: supplierLabel,
       status: item.status,
       keyFacts: keyFacts,
       secondaryLine: reason?.isNotEmpty == true
-          ? 'Reason: ${_truncate(reason, 140)}'
+          ? '${l.reason}: ${_truncate(reason, 140)}'
           : null,
       onDetails: onDetails,
       onApprove: onApprove,
       onReject: onReject,
-      approveLabel: 'Approve',
-      rejectLabel: 'Reject',
+      approveLabel: l.resolveCategoryRequest,
+      rejectLabel: l.reject,
     );
   }
 }
@@ -964,6 +1005,7 @@ class _PriceRequestCard extends StatelessWidget {
 /// (title, badges, supplier, compact key facts) + status + actions.
 class _ApprovalCard extends StatelessWidget {
   const _ApprovalCard({
+    this.cardKey,
     required this.icon,
     required this.iconColor,
     required this.title,
@@ -981,6 +1023,7 @@ class _ApprovalCard extends StatelessWidget {
     this.secondaryLine,
   });
 
+  final Key? cardKey;
   final IconData icon;
   final Color iconColor;
   final String title;
@@ -1003,8 +1046,9 @@ class _ApprovalCard extends StatelessWidget {
     final isPending = status.toUpperCase() == 'PENDING';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
+      key: cardKey,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(18),
@@ -1021,8 +1065,8 @@ class _ApprovalCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 46,
+            height: 46,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: palette.isDark ? 0.2 : 0.12),
@@ -1030,7 +1074,7 @@ class _ApprovalCard extends StatelessWidget {
             ),
             child: Icon(icon, size: 24, color: iconColor),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1074,7 +1118,7 @@ class _ApprovalCard extends StatelessWidget {
                   ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 if (keyFacts.isNotEmpty) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 9),
                   Wrap(spacing: 8, runSpacing: 8, children: keyFacts),
                 ],
                 if (secondaryLine != null &&
@@ -1087,7 +1131,7 @@ class _ApprovalCard extends StatelessWidget {
                     style: AdminTypography.kpiHelper(palette),
                   ),
                 ],
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 _ApprovalActionRow(
                   isPending: isPending,
                   onDetails: onDetails,
@@ -1107,15 +1151,22 @@ class _ApprovalCard extends StatelessWidget {
 
 /// Small labeled pill used for compact "key facts" (e.g. price, quantity).
 class _ApprovalKeyFact extends StatelessWidget {
-  const _ApprovalKeyFact({required this.label, required this.value});
+  const _ApprovalKeyFact({
+    required this.label,
+    required this.value,
+    this.onTap,
+    this.actionLabel,
+  });
 
   final String label;
   final String value;
+  final VoidCallback? onTap;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    return Container(
+    final content = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: palette.pageBackground,
@@ -1134,9 +1185,27 @@ class _ApprovalKeyFact extends StatelessWidget {
               color: palette.textPrimary,
             ),
           ),
+          if (actionLabel != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              actionLabel!,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: onTap == null ? palette.textMuted : palette.primaryTeal,
+              ),
+            ),
+          ],
         ],
       ),
     );
+    return onTap == null
+        ? content
+        : InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: content,
+          );
   }
 }
 
@@ -1265,62 +1334,7 @@ Future<void> _quickApproveCategory(
   BuildContext context,
   WidgetRef ref,
   AdminCategoryRequestListItem item,
-) async {
-  final api = ref.read(adminApprovalsApiProvider);
-  final controller = TextEditingController(text: item.requestedName);
-  final finalName = await showDialog<String?>(
-    context: context,
-    builder: (context) => AppDialogShell(
-      title: const Text('Approve category'),
-      content: TextField(
-        controller: controller,
-        decoration: const InputDecoration(
-          labelText: 'Final category name',
-          border: OutlineInputBorder(),
-        ),
-      ),
-      footer: AppDialogFooter.form(
-        primaryAction: FilledButton(
-          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-          style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
-          child: const Text('Approve'),
-        ),
-      ),
-    ),
-  );
-  controller.dispose();
-  if (finalName == null || finalName.trim().isEmpty) return;
-
-  try {
-    await api.approveCategoryRequest(id: item.id, finalName: finalName);
-    ref.invalidate(adminApprovalsSummaryProvider);
-    ref.invalidate(adminApprovalsCategoryRequestsProvider);
-    ref.invalidate(materialCategoriesProvider);
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Category approved.')));
-    }
-  } on ApiException catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.displayMessage),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  }
-}
+) => _openCategoryDetails(context, ref, item);
 
 Future<void> _quickRejectCategory(
   BuildContext context,
@@ -1634,19 +1648,19 @@ Future<void> _openCategoryDetails(
   AdminCategoryRequestListItem item,
 ) async {
   final api = ref.read(adminApprovalsApiProvider);
-  final categoriesAsync = ref.read(materialCategoriesProvider.future);
 
   await showDialog<void>(
     context: context,
+    barrierDismissible: false,
     builder: (context) {
-      return _CategoryRequestDialog(
+      return CategoryRequestApprovalDialog(
         item: item,
         api: api,
-        categoriesFuture: categoriesAsync,
         onCompleted: () {
           ref.invalidate(adminApprovalsSummaryProvider);
           ref.invalidate(adminApprovalsCategoryRequestsProvider);
           ref.invalidate(materialCategoriesProvider);
+          ref.invalidate(adminMaterialCategoryOptionsProvider);
         },
       );
     },
@@ -1672,404 +1686,6 @@ Future<void> _openPriceDetails(
   );
 }
 
-class _CategoryRequestDialog extends StatefulWidget {
-  const _CategoryRequestDialog({
-    required this.item,
-    required this.api,
-    required this.categoriesFuture,
-    required this.onCompleted,
-  });
-
-  final AdminCategoryRequestListItem item;
-  final AdminApprovalsApi api;
-  final Future<List<MaterialCategory>> categoriesFuture;
-  final VoidCallback onCompleted;
-
-  @override
-  State<_CategoryRequestDialog> createState() => _CategoryRequestDialogState();
-}
-
-class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
-  bool _submitting = false;
-
-  Future<void> _approve() async {
-    final controller = TextEditingController(text: widget.item.requestedName);
-    final result = await showDialog<String?>(
-      context: context,
-      builder: (context) => AppDialogShell(
-        title: const Text('Approve category request'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Final category name',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        footer: AppDialogFooter.form(
-          primaryAction: FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
-            child: const Text('Approve'),
-          ),
-        ),
-      ),
-    );
-    controller.dispose();
-    if (result == null || result.trim().isEmpty) return;
-
-    setState(() => _submitting = true);
-    try {
-      await widget.api.approveCategoryRequest(
-        id: widget.item.id,
-        finalName: result,
-      );
-      if (!mounted) return;
-      widget.onCompleted();
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Category request approved.')),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.displayMessage),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  }
-
-  Future<void> _reject() async {
-    final reasonController = TextEditingController();
-    String? selectedCategoryId;
-
-    final categories = await widget.categoriesFuture;
-    if (!mounted) {
-      reasonController.dispose();
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AppDialogShell(
-        title: const Text('Reject category request'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Reason (required)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: selectedCategoryId,
-              items: [
-                for (final c in categories)
-                  DropdownMenuItem(value: c.id, child: Text(c.nameEn)),
-              ],
-              onChanged: (value) => selectedCategoryId = value,
-              decoration: const InputDecoration(
-                labelText: 'Suggested existing category (recommended)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        footer: AppDialogFooter.decision(
-          secondaryAction: TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          primaryAction: FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-            child: const Text('Reject'),
-          ),
-        ),
-      ),
-    );
-
-    final reason = reasonController.text.trim();
-    reasonController.dispose();
-    if (!mounted) return;
-    if (confirmed != true) return;
-    if (reason.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Reason is required.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
-    if (categories.isNotEmpty &&
-        (selectedCategoryId == null || selectedCategoryId!.trim().isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Select a suggested existing category.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      await widget.api.rejectCategoryRequest(
-        id: widget.item.id,
-        adminNote: reason,
-        suggestedCategoryId: selectedCategoryId,
-      );
-      if (!mounted) return;
-      widget.onCompleted();
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Category request rejected.')),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.displayMessage),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final colors = AppThemeColors.of(context);
-    final item = widget.item;
-    final supplierLabel = _supplierLabel(
-      item.supplierOrganization,
-      item.supplierName,
-      item.supplierEmail,
-    );
-    final screenSize = MediaQuery.sizeOf(context);
-    final maxDialogWidth = (screenSize.width - 48).clamp(280.0, 940.0);
-
-    return Dialog(
-      backgroundColor: palette.cardBackground,
-      elevation: 12,
-      shadowColor: colors.shadow,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-        side: BorderSide(color: palette.cardBorder),
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: maxDialogWidth,
-          maxHeight: screenSize.height * 0.86,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _CategoryDialogHeader(item: item, onClose: _closeDialog),
-            const SizedBox(height: 20),
-            _CategoryMetadataStrip(item: item, supplierLabel: supplierLabel),
-            const SizedBox(height: 18),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(32, 0, 32, 4),
-                child: _CategoryDialogBody(item: item),
-              ),
-            ),
-            const SizedBox(height: 4),
-            _CategoryDialogFooter(
-              submitting: _submitting,
-              canApprove: item.status.toUpperCase() == 'PENDING',
-              onClose: _closeDialog,
-              onReject: _reject,
-              onApprove: _approve,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _closeDialog() {
-    if (_submitting) return;
-    Navigator.of(context).maybePop();
-  }
-}
-
-/// Header: category icon tile + dialog type title + close button, followed
-/// by the request title and its "Category request" type badge.
-class _CategoryDialogHeader extends StatelessWidget {
-  const _CategoryDialogHeader({required this.item, required this.onClose});
-
-  final AdminCategoryRequestListItem item;
-  final VoidCallback onClose;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 28, 32, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: palette.blue.withValues(
-                    alpha: palette.isDark ? 0.2 : 0.12,
-                  ),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Icon(
-                  Icons.category_outlined,
-                  size: 24,
-                  color: palette.blue,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  'Category request',
-                  style: AdminTypography.sectionTitle(palette),
-                ),
-              ),
-              AppCloseButton(onPressed: onClose, tooltip: 'Close'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            item.requestedName,
-            style: AdminTypography.pageTitle(palette).copyWith(fontSize: 21),
-          ),
-          const SizedBox(height: 10),
-          const AppStatusBadge(
-            label: 'Category request',
-            tone: AppStatusTone.info,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Horizontal three-section strip: Status | Supplier | Material.
-class _CategoryMetadataStrip extends StatelessWidget {
-  const _CategoryMetadataStrip({
-    required this.item,
-    required this.supplierLabel,
-  });
-
-  final AdminCategoryRequestListItem item;
-  final String supplierLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        decoration: BoxDecoration(
-          color: palette.cardBackground,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: palette.cardBorder),
-          boxShadow: [
-            BoxShadow(
-              color: palette.cardShadow,
-              blurRadius: palette.isDark ? 12 : 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final items = [
-              _MetadataItem(
-                icon: Icons.access_time_rounded,
-                tone: AppStatusTone.warning,
-                label: 'Status',
-                valueWidget: AppStatusBadge(
-                  label: _formatApprovalStatus(item.status),
-                  tone: reviewStatusTone(item.status),
-                ),
-              ),
-              _MetadataItem(
-                icon: Icons.storefront_outlined,
-                tone: AppStatusTone.info,
-                label: 'Supplier',
-                value: supplierLabel,
-              ),
-              _MetadataItem(
-                icon: Icons.inventory_2_outlined,
-                tone: AppStatusTone.success,
-                label: 'Material',
-                value: _dashOr(item.materialTitle),
-              ),
-            ];
-
-            if (constraints.maxWidth < 480) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 14),
-                    items[i],
-                  ],
-                ],
-              );
-            }
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: items[0]),
-                _MetaDivider(palette: palette),
-                Expanded(child: items[1]),
-                _MetaDivider(palette: palette),
-                Expanded(child: items[2]),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
 class _MetaDivider extends StatelessWidget {
   const _MetaDivider({required this.palette});
 
@@ -2093,7 +1709,6 @@ class _MetadataItem extends StatelessWidget {
     required this.label,
     this.value,
     this.valueWidget,
-    this.valueMaxLines = 1,
   });
 
   final IconData icon;
@@ -2101,7 +1716,6 @@ class _MetadataItem extends StatelessWidget {
   final String label;
   final String? value;
   final Widget? valueWidget;
-  final int valueMaxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -2132,7 +1746,7 @@ class _MetadataItem extends StatelessWidget {
               valueWidget ??
                   Text(
                     value ?? '—',
-                    maxLines: valueMaxLines,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13.5,
@@ -2145,78 +1759,6 @@ class _MetadataItem extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Two-column desktop body: Request details + Category matching on the
-/// left, Request summary on the right. Stacks on narrow widths.
-class _CategoryDialogBody extends StatelessWidget {
-  const _CategoryDialogBody({required this.item});
-
-  final AdminCategoryRequestListItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final quantityValue = item.quantity == null
-        ? '—'
-        : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim();
-    final similarValue = item.similarCategories.isEmpty
-        ? 'No suggested existing category'
-        : item.similarCategories.join(', ');
-
-    final leftColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _DialogSectionCard(
-          title: 'Request details',
-          child: Column(
-            children: [
-              _DetailRow(
-                label: 'Description',
-                value: _dashOr(item.materialDescription),
-              ),
-              _DetailRow(label: 'Quantity', value: quantityValue),
-              _DetailRow(
-                label: 'Condition',
-                value: _formatCondition(item.condition),
-              ),
-              _DetailRow(label: 'Location', value: _dashOr(item.locationLabel)),
-              _DetailRow(
-                label: 'Reason',
-                value: _dashOr(item.categoryRequestReason),
-                isLast: true,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _CategoryMatchingCard(similarCategoryLabel: similarValue),
-      ],
-    );
-
-    final rightColumn = _RequestSummaryCard(
-      submittedLabel: _formatSubmittedTimestamp(item.createdAt),
-    );
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 620) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [leftColumn, const SizedBox(height: 16), rightColumn],
-          );
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 2, child: leftColumn),
-            const SizedBox(width: 18),
-            SizedBox(width: 300, child: rightColumn),
-          ],
-        );
-      },
     );
   }
 }
@@ -2347,282 +1889,9 @@ class _InlinePricePill extends StatelessWidget {
   }
 }
 
-/// "Category matching" card: search icon tile + similar-category summary.
-class _CategoryMatchingCard extends StatelessWidget {
-  const _CategoryMatchingCard({required this.similarCategoryLabel});
-
-  final String similarCategoryLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final style = AppStatusStyle.of(context, AppStatusTone.success);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: palette.pageBackground,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Category matching',
-            style: AdminTypography.sectionTitle(palette),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: style.background,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.search, size: 17, color: style.foreground),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Similar categories',
-                      style: AdminTypography.kpiHelper(palette),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      similarCategoryLabel,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: palette.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// "Request summary" card: green top accent, submitted timestamp and
-/// static admin guidance copy.
-class _RequestSummaryCard extends StatelessWidget {
-  const _RequestSummaryCard({required this.submittedLabel});
-
-  final String submittedLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(15),
-      child: Container(
-        decoration: BoxDecoration(
-          color: palette.cardBackground,
-          border: Border.all(color: palette.cardBorder),
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(height: 4, color: palette.green),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Request summary',
-                    style: AdminTypography.sectionTitle(palette),
-                  ),
-                  const SizedBox(height: 14),
-                  _MetadataItem(
-                    icon: Icons.calendar_today_outlined,
-                    tone: AppStatusTone.success,
-                    label: 'Submitted',
-                    value: submittedLabel,
-                  ),
-                  const SizedBox(height: 14),
-                  Divider(color: palette.cardBorder, height: 1),
-                  const SizedBox(height: 14),
-                  _MetadataItem(
-                    icon: Icons.info_outline,
-                    tone: AppStatusTone.info,
-                    label: 'Admin guidance',
-                    value:
-                        'Review the proposed category and approve it if it '
-                        'should be added to the marketplace taxonomy.',
-                    valueMaxLines: 4,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Fixed footer: Close, Reject, and Approve actions aligned to the end.
-class _CategoryDialogFooter extends StatelessWidget {
-  const _CategoryDialogFooter({
-    required this.submitting,
-    required this.canApprove,
-    required this.onClose,
-    required this.onReject,
-    required this.onApprove,
-  });
-
-  final bool submitting;
-  final bool canApprove;
-  final VoidCallback onClose;
-  final VoidCallback onReject;
-  final VoidCallback onApprove;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final colors = AppThemeColors.of(context);
-    final dangerColor = AppStatusStyle.of(
-      context,
-      AppStatusTone.danger,
-    ).foreground;
-
-    final closeButton = SizedBox(
-      height: 46,
-      child: OutlinedButton(
-        onPressed: submitting ? null : onClose,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: palette.textSecondary,
-          side: BorderSide(color: palette.cardBorder),
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        child: const Text('Close'),
-      ),
-    );
-
-    final rejectButton = SizedBox(
-      height: 46,
-      child: OutlinedButton.icon(
-        onPressed: submitting ? null : onReject,
-        icon: Icon(Icons.close, size: 16, color: dangerColor),
-        label: const Text('Reject'),
-        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger)
-            .copyWith(
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(horizontal: 20),
-              ),
-              shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-      ),
-    );
-
-    final approveButton = SizedBox(
-      height: 46,
-      child: FilledButton(
-        onPressed: (submitting || !canApprove) ? null : onApprove,
-        style: AppStatusButtonStyle.filled(context, AppStatusTone.success)
-            .copyWith(
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(horizontal: 20),
-              ),
-              shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-        child: submitting
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: colors.textOnPrimary,
-                ),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check, size: 16, color: colors.textOnPrimary),
-                  const SizedBox(width: 6),
-                  const Text('Approve'),
-                ],
-              ),
-      ),
-    );
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: palette.cardBorder)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth < 480) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                approveButton,
-                const SizedBox(height: 10),
-                rejectButton,
-                const SizedBox(height: 10),
-                closeButton,
-              ],
-            );
-          }
-
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              closeButton,
-              const SizedBox(width: 12),
-              rejectButton,
-              const SizedBox(width: 12),
-              approveButton,
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
 String _dashOr(String? value) {
   final trimmed = value?.trim() ?? '';
   return trimmed.isEmpty ? '—' : trimmed;
-}
-
-String _formatSubmittedTimestamp(DateTime createdAt) {
-  final diff = DateTime.now().difference(createdAt);
-  if (diff.inSeconds < 45) return 'Just now';
-  if (diff.inMinutes < 60) {
-    final minutes = diff.inMinutes;
-    return '$minutes minute${minutes == 1 ? '' : 's'} ago';
-  }
-  if (diff.inHours < 24) {
-    final hours = diff.inHours;
-    return '$hours hour${hours == 1 ? '' : 's'} ago';
-  }
-  return DateFormat.yMMMd().add_jm().format(createdAt);
 }
 
 class _PriceRequestDialog extends StatefulWidget {

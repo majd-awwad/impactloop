@@ -30,6 +30,22 @@ export const listAdminCategoryRequests = async (
   res.json(successResponse('Category requests loaded.', result));
 };
 
+export const listAdminMaterialFamilyOptions = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+  const result = await service.listMaterialFamilyOptions();
+  res.json(successResponse('Material family options loaded.', result));
+};
+
+export const listAdminMaterialCategoryOptions = async (
+  _req: Request,
+  res: Response,
+): Promise<void> => {
+  const result = await service.listMaterialCategoryOptions();
+  res.json(successResponse('Material category options loaded.', result));
+};
+
 export const approveAdminCategoryRequest = async (
   req: Request,
   res: Response,
