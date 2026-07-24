@@ -83,6 +83,9 @@ class AiContentBlockView extends ConsumerWidget {
             buildId: block.buildId,
             groups: block.matchGroups,
           ),
+        'project_budget_estimate' => block.budgetEstimate == null
+            ? const SizedBox.shrink()
+            : _AiProjectBudgetEstimateBlock(estimate: block.budgetEstimate!),
         'comparison' => _AiComparisonBlock(
             subject: block.comparisonSubject,
             items: block.comparisonItems,
@@ -927,6 +930,206 @@ class _AiBuildChecklistBlock extends StatelessWidget {
                 child: Text(AiL10n.viewBuild.resolve(context)),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiProjectBudgetEstimateBlock extends StatelessWidget {
+  const _AiProjectBudgetEstimateBlock({required this.estimate});
+
+  final AiProjectBudgetEstimate estimate;
+
+  String _formatMoney(BuildContext context, double value) {
+    if (value == 0) {
+      return Directionality.of(context) == TextDirection.rtl ? '0 ₪' : '0 NIS';
+    }
+    return '${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2)} ₪';
+  }
+
+  String _statusLabel(BuildContext context, String status) {
+    return switch (status) {
+      'SELECTED' => AiL10n.budgetStatusSelected.resolve(context),
+      'NO_AVAILABLE_MATCH' => AiL10n.budgetStatusNoMatch.resolve(context),
+      'INSUFFICIENT_QUANTITY' => AiL10n.budgetStatusInsufficient.resolve(context),
+      'PRICE_UNAVAILABLE' => AiL10n.budgetStatusUnpriced.resolve(context),
+      'UNSUPPORTED_CURRENCY' => AiL10n.budgetStatusUnsupportedCurrency.resolve(context),
+      'UNIT_ASSUMPTION_REQUIRED' => AiL10n.budgetStatusUnitAssumption.resolve(context),
+      _ => status,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final statusLabel = switch (estimate.estimateStatus) {
+      'COMPLETE' => AiL10n.budgetEstimateComplete.resolve(context),
+      'ZERO_COST_AVAILABLE_MATERIALS' =>
+        AiL10n.budgetEstimateZeroCost.resolve(context),
+      _ => AiL10n.budgetEstimatePartial.resolve(context),
+    };
+
+    return _AiBlockSection(
+      title: AiL10n.budgetEstimateSection.resolve(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                colors: [palette.fallbackStart, palette.fallbackEnd],
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  statusLabel,
+                  style: AppTextStyles.label(context).copyWith(fontSize: 13),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  AiL10n.budgetEstimatedSubtotal.resolve(context),
+                  style: AppTextStyles.body(context).copyWith(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  _formatMoney(context, estimate.estimatedSubtotalNis),
+                  style: AppTextStyles.title(context).copyWith(fontSize: 22),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  AiL10n.budgetCoverageSummary
+                      .resolve(context)
+                      .replaceAll('{priced}', '${estimate.pricedComponentCount}')
+                      .replaceAll('{total}', '${estimate.requiredComponentCount}'),
+                  style: AppTextStyles.body(context).copyWith(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          if (estimate.quantityAssumptionWarning?.isNotEmpty == true) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              estimate.quantityAssumptionWarning!,
+              style: AppTextStyles.body(context).copyWith(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            estimate.deliveryExcludedNotice,
+            style: AppTextStyles.body(context).copyWith(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          for (var i = 0; i < estimate.components.length; i++) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.md),
+            Text(
+              estimate.components[i].componentName,
+              style: AppTextStyles.label(context).copyWith(fontSize: 13),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (estimate.components[i].selectedMaterialTitle?.isNotEmpty ==
+                          true)
+                        Text(
+                          estimate.components[i].selectedMaterialTitle!,
+                          style: AppTextStyles.body(context).copyWith(fontSize: 13),
+                        )
+                      else
+                        Text(
+                          _statusLabel(context, estimate.components[i].status),
+                          style: AppTextStyles.body(context).copyWith(
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      if (estimate.components[i].assumptionNote?.isNotEmpty == true)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text(
+                            estimate.components[i].assumptionNote!,
+                            style: AppTextStyles.body(context).copyWith(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      if (estimate.components[i].alternativesCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text(
+                            AiL10n.budgetAlternativesCount
+                                .resolve(context)
+                                .replaceAll(
+                                  '{count}',
+                                  '${estimate.components[i].alternativesCount}',
+                                ),
+                            style: AppTextStyles.body(context).copyWith(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Column(
+                  crossAxisAlignment:
+                      isRtl ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      estimate.components[i].effectiveComponentCost == null
+                          ? _statusLabel(context, estimate.components[i].status)
+                          : _formatMoney(
+                              context,
+                              estimate.components[i].effectiveComponentCost!,
+                            ),
+                      style: AppTextStyles.label(context).copyWith(fontSize: 13),
+                    ),
+                    if (estimate.components[i].selectedMaterialId?.isNotEmpty ==
+                        true)
+                      TextButton(
+                        onPressed: () => context.push(
+                          '/materials/${estimate.components[i].selectedMaterialId}',
+                        ),
+                        child: Text(AiL10n.viewMaterial.resolve(context)),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton(
+              onPressed: estimate.projectId.isEmpty
+                  ? null
+                  : () => context.push('/learning/projects/${estimate.projectId}'),
+              child: Text(AiL10n.viewProject.resolve(context)),
+            ),
+          ),
         ],
       ),
     );

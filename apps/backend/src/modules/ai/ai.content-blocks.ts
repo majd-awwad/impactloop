@@ -127,6 +127,51 @@ export const aiComponentMatchesBlockSchema = z.object({
     .max(10),
 });
 
+const aiProjectBudgetComponentLineSchema = z.object({
+  componentId: z.string().trim().min(1),
+  componentName: z.string().trim().min(1),
+  requiredQuantity: z.number().positive(),
+  requiredUnit: z.string().trim().min(1).nullable().optional(),
+  status: z.enum([
+    'SELECTED',
+    'NO_AVAILABLE_MATCH',
+    'INSUFFICIENT_QUANTITY',
+    'PRICE_UNAVAILABLE',
+    'UNSUPPORTED_CURRENCY',
+    'UNIT_ASSUMPTION_REQUIRED',
+  ]),
+  selectedMaterialId: z.string().trim().min(1).nullable().optional(),
+  selectedMaterialTitle: z.string().trim().min(1).nullable().optional(),
+  isFree: z.boolean().nullable().optional(),
+  unitPrice: z.number().nonnegative().nullable().optional(),
+  effectiveComponentCost: z.number().nonnegative().nullable().optional(),
+  allocatedQuantity: z.number().nonnegative().nullable().optional(),
+  availableQuantity: z.number().nonnegative().nullable().optional(),
+  listingUnit: z.string().trim().min(1).nullable().optional(),
+  alternativesCount: z.number().int().nonnegative(),
+  matchEvidence: z.string().trim().min(1).nullable().optional(),
+  assumptionNote: z.string().trim().min(1).nullable().optional(),
+});
+
+export const aiProjectBudgetEstimateBlockSchema = z.object({
+  type: z.literal('project_budget_estimate'),
+  projectId: z.string().trim().min(1),
+  projectTitle: z.string().trim().min(1),
+  projectImageUrl: z.string().url().nullable().optional(),
+  categoryLabel: z.string().trim().min(1).nullable().optional(),
+  difficulty: z.string().trim().min(1).nullable().optional(),
+  estimateStatus: z.enum(['COMPLETE', 'PARTIAL', 'ZERO_COST_AVAILABLE_MATERIALS']),
+  estimatedSubtotalNis: z.number().nonnegative(),
+  currency: z.literal('NIS'),
+  requiredComponentCount: z.number().int().nonnegative(),
+  pricedComponentCount: z.number().int().nonnegative(),
+  missingComponentCount: z.number().int().nonnegative(),
+  unpricedComponentCount: z.number().int().nonnegative(),
+  quantityAssumptionWarning: z.string().trim().min(1).nullable().optional(),
+  deliveryExcludedNotice: z.string().trim().min(1),
+  components: z.array(aiProjectBudgetComponentLineSchema).max(30),
+});
+
 export const aiComparisonBlockSchema = z.object({
   type: z.literal('comparison'),
   subject: z.enum(['MATERIAL', 'PROJECT']),
@@ -725,6 +770,7 @@ export const aiContentBlockSchema = z.discriminatedUnion('type', [
   aiComponentListBlockSchema,
   aiBuildChecklistBlockSchema,
   aiComponentMatchesBlockSchema,
+  aiProjectBudgetEstimateBlockSchema,
   aiComparisonBlockSchema,
   aiRecommendationsBlockSchema,
   aiBuildStepGuideBlockSchema,

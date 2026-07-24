@@ -7,6 +7,7 @@ import {
   compareProjectIdsInputSchema,
   componentIdInputSchema,
   emptyObjectSchema,
+  estimateProjectMaterialBudgetInputSchema,
   findMaterialsForProjectInputSchema,
   matchAvailableMaterialsForProjectInputSchema,
   materialIdInputSchema,
@@ -164,6 +165,17 @@ export const AI_TOOL_REGISTRY = {
     maxOutputBytes: 48_768,
     handler: (input, context) =>
       executeLearnerAgentTool('match_available_materials_for_project', input, context),
+  }),
+  estimate_project_material_budget: defineReadTool({
+    name: 'estimate_project_material_budget',
+    kind: 'read',
+    description:
+      'Estimate the cheapest currently available ImpactLoop material subtotal for a published learning project required components without starting a build',
+    inputSchema: estimateProjectMaterialBudgetInputSchema,
+    timeoutMs: 15_000,
+    maxOutputBytes: 48_768,
+    handler: (input, context) =>
+      executeLearnerAgentTool('estimate_project_material_budget', input, context),
   }),
   compare_materials: defineReadTool({
     name: 'compare_materials',

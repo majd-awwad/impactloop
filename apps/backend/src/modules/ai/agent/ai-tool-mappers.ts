@@ -1,5 +1,6 @@
 import type { AiContentBlock } from '../ai.content-blocks.js';
 import type { AiLocale } from '../ai.types.js';
+import type { ProjectMaterialBudgetEstimate } from '../../learning-projects/learning-projects.build-material-linking.js';
 import { resolveBuildItemStepUnlockReadiness } from '../../learning-projects/learning-projects.build-material-linking.js';
 
 const DEFAULT_CURRENCY_SYMBOL = '₪';
@@ -408,6 +409,76 @@ export const buildProjectMaterialAvailabilityIntro = (
   return locale === 'ar'
     ? 'المواد المتوفرة حالياً على ImpactLoop لمكونات هذا المشروع:'
     : 'Currently available ImpactLoop materials for this project:';
+};
+
+export const toProjectBudgetEstimateBlock = (
+  estimate: ProjectMaterialBudgetEstimate,
+  locale: AiLocale,
+): AiContentBlock => ({
+  type: 'project_budget_estimate',
+  projectId: estimate.projectId,
+  projectTitle: estimate.projectTitle,
+  projectImageUrl: estimate.projectImageUrl,
+  categoryLabel: estimate.categoryLabel,
+  difficulty: estimate.difficulty,
+  estimateStatus: estimate.estimateStatus,
+  estimatedSubtotalNis: estimate.estimatedSubtotalNis,
+  currency: estimate.currency,
+  requiredComponentCount: estimate.requiredComponentCount,
+  pricedComponentCount: estimate.pricedComponentCount,
+  missingComponentCount: estimate.missingComponentCount,
+  unpricedComponentCount: estimate.unpricedComponentCount,
+  quantityAssumptionWarning: estimate.quantityAssumptionWarning,
+  deliveryExcludedNotice:
+    locale === 'ar'
+      ? 'هذا تقدير للمواد المتوفرة حالياً على ImpactLoop فقط، ولا يشمل التوصيل أو الأدوات أو المكونات غير المتوفرة.'
+      : estimate.deliveryExcludedNotice,
+  components: estimate.components.map((line) => ({
+    componentId: line.componentId,
+    componentName: line.componentName,
+    requiredQuantity: line.requiredQuantity,
+    requiredUnit: line.requiredUnit,
+    status: line.status,
+    selectedMaterialId: line.selectedMaterialId,
+    selectedMaterialTitle: line.selectedMaterialTitle,
+    isFree: line.isFree,
+    unitPrice: line.unitPrice,
+    effectiveComponentCost: line.effectiveComponentCost,
+    allocatedQuantity: line.allocatedQuantity,
+    availableQuantity: line.availableQuantity,
+    listingUnit: line.listingUnit,
+    alternativesCount: line.alternativesCount,
+    matchEvidence: line.matchEvidence,
+    assumptionNote: line.assumptionNote,
+  })),
+});
+
+export const buildProjectBudgetEstimationIntro = (
+  locale: AiLocale,
+  projectTitle?: string,
+  estimateStatus?: ProjectMaterialBudgetEstimate['estimateStatus'],
+): string => {
+  const titleSuffix = projectTitle
+    ? locale === 'ar'
+      ? ` لمشروع ${projectTitle}`
+      : ` for ${projectTitle}`
+    : '';
+
+  if (estimateStatus === 'ZERO_COST_AVAILABLE_MATERIALS') {
+    return locale === 'ar'
+      ? `تقدير المواد المتوفرة حالياً${titleSuffix}: 0 شيكل للمواد المجانية المختارة.`
+      : `Estimated available-material subtotal${titleSuffix}: 0 NIS for the selected free listings.`;
+  }
+
+  if (estimateStatus === 'PARTIAL') {
+    return locale === 'ar'
+      ? `تقدير جزئي للمواد المتوفرة حالياً${titleSuffix}:`
+      : `Partial estimated available-material subtotal${titleSuffix}:`;
+  }
+
+  return locale === 'ar'
+    ? `تقدير المواد المتوفرة حالياً${titleSuffix}:`
+    : `Estimated available-material subtotal${titleSuffix}:`;
 };
 
 export const mergeAgentBlocks = (

@@ -34,6 +34,7 @@ type SeedIds = {
   learnerNoCoordsId: string;
   supplierId: string;
   materialCategoryId: string;
+  budgetMaterialCategoryId: string;
   projectCategoryId: string;
   createdCategoryIds: string[];
   availableFreeNearId: string;
@@ -47,6 +48,14 @@ type SeedIds = {
   obstacleProjectId: string;
   draftProjectId: string;
   buildId: string;
+  budgetArduinoCheapId: string;
+  budgetArduinoExpensiveId: string;
+  budgetUltrasonicFreeId: string;
+  budgetUltrasonicPaidId: string;
+  budgetMotorCheapId: string;
+  budgetMotorExpensiveId: string;
+  budgetJumperFreeId: string;
+  budgetJumperPaidId: string;
   availableMaterialIds: Set<string>;
   excludedMaterialIds: Set<string>;
 };
@@ -62,6 +71,7 @@ const ids: SeedIds = {
   learnerNoCoordsId: '',
   supplierId: '',
   materialCategoryId: '',
+  budgetMaterialCategoryId: '',
   projectCategoryId: '',
   createdCategoryIds: [],
   availableFreeNearId: '',
@@ -75,6 +85,14 @@ const ids: SeedIds = {
   obstacleProjectId: '',
   draftProjectId: '',
   buildId: '',
+  budgetArduinoCheapId: '',
+  budgetArduinoExpensiveId: '',
+  budgetUltrasonicFreeId: '',
+  budgetUltrasonicPaidId: '',
+  budgetMotorCheapId: '',
+  budgetMotorExpensiveId: '',
+  budgetJumperFreeId: '',
+  budgetJumperPaidId: '',
   availableMaterialIds: new Set(),
   excludedMaterialIds: new Set(),
 };
@@ -92,6 +110,7 @@ let aiContentBlocksSchema: typeof import('../ai.content-blocks.js').aiContentBlo
 let saveLearningProjectById: typeof import('../../learning-projects/learning-projects.service.js').saveLearningProjectById;
 let startProjectBuildById: typeof import('../../learning-projects/learning-projects.service.js').startProjectBuildById;
 let updateProjectBuildItemById: typeof import('../../learning-projects/learning-projects.service.js').updateProjectBuildItemById;
+const hiddenObstacleProjectIds: string[] = [];
 
 async function createLearnerUser(
   label: string,
@@ -206,6 +225,47 @@ async function createMaterial(input: {
     `;
   }
 
+  return material;
+}
+
+async function createComponentMaterial(input: {
+  locationId: string;
+  title: string;
+  materialType: string;
+  quantity: number;
+  unit: string;
+  categoryId?: string;
+  isFree?: boolean;
+  price?: number | null;
+  tags?: string[];
+}) {
+  const supplierProfile = await prisma.supplierProfile.findUnique({
+    where: { userId: ids.supplierId },
+  });
+
+  const material = await prisma.material.create({
+    data: {
+      ownerId: ids.supplierId,
+      supplierProfileId: supplierProfile?.id,
+      categoryId: input.categoryId ?? ids.materialCategoryId,
+      locationId: input.locationId,
+      title: input.title,
+      description: `${TEST_MARKER} seeded component material`,
+      materialType: input.materialType,
+      quantity: input.quantity,
+      unit: input.unit,
+      condition: 'GOOD',
+      sourceType: 'WORKSHOP_SURPLUS',
+      status: 'AVAILABLE',
+      isFree: input.isFree ?? false,
+      price: input.isFree ? null : input.price ?? 25,
+      currency: 'NIS',
+      tags: {
+        create: (input.tags ?? []).map((tag) => ({ tag })),
+      },
+    },
+  });
+  ids.materials.push(material.id);
   return material;
 }
 
@@ -433,6 +493,17 @@ before(async () => {
     }));
   ids.materialCategoryId = materialCategory.id;
 
+  const budgetMaterialCategory = await prisma.category.create({
+    data: {
+      nameEn: `Agent Budget Demo ${SEED_TOKEN}`,
+      nameAr: `ميزانية ${SEED_TOKEN}`,
+      categoryType: 'BOTH',
+      isActive: true,
+    },
+  });
+  ids.budgetMaterialCategoryId = budgetMaterialCategory.id;
+  ids.createdCategoryIds.push(budgetMaterialCategory.id);
+
   const projectCategory = await prisma.category.create({
     data: {
       nameEn: `Agent Robotics ${SEED_TOKEN}`,
@@ -593,6 +664,22 @@ before(async () => {
   ids.publishedArduinoProjectId = publishedArduino.id;
   ids.projects.push(publishedArduino.id);
 
+  const existingObstacleProjects = await prisma.learningProject.findMany({
+    where: {
+      title: 'Obstacle Avoidance Robot',
+      hiddenAt: null,
+    },
+    select: { id: true },
+  });
+  if (existingObstacleProjects.length > 0) {
+    const hiddenAt = new Date();
+    await prisma.learningProject.updateMany({
+      where: { id: { in: existingObstacleProjects.map((project) => project.id) } },
+      data: { hiddenAt },
+    });
+    hiddenObstacleProjectIds.push(...existingObstacleProjects.map((project) => project.id));
+  }
+
   const obstacleProject = await prisma.learningProject.create({
     data: {
       categoryId: ids.projectCategoryId,
@@ -606,22 +693,40 @@ before(async () => {
       requiredComponents: {
         create: [
           {
-            componentName: 'Ultrasonic Sensor',
-            materialType: 'Sensor',
+            componentName: 'Arduino board',
+            materialType: 'Arduino Uno',
             quantity: 1,
             unit: 'piece',
             componentRole: 'REQUIRED_MATERIAL',
-            categoryId: ids.materialCategoryId,
-            searchKeywords: ['ultrasonic'],
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['arduino', 'microcontroller', 'uno'],
           },
           {
-            componentName: 'DC Motor',
-            materialType: 'Motor',
-            quantity: 2,
+            componentName: 'Ultrasonic distance sensor',
+            materialType: 'Ultrasonic Sensor',
+            quantity: 1,
             unit: 'piece',
             componentRole: 'REQUIRED_MATERIAL',
-            categoryId: ids.materialCategoryId,
-            searchKeywords: ['motor'],
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['ultrasonic', 'distance sensor', 'hc-sr04'],
+          },
+          {
+            componentName: 'DC gear motors',
+            materialType: 'DC Motor',
+            quantity: 2,
+            unit: 'pieces',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['dc motor', 'gear motor', 'robot motor'],
+          },
+          {
+            componentName: 'Jumper wires',
+            materialType: 'Jumper Wires',
+            quantity: 12,
+            unit: 'pieces',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['jumper wires', 'dupont wires'],
           },
         ],
       },
@@ -629,6 +734,101 @@ before(async () => {
   });
   ids.obstacleProjectId = obstacleProject.id;
   ids.projects.push(obstacleProject.id);
+
+  const budgetArduinoCheap = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Salvaged Arduino Uno Boards`,
+    materialType: 'Arduino Uno',
+    quantity: 6,
+    unit: 'piece',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: false,
+    price: 32,
+    tags: ['arduino', 'microcontroller', 'uno'],
+  });
+  const budgetArduinoExpensive = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Arduino Uno R3 Boards`,
+    materialType: 'Arduino Uno',
+    quantity: 8,
+    unit: 'piece',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: false,
+    price: 45,
+    tags: ['arduino', 'microcontroller', 'uno'],
+  });
+  const budgetUltrasonicFree = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Free Workshop Ultrasonic Sensors`,
+    materialType: 'Ultrasonic Sensor',
+    quantity: 5,
+    unit: 'piece',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: true,
+    tags: ['ultrasonic', 'distance sensor', 'hc-sr04'],
+  });
+  const budgetUltrasonicPaid = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} HC-SR04 Ultrasonic Sensors`,
+    materialType: 'Ultrasonic Sensor',
+    quantity: 12,
+    unit: 'piece',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: false,
+    price: 12,
+    tags: ['ultrasonic', 'distance sensor', 'hc-sr04'],
+  });
+  const budgetMotorCheap = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Surplus DC Gear Motors`,
+    materialType: 'DC Motor',
+    quantity: 14,
+    unit: 'pieces',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: false,
+    price: 12,
+    tags: ['dc motor', 'gear motor', 'robot motor'],
+  });
+  const budgetMotorExpensive = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Small DC Gear Motors Pair`,
+    materialType: 'DC Motor',
+    quantity: 10,
+    unit: 'pieces',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: false,
+    price: 16,
+    tags: ['dc motor', 'gear motor', 'robot motor'],
+  });
+  const budgetJumperFree = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Community Jumper Wire Pieces`,
+    materialType: 'Jumper Wires',
+    quantity: 24,
+    unit: 'pieces',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: true,
+    tags: ['jumper wires', 'dupont wires'],
+  });
+  const budgetJumperPaid = await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Assorted Jumper Wires Bundle`,
+    materialType: 'Jumper Wires',
+    quantity: 20,
+    unit: 'packs',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: false,
+    price: 10,
+    tags: ['jumper wires', 'dupont wires'],
+  });
+  ids.budgetArduinoCheapId = budgetArduinoCheap.id;
+  ids.budgetArduinoExpensiveId = budgetArduinoExpensive.id;
+  ids.budgetUltrasonicFreeId = budgetUltrasonicFree.id;
+  ids.budgetUltrasonicPaidId = budgetUltrasonicPaid.id;
+  ids.budgetMotorCheapId = budgetMotorCheap.id;
+  ids.budgetMotorExpensiveId = budgetMotorExpensive.id;
+  ids.budgetJumperFreeId = budgetJumperFree.id;
+  ids.budgetJumperPaidId = budgetJumperPaid.id;
 
   const draftProject = await prisma.learningProject.create({
     data: {
@@ -728,6 +928,12 @@ after(async () => {
     await prisma.userRoleAssignment.deleteMany({ where: { userId: { in: ids.users } } });
     await prisma.supplierProfile.deleteMany({ where: { userId: { in: ids.users } } });
     await prisma.user.deleteMany({ where: { id: { in: ids.users } } });
+  }
+  if (hiddenObstacleProjectIds.length > 0) {
+    await prisma.learningProject.updateMany({
+      where: { id: { in: hiddenObstacleProjectIds } },
+      data: { hiddenAt: null },
+    });
   }
 });
 
@@ -2093,21 +2299,32 @@ describe('ai agent http closure', () => {
   });
 
   test('project material availability resolves published project without creating build', async () => {
-    const ultrasonicMaterial = await createMaterial({
-      locationId: (
-        await prisma.location.findFirst({
-          where: { city: { contains: `${TEST_MARKER}-Nablus` } },
-        })
-      )!.id,
-      title: `${SEED_TOKEN} HC-SR04 Ultrasonic Sensor`,
+    const nearLocation = await prisma.location.findFirst({
+      where: { city: { contains: `${TEST_MARKER}-Nablus` } },
     });
-    const motorMaterial = await createMaterial({
-      locationId: (
-        await prisma.location.findFirst({
-          where: { city: { contains: `${TEST_MARKER}-Nablus` } },
-        })
-      )!.id,
-      title: `${SEED_TOKEN} DC Motor Gearbox`,
+    assert.ok(nearLocation);
+
+    const ultrasonicMaterial = await createComponentMaterial({
+      locationId: nearLocation.id,
+      title: `${SEED_TOKEN} HC-SR04 Ultrasonic Sensors`,
+      materialType: 'Ultrasonic Sensor',
+      quantity: 3,
+      unit: 'piece',
+      categoryId: ids.budgetMaterialCategoryId,
+      isFree: false,
+      price: 12,
+      tags: ['ultrasonic', 'distance sensor', 'hc-sr04'],
+    });
+    const motorMaterial = await createComponentMaterial({
+      locationId: nearLocation.id,
+      title: `${SEED_TOKEN} Surplus DC Gear Motors`,
+      materialType: 'DC Motor',
+      quantity: 6,
+      unit: 'pieces',
+      categoryId: ids.budgetMaterialCategoryId,
+      isFree: false,
+      price: 12,
+      tags: ['dc motor', 'gear motor', 'robot motor'],
     });
     ids.availableMaterialIds.add(ultrasonicMaterial.id);
     ids.availableMaterialIds.add(motorMaterial.id);
@@ -2150,14 +2367,14 @@ describe('ai agent http closure', () => {
     assert.ok(
       groups.some(
         (group) =>
-          group.componentName === 'Ultrasonic Sensor' &&
+          group.componentName === 'Ultrasonic distance sensor' &&
           group.materials.some((material) => material.materialId === ultrasonicMaterial.id),
       ),
     );
     assert.ok(
       groups.some(
         (group) =>
-          group.componentName === 'DC Motor' &&
+          group.componentName === 'DC gear motors' &&
           group.materials.some((material) => material.materialId === motorMaterial.id),
       ),
     );
@@ -2547,5 +2764,249 @@ describe('ai agent http closure', () => {
       blocks.some((block) => block.type === 'component_matches'),
       false,
     );
+  });
+
+  test('project budget estimation resolves complete obstacle robot estimate without side effects', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const buildsBefore = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    const buildItemsBefore = await prisma.projectBuildItem.count({
+      where: { build: { learnerId: ids.learnerBId } },
+    });
+    const reservationsBefore = await prisma.reservation.count({
+      where: { requesterId: ids.learnerBId },
+    });
+    const pendingBefore = await prisma.aiPendingAction.count({
+      where: { conversation: { userId: ids.learnerBId } },
+    });
+    const savedProjectsBefore = await prisma.projectSave.count({
+      where: { userId: ids.learnerBId },
+    });
+
+    const messageClientId = clientId('proj-budget-complete-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'كم بكلفني مشروع Obstacle Avoidance Robot؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const projectItems = results.items as Array<{ projectId: string; title: string }>;
+    assert.ok(
+      projectItems.some(
+        (item) =>
+          item.projectId === ids.obstacleProjectId &&
+          item.title === 'Obstacle Avoidance Robot',
+      ),
+    );
+
+    const estimate = blocks.find((block) => block.type === 'project_budget_estimate');
+    assert.ok(estimate, 'expected project_budget_estimate block');
+    assert.equal(estimate.projectId, ids.obstacleProjectId);
+    assert.equal(estimate.projectTitle, 'Obstacle Avoidance Robot');
+    assert.equal(estimate.estimateStatus, 'COMPLETE');
+    assert.equal(estimate.currency, 'NIS');
+    assert.equal(estimate.estimatedSubtotalNis, 56);
+    assert.equal(estimate.requiredComponentCount, 4);
+    assert.equal(estimate.pricedComponentCount, 4);
+    assert.equal(estimate.missingComponentCount, 0);
+
+    const components = estimate.components as Array<{
+      componentName: string;
+      status: string;
+      selectedMaterialId: string | null;
+      effectiveComponentCost: number | null;
+      alternativesCount: number;
+    }>;
+    assert.equal(components.length, 4);
+
+    const arduinoLine = components.find((line) => line.componentName === 'Arduino board');
+    assert.ok(arduinoLine);
+    assert.equal(arduinoLine.status, 'SELECTED');
+    assert.equal(arduinoLine.selectedMaterialId, ids.budgetArduinoCheapId);
+    assert.equal(arduinoLine.effectiveComponentCost, 32);
+    assert.ok(arduinoLine.alternativesCount >= 1);
+
+    const ultrasonicLine = components.find(
+      (line) => line.componentName === 'Ultrasonic distance sensor',
+    );
+    assert.ok(ultrasonicLine);
+    assert.equal(ultrasonicLine.status, 'SELECTED');
+    assert.equal(ultrasonicLine.selectedMaterialId, ids.budgetUltrasonicFreeId);
+    assert.equal(ultrasonicLine.effectiveComponentCost, 0);
+
+    const motorLine = components.find((line) => line.componentName === 'DC gear motors');
+    assert.ok(motorLine);
+    assert.equal(motorLine.status, 'SELECTED');
+    assert.equal(motorLine.selectedMaterialId, ids.budgetMotorCheapId);
+    assert.equal(motorLine.effectiveComponentCost, 24);
+
+    const jumperLine = components.find((line) => line.componentName === 'Jumper wires');
+    assert.ok(jumperLine);
+    assert.equal(jumperLine.status, 'SELECTED');
+    assert.equal(jumperLine.selectedMaterialId, ids.budgetJumperFreeId);
+    assert.equal(jumperLine.effectiveComponentCost, 0);
+
+    assert.notEqual(arduinoLine.selectedMaterialId, ids.budgetArduinoExpensiveId);
+    assert.notEqual(ultrasonicLine.selectedMaterialId, ids.budgetUltrasonicPaidId);
+    assert.notEqual(motorLine.selectedMaterialId, ids.budgetMotorExpensiveId);
+    assert.notEqual(jumperLine.selectedMaterialId, ids.budgetJumperPaidId);
+
+    assert.match(
+      String(estimate.deliveryExcludedNotice),
+      /delivery|tools|unavailable|التوصيل|الأدوات|غير المتوفرة/i,
+    );
+
+    const meta = sent.json.data?.meta as Record<string, unknown> | undefined;
+    assert.equal(meta?.provider, 'system');
+
+    const buildsAfter = await prisma.projectBuild.count({
+      where: { learnerId: ids.learnerBId },
+    });
+    const buildItemsAfter = await prisma.projectBuildItem.count({
+      where: { build: { learnerId: ids.learnerBId } },
+    });
+    const reservationsAfter = await prisma.reservation.count({
+      where: { requesterId: ids.learnerBId },
+    });
+    const pendingAfter = await prisma.aiPendingAction.count({
+      where: { conversation: { userId: ids.learnerBId } },
+    });
+    const savedProjectsAfter = await prisma.projectSave.count({
+      where: { userId: ids.learnerBId },
+    });
+    assert.equal(buildsAfter, buildsBefore);
+    assert.equal(buildItemsAfter, buildItemsBefore);
+    assert.equal(reservationsAfter, reservationsBefore);
+    assert.equal(pendingAfter, pendingBefore);
+    assert.equal(savedProjectsAfter, savedProjectsBefore);
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('project budget estimation returns partial estimate when a required component has no match', async () => {
+    const fluxCategory = await prisma.category.create({
+      data: {
+        nameEn: `${SEED_TOKEN} Flux Components`,
+        nameAr: `${SEED_TOKEN} فلكس`,
+        categoryType: 'BOTH',
+        isActive: true,
+      },
+    });
+    ids.createdCategoryIds.push(fluxCategory.id);
+
+    const partialProject = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: `${SEED_TOKEN} Partial Budget Robot`,
+        shortDescription: `${TEST_MARKER} partial budget project`,
+        description: `${TEST_MARKER} partial budget project`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Arduino board',
+              materialType: 'Arduino Uno',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.budgetMaterialCategoryId,
+              searchKeywords: ['arduino', 'microcontroller', 'uno'],
+            },
+            {
+              componentName: 'Quantum flux core',
+              materialType: 'Flux Core',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: fluxCategory.id,
+              searchKeywords: ['quantum-flux-no-match-token'],
+            },
+          ],
+        },
+      },
+    });
+    ids.projects.push(partialProject.id);
+
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+
+    const userMessage = await prisma.aiMessage.create({
+      data: {
+        conversationId,
+        role: 'USER',
+        status: 'COMPLETED',
+        contentText: 'اعرضلي المشروع',
+        clientMessageId: clientId('partial-budget-user'),
+        locale: 'ar',
+      },
+    });
+    await prisma.aiMessage.create({
+      data: {
+        conversationId,
+        role: 'ASSISTANT',
+        status: 'COMPLETED',
+        contentBlocks: [
+          {
+            type: 'project_results',
+            items: [
+              {
+                projectId: partialProject.id,
+                title: partialProject.title,
+                difficulty: 'BEGINNER',
+              },
+            ],
+          },
+        ] as never,
+        inReplyToMessageId: userMessage.id,
+        scopeClassification: 'DOMAIN_KNOWLEDGE',
+        locale: 'ar',
+        provider: 'system',
+        model: null,
+        policyVersion: 'test',
+        latencyMs: 1,
+        inputTokens: null,
+        outputTokens: null,
+      },
+    });
+
+    const messageClientId = clientId('proj-budget-partial-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'طيب كم تكلفة المواد إله؟',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const estimate = blocks.find((block) => block.type === 'project_budget_estimate');
+    assert.ok(estimate, 'expected project_budget_estimate block');
+    assert.equal(estimate.estimateStatus, 'PARTIAL');
+    assert.equal(estimate.missingComponentCount, 1);
+    assert.equal(estimate.estimatedSubtotalNis, 32);
+
+    const components = estimate.components as Array<{
+      componentName: string;
+      status: string;
+      effectiveComponentCost: number | null;
+    }>;
+    const missing = components.find((line) => line.componentName === 'Quantum flux core');
+    assert.ok(missing);
+    assert.equal(missing.status, 'NO_AVAILABLE_MATCH');
+    assert.equal(missing.effectiveComponentCost, null);
+
+    const arduino = components.find((line) => line.componentName === 'Arduino board');
+    assert.ok(arduino);
+    assert.equal(arduino.effectiveComponentCost, 32);
+
+    await assertTurnBasics(conversationId, messageClientId);
   });
 });

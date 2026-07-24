@@ -202,6 +202,124 @@ class AiComponentMatchGroup {
   final List<AiMaterialCardItem> materials;
 }
 
+class AiProjectBudgetComponentLine {
+  const AiProjectBudgetComponentLine({
+    required this.componentId,
+    required this.componentName,
+    required this.requiredQuantity,
+    this.requiredUnit,
+    required this.status,
+    this.selectedMaterialId,
+    this.selectedMaterialTitle,
+    this.isFree,
+    this.unitPrice,
+    this.effectiveComponentCost,
+    this.allocatedQuantity,
+    this.availableQuantity,
+    this.listingUnit,
+    this.alternativesCount = 0,
+    this.matchEvidence,
+    this.assumptionNote,
+  });
+
+  factory AiProjectBudgetComponentLine.fromJson(Map<String, dynamic> json) {
+    return AiProjectBudgetComponentLine(
+      componentId: json['componentId'] as String? ?? '',
+      componentName: json['componentName'] as String? ?? '',
+      requiredQuantity: (json['requiredQuantity'] as num?)?.toDouble() ?? 1,
+      requiredUnit: json['requiredUnit'] as String?,
+      status: json['status'] as String? ?? 'NO_AVAILABLE_MATCH',
+      selectedMaterialId: json['selectedMaterialId'] as String?,
+      selectedMaterialTitle: json['selectedMaterialTitle'] as String?,
+      isFree: json['isFree'] as bool?,
+      unitPrice: (json['unitPrice'] as num?)?.toDouble(),
+      effectiveComponentCost: (json['effectiveComponentCost'] as num?)?.toDouble(),
+      allocatedQuantity: (json['allocatedQuantity'] as num?)?.toDouble(),
+      availableQuantity: (json['availableQuantity'] as num?)?.toDouble(),
+      listingUnit: json['listingUnit'] as String?,
+      alternativesCount: (json['alternativesCount'] as num?)?.toInt() ?? 0,
+      matchEvidence: json['matchEvidence'] as String?,
+      assumptionNote: json['assumptionNote'] as String?,
+    );
+  }
+
+  final String componentId;
+  final String componentName;
+  final double requiredQuantity;
+  final String? requiredUnit;
+  final String status;
+  final String? selectedMaterialId;
+  final String? selectedMaterialTitle;
+  final bool? isFree;
+  final double? unitPrice;
+  final double? effectiveComponentCost;
+  final double? allocatedQuantity;
+  final double? availableQuantity;
+  final String? listingUnit;
+  final int alternativesCount;
+  final String? matchEvidence;
+  final String? assumptionNote;
+}
+
+class AiProjectBudgetEstimate {
+  const AiProjectBudgetEstimate({
+    required this.projectId,
+    required this.projectTitle,
+    this.projectImageUrl,
+    this.categoryLabel,
+    this.difficulty,
+    required this.estimateStatus,
+    required this.estimatedSubtotalNis,
+    required this.currency,
+    required this.requiredComponentCount,
+    required this.pricedComponentCount,
+    required this.missingComponentCount,
+    required this.unpricedComponentCount,
+    this.quantityAssumptionWarning,
+    required this.deliveryExcludedNotice,
+    this.components = const [],
+  });
+
+  factory AiProjectBudgetEstimate.fromJson(Map<String, dynamic> json) {
+    return AiProjectBudgetEstimate(
+      projectId: json['projectId'] as String? ?? '',
+      projectTitle: json['projectTitle'] as String? ?? '',
+      projectImageUrl: json['projectImageUrl'] as String?,
+      categoryLabel: json['categoryLabel'] as String?,
+      difficulty: json['difficulty'] as String?,
+      estimateStatus: json['estimateStatus'] as String? ?? 'PARTIAL',
+      estimatedSubtotalNis: (json['estimatedSubtotalNis'] as num?)?.toDouble() ?? 0,
+      currency: json['currency'] as String? ?? 'NIS',
+      requiredComponentCount: (json['requiredComponentCount'] as num?)?.toInt() ?? 0,
+      pricedComponentCount: (json['pricedComponentCount'] as num?)?.toInt() ?? 0,
+      missingComponentCount: (json['missingComponentCount'] as num?)?.toInt() ?? 0,
+      unpricedComponentCount: (json['unpricedComponentCount'] as num?)?.toInt() ?? 0,
+      quantityAssumptionWarning: json['quantityAssumptionWarning'] as String?,
+      deliveryExcludedNotice: json['deliveryExcludedNotice'] as String? ?? '',
+      components: _mapJsonList(
+        json['components'],
+        AiProjectBudgetComponentLine.fromJson,
+      ),
+    );
+  }
+
+  final String projectId;
+  final String projectTitle;
+  final String? projectImageUrl;
+  final String? categoryLabel;
+  final String? difficulty;
+  final String estimateStatus;
+  final double estimatedSubtotalNis;
+  final String currency;
+  final int requiredComponentCount;
+  final int pricedComponentCount;
+  final int missingComponentCount;
+  final int unpricedComponentCount;
+  final String? quantityAssumptionWarning;
+  final String deliveryExcludedNotice;
+  final List<AiProjectBudgetComponentLine> components;
+}
+
 class AiComparisonItem {
   const AiComparisonItem({
     required this.id,
@@ -1188,6 +1306,7 @@ class AiContentBlock {
     this.totalRequired,
     this.checklistItems = const [],
     this.matchGroups = const [],
+    this.budgetEstimate,
     this.comparisonSubject,
     this.comparisonItems = const [],
     this.recommendationType,
@@ -1312,6 +1431,11 @@ class AiContentBlock {
           matchGroups: _mapJsonList(json['groups'], AiComponentMatchGroup.fromJson)
               .where((group) => group.componentId.isNotEmpty)
               .toList(growable: false),
+        );
+      case 'project_budget_estimate':
+        return AiContentBlock(
+          type: type,
+          budgetEstimate: AiProjectBudgetEstimate.fromJson(json),
         );
       case 'comparison':
         return AiContentBlock(
@@ -1504,6 +1628,7 @@ class AiContentBlock {
   final int? totalRequired;
   final List<AiBuildChecklistItem> checklistItems;
   final List<AiComponentMatchGroup> matchGroups;
+  final AiProjectBudgetEstimate? budgetEstimate;
   final String? comparisonSubject;
   final List<AiComparisonItem> comparisonItems;
   final String? recommendationType;

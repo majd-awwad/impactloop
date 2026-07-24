@@ -6,6 +6,8 @@ import {
   detectMaterialSearchIntent,
   detectOwnedMaterialsProjectIntent,
   detectProjectComponentsIntent,
+  detectEducationalLearningIntent,
+  detectProjectBudgetEstimationIntent,
   detectProjectMaterialAvailabilityIntent,
   detectProjectMaterialAvailabilitySelectionFollowUp,
   extractMaterialSearchFilters,
@@ -717,6 +719,282 @@ describe('acceptance: project material availability', () => {
     assert.equal(detectProjectMaterialAvailabilityIntent('بدي مشروع'), false);
     assert.equal(detectProjectMaterialAvailabilityIntent('شو في مشروع حلو؟'), false);
     assert.equal(detectProjectMaterialAvailabilityIntent('I want to build something'), false);
+  });
+});
+
+describe('acceptance: project budget estimation', () => {
+  afterEach(() => {
+    setSemanticPlannerOverrideForTests(null);
+  });
+
+  test('detects Arabic and English budget phrasing', () => {
+    assert.equal(
+      detectProjectBudgetEstimationIntent(
+        'كم بكلفني مشروع Obstacle Avoidance Robot؟',
+      ),
+      true,
+    );
+    assert.equal(
+      detectProjectBudgetEstimationIntent(
+        'How much would the available materials for the Line Follower Robot cost?',
+      ),
+      true,
+    );
+    assert.equal(
+      detectProjectBudgetEstimationIntent(
+        'شو المواد المتوفرة لمشروع Obstacle Avoidance Robot؟',
+      ),
+      false,
+    );
+  });
+
+  test('semantic planner maps natural wording to budget tool', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'PROJECT_BUDGET_ESTIMATION',
+      confidence: 0.94,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'estimate_project_material_budget',
+        arguments: { projectQuery: 'Obstacle Avoidance Robot', limitPerComponent: 5 },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'كم بكلفني مشروع Obstacle Avoidance Robot؟',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(plan.toolName, 'estimate_project_material_budget');
+    assert.equal(plan.toolInput.projectQuery, 'Obstacle Avoidance Robot');
+  });
+
+  test('budget intent takes precedence over material availability for cost questions', () => {
+    const message = 'احسبلي تكلفة المواد المتوفرة لمشروع Electronic LED Dice';
+    assert.equal(detectProjectBudgetEstimationIntent(message), true);
+    assert.equal(detectProjectMaterialAvailabilityIntent(message), false);
+    const route = resolveAgentRoute({ userMessage: message, locale: 'ar' });
+    assert.equal(route.route, 'PROJECT_BUDGET_ESTIMATION');
+  });
+
+  test('validatePlannerOutput coerces budget tool even when route is GENERAL_LEARNING', () => {
+    const validated = validatePlannerOutput({
+      route: 'GENERAL_LEARNING',
+      confidence: 0.88,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'estimate_project_material_budget',
+        arguments: { projectQuery: 'Obstacle Avoidance Robot', limitPerComponent: 5 },
+      },
+    });
+    assert.ok(validated);
+    assert.equal(validated?.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(validated?.toolCall?.name, 'estimate_project_material_budget');
+  });
+
+  test('reconciliation preserves budget route when planner mislabels GENERAL_LEARNING', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'GENERAL_LEARNING',
+      confidence: 0.82,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'estimate_project_material_budget',
+        arguments: { projectQuery: 'Electronic LED Dice', limitPerComponent: 5 },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'احسبلي تكلفة المواد المتوفرة لمشروع Electronic LED Dice',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(plan.toolName, 'estimate_project_material_budget');
+    assert.equal(plan.toolInput.projectQuery, 'Electronic LED Dice');
+  });
+
+  test('English natural budget request selects PROJECT_BUDGET_ESTIMATION', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'PROJECT_BUDGET_ESTIMATION',
+      confidence: 0.93,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'estimate_project_material_budget',
+        arguments: {
+          projectQuery: 'Smart Plant Moisture Monitor',
+          limitPerComponent: 5,
+        },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage:
+        'What is the cheapest available component set for the Smart Plant Moisture Monitor?',
+      locale: 'en',
+    });
+    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(plan.toolName, 'estimate_project_material_budget');
+    assert.equal(plan.toolInput.projectQuery, 'Smart Plant Moisture Monitor');
+  });
+
+  test('contextual project-card follow-up selects budget route from recent project', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'PROJECT_BUDGET_ESTIMATION',
+      confidence: 0.91,
+      entities: [
+        {
+          type: 'PROJECT',
+          mention: 'Obstacle Avoidance Robot',
+          referenceType: 'RECENT_RESULT',
+        },
+      ],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'estimate_project_material_budget',
+        arguments: { limitPerComponent: 5 },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'طيب كم تكلفة المواد إله؟',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [],
+        entities: [
+          {
+            type: 'PROJECT',
+            id: 'proj-obstacle',
+            title: 'Obstacle Avoidance Robot',
+            resultIndex: 0,
+            blockType: 'project_results',
+            messageId: 'msg-1',
+            recencyOrder: 0,
+          },
+        ],
+      },
+    });
+    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(plan.toolName, 'estimate_project_material_budget');
+    assert.equal(plan.toolInput.projectId, 'proj-obstacle');
+  });
+
+  test('availability-context subtotal follow-up selects budget route', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'PROJECT_BUDGET_ESTIMATION',
+      confidence: 0.9,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'estimate_project_material_budget',
+        arguments: { limitPerComponent: 5 },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'كم مجموعهم تقريباً؟',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [],
+        entities: [
+          {
+            type: 'PROJECT',
+            id: 'proj-obstacle',
+            title: 'Obstacle Avoidance Robot',
+            resultIndex: 0,
+            blockType: 'component_matches',
+            messageId: 'msg-2',
+            recencyOrder: 0,
+            parentContext: 'Obstacle Avoidance Robot',
+          },
+        ],
+      },
+    });
+    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(plan.toolName, 'estimate_project_material_budget');
+    assert.equal(plan.toolInput.projectId, 'proj-obstacle');
+  });
+
+  test('material availability and material search remain separate from budget', () => {
+    const availability = 'شو المواد المتوفرة لمشروع Obstacle Avoidance Robot؟';
+    assert.equal(detectProjectMaterialAvailabilityIntent(availability), true);
+    assert.equal(detectProjectBudgetEstimationIntent(availability), false);
+
+    const search = 'اعرضلي أرخص مواد Arduino';
+    assert.equal(detectMaterialSearchIntent(search).detected, true);
+    assert.equal(detectProjectBudgetEstimationIntent(search), false);
+  });
+
+  test('general learning remains separate from budget estimation', () => {
+    const educational = 'اشرحلي شو هي الحساسات';
+    assert.equal(detectEducationalLearningIntent(educational), true);
+    assert.equal(detectProjectBudgetEstimationIntent(educational), false);
+    const route = resolveAgentRoute({ userMessage: educational, locale: 'ar' });
+    assert.equal(route.route, 'GENERAL_LEARNING');
+  });
+
+  test('invalid planner budget output is rejected safely', () => {
+    assert.equal(
+      validatePlannerOutput({
+        route: 'PROJECT_BUDGET_ESTIMATION',
+        confidence: 0.9,
+        entities: [],
+        clarificationNeeded: false,
+        toolCall: {
+          name: 'estimate_project_material_budget',
+          arguments: { projectQuery: '', limitPerComponent: -1 },
+        },
+      }),
+      null,
+    );
+    assert.equal(
+      validatePlannerOutput({
+        route: 'PROJECT_BUDGET_ESTIMATION',
+        confidence: 0.9,
+        entities: [],
+        clarificationNeeded: false,
+        toolCall: { name: 'not_a_real_tool', arguments: {} },
+      }),
+      null,
+    );
+  });
+
+  test('ambiguous budget follow-up without project context asks clarification', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'PROJECT_BUDGET_ESTIMATION',
+      confidence: 0.75,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'estimate_project_material_budget',
+        arguments: { limitPerComponent: 5 },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'كم بكلف؟',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [],
+        entities: [
+          {
+            type: 'PROJECT',
+            id: 'proj-a',
+            title: 'Obstacle Avoidance Robot',
+            resultIndex: 0,
+            blockType: 'project_results',
+            messageId: 'msg-a',
+            recencyOrder: 0,
+          },
+          {
+            type: 'PROJECT',
+            id: 'proj-b',
+            title: 'Line Follower Robot',
+            resultIndex: 1,
+            blockType: 'project_results',
+            messageId: 'msg-b',
+            recencyOrder: 1,
+          },
+        ],
+      },
+    });
+    assert.equal(plan.route, 'CLARIFICATION');
+    assert.match(String(plan.clarificationReason), /مشروع|project/i);
   });
 });
 

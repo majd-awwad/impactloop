@@ -841,14 +841,77 @@ export const detectComponentMaterialMatchingIntent = (
   );
 };
 
-const hasContextualProjectMaterialReference = (userMessage: string): boolean =>
-  /(هاد المشروع|هذا المشروع|هالمشروع|the project|this project|إله|له|له؟)/i.test(
+export const hasContextualProjectMaterialReference = (userMessage: string): boolean =>
+  /(هاد المشروع|هذا المشروع|هالمشروع|the project|this project|إله|له|لها|له؟)/i.test(
     userMessage,
   );
+
+export const detectProjectBudgetEstimationFollowUp = (userMessage: string): boolean =>
+  /(كم\s+بكلف|تكلفة|تكلفه|how\s+much|what.*cost|estimate|مجموع|مجموعهم|subtotal|السعر|احسب|احسبلي|قديش|أدفع|ادفع|pay|total)/i.test(
+    userMessage,
+  ) &&
+  /(إله|له|لها|هم|هن|them|it|this project|the project|المواد|materials)/i.test(
+    userMessage,
+  );
+
+export const detectProjectBudgetEstimationIntent = (
+  userMessage: string,
+): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+  if (detectOwnedMaterialsProjectIntent(userMessage)) {
+    return false;
+  }
+  if (detectBuildGapIntent(userMessage)) {
+    return false;
+  }
+  if (detectComponentMaterialMatchingIntent(userMessage)) {
+    return false;
+  }
+  if (/(احجز|reserve|book)\b/i.test(userMessage)) {
+    return false;
+  }
+
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalize(parsedMessage);
+
+  const asksCost =
+    /(كم\s+بكلف|تكلفة|تكلفه|سعر|السعر|احسب|احسبلي|how\s+much|cost|price|estimate|cheapest|pay|مجموع|مجموعهم|subtotal|budget|قديش|أدفع|ادفع|would\s+cost|would\s+pay)/i.test(
+      normalized,
+    ) || detectProjectBudgetEstimationFollowUp(userMessage);
+
+  const asksForProject =
+    /(مشروع|project)/i.test(normalized) ||
+    extractProjectTitleQuery(userMessage) != null ||
+    hasContextualProjectMaterialReference(userMessage) ||
+    detectProjectBudgetEstimationFollowUp(userMessage) ||
+    /(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(parsedMessage) ||
+    /\b(build|make)\s+(?:the\s+)?[A-Za-z]/i.test(parsedMessage) ||
+    /\bhelp\s+me\s+(?:build|make)\b/i.test(parsedMessage) ||
+    /\bfor\s+(?:the\s+)?[A-Za-z][\w\s-]{2,}/i.test(parsedMessage);
+
+  if (!asksCost || !asksForProject) {
+    return false;
+  }
+
+  if (
+    isExplicitMaterialSearchCommand(userMessage) &&
+    !hasContextualProjectMaterialReference(userMessage) &&
+    !/(how\s+much|cost|price|estimate|budget|تكلفة|كم\s+بكلف)/i.test(normalized)
+  ) {
+    return false;
+  }
+
+  return true;
+};
 
 export const detectProjectMaterialAvailabilityIntent = (
   userMessage: string,
 ): boolean => {
+  if (detectProjectBudgetEstimationIntent(userMessage)) {
+    return false;
+  }
   if (detectEducationalLearningIntent(userMessage)) {
     return false;
   }
@@ -1039,6 +1102,7 @@ export const extractProjectTitleQuery = (userMessage: string): string | undefine
     /^([A-Za-z][A-Za-z0-9\s&.-]{2,80})\s+[\u0600-\u06FF]/u,
     /^(.+?)\s+(?:شو|ما)\s+(?:مكونات|components)/i,
     /(?:بمشروع|لمشروع|للمشروع|for project|project)\s+(.+?)(?:\?|$)/i,
+    /\bfor\s+(?:the\s+)?([A-Za-z][A-Za-z0-9\s&.-]{2,80}?)(?:\s+cost)?(?:\?|$)/i,
     /(?:مشروع|project)\s+(.+?)(?:\?|$)/i,
     /(?:مكونات|components)\s+(.+?)(?:\?|$)/i,
   ];
@@ -1049,6 +1113,7 @@ export const extractProjectTitleQuery = (userMessage: string): string | undefine
     if (candidate && candidate.length >= 3) {
       const normalized = candidate
         .replace(/^(المطلوبة|المطلوب|required|the)\s+/i, '')
+        .replace(/\s+من\s+المنصة$/i, '')
         .replace(/[؟?.!]+$/g, '')
         .replace(/\s+/g, ' ')
         .slice(0, 120);

@@ -141,3 +141,6 @@ export const matchAvailableMaterialsForProjectInputSchema = z
       });
     }
   });
+
+export const estimateProjectMaterialBudgetInputSchema =
+  matchAvailableMaterialsForProjectInputSchema;

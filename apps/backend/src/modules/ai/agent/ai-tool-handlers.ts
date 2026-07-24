@@ -4,7 +4,7 @@ import { getCategories } from '../../categories/categories.service.js';
 import { getLearnerHomeSection } from '../../learner-home/learner-home.service.js';
 import { normalizeMaterialTitleKey } from '../../learner-home/learner-home.deduplication.js';
 import type { LearnerHomeSectionItem } from '../../learner-home/learner-home.types.js';
-import { getRequiredComponentMaterialCandidates } from '../../learning-projects/learning-projects.build-material-linking.js';
+import { getRequiredComponentMaterialCandidates, estimateProjectMaterialBudget } from '../../learning-projects/learning-projects.build-material-linking.js';
 import {
   getBuildItemMaterialCandidatesById,
   getLearningProjectById,
@@ -46,6 +46,7 @@ import {
   toProjectDetailsBlock,
   toProjectResultsBlock,
   toRecommendationsBlock,
+  toProjectBudgetEstimateBlock,
 } from './ai-tool-mappers.js';
 import {
   compareMaterialIdsInputSchema,
@@ -1351,6 +1352,65 @@ export const executeLearnerAgentTool = async (
         blocks: [
           toProjectResultsBlock([project], locale),
           toComponentMatchesBlock(groups, locale),
+        ],
+      };
+    }
+
+    case 'estimate_project_material_budget': {
+      const input = matchAvailableMaterialsForProjectInputSchema.parse(rawInput);
+      const resolved = await resolvePublishedProjectForMaterialAvailability(
+        input,
+        viewer,
+      );
+
+      if (resolved.kind === 'ambiguous') {
+        return {
+          blocks: [
+            {
+              type: 'text' as const,
+              text: buildAmbiguousProjectChoiceMessage(
+                input.projectQuery ?? resolved.projectQuery,
+                locale,
+                resolved.usedTokenFallback,
+              ),
+              purpose: 'clarification' as const,
+            },
+            toProjectResultsBlock(resolved.projects, locale),
+          ],
+        };
+      }
+
+      const project = await getLearningProjectById(resolved.project.id, viewer);
+      const requiredComponents = project.requiredComponents.filter(
+        (component) => component.isRequired !== false,
+      );
+
+      if (requiredComponents.length === 0) {
+        return {
+          blocks: [
+            {
+              type: 'text' as const,
+              text:
+                locale === 'ar'
+                  ? `مشروع ${project.title} لا يتضمن مكونات مطلوبة مسجّلة حالياً على ImpactLoop، لذلك لا يمكن تقدير تكلفة المواد المتوفرة له.`
+                  : `${project.title} does not list any required components on ImpactLoop yet, so an available-material budget cannot be estimated.`,
+              purpose: 'answer' as const,
+            },
+            toProjectResultsBlock([project], locale),
+          ],
+        };
+      }
+
+      const estimate = await estimateProjectMaterialBudget({
+        projectId: project.id,
+        learnerId: context.authenticatedUserId,
+        candidateLimitPerComponent: input.limitPerComponent ?? 5,
+      });
+
+      return {
+        blocks: [
+          toProjectResultsBlock([project], locale),
+          toProjectBudgetEstimateBlock(estimate, locale),
         ],
       };
     }

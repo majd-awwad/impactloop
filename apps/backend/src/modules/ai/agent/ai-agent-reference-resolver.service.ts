@@ -5,6 +5,7 @@ import { isActiveReservationBehaviorStatus } from '../../reservations/reservatio
 import type { ReservationStatus } from '../../../generated/prisma/client.js';
 import {
   detectComponentMaterialMatchingIntent,
+  detectProjectBudgetEstimationFollowUp,
   extractProjectTitleQuery,
   normalizeArabicVariants,
 } from './ai-agent-filter-extractor.service.js';
@@ -385,7 +386,9 @@ const extractMentionCandidates = (userMessage: string): string[] => {
 const GROUNDED_PROJECT_CONTEXT_BLOCK_TYPES = new Set([
   'project_results',
   'component_list',
+  'component_matches',
   'project_details',
+  'project_budget_estimate',
 ]);
 
 const hasContextualProjectReference = (userMessage: string): boolean =>
@@ -537,6 +540,10 @@ export const resolveProjectFromRecentEntities = (input: {
         return { entity: toTrustedProject(target), score: 0.95 };
       }
     }
+  }
+
+  if (detectProjectBudgetEstimationFollowUp(input.userMessage)) {
+    return resolveSingleContextualProjectFromCandidates(projectCandidates);
   }
 
   return null;

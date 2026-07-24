@@ -103,6 +103,12 @@ export const buildToolInputForRoute = (
         ? { projectQuery, limitPerComponent: 3 }
         : {};
     }
+    case 'PROJECT_BUDGET_ESTIMATION': {
+      const projectQuery = extractProjectTitleQuery(userMessage);
+      return projectQuery
+        ? { projectQuery, limitPerComponent: 5 }
+        : {};
+    }
     case 'SAVED_PROJECTS':
     case 'ACTIVE_PROJECT_BUILDS':
       return {};

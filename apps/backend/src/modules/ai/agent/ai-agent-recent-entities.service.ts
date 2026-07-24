@@ -83,6 +83,17 @@ export const extractRecentEntitiesFromBlock = (
         recencyOrder,
       });
       break;
+    case 'project_budget_estimate':
+      pushEntity(entities, {
+        id: block.projectId,
+        type: 'PROJECT',
+        title: block.projectTitle,
+        blockType: block.type,
+        resultIndex: 0,
+        messageId,
+        recencyOrder,
+      });
+      break;
     case 'recommendations':
       block.items.forEach((item, index) => {
         if (item.itemType === 'PROJECT') {

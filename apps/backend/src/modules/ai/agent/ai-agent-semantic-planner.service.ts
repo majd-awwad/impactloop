@@ -32,6 +32,7 @@ const PLANNER_ROUTES = [
   'PROJECT_DETAILS',
   'PROJECT_COMPONENTS',
   'PROJECT_MATERIAL_AVAILABILITY',
+  'PROJECT_BUDGET_ESTIMATION',
   'OWNED_MATERIALS_PROJECT_MATCH',
   'SAVED_PROJECTS',
   'ACTIVE_PROJECT_BUILDS',
@@ -140,6 +141,11 @@ const buildPlannerPrompt = (input: {
     '- "I have leftover LEDs, resistors and wires. Could I reuse them here?" -> OWNED_MATERIALS_PROJECT_MATCH, tool match_projects_by_owned_materials, materials ["LEDs","resistors","wires"]',
     '- "بدي أعمل Obstacle Avoidance Robot، شو المواد المتوفرة؟" -> PROJECT_MATERIAL_AVAILABILITY, tool match_available_materials_for_project, projectQuery "Obstacle Avoidance Robot"',
     '- "What available materials can help me build the Line Follower Robot?" -> PROJECT_MATERIAL_AVAILABILITY, tool match_available_materials_for_project, projectQuery "Line Follower Robot"',
+    '- "كم بكلفني مشروع Obstacle Avoidance Robot؟" -> PROJECT_BUDGET_ESTIMATION, tool estimate_project_material_budget, projectQuery "Obstacle Avoidance Robot"',
+    '- "How much would the available materials for the Line Follower Robot cost?" -> PROJECT_BUDGET_ESTIMATION, tool estimate_project_material_budget, projectQuery "Line Follower Robot"',
+    '- "احسبلي تكلفة المواد المتوفرة لمشروع Electronic LED Dice" -> PROJECT_BUDGET_ESTIMATION, tool estimate_project_material_budget, projectQuery "Electronic LED Dice"',
+    '- After project_results for Obstacle Avoidance Robot, "طيب كم تكلفة المواد إله؟" -> PROJECT_BUDGET_ESTIMATION, entity mention Obstacle Avoidance Robot, referenceType RECENT_RESULT',
+    '- After component_matches for a project, "كم مجموعهم تقريباً؟" -> PROJECT_BUDGET_ESTIMATION, referenceType RECENT_RESULT for that project',
     '- "اشرحلي كيف Arduino بشتغل" -> GENERAL_LEARNING',
     'Do not copy the full user sentence into query.',
     'Use trustedEntities IDs only when referenceType is RECENT_RESULT/RESULT_INDEX and the entity is clearly identified.',
@@ -169,6 +175,7 @@ const buildPlannerPrompt = (input: {
     '- get_personalized_recommendations',
     '- match_projects_by_owned_materials: use when the learner mentions materials/components they have or found and wants to know what they can build, make, reuse, or which published ImpactLoop Learning Hub projects fit those materials. Accept indirect/conversational wording, dialect, and follow-ups where materials appear in recent messages. Extract only material/component names from the current message and bounded recent context; never invent materials, projects, ownership records, reservations, or readiness scores. toolCall.arguments shape: { materials: string[], category?: string, difficulty?: "BEGINNER"|"INTERMEDIATE"|"ADVANCED", limit?: number }.',
     '- match_available_materials_for_project: use when the learner names or refers to a published Learning Hub project and wants to know which currently available ImpactLoop material listings match its required components, without starting a build. Never invent a project ID. toolCall.arguments shape: { projectQuery?: string, limitPerComponent?: number }.',
+    '- estimate_project_material_budget: Estimate the NIS subtotal of currently available ImpactLoop material listings for the required components of one real Learning Hub project. Use when the learner asks how much a named project, its materials, its available components, or the cheapest currently available component set would cost, including Arabic/English natural wording and follow-ups after project cards or material-availability results. Do not calculate prices yourself; return the project reference to the deterministic tool. Never invent a project ID or price. toolCall.arguments shape: { projectQuery?: string, limitPerComponent?: number }.',
     'For bare possession statements without a clear build/project intent (for example only "I have Arduino and wires"), set route CLARIFICATION with clarificationNeeded true and ask whether to show ImpactLoop projects that use those materials.',
     'Never include userId, coordinates, conversationId, or arbitrary database IDs in filters.',
     `Locale: ${input.locale}`,
@@ -239,6 +246,46 @@ export const validatePlannerOutput = (raw: unknown): AgentPlannerOutput | null =
 
   if (parsed.data.clarificationNeeded) {
     return parsed.data;
+  }
+
+  if (parsed.data.toolCall?.name === 'estimate_project_material_budget') {
+    try {
+      const argumentsValue = sanitizePlannerArguments(
+        'estimate_project_material_budget',
+        parsed.data.toolCall.arguments ?? {},
+      );
+      return {
+        ...parsed.data,
+        route: 'PROJECT_BUDGET_ESTIMATION',
+        clarificationNeeded: false,
+        toolCall: {
+          name: 'estimate_project_material_budget',
+          arguments: argumentsValue,
+        },
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  if (parsed.data.toolCall?.name === 'match_available_materials_for_project') {
+    try {
+      const argumentsValue = sanitizePlannerArguments(
+        'match_available_materials_for_project',
+        parsed.data.toolCall.arguments ?? {},
+      );
+      return {
+        ...parsed.data,
+        route: 'PROJECT_MATERIAL_AVAILABILITY',
+        clarificationNeeded: false,
+        toolCall: {
+          name: 'match_available_materials_for_project',
+          arguments: argumentsValue,
+        },
+      };
+    } catch {
+      return null;
+    }
   }
 
   if (
@@ -515,5 +562,37 @@ export const projectMaterialAvailabilityPlanFromPlanner = (
       typeof toolArgs.limitPerComponent === 'number'
         ? toolArgs.limitPerComponent
         : 3,
+  });
+};
+
+export const projectBudgetEstimationPlanFromPlanner = (
+  userMessage: string,
+  planner: AgentPlannerOutput,
+): Record<string, unknown> | null => {
+  if (
+    planner.route !== 'PROJECT_BUDGET_ESTIMATION' &&
+    planner.toolCall?.name !== 'estimate_project_material_budget'
+  ) {
+    return null;
+  }
+
+  const toolArgs =
+    planner.toolCall?.name === 'estimate_project_material_budget'
+      ? planner.toolCall.arguments
+      : {};
+  const projectQuery =
+    (typeof toolArgs.projectQuery === 'string' ? toolArgs.projectQuery.trim() : '') ||
+    extractProjectTitleQuery(userMessage);
+
+  if (!projectQuery) {
+    return null;
+  }
+
+  return sanitizePlannerArguments('estimate_project_material_budget', {
+    projectQuery: projectQuery.slice(0, 120),
+    limitPerComponent:
+      typeof toolArgs.limitPerComponent === 'number'
+        ? toolArgs.limitPerComponent
+        : 5,
   });
 };

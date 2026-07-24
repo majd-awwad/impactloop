@@ -776,6 +776,71 @@ class AiL10n {
     ar: 'لا توجد حالياً أي قائمة متاحة على ImpactLoop.',
   );
 
+  static const budgetEstimateSection = LocalizedText(
+    en: 'Estimated available-material subtotal',
+    ar: 'تقدير المواد المتوفرة حالياً',
+  );
+
+  static const budgetEstimatedSubtotal = LocalizedText(
+    en: 'Estimated available-material subtotal',
+    ar: 'مجموع المواد المتوفرة المقدّر',
+  );
+
+  static const budgetEstimateComplete = LocalizedText(
+    en: 'Complete estimate',
+    ar: 'تقدير كامل',
+  );
+
+  static const budgetEstimatePartial = LocalizedText(
+    en: 'Partial estimate',
+    ar: 'تقدير جزئي',
+  );
+
+  static const budgetEstimateZeroCost = LocalizedText(
+    en: 'Complete estimate with free selected materials',
+    ar: 'تقدير كامل بمواد مجانية مختارة',
+  );
+
+  static const budgetCoverageSummary = LocalizedText(
+    en: '{priced} of {total} required components priced',
+    ar: '{priced} من {total} مكونات مطلوبة بسعر محسوب',
+  );
+
+  static const budgetAlternativesCount = LocalizedText(
+    en: '{count} cheaper alternatives not selected',
+    ar: '{count} بدائل أغلى لم تُختَر',
+  );
+
+  static const budgetStatusSelected = LocalizedText(
+    en: 'Selected',
+    ar: 'مختار',
+  );
+
+  static const budgetStatusNoMatch = LocalizedText(
+    en: 'No available match',
+    ar: 'لا يوجد تطابق متاح',
+  );
+
+  static const budgetStatusInsufficient = LocalizedText(
+    en: 'Insufficient quantity',
+    ar: 'كمية غير كافية',
+  );
+
+  static const budgetStatusUnpriced = LocalizedText(
+    en: 'Price unavailable',
+    ar: 'السعر غير متاح',
+  );
+
+  static const budgetStatusUnsupportedCurrency = LocalizedText(
+    en: 'Unsupported currency',
+    ar: 'عملة غير مدعومة',
+  );
+
+  static const budgetStatusUnitAssumption = LocalizedText(
+    en: 'Unit assumption required',
+    ar: 'يتطلب افتراض وحدة',
+  );
+
   static const materialComparisonSection = LocalizedText(
     en: 'Material comparison',
     ar: 'مقارنة المواد',
@@ -844,6 +909,11 @@ class AiL10n {
   static const viewProject = LocalizedText(
     en: 'View project',
     ar: 'عرض المشروع',
+  );
+
+  static const viewMaterial = LocalizedText(
+    en: 'View material',
+    ar: 'عرض المادة',
   );
 
   static const matchedComponentsLabel = LocalizedText(

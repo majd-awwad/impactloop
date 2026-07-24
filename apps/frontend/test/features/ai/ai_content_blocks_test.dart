@@ -256,6 +256,54 @@ void main() {
       expect(block.matchGroups.first.materials, isEmpty);
     });
 
+    test('parses project_budget_estimate block', () {
+      final block = AiContentBlock.fromJson({
+        'type': 'project_budget_estimate',
+        'projectId': 'proj-1',
+        'projectTitle': 'Obstacle Avoidance Robot',
+        'estimateStatus': 'COMPLETE',
+        'estimatedSubtotalNis': 52,
+        'currency': 'NIS',
+        'requiredComponentCount': 4,
+        'pricedComponentCount': 4,
+        'missingComponentCount': 0,
+        'unpricedComponentCount': 0,
+        'deliveryExcludedNotice': 'Delivery excluded.',
+        'components': [
+          {
+            'componentId': 'comp-1',
+            'componentName': 'Arduino board',
+            'requiredQuantity': 1,
+            'status': 'SELECTED',
+            'selectedMaterialId': 'mat-1',
+            'selectedMaterialTitle': 'Salvaged Arduino Uno Boards',
+            'isFree': false,
+            'unitPrice': 32,
+            'effectiveComponentCost': 32,
+            'alternativesCount': 1,
+          },
+          {
+            'componentId': 'comp-2',
+            'componentName': 'Ultrasonic distance sensor',
+            'requiredQuantity': 1,
+            'status': 'SELECTED',
+            'selectedMaterialId': 'mat-2',
+            'selectedMaterialTitle': 'Free Workshop Ultrasonic Sensors',
+            'isFree': true,
+            'unitPrice': 0,
+            'effectiveComponentCost': 0,
+            'alternativesCount': 2,
+          },
+        ],
+      });
+
+      expect(block.type, 'project_budget_estimate');
+      expect(block.budgetEstimate?.projectTitle, 'Obstacle Avoidance Robot');
+      expect(block.budgetEstimate?.estimatedSubtotalNis, 52);
+      expect(block.budgetEstimate?.components, hasLength(2));
+      expect(block.budgetEstimate?.components.first.effectiveComponentCost, 32);
+    });
+
     test('parses comparison block', () {
       final block = AiContentBlock.fromJson({
         'type': 'comparison',

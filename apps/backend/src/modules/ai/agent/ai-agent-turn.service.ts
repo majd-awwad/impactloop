@@ -66,6 +66,7 @@ import {
   mergeAgentBlocks,
   buildComponentMatchesIntro,
   buildProjectMaterialAvailabilityIntro,
+  buildProjectBudgetEstimationIntro,
 } from './ai-tool-mappers.js';
 import {
   buildExternalSourcesBlock,
@@ -2135,7 +2136,10 @@ const buildGracefulToolFailureResult = (input: {
       };
     }
 
-    if (input.route === 'PROJECT_MATERIAL_AVAILABILITY') {
+    if (
+      input.route === 'PROJECT_MATERIAL_AVAILABILITY' ||
+      input.route === 'PROJECT_BUDGET_ESTIMATION'
+    ) {
       return {
         blocks: [
           textBlock(
@@ -2538,6 +2542,29 @@ const resolveToolInput = async (input: {
     );
   }
 
+  if (input.route === 'PROJECT_BUDGET_ESTIMATION') {
+    const projectMatch = await resolveProjectFromMessage({
+      conversationId: input.conversationId,
+      userMessage: input.userMessage,
+      explicitQuery: extractProjectTitleQuery(input.userMessage),
+    });
+
+    if (projectMatch) {
+      return { projectId: projectMatch.entity.id, limitPerComponent: 5 };
+    }
+
+    const projectQuery = extractProjectTitleQuery(input.userMessage);
+    if (projectQuery) {
+      return { projectQuery, limitPerComponent: 5 };
+    }
+
+    throw new AppError(
+      'Tell me which learning project you mean.',
+      400,
+      'AI_ROUTE_UNCLEAR',
+    );
+  }
+
   if (input.route === 'PROJECT_COMPONENTS') {
     const parsed = parseProjectComponentsInput(input.userMessage);
     const projectMatch = await resolveProjectFromMessage({
@@ -2847,16 +2874,22 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       executionPlan.toolInput.materialId != null ||
       executionPlan.toolInput.buildId != null ||
       executionPlan.toolInput.componentId != null;
+    const planHasBudgetInput =
+      routeDecision.route === 'PROJECT_BUDGET_ESTIMATION' &&
+      (executionPlan.toolInput.projectId != null ||
+        executionPlan.toolInput.projectQuery != null);
     const mustResolveToolInput =
       routeDecision.route === 'COMPONENT_MATERIAL_MATCHING' ||
       routeDecision.route === 'PROJECT_MATERIAL_MATCHING' ||
-      routeDecision.route === 'PROJECT_MATERIAL_AVAILABILITY';
+      routeDecision.route === 'PROJECT_MATERIAL_AVAILABILITY' ||
+      routeDecision.route === 'PROJECT_BUDGET_ESTIMATION';
 
     toolInput =
-      !mustResolveToolInput &&
-      (routeDecision.route === 'MATERIAL_SEARCH' ||
-        routeDecision.route === 'OWNED_MATERIALS_PROJECT_MATCH' ||
-        planHasTrustedIds)
+      planHasBudgetInput ||
+      (!mustResolveToolInput &&
+        (routeDecision.route === 'MATERIAL_SEARCH' ||
+          routeDecision.route === 'OWNED_MATERIALS_PROJECT_MATCH' ||
+          planHasTrustedIds))
         ? executionPlan.toolInput
         : await resolveToolInput({
             route: routeDecision.route,
@@ -2968,6 +3001,29 @@ export const executeLearnerAgentPlatformTurn = async (input: {
             ? componentBlock.projectTitle
             : undefined,
         ),
+      ),
+    ];
+  } else if (
+    routeDecision.route === 'PROJECT_BUDGET_ESTIMATION' &&
+    trustedBlocks.some((block) => block.type === 'project_budget_estimate')
+  ) {
+    const projectBlock = trustedBlocks.find((block) => block.type === 'project_results');
+    const budgetBlock = trustedBlocks.find(
+      (block) => block.type === 'project_budget_estimate',
+    );
+    const title =
+      projectBlock?.type === 'project_results'
+        ? projectBlock.items[0]?.title
+        : budgetBlock?.type === 'project_budget_estimate'
+          ? budgetBlock.projectTitle
+          : undefined;
+    const estimateStatus =
+      budgetBlock?.type === 'project_budget_estimate'
+        ? budgetBlock.estimateStatus
+        : undefined;
+    explanationBlocks = [
+      textBlock(
+        buildProjectBudgetEstimationIntro(responseLocale, title, estimateStatus),
       ),
     ];
   } else if (

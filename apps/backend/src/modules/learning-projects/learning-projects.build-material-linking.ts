@@ -2,7 +2,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
-import { ACTIVE_HOLD_STATUSES } from '../reservations/reservations.quantity.js';
+import { ACTIVE_HOLD_STATUSES, getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 
 import {
   buildCandidateMatchHints,
@@ -604,6 +604,7 @@ const mapRankedCandidateItems = (input: {
 
     return {
       ...mapLinkedMaterialSummary(record)!,
+      relevance: score.relevance,
       matchHints: buildCandidateMatchHints({
         material,
         component: rankingComponent,
@@ -873,4 +874,500 @@ export const unlinkBuildItemMaterial = async (input: {
   }
 
   return build;
+};
+
+const SUPPORTED_BUDGET_CURRENCY = 'NIS';
+
+export type ProjectBudgetComponentStatus =
+  | 'SELECTED'
+  | 'NO_AVAILABLE_MATCH'
+  | 'INSUFFICIENT_QUANTITY'
+  | 'PRICE_UNAVAILABLE'
+  | 'UNSUPPORTED_CURRENCY'
+  | 'UNIT_ASSUMPTION_REQUIRED';
+
+export type ProjectBudgetEstimateStatus =
+  | 'COMPLETE'
+  | 'PARTIAL'
+  | 'ZERO_COST_AVAILABLE_MATERIALS';
+
+export type ProjectBudgetComponentLine = {
+  componentId: string;
+  componentName: string;
+  requiredQuantity: number;
+  requiredUnit: string | null;
+  status: ProjectBudgetComponentStatus;
+  selectedMaterialId: string | null;
+  selectedMaterialTitle: string | null;
+  isFree: boolean | null;
+  unitPrice: number | null;
+  effectiveComponentCost: number | null;
+  allocatedQuantity: number | null;
+  availableQuantity: number | null;
+  listingUnit: string | null;
+  alternativesCount: number;
+  matchEvidence: string | null;
+  assumptionNote: string | null;
+};
+
+export type ProjectMaterialBudgetEstimate = {
+  projectId: string;
+  projectTitle: string;
+  projectImageUrl: string | null;
+  categoryLabel: string | null;
+  difficulty: string | null;
+  estimateStatus: ProjectBudgetEstimateStatus;
+  estimatedSubtotalNis: number;
+  currency: 'NIS';
+  requiredComponentCount: number;
+  pricedComponentCount: number;
+  missingComponentCount: number;
+  unpricedComponentCount: number;
+  quantityAssumptionWarning: string | null;
+  deliveryExcludedNotice: string;
+  components: ProjectBudgetComponentLine[];
+};
+
+const normalizeBudgetUnit = (value: string | null | undefined): string => {
+  const normalized = value?.trim().toLowerCase() ?? '';
+  if (!normalized) {
+    return '';
+  }
+
+  if (normalized.endsWith('ies')) {
+    return `${normalized.slice(0, -3)}y`;
+  }
+
+  if (normalized.endsWith('s') && normalized.length > 3) {
+    return normalized.slice(0, -1);
+  }
+
+  return normalized;
+};
+
+const unitsAreCompatible = (requiredUnit: string, listingUnit: string): boolean => {
+  const left = normalizeBudgetUnit(requiredUnit);
+  const right = normalizeBudgetUnit(listingUnit);
+  if (!left || !right) {
+    return false;
+  }
+
+  return left === right;
+};
+
+const roundMoney = (value: number): number => Math.round(value * 100) / 100;
+
+type BudgetCandidateRecord = NonNullable<ReturnType<typeof mapLinkedMaterialSummary>> & {
+  matchRank: number;
+  matchEvidence: string | null;
+  relevance: number;
+};
+
+const MIN_BUDGET_MATCH_RELEVANCE = 270;
+// Applied only inside estimateProjectMaterialBudget when choosing the cheapest
+// priced candidate. Shared candidate listing for Build Guide and availability
+// is unchanged.
+
+const loadBudgetCandidateRecords = async (input: {
+  learnerId: string;
+  component: RequiredComponentForMatching & {
+    quantity: Prisma.Decimal;
+    unit: string;
+    isRequired: boolean;
+    componentName: string;
+  };
+}): Promise<BudgetCandidateRecord[]> => {
+  if (!input.component.isRequired) {
+    return [];
+  }
+
+  const matched = await listMaterialCandidatesForRequiredComponent({
+    learnerId: input.learnerId,
+    component: input.component,
+  });
+
+  return matched.items.map((item, index) => ({
+    ...item,
+    matchRank: index,
+    matchEvidence: item.matchHints?.[0] ?? null,
+    relevance: item.relevance ?? 0,
+  }));
+};
+
+const evaluateBudgetCandidate = async (input: {
+  candidate: BudgetCandidateRecord;
+  requiredQuantity: number;
+  requiredUnit: string;
+  allocatedFromListing: number;
+}): Promise<{
+  status: ProjectBudgetComponentStatus;
+  effectiveComponentCost: number | null;
+  allocatedQuantity: number | null;
+  availableQuantity: number | null;
+  listingUnit: string | null;
+  unitPrice: number | null;
+  assumptionNote: string | null;
+}> => {
+  const quantityState = await getMaterialQuantityState(prisma, input.candidate.id);
+  const material = await prisma.material.findUnique({
+    where: { id: input.candidate.id },
+    select: {
+      unit: true,
+      currency: true,
+      isFree: true,
+      price: true,
+      status: true,
+    },
+  });
+
+  if (!quantityState || !material || material.status !== 'AVAILABLE') {
+    return {
+      status: 'NO_AVAILABLE_MATCH',
+      effectiveComponentCost: null,
+      allocatedQuantity: null,
+      availableQuantity: null,
+      listingUnit: null,
+      unitPrice: null,
+      assumptionNote: null,
+    };
+  }
+
+  const currency = (material.currency || SUPPORTED_BUDGET_CURRENCY).trim().toUpperCase();
+  if (currency !== SUPPORTED_BUDGET_CURRENCY) {
+    return {
+      status: 'UNSUPPORTED_CURRENCY',
+      effectiveComponentCost: null,
+      allocatedQuantity: null,
+      availableQuantity: decimalToNumber(quantityState.availableQuantity),
+      listingUnit: material.unit,
+      unitPrice: null,
+      assumptionNote: null,
+    };
+  }
+
+  const availableQuantity = decimalToNumber(quantityState.availableQuantity) ?? 0;
+  const remainingAllocatable = Math.max(0, availableQuantity - input.allocatedFromListing);
+  if (remainingAllocatable <= 0) {
+    return {
+      status: 'INSUFFICIENT_QUANTITY',
+      effectiveComponentCost: null,
+      allocatedQuantity: null,
+      availableQuantity,
+      listingUnit: material.unit,
+      unitPrice: material.isFree ? 0 : decimalToNumber(material.price),
+      assumptionNote: null,
+    };
+  }
+
+  if (!material.isFree && (material.price == null || decimalToNumber(material.price) == null)) {
+    return {
+      status: 'PRICE_UNAVAILABLE',
+      effectiveComponentCost: null,
+      allocatedQuantity: null,
+      availableQuantity,
+      listingUnit: material.unit,
+      unitPrice: null,
+      assumptionNote: null,
+    };
+  }
+
+  const unitPrice = material.isFree ? 0 : decimalToNumber(material.price) ?? 0;
+  if (!material.isFree && unitPrice <= 0) {
+    return {
+      status: 'PRICE_UNAVAILABLE',
+      effectiveComponentCost: null,
+      allocatedQuantity: null,
+      availableQuantity,
+      listingUnit: material.unit,
+      unitPrice: null,
+      assumptionNote: null,
+    };
+  }
+
+  if (unitsAreCompatible(input.requiredUnit, material.unit)) {
+    if (remainingAllocatable < input.requiredQuantity) {
+      return {
+        status: 'INSUFFICIENT_QUANTITY',
+        effectiveComponentCost: null,
+        allocatedQuantity: null,
+        availableQuantity,
+        listingUnit: material.unit,
+        unitPrice,
+        assumptionNote: null,
+      };
+    }
+
+    return {
+      status: 'SELECTED',
+      effectiveComponentCost: roundMoney(unitPrice * input.requiredQuantity),
+      allocatedQuantity: input.requiredQuantity,
+      availableQuantity,
+      listingUnit: material.unit,
+      unitPrice,
+      assumptionNote: null,
+    };
+  }
+
+  if (remainingAllocatable < 1) {
+    return {
+      status: 'INSUFFICIENT_QUANTITY',
+      effectiveComponentCost: null,
+      allocatedQuantity: null,
+      availableQuantity,
+      listingUnit: material.unit,
+      unitPrice,
+      assumptionNote: null,
+    };
+  }
+
+  return {
+    status: 'UNIT_ASSUMPTION_REQUIRED',
+    effectiveComponentCost: roundMoney(unitPrice),
+    allocatedQuantity: 1,
+    availableQuantity,
+    listingUnit: material.unit,
+    unitPrice,
+    assumptionNote:
+      'Estimated using one available listing because the required and listing units cannot be converted safely.',
+  };
+};
+
+export const estimateProjectMaterialBudget = async (input: {
+  projectId: string;
+  learnerId: string;
+  candidateLimitPerComponent?: number;
+}): Promise<ProjectMaterialBudgetEstimate> => {
+  const project = await prisma.learningProject.findFirst({
+    where: {
+      id: input.projectId,
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+      category: {
+        isActive: true,
+        categoryType: {
+          in: ['PROJECT', 'BOTH'],
+        },
+      },
+    },
+    select: {
+      id: true,
+      title: true,
+      coverImageUrl: true,
+      difficulty: true,
+      category: {
+        select: {
+          nameEn: true,
+          nameAr: true,
+        },
+      },
+      requiredComponents: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          componentRole: true,
+          categoryId: true,
+          componentName: true,
+          materialType: true,
+          searchKeywords: true,
+          alternativeKeywords: true,
+          quantity: true,
+          unit: true,
+          isRequired: true,
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    throw new AppError('Learning project not found', 404, 'NOT_FOUND');
+  }
+
+  const requiredComponents = project.requiredComponents.filter(
+    (component) => component.isRequired !== false,
+  );
+
+  const deliveryExcludedNotice =
+    'This estimate covers currently available ImpactLoop materials only. Delivery, tools, and unavailable components are not included.';
+
+  if (requiredComponents.length === 0) {
+    return {
+      projectId: project.id,
+      projectTitle: project.title,
+      projectImageUrl: project.coverImageUrl,
+      categoryLabel: project.category.nameEn,
+      difficulty: project.difficulty,
+      estimateStatus: 'PARTIAL',
+      estimatedSubtotalNis: 0,
+      currency: 'NIS',
+      requiredComponentCount: 0,
+      pricedComponentCount: 0,
+      missingComponentCount: 0,
+      unpricedComponentCount: 0,
+      quantityAssumptionWarning: null,
+      deliveryExcludedNotice,
+      components: [],
+    };
+  }
+
+  const allocatedByMaterialId = new Map<string, number>();
+  const lines: ProjectBudgetComponentLine[] = [];
+
+  for (const component of requiredComponents) {
+    const requiredQuantity = decimalToNumber(component.quantity) ?? 1;
+    const candidates = await loadBudgetCandidateRecords({
+      learnerId: input.learnerId,
+      component,
+    });
+    const candidateLimit = Math.min(input.candidateLimitPerComponent ?? 10, 10);
+    const boundedCandidates = candidates.slice(0, candidateLimit);
+
+    const scored: Array<{
+      candidate: BudgetCandidateRecord;
+      evaluation: Awaited<ReturnType<typeof evaluateBudgetCandidate>>;
+    }> = [];
+
+    for (const candidate of boundedCandidates) {
+      const evaluation = await evaluateBudgetCandidate({
+        candidate,
+        requiredQuantity,
+        requiredUnit: component.unit,
+        allocatedFromListing: allocatedByMaterialId.get(candidate.id) ?? 0,
+      });
+      if (
+        evaluation.status === 'SELECTED' ||
+        evaluation.status === 'UNIT_ASSUMPTION_REQUIRED'
+      ) {
+        scored.push({ candidate, evaluation });
+      }
+    }
+
+    const qualifiedScored = scored.filter(
+      (entry) => entry.candidate.relevance >= MIN_BUDGET_MATCH_RELEVANCE,
+    );
+    const selectionPool = qualifiedScored.length > 0 ? qualifiedScored : scored;
+
+    selectionPool.sort((left, right) => {
+      const leftCost = left.evaluation.effectiveComponentCost ?? Number.POSITIVE_INFINITY;
+      const rightCost = right.evaluation.effectiveComponentCost ?? Number.POSITIVE_INFINITY;
+      if (leftCost !== rightCost) {
+        return leftCost - rightCost;
+      }
+
+      const leftFree = left.candidate.isFree ? 0 : 1;
+      const rightFree = right.candidate.isFree ? 0 : 1;
+      if (leftFree !== rightFree) {
+        return leftFree - rightFree;
+      }
+
+      if (left.candidate.matchRank !== right.candidate.matchRank) {
+        return left.candidate.matchRank - right.candidate.matchRank;
+      }
+
+      const leftAvailable = left.evaluation.availableQuantity ?? 0;
+      const rightAvailable = right.evaluation.availableQuantity ?? 0;
+      if (leftAvailable !== rightAvailable) {
+        return rightAvailable - leftAvailable;
+      }
+
+      return left.candidate.id.localeCompare(right.candidate.id);
+    });
+
+    const selected = selectionPool[0];
+    if (!selected) {
+      lines.push({
+        componentId: component.id,
+        componentName: component.componentName,
+        requiredQuantity,
+        requiredUnit: component.unit,
+        status: 'NO_AVAILABLE_MATCH',
+        selectedMaterialId: null,
+        selectedMaterialTitle: null,
+        isFree: null,
+        unitPrice: null,
+        effectiveComponentCost: null,
+        allocatedQuantity: null,
+        availableQuantity: null,
+        listingUnit: null,
+        alternativesCount: 0,
+        matchEvidence: null,
+        assumptionNote: null,
+      });
+      continue;
+    }
+
+    if (selected.evaluation.allocatedQuantity != null) {
+      const previous = allocatedByMaterialId.get(selected.candidate.id) ?? 0;
+      allocatedByMaterialId.set(
+        selected.candidate.id,
+        previous + selected.evaluation.allocatedQuantity,
+      );
+    }
+
+    lines.push({
+      componentId: component.id,
+      componentName: component.componentName,
+      requiredQuantity,
+      requiredUnit: component.unit,
+      status: selected.evaluation.status,
+      selectedMaterialId: selected.candidate.id,
+      selectedMaterialTitle: selected.candidate.title,
+      isFree: selected.candidate.isFree,
+      unitPrice: selected.evaluation.unitPrice,
+      effectiveComponentCost: selected.evaluation.effectiveComponentCost,
+      allocatedQuantity: selected.evaluation.allocatedQuantity,
+      availableQuantity: selected.evaluation.availableQuantity,
+      listingUnit: selected.evaluation.listingUnit,
+      alternativesCount: Math.max(0, scored.length - 1),
+      matchEvidence: selected.candidate.matchEvidence,
+      assumptionNote: selected.evaluation.assumptionNote,
+    });
+  }
+
+  const pricedLines = lines.filter(
+    (line) =>
+      line.status === 'SELECTED' || line.status === 'UNIT_ASSUMPTION_REQUIRED',
+  );
+  const missingComponentCount = lines.filter(
+    (line) => line.status === 'NO_AVAILABLE_MATCH',
+  ).length;
+  const unpricedComponentCount = lines.filter(
+    (line) =>
+      line.status === 'PRICE_UNAVAILABLE' || line.status === 'UNSUPPORTED_CURRENCY',
+  ).length;
+  const estimatedSubtotalNis = roundMoney(
+    pricedLines.reduce((sum, line) => sum + (line.effectiveComponentCost ?? 0), 0),
+  );
+  const quantityAssumptionWarning = lines.some((line) => line.assumptionNote)
+    ? 'Some component costs use a documented listing-level assumption because units could not be converted safely.'
+    : null;
+
+  const allCovered =
+    lines.length > 0 &&
+    lines.every(
+      (line) => line.status === 'SELECTED' || line.status === 'UNIT_ASSUMPTION_REQUIRED',
+    );
+  const estimateStatus: ProjectBudgetEstimateStatus = allCovered
+    ? estimatedSubtotalNis === 0
+      ? 'ZERO_COST_AVAILABLE_MATERIALS'
+      : 'COMPLETE'
+    : 'PARTIAL';
+
+  return {
+    projectId: project.id,
+    projectTitle: project.title,
+    projectImageUrl: project.coverImageUrl,
+    categoryLabel: project.category.nameEn,
+    difficulty: project.difficulty,
+    estimateStatus,
+    estimatedSubtotalNis,
+    currency: 'NIS',
+    requiredComponentCount: lines.length,
+    pricedComponentCount: pricedLines.length,
+    missingComponentCount,
+    unpricedComponentCount,
+    quantityAssumptionWarning,
+    deliveryExcludedNotice,
+    components: lines,
+  };
 };

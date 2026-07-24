@@ -10,6 +10,7 @@ import {
   detectMaterialSearchIntent,
   detectOwnedMaterialsProjectIntent,
   detectProjectComponentsIntent,
+  detectProjectBudgetEstimationIntent,
   detectProjectMaterialAvailabilityIntent,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
@@ -240,6 +241,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
     };
   }
 
+  if (detectProjectBudgetEstimationIntent(text)) {
+    return {
+      route: 'PROJECT_BUDGET_ESTIMATION',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'estimate_project_material_budget',
+    };
+  }
+
   if (detectProjectMaterialAvailabilityIntent(text)) {
     return {
       route: 'PROJECT_MATERIAL_AVAILABILITY',
@@ -314,6 +324,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
 };
 
 const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
+  if (detectProjectBudgetEstimationIntent(text)) {
+    return {
+      route: 'PROJECT_BUDGET_ESTIMATION',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'estimate_project_material_budget',
+    };
+  }
+
   if (detectProjectMaterialAvailabilityIntent(text)) {
     return {
       route: 'PROJECT_MATERIAL_AVAILABILITY',

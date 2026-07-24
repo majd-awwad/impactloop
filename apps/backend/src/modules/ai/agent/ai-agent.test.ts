@@ -92,6 +92,31 @@ describe('ai agent router', () => {
     assert.equal(decision.route, 'PROJECT_MATERIAL_AVAILABILITY');
     assert.equal(decision.suggestedTool, 'match_available_materials_for_project');
   });
+
+  test('routes Arabic project budget estimation intent', () => {
+    const decision = resolveAgentRoute({
+      userMessage: 'كم بكلفني مشروع Obstacle Avoidance Robot؟',
+      locale: 'ar',
+    });
+
+    assert.equal(decision.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(decision.suggestedTool, 'estimate_project_material_budget');
+  });
+
+  test('routes English project budget estimation intent', () => {
+    const decision = resolveAgentRoute({
+      userMessage:
+        'How much would the available materials for the Obstacle Avoidance Robot cost?',
+      locale: 'en',
+    });
+
+    assert.equal(decision.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(decision.suggestedTool, 'estimate_project_material_budget');
+  });
+
+  test('registers estimate_project_material_budget tool', () => {
+    assert.equal(isRegisteredToolName('estimate_project_material_budget'), true);
+  });
 });
 
 describe('semantic owned materials route precedence', () => {
