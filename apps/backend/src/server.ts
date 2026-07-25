@@ -4,13 +4,23 @@ import {
   getResolvedEmailProvider,
   logAiPriceSuggestionStartupConfig,
   logEmailInvitationStartupConfig,
+  logRecommendationOutboxStartupConfig,
 } from './config/env.js';
 import { prisma } from './database/prisma.js';
 import { verifySmtpInvitationTransport } from './modules/invitations/email/smtp-email-invitation-provider.js';
-import { RecommendationOutboxWorker } from './modules/recommendation-events/recommendation-events.outbox.worker.js';
+import {
+  beginReadinessShutdown,
+  registerRecommendationOutboxHealthProvider,
+  runReadinessAwareShutdown,
+} from './modules/health/health.service.js';
+import {
+  RecommendationOutboxWorker,
+  RECOMMENDATION_OUTBOX_SHUTDOWN_WAIT_MS,
+} from './modules/recommendation-events/recommendation-events.outbox.worker.js';
 
 logAiPriceSuggestionStartupConfig();
 logEmailInvitationStartupConfig();
+logRecommendationOutboxStartupConfig();
 
 if (getResolvedEmailProvider() === 'smtp') {
   void verifySmtpInvitationTransport().then((result) => {
@@ -26,18 +36,34 @@ if (getResolvedEmailProvider() === 'smtp') {
 }
 
 const recommendationOutboxWorker = new RecommendationOutboxWorker({
+  enabled: env.recommendationOutboxWorkerEnabled,
+  required: env.recommendationOutboxWorkerRequired,
   pollIntervalMs: env.recommendationOutboxPollIntervalMs,
   batchSize: env.recommendationOutboxBatchSize,
   maxAttempts: env.recommendationOutboxMaxAttempts,
   leaseMs: env.recommendationOutboxLeaseMs,
 });
 
+if (env.recommendationOutboxWorkerEnabled) {
+  recommendationOutboxWorker.start();
+  console.log('[Recommendation outbox] worker enabled');
+} else if (env.recommendationOutboxWorkerRequired) {
+  console.log(
+    '[Recommendation outbox] worker required but disabled; readiness will remain not ready',
+  );
+} else {
+  console.log('[Recommendation outbox] worker intentionally disabled');
+}
+
+registerRecommendationOutboxHealthProvider({
+  getSnapshot: (nowMs) => recommendationOutboxWorker.getHealthSnapshot(nowMs),
+  markShutdownRequested: () => {
+    recommendationOutboxWorker.markShutdownRequested();
+  },
+});
+
 const server = app.listen(env.port, () => {
   console.log(`ImpactLoop API listening on port ${env.port}`);
-  if (env.recommendationOutboxWorkerEnabled) {
-    recommendationOutboxWorker.start();
-    console.log('[Recommendation outbox] worker enabled');
-  }
 });
 
 let shuttingDown = false;
@@ -47,9 +73,26 @@ const shutdown = async (signal: string): Promise<void> => {
   }
   shuttingDown = true;
   console.log(`[ImpactLoop API] ${signal} received; shutting down`);
-  await recommendationOutboxWorker.stop();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  await prisma.$disconnect();
+
+  await runReadinessAwareShutdown({
+    beginShutdown: beginReadinessShutdown,
+    stopTimeoutMs: RECOMMENDATION_OUTBOX_SHUTDOWN_WAIT_MS,
+    stopWorker: (timeoutMs) => recommendationOutboxWorker.stop(timeoutMs),
+    closeHttp: () =>
+      new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      }),
+    disconnectDb: () => prisma.$disconnect(),
+    markWorkerStopped: () => {
+      recommendationOutboxWorker.markStopped();
+    },
+    onHardExit: (code) => {
+      console.error(
+        `[ImpactLoop API] hard exit after outbox shutdown timeout (code=${code})`,
+      );
+      process.exit(code);
+    },
+  });
 };
 
 process.once('SIGINT', () => {

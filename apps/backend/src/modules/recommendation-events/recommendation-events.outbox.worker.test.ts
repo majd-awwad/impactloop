@@ -173,7 +173,12 @@ describe('recommendation outbox worker', () => {
       );
       assert.equal(result.enqueued, false);
       assert.equal(result.impressionIds.size, 0);
-      assert.equal(await prisma.recommendationEventOutbox.count(), 0);
+      assert.equal(
+        await prisma.recommendationEventOutbox.count({
+          where: { deduplicationKey: { contains: 'enqueue-failure' } },
+        }),
+        0,
+      );
       assert.equal(await prisma.recommendationGeneration.count({ where: { learnerId } }), 0);
       assert.equal(await prisma.recommendationImpression.count({ where: { learnerId } }), 0);
     } finally {
@@ -415,9 +420,15 @@ describe('recommendation outbox worker', () => {
   });
 
   test('graceful shutdown prevents new claims and disabled defaults do not poll', async () => {
-    const worker = new RecommendationOutboxWorker({ pollIntervalMs: 5, batchSize: 1 });
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 5,
+      batchSize: 1,
+    });
     worker.start();
-    await worker.stop();
+    const stopResult = await worker.stop();
+    assert.equal(stopResult.outcome, 'completed');
+    worker.markStopped();
 
     const generationKey = `outbox-generation-${Date.now()}-stopped`;
     await enqueueGeneration(generationKey, 'outbox-correlation-stopped');
@@ -456,5 +467,563 @@ describe('recommendation outbox worker', () => {
     });
     assert.equal(row.status, 'RETRY');
     assert.equal(row.lockToken, null);
+  });
+});
+
+describe('RP-04.1 recommendation outbox runtime config', () => {
+  test('production defaults required=true when flag unset', async () => {
+    const { resolveRecommendationOutboxRuntimeConfig } = await import(
+      '../../config/env.js'
+    );
+    const resolved = resolveRecommendationOutboxRuntimeConfig({
+      NODE_ENV: 'production',
+    });
+    assert.equal(resolved.required, true);
+    assert.equal(resolved.enabled, false);
+  });
+
+  test('non-production defaults required=false when flag unset', async () => {
+    const { resolveRecommendationOutboxRuntimeConfig } = await import(
+      '../../config/env.js'
+    );
+    const resolved = resolveRecommendationOutboxRuntimeConfig({
+      NODE_ENV: 'development',
+    });
+    assert.equal(resolved.required, false);
+  });
+
+  test('REQUIRED=true/false overrides defaults and stays independent of enabled', async () => {
+    const { resolveRecommendationOutboxRuntimeConfig } = await import(
+      '../../config/env.js'
+    );
+    assert.equal(
+      resolveRecommendationOutboxRuntimeConfig({
+        NODE_ENV: 'development',
+        RECOMMENDATION_OUTBOX_WORKER_REQUIRED: 'true',
+      }).required,
+      true,
+    );
+    assert.equal(
+      resolveRecommendationOutboxRuntimeConfig({
+        NODE_ENV: 'production',
+        RECOMMENDATION_OUTBOX_WORKER_REQUIRED: 'false',
+      }).required,
+      false,
+    );
+    const both = resolveRecommendationOutboxRuntimeConfig({
+      NODE_ENV: 'production',
+      RECOMMENDATION_OUTBOX_WORKER_ENABLED: 'true',
+      RECOMMENDATION_OUTBOX_WORKER_REQUIRED: 'false',
+    });
+    assert.equal(both.enabled, true);
+    assert.equal(both.required, false);
+  });
+
+  test('poll/batch/attempt/lease defaults and clamps are unchanged', async () => {
+    const { resolveRecommendationOutboxRuntimeConfig } = await import(
+      '../../config/env.js'
+    );
+    assert.deepEqual(
+      resolveRecommendationOutboxRuntimeConfig({ NODE_ENV: 'test' }),
+      {
+        enabled: false,
+        required: false,
+        pollIntervalMs: 2_000,
+        batchSize: 10,
+        maxAttempts: 5,
+        leaseMs: 30_000,
+      },
+    );
+    const clamped = resolveRecommendationOutboxRuntimeConfig({
+      NODE_ENV: 'test',
+      RECOMMENDATION_OUTBOX_POLL_INTERVAL_MS: '10',
+      RECOMMENDATION_OUTBOX_BATCH_SIZE: '999',
+      RECOMMENDATION_OUTBOX_MAX_ATTEMPTS: '0',
+      RECOMMENDATION_OUTBOX_LEASE_MS: '100',
+    });
+    assert.equal(clamped.pollIntervalMs, 250);
+    assert.equal(clamped.batchSize, 100);
+    assert.equal(clamped.maxAttempts, 1);
+    assert.equal(clamped.leaseMs, 1_000);
+  });
+});
+
+describe('RP-04.1 recommendation outbox worker health lifecycle', () => {
+  const firePendingSchedule = (pending: (() => void) | null): void => {
+    if (!pending) {
+      throw new Error('expected a pending poll schedule callback');
+    }
+    pending();
+  };
+  test('DISABLED only when enabled=false; required-disabled is not FAILED', () => {
+    const disabled = new RecommendationOutboxWorker({
+      enabled: false,
+      required: true,
+    });
+    const snapshot = disabled.getHealthSnapshot(Date.now());
+    assert.equal(snapshot.state, 'DISABLED');
+    assert.equal(snapshot.effectiveState, 'DISABLED');
+    assert.equal(snapshot.ready, false);
+    assert.ok(snapshot.reasonCodes.includes('WORKER_REQUIRED_BUT_DISABLED'));
+    assert.notEqual(snapshot.state, 'FAILED');
+  });
+
+  test('enabled start transitions to STARTING then HEALTHY on empty poll', async () => {
+    let now = 1_000;
+    let processCalls = 0;
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      required: true,
+      pollIntervalMs: 1_000,
+      queueMetricsRefreshIntervalMs: 60_000,
+      deps: {
+        now: () => now,
+        schedule: (_ms, cb) => {
+          const handle = setTimeout(cb, 0);
+          return handle;
+        },
+        clearSchedule: (timer) => clearTimeout(timer),
+        processBatch: async () => {
+          processCalls += 1;
+          return 0;
+        },
+        refreshQueueMetrics: async () => ({
+          retryBacklog: 0,
+          retryBacklogCapped: false,
+          deadRows: 0,
+          deadRowsCapped: false,
+        }),
+      },
+    });
+
+    assert.notEqual(worker.getHealthSnapshot(now).state, 'DISABLED');
+    worker.start();
+    assert.equal(worker.getHealthSnapshot(now).state, 'STARTING');
+    assert.equal(worker.getHealthSnapshot(now).ready, false);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    now = 1_500;
+    const healthy = worker.getHealthSnapshot(now);
+    assert.ok(processCalls >= 1);
+    assert.equal(healthy.state, 'HEALTHY');
+    assert.equal(healthy.ready, true);
+
+    const stopResult = await worker.stop(1_000);
+    assert.equal(stopResult.outcome, 'completed');
+    worker.markStopped();
+    assert.equal(worker.getHealthSnapshot(now).state, 'STOPPED');
+  });
+
+  test('transient failures degrade then fail; later success recovers', async () => {
+    let now = 10_000;
+    let mode: 'fail' | 'succeed' = 'fail';
+    let failCount = 0;
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 20,
+      consecutiveFailureThreshold: 3,
+      queueMetricsRefreshIntervalMs: 60_000,
+      deps: {
+        now: () => now,
+        schedule: (_ms, cb) => setTimeout(cb, 5),
+        clearSchedule: (timer) => clearTimeout(timer),
+        processBatch: async () => {
+          if (mode === 'fail') {
+            failCount += 1;
+            throw new Error('transient');
+          }
+          return 0;
+        },
+        refreshQueueMetrics: async () => ({
+          retryBacklog: 0,
+          retryBacklogCapped: false,
+          deadRows: 0,
+          deadRowsCapped: false,
+        }),
+      },
+    });
+
+    worker.start();
+    for (let i = 0; i < 5 && failCount < 3; i += 1) {
+      now += 50;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    now = 10_000 + 15_000;
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const failed = worker.getHealthSnapshot(now);
+    assert.equal(failed.effectiveState, 'FAILED');
+    assert.equal(failed.ready, false);
+
+    mode = 'succeed';
+    now += 100;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    const recovered = worker.getHealthSnapshot(now);
+    assert.ok(
+      recovered.state === 'HEALTHY' || recovered.state === 'DEGRADED',
+      `expected recovery, got ${recovered.state}`,
+    );
+    assert.equal(recovered.ready, true);
+
+    await worker.stop(1_000);
+    worker.markStopped();
+  });
+
+  test('stale detection is pure in getHealthSnapshot without mutating stored state logs', async () => {
+    let now = 50_000;
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 1_000,
+      queueMetricsRefreshIntervalMs: 60_000,
+      deps: {
+        now: () => now,
+        schedule: (_ms, cb) => setTimeout(cb, 1),
+        clearSchedule: clearTimeout,
+        processBatch: async () => 0,
+        refreshQueueMetrics: async () => ({
+          retryBacklog: 0,
+          retryBacklogCapped: false,
+          deadRows: 0,
+          deadRowsCapped: false,
+        }),
+      },
+    });
+    worker.start();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(worker.getHealthSnapshot(now).state, 'HEALTHY');
+
+    now += 20_000;
+    const staleSnap = worker.getHealthSnapshot(now);
+    assert.equal(staleSnap.stale, true);
+    assert.equal(staleSnap.effectiveState, 'FAILED');
+    assert.equal(staleSnap.ready, false);
+    assert.equal(staleSnap.state, 'HEALTHY');
+
+    await worker.stop(500);
+    worker.markStopped();
+  });
+
+  test('metrics refresh is throttled and failure does not increment poll failures', async () => {
+    let now = 100_000;
+    let refreshCalls = 0;
+    let processCalls = 0;
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 20,
+      queueMetricsRefreshIntervalMs: 1_000,
+      deps: {
+        now: () => now,
+        schedule: (_ms, cb) => setTimeout(cb, 5),
+        clearSchedule: clearTimeout,
+        processBatch: async () => {
+          processCalls += 1;
+          return 0;
+        },
+        refreshQueueMetrics: async () => {
+          refreshCalls += 1;
+          if (refreshCalls === 1) {
+            throw new Error('metrics unavailable');
+          }
+          return {
+            retryBacklog: 2,
+            retryBacklogCapped: false,
+            deadRows: 0,
+            deadRowsCapped: false,
+          };
+        },
+      },
+    });
+
+    worker.start();
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(refreshCalls, 1);
+    const afterFail = worker.getHealthSnapshot(now);
+    assert.equal(afterFail.queueMetricsStale, true);
+    assert.equal(afterFail.consecutiveFailures, 0);
+
+    now += 50;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.ok(processCalls >= 2);
+    assert.equal(refreshCalls, 1, 'refresh must stay throttled within interval');
+
+    now += 2_000;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.ok(refreshCalls >= 2);
+
+    await worker.stop(500);
+    worker.markStopped();
+  });
+
+  test('stop timeout reports in-flight without STOPPED; start after stop is no-op', async () => {
+    let now = 200_000;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 1_000,
+      queueMetricsRefreshIntervalMs: 60_000,
+      deps: {
+        now: () => now,
+        schedule: (ms, cb) => setTimeout(cb, ms),
+        clearSchedule: clearTimeout,
+        processBatch: async () => {
+          await gate;
+          return 0;
+        },
+        refreshQueueMetrics: async () => ({
+          retryBacklog: 0,
+          retryBacklogCapped: false,
+          deadRows: 0,
+          deadRowsCapped: false,
+        }),
+      },
+    });
+
+    worker.start();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const result = await worker.stop(30);
+    assert.equal(result.outcome, 'timedOut');
+    if (result.outcome === 'timedOut') {
+      assert.equal(result.inFlightStillRunning, true);
+    }
+    assert.equal(worker.getHealthSnapshot(now).state, 'STOPPING');
+    assert.notEqual(worker.getHealthSnapshot(now).state, 'STOPPED');
+
+    worker.start();
+    assert.equal(worker.getHealthSnapshot(now).state, 'STOPPING');
+
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  });
+
+  test('failed poll stays DEGRADED after successful metrics refresh; later poll recovers', async () => {
+    let now = 300_000;
+    let mode: 'ok' | 'fail' = 'ok';
+    let refreshCalls = 0;
+    let pendingSchedule: (() => void) | null = null;
+    const timers: NodeJS.Timeout[] = [];
+
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 1_000,
+      queueMetricsRefreshIntervalMs: 1,
+      consecutiveFailureThreshold: 3,
+      deps: {
+        now: () => now,
+        schedule: (_ms, cb) => {
+          pendingSchedule = cb;
+          const timer = setTimeout(() => undefined, 60_000);
+          timers.push(timer);
+          return timer;
+        },
+        clearSchedule: (timer) => clearTimeout(timer),
+        processBatch: async () => {
+          if (mode === 'fail') {
+            throw new Error('poll boom');
+          }
+          return 0;
+        },
+        refreshQueueMetrics: async () => {
+          refreshCalls += 1;
+          return {
+            retryBacklog: 0,
+            retryBacklogCapped: false,
+            deadRows: 0,
+            deadRowsCapped: false,
+          };
+        },
+      },
+    });
+
+    worker.start();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(worker.getHealthSnapshot(now).state, 'HEALTHY');
+    assert.ok(refreshCalls >= 1);
+
+    mode = 'fail';
+    now += 10;
+    firePendingSchedule(pendingSchedule);
+    pendingSchedule = null;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const afterFail = worker.getHealthSnapshot(now);
+    assert.equal(afterFail.state, 'DEGRADED');
+    assert.equal(afterFail.consecutiveFailures, 1);
+    assert.ok(refreshCalls >= 2);
+
+    mode = 'ok';
+    now += 10;
+    firePendingSchedule(pendingSchedule);
+    pendingSchedule = null;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const recovered = worker.getHealthSnapshot(now);
+    assert.equal(recovered.consecutiveFailures, 0);
+    assert.equal(recovered.state, 'HEALTHY');
+    assert.equal(recovered.ready, true);
+
+    const stopResult = await worker.stop(500);
+    assert.equal(stopResult.outcome, 'completed');
+    worker.markStopped();
+    for (const timer of timers) {
+      clearTimeout(timer);
+    }
+  });
+
+  test('stop does not return completed while failure-triggered metrics refresh is active', async () => {
+    let now = 400_000;
+    let pollCount = 0;
+    let releaseFailMetrics!: () => void;
+    const failMetricsGate = new Promise<void>((resolve) => {
+      releaseFailMetrics = resolve;
+    });
+    let failMetricsStarted = false;
+    let pendingSchedule: (() => void) | null = null;
+    const timers: NodeJS.Timeout[] = [];
+
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 1_000,
+      queueMetricsRefreshIntervalMs: 1,
+      consecutiveFailureThreshold: 5,
+      deps: {
+        now: () => now,
+        schedule: (_ms, cb) => {
+          pendingSchedule = cb;
+          const timer = setTimeout(() => undefined, 60_000);
+          timers.push(timer);
+          return timer;
+        },
+        clearSchedule: (timer) => clearTimeout(timer),
+        processBatch: async () => {
+          pollCount += 1;
+          if (pollCount === 1) {
+            return 0;
+          }
+          throw new Error('poll boom');
+        },
+        refreshQueueMetrics: async () => {
+          if (pollCount <= 1) {
+            return {
+              retryBacklog: 0,
+              retryBacklogCapped: false,
+              deadRows: 0,
+              deadRowsCapped: false,
+            };
+          }
+          failMetricsStarted = true;
+          await failMetricsGate;
+          return {
+            retryBacklog: 0,
+            retryBacklogCapped: false,
+            deadRows: 0,
+            deadRowsCapped: false,
+          };
+        },
+      },
+    });
+
+    worker.start();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(worker.getHealthSnapshot(now).state, 'HEALTHY');
+
+    now += 20;
+    firePendingSchedule(pendingSchedule);
+    pendingSchedule = null;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(failMetricsStarted, true);
+
+    const stopPromise = worker.stop(5_000);
+    let stopSettled: { outcome: string } | null = null;
+    void stopPromise.then((result) => {
+      stopSettled = result;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal(
+      stopSettled,
+      null,
+      'stop must not complete while metrics refresh is still active',
+    );
+    assert.equal(worker.getHealthSnapshot(now).state, 'STOPPING');
+
+    releaseFailMetrics();
+    const result = await stopPromise;
+    assert.equal(result.outcome, 'completed');
+    worker.markStopped();
+    assert.equal(worker.getHealthSnapshot(now).state, 'STOPPED');
+    for (const timer of timers) {
+      clearTimeout(timer);
+    }
+  });
+
+  test('stop times out when failure-triggered metrics never settle', async () => {
+    let now = 500_000;
+    let pollCount = 0;
+    let failMetricsStarted = false;
+    let pendingSchedule: (() => void) | null = null;
+    const timers: NodeJS.Timeout[] = [];
+
+    const worker = new RecommendationOutboxWorker({
+      enabled: true,
+      pollIntervalMs: 1_000,
+      queueMetricsRefreshIntervalMs: 1,
+      consecutiveFailureThreshold: 5,
+      deps: {
+        now: () => now,
+        schedule: (_ms, cb) => {
+          pendingSchedule = cb;
+          const timer = setTimeout(() => undefined, 60_000);
+          timers.push(timer);
+          return timer;
+        },
+        clearSchedule: (timer) => clearTimeout(timer),
+        processBatch: async () => {
+          pollCount += 1;
+          if (pollCount === 1) {
+            return 0;
+          }
+          throw new Error('poll boom');
+        },
+        refreshQueueMetrics: async () => {
+          if (pollCount <= 1) {
+            return {
+              retryBacklog: 0,
+              retryBacklogCapped: false,
+              deadRows: 0,
+              deadRowsCapped: false,
+            };
+          }
+          failMetricsStarted = true;
+          await new Promise(() => undefined);
+          return {
+            retryBacklog: 0,
+            retryBacklogCapped: false,
+            deadRows: 0,
+            deadRowsCapped: false,
+          };
+        },
+      },
+    });
+
+    worker.start();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(worker.getHealthSnapshot(now).state, 'HEALTHY');
+
+    now += 20;
+    firePendingSchedule(pendingSchedule);
+    pendingSchedule = null;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    assert.equal(failMetricsStarted, true);
+
+    const result = await worker.stop(40);
+    assert.equal(result.outcome, 'timedOut');
+    if (result.outcome === 'timedOut') {
+      assert.equal(result.inFlightStillRunning, true);
+    }
+    assert.equal(worker.getHealthSnapshot(now).state, 'STOPPING');
+    assert.notEqual(worker.getHealthSnapshot(now).state, 'STOPPED');
+    for (const timer of timers) {
+      clearTimeout(timer);
+    }
   });
 });
