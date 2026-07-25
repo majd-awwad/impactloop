@@ -88,7 +88,13 @@ isolatedRecommendationTest('READY NONE and LOW serve long-term order with zero r
       recentEvents: [],
       evaluationTimestamp: '2026-07-19T12:00:00Z',
     });
-    assert.equal(profileOnly.diagnostics.projectReadinessStatus, 'READY');
+    assert.equal(profileOnly.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(profileOnly.diagnostics.featureReadiness?.status, 'NOT_READY');
+    assert.ok(
+      profileOnly.diagnostics.featureReadiness?.reasons.includes(
+        'ARTIFACT_CONTRACT_VERSION_MISSING',
+      ),
+    );
     assert.equal(profileOnly.diagnostics.recentConfidence, 'NONE');
     assert.equal(profileOnly.diagnostics.recentSlotsUsedTop5, 0);
     assert.equal(profileOnly.rankedCandidateKeys, undefined);
@@ -157,13 +163,21 @@ isolatedRecommendationTest('READY MEDIUM and HIGH respect frozen recent slot cap
       recentEvents: coherentEvents,
       evaluationTimestamp: '2026-07-19T12:00:00Z',
     });
-    if (coherent.diagnostics.projectReadinessStatus === 'READY') {
+    assert.equal(coherent.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(coherent.diagnostics.featureReadiness?.status, 'NOT_READY');
+    if ((coherent.diagnostics.runtimeCandidatesMissingFromArtifact ?? 1) === 0) {
       assert.ok(['MEDIUM', 'HIGH'].includes(String(coherent.diagnostics.recentConfidence)));
       assert.ok((coherent.diagnostics.recentSlotsUsedTop5 ?? 0) <= 2);
       assert.ok((coherent.diagnostics.recentSlotsUsedTop10 ?? 0) <= 3);
+      assert.ok((coherent.diagnostics.recentFusionDurationMs ?? 0) > 0);
     } else {
-      assert.equal(coherent.rankedCandidateKeys, undefined);
+      assert.equal(coherent.diagnostics.recentConfidence, 'NONE');
     }
+    assert.equal(coherent.rankedCandidateKeys, undefined);
+    assert.equal(
+      coherent.diagnostics.servingSuppressedReason,
+      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+    );
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
     env.recommendationMlProjectServingEnabled = prior.projectServing;

@@ -191,10 +191,16 @@ isolatedRecommendationTest('project shadow recent intent diagnostics stay privac
     });
     assert.strictEqual(coherent.response, response);
     assert.equal(coherent.rankedCandidateKeys, undefined);
-    if (coherent.diagnostics.projectReadinessStatus === 'READY') {
+    assert.equal(coherent.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(coherent.diagnostics.featureReadiness?.status, 'NOT_READY');
+    // Synthetic concept keys may not map into the artifact; fusion runs only when mapping integrity is healthy.
+    if ((coherent.diagnostics.runtimeCandidatesMissingFromArtifact ?? 1) === 0) {
       assert.ok(['MEDIUM', 'HIGH'].includes(String(coherent.diagnostics.recentConfidence)));
       assert.ok((coherent.diagnostics.recentSlotsUsedTop5 ?? 0) <= 2);
       assert.ok((coherent.diagnostics.recentSlotsUsedTop10 ?? 0) <= 3);
+      assert.ok((coherent.diagnostics.recentFusionDurationMs ?? 0) > 0);
+    } else {
+      assert.equal(coherent.diagnostics.recentConfidence, 'NONE');
     }
     assert.doesNotMatch(JSON.stringify(coherent.diagnostics), /shadow-project|robotics-core|textiles-core/i);
     assert.ok((coherent.diagnostics.totalProjectRecommendationDurationMs ?? -1) >= 0);
@@ -662,6 +668,13 @@ isolatedRecommendationTest('RP-01.4 canonical user features are candidate-indepe
     );
     assert.equal(result.diagnostics.artifactMatchedUserFeatureCount, 0);
     assert.equal(result.diagnostics.artifactMissingUserFeatureCount, 2);
+    assert.equal(result.diagnostics.featureReadiness?.status, 'NOT_READY');
+    assert.ok(
+      result.diagnostics.featureReadiness?.reasons.includes(
+        'ARTIFACT_CONTRACT_VERSION_MISSING',
+      ),
+    );
+    assert.equal(result.diagnostics.featureReadiness?.artifact.contractVersionCompatible, false);
     assert.doesNotMatch(
       JSON.stringify(result.diagnostics),
       /interest:[0-9a-f]{64}/,
@@ -821,4 +834,97 @@ isolatedRecommendationTest('RP-01.4 material and project canonical features matc
   assert.equal(project.rankedCandidateKeys, undefined);
   assert.equal(material.diagnostics.artifactUserFeatureOverlapStatus, 'ZERO_OVERLAP');
   assert.equal(project.diagnostics.artifactUserFeatureOverlapStatus, 'ZERO_OVERLAP');
+});
+
+isolatedRecommendationTest('RP-01.5 feature readiness attaches and keeps serve keys suppressed', async () => {
+  const prior = {
+    shadow: env.recommendationMlShadowEnabled,
+    materialServing: env.recommendationMlMaterialServingEnabled,
+    projectServing: env.recommendationMlProjectServingEnabled,
+    materialPath: env.recommendationMlMaterialArtifactPath,
+    projectPath: env.recommendationMlProjectArtifactPath,
+  };
+  env.recommendationMlShadowEnabled = true;
+  env.recommendationMlMaterialServingEnabled = true;
+  env.recommendationMlProjectServingEnabled = true;
+  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+  setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+  clearMlArtifactCacheForTests();
+  try {
+    const material = await runMlShadowComparison({
+      response: { section: 'materials' },
+      domain: 'material',
+      interests: ['arduino'],
+      candidates: [
+        {
+          candidateKey: 'm1',
+          categoryId: 'cat-1',
+          categoryLabel: 'Electronics',
+          condition: 'NEW',
+          isFree: true,
+          pickupAllowed: true,
+          deliveryAllowed: false,
+          conceptKeys: ['material-family:electronics'],
+        },
+      ],
+      activeCandidateKeys: ['m1'],
+      currentTopKeys: ['m1'],
+      recentEvents: [],
+      evaluationTimestamp: '2026-08-10T00:00:00Z',
+    });
+    assert.equal(material.diagnostics.status, 'SCORED');
+    assert.equal(material.diagnostics.featureReadiness?.status, 'NOT_READY');
+    assert.ok(
+      material.diagnostics.featureReadiness?.reasons.includes(
+        'ARTIFACT_CONTRACT_VERSION_MISSING',
+      ),
+    );
+    assert.ok(
+      (material.diagnostics.featureReadiness?.items.unknownOccurrenceCount ?? 0) +
+        (material.diagnostics.featureReadiness?.items.unsupportedOccurrenceCount ?? 0) >
+        0,
+    );
+    assert.notEqual(
+      material.diagnostics.featureReadiness?.items.missingCriticalOccurrenceCount,
+      material.diagnostics.missingFeatureCount,
+    );
+    assert.equal(material.diagnostics.featureCoverage?.zeroFeatureUser, false);
+    assert.equal(material.rankedCandidateKeys, undefined);
+    assert.equal(
+      material.diagnostics.servingSuppressedReason,
+      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+    );
+
+    const project = await runMlShadowComparison({
+      response: { section: 'projects' },
+      domain: 'project',
+      interests: ['arduino'],
+      candidates: [
+        {
+          candidateKey: 'p1',
+          categoryId: 'proj-cat',
+          categoryLabel: 'Robotics',
+          difficulty: 'BEGINNER',
+          conceptKeys: ['project-topic:robotics'],
+        },
+      ],
+      activeCandidateKeys: ['p1'],
+      currentTopKeys: ['p1'],
+      recentEvents: [],
+      evaluationTimestamp: '2026-08-10T00:00:00Z',
+    });
+    assert.equal(project.diagnostics.status, 'SCORED');
+    assert.equal(project.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(project.diagnostics.featureReadiness?.status, 'NOT_READY');
+    assert.equal(project.rankedCandidateKeys, undefined);
+  } finally {
+    env.recommendationMlShadowEnabled = prior.shadow;
+    env.recommendationMlMaterialServingEnabled = prior.materialServing;
+    env.recommendationMlProjectServingEnabled = prior.projectServing;
+    env.recommendationMlMaterialArtifactPath = prior.materialPath;
+    env.recommendationMlProjectArtifactPath = prior.projectPath;
+    setMlShadowInterestRegistryLoaderForTests(undefined);
+    clearMlArtifactCacheForTests();
+  }
 });

@@ -16,6 +16,12 @@ import {
   type ArtifactUserFeatureOverlapStatus,
 } from "./canonical-shadow-user-features.js";
 import {
+  evaluateRecommendationFeatureReadiness,
+  getCompiledRecommendationFeatureReadinessContract,
+  setCompiledRecommendationFeatureReadinessContractForTests,
+  type RecommendationFeatureReadiness,
+} from "./recommendation-feature-readiness.js";
+import {
   combineNormalizedScores,
   scorePortableLightFm,
   type WeightedFeature,
@@ -210,6 +216,7 @@ export type ShadowDiagnostics = {
   artifactMissingUserFeatureCount?: number;
   artifactUserFeatureOverlapStatus?: ArtifactUserFeatureOverlapStatus;
   servingSuppressedReason?: typeof CANONICAL_USER_FEATURES_SHADOW_ONLY;
+  featureReadiness?: RecommendationFeatureReadiness;
   featureCoverage?: ShadowFeatureCoverage;
   currentTop5Keys?: string[];
   shadowTop5Keys?: string[];
@@ -366,6 +373,7 @@ export const resetMlShadowTestStateForTests = (): void => {
   setMlShadowFailureForTests(undefined);
   setMlShadowNeverSettleForTests(undefined);
   setMlShadowInterestRegistryLoaderForTests(undefined);
+  setCompiledRecommendationFeatureReadinessContractForTests(undefined);
 };
 
 const categoryKey = (id: string) =>
@@ -648,6 +656,7 @@ const buildProjectShadowDiagnostics = (
   longTerm: ReturnType<typeof scorePortableLightFm>,
   started: number,
   scorerDurationMs: number,
+  featureReadiness: RecommendationFeatureReadiness,
 ): { diagnostics: ShadowDiagnostics; fusedRankingKeys?: string[] } => {
   const comparisonStarted = performance.now();
   const runtimeKeys = input.candidates.map(
@@ -695,17 +704,21 @@ const buildProjectShadowDiagnostics = (
   ).length;
   const hydratedMappingFailureCount =
     duplicateRuntimeCandidateCount + unknownScoredCandidateCount;
+  const mappingIntegrityReady =
+    nonFiniteScoreCount === 0 &&
+    duplicateRuntimeCandidateCount === 0 &&
+    duplicateScoredCandidateCount === 0 &&
+    hydratedMappingFailureCount === 0 &&
+    runtimeCandidatesMissingFromArtifact === 0;
+  // RP-01.5: overall project readiness requires feature readiness; mapping integrity alone is not enough.
   const projectReadinessStatus: ProjectReadinessStatus =
-    nonFiniteScoreCount > 0 ||
-    duplicateRuntimeCandidateCount > 0 ||
-    duplicateScoredCandidateCount > 0 ||
-    hydratedMappingFailureCount > 0 ||
-    runtimeCandidatesMissingFromArtifact > 0
-      ? "NOT_READY"
-      : "READY";
+    mappingIntegrityReady && featureReadiness.status === "READY"
+      ? "READY"
+      : "NOT_READY";
   const readinessBase: ShadowDiagnostics = {
     status: "SCORED",
     projectReadinessStatus,
+    featureReadiness,
     candidateCount: input.candidates.length,
     runtimeCandidateCount: input.candidates.length,
     artifactCatalogCount: model.item_features.length,
@@ -752,7 +765,9 @@ const buildProjectShadowDiagnostics = (
     recentSlotsUsedTop10: 0,
     recentFusionDurationMs: 0,
   };
-  if (projectReadinessStatus !== "READY") {
+  // Early-return only when mapping/scoring integrity is unsafe. Feature NOT_READY
+  // must not suppress recent-intent / fusion shadow evidence.
+  if (!mappingIntegrityReady) {
     return { diagnostics: readinessBase };
   }
 
@@ -884,6 +899,7 @@ const buildProjectShadowDiagnostics = (
     diagnostics: {
       status: "SCORED",
       projectReadinessStatus,
+      featureReadiness,
       candidateCount: input.candidates.length,
       runtimeCandidateCount: input.candidates.length,
       artifactCatalogCount: model.item_features.length,
@@ -1076,6 +1092,51 @@ const runMlShadowComparisonInternal = async <T>(
       features: itemFeatures(value, input.domain),
     }));
 
+    const compiledContract =
+      await getCompiledRecommendationFeatureReadinessContract();
+    const featureReadiness = evaluateRecommendationFeatureReadiness({
+      compiledContract,
+      domain: input.domain,
+      user: {
+        features: userFeatures,
+        resolutionStatus: canonicalUser.resolutionStatus,
+      },
+      itemRows: candidates,
+      artifact: {
+        modelVersion: model.model_version,
+        featureSchemaVersion: model.feature_schema_version,
+        feature_contract_id:
+          "feature_contract_id" in model &&
+          typeof (model as { feature_contract_id?: unknown }).feature_contract_id ===
+            "string"
+            ? (model as { feature_contract_id: string }).feature_contract_id
+            : null,
+        feature_contract_version:
+          "feature_contract_version" in model &&
+          typeof (model as { feature_contract_version?: unknown })
+            .feature_contract_version === "string"
+            ? (model as { feature_contract_version: string })
+                .feature_contract_version
+            : null,
+        feature_contract_fingerprint:
+          "feature_contract_fingerprint" in model &&
+          typeof (model as { feature_contract_fingerprint?: unknown })
+            .feature_contract_fingerprint === "string"
+            ? (model as { feature_contract_fingerprint: string })
+                .feature_contract_fingerprint
+            : null,
+        feature_aggregation_mode:
+          "feature_aggregation_mode" in model &&
+          typeof (model as { feature_aggregation_mode?: unknown })
+            .feature_aggregation_mode === "string"
+            ? (model as { feature_aggregation_mode: string })
+                .feature_aggregation_mode
+            : null,
+        userFeatureNames: model.user_features.map((entry) => entry.name),
+        itemFeatureNames: model.item_features.map((entry) => entry.name),
+      },
+    });
+
     const scorerStarted = performance.now();
     const longTerm = scorePortableLightFm(model, userFeatures, candidates);
     const scorerDurationMs = Math.max(0, performance.now() - scorerStarted);
@@ -1094,6 +1155,7 @@ const runMlShadowComparisonInternal = async <T>(
         longTerm,
         started,
         scorerDurationMs,
+        featureReadiness,
       );
 
       const diagnostics: ShadowDiagnostics = {
@@ -1399,6 +1461,7 @@ const runMlShadowComparisonInternal = async <T>(
       featureSchemaVersion: model.feature_schema_version,
       missingFeatureCount: longTerm.missingFeatures.length,
       ...canonicalUserDiagnostics,
+      featureReadiness,
       currentTop5Keys: deduplicatedCurrent.slice(0, 5).map(privacyKey),
       shadowTop5Keys: shadowTop.slice(0, 5).map(privacyKey),
       linearBlendTop5Keys: linearBlendTop.slice(0, 5).map(privacyKey),

@@ -196,7 +196,13 @@ isolatedRecommendationTest('READY executes recent intent and fusion and exposes 
       evaluationTimestamp: '2026-07-19T12:00:00Z',
     });
     assert.strictEqual(profileOnly.response, response);
-    assert.equal(profileOnly.diagnostics.projectReadinessStatus, 'READY');
+    assert.equal(profileOnly.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(profileOnly.diagnostics.featureReadiness?.status, 'NOT_READY');
+    assert.ok(
+      profileOnly.diagnostics.featureReadiness?.reasons.includes(
+        'ARTIFACT_CONTRACT_VERSION_MISSING',
+      ),
+    );
     assert.equal(profileOnly.diagnostics.recentConfidence, 'NONE');
     assert.equal(profileOnly.diagnostics.recentSlotsUsedTop5, 0);
     assert.equal(profileOnly.rankedCandidateKeys, undefined);
@@ -220,7 +226,10 @@ isolatedRecommendationTest('READY executes recent intent and fusion and exposes 
       ],
       evaluationTimestamp: '2026-07-19T12:00:00Z',
     });
-    assert.equal(coherent.diagnostics.projectReadinessStatus, 'READY');
+    // Mapping integrity healthy → recent/fusion still run; feature readiness stays NOT_READY.
+    assert.equal(coherent.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(coherent.diagnostics.featureReadiness?.status, 'NOT_READY');
+    assert.equal(coherent.diagnostics.featureReadiness?.coverageStatus, 'NOT_READY');
     assert.ok(['MEDIUM', 'HIGH'].includes(String(coherent.diagnostics.recentConfidence)));
     assert.ok((coherent.diagnostics.recentFusionDurationMs ?? 0) > 0);
     assert.equal(coherent.rankedCandidateKeys, undefined);
