@@ -18,7 +18,65 @@ The worker uses short transactions and at-least-once delivery. Claiming uses `FO
 
 ## Operations
 
-The worker is disabled by default. Configure `RECOMMENDATION_OUTBOX_WORKER_ENABLED=true` only after the migration is deployed and the process has access to the same PostgreSQL database. Defaults are a 2-second poll interval, batch size 10, five attempts, and a 30-second lease. Monitor pending/retry/dead counts, oldest pending age, processing age, materialization failures, and the enqueue failure log. A dead-letter row requires payload inspection under the privacy contract before replay or deletion.
+### Configuration
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `RECOMMENDATION_OUTBOX_WORKER_ENABLED` | `false` | Whether the in-process worker polls and materializes outbox rows |
+| `RECOMMENDATION_OUTBOX_WORKER_REQUIRED` | `true` when `NODE_ENV=production`, otherwise `false` | Whether application **readiness** depends on the worker |
+| `RECOMMENDATION_OUTBOX_POLL_INTERVAL_MS` | `2000` (clamp 250–60000) | Poll interval |
+| `RECOMMENDATION_OUTBOX_BATCH_SIZE` | `10` (clamp 1–100) | Claim batch size |
+| `RECOMMENDATION_OUTBOX_MAX_ATTEMPTS` | `5` (clamp 1–20) | Attempts before `DEAD` |
+| `RECOMMENDATION_OUTBOX_LEASE_MS` | `30000` (clamp 1000–300000) | Processing lease duration |
+
+`enabled` and `required` are independent. In production, the intentional behavior when `required=true` and `enabled=false` is: process stays up, `GET /health` remains healthy (liveness), and `GET /health/ready` returns HTTP **503** with reason `WORKER_REQUIRED_BUT_DISABLED` and worker state **`DISABLED`** (not `FAILED`). During migration rollout, set `RECOMMENDATION_OUTBOX_WORKER_REQUIRED=false` or enable the worker after the outbox migration is applied.
+
+Configure `RECOMMENDATION_OUTBOX_WORKER_ENABLED=true` only after the migration is deployed and the process has access to the same PostgreSQL database.
+
+### Health vs readiness
+
+| Endpoint | Role | Worker impact |
+|----------|------|----------------|
+| `GET /health` | Process **liveness** / basic health | **None.** Always HTTP 200 with `{ status, uptime, timestamp }`. Do **not** treat this as readiness. |
+| `GET /health/ready` | **Readiness** | Reflects enabled/required/worker state. HTTP **200** when ready (`success: true`); HTTP **503** when not ready (`success: false`, `error.code: NOT_READY`). |
+
+Example:
+
+```bash
+curl -sS http://127.0.0.1:4000/health
+curl -sS -i http://127.0.0.1:4000/health/ready
+```
+
+### Worker states
+
+| State | Meaning |
+|-------|---------|
+| `DISABLED` | `enabled=false` only. Required-disabled stays here (never reclassified as `FAILED`). |
+| `STARTING` | `start()` invoked; waiting for first successful poll (including empty poll). |
+| `HEALTHY` | Recent successful poll; backlog/dead below warn thresholds. |
+| `DEGRADED` | Transient poll failure with recent success, or warn-level retry/dead/metrics; **still ready**. |
+| `FAILED` | Enabled worker operationally failed (grace expired, consecutive failures, stale poll). |
+| `STOPPING` | Shutdown in progress (including timed-out in-flight). |
+| `STOPPED` | Terminal after graceful shutdown completes (HTTP closed + Prisma disconnected). |
+
+### Queue diagnostics
+
+Readiness exposes an in-memory snapshot. Queue metrics refresh at most every `max(30s, 15 × pollIntervalMs)` (default 30s), never from `/health` or `/health/ready`.
+
+- `retryBacklog`: bounded sample of rows with status exactly `RETRY` (take = warnThreshold + 1).
+- `deadRows`: bounded sample of rows with status exactly `DEAD` (take = warnThreshold + 1).
+- `retryBacklogCapped` / `deadRowsCapped`: when true, the value means **at least** that many rows (not an exact total).
+
+### Shutdown
+
+1. Readiness becomes false immediately.
+2. Worker enters `STOPPING`, clears scheduling, sets a cooperative abort (no new rows/metrics).
+3. The current Prisma operation is allowed to settle (it cannot be cancelled).
+4. Await the in-flight poll up to **15 seconds** (internal shutdown wait; not the lease).
+5. On success: close HTTP, disconnect Prisma, mark `STOPPED`.
+6. On timeout with in-flight still running: log `SHUTDOWN_TIMED_OUT`, **initiate** HTTP close (stop accepting new connections) but **do not wait** for full connection draining, **do not** disconnect Prisma concurrently, then request server hard-exit (non-zero). State remains `STOPPING` until process exit — never a false `STOPPED`.
+
+Monitor pending/retry/dead pressure via readiness diagnostics and materialization failure logs. A dead-letter row requires payload inspection under the privacy contract before replay or deletion.
 
 The migration adds status/availability, lease, processed-time, and creation-time indexes. It has no destructive operation and no foreign key to the polymorphic payload entities. Rollback means stopping the worker and preserving or draining pending rows before a separately reviewed schema rollback; production migration application was not performed for this phase.
 

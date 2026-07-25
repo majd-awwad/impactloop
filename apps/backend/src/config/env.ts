@@ -192,6 +192,61 @@ const parseBoundedInteger = (
   return Math.min(maximum, Math.max(minimum, parsed));
 };
 
+export type RecommendationOutboxRuntimeConfig = {
+  enabled: boolean;
+  required: boolean;
+  pollIntervalMs: number;
+  batchSize: number;
+  maxAttempts: number;
+  leaseMs: number;
+};
+
+/**
+ * Pure resolver for recommendation outbox runtime flags.
+ * Accepts a plain env map so tests do not need module-cache re-imports.
+ */
+export const resolveRecommendationOutboxRuntimeConfig = (
+  processEnv: NodeJS.Dict<string> = process.env,
+): RecommendationOutboxRuntimeConfig => {
+  const nodeEnv = processEnv.NODE_ENV ?? "development";
+  const requiredDefault = nodeEnv === "production";
+
+  return {
+    enabled: parseBoolean(
+      processEnv.RECOMMENDATION_OUTBOX_WORKER_ENABLED,
+      false,
+    ),
+    required: parseBoolean(
+      processEnv.RECOMMENDATION_OUTBOX_WORKER_REQUIRED,
+      requiredDefault,
+    ),
+    pollIntervalMs: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_POLL_INTERVAL_MS,
+      2_000,
+      250,
+      60_000,
+    ),
+    batchSize: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_BATCH_SIZE,
+      10,
+      1,
+      100,
+    ),
+    maxAttempts: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_MAX_ATTEMPTS,
+      5,
+      1,
+      20,
+    ),
+    leaseMs: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_LEASE_MS,
+      30_000,
+      1_000,
+      300_000,
+    ),
+  };
+};
+
 const LOG_LEVELS = new Set([
   "fatal",
   "error",
@@ -224,6 +279,8 @@ const parseSmtpPort = (value: string | undefined): number => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 587;
 };
+
+const recommendationOutboxRuntime = resolveRecommendationOutboxRuntimeConfig();
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -284,34 +341,12 @@ export const env = {
     process.env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH?.trim() || "",
   recommendationMlProjectArtifactPath:
     process.env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH?.trim() || "",
-  recommendationOutboxWorkerEnabled: parseBoolean(
-    process.env.RECOMMENDATION_OUTBOX_WORKER_ENABLED,
-    false,
-  ),
-  recommendationOutboxPollIntervalMs: parseBoundedInteger(
-    process.env.RECOMMENDATION_OUTBOX_POLL_INTERVAL_MS,
-    2_000,
-    250,
-    60_000,
-  ),
-  recommendationOutboxBatchSize: parseBoundedInteger(
-    process.env.RECOMMENDATION_OUTBOX_BATCH_SIZE,
-    10,
-    1,
-    100,
-  ),
-  recommendationOutboxMaxAttempts: parseBoundedInteger(
-    process.env.RECOMMENDATION_OUTBOX_MAX_ATTEMPTS,
-    5,
-    1,
-    20,
-  ),
-  recommendationOutboxLeaseMs: parseBoundedInteger(
-    process.env.RECOMMENDATION_OUTBOX_LEASE_MS,
-    30_000,
-    1_000,
-    300_000,
-  ),
+  recommendationOutboxWorkerEnabled: recommendationOutboxRuntime.enabled,
+  recommendationOutboxWorkerRequired: recommendationOutboxRuntime.required,
+  recommendationOutboxPollIntervalMs: recommendationOutboxRuntime.pollIntervalMs,
+  recommendationOutboxBatchSize: recommendationOutboxRuntime.batchSize,
+  recommendationOutboxMaxAttempts: recommendationOutboxRuntime.maxAttempts,
+  recommendationOutboxLeaseMs: recommendationOutboxRuntime.leaseMs,
   nominatimBaseUrl:
     process.env.NOMINATIM_BASE_URL?.trim() ||
     "https://nominatim.openstreetmap.org",
@@ -430,5 +465,23 @@ export const logEmailInvitationStartupConfig = (): void => {
     console.log(
       "  Mock provider: invitation links are logged to this console.",
     );
+  }
+};
+
+export const logRecommendationOutboxStartupConfig = (): void => {
+  const outbox = recommendationOutboxRuntime;
+  console.log("[Recommendation outbox config]");
+  console.log(`  enabled: ${outbox.enabled}`);
+  console.log(`  required: ${outbox.required}`);
+  console.log(`  pollIntervalMs: ${outbox.pollIntervalMs}`);
+  console.log(`  batchSize: ${outbox.batchSize}`);
+  console.log(`  maxAttempts: ${outbox.maxAttempts}`);
+  console.log(`  leaseMs: ${outbox.leaseMs}`);
+  if (!outbox.enabled && outbox.required) {
+    console.log(
+      "  WARNING: worker is required but disabled; readiness will remain not ready",
+    );
+  } else if (!outbox.enabled) {
+    console.log("  worker intentionally disabled (optional in this environment)");
   }
 };
