@@ -18,10 +18,17 @@ import {
   restoreAdminLearningProject,
   updateAdminLearningProjectComponent,
 } from './admin-learning-projects.service.js';
+import * as adminLearningProjectsRepository from './admin-learning-projects.repository.js';
 import {
   getLearningProjects,
   getLearningProjectById,
 } from '../learning-projects/learning-projects.service.js';
+import * as learningProjectsRepository from '../learning-projects/learning-projects.repository.js';
+import {
+  defaultProjectTopicLifecycleDeps,
+  reconcileLearningProjectTopics,
+  type ProjectTopicLifecycleDeps,
+} from '../taxonomy/project-concept-assignment.repository.js';
 
 const TEST_MARKER = '[test-admin-learning-projects]';
 
@@ -85,17 +92,35 @@ async function createLearnerUser() {
   return user;
 }
 
-async function createProjectCategory() {
+async function createProjectCategory(topicCanonicalKey?: string) {
+  const topic = await prisma.taxonomyConcept.findFirst({
+    where: {
+      conceptType: 'PROJECT_TOPIC',
+      status: 'ACTIVE',
+      ...(topicCanonicalKey ? { canonicalKey: topicCanonicalKey } : {}),
+    },
+    select: { id: true, canonicalKey: true },
+    orderBy: { canonicalKey: 'asc' },
+  });
+  assert.ok(topic, 'Expected an ACTIVE PROJECT_TOPIC concept in the database');
+
   const category = await prisma.category.create({
     data: {
-      nameEn: `${TEST_MARKER} Robotics`,
+      nameEn: `${TEST_MARKER} Robotics ${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 7)}`,
       nameAr: `${TEST_MARKER} روبوتات`,
       categoryType: 'PROJECT',
       isActive: true,
+      projectTopicConceptId: topic.id,
     },
   });
   ids.categories.push(category.id);
-  return category;
+  return {
+    ...category,
+    topicConceptId: topic.id,
+    topicCanonicalKey: topic.canonicalKey,
+  };
 }
 
 async function createMaterialCategory() {
@@ -714,6 +739,282 @@ describe('admin learning projects moderation', () => {
 
     const approved = await approveAdminLearningProject(admin.id, project.id);
     assert.equal(approved.status, 'PUBLISHED');
+  });
+
+  test('approve reconciles legacy pending project without topics', async () => {
+    const admin = await createAdminUser();
+    const author = await createLearnerUser();
+    const category = await createProjectCategory('project-topic:robotics');
+    const project = await createLearningProject({
+      suffix: 'approve-reconcile-legacy',
+      status: 'PENDING_REVIEW',
+      authorId: author.id,
+      categoryId: category.id,
+    });
+
+    assert.equal(
+      await prisma.learningProjectConcept.count({
+        where: { projectId: project.id },
+      }),
+      0,
+    );
+
+    const approved = await approveAdminLearningProject(admin.id, project.id);
+    assert.equal(approved.status, 'PUBLISHED');
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+      include: { concept: { select: { canonicalKey: true, conceptType: true } } },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.conceptId, category.topicConceptId);
+    assert.equal(concepts[0]?.concept.conceptType, 'PROJECT_TOPIC');
+    assert.equal(concepts[0]?.concept.canonicalKey, 'project-topic:robotics');
+
+    assert.equal(
+      await prisma.projectComponentConcept.count({
+        where: { component: { projectId: project.id } },
+      }),
+      0,
+    );
+  });
+
+  test('approve preserves identical topic join row', async () => {
+    const admin = await createAdminUser();
+    const author = await createLearnerUser();
+    const category = await createProjectCategory('project-topic:electronics');
+    const project = await createLearningProject({
+      suffix: 'approve-preserve-row',
+      status: 'PENDING_REVIEW',
+      authorId: author.id,
+      categoryId: category.id,
+    });
+    const existing = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: category.topicConceptId,
+      },
+    });
+
+    const approved = await approveAdminLearningProject(admin.id, project.id);
+    assert.equal(approved.status, 'PUBLISHED');
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.id, existing.id);
+    assert.equal(concepts[0]?.conceptId, category.topicConceptId);
+  });
+
+  test('approve rolls back PUBLISHED when topic persistence fails after status write', async () => {
+    const author = await createLearnerUser();
+    const category = await createProjectCategory('project-topic:robotics');
+    const project = await createLearningProject({
+      suffix: 'approve-rollback',
+      status: 'PENDING_REVIEW',
+      authorId: author.id,
+      categoryId: category.id,
+    });
+    const existing = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: category.topicConceptId,
+      },
+    });
+
+    const failingDeps: ProjectTopicLifecycleDeps = {
+      reconcileLearningProjectTopics: async (client, projectId) => {
+        const row = await client.learningProject.findUnique({
+          where: { id: projectId },
+          select: { status: true },
+        });
+        assert.ok(row);
+        assert.equal(row.status, 'PUBLISHED');
+        throw new Error('forced topic persistence failure after entity write');
+      },
+    };
+
+    await assert.rejects(
+      () =>
+        prisma.$transaction((tx) =>
+          adminLearningProjectsRepository.approveLearningProjectInTransaction(tx, {
+            id: project.id,
+            moderationData: {
+              status: 'PUBLISHED',
+              reviewedAt: new Date(),
+              reviewNote: null,
+              rejectionReason: null,
+              changesRequestedReason: null,
+              hiddenAt: null,
+              hiddenBy: null,
+              hiddenReason: null,
+              archivedAt: null,
+              archivedBy: null,
+              archivedReason: null,
+            },
+            topicLifecycleDeps: failingDeps,
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof Error
+        && error.message === 'forced topic persistence failure after entity write',
+    );
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      select: { status: true },
+    });
+    assert.equal(stored.status, 'PENDING_REVIEW');
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.id, existing.id);
+  });
+
+  test('approve blocks when category lacks project-topic ownership', async () => {
+    const admin = await createAdminUser();
+    const author = await createLearnerUser();
+    const unowned = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} unowned approve ${Date.now()}`,
+        nameAr: `${TEST_MARKER} unowned`,
+        categoryType: 'PROJECT',
+        isActive: true,
+        projectTopicConceptId: null,
+      },
+    });
+    ids.categories.push(unowned.id);
+
+    const project = await createLearningProject({
+      suffix: 'approve-unowned',
+      status: 'PENDING_REVIEW',
+      authorId: author.id,
+      categoryId: unowned.id,
+    });
+
+    await assert.rejects(
+      () => approveAdminLearningProject(admin.id, project.id),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'CATEGORY_TAXONOMY_NOT_READY',
+    );
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      select: { status: true },
+    });
+    assert.equal(stored.status, 'PENDING_REVIEW');
+  });
+
+  test('overlapping learner update and approve keep category and topic paired', async () => {
+    type Deferred<T> = {
+      promise: Promise<T>;
+      resolve: (value: T) => void;
+      reject: (reason?: unknown) => void;
+    };
+    const deferred = <T>(): Deferred<T> => {
+      let resolve!: (value: T) => void;
+      let reject!: (reason?: unknown) => void;
+      const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise;
+        reject = rejectPromise;
+      });
+      return { promise, resolve, reject };
+    };
+
+    const author = await createLearnerUser();
+    const categoryA = await createProjectCategory('project-topic:robotics');
+    const categoryB = await createProjectCategory('project-topic:electronics');
+    assert.notEqual(categoryA.topicConceptId, categoryB.topicConceptId);
+
+    const project = await createLearningProject({
+      suffix: 'overlap-update-approve',
+      status: 'PENDING_REVIEW',
+      authorId: author.id,
+      categoryId: categoryA.id,
+    });
+    await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: categoryA.topicConceptId,
+      },
+    });
+
+    const lockAcquired = deferred<void>();
+    const release = deferred<void>();
+
+    const updateDeps: ProjectTopicLifecycleDeps = {
+      reconcileLearningProjectTopics: async (client, projectId, categoryId) => {
+        const row = await client.learningProject.findUnique({
+          where: { id: projectId },
+          select: { categoryId: true },
+        });
+        assert.ok(row);
+        assert.equal(row.categoryId, categoryB.id);
+        assert.equal(categoryId, categoryB.id);
+        lockAcquired.resolve();
+        await release.promise;
+        await reconcileLearningProjectTopics(client, projectId, categoryId);
+      },
+    };
+
+    const updatePromise = learningProjectsRepository.updateMyLearningProjectSubmission({
+      id: project.id,
+      userId: author.id,
+      categoryId: categoryB.id,
+      title: `${TEST_MARKER} overlap updated`,
+      shortDescription: `${TEST_MARKER} overlap short.`,
+      description: `${TEST_MARKER} overlap full.`,
+      difficulty: 'BEGINNER',
+      topicLifecycleDeps: updateDeps,
+    });
+
+    await lockAcquired.promise;
+
+    const approvePromise = prisma.$transaction((tx) =>
+      adminLearningProjectsRepository.approveLearningProjectInTransaction(tx, {
+        id: project.id,
+        moderationData: {
+          status: 'PUBLISHED',
+          reviewedAt: new Date(),
+          reviewNote: null,
+          rejectionReason: null,
+          changesRequestedReason: null,
+          hiddenAt: null,
+          hiddenBy: null,
+          hiddenReason: null,
+          archivedAt: null,
+          archivedBy: null,
+          archivedReason: null,
+        },
+        topicLifecycleDeps: defaultProjectTopicLifecycleDeps,
+      }),
+    );
+
+    release.resolve();
+    const results = await Promise.allSettled([updatePromise, approvePromise]);
+
+    assert.equal(
+      results.filter((result) => result.status === 'fulfilled').length,
+      2,
+    );
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      select: { status: true, categoryId: true },
+    });
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+      select: { conceptId: true },
+    });
+
+    assert.equal(stored.status, 'PUBLISHED');
+    assert.equal(stored.categoryId, categoryB.id);
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.conceptId, categoryB.topicConceptId);
+    assert.notEqual(concepts[0]?.conceptId, categoryA.topicConceptId);
   });
 
   test('non-admin cannot access admin learning project routes', () => {
