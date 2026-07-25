@@ -961,7 +961,14 @@ export const preScoreMaterials = (context: LearnerHomeContext): PreScoredMateria
   }
 };
 
-const rankPreScoredMaterialEntries = (
+/**
+ * @internal Exported only for RP-03.3's ranking-delta evaluator reuse, so the
+ * evaluator calls the exact production `score > 0` filter plus tiered-Home
+ * (`selectTieredSuggestedMaterials`) / browse-all (`sortAllRankedMaterials`)
+ * dispatch instead of re-implementing material ranking-eligibility rules.
+ * No behavior change.
+ */
+export const rankPreScoredMaterialEntries = (
   entries: PreScoredMaterialEntry[],
   scoreKey: keyof PreScoredMaterialEntry['scores'],
   useTieredSuggestedRanking: boolean,
@@ -1185,7 +1192,12 @@ const buildRankedHomeMaterialSections = (
   return deduped;
 };
 
-const rankProjects = (
+/**
+ * @internal Exported only for RP-03.3's ranking-delta evaluator reuse, so the
+ * evaluator calls the exact production filter/tier-sort/score-sort/dedupe
+ * combinator instead of maintaining a separate mirror. No behavior change.
+ */
+export const rankProjects = (
   projects: LearnerHomeContext['projects'],
   scorer: (project: (typeof projects)[number]) => {
     score: number;
