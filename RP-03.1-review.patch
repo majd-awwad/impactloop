@@ -1,0 +1,3959 @@
+diff --git a/apps/backend/src/config/recommendation-scoring-version.ts b/apps/backend/src/config/recommendation-scoring-version.ts
+index ebeab66f..221c1f36 100644
+--- a/apps/backend/src/config/recommendation-scoring-version.ts
++++ b/apps/backend/src/config/recommendation-scoring-version.ts
+@@ -1,6 +1,7 @@
+ export const RECOMMENDATION_SCORER_VERSIONS = [
+   "legacy-v1",
+   "normalized-interests-v2",
++  "canonical-taxonomy-v3",
+ ] as const;
+ 
+ export type RecommendationScorerVersion =
+diff --git a/apps/backend/src/modules/learner-home/learner-home.canonical-scoring.test.ts b/apps/backend/src/modules/learner-home/learner-home.canonical-scoring.test.ts
+new file mode 100644
+index 00000000..644a8424
+--- /dev/null
++++ b/apps/backend/src/modules/learner-home/learner-home.canonical-scoring.test.ts
+@@ -0,0 +1,2015 @@
++import assert from 'node:assert/strict';
++import { describe, test } from 'node:test';
++
++import {
++  parseRecommendationScorerVersion,
++  RECOMMENDATION_SCORER_VERSIONS,
++} from '../../config/recommendation-scoring-version.js';
++import { BEHAVIOR_SCORE_WEIGHTS } from './learner-home.affinity.js';
++import { SUGGESTED_MATERIAL_TIERS } from './learner-home.ranking.js';
++import {
++  algorithmVersionForEffectiveMode,
++  algorithmVersionForModeDecision,
++  assertCanonicalContextPresent,
++  buildCanonicalProfileMap,
++  buildLearnerHomeModeDecision,
++  CANONICAL_SCORING_MODE,
++  CanonicalContextInvariantError,
++  CanonicalScoringContextRequiredError,
++  createFallbackCanonicalContext,
++  createSuccessfulCanonicalContext,
++  projectCanonicalMaterialProfile,
++  scoreCanonicalMaterialCandidate,
++  scoreCanonicalMaterialPool,
++  type CanonicalMaterialScoreBreakdown,
++  type CanonicalScoredMaterialResult,
++  type CanonicalMaterialSemanticProfile,
++  type MaterialConceptRowInput,
++} from './learner-home.canonical-scoring.js';
++import { ALREADY_LIKED_MATERIAL_PENALTY } from './learner-home.scoring.js';
++import {
++  assessSuggestedMaterialRelevance,
++  buildMaterialScoringSharedState,
++  scoreSuggestedMaterial,
++  scoreSuggestedProject,
++} from './learner-home.scoring.js';
++import {
++  buildMaterialRecommendationFeature,
++  getOrBuildMaterialFeaturePool,
++  preScoreMaterialPool,
++  resetMaterialFeaturePoolCacheForTests,
++  scoreMaterialPoolWithFeatures,
++} from './learner-home.material-features.js';
++import { loadMaterialConceptsForScoring } from './learner-home.repository.js';
++import {
++  createLearnerHomeCacheForTests,
++  preScoreMaterials,
++  resolveMaterialModeDecisionAndContext,
++  type LearnerHomeContext,
++} from './learner-home.service.js';
++import type {
++  LearnerBehaviorContext,
++  LearnerHomeMaterialCandidate,
++  LearnerHomeProjectCandidate,
++  LearnerHomeSavedLocationContext,
++} from './learner-home.types.js';
++import { createEmptyAffinityProfile, createEmptyBehaviorContext } from './learner-home.affinity.js';
++import { prisma } from '../../database/prisma.js';
++
++/**
++ * Recomputes the expected total score from the signed component
++ * contributions, proving the returned `score` never disagrees with
++ * `components` (RP-03.1 correction #3). One general formula now covers every
++ * section (suggested, savedProjects, free, unavailable) because each section's
++ * returned breakdown reports zero for any field that does not actually
++ * contribute to that section's score.
++ */
++const assertCanonicalScoreMatchesComponents = (
++  result: CanonicalScoredMaterialResult,
++) => {
++  const c: CanonicalMaterialScoreBreakdown = result.components;
++  const expected =
++    c.likedSimilarity +
++    c.reservedSimilarity +
++    c.viewedSimilarity +
++    c.location +
++    c.free +
++    c.delivery +
++    c.popularity +
++    c.recency -
++    c.alreadyLikedPenalty -
++    c.unavailablePenalty;
++
++  assert.equal(
++    result.score,
++    expected,
++    `score (${result.score}) must equal signed component sum (${expected})`,
++  );
++};
++
++const material = (
++  overrides: Partial<LearnerHomeMaterialCandidate> = {},
++): LearnerHomeMaterialCandidate => ({
++  id: 'mat-1',
++  ownerId: 'owner-1',
++  title: 'Arduino Uno',
++  description: 'Board',
++  materialType: 'Arduino Board',
++  categoryId: 'cat-electronics',
++  categoryNameEn: 'Electronics',
++  categoryNameAr: 'الكترونيات',
++  status: 'AVAILABLE',
++  isFree: false,
++  deliveryAllowed: true,
++  pickupAllowed: true,
++  viewsCount: 10,
++  likesCount: 2,
++  city: 'Ramallah',
++  area: null,
++  tags: ['arduino'],
++  createdAt: new Date('2026-07-01T00:00:00.000Z'),
++  availableQuantity: 3,
++  mapped: { id: 'mat-1' },
++  ...overrides,
++});
++
++const emptyLocation = (): LearnerHomeSavedLocationContext => ({
++  city: null,
++  area: null,
++});
++
++const profile = (
++  materialId: string,
++  rows: MaterialConceptRowInput[],
++): CanonicalMaterialSemanticProfile =>
++  projectCanonicalMaterialProfile(materialId, rows);
++
++const familyForm = (
++  materialId: string,
++  family = 'material-family:electronics',
++  form?: string,
++) =>
++  profile(materialId, [
++    {
++      canonicalKey: family,
++      conceptType: 'MATERIAL_FAMILY',
++      status: 'ACTIVE',
++    },
++    ...(form
++      ? [
++          {
++            canonicalKey: form,
++            conceptType: 'MATERIAL_FORM',
++            status: 'ACTIVE',
++          } satisfies MaterialConceptRowInput,
++        ]
++      : []),
++  ]);
++
++const contextWith = (input: {
++  candidate: CanonicalMaterialSemanticProfile;
++  liked?: CanonicalMaterialSemanticProfile[];
++  reserved?: CanonicalMaterialSemanticProfile[];
++  viewed?: CanonicalMaterialSemanticProfile[];
++}) =>
++  createSuccessfulCanonicalContext({
++    candidateMaterialProfiles: new Map([[input.candidate.materialId, input.candidate]]),
++    likedMaterialProfiles: new Map(
++      (input.liked ?? []).map((row) => [row.materialId, row]),
++    ),
++    reservedMaterialProfiles: new Map(
++      (input.reserved ?? []).map((row) => [row.materialId, row]),
++    ),
++    viewedMaterialProfiles: new Map(
++      (input.viewed ?? []).map((row) => [row.materialId, row]),
++    ),
++  });
++
++describe('RP-03.1 scoring mode registry', () => {
++  test('missing mode defaults to legacy-v1', () => {
++    assert.equal(parseRecommendationScorerVersion(undefined), 'legacy-v1');
++    assert.equal(parseRecommendationScorerVersion(''), 'legacy-v1');
++    assert.equal(parseRecommendationScorerVersion('  '), 'legacy-v1');
++  });
++
++  test('accepts canonical-taxonomy-v3 and rejects unknown', () => {
++    assert.equal(
++      parseRecommendationScorerVersion('canonical-taxonomy-v3'),
++      CANONICAL_SCORING_MODE,
++    );
++    assert.ok(RECOMMENDATION_SCORER_VERSIONS.includes(CANONICAL_SCORING_MODE));
++    assert.throws(() => parseRecommendationScorerVersion('normalized-v2'));
++  });
++
++  test('algorithm stamp uses effective mode', () => {
++    assert.equal(
++      algorithmVersionForEffectiveMode('canonical-taxonomy-v3'),
++      'learner-home-v1:canonical-taxonomy-v3',
++    );
++    assert.equal(
++      algorithmVersionForEffectiveMode('legacy-v1'),
++      'learner-home-v1:legacy-v1',
++    );
++  });
++});
++
++describe('RP-03.1 canonical material profiles', () => {
++  test('duplicate identical family rows remain one valid family', () => {
++    const result = projectCanonicalMaterialProfile('m1', [
++      {
++        canonicalKey: 'material-family:electronics',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++      {
++        canonicalKey: 'material-family:electronics',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++    ]);
++    assert.equal(result.coverage, 'READY_FAMILY_ONLY');
++    assert.equal(result.similarityEligible, true);
++    assert.deepEqual(result.familyKeys, ['material-family:electronics']);
++  });
++
++  test('two distinct families are INVALID_FAMILY_CARDINALITY', () => {
++    const result = projectCanonicalMaterialProfile('m1', [
++      {
++        canonicalKey: 'material-family:electronics',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++      {
++        canonicalKey: 'material-family:wood',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++    ]);
++    assert.equal(result.coverage, 'INVALID_FAMILY_CARDINALITY');
++    assert.equal(result.similarityEligible, false);
++  });
++
++  test('one valid family plus malformed extra still uses the valid family', () => {
++    const result = projectCanonicalMaterialProfile('m1', [
++      {
++        canonicalKey: 'material-family:electronics',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++      {
++        canonicalKey: 'not-a-key',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++      {
++        canonicalKey: 'interest:arduino',
++        conceptType: 'INTEREST',
++        status: 'ACTIVE',
++      },
++    ]);
++    assert.equal(result.coverage, 'READY_FAMILY_ONLY');
++    assert.equal(result.similarityEligible, true);
++    assert.ok(result.diagnostics.includes('INVALID_CONCEPT_PROJECTION'));
++  });
++
++  test('zero families is MISSING_CANONICAL_ASSIGNMENT', () => {
++    const result = projectCanonicalMaterialProfile('m1', []);
++    assert.equal(result.coverage, 'MISSING_CANONICAL_ASSIGNMENT');
++    assert.equal(result.similarityEligible, false);
++  });
++
++  test('buildCanonicalProfileMap covers every input id', () => {
++    const map = buildCanonicalProfileMap(
++      ['a', 'b', 'a'],
++      new Map([
++        [
++          'a',
++          [
++            {
++              canonicalKey: 'material-family:electronics',
++              conceptType: 'MATERIAL_FAMILY',
++              status: 'ACTIVE',
++            },
++          ],
++        ],
++      ]),
++    );
++    assert.equal(map.size, 2);
++    assert.equal(map.get('a')?.coverage, 'READY_FAMILY_ONLY');
++    assert.equal(map.get('b')?.coverage, 'MISSING_CANONICAL_ASSIGNMENT');
++  });
++});
++
++describe('RP-03.1 canonical liked similarity', () => {
++  test('self-only liked yields zero likedSimilarity and keeps already-liked penalty', () => {
++    const candidate = material({ id: 'mat-self' });
++    const candidateProfile = familyForm('mat-self', 'material-family:electronics', 'material-form:arduino-board');
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      liked: [candidateProfile],
++    });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-self',
++          title: 'Arduino Uno',
++          description: '',
++          materialType: 'Arduino Board',
++          categoryNameEn: 'Electronics',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.equal(scored.components.likedSimilarity, 0);
++    assert.equal(scored.components.alreadyLikedPenalty, ALREADY_LIKED_MATERIAL_PENALTY);
++    assert.equal(scored.hasPrimaryRelevance, false);
++    // Correction #3: the self-only-liked case has no other relevance, but the
++    // already-liked penalty still applies to the final score, not only the
++    // component field.
++    assert.equal(scored.score, -ALREADY_LIKED_MATERIAL_PENALTY);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('self plus another form-sharing liked yields 28 and penalty', () => {
++    const candidate = material({ id: 'mat-self' });
++    const candidateProfile = familyForm(
++      'mat-self',
++      'material-family:electronics',
++      'material-form:arduino-board',
++    );
++    const otherLiked = familyForm(
++      'mat-other',
++      'material-family:electronics',
++      'material-form:arduino-board',
++    );
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      liked: [candidateProfile, otherLiked],
++    });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-self',
++          title: 'Self',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: 'Electronics',
++          categoryNameAr: '',
++          tags: [],
++        },
++        {
++          materialId: 'mat-other',
++          title: 'Other',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: 'Electronics',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.equal(scored.components.likedSimilarity, BEHAVIOR_SCORE_WEIGHTS.likedSimilar);
++    assert.equal(scored.components.alreadyLikedPenalty, ALREADY_LIKED_MATERIAL_PENALTY);
++    assert.ok(scored.internalReasonCodes.includes('CANONICAL_FORM_OVERLAP'));
++    assert.equal(scored.tier, SUGGESTED_MATERIAL_TIERS.behaviorStrong);
++    assert.equal(scored.hasPrimaryRelevance, false);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('family overlap contributes 14 and duplicate liked rows do not inflate', () => {
++    const candidate = material({ id: 'mat-1' });
++    const candidateProfile = familyForm('mat-1');
++    const likedProfile = familyForm('mat-liked');
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      liked: [likedProfile],
++    });
++    const likedSignal = {
++      materialId: 'mat-liked',
++      title: 'Liked',
++      description: '',
++      materialType: 'x',
++      categoryNameEn: 'Electronics',
++      categoryNameAr: '',
++      tags: [],
++    };
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [likedSignal, likedSignal],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.equal(
++      scored.components.likedSimilarity,
++      Math.floor(BEHAVIOR_SCORE_WEIGHTS.likedSimilar / 2),
++    );
++    assert.ok(scored.internalReasonCodes.includes('CANONICAL_FAMILY_OVERLAP'));
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('defective multi-family liked profile cannot contribute overlap', () => {
++    const candidate = material({ id: 'mat-1' });
++    const candidateProfile = familyForm('mat-1');
++    const badLiked = projectCanonicalMaterialProfile('mat-liked', [
++      {
++        canonicalKey: 'material-family:electronics',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++      {
++        canonicalKey: 'material-family:wood',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++    ]);
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      liked: [badLiked],
++    });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-liked',
++          title: 'Liked',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: 'Electronics',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.equal(scored.components.likedSimilarity, 0);
++  });
++});
++
++describe('RP-03.1 canonical interest and component fail-closed', () => {
++  test('interest and saved-component contributions stay zero with internal codes', () => {
++    const candidate = material();
++    const candidateProfile = familyForm('mat-1');
++    const ctx = contextWith({ candidate: candidateProfile });
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: { city: 'Ramallah', area: null },
++      behavior: createEmptyBehaviorContext(),
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.equal(scored.components.interest, 0);
++    assert.equal(scored.components.savedComponent, 0);
++    assert.ok(
++      scored.internalReasonCodes.includes('CANONICAL_INTEREST_RELATION_UNAVAILABLE'),
++    );
++    assert.ok(
++      scored.internalReasonCodes.includes('CANONICAL_COMPONENT_RELATION_UNAVAILABLE'),
++    );
++    assert.equal(scored.hasPrimaryRelevance, false);
++    assert.equal(scored.tier, SUGGESTED_MATERIAL_TIERS.fallback);
++  });
++
++  test('no cross-namespace interest/form equality shortcut', () => {
++    const candidate = material({ id: 'mat-1' });
++    // Candidate has material-form:arduino-board only via family+form; interest keys never consulted.
++    const candidateProfile = familyForm(
++      'mat-1',
++      'material-family:electronics',
++      'material-form:arduino-board',
++    );
++    const ctx = contextWith({ candidate: candidateProfile });
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior: createEmptyBehaviorContext(),
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++    assert.equal(scored.components.interest, 0);
++    assert.equal(scored.components.likedSimilarity, 0);
++  });
++});
++
++describe('RP-03.1 canonical context requirements', () => {
++  test('direct helper selecting canonical without context throws typed error', () => {
++    assert.throws(
++      () =>
++        scoreSuggestedMaterial({
++          material: material(),
++          interests: [],
++          savedComponents: [],
++          savedLocation: emptyLocation(),
++          scorerVersion: CANONICAL_SCORING_MODE,
++        }),
++      (error: unknown) => error instanceof CanonicalScoringContextRequiredError,
++    );
++  });
++
++  test('assertCanonicalContextPresent throws when absent', () => {
++    assert.throws(() => assertCanonicalContextPresent(undefined));
++  });
++
++  test('missing candidate map entry throws context invariant', () => {
++    const ctx = createSuccessfulCanonicalContext({
++      candidateMaterialProfiles: new Map(),
++      likedMaterialProfiles: new Map(),
++      reservedMaterialProfiles: new Map(),
++      viewedMaterialProfiles: new Map(),
++    });
++    assert.throws(() =>
++      scoreCanonicalMaterialCandidate({
++        candidate: material(),
++        context: ctx,
++        savedLocation: emptyLocation(),
++        behavior: createEmptyBehaviorContext(),
++      }),
++    );
++  });
++
++  test('fallback context is not cacheable and stamps legacy effective mode', () => {
++    const fallback = createFallbackCanonicalContext('CANONICAL_LOADER_FALLBACK_LEGACY_V1');
++    assert.equal(fallback.requestedScoringMode, CANONICAL_SCORING_MODE);
++    assert.equal(fallback.effectiveScoringMode, 'legacy-v1');
++    assert.equal(fallback.cacheable, false);
++    assert.equal(
++      algorithmVersionForEffectiveMode(fallback.effectiveScoringMode),
++      'learner-home-v1:legacy-v1',
++    );
++  });
++});
++
++describe('RP-03.1 candidate-pool invariance and hydration coverage', () => {
++  test('score is independent of surrounding pool size and order', () => {
++    const candidate = material({ id: 'focus' });
++    const focusProfile = familyForm('focus');
++    const otherA = familyForm('other-a', 'material-family:wood');
++    const otherB = familyForm('other-b', 'material-family:fabric');
++    const liked = familyForm('liked');
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'liked',
++          title: 'Liked',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: 'Electronics',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scoreFocus = (others: CanonicalMaterialSemanticProfile[]) => {
++      const candidates = [focusProfile, ...others];
++      const ctx = createSuccessfulCanonicalContext({
++        candidateMaterialProfiles: new Map(
++          candidates.map((row) => [row.materialId, row]),
++        ),
++        likedMaterialProfiles: new Map([[liked.materialId, liked]]),
++        reservedMaterialProfiles: new Map(),
++        viewedMaterialProfiles: new Map(),
++      });
++      return scoreCanonicalMaterialCandidate({
++        candidate,
++        context: ctx,
++        savedLocation: emptyLocation(),
++        behavior,
++        now: new Date('2026-07-20T00:00:00.000Z'),
++      });
++    };
++
++    const alone = scoreFocus([]);
++    const withOthers = scoreFocus([otherA, otherB]);
++    const reordered = scoreFocus([otherB, otherA]);
++    assert.equal(alone.score, withOthers.score);
++    assert.equal(alone.score, reordered.score);
++    assert.deepEqual(alone.components, withOthers.components);
++  });
++
++  test('pool of more than 200 candidates keeps complete profile coverage', () => {
++    const ids = Array.from({ length: 250 }, (_, index) => `mat-${index}`);
++    const rows = new Map<string, MaterialConceptRowInput[]>();
++    for (const id of ids) {
++      rows.set(id, [
++        {
++          canonicalKey: 'material-family:electronics',
++          conceptType: 'MATERIAL_FAMILY',
++          status: 'ACTIVE',
++        },
++      ]);
++    }
++    const map = buildCanonicalProfileMap(ids, rows);
++    assert.equal(map.size, 250);
++    for (const id of ids) {
++      assert.equal(map.get(id)?.coverage, 'READY_FAMILY_ONLY');
++      assert.notEqual(map.get(id)?.coverage, 'MISSING_CANONICAL_ASSIGNMENT');
++    }
++
++    const materials = ids.map((id) => material({ id, mapped: { id } }));
++    const ctx = createSuccessfulCanonicalContext({
++      candidateMaterialProfiles: map,
++      likedMaterialProfiles: new Map(),
++      reservedMaterialProfiles: new Map(),
++      viewedMaterialProfiles: new Map(),
++    });
++    const pool = scoreCanonicalMaterialPool({
++      materials: [...materials].reverse(),
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior: createEmptyBehaviorContext(),
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++    assert.equal(pool.length, 250);
++    assert.equal(pool.map((row) => row.material.id).join(','), [...ids].reverse().join(','));
++  });
++});
++
++describe('RP-03.1 project separation', () => {
++  test('scoreSuggestedProject under canonical delegates to legacy-v1 matching', () => {
++    const project: LearnerHomeProjectCandidate = {
++      id: 'proj-1',
++      title: 'Arduino robot',
++      shortDescription: 'Build with arduino',
++      difficulty: 'BEGINNER',
++      estimatedDurationMinutes: 60,
++      coverImageUrl: null,
++      categoryId: 'cat',
++      categoryNameEn: 'Electronics',
++      categoryNameAr: '',
++      tags: ['arduino'],
++      createdAt: new Date('2026-01-01T00:00:00.000Z'),
++      likesCount: 1,
++      savesCount: 1,
++      reviewCount: 0,
++      reviewAverage: 0,
++      requiredComponents: [],
++      mapped: { id: 'proj-1' },
++    };
++
++    const withCanonicalMode = scoreSuggestedProject({
++      project,
++      interests: ['arduino'],
++      availableMaterials: [],
++      behaviorAffinityProfile: createEmptyAffinityProfile(),
++      behavior: createEmptyBehaviorContext(),
++      scorerVersion: CANONICAL_SCORING_MODE,
++    });
++    const withLegacy = scoreSuggestedProject({
++      project,
++      interests: ['arduino'],
++      availableMaterials: [],
++      behaviorAffinityProfile: createEmptyAffinityProfile(),
++      behavior: createEmptyBehaviorContext(),
++      scorerVersion: 'legacy-v1',
++    });
++
++    assert.equal(withCanonicalMode.score, withLegacy.score);
++    assert.deepEqual(withCanonicalMode.reasons, withLegacy.reasons);
++  });
++});
++
++describe('RP-03.1 non-semantic preservation', () => {
++  test('location and free still affect score under identical canonical semantics', () => {
++    const candidateNear = material({
++      id: 'mat-1',
++      isFree: true,
++      city: 'Ramallah',
++      area: 'Center',
++    });
++    const candidateFar = material({
++      id: 'mat-1',
++      isFree: false,
++      city: 'Nablus',
++      area: null,
++    });
++    const candidateProfile = familyForm('mat-1');
++    const ctx = contextWith({ candidate: candidateProfile });
++    const now = new Date('2026-07-20T00:00:00.000Z');
++    const near = scoreCanonicalMaterialCandidate({
++      candidate: candidateNear,
++      context: ctx,
++      savedLocation: { city: 'Ramallah', area: 'Center' },
++      behavior: createEmptyBehaviorContext(),
++      now,
++    });
++    const far = scoreCanonicalMaterialCandidate({
++      candidate: candidateFar,
++      context: ctx,
++      savedLocation: { city: 'Ramallah', area: 'Center' },
++      behavior: createEmptyBehaviorContext(),
++      now,
++    });
++    assert.ok(near.score > far.score);
++    assert.ok(near.components.location > 0);
++    assert.ok(near.components.free > 0);
++    assertCanonicalScoreMatchesComponents(near);
++    assertCanonicalScoreMatchesComponents(far);
++  });
++});
++
++describe('RP-03.1 single evaluation timestamp for the full canonical pool', () => {
++  test('every candidate shares one evaluationTime regardless of pool order, and Date() is captured exactly once when omitted', () => {
++    const fixedNow = new Date('2026-07-20T00:00:00.000Z');
++    const RealDate = globalThis.Date;
++    let noArgConstructions = 0;
++
++    class SpyDate extends RealDate {
++      constructor(...args: unknown[]) {
++        if (args.length === 0) {
++          noArgConstructions += 1;
++          super(fixedNow.getTime());
++          return;
++        }
++        // @ts-expect-error forwarding constructor args to the real Date
++        super(...args);
++      }
++      static override now() {
++        return fixedNow.getTime();
++      }
++    }
++
++    // @ts-expect-error test-only global monkeypatch; restored in finally below
++    globalThis.Date = SpyDate;
++
++    try {
++      const dayMs = 24 * 60 * 60 * 1000;
++      // Exactly at the 7-day recency boundary (recencyMax) and one day past
++      // it (recencyMax - 2), evaluated against the same fixed instant.
++      const idOnBoundary = 'mat-on-boundary';
++      const idPastBoundary = 'mat-past-boundary';
++      const onBoundary = new RealDate(fixedNow.getTime() - 7 * dayMs);
++      const justPastBoundary = new RealDate(fixedNow.getTime() - 8 * dayMs);
++
++      const ctx = createSuccessfulCanonicalContext({
++        candidateMaterialProfiles: new Map([
++          [idOnBoundary, familyForm(idOnBoundary)],
++          [idPastBoundary, familyForm(idPastBoundary)],
++        ]),
++        likedMaterialProfiles: new Map(),
++        reservedMaterialProfiles: new Map(),
++        viewedMaterialProfiles: new Map(),
++      });
++
++      const materialOnBoundary = material({ id: idOnBoundary, createdAt: onBoundary });
++      const materialPastBoundary = material({ id: idPastBoundary, createdAt: justPastBoundary });
++
++      const forward = scoreCanonicalMaterialPool({
++        materials: [materialOnBoundary, materialPastBoundary],
++        context: ctx,
++        savedLocation: emptyLocation(),
++        behavior: createEmptyBehaviorContext(),
++      });
++      const reversed = scoreCanonicalMaterialPool({
++        materials: [materialPastBoundary, materialOnBoundary],
++        context: ctx,
++        savedLocation: emptyLocation(),
++        behavior: createEmptyBehaviorContext(),
++      });
++
++      const byId = (rows: typeof forward) =>
++        new Map(rows.map((row) => [row.material.id, row.scores]));
++      const forwardById = byId(forward);
++      const reversedById = byId(reversed);
++
++      for (const id of [idOnBoundary, idPastBoundary]) {
++        assert.deepEqual(forwardById.get(id), reversedById.get(id));
++      }
++
++      assert.equal(forwardById.get(idOnBoundary)!.suggested.components.recency, 5);
++      assert.equal(forwardById.get(idPastBoundary)!.suggested.components.recency, 3);
++
++      // The pool must capture evaluationTime exactly once (not once per
++      // candidate/section) when `now` is omitted: 2 candidates x 2 pool
++      // calls x 2 sections (suggested/free) would be 8 independent
++      // new Date() reads under the old per-call-default behavior.
++      assert.equal(noArgConstructions, 2);
++    } finally {
++      globalThis.Date = RealDate;
++    }
++  });
++});
++
++describe('RP-03.1 explicit scorer-version threading (fixes process-global leakage)', () => {
++  // Fixture reused from learner-home.normalized-scoring.test.ts: matches
++  // interest key 'art_crafts' only via the reviewed-alias vocabulary, never
++  // via legacy canonical keyword matching.
++  const aliasOnlyMaterial = (): LearnerHomeMaterialCandidate =>
++    material({
++      id: 'mat-alias-only',
++      title: 'Art and Crafts',
++      description: 'A reviewed interest alias only',
++      materialType: 'Miscellaneous',
++      categoryNameEn: 'Other Reusable Materials',
++      categoryNameAr: 'مواد أخرى',
++      tags: [],
++      deliveryAllowed: false,
++      viewsCount: 0,
++      likesCount: 0,
++    });
++
++  const poolFor = (scorerVersion: 'legacy-v1' | 'normalized-interests-v2') => {
++    resetMaterialFeaturePoolCacheForTests();
++    return preScoreMaterialPool({
++      materials: [aliasOnlyMaterial()],
++      interests: ['art_crafts'],
++      savedComponents: [],
++      savedLocation: emptyLocation(),
++      behavior: createEmptyBehaviorContext(),
++      behaviorAffinityProfile: createEmptyAffinityProfile(),
++      scorerVersion,
++    })[0]!.scores.suggested;
++  };
++
++  test('explicit legacy-v1 does not match the reviewed-alias-only material', () => {
++    const result = poolFor('legacy-v1');
++    assert.equal(result.score, 0);
++    assert.deepEqual(result.reasons, []);
++    assert.equal(result.hasPrimaryRelevance, false);
++  });
++
++  test('explicit normalized-interests-v2 matches via reviewed alias', () => {
++    const result = poolFor('normalized-interests-v2');
++    assert.ok(result.score > 0);
++    assert.equal(result.hasPrimaryRelevance, true);
++    assert.ok(
++      result.reasons.some((reason) => reason.includes('reviewed interest term')),
++    );
++  });
++
++  test('fallback output (explicit legacy-v1) differs from normalized where the alias changes ranking', () => {
++    const legacy = poolFor('legacy-v1');
++    const normalized = poolFor('normalized-interests-v2');
++    assert.notEqual(legacy.score, normalized.score);
++    assert.equal(legacy.hasPrimaryRelevance, false);
++    assert.equal(normalized.hasPrimaryRelevance, true);
++  });
++
++  test('canonical without a successful context throws rather than silently degrading', () => {
++    resetMaterialFeaturePoolCacheForTests();
++    assert.throws(
++      () =>
++        preScoreMaterialPool({
++          materials: [aliasOnlyMaterial()],
++          interests: ['art_crafts'],
++          savedComponents: [],
++          savedLocation: emptyLocation(),
++          behavior: createEmptyBehaviorContext(),
++          behaviorAffinityProfile: createEmptyAffinityProfile(),
++          scorerVersion: CANONICAL_SCORING_MODE,
++        }),
++      (error: unknown) => error instanceof CanonicalScoringContextRequiredError,
++    );
++  });
++
++  // Renamed from an earlier, over-claiming title ("whole-request fallback
++  // always threads..."): this only proves that two direct explicit
++  // legacy-v1 calls to preScoreMaterialPool are idempotent and identical.
++  // It does NOT exercise learner-home.service.ts's real fallback retry
++  // branch — see "RP-03.1 honest whole-request fallback integration" below
++  // for that proof.
++  test('explicit legacy-v1 calls are idempotent regardless of process-global state', () => {
++    const first = poolFor('legacy-v1');
++    const second = poolFor('legacy-v1');
++    assert.deepEqual(first, second);
++    assert.equal(first.score, 0);
++  });
++});
++
++describe('RP-03.1 sealed non-canonical helper boundary', () => {
++  // These five helpers are legacy/normalized-only. They must never process
++  // canonical-taxonomy-v3, even when called directly (bypassing
++  // preScoreMaterialPool's own canonical dispatch).
++  const candidate = material({ id: 'mat-sealed-boundary' });
++
++  test('buildMaterialRecommendationFeature(..., canonical) throws typed error', () => {
++    assert.throws(
++      () => buildMaterialRecommendationFeature(candidate, CANONICAL_SCORING_MODE),
++      (error: unknown) => error instanceof CanonicalScoringContextRequiredError,
++    );
++  });
++
++  test('getOrBuildMaterialFeaturePool(..., canonical) throws typed error', () => {
++    assert.throws(
++      () => getOrBuildMaterialFeaturePool([candidate], CANONICAL_SCORING_MODE),
++      (error: unknown) => error instanceof CanonicalScoringContextRequiredError,
++    );
++  });
++
++  test('scoreMaterialPoolWithFeatures(..., canonical) throws typed error', () => {
++    assert.throws(
++      () =>
++        scoreMaterialPoolWithFeatures({
++          materials: [candidate],
++          interests: [],
++          savedComponents: [],
++          savedLocation: emptyLocation(),
++          behavior: createEmptyBehaviorContext(),
++          behaviorAffinityProfile: createEmptyAffinityProfile(),
++          scorerVersion: CANONICAL_SCORING_MODE,
++        }),
++      (error: unknown) => error instanceof CanonicalScoringContextRequiredError,
++    );
++  });
++
++  test('assessSuggestedMaterialRelevance(..., canonical) throws typed error', () => {
++    assert.throws(
++      () =>
++        assessSuggestedMaterialRelevance({
++          material: candidate,
++          interests: [],
++          savedComponents: [],
++          savedLocation: emptyLocation(),
++          scorerVersion: CANONICAL_SCORING_MODE,
++        }),
++      (error: unknown) => error instanceof CanonicalScoringContextRequiredError,
++    );
++  });
++
++  test('buildMaterialScoringSharedState(..., canonical) throws typed error', () => {
++    assert.throws(
++      () =>
++        buildMaterialScoringSharedState({
++          material: candidate,
++          interests: [],
++          savedComponents: [],
++          savedLocation: emptyLocation(),
++          scorerVersion: CANONICAL_SCORING_MODE,
++        }),
++      (error: unknown) => error instanceof CanonicalScoringContextRequiredError,
++    );
++  });
++
++  test('explicit legacy and normalized behavior remains unchanged through the sealed resolver', () => {
++    resetMaterialFeaturePoolCacheForTests();
++    const legacyFeature = buildMaterialRecommendationFeature(candidate, 'legacy-v1');
++    const normalizedFeature = buildMaterialRecommendationFeature(candidate, 'normalized-interests-v2');
++    assert.equal(legacyFeature.materialId, candidate.id);
++    assert.equal(normalizedFeature.materialId, candidate.id);
++
++    const relevanceLegacy = assessSuggestedMaterialRelevance({
++      material: candidate,
++      interests: ['arduino'],
++      savedComponents: [],
++      savedLocation: emptyLocation(),
++      scorerVersion: 'legacy-v1',
++    });
++    assert.equal(relevanceLegacy.interestMatch?.key, 'arduino');
++
++    const sharedNormalized = buildMaterialScoringSharedState({
++      material: candidate,
++      interests: ['arduino'],
++      savedComponents: [],
++      savedLocation: emptyLocation(),
++      scorerVersion: 'normalized-interests-v2',
++    });
++    assert.equal(sharedNormalized.interestMatch?.key, 'arduino');
++  });
++});
++
++describe('RP-03.1 honest whole-request fallback integration', () => {
++  test('preScoreMaterials real catch/retry branch: canonical context failure produces output identical to an explicit legacy-v1 call', () => {
++    const candidateMaterial = material({ id: 'mat-fallback-integration' });
++    const baseInput = {
++      materials: [candidateMaterial],
++      interests: [],
++      savedComponents: [],
++      savedLocation: emptyLocation(),
++      behavior: createEmptyBehaviorContext(),
++      behaviorAffinityProfile: createEmptyAffinityProfile(),
++    };
++
++    // Simulates the inconsistent state that forces preScoreMaterialPool's own
++    // required-context guard to throw: requested and effective mode both say
++    // canonical, but no successful canonicalContext is attached. This
++    // exercises preScoreMaterials's REAL try/catch fallback branch (the
++    // exported production function itself, not a re-implementation of it).
++    const brokenContext: LearnerHomeContext = {
++      ...baseInput,
++      projects: [],
++      savedProjectItems: [],
++      inProgressBuilds: [],
++      savedProjectIds: new Set(),
++      hasSavedProjects: false,
++      hasActivity: false,
++      modeDecision: buildLearnerHomeModeDecision({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        effectiveMaterialScoringMode: CANONICAL_SCORING_MODE,
++        fallbackCode: null,
++        cacheable: true,
++      }),
++      canonicalContext: undefined,
++    };
++
++    resetMaterialFeaturePoolCacheForTests();
++    const fallbackResult = preScoreMaterials(brokenContext);
++
++    // The catch branch must have downgraded the mode decision in place.
++    assert.equal(brokenContext.modeDecision.effectiveMaterialScoringMode, 'legacy-v1');
++    assert.equal(
++      brokenContext.modeDecision.fallbackCode,
++      'CANONICAL_SCORER_INVARIANT_FALLBACK',
++    );
++    assert.equal(brokenContext.modeDecision.cacheable, false);
++
++    resetMaterialFeaturePoolCacheForTests();
++    const explicitLegacyResult = preScoreMaterialPool({
++      ...baseInput,
++      scorerVersion: 'legacy-v1',
++    });
++
++    assert.deepEqual(
++      fallbackResult.map((entry) => entry.scores.suggested),
++      explicitLegacyResult.map((entry) => entry.scores.suggested),
++    );
++  });
++});
++
++describe('RP-03.1 domain-truthful algorithm identity (mode decision)', () => {
++  test('canonical success: material stamps canonical, project stays legacy', () => {
++    const decision = buildLearnerHomeModeDecision({
++      requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++      effectiveMaterialScoringMode: CANONICAL_SCORING_MODE,
++      fallbackCode: null,
++      cacheable: true,
++    });
++    assert.equal(decision.effectiveMaterialScoringMode, CANONICAL_SCORING_MODE);
++    assert.equal(decision.effectiveProjectScoringMode, 'legacy-v1');
++    assert.equal(decision.fallbackCode, null);
++    assert.equal(decision.cacheable, true);
++    assert.equal(
++      algorithmVersionForEffectiveMode(decision.effectiveMaterialScoringMode),
++      'learner-home-v1:canonical-taxonomy-v3',
++    );
++    assert.equal(
++      algorithmVersionForEffectiveMode(decision.effectiveProjectScoringMode),
++      'learner-home-v1:legacy-v1',
++    );
++  });
++
++  test('full home stamps a truthful mixed material/project stamp when material is canonical', () => {
++    const decision = buildLearnerHomeModeDecision({
++      requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++      effectiveMaterialScoringMode: CANONICAL_SCORING_MODE,
++      fallbackCode: null,
++      cacheable: true,
++    });
++    assert.equal(
++      algorithmVersionForModeDecision(decision),
++      'learner-home-v1:material=canonical-taxonomy-v3;project=legacy-v1',
++    );
++  });
++
++  test('material fallback: both domains stamp legacy-v1 and fallbackCode remains internally observable', () => {
++    const decision = buildLearnerHomeModeDecision({
++      requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++      effectiveMaterialScoringMode: 'legacy-v1',
++      fallbackCode: 'CANONICAL_LOADER_FALLBACK_LEGACY_V1',
++      cacheable: false,
++    });
++    assert.equal(decision.effectiveMaterialScoringMode, 'legacy-v1');
++    assert.equal(decision.effectiveProjectScoringMode, 'legacy-v1');
++    assert.equal(algorithmVersionForModeDecision(decision), 'learner-home-v1:legacy-v1');
++    // fallbackCode must not disappear after context construction.
++    assert.equal(decision.fallbackCode, 'CANONICAL_LOADER_FALLBACK_LEGACY_V1');
++    assert.equal(decision.cacheable, false);
++  });
++
++  test('legacy/normalized requests: both domains match the requested mode exactly', () => {
++    const legacyDecision = buildLearnerHomeModeDecision({
++      requestedMaterialScoringMode: 'legacy-v1',
++      effectiveMaterialScoringMode: 'legacy-v1',
++      fallbackCode: null,
++      cacheable: true,
++    });
++    assert.equal(legacyDecision.effectiveProjectScoringMode, 'legacy-v1');
++    assert.equal(algorithmVersionForModeDecision(legacyDecision), 'learner-home-v1:legacy-v1');
++
++    const normalizedDecision = buildLearnerHomeModeDecision({
++      requestedMaterialScoringMode: 'normalized-interests-v2',
++      effectiveMaterialScoringMode: 'normalized-interests-v2',
++      fallbackCode: null,
++      cacheable: true,
++    });
++    assert.equal(normalizedDecision.effectiveProjectScoringMode, 'normalized-interests-v2');
++    assert.equal(
++      algorithmVersionForModeDecision(normalizedDecision),
++      'learner-home-v1:normalized-interests-v2',
++    );
++  });
++
++  test('a project ranking is never stamped canonical-taxonomy-v3', () => {
++    for (const requested of [
++      'legacy-v1',
++      'normalized-interests-v2',
++      CANONICAL_SCORING_MODE,
++    ] as const) {
++      const decision = buildLearnerHomeModeDecision({
++        requestedMaterialScoringMode: requested,
++        effectiveMaterialScoringMode: requested,
++        fallbackCode: null,
++        cacheable: true,
++      });
++      assert.notEqual(decision.effectiveProjectScoringMode, CANONICAL_SCORING_MODE);
++    }
++  });
++});
++
++describe('RP-03.1 context completeness before availability handling', () => {
++  test('unavailable candidate missing from the profile map throws a typed context invariant', () => {
++    const ctx = createSuccessfulCanonicalContext({
++      candidateMaterialProfiles: new Map(),
++      likedMaterialProfiles: new Map(),
++      reservedMaterialProfiles: new Map(),
++      viewedMaterialProfiles: new Map(),
++    });
++    const unavailableCandidate = material({
++      id: 'mat-unavailable-missing',
++      status: 'RESERVED',
++      availableQuantity: 0,
++    });
++
++    assert.throws(
++      () =>
++        scoreCanonicalMaterialCandidate({
++          candidate: unavailableCandidate,
++          context: ctx,
++          savedLocation: emptyLocation(),
++          behavior: createEmptyBehaviorContext(),
++        }),
++      (error: unknown) => error instanceof CanonicalContextInvariantError,
++    );
++  });
++
++  test('unavailable candidate with a valid profile reports factual coverage, not CONTEXT_MISSING', () => {
++    const unavailableCandidate = material({
++      id: 'mat-unavailable-valid',
++      status: 'AVAILABLE',
++      availableQuantity: 0,
++    });
++    const candidateProfile = familyForm('mat-unavailable-valid');
++    const ctx = contextWith({ candidate: candidateProfile });
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate: unavailableCandidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior: createEmptyBehaviorContext(),
++    });
++
++    assert.equal(scored.score, -1000);
++    assert.equal(scored.semanticCoverage, 'READY_FAMILY_ONLY');
++    assert.notEqual(scored.semanticCoverage, 'CONTEXT_MISSING');
++    // Correction #3: the breakdown must be able to derive -1000, not report
++    // all zeros alongside a nonzero score.
++    assert.equal(scored.components.unavailablePenalty, 1000);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('unavailable candidate with a MISSING_CANONICAL_ASSIGNMENT profile reports that fact, not CONTEXT_MISSING', () => {
++    const unavailableCandidate = material({
++      id: 'mat-unavailable-missing-assignment',
++      status: 'AVAILABLE',
++      availableQuantity: 0,
++    });
++    const candidateProfile = projectCanonicalMaterialProfile(
++      'mat-unavailable-missing-assignment',
++      [],
++    );
++    const ctx = contextWith({ candidate: candidateProfile });
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate: unavailableCandidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior: createEmptyBehaviorContext(),
++    });
++
++    assert.equal(scored.score, -1000);
++    assert.equal(scored.semanticCoverage, 'MISSING_CANONICAL_ASSIGNMENT');
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('non-free candidate evaluated for the free section reports the unavailable penalty in its breakdown', () => {
++    const nonFreeCandidate = material({
++      id: 'mat-non-free',
++      isFree: false,
++      status: 'AVAILABLE',
++      availableQuantity: 5,
++    });
++    const candidateProfile = familyForm('mat-non-free');
++    const ctx = contextWith({ candidate: candidateProfile });
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate: nonFreeCandidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior: createEmptyBehaviorContext(),
++      section: 'free',
++    });
++
++    assert.equal(scored.score, -1000);
++    assert.equal(scored.components.unavailablePenalty, 1000);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('savedProjects section breakdown is contribution-exact (mirrors suggested)', () => {
++    const candidate = material({ id: 'mat-saved', deliveryAllowed: true, isFree: true });
++    const candidateProfile = familyForm('mat-saved');
++    const ctx = contextWith({ candidate: candidateProfile });
++
++    const pool = scoreCanonicalMaterialPool({
++      materials: [candidate],
++      context: ctx,
++      savedLocation: { city: 'Ramallah', area: null },
++      behavior: createEmptyBehaviorContext(),
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++    const savedProjects = pool[0]!.scores.savedProjects;
++    assert.equal(savedProjects.components.savedComponent, 0);
++    assert.ok(
++      savedProjects.internalReasonCodes.includes('CANONICAL_COMPONENT_RELATION_UNAVAILABLE'),
++    );
++    assertCanonicalScoreMatchesComponents(savedProjects);
++  });
++
++  test('free section breakdown zeros non-contributing fields even when behavior/delivery would otherwise apply', () => {
++    // deliveryAllowed true and a reserved-identity match would contribute
++    // under 'suggested', but the free-score formula never adds delivery or
++    // behavior overlap — the returned breakdown must say so honestly.
++    const candidate = material({
++      id: 'mat-free-with-signals',
++      isFree: true,
++      deliveryAllowed: true,
++    });
++    const candidateProfile = familyForm('mat-free-with-signals');
++    // Reserved-identity match: the reserved signal is the candidate itself,
++    // so its profile must also be present in reservedMaterialProfiles to
++    // satisfy the complete-behavior-map invariant (identity does not bypass
++    // context completeness).
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      reserved: [candidateProfile],
++    });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      reservedMaterials: [
++        {
++          materialId: 'mat-free-with-signals',
++          title: 'x',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++      section: 'free',
++    });
++
++    assert.equal(scored.components.delivery, 0);
++    assert.equal(scored.components.reservedSimilarity, 0);
++    assert.equal(scored.components.alreadyLikedPenalty, 0);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++});
++
++describe('RP-03.1 material-concept hydration chunking (repository test seam)', () => {
++  const chunkQueryEcho = async (chunk: readonly string[]) =>
++    chunk.map((materialId) => ({
++      materialId,
++      concept: {
++        canonicalKey: 'material-family:electronics',
++        conceptType: 'MATERIAL_FAMILY',
++        status: 'ACTIVE',
++      },
++    }));
++
++  test('450 ids chunk deterministically into 200/200/50 with complete coverage', async () => {
++    const ids = Array.from({ length: 450 }, (_, index) => `mat-${String(index).padStart(4, '0')}`);
++    const chunkSizes: number[] = [];
++    const map = await loadMaterialConceptsForScoring(ids, async (chunk) => {
++      chunkSizes.push(chunk.length);
++      return chunkQueryEcho(chunk);
++    });
++
++    assert.deepEqual(chunkSizes, [200, 200, 50]);
++    assert.equal(map.size, 450);
++    for (const id of ids) {
++      assert.ok(map.has(id), `expected coverage for ${id}`);
++      assert.equal(map.get(id)!.length, 1);
++    }
++  });
++
++  test('reordered input produces equivalent chunk sizes and complete coverage', async () => {
++    const ids = Array.from({ length: 450 }, (_, index) => `mat-${String(index).padStart(4, '0')}`);
++    const reordered = [...ids].reverse();
++    const chunkSizes: number[] = [];
++    const map = await loadMaterialConceptsForScoring(reordered, async (chunk) => {
++      chunkSizes.push(chunk.length);
++      return chunkQueryEcho(chunk);
++    });
++
++    assert.deepEqual(chunkSizes, [200, 200, 50]);
++    assert.equal(map.size, 450);
++    for (const id of ids) {
++      assert.ok(map.has(id), `expected coverage for ${id}`);
++    }
++  });
++
++  test('no candidate truncation even with duplicate ids interleaved', async () => {
++    const ids = Array.from({ length: 450 }, (_, index) => `mat-${String(index).padStart(4, '0')}`);
++    const withDuplicates = [...ids, ...ids.slice(0, 10)];
++    const map = await loadMaterialConceptsForScoring(withDuplicates, chunkQueryEcho);
++    assert.equal(map.size, 450);
++  });
++});
++
++describe('RP-03.1 cache correctness: fallback never cached under the canonical key', () => {
++  test('canonical fallback is not cached; a later canonical success is cached and reused', async () => {
++    type FakePayload = { cacheable: boolean; effectiveMode: string; token: number };
++    let loadCount = 0;
++    const cache = createLearnerHomeCacheForTests<FakePayload>(
++      async () => {
++        loadCount += 1;
++        if (loadCount === 1) {
++          return { cacheable: false, effectiveMode: 'legacy-v1', token: loadCount };
++        }
++        return { cacheable: true, effectiveMode: CANONICAL_SCORING_MODE, token: loadCount };
++      },
++      Date.now,
++      (payload) => payload.cacheable,
++    );
++
++    // 1. canonical request; 2. registry/concept loader fails; 3. legacy
++    // fallback is returned.
++    const first = await cache.getWithState('learner-x');
++    assert.equal(first.state, 'MISS');
++    assert.equal(first.payload.effectiveMode, 'legacy-v1');
++    assert.equal(loadCount, 1);
++
++    // 4. no canonical cache write occurs: the loader must run again.
++    const second = await cache.getWithState('learner-x');
++    assert.equal(second.state, 'MISS');
++    assert.equal(second.payload.effectiveMode, CANONICAL_SCORING_MODE);
++    assert.equal(loadCount, 2);
++
++    // 5. loader succeeds; 6. canonical scorer executes; the successful
++    // canonical result was cacheable, so a third read must hit cache.
++    const third = await cache.getWithState('learner-x');
++    assert.equal(third.state, 'HIT');
++    assert.equal(loadCount, 2);
++    assert.equal(third.payload.token, 2);
++
++    // 7. the previous fallback result is never reused as a successful
++    // canonical result.
++    assert.notEqual(first.payload.effectiveMode, third.payload.effectiveMode);
++  });
++});
++
++describe('RP-03.1 skip canonical material hydration for project-only section requests', () => {
++  const spyOnMaterialConceptFindMany = () => {
++    const original = prisma.materialConcept.findMany.bind(prisma.materialConcept);
++    let callCount = 0;
++    // @ts-expect-error test-only monkeypatch of a mutable Prisma delegate method; restored by the caller
++    prisma.materialConcept.findMany = (...args: unknown[]) => {
++      callCount += 1;
++      // Never touch the real DB: return an empty result synchronously.
++      return Promise.resolve([]);
++    };
++    return {
++      getCallCount: () => callCount,
++      restore: () => {
++        prisma.materialConcept.findMany = original;
++      },
++    };
++  };
++
++  const smallMaterials = (count: number): LearnerHomeMaterialCandidate[] =>
++    Array.from({ length: count }, (_, index) => material({ id: `mat-hydration-${index}` }));
++
++  test('canonical suggested_projects-equivalent request (needsCanonicalMaterialScoring=false) issues zero concept-loader calls', async () => {
++    const spy = spyOnMaterialConceptFindMany();
++    try {
++      const { modeDecision, canonicalContext } = await resolveMaterialModeDecisionAndContext({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        needsCanonicalMaterialScoring: false,
++        materials: smallMaterials(3),
++        behavior: createEmptyBehaviorContext(),
++      });
++
++      assert.equal(spy.getCallCount(), 0);
++      assert.equal(canonicalContext, undefined);
++      // No fallback was recorded: hydration was never attempted, so there is
++      // nothing to fall back from.
++      assert.equal(modeDecision.fallbackCode, null);
++      assert.equal(modeDecision.cacheable, true);
++    } finally {
++      spy.restore();
++    }
++  });
++
++  test('canonical popular_projects-equivalent request issues zero concept-loader calls', async () => {
++    const spy = spyOnMaterialConceptFindMany();
++    try {
++      const { canonicalContext } = await resolveMaterialModeDecisionAndContext({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        needsCanonicalMaterialScoring: false,
++        materials: smallMaterials(3),
++        behavior: createEmptyBehaviorContext(),
++      });
++      assert.equal(spy.getCallCount(), 0);
++      assert.equal(canonicalContext, undefined);
++    } finally {
++      spy.restore();
++    }
++  });
++
++  test('canonical suggested_materials-equivalent request performs exactly one context-hydration operation', async () => {
++    const spy = spyOnMaterialConceptFindMany();
++    try {
++      const { modeDecision, canonicalContext } = await resolveMaterialModeDecisionAndContext({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        needsCanonicalMaterialScoring: true,
++        materials: smallMaterials(3),
++        behavior: createEmptyBehaviorContext(),
++      });
++      assert.equal(spy.getCallCount(), 1);
++      assert.equal(modeDecision.effectiveMaterialScoringMode, CANONICAL_SCORING_MODE);
++      assert.notEqual(canonicalContext, undefined);
++    } finally {
++      spy.restore();
++    }
++  });
++
++  test('canonical full-home-equivalent request performs exactly one context-hydration operation', async () => {
++    const spy = spyOnMaterialConceptFindMany();
++    try {
++      const { modeDecision } = await resolveMaterialModeDecisionAndContext({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        needsCanonicalMaterialScoring: true,
++        materials: smallMaterials(5),
++        behavior: createEmptyBehaviorContext(),
++      });
++      assert.equal(spy.getCallCount(), 1);
++      assert.equal(modeDecision.effectiveMaterialScoringMode, CANONICAL_SCORING_MODE);
++    } finally {
++      spy.restore();
++    }
++  });
++
++  test('legacy-v1 requested: needsCanonicalMaterialScoring is irrelevant, zero calls either way', async () => {
++    const spy = spyOnMaterialConceptFindMany();
++    try {
++      const trueCase = await resolveMaterialModeDecisionAndContext({
++        requestedMaterialScoringMode: 'legacy-v1',
++        needsCanonicalMaterialScoring: true,
++        materials: smallMaterials(3),
++        behavior: createEmptyBehaviorContext(),
++      });
++      const falseCase = await resolveMaterialModeDecisionAndContext({
++        requestedMaterialScoringMode: 'legacy-v1',
++        needsCanonicalMaterialScoring: false,
++        materials: smallMaterials(3),
++        behavior: createEmptyBehaviorContext(),
++      });
++      assert.equal(spy.getCallCount(), 0);
++      assert.equal(trueCase.modeDecision.effectiveMaterialScoringMode, 'legacy-v1');
++      assert.equal(falseCase.modeDecision.effectiveMaterialScoringMode, 'legacy-v1');
++    } finally {
++      spy.restore();
++    }
++  });
++});
++
++describe('RP-03.1 canonical weak-fallback gate uses only canonical-supported material activity', () => {
++  const buildContextFor = (candidateId: string) => {
++    const candidateProfile = familyForm(candidateId, 'material-family:electronics', 'material-form:arduino-board');
++    return contextWith({ candidate: candidateProfile });
++  };
++
++  test('saved-project activity only does not suppress location/free/popularity/recency fallback', () => {
++    const candidate = material({
++      id: 'mat-project-activity-1',
++      isFree: true,
++      city: 'Ramallah',
++      area: null,
++    });
++    const ctx = buildContextFor('mat-project-activity-1');
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      savedProjects: [
++        {
++          projectId: 'proj-1',
++          title: 'Saved project',
++          shortDescription: '',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++          components: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: { city: 'Ramallah', area: null },
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    // Project-only activity must not count as canonical-supported material
++    // activity: the weak-only fallback gate remains open, so free/location
++    // bonuses still apply.
++    assert.ok(scored.score > 0);
++    assert.equal(scored.fallbackOnly, true);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('followed/liked-project activity only does not suppress fallback', () => {
++    const candidate = material({
++      id: 'mat-project-activity-2',
++      isFree: true,
++      city: 'Ramallah',
++      area: null,
++    });
++    const ctx = buildContextFor('mat-project-activity-2');
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedProjects: [
++        {
++          projectId: 'proj-liked',
++          title: 'Liked project',
++          shortDescription: '',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++          components: [],
++        },
++      ],
++      followedProjects: [
++        {
++          projectId: 'proj-followed',
++          title: 'Followed project',
++          shortDescription: '',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++          components: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: { city: 'Ramallah', area: null },
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.ok(scored.score > 0);
++    assert.equal(scored.fallbackOnly, true);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('material activity with no family/form overlap retains the active-user relevance gate (no fallback score)', () => {
++    const candidate = material({
++      id: 'mat-activity-no-overlap',
++      isFree: true,
++      city: 'Ramallah',
++      area: null,
++    });
++    const candidateProfile = familyForm('mat-activity-no-overlap');
++    const unrelatedLiked = familyForm('mat-unrelated-liked', 'material-family:wood');
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      liked: [unrelatedLiked],
++    });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-unrelated-liked',
++          title: 'Unrelated',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: { city: 'Ramallah', area: null },
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    // Material activity exists (liked materials non-empty) but no overlap:
++    // allowsWeakOnlyFallback is false (hasActivity=true), so the explicit
++    // active-user relevance gate applies and this candidate scores 0 despite
++    // being free and near the saved location.
++    assert.equal(scored.score, 0);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('material activity with form overlap still produces canonical behavior scoring', () => {
++    const candidate = material({ id: 'mat-activity-with-overlap' });
++    const candidateProfile = familyForm(
++      'mat-activity-with-overlap',
++      'material-family:electronics',
++      'material-form:arduino-board',
++    );
++    const likedProfile = familyForm(
++      'mat-liked-overlap',
++      'material-family:electronics',
++      'material-form:arduino-board',
++    );
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      liked: [likedProfile],
++    });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-liked-overlap',
++          title: 'Liked',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate,
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.equal(scored.components.likedSimilarity, BEHAVIOR_SCORE_WEIGHTS.likedSimilar);
++    assert.ok(scored.score > 0);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++});
++
++describe('RP-03.1 complete behavior profile map invariants', () => {
++  test('missing liked profile entry throws a typed context invariant', () => {
++    const candidateProfile = familyForm('mat-1');
++    const ctx = contextWith({ candidate: candidateProfile }); // no liked profiles at all
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-liked-missing',
++          title: 'x',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    assert.throws(
++      () =>
++        scoreCanonicalMaterialCandidate({
++          candidate: material({ id: 'mat-1' }),
++          context: ctx,
++          savedLocation: emptyLocation(),
++          behavior,
++        }),
++      (error: unknown) => {
++        if (!(error instanceof CanonicalContextInvariantError)) return false;
++        // No raw material IDs in the exception message.
++        assert.doesNotMatch(error.message, /mat-liked-missing/);
++        return true;
++      },
++    );
++  });
++
++  test('missing reserved profile entry throws a typed context invariant', () => {
++    const candidateProfile = familyForm('mat-1');
++    const ctx = contextWith({ candidate: candidateProfile });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      reservedMaterials: [
++        {
++          materialId: 'mat-reserved-missing',
++          title: 'x',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    assert.throws(
++      () =>
++        scoreCanonicalMaterialCandidate({
++          candidate: material({ id: 'mat-1' }),
++          context: ctx,
++          savedLocation: emptyLocation(),
++          behavior,
++        }),
++      (error: unknown) => {
++        if (!(error instanceof CanonicalContextInvariantError)) return false;
++        assert.doesNotMatch(error.message, /mat-reserved-missing/);
++        return true;
++      },
++    );
++  });
++
++  test('missing viewed profile entry throws a typed context invariant', () => {
++    const candidateProfile = familyForm('mat-1');
++    const ctx = contextWith({ candidate: candidateProfile });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      viewedMaterials: [
++        {
++          materialId: 'mat-viewed-missing',
++          title: 'x',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    assert.throws(
++      () =>
++        scoreCanonicalMaterialCandidate({
++          candidate: material({ id: 'mat-1' }),
++          context: ctx,
++          savedLocation: emptyLocation(),
++          behavior,
++        }),
++      (error: unknown) => {
++        if (!(error instanceof CanonicalContextInvariantError)) return false;
++        assert.doesNotMatch(error.message, /mat-viewed-missing/);
++        return true;
++      },
++    );
++  });
++
++  test('present entry with MISSING_CANONICAL_ASSIGNMENT does not throw and contributes zero overlap', () => {
++    const candidateProfile = familyForm('mat-1');
++    const likedDefectiveProfile = projectCanonicalMaterialProfile('mat-liked-defective', []);
++    const ctx = contextWith({
++      candidate: candidateProfile,
++      liked: [likedDefectiveProfile],
++    });
++    const behavior: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-liked-defective',
++          title: 'x',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++
++    const scored = scoreCanonicalMaterialCandidate({
++      candidate: material({ id: 'mat-1' }),
++      context: ctx,
++      savedLocation: emptyLocation(),
++      behavior,
++      now: new Date('2026-07-20T00:00:00.000Z'),
++    });
++
++    assert.equal(scored.components.likedSimilarity, 0);
++    assertCanonicalScoreMatchesComponents(scored);
++  });
++
++  test('production fallback result (missing behavior profile) equals explicit legacy-v1', () => {
++    const materialWithMissingSignal = material({ id: 'mat-fallback-behavior-map' });
++    const baseInput = {
++      materials: [materialWithMissingSignal],
++      interests: [],
++      savedComponents: [],
++      savedLocation: emptyLocation(),
++      behaviorAffinityProfile: createEmptyAffinityProfile(),
++    };
++    const behaviorWithMissingSignal: LearnerBehaviorContext = {
++      ...createEmptyBehaviorContext(),
++      likedMaterials: [
++        {
++          materialId: 'mat-with-no-profile-entry',
++          title: 'x',
++          description: '',
++          materialType: 'x',
++          categoryNameEn: '',
++          categoryNameAr: '',
++          tags: [],
++        },
++      ],
++    };
++    const candidateProfile = familyForm('mat-fallback-behavior-map');
++
++    const brokenContext: LearnerHomeContext = {
++      materials: [materialWithMissingSignal],
++      interests: [],
++      savedComponents: [],
++      savedLocation: emptyLocation(),
++      behavior: behaviorWithMissingSignal,
++      behaviorAffinityProfile: createEmptyAffinityProfile(),
++      projects: [],
++      savedProjectItems: [],
++      inProgressBuilds: [],
++      savedProjectIds: new Set(),
++      hasSavedProjects: false,
++      hasActivity: false,
++      modeDecision: buildLearnerHomeModeDecision({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        effectiveMaterialScoringMode: CANONICAL_SCORING_MODE,
++        fallbackCode: null,
++        cacheable: true,
++      }),
++      canonicalContext: createSuccessfulCanonicalContext({
++        candidateMaterialProfiles: new Map([[candidateProfile.materialId, candidateProfile]]),
++        likedMaterialProfiles: new Map(), // 'mat-with-no-profile-entry' intentionally absent
++        reservedMaterialProfiles: new Map(),
++        viewedMaterialProfiles: new Map(),
++      }),
++    };
++
++    resetMaterialFeaturePoolCacheForTests();
++    const fallbackResult = preScoreMaterials(brokenContext);
++    assert.equal(brokenContext.modeDecision.effectiveMaterialScoringMode, 'legacy-v1');
++    assert.equal(brokenContext.modeDecision.cacheable, false);
++
++    resetMaterialFeaturePoolCacheForTests();
++    const explicitLegacyResult = preScoreMaterialPool({
++      ...baseInput,
++      behavior: behaviorWithMissingSignal,
++      scorerVersion: 'legacy-v1',
++    });
++
++    assert.deepEqual(
++      fallbackResult.map((entry) => entry.scores.suggested),
++      explicitLegacyResult.map((entry) => entry.scores.suggested),
++    );
++  });
++});
++
++describe('RP-03.1 preScoreMaterials: original errors preserved, only one canonical retry', () => {
++  const malformedMaterial = (id: string): LearnerHomeMaterialCandidate =>
++    ({ ...material({ id }), tags: undefined }) as unknown as LearnerHomeMaterialCandidate;
++
++  const contextFor = (
++    modeDecision: ReturnType<typeof buildLearnerHomeModeDecision>,
++    materials: LearnerHomeMaterialCandidate[],
++    canonicalContext?: LearnerHomeContext['canonicalContext'],
++  ): LearnerHomeContext => ({
++    materials,
++    interests: [],
++    savedComponents: [],
++    savedLocation: emptyLocation(),
++    behavior: createEmptyBehaviorContext(),
++    behaviorAffinityProfile: createEmptyAffinityProfile(),
++    projects: [],
++    savedProjectItems: [],
++    inProgressBuilds: [],
++    savedProjectIds: new Set(),
++    hasSavedProjects: false,
++    hasActivity: false,
++    modeDecision,
++    canonicalContext,
++  });
++
++  test('canonical scorer invariant (both requested and effective canonical) triggers exactly one legacy retry', () => {
++    const context = contextFor(
++      buildLearnerHomeModeDecision({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        effectiveMaterialScoringMode: CANONICAL_SCORING_MODE,
++        fallbackCode: null,
++        cacheable: true,
++      }),
++      [material({ id: 'mat-retry-1' })],
++      undefined, // missing context forces preScoreMaterialPool to throw
++    );
++
++    resetMaterialFeaturePoolCacheForTests();
++    const result = preScoreMaterials(context);
++    assert.equal(context.modeDecision.effectiveMaterialScoringMode, 'legacy-v1');
++    assert.equal(context.modeDecision.fallbackCode, 'CANONICAL_SCORER_INVARIANT_FALLBACK');
++    assert.equal(context.modeDecision.cacheable, false);
++    assert.ok(result.length === 1);
++  });
++
++  test('already-effective-legacy + a legacy error → no second retry, original error and fallbackCode preserved', () => {
++    const context = contextFor(
++      buildLearnerHomeModeDecision({
++        requestedMaterialScoringMode: CANONICAL_SCORING_MODE,
++        effectiveMaterialScoringMode: 'legacy-v1', // already downgraded by an earlier loader fallback
++        fallbackCode: 'CANONICAL_LOADER_FALLBACK_LEGACY_V1',
++        cacheable: false,
++      }),
++      [malformedMaterial('mat-already-legacy-error')],
++      undefined,
++    );
++
++    resetMaterialFeaturePoolCacheForTests();
++    assert.throws(
++      () => preScoreMaterials(context),
++      (error: unknown) => error instanceof TypeError,
++    );
++    // fallbackCode must remain the ORIGINAL loader-fallback code — no second
++    // (nonexistent) scorer-invariant retry overwrote it.
++    assert.equal(context.modeDecision.fallbackCode, 'CANONICAL_LOADER_FALLBACK_LEGACY_V1');
++    assert.equal(context.modeDecision.effectiveMaterialScoringMode, 'legacy-v1');
++  });
++
++  test('explicit legacy-v1 request: the original error object is rethrown unchanged, not a generic wrapper', () => {
++    const context = contextFor(
++      buildLearnerHomeModeDecision({
++        requestedMaterialScoringMode: 'legacy-v1',
++        effectiveMaterialScoringMode: 'legacy-v1',
++        fallbackCode: null,
++        cacheable: true,
++      }),
++      [malformedMaterial('mat-legacy-error')],
++      undefined,
++    );
++
++    resetMaterialFeaturePoolCacheForTests();
++    let caught: unknown;
++    try {
++      preScoreMaterials(context);
++      assert.fail('expected preScoreMaterials to throw');
++    } catch (error) {
++      caught = error;
++    }
++    assert.ok(caught instanceof TypeError);
++    assert.notEqual((caught as Error).message, 'preScoreMaterials failed');
++  });
++
++  test('explicit normalized-interests-v2 request: the original error object is rethrown unchanged', () => {
++    const context = contextFor(
++      buildLearnerHomeModeDecision({
++        requestedMaterialScoringMode: 'normalized-interests-v2',
++        effectiveMaterialScoringMode: 'normalized-interests-v2',
++        fallbackCode: null,
++        cacheable: true,
++      }),
++      [malformedMaterial('mat-normalized-error')],
++      undefined,
++    );
++
++    resetMaterialFeaturePoolCacheForTests();
++    let caught: unknown;
++    try {
++      preScoreMaterials(context);
++      assert.fail('expected preScoreMaterials to throw');
++    } catch (error) {
++      caught = error;
++    }
++    assert.ok(caught instanceof TypeError);
++    assert.notEqual((caught as Error).message, 'preScoreMaterials failed');
++  });
++});
+diff --git a/apps/backend/src/modules/learner-home/learner-home.canonical-scoring.ts b/apps/backend/src/modules/learner-home/learner-home.canonical-scoring.ts
+new file mode 100644
+index 00000000..99c60a42
+--- /dev/null
++++ b/apps/backend/src/modules/learner-home/learner-home.canonical-scoring.ts
+@@ -0,0 +1,902 @@
++import type { RecommendationScorerVersion } from '../../config/recommendation-scoring-version.js';
++import { isValidTaxonomyCanonicalKey } from '../taxonomy/taxonomy-normalization.js';
++import { BEHAVIOR_SCORE_WEIGHTS } from './learner-home.affinity.js';
++import {
++  FREE_MATERIAL_TIERS,
++  SUGGESTED_MATERIAL_TIERS,
++  type MaterialScoringTier,
++} from './learner-home.ranking.js';
++import { normalizeText } from './learner-interest-taxonomy.js';
++import type {
++  LearnerBehaviorContext,
++  LearnerHomeMaterialCandidate,
++  LearnerHomeSavedLocationContext,
++} from './learner-home.types.js';
++
++/** Mirrors learner-home.scoring MATERIAL_SCORE_WEIGHTS / penalties (avoid circular import). */
++const MATERIAL_SCORE_WEIGHTS = {
++  locationMatch: 25,
++  free: 8,
++  delivery: 6,
++  popularityMax: 10,
++  recencyMax: 5,
++} as const;
++const UNAVAILABLE_MATERIAL_PENALTY = -1000;
++const ALREADY_LIKED_MATERIAL_PENALTY = 18;
++
++const locationMatches = (
++  material: LearnerHomeMaterialCandidate,
++  location: LearnerHomeSavedLocationContext,
++) => {
++  const savedCity = normalizeText(location.city ?? '');
++  if (savedCity.length === 0) {
++    return false;
++  }
++  const materialCity = normalizeText(material.city);
++  if (materialCity !== savedCity) {
++    return false;
++  }
++  const savedArea = normalizeText(location.area ?? '');
++  if (savedArea.length === 0) {
++    return true;
++  }
++  return normalizeText(material.area ?? '') === savedArea;
++};
++
++const orderMaterialReasons = (reasons: string[]) => [...new Set(reasons)];
++
++export type ScoredMaterialResultCompat = {
++  score: number;
++  reasons: string[];
++  tier: MaterialScoringTier;
++  hasPrimaryRelevance: boolean;
++  fallbackOnly: boolean;
++};
++
++export const CANONICAL_SCORING_MODE = 'canonical-taxonomy-v3' as const;
++
++export type CanonicalFallbackCode =
++  | 'CANONICAL_LOADER_FALLBACK_LEGACY_V1'
++  | 'CANONICAL_CONTEXT_INVARIANT_FALLBACK'
++  | 'CANONICAL_SCORER_INVARIANT_FALLBACK';
++
++export type CanonicalInternalReasonCode =
++  | 'CANONICAL_INTEREST_RELATION_UNAVAILABLE'
++  | 'CANONICAL_COMPONENT_RELATION_UNAVAILABLE'
++  | 'MISSING_CANONICAL_ASSIGNMENT'
++  | 'INVALID_FAMILY_CARDINALITY'
++  | 'CANONICAL_FAMILY_OVERLAP'
++  | 'CANONICAL_FORM_OVERLAP'
++  | 'CANONICAL_RESERVED_IDENTITY'
++  | 'CANONICAL_VIEWED_IDENTITY'
++  | 'INVALID_CONCEPT_PROJECTION'
++  | CanonicalFallbackCode;
++
++export type CanonicalMaterialCoverage =
++  | 'READY_FAMILY_AND_FORM'
++  | 'READY_FAMILY_ONLY'
++  | 'MISSING_CANONICAL_ASSIGNMENT'
++  | 'INVALID_FAMILY_CARDINALITY'
++  | 'INVALID_OR_DEFECTIVE';
++
++export type MaterialConceptRowInput = {
++  canonicalKey: string;
++  conceptType: string;
++  status: string;
++};
++
++export type CanonicalMaterialSemanticProfile = {
++  materialId: string;
++  familyKeys: string[];
++  formKeys: string[];
++  coverage: CanonicalMaterialCoverage;
++  similarityEligible: boolean;
++  diagnostics: CanonicalInternalReasonCode[];
++};
++
++export type CanonicalMaterialScoringContext = {
++  requestedScoringMode: typeof CANONICAL_SCORING_MODE;
++  effectiveScoringMode: typeof CANONICAL_SCORING_MODE | 'legacy-v1';
++  fallbackCode: CanonicalFallbackCode | null;
++  cacheable: boolean;
++  candidateMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++  likedMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++  reservedMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++  viewedMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++};
++
++export class CanonicalScoringContextRequiredError extends Error {
++  readonly code = 'CANONICAL_CONTEXT_REQUIRED' as const;
++
++  constructor(message = 'canonical-taxonomy-v3 requires an explicit CanonicalMaterialScoringContext') {
++    super(message);
++    this.name = 'CanonicalScoringContextRequiredError';
++  }
++}
++
++/**
++ * A candidate ID entering the scorer that is absent from the context's
++ * profile map is a loader/context invariant violation, never a legitimate
++ * missing material assignment. Availability status must not be checked
++ * before this invariant, or an unavailable-but-context-incomplete candidate
++ * could silently report a factual coverage that was never computed.
++ */
++export class CanonicalContextInvariantError extends Error {
++  readonly code = 'CANONICAL_CONTEXT_INVARIANT' as const;
++
++  constructor(message = 'canonical-taxonomy-v3 candidate missing from CanonicalMaterialScoringContext profile map') {
++    super(message);
++    this.name = 'CanonicalContextInvariantError';
++  }
++}
++
++const asciiSort = (values: Iterable<string>): string[] =>
++  [...values].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
++
++const isActive = (status: string) => status === 'ACTIVE';
++
++const isWellFormedFamilyKey = (key: string) =>
++  isValidTaxonomyCanonicalKey(key) && key.startsWith('material-family:');
++
++const isWellFormedFormKey = (key: string) =>
++  isValidTaxonomyCanonicalKey(key) && key.startsWith('material-form:');
++
++/**
++ * Projects persisted concept rows into a deterministic material semantic profile.
++ * Concept/database IDs must not be passed in and never affect eligibility.
++ */
++export const projectCanonicalMaterialProfile = (
++  materialId: string,
++  rows: readonly MaterialConceptRowInput[],
++): CanonicalMaterialSemanticProfile => {
++  const diagnostics: CanonicalInternalReasonCode[] = [];
++  const familySet = new Set<string>();
++  const formSet = new Set<string>();
++
++  for (const row of rows) {
++    if (!isActive(row.status)) {
++      diagnostics.push('INVALID_CONCEPT_PROJECTION');
++      continue;
++    }
++
++    if (row.conceptType === 'MATERIAL_FAMILY') {
++      if (!isWellFormedFamilyKey(row.canonicalKey)) {
++        diagnostics.push('INVALID_CONCEPT_PROJECTION');
++        continue;
++      }
++      familySet.add(row.canonicalKey);
++      continue;
++    }
++
++    if (row.conceptType === 'MATERIAL_FORM') {
++      if (!isWellFormedFormKey(row.canonicalKey)) {
++        diagnostics.push('INVALID_CONCEPT_PROJECTION');
++        continue;
++      }
++      formSet.add(row.canonicalKey);
++      continue;
++    }
++
++    diagnostics.push('INVALID_CONCEPT_PROJECTION');
++  }
++
++  const familyKeys = asciiSort(familySet);
++  const formKeys = asciiSort(formSet);
++  const uniqueDiagnostics = asciiSort(new Set(diagnostics)) as CanonicalInternalReasonCode[];
++
++  if (familyKeys.length === 0) {
++    return {
++      materialId,
++      familyKeys,
++      formKeys: [],
++      coverage: 'MISSING_CANONICAL_ASSIGNMENT',
++      similarityEligible: false,
++      diagnostics: uniqueDiagnostics.includes('MISSING_CANONICAL_ASSIGNMENT')
++        ? uniqueDiagnostics
++        : (['MISSING_CANONICAL_ASSIGNMENT', ...uniqueDiagnostics] as CanonicalInternalReasonCode[]),
++    };
++  }
++
++  if (familyKeys.length > 1) {
++    return {
++      materialId,
++      familyKeys,
++      formKeys,
++      coverage: 'INVALID_FAMILY_CARDINALITY',
++      similarityEligible: false,
++      diagnostics: [
++        'INVALID_FAMILY_CARDINALITY',
++        ...uniqueDiagnostics.filter((code) => code !== 'INVALID_FAMILY_CARDINALITY'),
++      ] as CanonicalInternalReasonCode[],
++    };
++  }
++
++  return {
++    materialId,
++    familyKeys,
++    formKeys,
++    coverage: formKeys.length > 0 ? 'READY_FAMILY_AND_FORM' : 'READY_FAMILY_ONLY',
++    similarityEligible: true,
++    diagnostics: uniqueDiagnostics,
++  };
++};
++
++export const buildCanonicalProfileMap = (
++  materialIds: readonly string[],
++  rowsByMaterialId: ReadonlyMap<string, readonly MaterialConceptRowInput[]>,
++): Map<string, CanonicalMaterialSemanticProfile> => {
++  const uniqueIds = asciiSort(new Set(materialIds));
++  const map = new Map<string, CanonicalMaterialSemanticProfile>();
++  for (const materialId of uniqueIds) {
++    map.set(
++      materialId,
++      projectCanonicalMaterialProfile(materialId, rowsByMaterialId.get(materialId) ?? []),
++    );
++  }
++  return map;
++};
++
++const setsIntersect = (left: readonly string[], right: readonly string[]) => {
++  if (left.length === 0 || right.length === 0) {
++    return false;
++  }
++  const rightSet = new Set(right);
++  return left.some((key) => rightSet.has(key));
++};
++
++type OverlapKind = 'form' | 'family' | null;
++
++const resolveCanonicalOverlap = (
++  candidate: CanonicalMaterialSemanticProfile,
++  other: CanonicalMaterialSemanticProfile,
++): OverlapKind => {
++  if (!candidate.similarityEligible || !other.similarityEligible) {
++    return null;
++  }
++  if (setsIntersect(candidate.formKeys, other.formKeys)) {
++    return 'form';
++  }
++  if (setsIntersect(candidate.familyKeys, other.familyKeys)) {
++    return 'family';
++  }
++  return null;
++};
++
++/**
++ * Canonical material scoring only supports liked/reserved/viewed material
++ * signals. The broad learner-home.affinity.hasLearnerActivity also counts
++ * saved/liked/followed projects and in-progress builds, whose
++ * project→material semantics are disabled under canonical-taxonomy-v3.
++ * Using that broad predicate here would let project-only activity suppress
++ * the weak-only fallback gate (location/free/popularity/recency) even
++ * though it can never produce a canonical match.
++ */
++const hasCanonicalSupportedMaterialActivity = (behavior: LearnerBehaviorContext): boolean =>
++  behavior.likedMaterials.length > 0 ||
++  behavior.reservedMaterials.length > 0 ||
++  behavior.viewedMaterials.length > 0;
++
++const scorePopularity = (viewsCount: number, likesCount: number, max: number) =>
++  Math.min(max, Math.floor(viewsCount / 5) + likesCount * 2);
++
++const scoreRecency = (createdAt: Date, max: number, nowMs: number) => {
++  const ageMs = nowMs - createdAt.getTime();
++  const ageDays = ageMs / (1000 * 60 * 60 * 24);
++  if (ageDays <= 7) {
++    return max;
++  }
++  if (ageDays <= 30) {
++    return Math.max(1, max - 2);
++  }
++  return 1;
++};
++
++export type CanonicalMaterialScoreBreakdown = {
++  likedSimilarity: number;
++  reservedSimilarity: number;
++  viewedSimilarity: number;
++  location: number;
++  free: number;
++  delivery: number;
++  popularity: number;
++  recency: number;
++  /** Positive magnitude, subtracted — same sign convention as alreadyLikedPenalty. */
++  alreadyLikedPenalty: number;
++  /** Positive magnitude, subtracted. Non-zero only for the unavailable/non-free-in-free penalty (-1000). */
++  unavailablePenalty: number;
++  interest: 0;
++  savedComponent: 0;
++  affinity: 0;
++  savedRelatedProject: 0;
++  continuedBuild: 0;
++};
++
++export type CanonicalScoredMaterialResult = ScoredMaterialResultCompat & {
++  internalReasonCodes: CanonicalInternalReasonCode[];
++  semanticCoverage: CanonicalMaterialCoverage;
++  components: CanonicalMaterialScoreBreakdown;
++};
++
++const emptyBreakdown = (): CanonicalMaterialScoreBreakdown => ({
++  likedSimilarity: 0,
++  reservedSimilarity: 0,
++  viewedSimilarity: 0,
++  location: 0,
++  free: 0,
++  delivery: 0,
++  popularity: 0,
++  recency: 0,
++  alreadyLikedPenalty: 0,
++  unavailablePenalty: 0,
++  interest: 0,
++  savedComponent: 0,
++  affinity: 0,
++  savedRelatedProject: 0,
++  continuedBuild: 0,
++});
++
++const resolveCanonicalSuggestedTier = (input: {
++  hasBehaviorActivity: boolean;
++  behaviorScore: number;
++  allowsWeakOnlyFallback: boolean;
++  hasAnyRelevance: boolean;
++}): MaterialScoringTier => {
++  if (input.hasBehaviorActivity && input.behaviorScore >= 12) {
++    return SUGGESTED_MATERIAL_TIERS.behaviorStrong;
++  }
++  if (input.allowsWeakOnlyFallback && input.hasAnyRelevance) {
++    return SUGGESTED_MATERIAL_TIERS.fallback;
++  }
++  return SUGGESTED_MATERIAL_TIERS.fallback;
++};
++
++export const assertCanonicalContextPresent = (
++  context: CanonicalMaterialScoringContext | undefined | null,
++): CanonicalMaterialScoringContext => {
++  if (!context) {
++    throw new CanonicalScoringContextRequiredError();
++  }
++  return context;
++};
++
++export const createSuccessfulCanonicalContext = (input: {
++  candidateMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++  likedMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++  reservedMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++  viewedMaterialProfiles: ReadonlyMap<string, CanonicalMaterialSemanticProfile>;
++}): CanonicalMaterialScoringContext => ({
++  requestedScoringMode: CANONICAL_SCORING_MODE,
++  effectiveScoringMode: CANONICAL_SCORING_MODE,
++  fallbackCode: null,
++  cacheable: true,
++  candidateMaterialProfiles: input.candidateMaterialProfiles,
++  likedMaterialProfiles: input.likedMaterialProfiles,
++  reservedMaterialProfiles: input.reservedMaterialProfiles,
++  viewedMaterialProfiles: input.viewedMaterialProfiles,
++});
++
++export const createFallbackCanonicalContext = (
++  fallbackCode: CanonicalFallbackCode,
++): CanonicalMaterialScoringContext => ({
++  requestedScoringMode: CANONICAL_SCORING_MODE,
++  effectiveScoringMode: 'legacy-v1',
++  fallbackCode,
++  cacheable: false,
++  candidateMaterialProfiles: new Map(),
++  likedMaterialProfiles: new Map(),
++  reservedMaterialProfiles: new Map(),
++  viewedMaterialProfiles: new Map(),
++});
++
++export const algorithmVersionForEffectiveMode = (
++  effectiveScoringMode: RecommendationScorerVersion,
++): string => `learner-home-v1:${effectiveScoringMode}`;
++
++/**
++ * A single material effectiveScoringMode cannot describe project scoring
++ * (projects always force-delegate to legacy-v1 under a canonical request).
++ * This bounded, internal-only diagnostic tracks both domains plus fallback
++ * state so algorithm identity stamping stays truthful and fallbackCode is
++ * never silently dropped after context construction.
++ */
++export type LearnerHomeModeDecision = {
++  requestedMaterialScoringMode: RecommendationScorerVersion;
++  effectiveMaterialScoringMode: RecommendationScorerVersion;
++  effectiveProjectScoringMode: RecommendationScorerVersion;
++  fallbackCode: CanonicalFallbackCode | null;
++  cacheable: boolean;
++};
++
++export const buildLearnerHomeModeDecision = (input: {
++  requestedMaterialScoringMode: RecommendationScorerVersion;
++  effectiveMaterialScoringMode: RecommendationScorerVersion;
++  fallbackCode: CanonicalFallbackCode | null;
++  cacheable: boolean;
++}): LearnerHomeModeDecision => ({
++  requestedMaterialScoringMode: input.requestedMaterialScoringMode,
++  effectiveMaterialScoringMode: input.effectiveMaterialScoringMode,
++  // Projects never use canonical-taxonomy-v3, independent of whether material
++  // scoring succeeded canonically or fell back to legacy-v1.
++  effectiveProjectScoringMode:
++    input.requestedMaterialScoringMode === CANONICAL_SCORING_MODE
++      ? 'legacy-v1'
++      : input.requestedMaterialScoringMode,
++  fallbackCode: input.fallbackCode,
++  cacheable: input.cacheable,
++});
++
++/**
++ * Truthful full-home algorithm stamp. Returns the simple single-mode form
++ * when both domains agree (the common case: legacy/normalized requests, or a
++ * canonical request that fell back on both domains), and an explicit mixed
++ * form when material is canonical and project is legacy. Never stamps a
++ * project ranking as canonical-taxonomy-v3.
++ */
++export const algorithmVersionForModeDecision = (
++  decision: Pick<
++    LearnerHomeModeDecision,
++    'effectiveMaterialScoringMode' | 'effectiveProjectScoringMode'
++  >,
++): string =>
++  decision.effectiveMaterialScoringMode === decision.effectiveProjectScoringMode
++    ? algorithmVersionForEffectiveMode(decision.effectiveMaterialScoringMode)
++    : `learner-home-v1:material=${decision.effectiveMaterialScoringMode};project=${decision.effectiveProjectScoringMode}`;
++
++export const scoreCanonicalMaterialCandidate = (input: {
++  candidate: LearnerHomeMaterialCandidate;
++  context: CanonicalMaterialScoringContext;
++  savedLocation: LearnerHomeSavedLocationContext;
++  behavior: LearnerBehaviorContext;
++  now?: Date;
++  section?: 'suggested' | 'savedProjects' | 'free';
++}): CanonicalScoredMaterialResult => {
++  const context = assertCanonicalContextPresent(input.context);
++  if (context.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
++    throw new CanonicalScoringContextRequiredError(
++      'scoreCanonicalMaterialCandidate requires effectiveScoringMode canonical-taxonomy-v3',
++    );
++  }
++
++  const nowMs = (input.now ?? new Date()).getTime();
++  const material = input.candidate;
++  const internalReasonCodes: CanonicalInternalReasonCode[] = [
++    'CANONICAL_INTEREST_RELATION_UNAVAILABLE',
++    'CANONICAL_COMPONENT_RELATION_UNAVAILABLE',
++  ];
++  const components = emptyBreakdown();
++
++  // Context completeness is checked before availability. A candidate that is
++  // absent from the profile map is always a loader/context invariant, even
++  // when the material itself happens to be unavailable — it must never be
++  // reported as a legitimate missing assignment or a silently-zeroed profile.
++  const candidateProfile = context.candidateMaterialProfiles.get(material.id);
++  if (!candidateProfile) {
++    throw new CanonicalContextInvariantError(
++      'canonical-taxonomy-v3 candidate missing from CanonicalMaterialScoringContext.candidateMaterialProfiles',
++    );
++  }
++
++  // Complete-behavior-map invariant: every liked/reserved/viewed signal ID
++  // must exist in its respective profile map, independent of this
++  // candidate's own eligibility or availability. A missing map entry is a
++  // context invariant violation, not a legitimate zero-overlap result (which
++  // requires a present-but-ineligible profile, e.g.
++  // MISSING_CANONICAL_ASSIGNMENT). Checked unconditionally so an all-
++  // unavailable pool cannot silently hide an incomplete behavior map.
++  for (const liked of input.behavior.likedMaterials) {
++    if (!context.likedMaterialProfiles.has(liked.materialId)) {
++      throw new CanonicalContextInvariantError(
++        'canonical-taxonomy-v3 liked-material behavior signal missing from CanonicalMaterialScoringContext.likedMaterialProfiles',
++      );
++    }
++  }
++  for (const reserved of input.behavior.reservedMaterials) {
++    if (!context.reservedMaterialProfiles.has(reserved.materialId)) {
++      throw new CanonicalContextInvariantError(
++        'canonical-taxonomy-v3 reserved-material behavior signal missing from CanonicalMaterialScoringContext.reservedMaterialProfiles',
++      );
++    }
++  }
++  for (const viewed of input.behavior.viewedMaterials) {
++    if (!context.viewedMaterialProfiles.has(viewed.materialId)) {
++      throw new CanonicalContextInvariantError(
++        'canonical-taxonomy-v3 viewed-material behavior signal missing from CanonicalMaterialScoringContext.viewedMaterialProfiles',
++      );
++    }
++  }
++
++  if (material.status !== 'AVAILABLE' || material.availableQuantity <= 0) {
++    // Contribution-exact: the returned breakdown must be able to derive the
++    // penalty score, not just report zeros alongside a nonzero score.
++    components.unavailablePenalty = Math.abs(UNAVAILABLE_MATERIAL_PENALTY);
++    return {
++      score: UNAVAILABLE_MATERIAL_PENALTY,
++      reasons: [],
++      tier: SUGGESTED_MATERIAL_TIERS.fallback,
++      hasPrimaryRelevance: false,
++      fallbackOnly: false,
++      internalReasonCodes,
++      semanticCoverage: candidateProfile.coverage,
++      components,
++    };
++  }
++
++  internalReasonCodes.push(...candidateProfile.diagnostics);
++  if (candidateProfile.coverage === 'MISSING_CANONICAL_ASSIGNMENT') {
++    internalReasonCodes.push('MISSING_CANONICAL_ASSIGNMENT');
++  }
++  if (candidateProfile.coverage === 'INVALID_FAMILY_CARDINALITY') {
++    internalReasonCodes.push('INVALID_FAMILY_CARDINALITY');
++  }
++
++  const hasActivity = hasCanonicalSupportedMaterialActivity(input.behavior);
++  const likedIds = new Set(input.behavior.likedMaterials.map((row) => row.materialId));
++  const isAlreadyLiked = likedIds.has(material.id);
++
++  // Liked similarity: exclude self before overlap.
++  let likedScore = 0;
++  let likedReason: string | null = null;
++  let likedOverlap: OverlapKind = null;
++  if (candidateProfile.similarityEligible) {
++    for (const liked of input.behavior.likedMaterials) {
++      if (liked.materialId === material.id) {
++        continue;
++      }
++      // Guaranteed present by the completeness check above.
++      const likedProfile = context.likedMaterialProfiles.get(liked.materialId)!;
++      const overlap = resolveCanonicalOverlap(candidateProfile, likedProfile);
++      if (overlap === 'form') {
++        likedScore = BEHAVIOR_SCORE_WEIGHTS.likedSimilar;
++        likedOverlap = 'form';
++        likedReason = 'Similar to materials you liked';
++        break;
++      }
++      if (overlap === 'family' && likedOverlap === null) {
++        likedScore = Math.floor(BEHAVIOR_SCORE_WEIGHTS.likedSimilar / 2);
++        likedOverlap = 'family';
++        likedReason = 'Similar to materials you liked';
++      }
++    }
++  }
++  if (likedOverlap === 'form') {
++    internalReasonCodes.push('CANONICAL_FORM_OVERLAP');
++  } else if (likedOverlap === 'family') {
++    internalReasonCodes.push('CANONICAL_FAMILY_OVERLAP');
++  }
++  components.likedSimilarity = likedScore;
++
++  // Reserved: identity first, else form/family overlap.
++  let reservedScore = 0;
++  let reservedReason: string | null = null;
++  const reservedIdentity = input.behavior.reservedMaterials.some(
++    (signal) => signal.materialId === material.id,
++  );
++  if (reservedIdentity) {
++    reservedScore = BEHAVIOR_SCORE_WEIGHTS.reservedSimilar;
++    reservedReason = 'Similar to materials you reserved';
++    internalReasonCodes.push('CANONICAL_RESERVED_IDENTITY');
++  } else if (candidateProfile.similarityEligible) {
++    let reservedOverlap: OverlapKind = null;
++    for (const reserved of input.behavior.reservedMaterials) {
++      // Guaranteed present by the completeness check above.
++      const reservedProfile = context.reservedMaterialProfiles.get(reserved.materialId)!;
++      const overlap = resolveCanonicalOverlap(candidateProfile, reservedProfile);
++      if (overlap === 'form') {
++        reservedScore = BEHAVIOR_SCORE_WEIGHTS.reservedSimilar;
++        reservedOverlap = 'form';
++        reservedReason = 'Similar to materials you reserved';
++        break;
++      }
++      if (overlap === 'family' && reservedOverlap === null) {
++        reservedScore = Math.floor(BEHAVIOR_SCORE_WEIGHTS.reservedSimilar / 2);
++        reservedOverlap = 'family';
++        reservedReason = 'Similar to materials you reserved';
++      }
++    }
++    if (reservedOverlap === 'form') {
++      internalReasonCodes.push('CANONICAL_FORM_OVERLAP');
++    } else if (reservedOverlap === 'family') {
++      internalReasonCodes.push('CANONICAL_FAMILY_OVERLAP');
++    }
++  }
++  components.reservedSimilarity = reservedScore;
++
++  // Viewed: only if no reserved match and liked similarity score === 0.
++  let viewedScore = 0;
++  let viewedReason: string | null = null;
++  if (reservedScore === 0 && likedScore === 0) {
++    const viewedIdentity = input.behavior.viewedMaterials.some(
++      (signal) => signal.materialId === material.id,
++    );
++    if (viewedIdentity) {
++      viewedScore = BEHAVIOR_SCORE_WEIGHTS.viewedSimilar;
++      viewedReason = 'Matches your recent activity';
++      internalReasonCodes.push('CANONICAL_VIEWED_IDENTITY');
++    } else if (candidateProfile.similarityEligible) {
++      let viewedOverlap: OverlapKind = null;
++      for (const viewed of input.behavior.viewedMaterials) {
++        // Guaranteed present by the completeness check above.
++        const viewedProfile = context.viewedMaterialProfiles.get(viewed.materialId)!;
++        const overlap = resolveCanonicalOverlap(candidateProfile, viewedProfile);
++        if (overlap === 'form') {
++          viewedScore = BEHAVIOR_SCORE_WEIGHTS.viewedSimilar;
++          viewedOverlap = 'form';
++          viewedReason = 'Matches your recent activity';
++          break;
++        }
++        if (overlap === 'family' && viewedOverlap === null) {
++          viewedScore = Math.floor(BEHAVIOR_SCORE_WEIGHTS.viewedSimilar / 2);
++          viewedOverlap = 'family';
++          viewedReason = 'Matches your recent activity';
++        }
++      }
++      if (viewedOverlap === 'form') {
++        internalReasonCodes.push('CANONICAL_FORM_OVERLAP');
++      } else if (viewedOverlap === 'family') {
++        internalReasonCodes.push('CANONICAL_FAMILY_OVERLAP');
++      }
++    }
++  }
++  components.viewedSimilarity = viewedScore;
++
++  const behaviorScore = likedScore + reservedScore + viewedScore;
++  // Interests and saved-components contribute 0 under canonical, so weak-only
++  // fallback depends only on absence of learner activity (same activity gate).
++  const allowsWeakOnlyFallback = !hasActivity;
++
++  // Primary relevance never from interest/component/affinity (all disabled).
++  const hasPrimaryRelevance = false;
++  const fallbackOnly = allowsWeakOnlyFallback && behaviorScore === 0;
++  const hasAnyRelevance = hasPrimaryRelevance || fallbackOnly || behaviorScore > 0;
++
++  if (!hasAnyRelevance && !allowsWeakOnlyFallback) {
++    // The already-liked penalty applies even when no other signal establishes
++    // relevance (e.g. the candidate is itself the learner's only liked
++    // material). Score must reflect the penalty rather than reporting 0 while
++    // the component field disagrees.
++    if (isAlreadyLiked) {
++      components.alreadyLikedPenalty = ALREADY_LIKED_MATERIAL_PENALTY;
++    }
++    return {
++      score: isAlreadyLiked ? -ALREADY_LIKED_MATERIAL_PENALTY : 0,
++      reasons: [],
++      tier: SUGGESTED_MATERIAL_TIERS.fallback,
++      hasPrimaryRelevance: false,
++      fallbackOnly: false,
++      internalReasonCodes: asciiSort(new Set(internalReasonCodes)) as CanonicalInternalReasonCode[],
++      semanticCoverage: candidateProfile.coverage,
++      components,
++    };
++  }
++
++  const locationMatch = locationMatches(material, input.savedLocation);
++  let bonusScore = 0;
++  const reasons: string[] = [];
++
++  if (behaviorScore > 0) {
++    if (reservedReason) {
++      reasons.push(reservedReason);
++    }
++    if (likedReason) {
++      reasons.push(likedReason);
++    }
++    if (viewedReason) {
++      reasons.push(viewedReason);
++    }
++  }
++
++  if (locationMatch) {
++    components.location = MATERIAL_SCORE_WEIGHTS.locationMatch;
++    bonusScore += components.location;
++  }
++  if (material.isFree) {
++    components.free = MATERIAL_SCORE_WEIGHTS.free;
++    bonusScore += components.free;
++  }
++  if (material.deliveryAllowed) {
++    components.delivery = MATERIAL_SCORE_WEIGHTS.delivery;
++    bonusScore += components.delivery;
++  }
++
++  components.popularity = scorePopularity(
++    material.viewsCount,
++    material.likesCount,
++    MATERIAL_SCORE_WEIGHTS.popularityMax,
++  );
++  bonusScore += components.popularity;
++
++  components.recency = scoreRecency(
++    material.createdAt,
++    MATERIAL_SCORE_WEIGHTS.recencyMax,
++    nowMs,
++  );
++  bonusScore += components.recency;
++
++  if (isAlreadyLiked) {
++    components.alreadyLikedPenalty = ALREADY_LIKED_MATERIAL_PENALTY;
++  }
++
++  const section = input.section ?? 'suggested';
++
++  if (section === 'free') {
++    if (!material.isFree) {
++      return {
++        score: UNAVAILABLE_MATERIAL_PENALTY,
++        reasons: [],
++        tier: FREE_MATERIAL_TIERS.freeFallback,
++        hasPrimaryRelevance: false,
++        fallbackOnly: false,
++        internalReasonCodes: asciiSort(new Set(internalReasonCodes)) as CanonicalInternalReasonCode[],
++        semanticCoverage: candidateProfile.coverage,
++        components: {
++          ...emptyBreakdown(),
++          unavailablePenalty: Math.abs(UNAVAILABLE_MATERIAL_PENALTY),
++        },
++      };
++    }
++
++    const hasPersonalSignal = hasActivity && behaviorScore > 0;
++    let freeScore = MATERIAL_SCORE_WEIGHTS.free * 2;
++    const freeReasons: string[] = ['Free material'];
++    let freeTier: MaterialScoringTier = FREE_MATERIAL_TIERS.freeFallback;
++
++    if (locationMatch) {
++      freeScore += MATERIAL_SCORE_WEIGHTS.locationMatch;
++      freeReasons.push('Free material near your saved location');
++      freeTier = FREE_MATERIAL_TIERS.freeNearLocation;
++    } else if (hasPersonalSignal) {
++      freeTier = FREE_MATERIAL_TIERS.freeInterestOrBehavior;
++      const personalReason = reservedReason ?? likedReason ?? viewedReason;
++      if (personalReason) {
++        freeReasons.push(personalReason);
++      }
++    }
++
++    freeScore += components.popularity;
++    freeScore += components.recency;
++
++    return {
++      score: freeScore,
++      reasons: orderMaterialReasons(freeReasons).slice(0, 4),
++      tier: freeTier,
++      // §30b: canonical liked/reserved/viewed never establish primary relevance.
++      hasPrimaryRelevance: false,
++      fallbackOnly: !hasPersonalSignal && !locationMatch,
++      internalReasonCodes: asciiSort(new Set(internalReasonCodes)) as CanonicalInternalReasonCode[],
++      semanticCoverage: candidateProfile.coverage,
++      // Contribution-exact: freeScore = free*2 + [location if match] +
++      // popularity + recency only. Behavior overlap (liked/reserved/viewed)
++      // and delivery affect only tier/reason text in this section — they are
++      // reported as zero here so the breakdown never claims a contribution
++      // the formula does not actually make.
++      components: {
++        likedSimilarity: 0,
++        reservedSimilarity: 0,
++        viewedSimilarity: 0,
++        location: locationMatch ? MATERIAL_SCORE_WEIGHTS.locationMatch : 0,
++        free: MATERIAL_SCORE_WEIGHTS.free * 2,
++        delivery: 0,
++        popularity: components.popularity,
++        recency: components.recency,
++        alreadyLikedPenalty: 0,
++        unavailablePenalty: 0,
++        interest: 0,
++        savedComponent: 0,
++        affinity: 0,
++        savedRelatedProject: 0,
++        continuedBuild: 0,
++      },
++    };
++  }
++
++  // suggested + savedProjects share base; saved-component contribution is 0 under canonical.
++  const tier = resolveCanonicalSuggestedTier({
++    hasBehaviorActivity: hasActivity,
++    behaviorScore,
++    allowsWeakOnlyFallback,
++    hasAnyRelevance,
++  });
++
++  if (locationMatch && (tier <= SUGGESTED_MATERIAL_TIERS.interestWeakOrCustom || fallbackOnly)) {
++    reasons.push('Available near your saved location');
++  }
++  if (material.isFree && (fallbackOnly || tier >= SUGGESTED_MATERIAL_TIERS.interestWeakOrCustom)) {
++    reasons.push('Free material');
++  }
++  if (
++    material.deliveryAllowed &&
++    (fallbackOnly || tier >= SUGGESTED_MATERIAL_TIERS.interestWeakOrCustom)
++  ) {
++    reasons.push('Delivery available');
++  }
++  if (fallbackOnly && components.popularity >= 4) {
++    reasons.push('Popular material');
++  }
++  if (fallbackOnly && components.recency >= MATERIAL_SCORE_WEIGHTS.recencyMax - 1) {
++    reasons.push('Recently added');
++  }
++
++  let score = behaviorScore + bonusScore;
++  if (isAlreadyLiked) {
++    score -= ALREADY_LIKED_MATERIAL_PENALTY;
++  }
++
++  return {
++    score,
++    reasons: orderMaterialReasons(reasons).slice(0, 4),
++    tier,
++    hasPrimaryRelevance: false,
++    fallbackOnly,
++    internalReasonCodes: asciiSort(new Set(internalReasonCodes)) as CanonicalInternalReasonCode[],
++    semanticCoverage: candidateProfile.coverage,
++    components,
++  };
++};
++
++export const scoreCanonicalMaterialPool = (input: {
++  materials: LearnerHomeMaterialCandidate[];
++  context: CanonicalMaterialScoringContext;
++  savedLocation: LearnerHomeSavedLocationContext;
++  behavior: LearnerBehaviorContext;
++  now?: Date;
++}): Array<{
++  material: LearnerHomeMaterialCandidate;
++  ownerId: string;
++  scores: {
++    suggested: CanonicalScoredMaterialResult;
++    savedProjects: CanonicalScoredMaterialResult;
++    free: CanonicalScoredMaterialResult;
++  };
++}> => {
++  const context = assertCanonicalContextPresent(input.context);
++  for (const material of input.materials) {
++    if (!context.candidateMaterialProfiles.has(material.id)) {
++      throw new CanonicalContextInvariantError(
++        'canonical-taxonomy-v3 candidate missing from CanonicalMaterialScoringContext.candidateMaterialProfiles',
++      );
++    }
++  }
++
++  // Captured exactly once for the whole pool. Every candidate's suggested,
++  // saved-project, and free calculations share this identical instant, so
++  // recency (and any other time-derived component) cannot diverge between
++  // candidates — or between pool orderings — merely because wall-clock time
++  // advanced between individual scoring calls.
++  const evaluationTime = input.now ?? new Date();
++
++  return input.materials.map((material) => {
++    const suggested = scoreCanonicalMaterialCandidate({
++      candidate: material,
++      context,
++      savedLocation: input.savedLocation,
++      behavior: input.behavior,
++      now: evaluationTime,
++      section: 'suggested',
++    });
++    // Saved-projects section: same score as suggested under canonical (component +0).
++    const savedProjects: CanonicalScoredMaterialResult = {
++      ...suggested,
++      // Keep explicit marker that component relation is unavailable.
++      internalReasonCodes: asciiSort(
++        new Set([
++          ...suggested.internalReasonCodes,
++          'CANONICAL_COMPONENT_RELATION_UNAVAILABLE' as const,
++        ]),
++      ) as CanonicalInternalReasonCode[],
++    };
++    const free = scoreCanonicalMaterialCandidate({
++      candidate: material,
++      context,
++      savedLocation: input.savedLocation,
++      behavior: input.behavior,
++      now: evaluationTime,
++      section: 'free',
++    });
++
++    return {
++      material,
++      ownerId: material.ownerId,
++      scores: { suggested, savedProjects, free },
++    };
++  });
++};
+diff --git a/apps/backend/src/modules/learner-home/learner-home.material-features.ts b/apps/backend/src/modules/learner-home/learner-home.material-features.ts
+index 34dd0218..db6bde39 100644
+--- a/apps/backend/src/modules/learner-home/learner-home.material-features.ts
++++ b/apps/backend/src/modules/learner-home/learner-home.material-features.ts
+@@ -14,7 +14,7 @@ import {
+   buildMaterialMatchHaystack,
+   isCustomInterestKey,
+   matchCustomInterestKeyAgainstMaterial,
+-  matchInterestKeyAgainstMaterial,
++  matchInterestKeyAgainstMaterialForScorerVersion,
+   normalizeInterestToken,
+   normalizeText,
+   resolveInterestKey,
+@@ -22,6 +22,7 @@ import {
+   type LearnerInterestMatch,
+   type MaterialMatchHaystack,
+ } from './learner-interest-taxonomy.js';
++import type { RecommendationScorerVersion } from '../../config/recommendation-scoring-version.js';
+ import {
+   FREE_MATERIAL_TIERS,
+   SAVED_PROJECT_MATERIAL_TIERS,
+@@ -35,6 +36,8 @@ import {
+   UNAVAILABLE_MATERIAL_PENALTY,
+   locationMatches,
+   orderMaterialReasons,
++  resolveMaterialScorerVersion,
++  resolveNonCanonicalMaterialScorerVersion,
+   type ScoredMaterialResult,
+ } from './learner-home.scoring.js';
+ import type {
+@@ -46,6 +49,13 @@ import type {
+   LearnerHomeSavedLocationContext,
+   LearnerHomeSavedProjectComponent,
+ } from './learner-home.types.js';
++import {
++  CANONICAL_SCORING_MODE,
++  CanonicalScoringContextRequiredError,
++  assertCanonicalContextPresent,
++  scoreCanonicalMaterialPool,
++  type CanonicalMaterialScoringContext,
++} from './learner-home.canonical-scoring.js';
+ 
+ const FEATURE_CACHE_TTL_MS = 60_000;
+ const GENERIC_BROAD_INTEREST_KEYS = new Set(['electronics']);
+@@ -341,8 +351,19 @@ const signalsOverlap = (
+   );
+ };
+ 
+-const buildMaterialSourceSignature = (material: LearnerHomeMaterialCandidate) =>
++/**
++ * RP-03.1 correction: interest matching is scorer-version-dependent
++ * (`matchInterestKeyAgainstMaterialForScorerVersion`), so the cached feature
++ * signature must include the resolved scorer version. Otherwise a whole-request
++ * legacy fallback could reuse feature-pool entries built under a different
++ * process-global mode and silently regain normalized-alias semantics.
++ */
++const buildMaterialSourceSignature = (
++  material: LearnerHomeMaterialCandidate,
++  scorerVersion: RecommendationScorerVersion,
++) =>
+   JSON.stringify([
++    scorerVersion,
+     material.id,
+     material.title,
+     material.description,
+@@ -353,9 +374,12 @@ const buildMaterialSourceSignature = (material: LearnerHomeMaterialCandidate) =>
+     [...material.tags].sort(),
+   ]);
+ 
+-const buildPoolSignature = (materials: LearnerHomeMaterialCandidate[]) =>
++const buildPoolSignature = (
++  materials: LearnerHomeMaterialCandidate[],
++  scorerVersion: RecommendationScorerVersion,
++) =>
+   materials
+-    .map(buildMaterialSourceSignature)
++    .map((material) => buildMaterialSourceSignature(material, scorerVersion))
+     .sort()
+     .join('|');
+ 
+@@ -372,7 +396,12 @@ const indexTerm = (
+ 
+ export const buildMaterialRecommendationFeature = (
+   material: LearnerHomeMaterialCandidate,
++  scorerVersion?: RecommendationScorerVersion,
+ ): MaterialRecommendationFeature => {
++  // Sealed: this legacy/normalized feature builder must never process
++  // canonical-taxonomy-v3, and no canonical value may reach
++  // matchInterestKeyAgainstMaterialForScorerVersion through it.
++  const resolvedScorerVersion = resolveNonCanonicalMaterialScorerVersion(scorerVersion);
+   const haystackParts = buildMaterialMatchHaystack({
+     title: material.title,
+     description: material.description,
+@@ -385,7 +414,11 @@ export const buildMaterialRecommendationFeature = (
+   const interestMatches = new Map<string, LearnerInterestMatch>();
+ 
+   for (const key of ALL_LEARNER_INTEREST_KEYS) {
+-    const match = matchInterestKeyAgainstMaterial(haystackParts, key);
++    const match = matchInterestKeyAgainstMaterialForScorerVersion(
++      haystackParts,
++      key,
++      resolvedScorerVersion,
++    );
+     if (match) {
+       interestKeys.add(key);
+       interestMatches.set(key, match);
+@@ -404,7 +437,7 @@ export const buildMaterialRecommendationFeature = (
+ 
+   return {
+     materialId: material.id,
+-    sourceSignature: buildMaterialSourceSignature(material),
++    sourceSignature: buildMaterialSourceSignature(material, resolvedScorerVersion),
+     haystackParts,
+     normalizedTitle: normalizeText(material.title),
+     normalizedCategory: normalizeText(
+@@ -467,8 +500,12 @@ export const buildMaterialFeatureIndex = (
+ 
+ export const getOrBuildMaterialFeaturePool = (
+   materials: LearnerHomeMaterialCandidate[],
++  scorerVersion?: RecommendationScorerVersion,
+ ) => {
+-  const poolSignature = buildPoolSignature(materials);
++  // Sealed: this legacy/normalized feature pool must never process
++  // canonical-taxonomy-v3.
++  const resolvedScorerVersion = resolveNonCanonicalMaterialScorerVersion(scorerVersion);
++  const poolSignature = buildPoolSignature(materials, resolvedScorerVersion);
+   const now = Date.now();
+ 
+   if (
+@@ -486,6 +523,9 @@ export const getOrBuildMaterialFeaturePool = (
+     };
+   }
+ 
++  // Per-material sourceSignature already embeds scorerVersion, so reuse across a
++  // scorer-version change is impossible even when the pool-level signature check
++  // above misses (e.g. same materials, different mode).
+   const cachedFeaturesById = new Map(
+     featurePoolCache && featurePoolCache.expiresAt > now
+       ? featurePoolCache.features.map((feature) => [feature.materialId, feature])
+@@ -493,11 +533,11 @@ export const getOrBuildMaterialFeaturePool = (
+   );
+   const features = materials.map((material) => {
+     const cachedFeature = cachedFeaturesById.get(material.id);
+-    const sourceSignature = buildMaterialSourceSignature(material);
++    const sourceSignature = buildMaterialSourceSignature(material, resolvedScorerVersion);
+ 
+     return cachedFeature?.sourceSignature === sourceSignature
+       ? cachedFeature
+-      : buildMaterialRecommendationFeature(material);
++      : buildMaterialRecommendationFeature(material, resolvedScorerVersion);
+   });
+   featurePoolCache = {
+     expiresAt: now + FEATURE_CACHE_TTL_MS,
+@@ -1137,8 +1177,12 @@ export const scoreMaterialPoolWithFeatures = (input: {
+   savedLocation: LearnerHomeSavedLocationContext;
+   behavior: LearnerBehaviorContext;
+   behaviorAffinityProfile: LearnerAffinityProfile;
++  scorerVersion?: RecommendationScorerVersion;
+ }): MaterialScoreRecord[] => {
+-  const { features } = getOrBuildMaterialFeaturePool(input.materials);
++  // Sealed: this legacy/normalized pool scorer must never process
++  // canonical-taxonomy-v3.
++  const scorerVersion = resolveNonCanonicalMaterialScorerVersion(input.scorerVersion);
++  const { features } = getOrBuildMaterialFeaturePool(input.materials, scorerVersion);
+   const user = buildUserSignalProfile(input);
+ 
+   const featureByMaterialId = new Map(
+@@ -1186,8 +1230,41 @@ export const preScoreMaterialPool = (input: {
+   savedLocation: LearnerHomeSavedLocationContext;
+   behavior: LearnerBehaviorContext;
+   behaviorAffinityProfile: LearnerAffinityProfile;
+-}): PreScoredMaterialEntry[] =>
+-  scoreMaterialPoolWithFeatures(input).map((record) => ({
++  scorerVersion?: RecommendationScorerVersion;
++  canonicalContext?: CanonicalMaterialScoringContext;
++}): PreScoredMaterialEntry[] => {
++  // RP-03.1 correction: dispatch on the explicitly resolved scorer version, not
++  // merely on whether a canonicalContext happens to be present. A caller that
++  // requests canonical-taxonomy-v3 without a successful context must fail
++  // loudly rather than silently drift into legacy scoring with the wrong
++  // interest-matching semantics.
++  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
++
++  if (scorerVersion === CANONICAL_SCORING_MODE) {
++    const canonicalContext = assertCanonicalContextPresent(input.canonicalContext);
++    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
++      throw new CanonicalScoringContextRequiredError(
++        'canonical-taxonomy-v3 requires a successful CanonicalMaterialScoringContext',
++      );
++    }
++
++    return scoreCanonicalMaterialPool({
++      materials: input.materials,
++      context: canonicalContext,
++      savedLocation: input.savedLocation,
++      behavior: input.behavior,
++    }).map((record) => ({
++      material: record.material,
++      ownerId: record.ownerId,
++      scores: {
++        suggested: record.scores.suggested,
++        savedProjects: record.scores.savedProjects,
++        free: record.scores.free,
++      },
++    }));
++  }
++
++  return scoreMaterialPoolWithFeatures({ ...input, scorerVersion }).map((record) => ({
+     material: record.candidate,
+     ownerId: record.ownerId,
+     scores: {
+@@ -1196,3 +1273,4 @@ export const preScoreMaterialPool = (input: {
+       free: record.free,
+     },
+   }));
++};
+\ No newline at end of file
+diff --git a/apps/backend/src/modules/learner-home/learner-home.repository.ts b/apps/backend/src/modules/learner-home/learner-home.repository.ts
+index e48474f5..38edf48f 100644
+--- a/apps/backend/src/modules/learner-home/learner-home.repository.ts
++++ b/apps/backend/src/modules/learner-home/learner-home.repository.ts
+@@ -1315,6 +1315,81 @@ export const loadMlShadowConcepts = async (
+   };
+ };
+ 
++/** Chunk size for deterministic canonical concept hydration only — not a candidate pool cap. */
++export const MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE = 200;
++
++export type MaterialConceptScoringRow = {
++  materialId: string;
++  canonicalKey: string;
++  conceptType: string;
++  status: string;
++};
++
++export type MaterialConceptChunkRow = {
++  materialId: string;
++  concept: { canonicalKey: string; conceptType: string; status: string };
++};
++
++export type MaterialConceptChunkQuery = (
++  materialIds: readonly string[],
++) => Promise<MaterialConceptChunkRow[]>;
++
++const defaultMaterialConceptChunkQuery: MaterialConceptChunkQuery = (materialIds) =>
++  prisma.materialConcept.findMany({
++    where: { materialId: { in: [...materialIds] } },
++    select: {
++      materialId: true,
++      concept: {
++        select: {
++          canonicalKey: true,
++          conceptType: true,
++          status: true,
++        },
++      },
++    },
++  });
++
++/**
++ * Loads MaterialConcept rows for every requested material ID.
++ * Does not truncate the ID list; chunks DB queries only.
++ * Returns a map with an entry for every unique input ID (empty array when none).
++ *
++ * The optional `queryChunk` parameter is a test-only seam: production callers
++ * never pass it, so the real Prisma query remains the default. Tests can
++ * inject a fake chunk query to prove chunk sizing/coverage/order-independence
++ * without a database.
++ */
++export const loadMaterialConceptsForScoring = async (
++  materialIds: readonly string[],
++  queryChunk: MaterialConceptChunkQuery = defaultMaterialConceptChunkQuery,
++): Promise<Map<string, MaterialConceptScoringRow[]>> => {
++  const uniqueIds = [...new Set(materialIds.filter((id) => id.length > 0))];
++  const rowsByMaterialId = new Map<string, MaterialConceptScoringRow[]>();
++  for (const materialId of uniqueIds) {
++    rowsByMaterialId.set(materialId, []);
++  }
++
++  for (let offset = 0; offset < uniqueIds.length; offset += MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE) {
++    const chunk = uniqueIds.slice(offset, offset + MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE);
++    const rows = await queryChunk(chunk);
++
++    for (const row of rows) {
++      const list = rowsByMaterialId.get(row.materialId);
++      if (!list) {
++        continue;
++      }
++      list.push({
++        materialId: row.materialId,
++        canonicalKey: row.concept.canonicalKey,
++        conceptType: row.concept.conceptType,
++        status: row.concept.status,
++      });
++    }
++  }
++
++  return rowsByMaterialId;
++};
++
+ type SavedProjectBehaviorRow = Awaited<
+   ReturnType<typeof loadLearnerBehaviorRows>
+ >['savedProjectRows'][number];
+diff --git a/apps/backend/src/modules/learner-home/learner-home.scoring.ts b/apps/backend/src/modules/learner-home/learner-home.scoring.ts
+index 679ca889..3c136c8e 100644
+--- a/apps/backend/src/modules/learner-home/learner-home.scoring.ts
++++ b/apps/backend/src/modules/learner-home/learner-home.scoring.ts
+@@ -7,6 +7,13 @@ import type {
+   LearnerAffinityProfile,
+ } from './learner-home.types.js';
+ import type { RecommendationScorerVersion } from '../../config/recommendation-scoring-version.js';
++import { RECOMMENDATION_SCORER_VERSION } from '../../config/recommendation-scoring-version.js';
++import {
++  CANONICAL_SCORING_MODE,
++  CanonicalScoringContextRequiredError,
++  scoreCanonicalMaterialCandidate,
++  type CanonicalMaterialScoringContext,
++} from './learner-home.canonical-scoring.js';
+ import {
+   buildInterestMatchReason,
+   getInterestSearchTermsForKey,
+@@ -40,6 +47,51 @@ import {
+   type SuggestedMaterialTier,
+ } from './learner-home.ranking.js';
+ 
++export const resolveMaterialScorerVersion = (
++  scorerVersion?: RecommendationScorerVersion,
++): RecommendationScorerVersion => scorerVersion ?? RECOMMENDATION_SCORER_VERSION;
++
++/**
++ * RP-03.1 correction: legacy/normalized feature and relevance builders
++ * (buildMaterialRecommendationFeature, getOrBuildMaterialFeaturePool,
++ * scoreMaterialPoolWithFeatures, assessSuggestedMaterialRelevance,
++ * buildMaterialScoringSharedState) must never process canonical-taxonomy-v3.
++ * This is the single bounded resolver/assertion used by every one of them: it
++ * resolves the explicit or process mode, then throws rather than silently
++ * returning a canonical value. preScoreMaterialPool and the three direct
++ * final material scorers are exempt — they retain their own canonical
++ * dispatch with a required CanonicalMaterialScoringContext.
++ */
++export const resolveNonCanonicalMaterialScorerVersion = (
++  scorerVersion?: RecommendationScorerVersion,
++): Exclude<RecommendationScorerVersion, typeof CANONICAL_SCORING_MODE> => {
++  const resolved = resolveMaterialScorerVersion(scorerVersion);
++  if (resolved === CANONICAL_SCORING_MODE) {
++    throw new CanonicalScoringContextRequiredError(
++      'this legacy/normalized helper must never process canonical-taxonomy-v3; ' +
++        'canonical scoring requires preScoreMaterialPool or a direct canonical-aware scorer with an explicit CanonicalMaterialScoringContext',
++    );
++  }
++  return resolved;
++};
++
++/** Projects never use canonical-taxonomy-v3; force legacy-v1 when that mode is selected. */
++export const resolveProjectScorerVersion = (
++  scorerVersion?: RecommendationScorerVersion,
++): RecommendationScorerVersion => {
++  const resolved = resolveMaterialScorerVersion(scorerVersion);
++  return resolved === CANONICAL_SCORING_MODE ? 'legacy-v1' : resolved;
++};
++
++const requireCanonicalContext = (
++  context: CanonicalMaterialScoringContext | undefined,
++): CanonicalMaterialScoringContext => {
++  if (!context) {
++    throw new CanonicalScoringContextRequiredError();
++  }
++  return context;
++};
++
+ export const MATERIAL_SCORE_WEIGHTS = {
+   interestMatch: 40,
+   savedProjectComponent: 45,
+@@ -382,18 +434,17 @@ export const assessSuggestedMaterialRelevance = (input: {
+   behavior?: LearnerBehaviorContext;
+   scorerVersion?: RecommendationScorerVersion;
+ }): MaterialRelevanceAssessment => {
++  // Sealed: this legacy/normalized relevance builder must never process
++  // canonical-taxonomy-v3, even when called directly without going through
++  // scoreSuggestedMaterial's own canonical dispatch first.
++  const scorerVersion = resolveNonCanonicalMaterialScorerVersion(input.scorerVersion);
+   const interestMatch =
+     input.interests.length > 0
+-      ? input.scorerVersion
+-        ? matchLearnerInterestsAgainstMaterialForScorerVersion(
+-            materialInterestInput(input.material),
+-            input.interests,
+-            input.scorerVersion,
+-          )
+-        : matchLearnerInterestsAgainstMaterial(
+-            materialInterestInput(input.material),
+-            input.interests,
+-          )
++      ? matchLearnerInterestsAgainstMaterialForScorerVersion(
++          materialInterestInput(input.material),
++          input.interests,
++          scorerVersion,
++        )
+       : null;
+   const matchedInterest = interestMatch?.labelEn ?? null;
+   const matchedInterestReason = interestMatch
+@@ -467,6 +518,9 @@ export const buildMaterialScoringSharedState = (input: {
+   behavior?: LearnerBehaviorContext;
+   scorerVersion?: RecommendationScorerVersion;
+ }): MaterialScoringSharedState => {
++  // Sealed: this legacy/normalized shared-state builder must never process
++  // canonical-taxonomy-v3.
++  const scorerVersion = resolveNonCanonicalMaterialScorerVersion(input.scorerVersion);
+   const behavior = input.behavior ?? createEmptyBehaviorContext();
+   const behaviorAffinityProfile =
+     input.behaviorAffinityProfile ?? createEmptyAffinityProfile();
+@@ -477,7 +531,7 @@ export const buildMaterialScoringSharedState = (input: {
+     savedLocation: input.savedLocation,
+     behaviorAffinityProfile,
+     behavior,
+-    scorerVersion: input.scorerVersion,
++    scorerVersion,
+   });
+ 
+   return {
+@@ -503,7 +557,28 @@ export const scoreSuggestedMaterial = (input: {
+   includeAudit?: boolean;
+   shared?: MaterialScoringSharedState;
+   scorerVersion?: RecommendationScorerVersion;
++  canonicalContext?: CanonicalMaterialScoringContext;
++  /** Deterministic evaluation instant for the canonical branch only; ignored by legacy/normalized scoring. */
++  now?: Date;
+ }): ScoredMaterialResult => {
++  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
++  if (scorerVersion === CANONICAL_SCORING_MODE) {
++    const canonicalContext = requireCanonicalContext(input.canonicalContext);
++    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
++      throw new CanonicalScoringContextRequiredError(
++        'canonical-taxonomy-v3 scoring requires effectiveScoringMode canonical-taxonomy-v3',
++      );
++    }
++    return scoreCanonicalMaterialCandidate({
++      candidate: input.material,
++      context: canonicalContext,
++      savedLocation: input.savedLocation,
++      behavior: input.behavior ?? createEmptyBehaviorContext(),
++      now: input.now,
++      section: 'suggested',
++    });
++  }
++
+   const reasons: string[] = [];
+   let relevanceScore = 0;
+   let bonusScore = 0;
+@@ -700,7 +775,28 @@ export const scoreMaterialForSavedProjects = (input: {
+   shared?: MaterialScoringSharedState;
+   suggestedBase?: ScoredMaterialResult;
+   scorerVersion?: RecommendationScorerVersion;
++  canonicalContext?: CanonicalMaterialScoringContext;
++  /** Deterministic evaluation instant for the canonical branch only; ignored by legacy/normalized scoring. */
++  now?: Date;
+ }): ScoredMaterialResult => {
++  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
++  if (scorerVersion === CANONICAL_SCORING_MODE) {
++    const canonicalContext = requireCanonicalContext(input.canonicalContext);
++    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
++      throw new CanonicalScoringContextRequiredError(
++        'canonical-taxonomy-v3 scoring requires effectiveScoringMode canonical-taxonomy-v3',
++      );
++    }
++    return scoreCanonicalMaterialCandidate({
++      candidate: input.material,
++      context: canonicalContext,
++      savedLocation: input.savedLocation,
++      behavior: input.behavior ?? createEmptyBehaviorContext(),
++      now: input.now,
++      section: 'savedProjects',
++    });
++  }
++
+   const matchedComponent =
+     input.shared?.matchedComponent ??
+     findMatchingSavedComponent(input.material, input.savedComponents);
+@@ -777,7 +873,28 @@ export const scoreFreeNearbyMaterial = (input: {
+   behavior?: LearnerBehaviorContext;
+   shared?: MaterialScoringSharedState;
+   scorerVersion?: RecommendationScorerVersion;
++  canonicalContext?: CanonicalMaterialScoringContext;
++  /** Deterministic evaluation instant for the canonical branch only; ignored by legacy/normalized scoring. */
++  now?: Date;
+ }): ScoredMaterialResult => {
++  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
++  if (scorerVersion === CANONICAL_SCORING_MODE) {
++    const canonicalContext = requireCanonicalContext(input.canonicalContext);
++    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
++      throw new CanonicalScoringContextRequiredError(
++        'canonical-taxonomy-v3 scoring requires effectiveScoringMode canonical-taxonomy-v3',
++      );
++    }
++    return scoreCanonicalMaterialCandidate({
++      candidate: input.material,
++      context: canonicalContext,
++      savedLocation: input.savedLocation,
++      behavior: input.behavior ?? createEmptyBehaviorContext(),
++      now: input.now,
++      section: 'free',
++    });
++  }
++
+   if (
+     input.material.status !== 'AVAILABLE' ||
+     input.material.availableQuantity <= 0 ||
+@@ -897,17 +1014,16 @@ export const scoreSuggestedProject = (input: {
+   const behavior = input.behavior ?? createEmptyBehaviorContext();
+   const behaviorAffinityProfile =
+     input.behaviorAffinityProfile ?? createEmptyAffinityProfile();
++  const scorerVersion = resolveProjectScorerVersion(input.scorerVersion);
+ 
+   const haystack = haystackForProject(input.project);
+   let interestMatch: LearnerInterestMatch | null = null;
+   if (input.interests.length > 0) {
+-    interestMatch = input.scorerVersion
+-      ? matchLearnerInterestsAgainstHaystackForScorerVersion(
+-          haystack,
+-          input.interests,
+-          input.scorerVersion,
+-        )
+-      : matchLearnerInterestsAgainstHaystack(haystack, input.interests);
++    interestMatch = matchLearnerInterestsAgainstHaystackForScorerVersion(
++      haystack,
++      input.interests,
++      scorerVersion,
++    );
+     if (interestMatch) {
+       score += interestMatch.scoreWeight;
+       reasons.push(buildInterestMatchReason(interestMatch));
+diff --git a/apps/backend/src/modules/learner-home/learner-home.service.ts b/apps/backend/src/modules/learner-home/learner-home.service.ts
+index 35a334d8..b687c381 100644
+--- a/apps/backend/src/modules/learner-home/learner-home.service.ts
++++ b/apps/backend/src/modules/learner-home/learner-home.service.ts
+@@ -1,5 +1,9 @@
+ import { randomUUID } from 'node:crypto';
+ import { env } from '../../config/env.js';
++import {
++  RECOMMENDATION_SCORER_VERSION,
++  type RecommendationScorerVersion,
++} from '../../config/recommendation-scoring-version.js';
+ 
+ import * as learnerHomeRepository from './learner-home.repository.js';
+ import {
+@@ -25,6 +29,18 @@ import {
+   buildBehaviorAffinityProfile,
+   hasLearnerActivity,
+ } from './learner-home.affinity.js';
++import {
++  algorithmVersionForEffectiveMode,
++  algorithmVersionForModeDecision,
++  buildCanonicalProfileMap,
++  buildLearnerHomeModeDecision,
++  CANONICAL_SCORING_MODE,
++  createFallbackCanonicalContext,
++  createSuccessfulCanonicalContext,
++  type CanonicalFallbackCode,
++  type CanonicalMaterialScoringContext,
++  type LearnerHomeModeDecision,
++} from './learner-home.canonical-scoring.js';
+ import {
+   resolveFreeMaterialsSectionTitle,
+   selectSuggestedProjectItems,
+@@ -56,7 +72,6 @@ import { isActiveReservationBehaviorStatus } from '../reservations/reservations.
+ import { getRequestId } from '../../observability/request-context.js';
+ import {
+   RECOMMENDATION_ALGORITHM_NAME,
+-  RECOMMENDATION_ALGORITHM_VERSION,
+   RECOMMENDATION_POLICY_VERSION,
+   attachRecommendationImpressionIds,
+   enqueueRecommendationExposure,
+@@ -67,6 +82,28 @@ import {
+ import { reportMlShadowFallback, runMlShadowComparison, type MlShadowComparisonResult } from '../recommendations/ml-shadow.service.js';
+ import { buildServedSuggestedProjectsItems } from '../recommendations/project-runtime-candidate-mapping.js';
+ 
++const MATERIAL_SECTION_KEYS: ReadonlySet<LearnerHomeSectionKey> = new Set([
++  'suggested_materials',
++  'materials_for_saved_projects',
++  'free_materials_near_you',
++]);
++
++/**
++ * Section stamps use the domain-appropriate effective mode: material
++ * sections stamp effectiveMaterialScoringMode, project (and unscored
++ * project-adjacent) sections stamp effectiveProjectScoringMode. A project
++ * ranking must never be stamped canonical-taxonomy-v3.
++ */
++const algorithmVersionForSection = (
++  context: LearnerHomeContext,
++  sectionKey: LearnerHomeSectionKey,
++): string =>
++  algorithmVersionForEffectiveMode(
++    MATERIAL_SECTION_KEYS.has(sectionKey)
++      ? context.modeDecision.effectiveMaterialScoringMode
++      : context.modeDecision.effectiveProjectScoringMode,
++  );
++
+ const SECTION_LIMITS = {
+   suggested_materials: 4,
+   materials_for_saved_projects: 4,
+@@ -214,6 +251,7 @@ const createLearnerHomeCache = <T>(
+   load: LearnerHomeCacheLoader<T>,
+   now: () => number = Date.now,
+   resolveCacheKey: (userId: string) => string = (userId) => userId,
++  shouldCache: (payload: T) => boolean = () => true,
+ ): LearnerHomeCacheController<T> => {
+   const cache = new Map<string, LearnerHomeCacheEntry<T>>();
+   const inFlight = new Map<string, LearnerHomeInFlightEntry<T>>();
+@@ -253,7 +291,8 @@ const createLearnerHomeCache = <T>(
+ 
+       if (
+         currentFlight?.promise === promise &&
+-        currentGeneration(cacheKey) === generationAtStart
++        currentGeneration(cacheKey) === generationAtStart &&
++        shouldCache(payload)
+       ) {
+         cache.set(cacheKey, {
+           expiresAt: now() + LEARNER_HOME_CACHE_TTL_MS,
+@@ -319,12 +358,18 @@ const createLearnerHomeCache = <T>(
+   };
+ };
+ 
+-/** @internal Test-only factory for deterministic cache-coordination tests. */
+-export const createLearnerHomeCacheForTests = (
+-  load: LearnerHomeCacheLoader<LearnerHomeResponse>,
++/**
++ * @internal Test-only factory for deterministic cache-coordination tests.
++ * The optional shouldCache predicate mirrors the production wiring
++ * (`payload => payload.cacheable`) so RP-03.1 cache-recovery tests can
++ * exercise the real generic controller without a database.
++ */
++export const createLearnerHomeCacheForTests = <T = LearnerHomeResponse>(
++  load: LearnerHomeCacheLoader<T>,
+   now: () => number = Date.now,
+-): LearnerHomeCacheController<LearnerHomeResponse> =>
+-  createLearnerHomeCache(load, now);
++  shouldCache?: (payload: T) => boolean,
++): LearnerHomeCacheController<T> =>
++  createLearnerHomeCache(load, now, undefined, shouldCache);
+ 
+ export const invalidateLearnerHomeCache = (userId: string): void => {
+   learnerHomeCache.invalidate(userId);
+@@ -485,7 +530,12 @@ const mapContinueBuild = (
+   };
+ };
+ 
+-type LearnerHomeContext = {
++/**
++ * @internal Exported only so RP-03.1 tests can exercise preScoreMaterials's
++ * real try/catch fallback branch directly (honest integration proof) instead
++ * of duplicating its retry logic inside a test.
++ */
++export type LearnerHomeContext = {
+   interests: string[];
+   savedLocation: Awaited<
+     ReturnType<typeof learnerHomeRepository.loadDefaultSavedLocation>
+@@ -504,11 +554,142 @@ type LearnerHomeContext = {
+   behavior: LearnerBehaviorContext;
+   behaviorAffinityProfile: LearnerAffinityProfile;
+   hasActivity: boolean;
++  /**
++   * RP-03.1 correction: one material effectiveScoringMode cannot describe
++   * project scoring (projects always force-delegate to legacy-v1 under a
++   * canonical request). This bounded diagnostic tracks both domains plus
++   * fallback state; fallbackCode is preserved here rather than dropped after
++   * context construction, and is never exposed on the public response.
++   */
++  modeDecision: LearnerHomeModeDecision;
++  canonicalContext: CanonicalMaterialScoringContext | undefined;
+ };
+ 
+ type LearnerHomeCachedEnvelope = {
+   response: LearnerHomeResponse;
+   generation: RecommendationGenerationMetadata;
++  cacheable: boolean;
++};
++
++const buildCanonicalScoringContextForMaterials = async (input: {
++  materials: LearnerHomeContext['materials'];
++  behavior: LearnerBehaviorContext;
++}): Promise<CanonicalMaterialScoringContext> => {
++  const candidateIds = input.materials.map((material) => material.id);
++  const likedIds = input.behavior.likedMaterials.map((row) => row.materialId);
++  const reservedIds = input.behavior.reservedMaterials.map((row) => row.materialId);
++  const viewedIds = input.behavior.viewedMaterials.map((row) => row.materialId);
++  const allIds = [...new Set([...candidateIds, ...likedIds, ...reservedIds, ...viewedIds])];
++
++  const rowsByMaterialId =
++    await learnerHomeRepository.loadMaterialConceptsForScoring(allIds);
++
++  // Incomplete coverage of requested IDs is a context invariant.
++  for (const materialId of allIds) {
++    if (!rowsByMaterialId.has(materialId)) {
++      return createFallbackCanonicalContext('CANONICAL_CONTEXT_INVARIANT_FALLBACK');
++    }
++  }
++
++  const allProfiles = buildCanonicalProfileMap(allIds, rowsByMaterialId);
++  const pick = (ids: string[]) => {
++    const map = new Map(
++      [...new Set(ids)].map((id) => {
++        const profile = allProfiles.get(id);
++        if (!profile) {
++          throw new Error('CANONICAL_CONTEXT_INVARIANT');
++        }
++        return [id, profile] as const;
++      }),
++    );
++    return map;
++  };
++
++  try {
++    return createSuccessfulCanonicalContext({
++      candidateMaterialProfiles: pick(candidateIds),
++      likedMaterialProfiles: pick(likedIds),
++      reservedMaterialProfiles: pick(reservedIds),
++      viewedMaterialProfiles: pick(viewedIds),
++    });
++  } catch {
++    return createFallbackCanonicalContext('CANONICAL_CONTEXT_INVARIANT_FALLBACK');
++  }
++};
++
++/**
++ * @internal Exported for RP-03.1 tests: `requestedMaterialScoringMode` and
++ * `needsCanonicalMaterialScoring` are explicit parameters (not read from the
++ * frozen process-level RECOMMENDATION_SCORER_VERSION constant), so tests can
++ * exercise the skip decision and hydration call count deterministically
++ * regardless of the running process's actual configured mode.
++ *
++ * Project-only section requests (suggested_projects, popular_projects,
++ * saved_projects, continue_projects) never need canonical material context:
++ * project scoring always force-delegates to legacy-v1 already. Hydrating
++ * MaterialConcept rows for those requests would be a wasted query with no
++ * effect on the response, so needsCanonicalMaterialScoring=false skips the
++ * whole hydration attempt (no query, no context, no fallback recorded).
++ */
++export const resolveMaterialModeDecisionAndContext = async (input: {
++  requestedMaterialScoringMode: RecommendationScorerVersion;
++  needsCanonicalMaterialScoring: boolean;
++  materials: LearnerHomeContext['materials'];
++  behavior: LearnerBehaviorContext;
++  profiler?: ReturnType<typeof createLearnerHomeProfiler>;
++}): Promise<{
++  modeDecision: LearnerHomeModeDecision;
++  canonicalContext: CanonicalMaterialScoringContext | undefined;
++}> => {
++  let effectiveMaterialScoringMode: RecommendationScorerVersion =
++    input.requestedMaterialScoringMode;
++  let fallbackCode: CanonicalFallbackCode | null = null;
++  let cacheable = true;
++  let canonicalContext: CanonicalMaterialScoringContext | undefined;
++
++  if (
++    input.requestedMaterialScoringMode === CANONICAL_SCORING_MODE &&
++    input.needsCanonicalMaterialScoring
++  ) {
++    try {
++      canonicalContext = await (input.profiler
++        ? input.profiler.time('loadCanonicalMaterialConcepts', () =>
++            buildCanonicalScoringContextForMaterials({
++              materials: input.materials,
++              behavior: input.behavior,
++            }),
++          )
++        : buildCanonicalScoringContextForMaterials({
++            materials: input.materials,
++            behavior: input.behavior,
++          }));
++    } catch {
++      canonicalContext = createFallbackCanonicalContext(
++        'CANONICAL_LOADER_FALLBACK_LEGACY_V1',
++      );
++    }
++
++    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
++      effectiveMaterialScoringMode = 'legacy-v1';
++      fallbackCode =
++        canonicalContext.fallbackCode ?? 'CANONICAL_LOADER_FALLBACK_LEGACY_V1';
++      cacheable = false;
++      canonicalContext = undefined;
++    } else {
++      effectiveMaterialScoringMode = CANONICAL_SCORING_MODE;
++      cacheable = true;
++    }
++  }
++
++  return {
++    modeDecision: buildLearnerHomeModeDecision({
++      requestedMaterialScoringMode: input.requestedMaterialScoringMode,
++      effectiveMaterialScoringMode,
++      fallbackCode,
++      cacheable,
++    }),
++    canonicalContext,
++  };
+ };
+ 
+ const buildCandidateTraces = (
+@@ -593,6 +774,12 @@ type LearnerHomeLoadOptions = {
+   materialPoolCap?: number;
+   profiler?: ReturnType<typeof createLearnerHomeProfiler>;
+   useConsolidatedProjectContext?: boolean;
++  /**
++   * Defaults to true (full Learner Home, and any caller that omits it,
++   * always needs canonical material scoring). Single-section callers pass
++   * this explicitly based on whether sectionKey is a material section.
++   */
++  needsCanonicalMaterialScoring?: boolean;
+ };
+ 
+ const loadLearnerHomeContext = async (
+@@ -689,6 +876,14 @@ const loadLearnerHomeContext = async (
+     projects.filter((project) => project.mapped.isSaved).map((project) => project.id),
+   );
+ 
++  const { modeDecision, canonicalContext } = await resolveMaterialModeDecisionAndContext({
++    requestedMaterialScoringMode: RECOMMENDATION_SCORER_VERSION,
++    needsCanonicalMaterialScoring: options.needsCanonicalMaterialScoring ?? true,
++    materials,
++    behavior,
++    profiler,
++  });
++
+   return {
+     interests,
+     savedLocation,
+@@ -702,18 +897,69 @@ const loadLearnerHomeContext = async (
+     behavior,
+     behaviorAffinityProfile,
+     hasActivity: hasLearnerActivity(behavior),
++    modeDecision,
++    canonicalContext,
+   };
+ };
+ 
+-const preScoreMaterials = (context: LearnerHomeContext): PreScoredMaterialEntry[] =>
+-  preScoreMaterialPool({
+-    materials: context.materials,
+-    interests: context.interests,
+-    savedComponents: context.savedComponents,
+-    savedLocation: context.savedLocation,
+-    behavior: context.behavior,
+-    behaviorAffinityProfile: context.behaviorAffinityProfile,
+-  });
++/**
++ * @internal Exported only for RP-03.1's honest fallback-integration test,
++ * which calls this exact function (not a re-implementation of it) to prove
++ * that a canonical failure retries with the explicit 'legacy-v1' literal.
++ */
++export const preScoreMaterials = (context: LearnerHomeContext): PreScoredMaterialEntry[] => {
++  try {
++    return preScoreMaterialPool({
++      materials: context.materials,
++      interests: context.interests,
++      savedComponents: context.savedComponents,
++      savedLocation: context.savedLocation,
++      behavior: context.behavior,
++      behaviorAffinityProfile: context.behaviorAffinityProfile,
++      // Explicit: the feature pool must never re-derive scorer version from
++      // the process-global constant, or a canonical whole-request fallback
++      // (effectiveMaterialScoringMode already downgraded to legacy-v1) would
++      // silently regain normalized-alias interest semantics.
++      scorerVersion: context.modeDecision.effectiveMaterialScoringMode,
++      canonicalContext:
++        context.modeDecision.effectiveMaterialScoringMode === CANONICAL_SCORING_MODE
++          ? context.canonicalContext
++          : undefined,
++    });
++  } catch (error) {
++    // Only one canonical retry is ever attempted, and only when the request
++    // was still effectively canonical at the moment of failure. If an
++    // earlier loader-level fallback had already downgraded
++    // effectiveMaterialScoringMode to legacy-v1, this catch is a genuine
++    // legacy/normalized failure, not a canonical one, and must not retry
++    // again.
++    const canRetryAsCanonicalFallback =
++      context.modeDecision.requestedMaterialScoringMode === CANONICAL_SCORING_MODE &&
++      context.modeDecision.effectiveMaterialScoringMode === CANONICAL_SCORING_MODE;
++
++    if (canRetryAsCanonicalFallback) {
++      context.modeDecision.effectiveMaterialScoringMode = 'legacy-v1';
++      context.modeDecision.fallbackCode = 'CANONICAL_SCORER_INVARIANT_FALLBACK';
++      context.modeDecision.cacheable = false;
++      context.canonicalContext = undefined;
++      return preScoreMaterialPool({
++        materials: context.materials,
++        interests: context.interests,
++        savedComponents: context.savedComponents,
++        savedLocation: context.savedLocation,
++        behavior: context.behavior,
++        behaviorAffinityProfile: context.behaviorAffinityProfile,
++        scorerVersion: 'legacy-v1',
++      });
++    }
++
++    // Legacy-v1/normalized-interests-v2 failures — and a second failure
++    // after the mode is already effectively legacy-v1 — propagate the
++    // original error unchanged rather than masking it behind a generic
++    // wrapper message.
++    throw error;
++  }
++};
+ 
+ const rankPreScoredMaterialEntries = (
+   entries: PreScoredMaterialEntry[],
+@@ -1264,7 +1510,13 @@ export const getLearnerHomeSection = async (
+       ? BROWSE_MATERIAL_POOL_CAP
+       : HOME_MATERIAL_POOL_CAP;
+   const context = await profiler.time('loadLearnerHomeContext', () =>
+-    loadLearnerHomeContext(userId, { profiler, materialPoolCap }),
++    loadLearnerHomeContext(userId, {
++      profiler,
++      materialPoolCap,
++      // Project-only sections never need canonical material context: project
++      // scoring always force-delegates to legacy-v1 regardless.
++      needsCanonicalMaterialScoring: MATERIAL_SECTION_KEYS.has(sectionKey),
++    }),
+   );
+   let preScoredMaterials: PreScoredMaterialEntry[] | undefined;
+ 
+@@ -1439,7 +1691,7 @@ export const getLearnerHomeSection = async (
+     learnerId: userId,
+     surface: 'LEARNER_HOME_SECTION',
+     algorithmName: RECOMMENDATION_ALGORITHM_NAME,
+-    algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
++    algorithmVersion: algorithmVersionForSection(context, sectionKey),
+     policyVersion: RECOMMENDATION_POLICY_VERSION,
+     generatedAt: new Date(),
+     candidateCount: context.materials.length + context.projects.length,
+@@ -1479,6 +1731,8 @@ async function loadLearnerHomeUncached(
+       profiler,
+       materialPoolCap: HOME_MATERIAL_POOL_CAP,
+       useConsolidatedProjectContext: true,
++      // Full Learner Home always includes material sections.
++      needsCanonicalMaterialScoring: true,
+     }),
+   );
+ 
+@@ -1658,7 +1912,7 @@ async function loadLearnerHomeUncached(
+       learnerId: userId,
+       surface: 'LEARNER_HOME',
+       algorithmName: RECOMMENDATION_ALGORITHM_NAME,
+-      algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
++      algorithmVersion: algorithmVersionForModeDecision(context.modeDecision),
+       policyVersion: RECOMMENDATION_POLICY_VERSION,
+       generatedAt: new Date(),
+       candidateCount: context.materials.length + context.projects.length,
+@@ -1670,11 +1924,13 @@ async function loadLearnerHomeUncached(
+       generationCacheState: 'MISS',
+       candidateTraces: buildCandidateTraces(context, response),
+     },
++    cacheable: context.modeDecision.cacheable,
+   };
+ }
+ 
+ const learnerHomeCacheKey = (userId: string): string => [
+   userId,
++  RECOMMENDATION_SCORER_VERSION,
+   env.recommendationMlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC',
+   env.recommendationMlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
+   env.recommendationMlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
+@@ -1686,6 +1942,7 @@ const learnerHomeCache = createLearnerHomeCache(
+   loadLearnerHomeUncached,
+   Date.now,
+   learnerHomeCacheKey,
++  (payload) => payload.cacheable,
+ );
+ 
+ export const getLearnerHome = async (
+diff --git a/docs/recommendation/current-state.md b/docs/recommendation/current-state.md
+index f13e1dab..1d93065a 100644
+--- a/docs/recommendation/current-state.md
++++ b/docs/recommendation/current-state.md
+@@ -12,19 +12,30 @@ ImpactLoop's adopted and default recommender remains the deterministic hybrid us
+ | Layer | Current status | Included capabilities |
+ |---|---|---|
+ | Active production/default behavior | Adopted champion and fail-closed default | Deterministic hybrid candidate retrieval and ranking, hard eligibility and business rules, caching, `legacy-v1`, and deterministic fallback |
+-| Implemented but inactive foundation | Retained behind opt-in activation or not read by active ranking | Typed taxonomy concepts, aliases, and mappings; canonical learner-interest resolution with explicit unmapped diagnostics; pure material family/form assignment (active on free/paid supplier material create and title-changing supplier material update; read-only RP-02.5 coverage/staleness audit available; recommendation paths inactive); `normalized-interests-v2`; durable recommendation observability/outbox infrastructure; opt-in outbox materialization worker |
++| Implemented but inactive foundation | Retained behind opt-in activation or not read by active ranking | Typed taxonomy concepts, aliases, and mappings; canonical learner-interest resolution with explicit unmapped diagnostics; pure material family/form assignment (active on free/paid supplier material create and title-changing supplier material update; read-only RP-02.5 coverage/staleness audit available); **`canonical-taxonomy-v3` opt-in material scoring (RP-03.1; default unchanged)**; `normalized-interests-v2`; durable recommendation observability/outbox infrastructure; opt-in outbox materialization worker |
+ | Experimental ML/runtime capabilities | Implemented for offline, shadow, controlled-demo, and guarded runtime evaluation; not production-adopted | LightFM training and export, portable artifacts, TypeScript scoring, shadow comparison with **canonical declared-interest user features (RP-01.4)** and **fail-closed feature readiness diagnostics (RP-01.5)**, recent intent, material and project rank fusion, privacy-safe diagnostics, controlled-demo preflight, and optional serving hooks that remain **unconditionally suppressed** while canonical/runtime artifact parity is incomplete |
+ | Evidence-dependent/deferred capabilities | Blocked pending explicit gates and a separate promotion decision | User-visible production ML serving, sufficient real attributed evidence, taxonomy lifecycle and crosswalk completion, reproducible artifact deployment, registry and monitoring readiness, canary rollout, and project ML promotion |
+ 
+ Recommendation observability envelopes can be enqueued through the durable outbox contract, but the materialization worker is opt-in and disabled by default. The infrastructure's existence does not establish sufficient real attributed evidence for model promotion.
+ 
+-The typed taxonomy foundation is implemented but inactive in the adopted ranking path. Experimental runtime code may hydrate taxonomy concepts when ML shadow is enabled; that use does not activate taxonomy in the deterministic champion.
++The typed taxonomy foundation is implemented but inactive in the adopted ranking path by default. Experimental runtime code may hydrate taxonomy concepts when ML shadow is enabled. **Opt-in `canonical-taxonomy-v3`** (RP-03.1) consumes persisted material family/form assignments for deterministic material scoring only when explicitly selected; it does not change default ranking or retrieval.
+ 
+ The canonical learner-interest resolver reads the persisted typed-taxonomy registry and resolves stored profile values to active `INTEREST` canonical keys with deterministic provenance, status, type, ambiguity, and custom-interest diagnostics. **RP-01.4 activates that resolver for ML shadow user features only:** shadow builds candidate-independent exact canonical keys (for example `interest:arduino`) at weight 1.0 from resolver output. Serving remains unreachable: even when material/project serving flags are enabled, `rankedCandidateKeys` are never attached and diagnostics report `servingSuppressedReason = CANONICAL_USER_FEATURES_SHADOW_ONLY`. Deterministic Learner Home ordering remains authoritative. Current portable runtime-v2 artifacts still use legacy category-hash user vocabularies, so exact artifact overlap is typically `ZERO_OVERLAP`.
+ 
+ **RP-01.5 activates a fail-closed feature coverage/readiness contract in shadow diagnostics only.** Readiness derives from the parsed v3 feature-token contract (critical vs optional groups, closed enum/boolean universes, unknown/unsupported/invalid classifications, exact foundation taxonomy membership, and explicit artifact contract id/version/fingerprint) without activating portable serving or changing `aggregationBlocked` / `runtimeActivation`. Compatibility requires **explicit** artifact `feature_contract_id`, `feature_contract_version`, and taxonomy fingerprint matching the compiled contract—never inferred from historical `feature_schema_version` lists or vocabulary overlap. When a future contract revision selects an aggregation mode, eventual artifact readiness also requires an explicit `feature_aggregation_mode` matching that selected mode; while `selectedMode` remains null, no artifact aggregation declaration can unlock activation. Dynamic taxonomy tokens are v3-valid only when they are exact `TAXONOMY_CONCEPT_SEEDS` members for the namespace concept type; approved DB concepts outside that foundation remain runtime/catalog concepts until a future feature-contract revision. `coverageStatus` may be `READY` for complete synthetic coverage independently of activation; overall `status` remains `NOT_READY` while the current v3 contract is runtime-inactive, aggregation-blocked, and has no selected aggregation mode (RP-05.6 owns that experiment). Current v1/v2 artifacts declare no metadata and remain overall `NOT_READY`. Project recent-intent/fusion may still run for shadow evidence when mapping integrity is healthy, even while `projectReadinessStatus` / `featureReadiness.status` stay `NOT_READY`. True missing totals are separate from the scorer’s bounded `missingFeatures` sample. Deterministic serving remains authoritative; no serving or promotion gate is passed. RP-06.1 later finalizes scorer-level diagnostics; RP-06.2 later adds startup validation; RP-02.5 material-audit failure remains an independent catalog signal; no Gate B3 pass is implied merely because this contract exists in shadow.
+ 
+-Free and paid supplier material creation (`POST /api/supplier/materials`) now call the pure material-concept assignment engine after final category/materialType/title resolution, load category-owned `MATERIAL_FAMILY` authority and a bounded full taxonomy registry for diagnostics, apply evidence-scoped publish preflight (not a global taxonomy-health gate), and persist `MaterialConcept` family (and optional form) rows in the same create/idempotency transaction. Paid branches re-authorize price-rule / approved-request decisions inside that transaction and consume source requests with conditional unpublished updates. Supplier material update (`PATCH /api/supplier/materials/:id`) refreshes canonical `MaterialConcept` rows only when the final trimmed title differs from the stored title, using the immutable stored `categoryId` and `materialType` inside the same guarded update transaction; non-title updates preserve existing concept rows exactly (including historical gaps). The read-only RP-02.5 material taxonomy audit command (`npx tsx scripts/material-taxonomy-audit.ts`) reports assignment coverage, staleness, registry health, and rule coverage without repairing data. Recommendation consumption and ML shadow still do not call the assignment engine; historical repair remains a separate explicit decision. Item-side material assignment readiness remains incomplete (RP-02.5 catalog findings); that does not authorize item-feature integration in RP-01.4.
++Free and paid supplier material creation (`POST /api/supplier/materials`) now call the pure material-concept assignment engine after final category/materialType/title resolution, load category-owned `MATERIAL_FAMILY` authority and a bounded full taxonomy registry for diagnostics, apply evidence-scoped publish preflight (not a global taxonomy-health gate), and persist `MaterialConcept` family (and optional form) rows in the same create/idempotency transaction. Paid branches re-authorize price-rule / approved-request decisions inside that transaction and consume source requests with conditional unpublished updates. Supplier material update (`PATCH /api/supplier/materials/:id`) refreshes canonical `MaterialConcept` rows only when the final trimmed title differs from the stored title, using the immutable stored `categoryId` and `materialType` inside the same guarded update transaction; non-title updates preserve existing concept rows exactly (including historical gaps). The read-only RP-02.5 material taxonomy audit command (`npx tsx scripts/material-taxonomy-audit.ts`) reports assignment coverage, staleness, registry health, and rule coverage without repairing data. Historical repair remains a separate explicit decision. Item-side material assignment readiness remains incomplete (RP-02.5 catalog findings); that does not authorize item-feature integration in RP-01.4.
++
++**RP-03.1 adds opt-in `canonical-taxonomy-v3` deterministic material scoring** behind `RECOMMENDATION_SCORER_VERSION`. Default remains `legacy-v1`; `normalized-interests-v2` is unchanged. Candidate retrieval, pool caps, and eligibility are unchanged. When selected, Learner Home hydrates `MaterialConcept` family/form profiles for the complete pre-score candidate pool (chunked queries; no 200-row truncation of candidates) plus liked/reserved/viewed behavior IDs under their existing caps, and captures one evaluation timestamp per pool so recency cannot diverge between candidates or pool orderings. There is **no** production learner-interest registry load for this mode: interest→material relations do not exist yet, so interest contribution is always zero with internal `CANONICAL_INTEREST_RELATION_UNAVAILABLE` (not a pretended match attempt). Saved-component lexical matching contributes **zero** under canonical (`CANONICAL_COMPONENT_RELATION_UNAVAILABLE`); RP-02.8–RP-02.10 remain prerequisites. Liked similarity uses exact canonical form (28) / family (14) overlap excluding self; multi-family profiles are fail-closed (`INVALID_FAMILY_CARDINALITY`); every canonical score's component breakdown is contribution-exact (an explicit `unavailablePenalty` field lets -1000 be derived from the breakdown rather than reporting zeros beside a nonzero score). Five legacy/normalized-only helpers (`buildMaterialRecommendationFeature`, `getOrBuildMaterialFeaturePool`, `scoreMaterialPoolWithFeatures`, `assessSuggestedMaterialRelevance`, `buildMaterialScoringSharedState`) are sealed against canonical-taxonomy-v3 via one shared resolver and throw `CanonicalScoringContextRequiredError` if ever invoked with a resolved canonical mode; only `preScoreMaterialPool` and the three direct canonical-aware scorers accept and require an explicit `CanonicalMaterialScoringContext`.
++
++Project scoring under this mode force-delegates to `legacy-v1` (RP-02.6/RP-02.7 incomplete). Algorithm identity is domain-truthful and generation-scoped, tracked internally as a `LearnerHomeModeDecision` (requested/effective material mode, effective project mode, fallback code, cacheable) that is never exposed on the public response. **Project-only section requests (`suggested_projects`, `popular_projects`, `saved_projects`, `continue_projects`) never hydrate `MaterialConcept` rows** under a canonical request, because project scoring already force-delegates to `legacy-v1` and would derive no benefit from that hydration; only full Learner Home and the material sections (`suggested_materials`, `materials_for_saved_projects`, `free_materials_near_you`) perform canonical material hydration. The canonical weak-only fallback gate (location/free/popularity/recency) is based only on canonical-supported material activity (liked/reserved/viewed materials); saved/liked/followed-project and in-progress-build activity does not suppress it, since that project→material semantics is disabled under canonical-taxonomy-v3. Every liked/reserved/viewed behavior signal ID must exist in its respective profile map; a missing map entry is a context invariant (whole-request legacy fallback), while a present entry with `MISSING_CANONICAL_ASSIGNMENT` remains canonical and contributes zero overlap. The exact stamps are:
++
++- material canonical section (`suggested_materials`, `materials_for_saved_projects`, `free_materials_near_you`) on success: `learner-home-v1:canonical-taxonomy-v3`;
++- project section (`suggested_projects`, `continue_projects`, `saved_projects`, `popular_projects`) under a canonical request: always `learner-home-v1:legacy-v1`, never canonical;
++- successful full-home generation when material is canonical and project is legacy: the explicit mixed stamp `learner-home-v1:material=canonical-taxonomy-v3;project=legacy-v1`;
++- whole-request material fallback (canonical loader/context/scorer failure): `learner-home-v1:legacy-v1` for every section and the full-home stamp, with `cacheable=false` and an internal fallback code (`CANONICAL_LOADER_FALLBACK_LEGACY_V1` / `CANONICAL_CONTEXT_INVARIANT_FALLBACK` / `CANONICAL_SCORER_INVARIANT_FALLBACK`) that is never dropped and never exposed publicly.
++
++A fallback result is never written to the Learner Home cache under the canonical mode key; only a successful canonical or legacy/normalized generation is cacheable. Catalog-side concept writes do not invalidate Learner Home caches; scores may be TTL-stale for up to 45s. A bounded current-database dry run (frozen dev persona, identical pre-score candidate pool, legacy-v1 vs canonical-taxonomy-v3) confirmed candidate-ID parity across modes with zero whole-request fallbacks and only factual top-order differences; no promotion decision was made. No Gate A4 pass; RP-03.3 must evaluate ranking deltas before any RP-03.4 default activation. No material repair or exclusion occurred in RP-03.1.
+ 
+ ## Configuration Defaults
+ 
+@@ -32,7 +43,7 @@ These are code-defined defaults, not machine-local environment overrides:
+ 
+ | Configuration | Default | Meaning |
+ |---|---:|---|
+-| `RECOMMENDATION_SCORER_VERSION` | `legacy-v1` | Selects the adopted deterministic content scorer; `normalized-interests-v2` remains opt-in |
++| `RECOMMENDATION_SCORER_VERSION` | `legacy-v1` | Selects the adopted deterministic content scorer; `normalized-interests-v2` remains opt-in; **`canonical-taxonomy-v3` is opt-in material scoring only (RP-03.1)** and is not the default |
+ | `RECOMMENDATION_ML_SHADOW_ENABLED` | `false` | Skips ML scoring and preserves the deterministic response |
+ | `RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED` | `false` | Does not permit material ML ordering to be returned |
+ | `RECOMMENDATION_ML_PROJECT_SERVING_ENABLED` | `false` | Does not permit project ML ordering to be returned |

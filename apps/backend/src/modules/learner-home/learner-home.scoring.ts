@@ -7,6 +7,13 @@ import type {
   LearnerAffinityProfile,
 } from './learner-home.types.js';
 import type { RecommendationScorerVersion } from '../../config/recommendation-scoring-version.js';
+import { RECOMMENDATION_SCORER_VERSION } from '../../config/recommendation-scoring-version.js';
+import {
+  CANONICAL_SCORING_MODE,
+  CanonicalScoringContextRequiredError,
+  scoreCanonicalMaterialCandidate,
+  type CanonicalMaterialScoringContext,
+} from './learner-home.canonical-scoring.js';
 import {
   buildInterestMatchReason,
   getInterestSearchTermsForKey,
@@ -39,6 +46,51 @@ import {
   type MaterialScoringTier,
   type SuggestedMaterialTier,
 } from './learner-home.ranking.js';
+
+export const resolveMaterialScorerVersion = (
+  scorerVersion?: RecommendationScorerVersion,
+): RecommendationScorerVersion => scorerVersion ?? RECOMMENDATION_SCORER_VERSION;
+
+/**
+ * RP-03.1 correction: legacy/normalized feature and relevance builders
+ * (buildMaterialRecommendationFeature, getOrBuildMaterialFeaturePool,
+ * scoreMaterialPoolWithFeatures, assessSuggestedMaterialRelevance,
+ * buildMaterialScoringSharedState) must never process canonical-taxonomy-v3.
+ * This is the single bounded resolver/assertion used by every one of them: it
+ * resolves the explicit or process mode, then throws rather than silently
+ * returning a canonical value. preScoreMaterialPool and the three direct
+ * final material scorers are exempt — they retain their own canonical
+ * dispatch with a required CanonicalMaterialScoringContext.
+ */
+export const resolveNonCanonicalMaterialScorerVersion = (
+  scorerVersion?: RecommendationScorerVersion,
+): Exclude<RecommendationScorerVersion, typeof CANONICAL_SCORING_MODE> => {
+  const resolved = resolveMaterialScorerVersion(scorerVersion);
+  if (resolved === CANONICAL_SCORING_MODE) {
+    throw new CanonicalScoringContextRequiredError(
+      'this legacy/normalized helper must never process canonical-taxonomy-v3; ' +
+        'canonical scoring requires preScoreMaterialPool or a direct canonical-aware scorer with an explicit CanonicalMaterialScoringContext',
+    );
+  }
+  return resolved;
+};
+
+/** Projects never use canonical-taxonomy-v3; force legacy-v1 when that mode is selected. */
+export const resolveProjectScorerVersion = (
+  scorerVersion?: RecommendationScorerVersion,
+): RecommendationScorerVersion => {
+  const resolved = resolveMaterialScorerVersion(scorerVersion);
+  return resolved === CANONICAL_SCORING_MODE ? 'legacy-v1' : resolved;
+};
+
+const requireCanonicalContext = (
+  context: CanonicalMaterialScoringContext | undefined,
+): CanonicalMaterialScoringContext => {
+  if (!context) {
+    throw new CanonicalScoringContextRequiredError();
+  }
+  return context;
+};
 
 export const MATERIAL_SCORE_WEIGHTS = {
   interestMatch: 40,
@@ -382,18 +434,17 @@ export const assessSuggestedMaterialRelevance = (input: {
   behavior?: LearnerBehaviorContext;
   scorerVersion?: RecommendationScorerVersion;
 }): MaterialRelevanceAssessment => {
+  // Sealed: this legacy/normalized relevance builder must never process
+  // canonical-taxonomy-v3, even when called directly without going through
+  // scoreSuggestedMaterial's own canonical dispatch first.
+  const scorerVersion = resolveNonCanonicalMaterialScorerVersion(input.scorerVersion);
   const interestMatch =
     input.interests.length > 0
-      ? input.scorerVersion
-        ? matchLearnerInterestsAgainstMaterialForScorerVersion(
-            materialInterestInput(input.material),
-            input.interests,
-            input.scorerVersion,
-          )
-        : matchLearnerInterestsAgainstMaterial(
-            materialInterestInput(input.material),
-            input.interests,
-          )
+      ? matchLearnerInterestsAgainstMaterialForScorerVersion(
+          materialInterestInput(input.material),
+          input.interests,
+          scorerVersion,
+        )
       : null;
   const matchedInterest = interestMatch?.labelEn ?? null;
   const matchedInterestReason = interestMatch
@@ -467,6 +518,9 @@ export const buildMaterialScoringSharedState = (input: {
   behavior?: LearnerBehaviorContext;
   scorerVersion?: RecommendationScorerVersion;
 }): MaterialScoringSharedState => {
+  // Sealed: this legacy/normalized shared-state builder must never process
+  // canonical-taxonomy-v3.
+  const scorerVersion = resolveNonCanonicalMaterialScorerVersion(input.scorerVersion);
   const behavior = input.behavior ?? createEmptyBehaviorContext();
   const behaviorAffinityProfile =
     input.behaviorAffinityProfile ?? createEmptyAffinityProfile();
@@ -477,7 +531,7 @@ export const buildMaterialScoringSharedState = (input: {
     savedLocation: input.savedLocation,
     behaviorAffinityProfile,
     behavior,
-    scorerVersion: input.scorerVersion,
+    scorerVersion,
   });
 
   return {
@@ -503,7 +557,28 @@ export const scoreSuggestedMaterial = (input: {
   includeAudit?: boolean;
   shared?: MaterialScoringSharedState;
   scorerVersion?: RecommendationScorerVersion;
+  canonicalContext?: CanonicalMaterialScoringContext;
+  /** Deterministic evaluation instant for the canonical branch only; ignored by legacy/normalized scoring. */
+  now?: Date;
 }): ScoredMaterialResult => {
+  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
+  if (scorerVersion === CANONICAL_SCORING_MODE) {
+    const canonicalContext = requireCanonicalContext(input.canonicalContext);
+    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
+      throw new CanonicalScoringContextRequiredError(
+        'canonical-taxonomy-v3 scoring requires effectiveScoringMode canonical-taxonomy-v3',
+      );
+    }
+    return scoreCanonicalMaterialCandidate({
+      candidate: input.material,
+      context: canonicalContext,
+      savedLocation: input.savedLocation,
+      behavior: input.behavior ?? createEmptyBehaviorContext(),
+      now: input.now,
+      section: 'suggested',
+    });
+  }
+
   const reasons: string[] = [];
   let relevanceScore = 0;
   let bonusScore = 0;
@@ -700,7 +775,28 @@ export const scoreMaterialForSavedProjects = (input: {
   shared?: MaterialScoringSharedState;
   suggestedBase?: ScoredMaterialResult;
   scorerVersion?: RecommendationScorerVersion;
+  canonicalContext?: CanonicalMaterialScoringContext;
+  /** Deterministic evaluation instant for the canonical branch only; ignored by legacy/normalized scoring. */
+  now?: Date;
 }): ScoredMaterialResult => {
+  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
+  if (scorerVersion === CANONICAL_SCORING_MODE) {
+    const canonicalContext = requireCanonicalContext(input.canonicalContext);
+    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
+      throw new CanonicalScoringContextRequiredError(
+        'canonical-taxonomy-v3 scoring requires effectiveScoringMode canonical-taxonomy-v3',
+      );
+    }
+    return scoreCanonicalMaterialCandidate({
+      candidate: input.material,
+      context: canonicalContext,
+      savedLocation: input.savedLocation,
+      behavior: input.behavior ?? createEmptyBehaviorContext(),
+      now: input.now,
+      section: 'savedProjects',
+    });
+  }
+
   const matchedComponent =
     input.shared?.matchedComponent ??
     findMatchingSavedComponent(input.material, input.savedComponents);
@@ -777,7 +873,28 @@ export const scoreFreeNearbyMaterial = (input: {
   behavior?: LearnerBehaviorContext;
   shared?: MaterialScoringSharedState;
   scorerVersion?: RecommendationScorerVersion;
+  canonicalContext?: CanonicalMaterialScoringContext;
+  /** Deterministic evaluation instant for the canonical branch only; ignored by legacy/normalized scoring. */
+  now?: Date;
 }): ScoredMaterialResult => {
+  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
+  if (scorerVersion === CANONICAL_SCORING_MODE) {
+    const canonicalContext = requireCanonicalContext(input.canonicalContext);
+    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
+      throw new CanonicalScoringContextRequiredError(
+        'canonical-taxonomy-v3 scoring requires effectiveScoringMode canonical-taxonomy-v3',
+      );
+    }
+    return scoreCanonicalMaterialCandidate({
+      candidate: input.material,
+      context: canonicalContext,
+      savedLocation: input.savedLocation,
+      behavior: input.behavior ?? createEmptyBehaviorContext(),
+      now: input.now,
+      section: 'free',
+    });
+  }
+
   if (
     input.material.status !== 'AVAILABLE' ||
     input.material.availableQuantity <= 0 ||
@@ -897,17 +1014,16 @@ export const scoreSuggestedProject = (input: {
   const behavior = input.behavior ?? createEmptyBehaviorContext();
   const behaviorAffinityProfile =
     input.behaviorAffinityProfile ?? createEmptyAffinityProfile();
+  const scorerVersion = resolveProjectScorerVersion(input.scorerVersion);
 
   const haystack = haystackForProject(input.project);
   let interestMatch: LearnerInterestMatch | null = null;
   if (input.interests.length > 0) {
-    interestMatch = input.scorerVersion
-      ? matchLearnerInterestsAgainstHaystackForScorerVersion(
-          haystack,
-          input.interests,
-          input.scorerVersion,
-        )
-      : matchLearnerInterestsAgainstHaystack(haystack, input.interests);
+    interestMatch = matchLearnerInterestsAgainstHaystackForScorerVersion(
+      haystack,
+      input.interests,
+      scorerVersion,
+    );
     if (interestMatch) {
       score += interestMatch.scoreWeight;
       reasons.push(buildInterestMatchReason(interestMatch));

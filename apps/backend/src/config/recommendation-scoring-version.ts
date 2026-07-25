@@ -1,6 +1,7 @@
 export const RECOMMENDATION_SCORER_VERSIONS = [
   "legacy-v1",
   "normalized-interests-v2",
+  "canonical-taxonomy-v3",
 ] as const;
 
 export type RecommendationScorerVersion =

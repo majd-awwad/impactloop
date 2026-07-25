@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { env } from '../../config/env.js';
+import {
+  RECOMMENDATION_SCORER_VERSION,
+  type RecommendationScorerVersion,
+} from '../../config/recommendation-scoring-version.js';
 
 import * as learnerHomeRepository from './learner-home.repository.js';
 import {
@@ -25,6 +29,18 @@ import {
   buildBehaviorAffinityProfile,
   hasLearnerActivity,
 } from './learner-home.affinity.js';
+import {
+  algorithmVersionForEffectiveMode,
+  algorithmVersionForModeDecision,
+  buildCanonicalProfileMap,
+  buildLearnerHomeModeDecision,
+  CANONICAL_SCORING_MODE,
+  createFallbackCanonicalContext,
+  createSuccessfulCanonicalContext,
+  type CanonicalFallbackCode,
+  type CanonicalMaterialScoringContext,
+  type LearnerHomeModeDecision,
+} from './learner-home.canonical-scoring.js';
 import {
   resolveFreeMaterialsSectionTitle,
   selectSuggestedProjectItems,
@@ -56,7 +72,6 @@ import { isActiveReservationBehaviorStatus } from '../reservations/reservations.
 import { getRequestId } from '../../observability/request-context.js';
 import {
   RECOMMENDATION_ALGORITHM_NAME,
-  RECOMMENDATION_ALGORITHM_VERSION,
   RECOMMENDATION_POLICY_VERSION,
   attachRecommendationImpressionIds,
   enqueueRecommendationExposure,
@@ -66,6 +81,28 @@ import {
 } from '../recommendation-events/recommendation-events.service.js';
 import { reportMlShadowFallback, runMlShadowComparison, type MlShadowComparisonResult } from '../recommendations/ml-shadow.service.js';
 import { buildServedSuggestedProjectsItems } from '../recommendations/project-runtime-candidate-mapping.js';
+
+const MATERIAL_SECTION_KEYS: ReadonlySet<LearnerHomeSectionKey> = new Set([
+  'suggested_materials',
+  'materials_for_saved_projects',
+  'free_materials_near_you',
+]);
+
+/**
+ * Section stamps use the domain-appropriate effective mode: material
+ * sections stamp effectiveMaterialScoringMode, project (and unscored
+ * project-adjacent) sections stamp effectiveProjectScoringMode. A project
+ * ranking must never be stamped canonical-taxonomy-v3.
+ */
+const algorithmVersionForSection = (
+  context: LearnerHomeContext,
+  sectionKey: LearnerHomeSectionKey,
+): string =>
+  algorithmVersionForEffectiveMode(
+    MATERIAL_SECTION_KEYS.has(sectionKey)
+      ? context.modeDecision.effectiveMaterialScoringMode
+      : context.modeDecision.effectiveProjectScoringMode,
+  );
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -214,6 +251,7 @@ const createLearnerHomeCache = <T>(
   load: LearnerHomeCacheLoader<T>,
   now: () => number = Date.now,
   resolveCacheKey: (userId: string) => string = (userId) => userId,
+  shouldCache: (payload: T) => boolean = () => true,
 ): LearnerHomeCacheController<T> => {
   const cache = new Map<string, LearnerHomeCacheEntry<T>>();
   const inFlight = new Map<string, LearnerHomeInFlightEntry<T>>();
@@ -253,7 +291,8 @@ const createLearnerHomeCache = <T>(
 
       if (
         currentFlight?.promise === promise &&
-        currentGeneration(cacheKey) === generationAtStart
+        currentGeneration(cacheKey) === generationAtStart &&
+        shouldCache(payload)
       ) {
         cache.set(cacheKey, {
           expiresAt: now() + LEARNER_HOME_CACHE_TTL_MS,
@@ -319,12 +358,18 @@ const createLearnerHomeCache = <T>(
   };
 };
 
-/** @internal Test-only factory for deterministic cache-coordination tests. */
-export const createLearnerHomeCacheForTests = (
-  load: LearnerHomeCacheLoader<LearnerHomeResponse>,
+/**
+ * @internal Test-only factory for deterministic cache-coordination tests.
+ * The optional shouldCache predicate mirrors the production wiring
+ * (`payload => payload.cacheable`) so RP-03.1 cache-recovery tests can
+ * exercise the real generic controller without a database.
+ */
+export const createLearnerHomeCacheForTests = <T = LearnerHomeResponse>(
+  load: LearnerHomeCacheLoader<T>,
   now: () => number = Date.now,
-): LearnerHomeCacheController<LearnerHomeResponse> =>
-  createLearnerHomeCache(load, now);
+  shouldCache?: (payload: T) => boolean,
+): LearnerHomeCacheController<T> =>
+  createLearnerHomeCache(load, now, undefined, shouldCache);
 
 export const invalidateLearnerHomeCache = (userId: string): void => {
   learnerHomeCache.invalidate(userId);
@@ -485,7 +530,12 @@ const mapContinueBuild = (
   };
 };
 
-type LearnerHomeContext = {
+/**
+ * @internal Exported only so RP-03.1 tests can exercise preScoreMaterials's
+ * real try/catch fallback branch directly (honest integration proof) instead
+ * of duplicating its retry logic inside a test.
+ */
+export type LearnerHomeContext = {
   interests: string[];
   savedLocation: Awaited<
     ReturnType<typeof learnerHomeRepository.loadDefaultSavedLocation>
@@ -504,11 +554,142 @@ type LearnerHomeContext = {
   behavior: LearnerBehaviorContext;
   behaviorAffinityProfile: LearnerAffinityProfile;
   hasActivity: boolean;
+  /**
+   * RP-03.1 correction: one material effectiveScoringMode cannot describe
+   * project scoring (projects always force-delegate to legacy-v1 under a
+   * canonical request). This bounded diagnostic tracks both domains plus
+   * fallback state; fallbackCode is preserved here rather than dropped after
+   * context construction, and is never exposed on the public response.
+   */
+  modeDecision: LearnerHomeModeDecision;
+  canonicalContext: CanonicalMaterialScoringContext | undefined;
 };
 
 type LearnerHomeCachedEnvelope = {
   response: LearnerHomeResponse;
   generation: RecommendationGenerationMetadata;
+  cacheable: boolean;
+};
+
+const buildCanonicalScoringContextForMaterials = async (input: {
+  materials: LearnerHomeContext['materials'];
+  behavior: LearnerBehaviorContext;
+}): Promise<CanonicalMaterialScoringContext> => {
+  const candidateIds = input.materials.map((material) => material.id);
+  const likedIds = input.behavior.likedMaterials.map((row) => row.materialId);
+  const reservedIds = input.behavior.reservedMaterials.map((row) => row.materialId);
+  const viewedIds = input.behavior.viewedMaterials.map((row) => row.materialId);
+  const allIds = [...new Set([...candidateIds, ...likedIds, ...reservedIds, ...viewedIds])];
+
+  const rowsByMaterialId =
+    await learnerHomeRepository.loadMaterialConceptsForScoring(allIds);
+
+  // Incomplete coverage of requested IDs is a context invariant.
+  for (const materialId of allIds) {
+    if (!rowsByMaterialId.has(materialId)) {
+      return createFallbackCanonicalContext('CANONICAL_CONTEXT_INVARIANT_FALLBACK');
+    }
+  }
+
+  const allProfiles = buildCanonicalProfileMap(allIds, rowsByMaterialId);
+  const pick = (ids: string[]) => {
+    const map = new Map(
+      [...new Set(ids)].map((id) => {
+        const profile = allProfiles.get(id);
+        if (!profile) {
+          throw new Error('CANONICAL_CONTEXT_INVARIANT');
+        }
+        return [id, profile] as const;
+      }),
+    );
+    return map;
+  };
+
+  try {
+    return createSuccessfulCanonicalContext({
+      candidateMaterialProfiles: pick(candidateIds),
+      likedMaterialProfiles: pick(likedIds),
+      reservedMaterialProfiles: pick(reservedIds),
+      viewedMaterialProfiles: pick(viewedIds),
+    });
+  } catch {
+    return createFallbackCanonicalContext('CANONICAL_CONTEXT_INVARIANT_FALLBACK');
+  }
+};
+
+/**
+ * @internal Exported for RP-03.1 tests: `requestedMaterialScoringMode` and
+ * `needsCanonicalMaterialScoring` are explicit parameters (not read from the
+ * frozen process-level RECOMMENDATION_SCORER_VERSION constant), so tests can
+ * exercise the skip decision and hydration call count deterministically
+ * regardless of the running process's actual configured mode.
+ *
+ * Project-only section requests (suggested_projects, popular_projects,
+ * saved_projects, continue_projects) never need canonical material context:
+ * project scoring always force-delegates to legacy-v1 already. Hydrating
+ * MaterialConcept rows for those requests would be a wasted query with no
+ * effect on the response, so needsCanonicalMaterialScoring=false skips the
+ * whole hydration attempt (no query, no context, no fallback recorded).
+ */
+export const resolveMaterialModeDecisionAndContext = async (input: {
+  requestedMaterialScoringMode: RecommendationScorerVersion;
+  needsCanonicalMaterialScoring: boolean;
+  materials: LearnerHomeContext['materials'];
+  behavior: LearnerBehaviorContext;
+  profiler?: ReturnType<typeof createLearnerHomeProfiler>;
+}): Promise<{
+  modeDecision: LearnerHomeModeDecision;
+  canonicalContext: CanonicalMaterialScoringContext | undefined;
+}> => {
+  let effectiveMaterialScoringMode: RecommendationScorerVersion =
+    input.requestedMaterialScoringMode;
+  let fallbackCode: CanonicalFallbackCode | null = null;
+  let cacheable = true;
+  let canonicalContext: CanonicalMaterialScoringContext | undefined;
+
+  if (
+    input.requestedMaterialScoringMode === CANONICAL_SCORING_MODE &&
+    input.needsCanonicalMaterialScoring
+  ) {
+    try {
+      canonicalContext = await (input.profiler
+        ? input.profiler.time('loadCanonicalMaterialConcepts', () =>
+            buildCanonicalScoringContextForMaterials({
+              materials: input.materials,
+              behavior: input.behavior,
+            }),
+          )
+        : buildCanonicalScoringContextForMaterials({
+            materials: input.materials,
+            behavior: input.behavior,
+          }));
+    } catch {
+      canonicalContext = createFallbackCanonicalContext(
+        'CANONICAL_LOADER_FALLBACK_LEGACY_V1',
+      );
+    }
+
+    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
+      effectiveMaterialScoringMode = 'legacy-v1';
+      fallbackCode =
+        canonicalContext.fallbackCode ?? 'CANONICAL_LOADER_FALLBACK_LEGACY_V1';
+      cacheable = false;
+      canonicalContext = undefined;
+    } else {
+      effectiveMaterialScoringMode = CANONICAL_SCORING_MODE;
+      cacheable = true;
+    }
+  }
+
+  return {
+    modeDecision: buildLearnerHomeModeDecision({
+      requestedMaterialScoringMode: input.requestedMaterialScoringMode,
+      effectiveMaterialScoringMode,
+      fallbackCode,
+      cacheable,
+    }),
+    canonicalContext,
+  };
 };
 
 const buildCandidateTraces = (
@@ -593,6 +774,12 @@ type LearnerHomeLoadOptions = {
   materialPoolCap?: number;
   profiler?: ReturnType<typeof createLearnerHomeProfiler>;
   useConsolidatedProjectContext?: boolean;
+  /**
+   * Defaults to true (full Learner Home, and any caller that omits it,
+   * always needs canonical material scoring). Single-section callers pass
+   * this explicitly based on whether sectionKey is a material section.
+   */
+  needsCanonicalMaterialScoring?: boolean;
 };
 
 const loadLearnerHomeContext = async (
@@ -689,6 +876,14 @@ const loadLearnerHomeContext = async (
     projects.filter((project) => project.mapped.isSaved).map((project) => project.id),
   );
 
+  const { modeDecision, canonicalContext } = await resolveMaterialModeDecisionAndContext({
+    requestedMaterialScoringMode: RECOMMENDATION_SCORER_VERSION,
+    needsCanonicalMaterialScoring: options.needsCanonicalMaterialScoring ?? true,
+    materials,
+    behavior,
+    profiler,
+  });
+
   return {
     interests,
     savedLocation,
@@ -702,18 +897,69 @@ const loadLearnerHomeContext = async (
     behavior,
     behaviorAffinityProfile,
     hasActivity: hasLearnerActivity(behavior),
+    modeDecision,
+    canonicalContext,
   };
 };
 
-const preScoreMaterials = (context: LearnerHomeContext): PreScoredMaterialEntry[] =>
-  preScoreMaterialPool({
-    materials: context.materials,
-    interests: context.interests,
-    savedComponents: context.savedComponents,
-    savedLocation: context.savedLocation,
-    behavior: context.behavior,
-    behaviorAffinityProfile: context.behaviorAffinityProfile,
-  });
+/**
+ * @internal Exported only for RP-03.1's honest fallback-integration test,
+ * which calls this exact function (not a re-implementation of it) to prove
+ * that a canonical failure retries with the explicit 'legacy-v1' literal.
+ */
+export const preScoreMaterials = (context: LearnerHomeContext): PreScoredMaterialEntry[] => {
+  try {
+    return preScoreMaterialPool({
+      materials: context.materials,
+      interests: context.interests,
+      savedComponents: context.savedComponents,
+      savedLocation: context.savedLocation,
+      behavior: context.behavior,
+      behaviorAffinityProfile: context.behaviorAffinityProfile,
+      // Explicit: the feature pool must never re-derive scorer version from
+      // the process-global constant, or a canonical whole-request fallback
+      // (effectiveMaterialScoringMode already downgraded to legacy-v1) would
+      // silently regain normalized-alias interest semantics.
+      scorerVersion: context.modeDecision.effectiveMaterialScoringMode,
+      canonicalContext:
+        context.modeDecision.effectiveMaterialScoringMode === CANONICAL_SCORING_MODE
+          ? context.canonicalContext
+          : undefined,
+    });
+  } catch (error) {
+    // Only one canonical retry is ever attempted, and only when the request
+    // was still effectively canonical at the moment of failure. If an
+    // earlier loader-level fallback had already downgraded
+    // effectiveMaterialScoringMode to legacy-v1, this catch is a genuine
+    // legacy/normalized failure, not a canonical one, and must not retry
+    // again.
+    const canRetryAsCanonicalFallback =
+      context.modeDecision.requestedMaterialScoringMode === CANONICAL_SCORING_MODE &&
+      context.modeDecision.effectiveMaterialScoringMode === CANONICAL_SCORING_MODE;
+
+    if (canRetryAsCanonicalFallback) {
+      context.modeDecision.effectiveMaterialScoringMode = 'legacy-v1';
+      context.modeDecision.fallbackCode = 'CANONICAL_SCORER_INVARIANT_FALLBACK';
+      context.modeDecision.cacheable = false;
+      context.canonicalContext = undefined;
+      return preScoreMaterialPool({
+        materials: context.materials,
+        interests: context.interests,
+        savedComponents: context.savedComponents,
+        savedLocation: context.savedLocation,
+        behavior: context.behavior,
+        behaviorAffinityProfile: context.behaviorAffinityProfile,
+        scorerVersion: 'legacy-v1',
+      });
+    }
+
+    // Legacy-v1/normalized-interests-v2 failures — and a second failure
+    // after the mode is already effectively legacy-v1 — propagate the
+    // original error unchanged rather than masking it behind a generic
+    // wrapper message.
+    throw error;
+  }
+};
 
 const rankPreScoredMaterialEntries = (
   entries: PreScoredMaterialEntry[],
@@ -1264,7 +1510,13 @@ export const getLearnerHomeSection = async (
       ? BROWSE_MATERIAL_POOL_CAP
       : HOME_MATERIAL_POOL_CAP;
   const context = await profiler.time('loadLearnerHomeContext', () =>
-    loadLearnerHomeContext(userId, { profiler, materialPoolCap }),
+    loadLearnerHomeContext(userId, {
+      profiler,
+      materialPoolCap,
+      // Project-only sections never need canonical material context: project
+      // scoring always force-delegates to legacy-v1 regardless.
+      needsCanonicalMaterialScoring: MATERIAL_SECTION_KEYS.has(sectionKey),
+    }),
   );
   let preScoredMaterials: PreScoredMaterialEntry[] | undefined;
 
@@ -1439,7 +1691,7 @@ export const getLearnerHomeSection = async (
     learnerId: userId,
     surface: 'LEARNER_HOME_SECTION',
     algorithmName: RECOMMENDATION_ALGORITHM_NAME,
-    algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
+    algorithmVersion: algorithmVersionForSection(context, sectionKey),
     policyVersion: RECOMMENDATION_POLICY_VERSION,
     generatedAt: new Date(),
     candidateCount: context.materials.length + context.projects.length,
@@ -1479,6 +1731,8 @@ async function loadLearnerHomeUncached(
       profiler,
       materialPoolCap: HOME_MATERIAL_POOL_CAP,
       useConsolidatedProjectContext: true,
+      // Full Learner Home always includes material sections.
+      needsCanonicalMaterialScoring: true,
     }),
   );
 
@@ -1658,7 +1912,7 @@ async function loadLearnerHomeUncached(
       learnerId: userId,
       surface: 'LEARNER_HOME',
       algorithmName: RECOMMENDATION_ALGORITHM_NAME,
-      algorithmVersion: RECOMMENDATION_ALGORITHM_VERSION,
+      algorithmVersion: algorithmVersionForModeDecision(context.modeDecision),
       policyVersion: RECOMMENDATION_POLICY_VERSION,
       generatedAt: new Date(),
       candidateCount: context.materials.length + context.projects.length,
@@ -1670,11 +1924,13 @@ async function loadLearnerHomeUncached(
       generationCacheState: 'MISS',
       candidateTraces: buildCandidateTraces(context, response),
     },
+    cacheable: context.modeDecision.cacheable,
   };
 }
 
 const learnerHomeCacheKey = (userId: string): string => [
   userId,
+  RECOMMENDATION_SCORER_VERSION,
   env.recommendationMlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC',
   env.recommendationMlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
   env.recommendationMlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
@@ -1686,6 +1942,7 @@ const learnerHomeCache = createLearnerHomeCache(
   loadLearnerHomeUncached,
   Date.now,
   learnerHomeCacheKey,
+  (payload) => payload.cacheable,
 );
 
 export const getLearnerHome = async (

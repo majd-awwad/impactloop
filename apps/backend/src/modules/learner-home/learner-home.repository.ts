@@ -1315,6 +1315,81 @@ export const loadMlShadowConcepts = async (
   };
 };
 
+/** Chunk size for deterministic canonical concept hydration only — not a candidate pool cap. */
+export const MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE = 200;
+
+export type MaterialConceptScoringRow = {
+  materialId: string;
+  canonicalKey: string;
+  conceptType: string;
+  status: string;
+};
+
+export type MaterialConceptChunkRow = {
+  materialId: string;
+  concept: { canonicalKey: string; conceptType: string; status: string };
+};
+
+export type MaterialConceptChunkQuery = (
+  materialIds: readonly string[],
+) => Promise<MaterialConceptChunkRow[]>;
+
+const defaultMaterialConceptChunkQuery: MaterialConceptChunkQuery = (materialIds) =>
+  prisma.materialConcept.findMany({
+    where: { materialId: { in: [...materialIds] } },
+    select: {
+      materialId: true,
+      concept: {
+        select: {
+          canonicalKey: true,
+          conceptType: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+/**
+ * Loads MaterialConcept rows for every requested material ID.
+ * Does not truncate the ID list; chunks DB queries only.
+ * Returns a map with an entry for every unique input ID (empty array when none).
+ *
+ * The optional `queryChunk` parameter is a test-only seam: production callers
+ * never pass it, so the real Prisma query remains the default. Tests can
+ * inject a fake chunk query to prove chunk sizing/coverage/order-independence
+ * without a database.
+ */
+export const loadMaterialConceptsForScoring = async (
+  materialIds: readonly string[],
+  queryChunk: MaterialConceptChunkQuery = defaultMaterialConceptChunkQuery,
+): Promise<Map<string, MaterialConceptScoringRow[]>> => {
+  const uniqueIds = [...new Set(materialIds.filter((id) => id.length > 0))];
+  const rowsByMaterialId = new Map<string, MaterialConceptScoringRow[]>();
+  for (const materialId of uniqueIds) {
+    rowsByMaterialId.set(materialId, []);
+  }
+
+  for (let offset = 0; offset < uniqueIds.length; offset += MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE) {
+    const chunk = uniqueIds.slice(offset, offset + MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE);
+    const rows = await queryChunk(chunk);
+
+    for (const row of rows) {
+      const list = rowsByMaterialId.get(row.materialId);
+      if (!list) {
+        continue;
+      }
+      list.push({
+        materialId: row.materialId,
+        canonicalKey: row.concept.canonicalKey,
+        conceptType: row.concept.conceptType,
+        status: row.concept.status,
+      });
+    }
+  }
+
+  return rowsByMaterialId;
+};
+
 type SavedProjectBehaviorRow = Awaited<
   ReturnType<typeof loadLearnerBehaviorRows>
 >['savedProjectRows'][number];
