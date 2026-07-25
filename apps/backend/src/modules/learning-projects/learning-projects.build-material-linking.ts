@@ -635,6 +635,7 @@ type RequiredComponentForMatching = {
 const listMaterialCandidatesForRequiredComponent = async (input: {
   learnerId: string;
   component: RequiredComponentForMatching;
+  preloadedLearner?: BuildCandidateLearnerContext;
 }) => {
   const component = input.component;
 
@@ -648,7 +649,8 @@ const listMaterialCandidatesForRequiredComponent = async (input: {
 
   const searchTerms = buildCandidateSearchTerms(component);
   const searchTerm = buildCandidateSearchTerm(component);
-  const learner = await loadLearnerCandidateContext(input.learnerId);
+  const learner =
+    input.preloadedLearner ?? (await loadLearnerCandidateContext(input.learnerId));
 
   let materials = await fetchCandidateMaterials(
     buildEligibleCandidateWhere({
@@ -976,6 +978,7 @@ const loadBudgetCandidateRecords = async (input: {
     isRequired: boolean;
     componentName: string;
   };
+  preloadedLearner?: BuildCandidateLearnerContext;
 }): Promise<BudgetCandidateRecord[]> => {
   if (!input.component.isRequired) {
     return [];
@@ -984,6 +987,7 @@ const loadBudgetCandidateRecords = async (input: {
   const matched = await listMaterialCandidatesForRequiredComponent({
     learnerId: input.learnerId,
     component: input.component,
+    preloadedLearner: input.preloadedLearner,
   });
 
   return matched.items.map((item, index) => ({
@@ -1132,52 +1136,81 @@ const evaluateBudgetCandidate = async (input: {
   };
 };
 
+export type BudgetEstimatePreloadedProject = {
+  id: string;
+  title: string;
+  coverImageUrl: string | null;
+  difficulty: string;
+  category: {
+    nameEn: string;
+    nameAr: string;
+  };
+  requiredComponents: Array<{
+    id: string;
+    componentRole: string;
+    categoryId: string | null;
+    componentName: string;
+    materialType: string;
+    searchKeywords: Prisma.JsonValue | null;
+    alternativeKeywords?: Prisma.JsonValue | null;
+    quantity: Prisma.Decimal;
+    unit: string;
+    isRequired: boolean;
+  }>;
+};
+
+const budgetEstimateProjectSelect = {
+  id: true,
+  title: true,
+  coverImageUrl: true,
+  difficulty: true,
+  category: {
+    select: {
+      nameEn: true,
+      nameAr: true,
+    },
+  },
+  requiredComponents: {
+    orderBy: { createdAt: 'asc' as const },
+    select: {
+      id: true,
+      componentRole: true,
+      categoryId: true,
+      componentName: true,
+      materialType: true,
+      searchKeywords: true,
+      alternativeKeywords: true,
+      quantity: true,
+      unit: true,
+      isRequired: true,
+    },
+  },
+} satisfies Prisma.LearningProjectSelect;
+
 export const estimateProjectMaterialBudget = async (input: {
   projectId: string;
   learnerId: string;
   candidateLimitPerComponent?: number;
+  preloadedLearnerContext?: BuildCandidateLearnerContext;
+  preloadedProject?: BudgetEstimatePreloadedProject;
 }): Promise<ProjectMaterialBudgetEstimate> => {
-  const project = await prisma.learningProject.findFirst({
-    where: {
-      id: input.projectId,
-      status: 'PUBLISHED',
-      hiddenAt: null,
-      archivedAt: null,
-      category: {
-        isActive: true,
-        categoryType: {
-          in: ['PROJECT', 'BOTH'],
+  const project =
+    input.preloadedProject ??
+    (await prisma.learningProject.findFirst({
+      where: {
+        id: input.projectId,
+        status: 'PUBLISHED',
+        hiddenAt: null,
+        archivedAt: null,
+        category: {
+          isActive: true,
+          categoryType: {
+            in: ['PROJECT', 'BOTH'],
+          },
         },
       },
-    },
-    select: {
-      id: true,
-      title: true,
-      coverImageUrl: true,
-      difficulty: true,
-      category: {
-        select: {
-          nameEn: true,
-          nameAr: true,
-        },
-      },
-      requiredComponents: {
-        orderBy: { createdAt: 'asc' },
-        select: {
-          id: true,
-          componentRole: true,
-          categoryId: true,
-          componentName: true,
-          materialType: true,
-          searchKeywords: true,
-          alternativeKeywords: true,
-          quantity: true,
-          unit: true,
-          isRequired: true,
-        },
-      },
-    },
-  });
+      select: budgetEstimateProjectSelect,
+    }));
 
   if (!project) {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
@@ -1212,12 +1245,16 @@ export const estimateProjectMaterialBudget = async (input: {
 
   const allocatedByMaterialId = new Map<string, number>();
   const lines: ProjectBudgetComponentLine[] = [];
+  const preloadedLearner =
+    input.preloadedLearnerContext ??
+    (await loadLearnerCandidateContext(input.learnerId));
 
   for (const component of requiredComponents) {
     const requiredQuantity = decimalToNumber(component.quantity) ?? 1;
     const candidates = await loadBudgetCandidateRecords({
       learnerId: input.learnerId,
       component,
+      preloadedLearner,
     });
     const candidateLimit = Math.min(input.candidateLimitPerComponent ?? 10, 10);
     const boundedCandidates = candidates.slice(0, candidateLimit);
@@ -1370,4 +1407,336 @@ export const estimateProjectMaterialBudget = async (input: {
     deliveryExcludedNotice,
     components: lines,
   };
+};
+
+export type BudgetComparisonMode = 'LT' | 'LTE';
+
+export type ProjectsWithinBudgetMetrics = {
+  candidateProjectsLoaded: number;
+  projectsEvaluated: number;
+  estimatorInvocationCount: number;
+  maxConcurrency: number;
+  totalDurationMs: number;
+  perProjectDurationMs: number[];
+  observedDatabaseQueryCount: number | null;
+};
+
+export type ProjectsWithinBudgetResultEntry = {
+  estimate: ProjectMaterialBudgetEstimate;
+  durationMs: number;
+};
+
+export type ProjectsWithinBudgetResult = {
+  complete: ProjectsWithinBudgetResultEntry[];
+  partial: ProjectsWithinBudgetResultEntry[];
+  metrics: ProjectsWithinBudgetMetrics;
+};
+
+const DEFAULT_CANDIDATE_POOL_CAP = 12;
+const MAX_ESTIMATOR_CONCURRENCY = 3;
+
+const matchesBudgetBound = (input: {
+  subtotalNis: number;
+  maxBudgetNis: number;
+  comparisonMode: BudgetComparisonMode;
+}): boolean =>
+  input.comparisonMode === 'LT'
+    ? input.subtotalNis < input.maxBudgetNis
+    : input.subtotalNis <= input.maxBudgetNis;
+
+const BUDGET_CATEGORY_TOPIC_EXPANSIONS: Record<string, string[]> = {
+  electronics: [
+    'electronics',
+    'robotics',
+    'arduino',
+    'إلكترونيات',
+    'الكترونيات',
+    'روبوتات',
+    'أردوينو',
+    'اردوينو',
+  ],
+  wood: ['wood', 'woodworking', 'خشب', 'نجارة'],
+  fabric: ['fabric', 'textile', 'قماش', 'خياطة', 'نسيج'],
+  plastic: ['plastic', 'بلاستيك'],
+  metal: ['metal', 'معدن', 'معادن'],
+};
+
+const expandBudgetCategoryTopicTerms = (category: string): string[] => {
+  const normalized = category.trim().toLowerCase();
+  if (!normalized) {
+    return [];
+  }
+
+  const expanded = BUDGET_CATEGORY_TOPIC_EXPANSIONS[normalized] ?? [category.trim()];
+  return [...new Set(expanded.map((term) => term.trim()).filter((term) => term.length > 0))];
+};
+
+const buildBudgetCategoryTopicClauses = (
+  category: string,
+): Prisma.LearningProjectWhereInput[] => {
+  const terms = expandBudgetCategoryTopicTerms(category);
+  const clauses: Prisma.LearningProjectWhereInput[] = [];
+
+  for (const term of terms) {
+    clauses.push(
+      {
+        category: {
+          nameEn: {
+            contains: term,
+            mode: 'insensitive',
+          },
+        },
+      },
+      {
+        category: {
+          nameAr: {
+            contains: term,
+            mode: 'insensitive',
+          },
+        },
+      },
+      {
+        tags: {
+          some: {
+            tag: {
+              contains: term,
+              mode: 'insensitive',
+            },
+          },
+        },
+      },
+      {
+        title: {
+          contains: term,
+          mode: 'insensitive',
+        },
+      },
+      {
+        shortDescription: {
+          contains: term,
+          mode: 'insensitive',
+        },
+      },
+      {
+        description: {
+          contains: term,
+          mode: 'insensitive',
+        },
+      },
+    );
+  }
+
+  return clauses;
+};
+
+const buildBudgetCandidateProjectWhere = (input: {
+  category?: string;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  query?: string;
+  candidateProjectIds?: string[];
+}): Prisma.LearningProjectWhereInput => {
+  const andClauses: Prisma.LearningProjectWhereInput[] = [
+    {
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+      category: {
+        isActive: true,
+        categoryType: {
+          in: ['PROJECT', 'BOTH'],
+        },
+      },
+      requiredComponents: {
+        some: {
+          isRequired: true,
+        },
+      },
+    },
+  ];
+
+  if (input.candidateProjectIds?.length) {
+    andClauses.push({
+      id: { in: input.candidateProjectIds.slice(0, DEFAULT_CANDIDATE_POOL_CAP) },
+    });
+  }
+
+  if (input.difficulty) {
+    andClauses.push({ difficulty: input.difficulty });
+  }
+
+  if (input.category?.trim()) {
+    andClauses.push({
+      OR: buildBudgetCategoryTopicClauses(input.category),
+    });
+  }
+
+  if (input.query?.trim()) {
+    andClauses.push({
+      OR: [
+        {
+          title: {
+            contains: input.query,
+            mode: 'insensitive',
+          },
+        },
+        {
+          shortDescription: {
+            contains: input.query,
+            mode: 'insensitive',
+          },
+        },
+        {
+          description: {
+            contains: input.query,
+            mode: 'insensitive',
+          },
+        },
+      ],
+    });
+  }
+
+  return { AND: andClauses };
+};
+
+const compareBudgetSearchProjects = (
+  left: ProjectsWithinBudgetResultEntry,
+  right: ProjectsWithinBudgetResultEntry,
+): number => {
+  if (left.estimate.estimatedSubtotalNis !== right.estimate.estimatedSubtotalNis) {
+    return left.estimate.estimatedSubtotalNis - right.estimate.estimatedSubtotalNis;
+  }
+
+  const titleCompare = left.estimate.projectTitle.localeCompare(
+    right.estimate.projectTitle,
+    undefined,
+    { sensitivity: 'base' },
+  );
+  if (titleCompare !== 0) {
+    return titleCompare;
+  }
+
+  return left.estimate.projectId.localeCompare(right.estimate.projectId);
+};
+
+const mapWithBoundedConcurrency = async <TItem, TResult>(
+  items: TItem[],
+  concurrency: number,
+  worker: (item: TItem, index: number) => Promise<TResult>,
+): Promise<TResult[]> => {
+  if (items.length === 0) {
+    return [];
+  }
+
+  const results = new Array<TResult>(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(concurrency, items.length);
+
+  const runners = Array.from({ length: workerCount }, async () => {
+    while (true) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      if (currentIndex >= items.length) {
+        break;
+      }
+
+      results[currentIndex] = await worker(items[currentIndex]!, currentIndex);
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
+};
+
+export const findProjectsWithinBudget = async (input: {
+  learnerId: string;
+  maxBudgetNis: number;
+  comparisonMode: BudgetComparisonMode;
+  category?: string;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  query?: string;
+  projectLimit?: number;
+  includePartial?: boolean;
+  candidateProjectIds?: string[];
+  candidateLimitPerComponent?: number;
+}): Promise<ProjectsWithinBudgetResult> => {
+  const startedAt = Date.now();
+
+  const projectLimit = Math.min(input.projectLimit ?? 8, 10);
+    const candidateProjects = await prisma.learningProject.findMany({
+      where: buildBudgetCandidateProjectWhere({
+        category: input.category,
+        difficulty: input.difficulty,
+        query: input.query,
+        candidateProjectIds: input.candidateProjectIds,
+      }),
+      select: budgetEstimateProjectSelect,
+      orderBy: [{ title: 'asc' }, { id: 'asc' }],
+      take: DEFAULT_CANDIDATE_POOL_CAP,
+    });
+
+    const preloadedLearnerContext = await loadLearnerCandidateContext(input.learnerId);
+    const perProjectDurationMs: number[] = [];
+    let estimatorInvocationCount = 0;
+
+    const evaluated = await mapWithBoundedConcurrency(
+      candidateProjects,
+      MAX_ESTIMATOR_CONCURRENCY,
+      async (project) => {
+        const projectStartedAt = Date.now();
+        estimatorInvocationCount += 1;
+        const estimate = await estimateProjectMaterialBudget({
+          projectId: project.id,
+          learnerId: input.learnerId,
+          candidateLimitPerComponent: input.candidateLimitPerComponent ?? 5,
+          preloadedLearnerContext,
+          preloadedProject: project,
+        });
+        const durationMs = Date.now() - projectStartedAt;
+        perProjectDurationMs.push(durationMs);
+        return { estimate, durationMs };
+      },
+    );
+
+    const complete: ProjectsWithinBudgetResultEntry[] = [];
+    const partial: ProjectsWithinBudgetResultEntry[] = [];
+
+    for (const entry of evaluated) {
+      const withinBudget = matchesBudgetBound({
+        subtotalNis: entry.estimate.estimatedSubtotalNis,
+        maxBudgetNis: input.maxBudgetNis,
+        comparisonMode: input.comparisonMode,
+      });
+      if (!withinBudget) {
+        continue;
+      }
+
+      if (
+        entry.estimate.estimateStatus === 'COMPLETE' ||
+        entry.estimate.estimateStatus === 'ZERO_COST_AVAILABLE_MATERIALS'
+      ) {
+        complete.push(entry);
+        continue;
+      }
+
+      if (entry.estimate.estimateStatus === 'PARTIAL' && input.includePartial !== false) {
+        partial.push(entry);
+      }
+    }
+
+    complete.sort(compareBudgetSearchProjects);
+    partial.sort(compareBudgetSearchProjects);
+
+    return {
+      complete: complete.slice(0, projectLimit),
+      partial: partial.slice(0, projectLimit),
+      metrics: {
+        candidateProjectsLoaded: candidateProjects.length,
+        projectsEvaluated: evaluated.length,
+        estimatorInvocationCount,
+        maxConcurrency: MAX_ESTIMATOR_CONCURRENCY,
+        totalDurationMs: Date.now() - startedAt,
+        perProjectDurationMs: [...perProjectDurationMs].sort((left, right) => left - right),
+        observedDatabaseQueryCount: null,
+      },
+    };
 };

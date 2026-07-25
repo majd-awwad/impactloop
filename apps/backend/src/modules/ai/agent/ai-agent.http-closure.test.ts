@@ -46,6 +46,7 @@ type SeedIds = {
   reusedId: string;
   publishedArduinoProjectId: string;
   obstacleProjectId: string;
+  fabricPencilProjectId: string;
   draftProjectId: string;
   buildId: string;
   budgetArduinoCheapId: string;
@@ -83,6 +84,7 @@ const ids: SeedIds = {
   reusedId: '',
   publishedArduinoProjectId: '',
   obstacleProjectId: '',
+  fabricPencilProjectId: '',
   draftProjectId: '',
   buildId: '',
   budgetArduinoCheapId: '',
@@ -111,6 +113,7 @@ let saveLearningProjectById: typeof import('../../learning-projects/learning-pro
 let startProjectBuildById: typeof import('../../learning-projects/learning-projects.service.js').startProjectBuildById;
 let updateProjectBuildItemById: typeof import('../../learning-projects/learning-projects.service.js').updateProjectBuildItemById;
 const hiddenObstacleProjectIds: string[] = [];
+const hiddenFabricPencilProjectIds: string[] = [];
 
 async function createLearnerUser(
   label: string,
@@ -735,6 +738,64 @@ before(async () => {
   ids.obstacleProjectId = obstacleProject.id;
   ids.projects.push(obstacleProject.id);
 
+  const existingFabricPencilProjects = await prisma.learningProject.findMany({
+    where: {
+      title: 'Fabric Pencil Case',
+      hiddenAt: null,
+    },
+    select: { id: true },
+  });
+  if (existingFabricPencilProjects.length > 0) {
+    const hiddenAt = new Date();
+    await prisma.learningProject.updateMany({
+      where: { id: { in: existingFabricPencilProjects.map((project) => project.id) } },
+      data: { hiddenAt },
+    });
+    hiddenFabricPencilProjectIds.push(
+      ...existingFabricPencilProjects.map((project) => project.id),
+    );
+  }
+
+  const fabricPencilProject = await prisma.learningProject.create({
+    data: {
+      categoryId: ids.projectCategoryId,
+      createdBy: ids.learnerAId,
+      title: 'Fabric Pencil Case',
+      shortDescription: `${TEST_MARKER} fabric pencil starter`,
+      description: `${TEST_MARKER} beginner fabric pencil case project`,
+      difficulty: 'BEGINNER',
+      status: 'PUBLISHED',
+      tags: { create: [{ tag: 'fabric' }, { tag: 'pencil' }] },
+      requiredComponents: {
+        create: [
+          {
+            componentName: 'Zipper',
+            materialType: 'Zipper',
+            quantity: 1,
+            unit: 'piece',
+            componentRole: 'REQUIRED_MATERIAL',
+            categoryId: ids.budgetMaterialCategoryId,
+            searchKeywords: ['zipper', 'fabric zipper'],
+          },
+        ],
+      },
+    },
+  });
+  ids.fabricPencilProjectId = fabricPencilProject.id;
+  ids.projects.push(fabricPencilProject.id);
+
+  await createComponentMaterial({
+    locationId: nearLocation.id,
+    title: `${SEED_TOKEN} Fabric Zipper`,
+    materialType: 'Zipper',
+    quantity: 10,
+    unit: 'piece',
+    categoryId: ids.budgetMaterialCategoryId,
+    isFree: false,
+    price: 8,
+    tags: ['zipper', 'fabric'],
+  });
+
   const budgetArduinoCheap = await createComponentMaterial({
     locationId: nearLocation.id,
     title: `${SEED_TOKEN} Salvaged Arduino Uno Boards`,
@@ -932,6 +993,12 @@ after(async () => {
   if (hiddenObstacleProjectIds.length > 0) {
     await prisma.learningProject.updateMany({
       where: { id: { in: hiddenObstacleProjectIds } },
+      data: { hiddenAt: null },
+    });
+  }
+  if (hiddenFabricPencilProjectIds.length > 0) {
+    await prisma.learningProject.updateMany({
+      where: { id: { in: hiddenFabricPencilProjectIds } },
       data: { hiddenAt: null },
     });
   }
@@ -2511,6 +2578,66 @@ describe('ai agent http closure', () => {
     await assertTurnBasics(conversationId, followClientId);
   });
 
+  test('learner assistant project search excludes hidden and archived duplicate titles', async () => {
+    const { getLearningProjects } = await import(
+      '../../learning-projects/learning-projects.service.js'
+    );
+    const hiddenDuplicate = await prisma.learningProject.create({
+      data: {
+        categoryId: ids.projectCategoryId,
+        createdBy: ids.learnerAId,
+        title: 'Obstacle Avoidance Robot',
+        shortDescription: `${TEST_MARKER} hidden duplicate obstacle`,
+        description: `${TEST_MARKER} hidden duplicate obstacle`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        hiddenAt: new Date(),
+        requiredComponents: {
+          create: [
+            {
+              componentName: 'Hidden duplicate component',
+              materialType: 'Misc',
+              quantity: 1,
+              unit: 'piece',
+              componentRole: 'REQUIRED_MATERIAL',
+              categoryId: ids.budgetMaterialCategoryId,
+            },
+          ],
+        },
+      },
+    });
+    ids.projects.push(hiddenDuplicate.id);
+
+    const searchResult = await getLearningProjects(
+      { page: 1, limit: 10, q: 'Obstacle Avoidance Robot' },
+      { sub: ids.learnerBId, roles: ['LEARNER'] },
+    );
+    const visibleMatches = searchResult.items.filter(
+      (item) => item.title === 'Obstacle Avoidance Robot',
+    );
+    assert.equal(visibleMatches.length, 1);
+    assert.equal(visibleMatches[0]?.id, ids.obstacleProjectId);
+    assert.ok(!searchResult.items.some((item) => item.id === hiddenDuplicate.id));
+
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'اعرضلي مشروع Obstacle Avoidance Robot',
+      clientId('proj-search-hidden-dup-001'),
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const results = projectResultsBlock(blocks);
+    const items = results.items as Array<{ projectId: string; title: string }>;
+    assert.equal(items.length, 1);
+    assert.equal(items[0]?.projectId, ids.obstacleProjectId);
+    assert.equal(items[0]?.title, 'Obstacle Avoidance Robot');
+    assert.ok(!items.some((item) => item.projectId === hiddenDuplicate.id));
+  });
+
   test('explicit mixed-language project search resolves one real project', async () => {
     let ledDice = await prisma.learningProject.findFirst({
       where: {
@@ -3008,5 +3135,312 @@ describe('ai agent http closure', () => {
     assert.equal(arduino.effectiveComponentCost, 32);
 
     await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('projects within budget returns Obstacle Avoidance Robot at 60 NIS LTE', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+    const buildItemsBefore = await prisma.projectBuildItem.count({
+      where: { build: { learnerId: ids.learnerBId } },
+    });
+    const reservationsBefore = await prisma.reservation.count({
+      where: { requesterId: ids.learnerBId },
+    });
+    const pendingBefore = await prisma.aiPendingAction.count({
+      where: { conversation: { userId: ids.learnerBId } },
+    });
+    const savedProjectsBefore = await prisma.projectSave.count({
+      where: { userId: ids.learnerBId },
+    });
+
+    const messageClientId = clientId('projects-within-budget-001');
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'Show robot projects up to 60 NIS',
+      messageClientId,
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const completeHeadingIndex = blocks.findIndex(
+      (block) =>
+        block.type === 'text' &&
+        String(block.text).includes('Fully covered projects within your budget'),
+    );
+    assert.ok(completeHeadingIndex >= 0, 'expected complete budget section heading');
+    const partialHeadingIndex = blocks.findIndex(
+      (block) =>
+        block.type === 'text' &&
+        String(block.text).includes(
+          'Partial estimates under budget — missing components are not included',
+        ),
+    );
+    const completeSectionBlocks = blocks.slice(
+      completeHeadingIndex + 1,
+      partialHeadingIndex >= 0 ? partialHeadingIndex : blocks.length,
+    );
+    const completeItems = completeSectionBlocks
+      .filter((block) => block.type === 'project_results')
+      .flatMap(
+        (block) =>
+          (block.items ?? []) as Array<{
+            projectId: string;
+            title: string;
+            summary?: string;
+            matchedComponentCount?: number;
+            totalRequiredComponentCount?: number;
+          }>,
+      );
+    const obstacle = completeItems.find(
+      (item) =>
+        item.projectId === ids.obstacleProjectId &&
+        item.title === 'Obstacle Avoidance Robot',
+    );
+    assert.ok(obstacle, 'expected Obstacle Avoidance Robot in complete section');
+    assert.match(String(obstacle.summary), /56/);
+    assert.equal(obstacle.matchedComponentCount, 4);
+    assert.equal(obstacle.totalRequiredComponentCount, 4);
+
+    const partialHeading = partialHeadingIndex >= 0 ? blocks[partialHeadingIndex] : undefined;
+    if (partialHeading) {
+      const partialBlock = blocks
+        .slice(partialHeadingIndex + 1)
+        .find((block) => block.type === 'project_results');
+      const partialItems = (partialBlock?.items ?? []) as Array<{ title: string }>;
+      assert.ok(
+        !partialItems.some((item) => item.title === 'Obstacle Avoidance Robot'),
+        'partial section must not relabel Obstacle as complete',
+      );
+    }
+
+    const buildItemsAfter = await prisma.projectBuildItem.count({
+      where: { build: { learnerId: ids.learnerBId } },
+    });
+    const reservationsAfter = await prisma.reservation.count({
+      where: { requesterId: ids.learnerBId },
+    });
+    const pendingAfter = await prisma.aiPendingAction.count({
+      where: { conversation: { userId: ids.learnerBId } },
+    });
+    const savedProjectsAfter = await prisma.projectSave.count({
+      where: { userId: ids.learnerBId },
+    });
+    assert.equal(buildItemsAfter, buildItemsBefore);
+    assert.equal(reservationsAfter, reservationsBefore);
+    assert.equal(pendingAfter, pendingBefore);
+    assert.equal(savedProjectsAfter, savedProjectsBefore);
+
+    await assertTurnBasics(conversationId, messageClientId);
+  });
+
+  test('multi-project estimate matches individual Obstacle estimate and respects LT boundary', async () => {
+    const { estimateProjectMaterialBudget, findProjectsWithinBudget } = await import(
+      '../../learning-projects/learning-projects.build-material-linking.js'
+    );
+
+    const individual = await estimateProjectMaterialBudget({
+      projectId: ids.obstacleProjectId,
+      learnerId: ids.learnerBId,
+    });
+    assert.equal(individual.estimateStatus, 'COMPLETE');
+    assert.equal(individual.estimatedSubtotalNis, 56);
+
+    const electronicsTopic = await findProjectsWithinBudget({
+      learnerId: ids.learnerBId,
+      maxBudgetNis: 60,
+      comparisonMode: 'LTE',
+      category: 'electronics',
+    });
+    assert.ok(
+      electronicsTopic.complete.some(
+        (entry) => entry.estimate.projectId === ids.obstacleProjectId,
+      ),
+      'electronics topic filter must include robotics Obstacle Avoidance Robot',
+    );
+    assert.equal(
+      electronicsTopic.complete.find(
+        (entry) => entry.estimate.projectId === ids.obstacleProjectId,
+      )?.estimate.estimatedSubtotalNis,
+      56,
+    );
+
+    const inclusive = await findProjectsWithinBudget({
+      learnerId: ids.learnerBId,
+      maxBudgetNis: 56,
+      comparisonMode: 'LTE',
+      candidateProjectIds: [ids.obstacleProjectId],
+    });
+    const inclusiveMatch = inclusive.complete.find(
+      (entry) => entry.estimate.projectId === ids.obstacleProjectId,
+    );
+    assert.ok(inclusiveMatch);
+    assert.equal(inclusiveMatch.estimate.estimatedSubtotalNis, individual.estimatedSubtotalNis);
+    assert.equal(inclusiveMatch.estimate.estimateStatus, individual.estimateStatus);
+    assert.equal(inclusiveMatch.estimate.pricedComponentCount, individual.pricedComponentCount);
+
+    const strict = await findProjectsWithinBudget({
+      learnerId: ids.learnerBId,
+      maxBudgetNis: 56,
+      comparisonMode: 'LT',
+      candidateProjectIds: [ids.obstacleProjectId],
+    });
+    assert.equal(
+      strict.complete.some(
+        (entry) => entry.estimate.projectId === ids.obstacleProjectId,
+      ),
+      false,
+      '56 NIS subtotal must be excluded under strict LT at 56',
+    );
+
+    assert.equal(inclusive.metrics.estimatorInvocationCount, 1);
+    assert.equal(inclusive.metrics.maxConcurrency, 3);
+    assert.ok(inclusive.metrics.totalDurationMs >= 0);
+
+    const pooled = await findProjectsWithinBudget({
+      learnerId: ids.learnerBId,
+      maxBudgetNis: 10_000,
+      comparisonMode: 'LTE',
+    });
+    assert.ok(pooled.metrics.candidateProjectsLoaded <= 12);
+    assert.equal(pooled.metrics.maxConcurrency, 3);
+    assert.equal(
+      pooled.metrics.estimatorInvocationCount,
+      pooled.metrics.projectsEvaluated,
+    );
+    assert.ok(pooled.metrics.totalDurationMs >= 0);
+    console.info('[projects-within-budget-metrics]', JSON.stringify(pooled.metrics));
+  });
+
+  test('Arabic numeric budget follow-up preserves electronics filter after clarification', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+
+    const first = await sendAgentMessage(
+      token,
+      conversationId,
+      'بدي مشروع إلكترونيات ضمن ميزانيتي',
+      clientId('budget-numeric-ar-001'),
+    );
+    assert.equal(first.response.status, 201);
+    const firstBlocks = parseBlocks(first.json);
+    const clarification = firstBlocks.find(
+      (block) =>
+        block.type === 'text' &&
+        /الحد الأقصى لميزانيتك|maximum budget in nis/i.test(String(block.text)),
+    );
+    assert.ok(clarification, 'expected budget clarification prompt');
+
+    const second = await sendAgentMessage(
+      token,
+      conversationId,
+      '60',
+      clientId('budget-numeric-ar-002'),
+    );
+    assert.equal(second.response.status, 201);
+    const blocks = parseBlocks(second.json);
+
+    const joinedText = blocks
+      .filter((block) => block.type === 'text')
+      .map((block) => String(block.text))
+      .join('\n');
+    assert.equal(
+      /simple LED|LDR|buzzer alarm|دائرة LED|مشروع LDR|إنذار buzz/i.test(joinedText),
+      false,
+      'must not invent generic Gemini project ideas after deterministic budget search',
+    );
+
+    const projectItems = blocks
+      .filter((block) => block.type === 'project_results')
+      .flatMap(
+        (block) =>
+          (block.items ?? []) as Array<{
+            projectId: string;
+            title: string;
+            summary?: string;
+          }>,
+      );
+    assert.ok(
+      projectItems.some(
+        (item) =>
+          item.projectId === ids.obstacleProjectId &&
+          item.title === 'Obstacle Avoidance Robot',
+      ),
+      'electronics budget search must include Obstacle Avoidance Robot from robotics topic expansion',
+    );
+
+    const assistant = await prisma.aiMessage.findFirst({
+      where: {
+        conversationId,
+        role: 'ASSISTANT',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    assert.ok(assistant);
+    assert.notEqual(assistant.model, 'mock-general-learning');
+  });
+
+  test('approximate fabric pencil budget asks for confirmation before estimating', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+
+    const sent = await sendAgentMessage(
+      token,
+      conversationId,
+      'مشروع fabric pencil starter كم بكلفني',
+      clientId('fabric-pencil-budget-001'),
+    );
+    assert.equal(sent.response.status, 201);
+
+    const blocks = parseBlocks(sent.json);
+    const clarification = blocks.find(
+      (block) =>
+        block.type === 'text' &&
+        (/هل تقصد مشروع Fabric Pencil Case/i.test(String(block.text)) ||
+          /Did you mean the Fabric Pencil Case project/i.test(String(block.text))),
+    );
+    assert.ok(clarification, 'expected bounded Fabric Pencil Case confirmation');
+    assert.equal(
+      blocks.some((block) => block.type === 'project_budget_estimate'),
+      false,
+      'must not estimate budget before confirmation',
+    );
+
+    const results = projectResultsBlock(blocks);
+    const projectItems = results.items as Array<{ projectId: string; title: string }>;
+    assert.ok(
+      projectItems.some(
+        (item) =>
+          item.projectId === ids.fabricPencilProjectId &&
+          item.title === 'Fabric Pencil Case',
+      ),
+    );
+  });
+
+  test('affirmative reply after fabric pencil confirmation estimates budget', async () => {
+    const token = tokenFor(ids.learnerBId);
+    const conversationId = await createConversation(token);
+
+    const first = await sendAgentMessage(
+      token,
+      conversationId,
+      'مشروع fabric pencil starter كم بكلفني',
+      clientId('fabric-pencil-budget-002'),
+    );
+    assert.equal(first.response.status, 201);
+
+    const second = await sendAgentMessage(
+      token,
+      conversationId,
+      'اه',
+      clientId('fabric-pencil-budget-003'),
+    );
+    assert.equal(second.response.status, 201);
+
+    const blocks = parseBlocks(second.json);
+    const estimate = blocks.find((block) => block.type === 'project_budget_estimate');
+    assert.ok(estimate, 'expected project_budget_estimate after confirmation');
+    assert.equal(estimate.projectId, ids.fabricPencilProjectId);
+    assert.equal(estimate.projectTitle, 'Fabric Pencil Case');
   });
 });

@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 
 import type {
+  findProjectsWithinBudgetInputSchema,
   matchProjectsByOwnedMaterialsInputSchema,
   searchAvailableMaterialsInputSchema,
 } from './ai-tool.types.js';
@@ -876,6 +877,17 @@ export const detectProjectBudgetEstimationIntent = (
   const parsedMessage = stripBenignListPrefixForParsing(userMessage);
   const normalized = normalize(parsedMessage);
 
+  if (
+    /(?:مشاريع|projects)/i.test(normalized) &&
+    extractProjectTitleQuery(userMessage) == null &&
+    (/(?:ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget|بحد\s+أقصى|up\s+to|under|maximum|max\b|أقل\s+من)/i.test(
+      parsedMessage,
+    ) ||
+      /\d+(?:\.\d+)?\s*(?:nis|shekels?|شيكل|₪)/i.test(parsedMessage))
+  ) {
+    return false;
+  }
+
   const asksCost =
     /(كم\s+بكلف|تكلفة|تكلفه|سعر|السعر|احسب|احسبلي|how\s+much|cost|price|estimate|cheapest|pay|مجموع|مجموعهم|subtotal|budget|قديش|أدفع|ادفع|would\s+cost|would\s+pay)/i.test(
       normalized,
@@ -906,9 +918,338 @@ export const detectProjectBudgetEstimationIntent = (
   return true;
 };
 
+export type BudgetComparisonMode = 'LT' | 'LTE';
+
+export type ParsedBudgetBound = {
+  maxBudgetNis: number;
+  comparisonMode: BudgetComparisonMode;
+};
+
+const MAX_PROJECT_BUDGET_NIS = 10_000;
+
+const sanitizeBudgetAmount = (value: number): number | undefined => {
+  if (!Number.isFinite(value) || value <= 0 || value > MAX_PROJECT_BUDGET_NIS) {
+    return undefined;
+  }
+  return Math.round(value * 100) / 100;
+};
+
+export const extractBudgetBound = (text: string): ParsedBudgetBound | undefined => {
+  const parsedMessage = stripBenignListPrefixForParsing(text);
+  const normalized = normalize(parsedMessage);
+
+  const strictCue =
+    /(?:\bunder\b|\bbelow\b|\bless\s+than\b|أقل\s+من|اقل\s+من)(?!\s*من)/i;
+  const inclusiveCue =
+    /(?:up\s+to|maximum|max\b|within|no\s+more\s+than|بحد\s+أقصى|حد\s+أقصى|ما\s+بتجاوز|ما\s+يتجاوز|لا\s+يتجاوز|لا\s+تتجاوز|ميزانيتي|ضمن\s+ميزانيتي|تتجاوز|within\s+a\s+budget)/i;
+
+  const amountPatterns = [
+    /(?:under|below|less\s+than|أقل\s+من|اقل\s+من|up\s+to|maximum|max|within|no\s+more\s+than|بحد\s+أقصى|حد\s+أقصى|ميزانيتي|ضمن\s+ميزانيتي|بميزانية|بحوالي|معي)\s*(\d+(?:\.\d+)?)/i,
+    /(\d+(?:\.\d+)?)\s*(?:nis|shekels?|شيكل|شاقل|₪)/i,
+  ];
+
+  let amount: number | undefined;
+  for (const pattern of amountPatterns) {
+    const match = parsedMessage.match(pattern) ?? normalized.match(pattern);
+    if (match?.[1]) {
+      amount = sanitizeBudgetAmount(Number(match[1]));
+      if (amount != null) {
+        break;
+      }
+    }
+  }
+
+  if (amount == null) {
+    const fallback = extractBoundedMaxPrice(parsedMessage);
+    if (fallback != null) {
+      amount = sanitizeBudgetAmount(fallback);
+    }
+  }
+
+  if (amount == null) {
+    return undefined;
+  }
+
+  const comparisonMode: BudgetComparisonMode =
+    strictCue.test(parsedMessage) || strictCue.test(normalized) ? 'LT' : 'LTE';
+
+  if (
+    !strictCue.test(parsedMessage) &&
+    !strictCue.test(normalized) &&
+    !inclusiveCue.test(parsedMessage) &&
+    !inclusiveCue.test(normalized) &&
+    !/(?:budget|ميزانية|شيكل|nis|₪)/i.test(parsedMessage)
+  ) {
+    return undefined;
+  }
+
+  return { maxBudgetNis: amount, comparisonMode };
+};
+
+export const isProjectsWithinBudgetNumericFollowUp = (userMessage: string): boolean =>
+  /^\s*\d+(?:\.\d+)?\s*(?:nis|شيكل|₪|shekels?)?\s*[.!?؟]*\s*$/iu.test(userMessage.trim());
+
+const PROJECTS_WITHIN_BUDGET_CLARIFICATION_PATTERNS = [
+  /what is your maximum budget in nis/i,
+  /maximum budget in nis/i,
+  /ما الحد الأقصى لميزانيتك بالشيكل/i,
+  /الحد الأقصى لميزانيتك/i,
+];
+
+export const isProjectsWithinBudgetClarificationPrompt = (text: string): boolean =>
+  PROJECTS_WITHIN_BUDGET_CLARIFICATION_PATTERNS.some((pattern) => pattern.test(text));
+
+export const hasRecentProjectsWithinBudgetClarification = (input: {
+  recentMessages: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+}): boolean => {
+  const lastAssistant = [...input.recentMessages]
+    .reverse()
+    .find((message) => message.role === 'ASSISTANT');
+  return lastAssistant
+    ? isProjectsWithinBudgetClarificationPrompt(lastAssistant.text)
+    : false;
+};
+
+const PROJECT_BUDGET_CONFIRMATION_PATTERNS = [
+  /هل تقصد مشروع/i,
+  /did you mean the .+ project\?/i,
+];
+
+export const isProjectBudgetConfirmationPrompt = (text: string): boolean =>
+  PROJECT_BUDGET_CONFIRMATION_PATTERNS.some((pattern) => pattern.test(text));
+
+export const hasRecentProjectBudgetConfirmation = (input: {
+  recentMessages: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+}): boolean => {
+  const lastAssistant = [...input.recentMessages]
+    .reverse()
+    .find((message) => message.role === 'ASSISTANT');
+  return lastAssistant
+    ? isProjectBudgetConfirmationPrompt(lastAssistant.text)
+    : false;
+};
+
+export const resolveProjectsWithinBudgetNumericContinuation = (
+  userMessage: string,
+  conversationContext: {
+    recentMessages: Array<{ role: 'USER' | 'ASSISTANT'; text: string }>;
+  },
+): z.infer<typeof findProjectsWithinBudgetInputSchema> | null => {
+  if (!isProjectsWithinBudgetNumericFollowUp(userMessage)) {
+    return null;
+  }
+  if (!hasRecentProjectsWithinBudgetClarification(conversationContext)) {
+    return null;
+  }
+
+  const amountMatch = userMessage.trim().match(/^(\d+(?:\.\d+)?)/);
+  const amount = amountMatch?.[1] ? sanitizeBudgetAmount(Number(amountMatch[1])) : undefined;
+  if (amount == null) {
+    return null;
+  }
+
+  const priorUserMessage = [...conversationContext.recentMessages]
+    .reverse()
+    .find(
+      (message) =>
+        message.role === 'USER' &&
+        !isProjectsWithinBudgetNumericFollowUp(message.text) &&
+        (extractBudgetBound(message.text) != null ||
+          /(?:مشاريع|projects|مشروع|project).{0,40}(?:بحد|بميزانية|under|within|budget|أقل|اقل)/i.test(
+            message.text,
+          ) ||
+          /(?:ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget)/i.test(message.text)),
+    );
+
+  const base = priorUserMessage
+    ? parseProjectsWithinBudgetInput(priorUserMessage.text)
+    : parseProjectsWithinBudgetInput(userMessage);
+
+  return {
+    ...base,
+    maxBudgetNis: amount,
+    comparisonMode: base.comparisonMode ?? 'LTE',
+  };
+};
+
+export const detectProjectsWithinBudgetIntent = (userMessage: string): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+  if (detectOwnedMaterialsProjectIntent(userMessage)) {
+    return false;
+  }
+  if (/(احجز|reserve|book)\b/i.test(userMessage)) {
+    return false;
+  }
+  if (detectProjectBudgetEstimationIntent(userMessage)) {
+    return false;
+  }
+
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalize(parsedMessage);
+  const budgetBound = extractBudgetBound(userMessage);
+
+  const asksProjects =
+    /(مشاريع|projects)/i.test(normalized) ||
+    /(?:بدي|بدك|اعرض|ورجيني|ورّيني|show|find|شو|what).{0,40}(?:مشروع|project)/i.test(
+      parsedMessage,
+    ) ||
+    /(?:مشروع|project).{0,40}(?:بحد|بميزانية|under|within|budget|أقل|اقل)/i.test(
+      parsedMessage,
+    ) ||
+    /(بقدر\s+أعمل|أقدر\s+أعمل|can\s+(?:i|we)\s+build|which\s+projects?)/i.test(
+      parsedMessage,
+    ) ||
+    /(ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget)/i.test(parsedMessage);
+
+  if (!budgetBound) {
+    return asksProjects && /(ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget|بميزانية)/i.test(
+      parsedMessage,
+    );
+  }
+
+  return asksProjects;
+};
+
+export const parseProjectsWithinBudgetInput = (
+  userMessage: string,
+): z.infer<typeof findProjectsWithinBudgetInputSchema> => {
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalize(parsedMessage);
+  const budgetBound = extractBudgetBound(userMessage);
+
+  const input: {
+    maxBudgetNis: number;
+    comparisonMode: BudgetComparisonMode;
+    category?: string;
+    difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    query?: string;
+    projectLimit?: number;
+    includePartial?: boolean;
+  } = {
+    maxBudgetNis: budgetBound?.maxBudgetNis ?? 0,
+    comparisonMode: budgetBound?.comparisonMode ?? 'LTE',
+    includePartial: true,
+    projectLimit: extractRequestedResultCount(parsedMessage) ?? 8,
+  };
+
+  if (includesAny(normalized, ['beginner', 'مبتدئ', 'مبتدئين'])) {
+    input.difficulty = 'BEGINNER';
+  } else if (includesAny(normalized, ['intermediate', 'متوسط'])) {
+    input.difficulty = 'INTERMEDIATE';
+  } else if (includesAny(normalized, ['advanced', 'متقدم'])) {
+    input.difficulty = 'ADVANCED';
+  }
+
+  for (const entry of CATEGORY_SYNONYMS) {
+    if (includesAny(normalized, entry.terms)) {
+      input.category = entry.categoryText;
+      break;
+    }
+  }
+
+  const explicitTitle = extractProjectTitleQuery(userMessage);
+  if (explicitTitle && !budgetBound) {
+    const sanitizedQuery = sanitizeProjectsWithinBudgetQuery(
+      explicitTitle,
+      input.category,
+    );
+    if (sanitizedQuery) {
+      input.query = sanitizedQuery;
+    }
+  } else if (
+    !input.category &&
+    includesAny(normalized, ['robot', 'robotics', 'روبوت', 'arduino', 'اردوينو'])
+  ) {
+    if (includesAny(normalized, ['arduino', 'اردوينو', 'أردوينو'])) {
+      input.query = 'Arduino';
+    } else if (includesAny(normalized, ['robot', 'robotics', 'روبوت'])) {
+      input.query = 'robot';
+    }
+  }
+
+  return input;
+};
+
+const PROJECTS_WITHIN_BUDGET_QUERY_NOISE = [
+  'within my budget',
+  'within budget',
+  'my budget',
+  'budget',
+  'ضمن ميزانيتي',
+  'بميزانية',
+  'ميزانيتي',
+  'ميزانية',
+  'بحد أقصى',
+  'بحد اقصى',
+  'maximum',
+  'max',
+  'under',
+  'up to',
+  'أقل من',
+  'اقل من',
+  'شيكل',
+  'nis',
+  'shekel',
+  'shekels',
+  'project',
+  'projects',
+  'مشروع',
+  'مشاريع',
+];
+
+export const sanitizeProjectsWithinBudgetQuery = (
+  rawQuery: string,
+  category?: string,
+): string | undefined => {
+  let cleaned = rawQuery.trim();
+  if (!cleaned) {
+    return undefined;
+  }
+
+  cleaned = cleaned
+    .replace(/(?:ضمن\s+ميزانيتي|within\s+(?:my\s+)?budget|بميزانية)/giu, ' ')
+    .replace(/(?:بحد\s+أقصى|بحد\s+اقصى|up\s+to|under|maximum|max\b|أقل\s+من|اقل\s+من)/giu, ' ')
+    .replace(/\d+(?:\.\d+)?\s*(?:nis|shekels?|شيكل|₪)?/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const categoryTerms = new Set(
+    CATEGORY_SYNONYMS.flatMap((entry) =>
+      category && entry.categoryText === category
+        ? entry.terms.map((term) => term.toLowerCase())
+        : [],
+    ),
+  );
+
+  const tokens = cleaned
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => {
+      if (!token) {
+        return false;
+      }
+      const lower = token.toLowerCase();
+      if (PROJECTS_WITHIN_BUDGET_QUERY_NOISE.includes(lower)) {
+        return false;
+      }
+      if (categoryTerms.has(lower)) {
+        return false;
+      }
+      return true;
+    });
+
+  const sanitized = tokens.join(' ').trim();
+  return sanitized.length >= 2 ? sanitized : undefined;
+};
+
 export const detectProjectMaterialAvailabilityIntent = (
   userMessage: string,
 ): boolean => {
+  if (detectProjectsWithinBudgetIntent(userMessage)) {
+    return false;
+  }
   if (detectProjectBudgetEstimationIntent(userMessage)) {
     return false;
   }
@@ -1021,8 +1362,50 @@ const PROJECT_QUERY_STOPWORDS = new Set(
     'حلوة',
     'beautiful',
     'cool',
+    'كم',
+    'بكلفني',
+    'بكلف',
+    'تكلفة',
+    'تكلفه',
+    'سعر',
+    'السعر',
+    'cost',
+    'price',
+    'much',
+    'how',
+    'estimate',
+    'احسب',
+    'احسبلي',
+    'قديش',
+    'pay',
+    'budget',
   ].map((term) => term.toLowerCase()),
 );
+
+export const stripProjectBudgetCostSuffix = (text: string): string =>
+  text
+    .replace(
+      /\s+(?:كم\s+)?(?:بكلف(?:ني)?|بكلف|تكلفة|تكلفه|سعر|السعر|how\s+much(?:\s+does)?|what.*cost|would\s+cost|price|estimate|احسب(?:لي)?|قديش|pay|budget).*$/iu,
+      '',
+    )
+    .trim();
+
+export const stripProjectBudgetCostPrefix = (text: string): string =>
+  text
+    .replace(
+      /^(?:كم\s+)?(?:بكلف(?:ني)?|بكلف|تكلفة|تكلفه|سعر|السعر|how\s+much(?:\s+does)?|what.*cost|would\s+cost|price|estimate|احسب(?:لي)?|قديش|pay|budget)\s+(?:مشروع|project)?\s*/iu,
+      '',
+    )
+    .trim();
+
+const normalizeExtractedProjectTitle = (candidate: string): string =>
+  stripProjectBudgetCostSuffix(stripProjectBudgetCostPrefix(candidate))
+    .replace(/^(المطلوبة|المطلوب|required|the)\s+/i, '')
+    .replace(/\s+من\s+المنصة$/i, '')
+    .replace(/[؟?.!]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, 120)
+    .trim();
 
 export const normalizeProjectQueryText = (value: string): string =>
   value
@@ -1086,10 +1469,10 @@ export const extractProjectTitleQuery = (userMessage: string): string | undefine
     actionFirstTitle.length >= 3 &&
     !isGenericComponentDescriptorTitle(actionFirstTitle)
   ) {
-    return actionFirstTitle
-      .replace(/[؟?.!]+$/g, '')
-      .replace(/\s+/g, ' ')
-      .slice(0, 120);
+    const normalized = normalizeExtractedProjectTitle(actionFirstTitle);
+    if (normalized.length >= 3 && !isGenericComponentDescriptorTitle(normalized)) {
+      return normalized;
+    }
   }
 
   const patterns = [
@@ -1111,13 +1494,8 @@ export const extractProjectTitleQuery = (userMessage: string): string | undefine
     const match = parsedMessage.match(pattern);
     const candidate = match?.[1]?.trim();
     if (candidate && candidate.length >= 3) {
-      const normalized = candidate
-        .replace(/^(المطلوبة|المطلوب|required|the)\s+/i, '')
-        .replace(/\s+من\s+المنصة$/i, '')
-        .replace(/[؟?.!]+$/g, '')
-        .replace(/\s+/g, ' ')
-        .slice(0, 120);
-      if (isGenericComponentDescriptorTitle(normalized)) {
+      const normalized = normalizeExtractedProjectTitle(candidate);
+      if (normalized.length < 3 || isGenericComponentDescriptorTitle(normalized)) {
         continue;
       }
       return normalized;

@@ -22,9 +22,15 @@ import {
   detectProjectComponentsIntent,
   detectProjectBudgetEstimationIntent,
   detectProjectBudgetEstimationFollowUp,
+  detectProjectMaterialAvailabilitySelectionFollowUp,
+  detectProjectsWithinBudgetIntent,
   detectProjectMaterialAvailabilityIntent,
+  extractBudgetBound,
+  parseProjectsWithinBudgetInput,
+  resolveProjectsWithinBudgetNumericContinuation,
   extractProjectTitleQuery,
   hasRecentOwnedMaterialsProjectContext,
+  hasRecentProjectBudgetConfirmation,
   isAffirmativeOwnedMaterialsContinuation,
   isExplicitMaterialSearchCommand,
   mergeMaterialSearchPlan,
@@ -52,6 +58,7 @@ import { resolveProjectFromRecentEntities } from './ai-agent-reference-resolver.
 import { assessDangerousRequest } from './ai-agent-safety-guard.service.js';
 import { routeToToolName } from './ai-agent-route-mapping.js';
 import { resolveEntityFromContext } from './ai-agent-reference-resolver.service.js';
+import { findProjectsWithinBudgetInputSchema } from './ai-tool.types.js';
 
 export type AgentExecutionDiagnostics = {
   deterministicRoute: AiAgentRouteType;
@@ -423,6 +430,21 @@ const buildDeterministicFallbackPlan = (input: {
     }
   }
 
+  if (route === 'PROJECTS_WITHIN_BUDGET') {
+    const parsed = parseProjectsWithinBudgetInput(input.userMessage);
+    const budgetBound = extractBudgetBound(input.userMessage);
+    if (!budgetBound?.maxBudgetNis) {
+      return buildProjectsWithinBudgetClarificationPlan({
+        routeDecision: input.routeDecision,
+        locale: input.locale,
+        semanticPlannerUsed: false,
+        semanticRoute: null,
+        plannerConfidence: null,
+      });
+    }
+    toolInput = parsed;
+  }
+
   if (route === 'PROJECT_BUDGET_ESTIMATION') {
     const contextual = resolveContextualProjectBudgetToolInput({
       userMessage: input.userMessage,
@@ -591,6 +613,102 @@ const buildProjectBudgetClarificationPlan = (input: {
   },
 });
 
+const buildProjectsWithinBudgetClarificationPlan = (input: {
+  routeDecision: AiAgentRouteDecision;
+  locale: AiLocale;
+  semanticPlannerUsed: boolean;
+  semanticRoute: AiAgentRouteType | null;
+  plannerConfidence: number | null;
+}): AgentExecutionPlan => ({
+  route: 'CLARIFICATION',
+  toolName: null,
+  toolInput: {},
+  clarificationReason:
+    input.locale === 'ar'
+      ? 'ما الحد الأقصى لميزانيتك بالشيكل؟'
+      : 'What is your maximum budget in NIS?',
+  diagnostics: {
+    deterministicRoute: input.routeDecision.route,
+    deterministicConfidence: input.routeDecision.confidence,
+    semanticPlannerUsed: input.semanticPlannerUsed,
+    semanticRoute: input.semanticRoute,
+    validatedRoute: 'CLARIFICATION',
+    normalizedFilters: null,
+    toolName: null,
+    plannerConfidence: input.plannerConfidence,
+    resolvedEntityTitle: null,
+  },
+});
+
+const projectsWithinBudgetPlanFromPlanner = (
+  userMessage: string,
+  planner: AgentPlannerOutput,
+): Record<string, unknown> | null => {
+  if (planner.toolCall?.name !== 'find_projects_within_budget') {
+    return null;
+  }
+
+  const toolArgs =
+    planner.toolCall?.name === 'find_projects_within_budget'
+      ? planner.toolCall.arguments
+      : {};
+  const deterministic = parseProjectsWithinBudgetInput(userMessage);
+
+  return findProjectsWithinBudgetInputSchema.parse({
+    maxBudgetNis:
+      typeof toolArgs.maxBudgetNis === 'number'
+        ? toolArgs.maxBudgetNis
+        : deterministic.maxBudgetNis,
+    comparisonMode:
+      toolArgs.comparisonMode === 'LT' || toolArgs.comparisonMode === 'LTE'
+        ? toolArgs.comparisonMode
+        : deterministic.comparisonMode,
+    category:
+      typeof toolArgs.category === 'string' ? toolArgs.category : deterministic.category,
+    difficulty:
+      toolArgs.difficulty === 'BEGINNER' ||
+      toolArgs.difficulty === 'INTERMEDIATE' ||
+      toolArgs.difficulty === 'ADVANCED'
+        ? toolArgs.difficulty
+        : deterministic.difficulty,
+    query: typeof toolArgs.query === 'string' ? toolArgs.query : deterministic.query,
+    projectLimit:
+      typeof toolArgs.projectLimit === 'number'
+        ? toolArgs.projectLimit
+        : deterministic.projectLimit,
+    includePartial:
+      typeof toolArgs.includePartial === 'boolean'
+        ? toolArgs.includePartial
+        : deterministic.includePartial,
+    candidateProjectIds: Array.isArray(toolArgs.candidateProjectIds)
+      ? toolArgs.candidateProjectIds
+      : deterministic.candidateProjectIds,
+  });
+};
+
+const buildProjectsWithinBudgetExecutionPlan = (input: {
+  routeDecision: AiAgentRouteDecision;
+  toolInput: Record<string, unknown>;
+  semanticPlannerUsed: boolean;
+  semanticRoute: AiAgentRouteType | null;
+  plannerConfidence: number | null;
+}): AgentExecutionPlan => ({
+  route: 'PROJECTS_WITHIN_BUDGET',
+  toolName: 'find_projects_within_budget',
+  toolInput: input.toolInput,
+  diagnostics: {
+    deterministicRoute: input.routeDecision.route,
+    deterministicConfidence: input.routeDecision.confidence,
+    semanticPlannerUsed: input.semanticPlannerUsed,
+    semanticRoute: input.semanticRoute,
+    validatedRoute: 'PROJECTS_WITHIN_BUDGET',
+    normalizedFilters: input.toolInput,
+    toolName: 'find_projects_within_budget',
+    plannerConfidence: input.plannerConfidence,
+    resolvedEntityTitle: null,
+  },
+});
+
 const BUDGET_CONTEXT_PROJECT_BLOCK_TYPES = new Set([
   'project_results',
   'component_list',
@@ -665,6 +783,19 @@ const resolveContextualProjectBudgetToolInput = (input: {
 
   if (resolved?.entity.id) {
     return { projectId: resolved.entity.id, limitPerComponent: 5 };
+  }
+
+  if (
+    hasRecentProjectBudgetConfirmation({
+      recentMessages: input.conversationContext?.recentMessages ?? [],
+    }) &&
+    (isAffirmativeOwnedMaterialsContinuation(input.userMessage) ||
+      detectProjectMaterialAvailabilitySelectionFollowUp(input.userMessage))
+  ) {
+    const contextual = resolveSingleBudgetContextProject(projectCandidates);
+    if (contextual) {
+      return { projectId: contextual.id, limitPerComponent: 5 };
+    }
   }
 
   if (detectProjectBudgetEstimationFollowUp(input.userMessage)) {
@@ -809,6 +940,41 @@ const applyPlannerPlan = (input: {
   const ownedMaterialsPlan = applyOwnedMaterialsPlannerDecision(input);
   if (ownedMaterialsPlan) {
     return ownedMaterialsPlan;
+  }
+
+  const projectsWithinBudgetToolInput = projectsWithinBudgetPlanFromPlanner(
+    input.userMessage,
+    input.planner,
+  );
+
+  if (
+    input.planner.toolCall?.name === 'find_projects_within_budget' ||
+    projectsWithinBudgetToolInput ||
+    detectProjectsWithinBudgetIntent(input.userMessage)
+  ) {
+    let toolInput =
+      projectsWithinBudgetToolInput ?? parseProjectsWithinBudgetInput(input.userMessage);
+    const budgetBound = extractBudgetBound(input.userMessage);
+
+    if (!budgetBound?.maxBudgetNis || Number(toolInput.maxBudgetNis) <= 0) {
+      return buildProjectsWithinBudgetClarificationPlan({
+        routeDecision: input.routeDecision,
+        locale: input.locale,
+        semanticPlannerUsed: true,
+        semanticRoute: input.planner.route,
+        plannerConfidence: input.planner.confidence,
+      });
+    }
+
+    toolInput = findProjectsWithinBudgetInputSchema.parse(toolInput);
+
+    return buildProjectsWithinBudgetExecutionPlan({
+      routeDecision: input.routeDecision,
+      toolInput,
+      semanticPlannerUsed: true,
+      semanticRoute: input.planner.route,
+      plannerConfidence: input.planner.confidence,
+    });
   }
 
   const budgetToolInput = projectBudgetEstimationPlanFromPlanner(
@@ -1128,11 +1294,40 @@ const reconcilePlannerWithPlatformIntent = (input: {
   }
 
   if (
+    detectProjectsWithinBudgetIntent(input.userMessage) &&
+    (input.plan.route === 'GENERAL_LEARNING' ||
+      input.plan.route === 'CLARIFICATION' ||
+      input.plan.route === 'MATERIAL_SEARCH' ||
+      input.plan.route === 'PROJECT_SEARCH' ||
+      input.plan.route === 'PROJECT_BUDGET_ESTIMATION')
+  ) {
+    const budgetBound = extractBudgetBound(input.userMessage);
+    if (!budgetBound?.maxBudgetNis) {
+      return buildProjectsWithinBudgetClarificationPlan({
+        routeDecision: input.routeDecision,
+        locale: input.locale,
+        semanticPlannerUsed: input.plan.diagnostics.semanticPlannerUsed,
+        semanticRoute: input.plan.diagnostics.semanticRoute,
+        plannerConfidence: input.plan.diagnostics.plannerConfidence,
+      });
+    }
+
+    return buildProjectsWithinBudgetExecutionPlan({
+      routeDecision: input.routeDecision,
+      toolInput: parseProjectsWithinBudgetInput(input.userMessage),
+      semanticPlannerUsed: input.plan.diagnostics.semanticPlannerUsed,
+      semanticRoute: input.plan.diagnostics.semanticRoute,
+      plannerConfidence: input.plan.diagnostics.plannerConfidence,
+    });
+  }
+
+  if (
     detectProjectBudgetEstimationIntent(input.userMessage) &&
     (input.plan.route === 'GENERAL_LEARNING' ||
       input.plan.route === 'CLARIFICATION' ||
       input.plan.route === 'MATERIAL_SEARCH' ||
-      input.plan.route === 'PROJECT_MATERIAL_AVAILABILITY')
+      input.plan.route === 'PROJECT_MATERIAL_AVAILABILITY' ||
+      input.plan.route === 'PROJECT_SEARCH')
   ) {
     return buildProjectBudgetFallbackPlan({
       userMessage: input.userMessage,
@@ -1208,6 +1403,18 @@ const reconcilePlannerWithPlatformIntent = (input: {
           input.plan.diagnostics.semanticRoute;
         return ownedFallback;
       }
+    }
+
+    if (detectProjectBudgetEstimationIntent(input.userMessage)) {
+      return buildProjectBudgetFallbackPlan({
+        userMessage: input.userMessage,
+        routeDecision: input.routeDecision,
+        locale: input.locale,
+        conversationContext: input.conversationContext,
+        semanticPlannerUsed: input.plan.diagnostics.semanticPlannerUsed,
+        semanticRoute: input.plan.diagnostics.semanticRoute,
+        plannerConfidence: input.plan.diagnostics.plannerConfidence,
+      });
     }
 
     return domainPreservedPlan;
@@ -1411,6 +1618,49 @@ export const resolveAgentExecutionPlan = async (input: {
     (input.conversationId
       ? await buildPlannerConversationContext(input.conversationId)
       : undefined);
+
+  const numericBudgetContinuation = conversationContext
+    ? resolveProjectsWithinBudgetNumericContinuation(
+        input.userMessage,
+        conversationContext,
+      )
+    : null;
+  if (numericBudgetContinuation) {
+    return buildProjectsWithinBudgetExecutionPlan({
+      routeDecision: {
+        route: 'PROJECTS_WITHIN_BUDGET',
+        confidence: 0.95,
+        source: 'deterministic',
+        suggestedTool: 'find_projects_within_budget',
+      },
+      toolInput: numericBudgetContinuation,
+      semanticPlannerUsed: false,
+      semanticRoute: null,
+      plannerConfidence: null,
+    });
+  }
+
+  if (
+    conversationContext &&
+    hasRecentProjectBudgetConfirmation(conversationContext) &&
+    (isAffirmativeOwnedMaterialsContinuation(input.userMessage) ||
+      detectProjectMaterialAvailabilitySelectionFollowUp(input.userMessage))
+  ) {
+    const confirmationPlan = buildProjectBudgetFallbackPlan({
+      userMessage: input.userMessage,
+      routeDecision: {
+        route: 'PROJECT_BUDGET_ESTIMATION',
+        confidence: 0.96,
+        source: 'deterministic',
+        suggestedTool: 'estimate_project_material_budget',
+      },
+      locale: input.locale,
+      conversationContext,
+    });
+    if (confirmationPlan.toolInput.projectId) {
+      return confirmationPlan;
+    }
+  }
 
   const skipPlanner =
     isHighConfidenceDeterministicPlatformPlan({

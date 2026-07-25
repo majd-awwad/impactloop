@@ -21,6 +21,8 @@ const clientOrPrisma = (client?: Prisma.TransactionClient) => client ?? prisma;
 
 const publicProjectWhere: Prisma.LearningProjectWhereInput = {
   status: 'PUBLISHED',
+  hiddenAt: null,
+  archivedAt: null,
   category: {
     isActive: true,
     categoryType: {

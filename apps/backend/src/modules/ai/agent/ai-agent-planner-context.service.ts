@@ -1,4 +1,3 @@
-import type { AiContentBlock } from '../ai.content-blocks.js';
 import { parseStoredContentBlocks } from '../ai-context-builder.js';
 import { listMessagesForConversation } from '../ai.repository.js';
 import {
@@ -53,10 +52,28 @@ export const buildPlannerConversationContext = async (
 
   const recentMessages = items
     .filter((message) => message.role === 'USER' || message.role === 'ASSISTANT')
-    .map((message) => ({
-      role: message.role as 'USER' | 'ASSISTANT',
-      text: message.contentText?.trim() ?? '',
-    }))
+    .map((message) => {
+      if (message.role === 'USER') {
+        return {
+          role: 'USER' as const,
+          text: message.contentText?.trim() ?? '',
+        };
+      }
+
+      const fromContentText = message.contentText?.trim() ?? '';
+      if (fromContentText.length > 0) {
+        return { role: 'ASSISTANT' as const, text: fromContentText };
+      }
+
+      const blocks = parseStoredContentBlocks(message.contentBlocks);
+      const text = blocks
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('\n\n')
+        .trim();
+
+      return { role: 'ASSISTANT' as const, text };
+    })
     .filter((message) => message.text.length > 0);
 
   const entities = (await loadRecentEntitiesForConversation(conversationId))

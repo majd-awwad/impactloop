@@ -11,6 +11,7 @@ import {
   detectOwnedMaterialsProjectIntent,
   detectProjectComponentsIntent,
   detectProjectBudgetEstimationIntent,
+  detectProjectsWithinBudgetIntent,
   detectProjectMaterialAvailabilityIntent,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
@@ -241,6 +242,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
     };
   }
 
+  if (detectProjectsWithinBudgetIntent(text)) {
+    return {
+      route: 'PROJECTS_WITHIN_BUDGET',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'find_projects_within_budget',
+    };
+  }
+
   if (detectProjectBudgetEstimationIntent(text)) {
     return {
       route: 'PROJECT_BUDGET_ESTIMATION',
@@ -324,6 +334,15 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
 };
 
 const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
+  if (detectProjectsWithinBudgetIntent(text)) {
+    return {
+      route: 'PROJECTS_WITHIN_BUDGET',
+      confidence: 0.94,
+      source: 'deterministic',
+      suggestedTool: 'find_projects_within_budget',
+    };
+  }
+
   if (detectProjectBudgetEstimationIntent(text)) {
     return {
       route: 'PROJECT_BUDGET_ESTIMATION',

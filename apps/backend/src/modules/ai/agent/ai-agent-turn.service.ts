@@ -2878,6 +2878,10 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       routeDecision.route === 'PROJECT_BUDGET_ESTIMATION' &&
       (executionPlan.toolInput.projectId != null ||
         executionPlan.toolInput.projectQuery != null);
+    const planHasProjectsWithinBudgetInput =
+      routeDecision.route === 'PROJECTS_WITHIN_BUDGET' &&
+      typeof executionPlan.toolInput.maxBudgetNis === 'number' &&
+      Number(executionPlan.toolInput.maxBudgetNis) > 0;
     const mustResolveToolInput =
       routeDecision.route === 'COMPONENT_MATERIAL_MATCHING' ||
       routeDecision.route === 'PROJECT_MATERIAL_MATCHING' ||
@@ -2886,6 +2890,7 @@ export const executeLearnerAgentPlatformTurn = async (input: {
 
     toolInput =
       planHasBudgetInput ||
+      planHasProjectsWithinBudgetInput ||
       (!mustResolveToolInput &&
         (routeDecision.route === 'MATERIAL_SEARCH' ||
           routeDecision.route === 'OWNED_MATERIALS_PROJECT_MATCH' ||
@@ -3054,6 +3059,7 @@ export const executeLearnerAgentPlatformTurn = async (input: {
     ];
   } else if (
     trustedBlocks.length > 0 &&
+    routeDecision.route !== 'PROJECTS_WITHIN_BUDGET' &&
     !trustedBlocks.some((block) => block.type === 'component_matches') &&
     !trustedBlocks.some((block) => block.type === 'project_results') &&
     isAiChatProviderOperational()

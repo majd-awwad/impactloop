@@ -144,3 +144,16 @@ export const matchAvailableMaterialsForProjectInputSchema = z
 
 export const estimateProjectMaterialBudgetInputSchema =
   matchAvailableMaterialsForProjectInputSchema;
+
+export const findProjectsWithinBudgetInputSchema = z
+  .object({
+    maxBudgetNis: z.number().positive().max(10_000),
+    comparisonMode: z.enum(['LT', 'LTE']),
+    category: z.string().trim().min(1).max(80).optional(),
+    difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).optional(),
+    query: z.string().trim().min(1).max(120).optional(),
+    projectLimit: z.number().int().min(1).max(10).optional(),
+    includePartial: z.boolean().optional(),
+    candidateProjectIds: z.array(z.string().trim().min(1)).max(12).optional(),
+  })
+  .strict();

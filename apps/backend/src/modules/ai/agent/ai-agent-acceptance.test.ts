@@ -8,6 +8,7 @@ import {
   detectProjectComponentsIntent,
   detectEducationalLearningIntent,
   detectProjectBudgetEstimationIntent,
+  detectProjectsWithinBudgetIntent,
   detectProjectMaterialAvailabilityIntent,
   detectProjectMaterialAvailabilitySelectionFollowUp,
   extractMaterialSearchFilters,
@@ -16,6 +17,7 @@ import {
   isExplicitMaterialSearchCommand,
   parseOwnedMaterialsFromMessage,
   parseOwnedMaterialsProjectInput,
+  parseProjectsWithinBudgetInput,
   resolveOwnedMaterialsFromConversation,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
   tokenizeProjectQuery,
@@ -792,6 +794,26 @@ describe('acceptance: project budget estimation', () => {
     assert.equal(validated?.toolCall?.name, 'estimate_project_material_budget');
   });
 
+  test('reconciliation overrides PROJECT_SEARCH when budget intent is present', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'PROJECT_SEARCH',
+      confidence: 0.95,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: {
+        name: 'search_learning_projects',
+        arguments: { query: 'Obstacle Avoidance Robot', limit: 5 },
+      },
+    }));
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'كم بكلفني مشروع Obstacle Avoidance Robot؟',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(plan.toolName, 'estimate_project_material_budget');
+    assert.equal(plan.toolInput.projectQuery, 'Obstacle Avoidance Robot');
+  });
+
   test('reconciliation preserves budget route when planner mislabels GENERAL_LEARNING', async () => {
     setSemanticPlannerOverrideForTests(async () => ({
       route: 'GENERAL_LEARNING',
@@ -998,6 +1020,92 @@ describe('acceptance: project budget estimation', () => {
   });
 });
 
+describe('acceptance: projects within budget', () => {
+  test('Arabic max-budget project request selects PROJECTS_WITHIN_BUDGET', async () => {
+    const message = 'بدي مشروع إلكترونيات بحد أقصى 60 شيكل';
+    assert.equal(detectProjectsWithinBudgetIntent(message), true);
+    assert.equal(detectProjectBudgetEstimationIntent(message), false);
+
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: message,
+      locale: 'ar',
+    });
+
+    assert.equal(plan.route, 'PROJECTS_WITHIN_BUDGET');
+    assert.equal(plan.toolName, 'find_projects_within_budget');
+    assert.equal(plan.toolInput.maxBudgetNis, 60);
+    assert.equal(plan.toolInput.comparisonMode, 'LTE');
+  });
+
+  test('numeric clarification follow-up continues PROJECTS_WITHIN_BUDGET', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: '60',
+      locale: 'en',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'Show electronics projects within my budget' },
+          { role: 'ASSISTANT', text: 'What is your maximum budget in NIS?' },
+        ],
+        entities: [],
+      },
+    });
+
+    assert.equal(plan.route, 'PROJECTS_WITHIN_BUDGET');
+    assert.equal(plan.toolName, 'find_projects_within_budget');
+    assert.equal(plan.toolInput.maxBudgetNis, 60);
+  });
+
+  test('Arabic numeric follow-up preserves electronics category from ضمن ميزانيتي', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: '60',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'بدي مشروع إلكترونيات ضمن ميزانيتي' },
+          { role: 'ASSISTANT', text: 'ما الحد الأقصى لميزانيتك بالشيكل؟' },
+        ],
+        entities: [],
+      },
+    });
+
+    assert.equal(plan.route, 'PROJECTS_WITHIN_BUDGET');
+    assert.equal(plan.toolName, 'find_projects_within_budget');
+    assert.equal(plan.toolInput.maxBudgetNis, 60);
+    assert.equal(plan.toolInput.category, 'electronics');
+    assert.equal(plan.toolInput.comparisonMode, 'LTE');
+  });
+
+  test('standalone numeric without budget context does not execute budget search', async () => {
+    setSemanticPlannerOverrideForTests(async () => null);
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: '60',
+      locale: 'en',
+      conversationContext: {
+        recentMessages: [],
+        entities: [],
+      },
+    });
+    assert.notEqual(plan.route, 'PROJECTS_WITHIN_BUDGET');
+    assert.notEqual(plan.toolName, 'find_projects_within_budget');
+  });
+
+  test('missing budget amount asks for clarification', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'Show electronics projects within my budget',
+      locale: 'en',
+    });
+
+    assert.equal(plan.route, 'CLARIFICATION');
+    assert.match(String(plan.clarificationReason), /maximum budget in nis/i);
+  });
+
+  test('parseProjectsWithinBudgetInput preserves LTE inclusive bound', () => {
+    const parsed = parseProjectsWithinBudgetInput('electronics projects up to 56 NIS');
+    assert.equal(parsed.maxBudgetNis, 56);
+    assert.equal(parsed.comparisonMode, 'LTE');
+  });
+});
+
 describe('acceptance: explicit project title extraction', () => {
   test('extracts mixed Arabic command and English project titles', () => {
     const cases = [
@@ -1017,6 +1125,52 @@ describe('acceptance: explicit project title extraction', () => {
     const parsed = parseProjectSearchInput('اعرضلي مشروع Electronic LED Dice');
     assert.equal(parsed.query, 'Electronic LED Dice');
     assert.equal(parsed.limit, 5);
+  });
+
+  test('strips budget suffix from approximate project title query', () => {
+    assert.equal(
+      extractProjectTitleQuery('مشروع fabric pencil starter كم بكلفني'),
+      'fabric pencil starter',
+    );
+  });
+
+  test('tokenizeProjectQuery ignores budget cost words', () => {
+    const tokens = tokenizeProjectQuery('fabric pencil starter كم بكلفني');
+    assert.deepEqual(tokens, ['fabric', 'pencil', 'starter']);
+  });
+});
+
+describe('acceptance: approximate project budget confirmation', () => {
+  test('affirmative reply after budget confirmation selects grounded project', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'اه',
+      locale: 'ar',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'مشروع fabric pencil starter كم بكلفني' },
+          { role: 'ASSISTANT', text: 'هل تقصد مشروع Fabric Pencil Case؟' },
+        ],
+        entities: [
+          {
+            type: 'PROJECT',
+            id: 'proj-fabric-pencil',
+            title: 'Fabric Pencil Case',
+            resultIndex: 0,
+            blockType: 'project_results',
+            messageId: 'msg-1',
+            recencyOrder: 0,
+          },
+        ],
+      },
+    });
+    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
+    assert.equal(plan.toolName, 'estimate_project_material_budget');
+    assert.equal(plan.toolInput.projectId, 'proj-fabric-pencil');
+  });
+
+  test('weak generic token query does not imply a named project budget', () => {
+    assert.equal(extractProjectTitleQuery('مشروع fabric كم بكلفني'), 'fabric');
+    assert.equal(detectProjectBudgetEstimationIntent('مشروع fabric كم بكلفني'), true);
   });
 });
 

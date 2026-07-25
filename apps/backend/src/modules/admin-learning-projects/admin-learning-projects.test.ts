@@ -274,6 +274,58 @@ describe('admin learning projects moderation', () => {
     );
   });
 
+  test('public Learning Hub excludes published projects with hiddenAt or archivedAt', async () => {
+    const author = await createLearnerUser();
+    const category = await createProjectCategory();
+    const visible = await createLearningProject({
+      suffix: 'visible-published',
+      status: 'PUBLISHED',
+      authorId: author.id,
+      categoryId: category.id,
+    });
+    const publishedHidden = await prisma.learningProject.create({
+      data: {
+        categoryId: category.id,
+        createdBy: author.id,
+        title: `${TEST_MARKER} published-hidden`,
+        shortDescription: `${TEST_MARKER} hidden published`,
+        description: `${TEST_MARKER} hidden published`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        hiddenAt: new Date(),
+      },
+    });
+    const publishedArchived = await prisma.learningProject.create({
+      data: {
+        categoryId: category.id,
+        createdBy: author.id,
+        title: `${TEST_MARKER} published-archived`,
+        shortDescription: `${TEST_MARKER} archived published`,
+        description: `${TEST_MARKER} archived published`,
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        archivedAt: new Date(),
+      },
+    });
+    ids.projects.push(publishedHidden.id, publishedArchived.id);
+
+    const publicList = await getLearningProjects({ page: 1, limit: 100 });
+    const publicIds = publicList.items.map((item) => item.id);
+
+    assert.equal(publicIds.includes(visible.id), true);
+    assert.equal(publicIds.includes(publishedHidden.id), false);
+    assert.equal(publicIds.includes(publishedArchived.id), false);
+
+    await assert.rejects(
+      () => getLearningProjectById(publishedHidden.id),
+      (error: unknown) => error instanceof AppError && error.statusCode === 404,
+    );
+    await assert.rejects(
+      () => getLearningProjectById(publishedArchived.id),
+      (error: unknown) => error instanceof AppError && error.statusCode === 404,
+    );
+  });
+
   test('admin list shows all moderation statuses', async () => {
     const author = await createLearnerUser();
     const category = await createProjectCategory();

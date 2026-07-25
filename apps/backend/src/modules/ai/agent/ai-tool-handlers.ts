@@ -4,7 +4,12 @@ import { getCategories } from '../../categories/categories.service.js';
 import { getLearnerHomeSection } from '../../learner-home/learner-home.service.js';
 import { normalizeMaterialTitleKey } from '../../learner-home/learner-home.deduplication.js';
 import type { LearnerHomeSectionItem } from '../../learner-home/learner-home.types.js';
-import { getRequiredComponentMaterialCandidates, estimateProjectMaterialBudget } from '../../learning-projects/learning-projects.build-material-linking.js';
+import {
+  getRequiredComponentMaterialCandidates,
+  estimateProjectMaterialBudget,
+  findProjectsWithinBudget,
+  type ProjectMaterialBudgetEstimate,
+} from '../../learning-projects/learning-projects.build-material-linking.js';
 import {
   getBuildItemMaterialCandidatesById,
   getLearningProjectById,
@@ -24,6 +29,8 @@ import {
   isGenericProjectBrowseQuery,
   normalizeOwnedMaterialForMatching,
   ownedMaterialAliasGroups,
+  stripProjectBudgetCostSuffix,
+  stripProjectBudgetCostPrefix,
   tokenizeProjectQuery,
 } from './ai-agent-filter-extractor.service.js';
 import type { AiToolExecutionContext } from './ai-agent.types.js';
@@ -53,6 +60,7 @@ import {
   compareProjectIdsInputSchema,
   componentIdInputSchema,
   findMaterialsForProjectInputSchema,
+  findProjectsWithinBudgetInputSchema,
   matchAvailableMaterialsForProjectInputSchema,
   materialIdInputSchema,
   matchProjectsByOwnedMaterialsInputSchema,
@@ -508,10 +516,13 @@ type LearningProjectListItem = Awaited<
 
 const collectProjectEvidenceTokens = (project: LearningProjectListItem): Set<string> => {
   const tokens = new Set<string>();
+  const tagLabels = (project.tags ?? []).map((tag) =>
+    typeof tag === 'string' ? tag : tag.tag,
+  );
   const parts = [
     project.title,
     project.shortDescription ?? '',
-    ...(project.tags ?? []),
+    ...tagLabels,
     project.category?.nameEn ?? '',
     project.category?.nameAr ?? '',
   ];
@@ -523,6 +534,44 @@ const collectProjectEvidenceTokens = (project: LearningProjectListItem): Set<str
   }
 
   return tokens;
+};
+
+const narrowToDominantProjectCandidates = (
+  query: string,
+  projects: LearningProjectListItem[],
+): LearningProjectListItem[] => {
+  if (projects.length <= 1) {
+    return projects;
+  }
+
+  const queryTokens = tokenizeProjectQuery(query);
+  const scored = projects
+    .map((project) => ({
+      project,
+      evidence: scoreProjectQueryTokenEvidence(queryTokens, project),
+    }))
+    .filter(({ evidence }) => passesProjectQueryTokenThreshold(queryTokens, evidence))
+    .sort((left, right) => {
+      if (right.evidence.matchedTokens !== left.evidence.matchedTokens) {
+        return right.evidence.matchedTokens - left.evidence.matchedTokens;
+      }
+
+      return left.project.title.localeCompare(right.project.title);
+    });
+
+  if (scored.length === 0) {
+    return [];
+  }
+
+  const top = scored[0]!;
+  const tied = scored.filter(
+    (entry) => entry.evidence.matchedTokens === top.evidence.matchedTokens,
+  );
+  if (tied.length === 1 && top.evidence.matchedTokens >= 2) {
+    return [top.project];
+  }
+
+  return tied.map((entry) => entry.project);
 };
 
 const scoreProjectQueryTokenEvidence = (
@@ -560,10 +609,12 @@ const passesProjectQueryTokenThreshold = (
     return evidence.matchedTokens >= 1;
   }
 
-  return (
-    evidence.longestMatched &&
-    evidence.matchedTokens / queryTokens.length >= 0.5
-  );
+  const matchedRatio = evidence.matchedTokens / queryTokens.length;
+  if (evidence.matchedTokens >= 2 && matchedRatio >= 0.5) {
+    return true;
+  }
+
+  return evidence.longestMatched && matchedRatio >= 0.5;
 };
 
 const findBoundedTokenFallbackCandidates = async (
@@ -590,21 +641,24 @@ const findBoundedTokenFallbackCandidates = async (
     }
   }
 
-  return [...candidateMap.values()]
-    .map((project) => ({
-      project,
-      evidence: scoreProjectQueryTokenEvidence(queryTokens, project),
-    }))
-    .filter(({ evidence }) => passesProjectQueryTokenThreshold(queryTokens, evidence))
-    .sort((left, right) => {
-      if (right.evidence.matchedTokens !== left.evidence.matchedTokens) {
-        return right.evidence.matchedTokens - left.evidence.matchedTokens;
-      }
+  return narrowToDominantProjectCandidates(
+    query,
+    [...candidateMap.values()]
+      .map((project) => ({
+        project,
+        evidence: scoreProjectQueryTokenEvidence(queryTokens, project),
+      }))
+      .filter(({ evidence }) => passesProjectQueryTokenThreshold(queryTokens, evidence))
+      .sort((left, right) => {
+        if (right.evidence.matchedTokens !== left.evidence.matchedTokens) {
+          return right.evidence.matchedTokens - left.evidence.matchedTokens;
+        }
 
-      return left.project.title.localeCompare(right.project.title);
-    })
-    .slice(0, 5)
-    .map((entry) => entry.project);
+        return left.project.title.localeCompare(right.project.title);
+      })
+      .slice(0, 5)
+      .map((entry) => entry.project),
+  );
 };
 
 const buildAmbiguousProjectChoiceMessage = (
@@ -623,6 +677,27 @@ const buildAmbiguousProjectChoiceMessage = (
     : 'I found more than one matching project. Please choose the project you mean:';
 };
 
+const buildApproximateProjectBudgetConfirmationMessage = (
+  projectTitle: string,
+  locale: AiLocale,
+): string =>
+  locale === 'ar'
+    ? `هل تقصد مشروع ${projectTitle}؟`
+    : `Did you mean the ${projectTitle} project?`;
+
+const buildProjectBudgetResolutionClarificationMessage = (
+  projectQuery: string,
+  projects: Array<{ title: string }>,
+  locale: AiLocale,
+  usedTokenFallback: boolean,
+): string => {
+  if (projects.length === 1) {
+    return buildApproximateProjectBudgetConfirmationMessage(projects[0]!.title, locale);
+  }
+
+  return buildAmbiguousProjectChoiceMessage(projectQuery, locale, usedTokenFallback);
+};
+
 const resolvePublishedLearnerProjectQuery = async (
   input: { projectId?: string; projectQuery?: string },
   viewer: ReturnType<typeof buildLearnerViewer>,
@@ -632,7 +707,9 @@ const resolvePublishedLearnerProjectQuery = async (
     return { kind: 'exact', project };
   }
 
-  const query = input.projectQuery!.trim();
+  const query = stripProjectBudgetCostPrefix(
+    stripProjectBudgetCostSuffix(input.projectQuery!.trim()),
+  );
   const normalizedQuery = normalizeProjectTitleKey(query);
   const searchResult = await getLearningProjects({ page: 1, limit: 8, q: query }, viewer);
 
@@ -648,7 +725,8 @@ const resolvePublishedLearnerProjectQuery = async (
 
   if (searchResult.items.length === 0) {
     const fallbackCandidates = await findBoundedTokenFallbackCandidates(query, viewer);
-    if (fallbackCandidates.length === 0) {
+    const narrowedFallback = narrowToDominantProjectCandidates(query, fallbackCandidates);
+    if (narrowedFallback.length === 0) {
       throw new AppError(
         'No published learning project found.',
         404,
@@ -658,7 +736,7 @@ const resolvePublishedLearnerProjectQuery = async (
 
     return {
       kind: 'ambiguous',
-      projects: fallbackCandidates,
+      projects: narrowedFallback,
       projectQuery: query,
       usedTokenFallback: true,
     };
@@ -674,7 +752,7 @@ const resolvePublishedLearnerProjectQuery = async (
     }
     return {
       kind: 'ambiguous',
-      projects: [only],
+      projects: narrowToDominantProjectCandidates(query, [only]),
       projectQuery: query,
       usedTokenFallback: false,
     };
@@ -682,7 +760,10 @@ const resolvePublishedLearnerProjectQuery = async (
 
   return {
     kind: 'ambiguous',
-    projects: searchResult.items.slice(0, 5),
+    projects: narrowToDominantProjectCandidates(
+      query,
+      searchResult.items.slice(0, 5),
+    ),
     projectQuery: query,
     usedTokenFallback: false,
   };
@@ -897,6 +978,40 @@ const mapLearningProjectsQuery = (
   q: input.query,
   difficulty: input.difficulty,
   tag: input.interests?.[0] ?? input.category,
+});
+
+const formatBudgetSearchSummary = (
+  estimate: ProjectMaterialBudgetEstimate,
+  locale: AiLocale,
+): string => {
+  const coverage = `${estimate.pricedComponentCount}/${estimate.requiredComponentCount}`;
+  if (locale === 'ar') {
+    return `${estimate.estimatedSubtotalNis} شيكل · تغطية ${coverage}`;
+  }
+  return `${estimate.estimatedSubtotalNis} NIS · ${coverage} covered`;
+};
+
+const mapBudgetSearchProjectCard = (
+  estimate: ProjectMaterialBudgetEstimate,
+  locale: AiLocale,
+) => ({
+  ...mapProjectToCard(
+    {
+      id: estimate.projectId,
+      title: estimate.projectTitle,
+      coverImageUrl: estimate.projectImageUrl,
+      difficulty: estimate.difficulty ?? undefined,
+      estimatedDurationMinutes: null,
+    },
+    locale,
+  ),
+  categoryLabel: estimate.categoryLabel ?? undefined,
+  summary: formatBudgetSearchSummary(estimate, locale),
+  matchedComponentCount: estimate.pricedComponentCount,
+  totalRequiredComponentCount: estimate.requiredComponentCount,
+  missingComponents: estimate.components
+    .filter((line) => line.status === 'NO_AVAILABLE_MATCH')
+    .map((line) => line.componentName),
 });
 
 export const executeLearnerAgentTool = async (
@@ -1368,8 +1483,9 @@ export const executeLearnerAgentTool = async (
           blocks: [
             {
               type: 'text' as const,
-              text: buildAmbiguousProjectChoiceMessage(
+              text: buildProjectBudgetResolutionClarificationMessage(
                 input.projectQuery ?? resolved.projectQuery,
+                resolved.projects,
                 locale,
                 resolved.usedTokenFallback,
               ),
@@ -1412,6 +1528,76 @@ export const executeLearnerAgentTool = async (
           toProjectResultsBlock([project], locale),
           toProjectBudgetEstimateBlock(estimate, locale),
         ],
+      };
+    }
+
+    case 'find_projects_within_budget': {
+      const input = findProjectsWithinBudgetInputSchema.parse(rawInput);
+      const result = await findProjectsWithinBudget({
+        learnerId: context.authenticatedUserId,
+        ...input,
+      });
+
+      const blocks: AiContentBlock[] = [];
+      const completeItems = result.complete.map((entry) =>
+        mapBudgetSearchProjectCard(entry.estimate, locale),
+      );
+      const partialItems = result.partial.map((entry) =>
+        mapBudgetSearchProjectCard(entry.estimate, locale),
+      );
+      const boundLabel =
+        input.comparisonMode === 'LT'
+          ? locale === 'ar'
+            ? `أقل من ${input.maxBudgetNis} شيكل`
+            : `under ${input.maxBudgetNis} NIS`
+          : locale === 'ar'
+            ? `بحد أقصى ${input.maxBudgetNis} شيكل`
+            : `up to ${input.maxBudgetNis} NIS`;
+
+      if (completeItems.length === 0 && partialItems.length === 0) {
+        blocks.push({
+          type: 'text',
+          text:
+            locale === 'ar'
+              ? `لم أجد مشاريع منشورة على ImpactLoop تطابق ميزانيتك (${boundLabel}) ضمن مجموعة المرشحين الحالية.`
+              : `I did not find published ImpactLoop projects matching your budget (${boundLabel}) in the current candidate pool.`,
+          purpose: 'answer',
+        });
+      } else {
+        if (completeItems.length > 0) {
+          blocks.push({
+            type: 'text',
+            text:
+              locale === 'ar'
+                ? 'مشاريع مغطاة بالكامل ضمن ميزانيتك'
+                : 'Fully covered projects within your budget',
+            purpose: 'answer',
+          });
+          blocks.push({
+            type: 'project_results',
+            items: completeItems,
+          });
+        }
+        if (partialItems.length > 0) {
+          blocks.push({
+            type: 'text',
+            text:
+              locale === 'ar'
+                ? 'تقديرات جزئية ضمن الميزانية — المكونات الناقصة غير مشمولة'
+                : 'Partial estimates under budget — missing components are not included',
+            purpose: 'answer',
+          });
+          blocks.push({
+            type: 'project_results',
+            items: partialItems,
+          });
+        }
+      }
+
+      return {
+        blocks,
+        metrics: result.metrics,
+        count: completeItems.length + partialItems.length,
       };
     }
 

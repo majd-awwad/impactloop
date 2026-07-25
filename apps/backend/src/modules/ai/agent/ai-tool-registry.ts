@@ -8,6 +8,7 @@ import {
   componentIdInputSchema,
   emptyObjectSchema,
   estimateProjectMaterialBudgetInputSchema,
+  findProjectsWithinBudgetInputSchema,
   findMaterialsForProjectInputSchema,
   matchAvailableMaterialsForProjectInputSchema,
   materialIdInputSchema,
@@ -176,6 +177,17 @@ export const AI_TOOL_REGISTRY = {
     maxOutputBytes: 48_768,
     handler: (input, context) =>
       executeLearnerAgentTool('estimate_project_material_budget', input, context),
+  }),
+  find_projects_within_budget: defineReadTool({
+    name: 'find_projects_within_budget',
+    kind: 'read',
+    description:
+      'Find published Learning Hub projects whose currently available material subtotal matches a learner budget bound',
+    inputSchema: findProjectsWithinBudgetInputSchema,
+    timeoutMs: 30_000,
+    maxOutputBytes: 48_768,
+    handler: (input, context) =>
+      executeLearnerAgentTool('find_projects_within_budget', input, context),
   }),
   compare_materials: defineReadTool({
     name: 'compare_materials',

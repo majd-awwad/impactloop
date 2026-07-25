@@ -23,6 +23,7 @@ export const routeToToolName = (
     PROJECT_MATERIAL_MATCHING: 'find_materials_for_project',
     PROJECT_MATERIAL_AVAILABILITY: 'match_available_materials_for_project',
     PROJECT_BUDGET_ESTIMATION: 'estimate_project_material_budget',
+    PROJECTS_WITHIN_BUDGET: 'find_projects_within_budget',
     OWNED_MATERIALS_PROJECT_MATCH: 'match_projects_by_owned_materials',
     MATERIAL_COMPARISON: 'compare_materials',
     PROJECT_COMPARISON: 'compare_projects',

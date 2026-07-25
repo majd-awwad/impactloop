@@ -6,7 +6,11 @@ import { resolveAgentExecutionPlan } from './ai-agent-plan-resolver.service.js';
 import { resolveAgentRoute } from './ai-agent-router.service.js';
 import {
   detectMaterialSearchIntent,
+  extractBudgetBound,
+  detectProjectsWithinBudgetIntent,
   isExplicitMaterialSearchCommand,
+  parseProjectsWithinBudgetInput,
+  resolveProjectsWithinBudgetNumericContinuation,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
 import { setSemanticPlannerOverrideForTests } from './ai-agent-semantic-planner.service.js';
@@ -114,8 +118,65 @@ describe('ai agent router', () => {
     assert.equal(decision.suggestedTool, 'estimate_project_material_budget');
   });
 
+  test('routes Arabic projects within budget intent', () => {
+    const decision = resolveAgentRoute({
+      userMessage: 'بدي مشروع إلكترونيات بحد أقصى 60 شيكل',
+      locale: 'ar',
+    });
+
+    assert.equal(decision.route, 'PROJECTS_WITHIN_BUDGET');
+    assert.equal(decision.suggestedTool, 'find_projects_within_budget');
+  });
+
+  test('extractBudgetBound distinguishes LT and LTE', () => {
+    assert.deepEqual(extractBudgetBound('under 56 NIS'), {
+      maxBudgetNis: 56,
+      comparisonMode: 'LT',
+    });
+    assert.deepEqual(extractBudgetBound('up to 56 NIS'), {
+      maxBudgetNis: 56,
+      comparisonMode: 'LTE',
+    });
+  });
+
+  test('numeric budget follow-up resolves from clarification context', () => {
+    const continuation = resolveProjectsWithinBudgetNumericContinuation('60', {
+      recentMessages: [
+        { role: 'USER', text: 'بدي مشروع إلكترونيات بحد أقصى' },
+        { role: 'ASSISTANT', text: 'What is your maximum budget in NIS?' },
+      ],
+    });
+    assert.equal(continuation?.maxBudgetNis, 60);
+    assert.equal(continuation?.comparisonMode, 'LTE');
+  });
+
+  test('Arabic within-budget clarification input does not treat category as title query', () => {
+    const parsed = parseProjectsWithinBudgetInput('بدي مشروع إلكترونيات ضمن ميزانيتي');
+    assert.equal(parsed.category, 'electronics');
+    assert.equal(parsed.query, undefined);
+    assert.equal(parsed.maxBudgetNis, 0);
+
+    const continuation = resolveProjectsWithinBudgetNumericContinuation('60', {
+      recentMessages: [
+        { role: 'USER', text: 'بدي مشروع إلكترونيات ضمن ميزانيتي' },
+        { role: 'ASSISTANT', text: 'ما الحد الأقصى لميزانيتك بالشيكل؟' },
+      ],
+    });
+    assert.equal(continuation?.maxBudgetNis, 60);
+    assert.equal(continuation?.category, 'electronics');
+    assert.equal(continuation?.query, undefined);
+  });
+
+  test('bare numeric reply is not a standalone projects-within-budget route', () => {
+    assert.equal(detectProjectsWithinBudgetIntent('60'), false);
+  });
+
   test('registers estimate_project_material_budget tool', () => {
     assert.equal(isRegisteredToolName('estimate_project_material_budget'), true);
+  });
+
+  test('registers find_projects_within_budget tool', () => {
+    assert.equal(isRegisteredToolName('find_projects_within_budget'), true);
   });
 });
 
