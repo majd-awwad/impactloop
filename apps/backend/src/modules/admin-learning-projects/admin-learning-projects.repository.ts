@@ -1,7 +1,12 @@
 import type { LearningProjectStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
+import {
+  defaultProjectTopicLifecycleDeps,
+  type ProjectTopicLifecycleDeps,
+} from '../taxonomy/project-concept-assignment.repository.js';
 import type { AdminLearningProjectsListQuery } from './admin-learning-projects.validation.js';
+import { AppError } from '../../utils/app-error.js';
 
 const startOfUtcDay = (date: Date) => {
   const copy = new Date(date);
@@ -283,6 +288,53 @@ export const updateLearningProjectModeration = async (
     where: { id: updated.id },
     include: adminLearningProjectDetailInclude,
   });
+};
+
+const APPROVE_FROM_STATUSES: LearningProjectStatus[] = [
+  'PENDING_REVIEW',
+  'CHANGES_REQUESTED',
+  'REJECTED',
+];
+
+export const approveLearningProjectInTransaction = async (
+  client: Prisma.TransactionClient,
+  input: {
+    id: string;
+    moderationData: Prisma.LearningProjectUncheckedUpdateManyInput;
+    topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+  },
+) => {
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+
+  const updated = await client.learningProject.updateMany({
+    where: {
+      id: input.id,
+      status: { in: APPROVE_FROM_STATUSES },
+    },
+    data: input.moderationData,
+  });
+
+  if (updated.count === 0) {
+    throw new AppError(
+      'Cannot approve while project status is not eligible for approval.',
+      400,
+      'INVALID_STATUS_TRANSITION',
+    );
+  }
+
+  const project = await client.learningProject.findUniqueOrThrow({
+    where: { id: input.id },
+    select: { categoryId: true, status: true },
+  });
+
+  await topicLifecycleDeps.reconcileLearningProjectTopics(
+    client,
+    input.id,
+    project.categoryId,
+  );
+
+  return { id: input.id };
 };
 
 export const createLearningProjectAuthorNotification = async (input: {

@@ -1,5 +1,6 @@
 import type { LearningProjectStatus, Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
+import { prisma } from '../../database/prisma.js';
 
 import {
   ADMIN_ACTIVITY_ACTIONS,
@@ -368,20 +369,27 @@ export const approveAdminLearningProject = async (
   }
 
   const now = new Date();
-  const updated = await repository.updateLearningProjectModeration(id, {
-    status: 'PUBLISHED',
-    reviewedAt: now,
-    reviewNote: null,
-    rejectionReason: null,
-    changesRequestedReason: null,
-    hiddenAt: null,
-    hiddenBy: null,
-    hiddenReason: null,
-    archivedAt: null,
-    archivedBy: null,
-    archivedReason: null,
-    ...connectReviewer(actorUserId),
-  });
+  const committed = await prisma.$transaction((tx) =>
+    repository.approveLearningProjectInTransaction(tx, {
+      id,
+      moderationData: {
+        status: 'PUBLISHED',
+        reviewedAt: now,
+        reviewedBy: actorUserId,
+        reviewNote: null,
+        rejectionReason: null,
+        changesRequestedReason: null,
+        hiddenAt: null,
+        hiddenBy: null,
+        hiddenReason: null,
+        archivedAt: null,
+        archivedBy: null,
+        archivedReason: null,
+      },
+    }),
+  );
+
+  const updated = await loadProjectOrThrow(committed.id);
 
   await logModeration(actorUserId, ADMIN_ACTIVITY_ACTIONS.LEARNING_PROJECT_APPROVED, updated, {
     status: 'PUBLISHED',

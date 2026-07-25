@@ -2,6 +2,10 @@ import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import {
+  defaultProjectTopicLifecycleDeps,
+  type ProjectTopicLifecycleDeps,
+} from '../taxonomy/project-concept-assignment.repository.js';
 import type {
   LearningProjectsQuery,
   MyLearningProjectsQuery,
@@ -1196,11 +1200,14 @@ export const createLearningProjectForReview = async (input: {
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
   client?: Prisma.TransactionClient;
+  topicLifecycleDeps?: ProjectTopicLifecycleDeps;
 }) => {
   const now = new Date();
   const client = clientOrPrisma(input.client);
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
 
-  return client.learningProject.create({
+  const project = await client.learningProject.create({
     data: {
       categoryId: input.categoryId,
       createdBy: input.createdBy,
@@ -1240,11 +1247,25 @@ export const createLearningProjectForReview = async (input: {
     },
     select: {
       id: true,
+      categoryId: true,
       title: true,
       status: true,
       submittedAt: true,
     },
   });
+
+  await topicLifecycleDeps.reconcileLearningProjectTopics(
+    client,
+    project.id,
+    project.categoryId,
+  );
+
+  return {
+    id: project.id,
+    title: project.title,
+    status: project.status,
+    submittedAt: project.submittedAt,
+  };
 };
 
 export const updateMyLearningProjectSubmission = async (input: {
@@ -1263,7 +1284,11 @@ export const updateMyLearningProjectSubmission = async (input: {
   }>;
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
+  topicLifecycleDeps?: ProjectTopicLifecycleDeps;
 }) => {
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+
   const updated = await prisma.$transaction(async (tx) => {
     const existing = await tx.learningProject.findFirst({
       where: {
@@ -1325,6 +1350,17 @@ export const updateMyLearningProjectSubmission = async (input: {
       where: { id: input.id },
       data: { categoryId: input.categoryId },
     });
+
+    const committed = await tx.learningProject.findUniqueOrThrow({
+      where: { id: input.id },
+      select: { categoryId: true },
+    });
+
+    await topicLifecycleDeps.reconcileLearningProjectTopics(
+      tx,
+      input.id,
+      committed.categoryId,
+    );
 
     if (input.requiredComponents !== undefined) {
       const existingIds = new Set(
