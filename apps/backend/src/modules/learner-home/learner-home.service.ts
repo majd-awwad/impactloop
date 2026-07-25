@@ -9,6 +9,7 @@ import * as learnerHomeRepository from './learner-home.repository.js';
 import {
   BROWSE_MATERIAL_POOL_CAP,
   HOME_MATERIAL_POOL_CAP,
+  type MaterialConceptChunkQuery,
 } from './learner-home.repository.js';
 import {
   dedupeMaterialSections,
@@ -116,7 +117,25 @@ const SECTION_LIMITS = {
 
 const RANK_POOL_SIZE = 48;
 
-const LEARNER_HOME_CACHE_TTL_MS = 45_000;
+/** @internal Exported for RP-03.5 TTL assertions (single source of truth). */
+export const LEARNER_HOME_CACHE_TTL_MS = 45_000;
+
+export type LearnerHomeRequestScope =
+  | { kind: 'FULL_HOME' }
+  | { kind: 'SECTION'; sectionKey: LearnerHomeSectionKey };
+
+/**
+ * Production material candidate-pool cap resolver.
+ * Full Home and non-browse sections use 120; browse-all suggested_materials uses 400.
+ */
+export const resolveMaterialCandidatePoolCap = (
+  scope: LearnerHomeRequestScope,
+): number => {
+  if (scope.kind === 'SECTION' && scope.sectionKey === 'suggested_materials') {
+    return BROWSE_MATERIAL_POOL_CAP;
+  }
+  return HOME_MATERIAL_POOL_CAP;
+};
 
 const emptyMlShadowConcepts = {
   materialConcepts: new Map<string, string[]>(),
@@ -368,8 +387,9 @@ export const createLearnerHomeCacheForTests = <T = LearnerHomeResponse>(
   load: LearnerHomeCacheLoader<T>,
   now: () => number = Date.now,
   shouldCache?: (payload: T) => boolean,
+  resolveCacheKey?: (userId: string) => string,
 ): LearnerHomeCacheController<T> =>
-  createLearnerHomeCache(load, now, undefined, shouldCache);
+  createLearnerHomeCache(load, now, resolveCacheKey, shouldCache);
 
 export const invalidateLearnerHomeCache = (userId: string): void => {
   learnerHomeCache.invalidate(userId);
@@ -535,7 +555,7 @@ const mapContinueBuild = (
  * real try/catch fallback branch directly (honest integration proof) instead
  * of duplicating its retry logic inside a test.
  */
-export type LearnerHomeContext = {
+export type LearnerHomeLoadedContext = {
   interests: string[];
   savedLocation: Awaited<
     ReturnType<typeof learnerHomeRepository.loadDefaultSavedLocation>
@@ -554,6 +574,9 @@ export type LearnerHomeContext = {
   behavior: LearnerBehaviorContext;
   behaviorAffinityProfile: LearnerAffinityProfile;
   hasActivity: boolean;
+};
+
+export type LearnerHomeContext = LearnerHomeLoadedContext & {
   /**
    * RP-03.1 correction: one material effectiveScoringMode cannot describe
    * project scoring (projects always force-delegate to legacy-v1 under a
@@ -565,15 +588,18 @@ export type LearnerHomeContext = {
   canonicalContext: CanonicalMaterialScoringContext | undefined;
 };
 
-type LearnerHomeCachedEnvelope = {
+export type LearnerHomeCachedEnvelope = {
   response: LearnerHomeResponse;
   generation: RecommendationGenerationMetadata;
   cacheable: boolean;
+  /** @internal Not exposed on the public HTTP response. */
+  modeDecision: LearnerHomeModeDecision;
 };
 
 const buildCanonicalScoringContextForMaterials = async (input: {
   materials: LearnerHomeContext['materials'];
   behavior: LearnerBehaviorContext;
+  conceptQueryChunk?: MaterialConceptChunkQuery;
 }): Promise<CanonicalMaterialScoringContext> => {
   const candidateIds = input.materials.map((material) => material.id);
   const likedIds = input.behavior.likedMaterials.map((row) => row.materialId);
@@ -581,8 +607,12 @@ const buildCanonicalScoringContextForMaterials = async (input: {
   const viewedIds = input.behavior.viewedMaterials.map((row) => row.materialId);
   const allIds = [...new Set([...candidateIds, ...likedIds, ...reservedIds, ...viewedIds])];
 
-  const rowsByMaterialId =
-    await learnerHomeRepository.loadMaterialConceptsForScoring(allIds);
+  const rowsByMaterialId = input.conceptQueryChunk
+    ? await learnerHomeRepository.loadMaterialConceptsForScoring(
+        allIds,
+        input.conceptQueryChunk,
+      )
+    : await learnerHomeRepository.loadMaterialConceptsForScoring(allIds);
 
   // Incomplete coverage of requested IDs is a context invariant.
   for (const materialId of allIds) {
@@ -637,6 +667,7 @@ export const resolveMaterialModeDecisionAndContext = async (input: {
   materials: LearnerHomeContext['materials'];
   behavior: LearnerBehaviorContext;
   profiler?: ReturnType<typeof createLearnerHomeProfiler>;
+  conceptQueryChunk?: MaterialConceptChunkQuery;
 }): Promise<{
   modeDecision: LearnerHomeModeDecision;
   canonicalContext: CanonicalMaterialScoringContext | undefined;
@@ -652,17 +683,15 @@ export const resolveMaterialModeDecisionAndContext = async (input: {
     input.needsCanonicalMaterialScoring
   ) {
     try {
+      const hydrate = () =>
+        buildCanonicalScoringContextForMaterials({
+          materials: input.materials,
+          behavior: input.behavior,
+          conceptQueryChunk: input.conceptQueryChunk,
+        });
       canonicalContext = await (input.profiler
-        ? input.profiler.time('loadCanonicalMaterialConcepts', () =>
-            buildCanonicalScoringContextForMaterials({
-              materials: input.materials,
-              behavior: input.behavior,
-            }),
-          )
-        : buildCanonicalScoringContextForMaterials({
-            materials: input.materials,
-            behavior: input.behavior,
-          }));
+        ? input.profiler.time('loadCanonicalMaterialConcepts', hydrate)
+        : hydrate());
     } catch {
       canonicalContext = createFallbackCanonicalContext(
         'CANONICAL_LOADER_FALLBACK_LEGACY_V1',
@@ -774,18 +803,12 @@ type LearnerHomeLoadOptions = {
   materialPoolCap?: number;
   profiler?: ReturnType<typeof createLearnerHomeProfiler>;
   useConsolidatedProjectContext?: boolean;
-  /**
-   * Defaults to true (full Learner Home, and any caller that omits it,
-   * always needs canonical material scoring). Single-section callers pass
-   * this explicitly based on whether sectionKey is a material section.
-   */
-  needsCanonicalMaterialScoring?: boolean;
 };
 
 const loadLearnerHomeContext = async (
   userId: string,
   options: LearnerHomeLoadOptions = {},
-): Promise<LearnerHomeContext> => {
+): Promise<LearnerHomeLoadedContext> => {
   const profiler = options.profiler;
   const materialPoolCap = options.materialPoolCap ?? HOME_MATERIAL_POOL_CAP;
   const useConsolidatedProjectContext =
@@ -876,14 +899,6 @@ const loadLearnerHomeContext = async (
     projects.filter((project) => project.mapped.isSaved).map((project) => project.id),
   );
 
-  const { modeDecision, canonicalContext } = await resolveMaterialModeDecisionAndContext({
-    requestedMaterialScoringMode: RECOMMENDATION_SCORER_VERSION,
-    needsCanonicalMaterialScoring: options.needsCanonicalMaterialScoring ?? true,
-    materials,
-    behavior,
-    profiler,
-  });
-
   return {
     interests,
     savedLocation,
@@ -897,8 +912,6 @@ const loadLearnerHomeContext = async (
     behavior,
     behaviorAffinityProfile,
     hasActivity: hasLearnerActivity(behavior),
-    modeDecision,
-    canonicalContext,
   };
 };
 
@@ -1509,27 +1522,43 @@ const buildSectionItems = async (
   }
 };
 
-export const getLearnerHomeSection = async (
+/**
+ * @internal RP-03.5 audit seam: same production section path as
+ * getLearnerHomeSection, plus candidate/mode/timing diagnostics.
+ */
+export const getLearnerHomeSectionForAudit = async (
   userId: string,
   sectionKey: LearnerHomeSectionKey,
   limit: number,
   offset = 0,
-): Promise<LearnerHomeSectionDetails> => {
+) => {
   const profiler = createLearnerHomeProfiler('getLearnerHomeSection');
   const startedAt = performance.now();
-  const materialPoolCap =
-    sectionKey === 'suggested_materials'
-      ? BROWSE_MATERIAL_POOL_CAP
-      : HOME_MATERIAL_POOL_CAP;
-  const context = await profiler.time('loadLearnerHomeContext', () =>
+  const materialPoolCap = resolveMaterialCandidatePoolCap({
+    kind: 'SECTION',
+    sectionKey,
+  });
+  const loaded = await profiler.time('loadLearnerHomeContext', () =>
     loadLearnerHomeContext(userId, {
       profiler,
       materialPoolCap,
-      // Project-only sections never need canonical material context: project
-      // scoring always force-delegates to legacy-v1 regardless.
-      needsCanonicalMaterialScoring: MATERIAL_SECTION_KEYS.has(sectionKey),
     }),
   );
+  // Project-only sections never need canonical material context: project
+  // scoring always force-delegates to legacy-v1 regardless.
+  const { modeDecision, canonicalContext } =
+    await resolveMaterialModeDecisionAndContext({
+      requestedMaterialScoringMode: RECOMMENDATION_SCORER_VERSION,
+      needsCanonicalMaterialScoring: MATERIAL_SECTION_KEYS.has(sectionKey),
+      materials: loaded.materials,
+      behavior: loaded.behavior,
+      profiler,
+    });
+  const context: LearnerHomeContext = {
+    ...loaded,
+    modeDecision,
+    canonicalContext,
+  };
   let preScoredMaterials: PreScoredMaterialEntry[] | undefined;
 
   if (
@@ -1694,59 +1723,107 @@ export const getLearnerHomeSection = async (
   }
 
   const correlationId = getRequestId();
-  if (!correlationId) {
-    return sectionResponse;
+  if (correlationId) {
+    const generation: RecommendationGenerationMetadata = {
+      generationKey: randomUUID(),
+      learnerId: userId,
+      surface: 'LEARNER_HOME_SECTION',
+      algorithmName: RECOMMENDATION_ALGORITHM_NAME,
+      algorithmVersion: algorithmVersionForSection(context, sectionKey),
+      policyVersion: RECOMMENDATION_POLICY_VERSION,
+      generatedAt: new Date(),
+      candidateCount: context.materials.length + context.projects.length,
+      shownItemCount: sectionResponse.items.length,
+      generationDurationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+      generationCacheState: 'UNCACHED',
+      candidateTraces: buildCandidateTraces(
+        context,
+        { sections: [sectionResponse] },
+        'LEARNER_HOME_SECTION',
+      ),
+    };
+    const enqueue = await enqueueRecommendationExposure({
+      generation,
+      cacheState: 'UNCACHED',
+      correlationId,
+      items: toRecommendationExposureItems({ sections: [sectionResponse] }),
+      includeGeneration: true,
+    });
+    if (enqueue.enqueued) {
+      attachRecommendationImpressionIds(
+        { sections: [sectionResponse] },
+        enqueue.impressionIds,
+      );
+    }
   }
 
-  const generation: RecommendationGenerationMetadata = {
-    generationKey: randomUUID(),
-    learnerId: userId,
-    surface: 'LEARNER_HOME_SECTION',
-    algorithmName: RECOMMENDATION_ALGORITHM_NAME,
-    algorithmVersion: algorithmVersionForSection(context, sectionKey),
-    policyVersion: RECOMMENDATION_POLICY_VERSION,
-    generatedAt: new Date(),
-    candidateCount: context.materials.length + context.projects.length,
-    shownItemCount: sectionResponse.items.length,
-    generationDurationMs: Math.max(0, Math.round(performance.now() - startedAt)),
-    generationCacheState: 'UNCACHED',
-    candidateTraces: buildCandidateTraces(
-      context,
-      { sections: [sectionResponse] },
-      'LEARNER_HOME_SECTION',
+  return {
+    section: sectionResponse,
+    returnedItemCount: sectionResponse.items.length,
+    candidateCounts: {
+      materials: context.materials.length,
+      projects: context.projects.length,
+    },
+    appliedPoolCap: materialPoolCap,
+    requestedMaterialScoringMode: modeDecision.requestedMaterialScoringMode,
+    effectiveMaterialScoringMode: modeDecision.effectiveMaterialScoringMode,
+    fallbackCode: modeDecision.fallbackCode,
+    cacheable: modeDecision.cacheable,
+    timingsMs: Object.fromEntries(
+      [...profiler.getTimings().entries()].map(([step, durationMs]) => [
+        step,
+        durationMs,
+      ]),
     ),
   };
-  const enqueue = await enqueueRecommendationExposure({
-    generation,
-    cacheState: 'UNCACHED',
-    correlationId,
-    items: toRecommendationExposureItems({ sections: [sectionResponse] }),
-    includeGeneration: true,
-  });
-  if (enqueue.enqueued) {
-    attachRecommendationImpressionIds(
-      { sections: [sectionResponse] },
-      enqueue.impressionIds,
-    );
-  }
-
-  return sectionResponse;
 };
 
-async function loadLearnerHomeUncached(
+export const getLearnerHomeSection = async (
   userId: string,
-): Promise<LearnerHomeCachedEnvelope> {
-  const profiler = createLearnerHomeProfiler('getLearnerHome');
-  const startedAt = performance.now();
-  const context = await profiler.time('loadLearnerHomeContext', () =>
-    loadLearnerHomeContext(userId, {
-      profiler,
-      materialPoolCap: HOME_MATERIAL_POOL_CAP,
-      useConsolidatedProjectContext: true,
-      // Full Learner Home always includes material sections.
-      needsCanonicalMaterialScoring: true,
-    }),
+  sectionKey: LearnerHomeSectionKey,
+  limit: number,
+  offset = 0,
+): Promise<LearnerHomeSectionDetails> => {
+  const audited = await getLearnerHomeSectionForAudit(
+    userId,
+    sectionKey,
+    limit,
+    offset,
   );
+  return audited.section;
+};
+
+/**
+ * @internal Production Full-Home post-load orchestration; RP-03.5 Canonical
+ * fallback / cacheability seam. Accepts an already-loaded context and optional
+ * conceptQueryChunk (omitted in production → real Prisma chunk query).
+ */
+export const assembleLearnerHomeCachedEnvelope = async (input: {
+  userId: string;
+  loaded: LearnerHomeLoadedContext;
+  requestedMaterialScoringMode: RecommendationScorerVersion;
+  conceptQueryChunk?: MaterialConceptChunkQuery;
+  profiler?: ReturnType<typeof createLearnerHomeProfiler>;
+  /** Wall-clock start of the full uncached load (includes context load when provided). */
+  startedAt?: number;
+}): Promise<LearnerHomeCachedEnvelope> => {
+  const profiler =
+    input.profiler ?? createLearnerHomeProfiler('getLearnerHome');
+  const startedAt = input.startedAt ?? performance.now();
+  const { modeDecision, canonicalContext } =
+    await resolveMaterialModeDecisionAndContext({
+      requestedMaterialScoringMode: input.requestedMaterialScoringMode,
+      needsCanonicalMaterialScoring: true,
+      materials: input.loaded.materials,
+      behavior: input.loaded.behavior,
+      profiler,
+      conceptQueryChunk: input.conceptQueryChunk,
+    });
+  const context: LearnerHomeContext = {
+    ...input.loaded,
+    modeDecision,
+    canonicalContext,
+  };
 
   let preScoredMaterials!: PreScoredMaterialEntry[];
   const [dedupedMaterials, continueProjectsSection, savedProjectsSection] =
@@ -1782,7 +1859,7 @@ async function loadLearnerHomeUncached(
     ]);
 
   profiler.record('totalGetLearnerHome', performance.now() - startedAt);
-  profiler.report({ userId, scope: 'getLearnerHome' });
+  profiler.report({ userId: input.userId, scope: 'getLearnerHome' });
 
   const profileCompletion = {
     hasInterests: context.interests.length > 0,
@@ -1921,7 +1998,7 @@ async function loadLearnerHomeUncached(
     response,
     generation: {
       generationKey: randomUUID(),
-      learnerId: userId,
+      learnerId: input.userId,
       surface: 'LEARNER_HOME',
       algorithmName: RECOMMENDATION_ALGORITHM_NAME,
       algorithmVersion: algorithmVersionForModeDecision(context.modeDecision),
@@ -1937,18 +2014,68 @@ async function loadLearnerHomeUncached(
       candidateTraces: buildCandidateTraces(context, response),
     },
     cacheable: context.modeDecision.cacheable,
+    modeDecision: context.modeDecision,
   };
+};
+
+async function loadLearnerHomeUncached(
+  userId: string,
+): Promise<LearnerHomeCachedEnvelope> {
+  const profiler = createLearnerHomeProfiler('getLearnerHome');
+  const startedAt = performance.now();
+  const loaded = await profiler.time('loadLearnerHomeContext', () =>
+    loadLearnerHomeContext(userId, {
+      profiler,
+      materialPoolCap: resolveMaterialCandidatePoolCap({ kind: 'FULL_HOME' }),
+      useConsolidatedProjectContext: true,
+    }),
+  );
+  return assembleLearnerHomeCachedEnvelope({
+    userId,
+    loaded,
+    requestedMaterialScoringMode: RECOMMENDATION_SCORER_VERSION,
+    profiler,
+    startedAt,
+  });
 }
 
-const learnerHomeCacheKey = (userId: string): string => [
-  userId,
-  RECOMMENDATION_SCORER_VERSION,
-  env.recommendationMlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC',
-  env.recommendationMlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
-  env.recommendationMlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
-  env.recommendationMlProjectServingEnabled ? 'PROJECT_SERVED' : 'PROJECT_NOT_SERVED',
-  env.recommendationMlProjectArtifactPath || 'NO_PROJECT_ARTIFACT',
-].join('\u0000');
+export type LearnerHomeCacheKeyInput = {
+  userId: string;
+  scorerVersion: RecommendationScorerVersion;
+  mlShadowEnabled: boolean;
+  mlMaterialServingEnabled: boolean;
+  mlMaterialArtifactPath: string;
+  mlProjectServingEnabled: boolean;
+  mlProjectArtifactPath: string;
+};
+
+/**
+ * @internal Pure production cache-key construction. Tests must use this helper
+ * with explicit scorer versions — never a parallel test-only key formula.
+ */
+export const buildLearnerHomeCacheKey = (
+  input: LearnerHomeCacheKeyInput,
+): string =>
+  [
+    input.userId,
+    input.scorerVersion,
+    input.mlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC',
+    input.mlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
+    input.mlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
+    input.mlProjectServingEnabled ? 'PROJECT_SERVED' : 'PROJECT_NOT_SERVED',
+    input.mlProjectArtifactPath || 'NO_PROJECT_ARTIFACT',
+  ].join('\u0000');
+
+const learnerHomeCacheKey = (userId: string): string =>
+  buildLearnerHomeCacheKey({
+    userId,
+    scorerVersion: RECOMMENDATION_SCORER_VERSION,
+    mlShadowEnabled: env.recommendationMlShadowEnabled,
+    mlMaterialServingEnabled: env.recommendationMlMaterialServingEnabled,
+    mlMaterialArtifactPath: env.recommendationMlMaterialArtifactPath || '',
+    mlProjectServingEnabled: env.recommendationMlProjectServingEnabled,
+    mlProjectArtifactPath: env.recommendationMlProjectArtifactPath || '',
+  });
 
 const learnerHomeCache = createLearnerHomeCache(
   loadLearnerHomeUncached,
@@ -1956,6 +2083,69 @@ const learnerHomeCache = createLearnerHomeCache(
   learnerHomeCacheKey,
   (payload) => payload.cacheable,
 );
+
+/**
+ * @internal RP-03.5 audit seam: real uncached Full Home assembly with a
+ * supplied profiler. Returns envelope + timing snapshot + pool diagnostics.
+ */
+export const runLearnerHomeUncachedAudit = async (userId: string) => {
+  const profiler = createLearnerHomeProfiler('getLearnerHomeAudit');
+  const startedAt = performance.now();
+  const appliedPoolCap = resolveMaterialCandidatePoolCap({ kind: 'FULL_HOME' });
+  const loaded = await profiler.time('loadLearnerHomeContext', () =>
+    loadLearnerHomeContext(userId, {
+      profiler,
+      materialPoolCap: appliedPoolCap,
+      useConsolidatedProjectContext: true,
+    }),
+  );
+  const envelope = await assembleLearnerHomeCachedEnvelope({
+    userId,
+    loaded,
+    requestedMaterialScoringMode: RECOMMENDATION_SCORER_VERSION,
+    profiler,
+    startedAt,
+  });
+  return {
+    envelope,
+    timingsMs: Object.fromEntries(
+      [...profiler.getTimings().entries()].map(([step, durationMs]) => [
+        step,
+        durationMs,
+      ]),
+    ),
+    candidateCounts: {
+      materials: loaded.materials.length,
+      projects: loaded.projects.length,
+      requiredComponents: loaded.projects.reduce(
+        (sum, project) => sum + project.requiredComponents.length,
+        0,
+      ),
+    },
+    appliedPoolCap,
+    requestedMaterialScoringMode:
+      envelope.modeDecision.requestedMaterialScoringMode,
+    effectiveMaterialScoringMode:
+      envelope.modeDecision.effectiveMaterialScoringMode,
+    fallbackCode: envelope.modeDecision.fallbackCode,
+    cacheable: envelope.cacheable,
+  };
+};
+
+/**
+ * @internal RP-03.5 audit seam: read production cache state without inferring
+ * HIT/MISS from latency.
+ */
+export const getLearnerHomeWithCacheStateForAudit = async (userId: string) => {
+  const cacheRead = await learnerHomeCache.getWithState(userId);
+  return {
+    cacheState: cacheRead.state,
+    cacheable: cacheRead.payload.cacheable,
+    response: cacheRead.payload.response,
+    modeDecision: cacheRead.payload.modeDecision,
+    candidateCount: cacheRead.payload.generation.candidateCount,
+  };
+};
 
 export const getLearnerHome = async (
   userId: string,
