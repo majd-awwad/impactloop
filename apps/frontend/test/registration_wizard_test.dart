@@ -72,7 +72,7 @@ void main() {
       expect(labels['audio_media'], 'Audio & Media');
     });
 
-    test('maps onboarding interests to learnerProfile.interests keys', () {
+    test('maps learner profile fields into the public request payload', () {
       const interests = ['arduino', 'robotics'];
       final request = RegisterRequest.fromDraft(
         RegistrationDraft(
@@ -85,12 +85,34 @@ void main() {
             learnerType: 'Self learner',
             skillLevel: 'Beginner',
             interests: interests,
+            bio: 'Building practical electronics skills.',
           ),
         ),
       );
 
-      final learnerJson = request.learnerProfile!.toJson();
+      final learnerJson =
+          request.toJson()['learnerProfile'] as Map<String, dynamic>;
+      expect(learnerJson['learnerType'], 'Self learner');
+      expect(learnerJson['skillLevel'], 'Beginner');
       expect(learnerJson['interests'], interests);
+      expect(learnerJson['bio'], 'Building practical electronics skills.');
+
+      final minimalPayload = RegisterRequest.fromDraft(
+        const RegistrationDraft(
+          displayName: 'Minimal Learner',
+          email: 'minimal@example.com',
+          password: 'TestPassword123!',
+          intent: RegistrationIntent.learner,
+          learnerProfile: LearnerProfileDraft(
+            learnerType: 'Self learner',
+            skillLevel: 'Beginner',
+          ),
+        ),
+      ).toJson();
+      final minimalLearnerJson =
+          minimalPayload['learnerProfile'] as Map<String, dynamic>;
+      expect(minimalLearnerJson.containsKey('interests'), isFalse);
+      expect(minimalLearnerJson.containsKey('bio'), isFalse);
     });
 
     test('normalizes legacy labels and custom interests for display', () {
