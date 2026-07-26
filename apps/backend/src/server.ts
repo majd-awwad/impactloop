@@ -17,10 +17,17 @@ import {
   RecommendationOutboxWorker,
   RECOMMENDATION_OUTBOX_SHUTDOWN_WAIT_MS,
 } from './modules/recommendation-events/recommendation-events.outbox.worker.js';
+import { preloadRecommendationMlRuntime } from './modules/recommendations/ml-runtime-state.service.js';
 
 logAiPriceSuggestionStartupConfig();
 logEmailInvitationStartupConfig();
 logRecommendationOutboxStartupConfig();
+
+const recommendationMlRuntime = await preloadRecommendationMlRuntime();
+console.log(
+  '[Recommendation ML runtime]',
+  JSON.stringify(recommendationMlRuntime),
+);
 
 if (getResolvedEmailProvider() === 'smtp') {
   void verifySmtpInvitationTransport().then((result) => {

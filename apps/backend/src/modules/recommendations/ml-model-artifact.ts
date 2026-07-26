@@ -512,3 +512,12 @@ export const validatePortableModelArtifact = (raw: unknown, expectedDomain?: 'ma
 
 export const loadPortableModelArtifact = async (path: string, domain: 'material' | 'project') =>
   validatePortableModelArtifact(JSON.parse(await readFile(path, 'utf8')), domain);
+
+export const loadPortableModelArtifactV2 = async (
+  path: string,
+  expectations: PortableArtifactV2Expectations,
+): Promise<PortableModelArtifactV2> =>
+  validatePortableModelArtifactV2(
+    JSON.parse(await readFile(path, 'utf8')) as unknown,
+    expectations,
+  );

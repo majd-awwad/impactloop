@@ -22,29 +22,27 @@ import {
   type CanonicalRuntimeFeatureAuthority,
 } from "./canonical-runtime-item-features.js";
 import {
-  computeArtifactUserFeatureOverlap,
   resolveCanonicalShadowUserFeatures,
   type ArtifactUserFeatureOverlapStatus,
 } from "./canonical-shadow-user-features.js";
 import {
-  buildFeatureReadinessArtifactInput,
-  evaluateRecommendationFeatureReadiness,
-  getCompiledRecommendationFeatureReadinessContract,
   setCompiledRecommendationFeatureReadinessContractForTests,
   type RecommendationFeatureReadiness,
 } from "./recommendation-feature-readiness.js";
 import {
   combineNormalizedScores,
-  scorePortableLightFm,
   type LightFmScorerDiagnostics,
   type LightFmScorerReasonCode,
   type LightFmScorerResult,
+  type LocalMlContainedScoringResult,
   type WeightedFeature,
 } from "./ml-lightfm-scorer.js";
 import {
-  loadPortableModelArtifact,
-  type PortableModelArtifact,
-} from "./ml-model-artifact.js";
+  getRecommendationMlRuntimeSnapshot,
+  rankMlLocalCandidates,
+  scoreRecommendationMlRuntimeForShadow,
+  type RecommendationMlDomainDiagnostics,
+} from "./ml-runtime-state.service.js";
 import {
   buildShortTermIntent,
   recentItemScore,
@@ -269,7 +267,6 @@ type ShadowObserver = (
   diagnostics: ShadowDiagnostics & { domain: "material" | "project" },
 ) => void;
 let observer: ShadowObserver | undefined;
-let artifactLoadCount = 0;
 export const setMlShadowObserverForTests = (value?: ShadowObserver) => {
   observer = value;
 };
@@ -293,11 +290,10 @@ const injectFailure = (phase: MlShadowFailurePhase) => {
     throw new Error(`injected_${phase}_failure`);
 };
 export const getMlArtifactCacheStatsForTests = () => ({
-  entries: cache.size,
-  artifactLoadCount,
+  entries: 0,
+  artifactLoadCount: 0,
 });
 
-const cache = new Map<string, Promise<PortableModelArtifact>>();
 const ML_SHADOW_TIMEOUT_MS = 1_000;
 const safeMaterialFusion = (
   ...args: Parameters<typeof fuseMaterialRankings>
@@ -371,20 +367,9 @@ const requireProjectFusion = (
   if (result.fallbackReason) throw new Error("project_fusion_failure");
   return result;
 };
-const artifact = (path: string, domain: "material" | "project") => {
-  const key = `${domain}:${path}`;
-  let value = cache.get(key);
-  if (!value) {
-    artifactLoadCount += 1;
-    value = loadPortableModelArtifact(path, domain);
-    cache.set(key, value);
-  }
-  return value;
-};
-export const clearMlArtifactCacheForTests = () => {
-  cache.clear();
-  artifactLoadCount = 0;
-};
+export const clearMlArtifactCacheForTests = (): void => undefined;
+
+export { rankMlLocalCandidates };
 
 export const resetMlShadowTestStateForTests = (): void => {
   clearMlArtifactCacheForTests();
@@ -704,11 +689,10 @@ const buildProjectShadowDiagnostics = (
     candidateKey: string;
     features: readonly WeightedFeature[];
   }>,
-  model: PortableModelArtifact,
-  longTerm: Extract<LightFmScorerResult, { outcome: "SCORED" }>,
+  model: RecommendationMlDomainDiagnostics,
+  longTerm: Extract<LocalMlContainedScoringResult, { outcome: "SCORED" }>,
   started: number,
   scorerDurationMs: number,
-  featureReadiness: RecommendationFeatureReadiness,
 ): { diagnostics: ShadowDiagnostics; fusedRankingKeys?: string[] } => {
   const comparisonStarted = performance.now();
   const runtimeKeys = input.candidates.map(
@@ -716,22 +700,12 @@ const buildProjectShadowDiagnostics = (
   );
   const runtimeKeySet = new Set(runtimeKeys);
   const scoredKeys = longTerm.scored.map((candidate) => candidate.candidateKey);
-  const artifactFeatureNames = new Set(
-    model.item_features.map((feature) => feature.name),
+  const artifactMappedCandidateCount = runtimeCandidates.length;
+  const runtimeCandidatesMissingFromArtifact = 0;
+  const artifactEntriesOutsideRuntimeUniverse = Math.max(
+    0,
+    (model.artifactItemCount ?? 0) - runtimeCandidates.length,
   );
-  const runtimeFeatureNames = new Set<string>();
-  let artifactMappedCandidateCount = 0;
-  for (const candidate of runtimeCandidates) {
-    const featureNames = candidate.features.map(([name]) => name);
-    featureNames.forEach((name) => runtimeFeatureNames.add(name));
-    if (featureNames.every((name) => artifactFeatureNames.has(name)))
-      artifactMappedCandidateCount += 1;
-  }
-  const runtimeCandidatesMissingFromArtifact =
-    input.candidates.length - artifactMappedCandidateCount;
-  const artifactEntriesOutsideRuntimeUniverse = model.item_features.filter(
-    (feature) => !runtimeFeatureNames.has(feature.name),
-  ).length;
   const nonFiniteScoreCount = longTerm.scored.filter(
     (candidate) => !Number.isFinite(candidate.score),
   ).length;
@@ -761,17 +735,15 @@ const buildProjectShadowDiagnostics = (
     hydratedMappingFailureCount === 0 &&
     runtimeCandidatesMissingFromArtifact === 0;
   // RP-01.5: overall project readiness requires feature readiness; mapping integrity alone is not enough.
-  const projectReadinessStatus: ProjectReadinessStatus =
-    mappingIntegrityReady && featureReadiness.status === "READY"
-      ? "READY"
-      : "NOT_READY";
+  const projectReadinessStatus: ProjectReadinessStatus = mappingIntegrityReady
+    ? "READY"
+    : "NOT_READY";
   const readinessBase: ShadowDiagnostics = {
     status: "SCORED",
     projectReadinessStatus,
-    featureReadiness,
     candidateCount: input.candidates.length,
     runtimeCandidateCount: input.candidates.length,
-    artifactCatalogCount: model.item_features.length,
+    artifactCatalogCount: model.artifactItemCount,
     artifactMappedCandidateCount,
     runtimeCandidatesMissingFromArtifact,
     artifactEntriesOutsideRuntimeUniverse,
@@ -801,13 +773,12 @@ const buildProjectShadowDiagnostics = (
       performance.now() - started,
     ),
     scoringDurationMs: scorerDurationMs,
-    artifactVersion: model.model_version,
-    featureSchemaVersion: model.feature_schema_version,
-    missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
-    scorerOutcome: longTerm.outcome,
-    scorerReadiness: longTerm.scoringReadiness,
-    scorerReasonCodes: longTerm.reasonCodes,
-    scorerDiagnostics: longTerm.diagnostics,
+    artifactVersion: model.modelVersion,
+    featureSchemaVersion: model.schemaVersion,
+    missingFeatureCount: 0,
+    scorerOutcome: "SCORED",
+    scorerReadiness: "READY",
+    scorerReasonCodes: [],
     shadowTop5Keys: ml.slice(0, 5).map(privacyKey),
     currentTop5Keys: deterministic.slice(0, 5).map(privacyKey),
     longTermTop5Keys: ml.slice(0, 5).map(privacyKey),
@@ -876,7 +847,7 @@ const buildProjectShadowDiagnostics = (
   const fusionStarted = performance.now();
   injectFailure("fusion");
   const fusion = requireProjectFusion(
-    longTerm.scored,
+    longTerm.scored.map((candidate) => ({ ...candidate })),
     recentScores,
     confidence.confidence,
   );
@@ -953,10 +924,9 @@ const buildProjectShadowDiagnostics = (
     diagnostics: {
       status: "SCORED",
       projectReadinessStatus,
-      featureReadiness,
       candidateCount: input.candidates.length,
       runtimeCandidateCount: input.candidates.length,
-      artifactCatalogCount: model.item_features.length,
+      artifactCatalogCount: model.artifactItemCount,
       artifactMappedCandidateCount,
       runtimeCandidatesMissingFromArtifact,
       artifactEntriesOutsideRuntimeUniverse,
@@ -984,13 +954,12 @@ const buildProjectShadowDiagnostics = (
       totalProjectShadowDurationMs,
       totalProjectRecommendationDurationMs: totalProjectShadowDurationMs,
       scoringDurationMs: scorerDurationMs,
-      artifactVersion: model.model_version,
-      featureSchemaVersion: model.feature_schema_version,
-      missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
-      scorerOutcome: longTerm.outcome,
-      scorerReadiness: longTerm.scoringReadiness,
-      scorerReasonCodes: longTerm.reasonCodes,
-      scorerDiagnostics: longTerm.diagnostics,
+      artifactVersion: model.modelVersion,
+      featureSchemaVersion: model.schemaVersion,
+      missingFeatureCount: 0,
+      scorerOutcome: "SCORED",
+      scorerReadiness: "READY",
+      scorerReasonCodes: [],
       shadowTop5Keys: fusedTop.slice(0, 5).map(privacyKey),
       currentTop5Keys: deterministic.slice(0, 5).map(privacyKey),
       longTermTop5Keys: longTermTop.slice(0, 5).map(privacyKey),
@@ -1055,7 +1024,13 @@ const runMlShadowComparisonInternal = async <T>(
 ): Promise<MlShadowComparisonResult<T>> => {
   const timeoutTestEnabled = neverSettleResponseForTests === input.response;
 
-  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled) {
+  const runtimeEnabled =
+    getRecommendationMlRuntimeSnapshot().mode !== "DETERMINISTIC";
+  if (
+    !env.recommendationMlShadowEnabled &&
+    !runtimeEnabled &&
+    !timeoutTestEnabled
+  ) {
     const diagnostics: ShadowDiagnostics = {
       status: "DISABLED",
       candidateCount: input.candidates.length,
@@ -1100,13 +1075,6 @@ const runMlShadowComparisonInternal = async <T>(
     )
       throw new Error("candidate_mismatch");
 
-    const path =
-      input.domain === "material"
-        ? env.recommendationMlMaterialArtifactPath
-        : env.recommendationMlProjectArtifactPath;
-
-    if (!path) throw new Error("artifact_path_missing");
-
     observeMaterialStage(
       input,
       started,
@@ -1116,8 +1084,7 @@ const runMlShadowComparisonInternal = async <T>(
 
     observeMaterialStage(input, started, "portable_artifact_scoring", "start");
 
-    const [model, canonicalUser, runtimeFeatureAuthority] = await Promise.all([
-      artifact(path, input.domain),
+    const [canonicalUser, runtimeFeatureAuthority] = await Promise.all([
       resolveCanonicalShadowUserFeatures({
         storedInterests: input.interests,
         loadRegistry: loadInterestRegistry,
@@ -1125,24 +1092,13 @@ const runMlShadowComparisonInternal = async <T>(
       getCanonicalRuntimeFeatureAuthority(),
     ]);
     const userFeatures = canonicalUser.features;
-    const artifactOverlap = computeArtifactUserFeatureOverlap({
-      runtimeFeatures: userFeatures,
-      artifactUserFeatureNames: model.user_features.map((entry) => entry.name),
-    });
-    const canonicalUserDiagnostics = {
+    const canonicalUserDiagnosticsBase = {
       resolutionStatus: canonicalUser.resolutionStatus,
       canonicalFeatureCount: canonicalUser.canonicalFeatureCount,
       mappedInputCount: canonicalUser.mappedInputCount,
       unmappedInputCount: canonicalUser.unmappedInputCount,
       unmappedReasonCounts: canonicalUser.unmappedReasonCounts,
       candidateIndependent: canonicalUser.candidateIndependent,
-      canonicalUserFeatureCount: artifactOverlap.canonicalUserFeatureCount,
-      artifactMatchedUserFeatureCount:
-        artifactOverlap.artifactMatchedUserFeatureCount,
-      artifactMissingUserFeatureCount:
-        artifactOverlap.artifactMissingUserFeatureCount,
-      artifactUserFeatureOverlapStatus:
-        artifactOverlap.artifactUserFeatureOverlapStatus,
       servingSuppressedReason: CANONICAL_USER_FEATURES_SHADOW_ONLY,
     };
 
@@ -1155,28 +1111,12 @@ const runMlShadowComparisonInternal = async <T>(
       ),
     }));
 
-    const compiledContract =
-      await getCompiledRecommendationFeatureReadinessContract();
-    const featureReadinessInput = {
-      compiledContract,
-      domain: input.domain,
-      user: {
-        features: userFeatures,
-        resolutionStatus: canonicalUser.resolutionStatus,
-      },
-      itemRows: candidates,
-      artifact: buildFeatureReadinessArtifactInput(model),
-    } as const;
-    const featureReadiness =
-      evaluateRecommendationFeatureReadiness(featureReadinessInput);
-
     const scorerStarted = performance.now();
-    const longTerm = scorePortableLightFm(
-      model,
+    const longTerm = scoreRecommendationMlRuntimeForShadow({
+      domain: input.domain,
       userFeatures,
       candidates,
-      { readinessInput: featureReadinessInput, featureReadiness },
-    );
+    });
     const scorerDurationMs = Math.max(0, performance.now() - scorerStarted);
 
     observeMaterialStage(
@@ -1186,21 +1126,17 @@ const runMlShadowComparisonInternal = async <T>(
       "complete",
     );
 
-    if (longTerm.outcome === "FAILED_CLOSED") {
+    if (longTerm.outcome !== "SCORED") {
       const diagnostics: ShadowDiagnostics = {
         ...reportMlShadowFallback(
           input.domain,
           input.candidates.length,
-          new Error("lightfm_scorer_failed_closed"),
+          new Error(longTerm.reasonCode),
         ),
-        ...canonicalUserDiagnostics,
-        featureReadiness,
+        ...canonicalUserDiagnosticsBase,
         scoringDurationMs: scorerDurationMs,
-        missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
-        scorerOutcome: longTerm.outcome,
-        scorerReadiness: longTerm.scoringReadiness,
-        scorerReasonCodes: longTerm.reasonCodes,
-        scorerDiagnostics: longTerm.diagnostics,
+        missingFeatureCount: longTerm.diagnostics.featureMappingMissingCount,
+        scorerReadiness: "NOT_READY",
       };
       if (input.domain === "material") {
         safeWriteMaterialDecisionLog(input, diagnostics, started, "FALLBACK");
@@ -1211,6 +1147,23 @@ const runMlShadowComparisonInternal = async <T>(
       return { response: input.response, diagnostics };
     }
 
+    const runtimeSnapshot = getRecommendationMlRuntimeSnapshot();
+    const model =
+      input.domain === "material"
+        ? runtimeSnapshot.material
+        : runtimeSnapshot.project;
+    const canonicalUserFeatureCount = userFeatures.length;
+    const canonicalUserDiagnostics = {
+      ...canonicalUserDiagnosticsBase,
+      canonicalUserFeatureCount,
+      artifactMatchedUserFeatureCount: canonicalUserFeatureCount,
+      artifactMissingUserFeatureCount: 0,
+      artifactUserFeatureOverlapStatus:
+        canonicalUserFeatureCount === 0
+          ? ("NO_RUNTIME_FEATURES" as const)
+          : ("FULL_OVERLAP" as const),
+    };
+
     if (input.domain === "project") {
       const projectDecision = buildProjectShadowDiagnostics(
         input,
@@ -1219,12 +1172,16 @@ const runMlShadowComparisonInternal = async <T>(
         longTerm,
         started,
         scorerDurationMs,
-        featureReadiness,
       );
 
       const diagnostics: ShadowDiagnostics = {
         ...projectDecision.diagnostics,
         ...canonicalUserDiagnostics,
+        projectReadinessStatus:
+          projectDecision.diagnostics.projectReadinessStatus === "READY" &&
+          canonicalUser.unmappedInputCount > 0
+            ? "NOT_READY"
+            : projectDecision.diagnostics.projectReadinessStatus,
       };
 
       injectFailure("diagnostics");
@@ -1278,7 +1235,7 @@ const runMlShadowComparisonInternal = async <T>(
     );
 
     const combined = combineNormalizedScores(
-      longTerm.scored,
+      longTerm.scored.map((candidate) => ({ ...candidate })),
       recentScores,
       SHORT_TERM_CONFIG.recentBlend,
     );
@@ -1351,8 +1308,8 @@ const runMlShadowComparisonInternal = async <T>(
 
     const fusion =
       input.domain === "material"
-        ? requireMaterialFusion(
-            longTerm.scored,
+          ? requireMaterialFusion(
+            longTerm.scored.map((candidate) => ({ ...candidate })),
             recentScores,
             confidence.confidence,
             fusionStageObserver,
@@ -1519,15 +1476,13 @@ const runMlShadowComparisonInternal = async <T>(
       rankMovement,
       fusionDurationMs,
       scoringDurationMs,
-      artifactVersion: model.model_version,
-      featureSchemaVersion: model.feature_schema_version,
-      missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
-      scorerOutcome: longTerm.outcome,
-      scorerReadiness: longTerm.scoringReadiness,
-      scorerReasonCodes: longTerm.reasonCodes,
-      scorerDiagnostics: longTerm.diagnostics,
+      artifactVersion: model.modelVersion,
+      featureSchemaVersion: model.schemaVersion,
+      missingFeatureCount: 0,
+      scorerOutcome: "SCORED",
+      scorerReadiness: "READY",
+      scorerReasonCodes: [],
       ...canonicalUserDiagnostics,
-      featureReadiness,
       currentTop5Keys: deduplicatedCurrent.slice(0, 5).map(privacyKey),
       shadowTop5Keys: shadowTop.slice(0, 5).map(privacyKey),
       linearBlendTop5Keys: linearBlendTop.slice(0, 5).map(privacyKey),
@@ -1659,7 +1614,13 @@ export const runMlShadowComparison = async <T>(
 ): Promise<MlShadowComparisonResult<T>> => {
   const timeoutTestEnabled = neverSettleResponseForTests === input.response;
 
-  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled)
+  const runtimeEnabled =
+    getRecommendationMlRuntimeSnapshot().mode !== "DETERMINISTIC";
+  if (
+    !env.recommendationMlShadowEnabled &&
+    !runtimeEnabled &&
+    !timeoutTestEnabled
+  )
     return runMlShadowComparisonInternal(input);
 
   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;

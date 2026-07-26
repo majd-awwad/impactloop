@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { before, describe, it } from 'node:test';
 
 import {
+  buildPortableLightFmV2Scorer,
   scorePortableLightFm,
   type LightFmScorerContext,
   type WeightedFeature,
@@ -9,7 +10,9 @@ import {
 import {
   type PortableFeature,
   type PortableModelArtifact,
+  type PortableModelArtifactV2,
 } from './ml-model-artifact.js';
+import { stableOpaqueKey } from './local-ml-training-snapshot.schema.js';
 import {
   buildFeatureReadinessArtifactInput,
   compileRecommendationFeatureReadinessContract,
@@ -429,5 +432,166 @@ describe('RP-06.1 LightFM scorer diagnostics', () => {
     assert.equal(serialized.includes(candidateKey), false);
     assert.equal(serialized.includes('private/model.json'), false);
     assert.ok(result.diagnostics.unknown.sample.length <= FEATURE_READINESS_SAMPLE_LIMIT);
+  });
+});
+
+const v2Artifact = (
+  candidateKeys: readonly string[] = ['candidate-a', 'candidate-b'],
+): PortableModelArtifactV2 => {
+  const dimension = 16;
+  const zeros = (): string[] => Array<string>(dimension).fill('0');
+  const userEmbedding = zeros();
+  userEmbedding[0] = '1';
+  const itemEmbedding = zeros();
+  itemEmbedding[0] = '1';
+  return {
+    schemaVersion: 'impactloop-lightfm-portable-v2',
+    domain: 'material',
+    modelVersion: 'lm-06-local-lightfm-v1',
+    featureContractId: 'recommendation-feature-token-contract-v3',
+    featureContractVersion: '3.0.0',
+    aggregationMode: 'weighted-sum',
+    taxonomyFingerprint: 'a'.repeat(64),
+    datasetContentHash: 'b'.repeat(64),
+    featureMapping: {
+      user: [{ token: 'interest:arduino', index: 0 }],
+      item: [{ token: 'material-family:electronics', index: 0 }],
+    },
+    featureMappingHash: 'c'.repeat(64),
+    itemMapping: [...candidateKeys]
+      .map((candidateKey) => ({
+        itemKey: stableOpaqueKey('material', candidateKey),
+        index: 0,
+      }))
+      .sort((left, right) =>
+        left.itemKey < right.itemKey ? -1 : left.itemKey > right.itemKey ? 1 : 0,
+      )
+      .map((entry, index) => ({ ...entry, index })),
+    itemMappingHash: 'd'.repeat(64),
+    trainingConfiguration: {
+      randomSeed: 11,
+      loss: 'warp',
+      epochs: 10,
+      noComponents: 16,
+      learningRate: '0.03',
+      userAlpha: '0.000001',
+      itemAlpha: '0.000001',
+      numThreads: 1,
+      interactionWeighting: 'unit-per-snapshot-event',
+      duplicateInteractionAggregation: 'sum',
+    },
+    modelDimensions: {
+      embeddingDimension: dimension,
+      userFeatureCount: 1,
+      itemFeatureCount: 1,
+      itemCount: candidateKeys.length,
+    },
+    modelComponents: {
+      userFeatureEmbeddings: [userEmbedding],
+      itemFeatureEmbeddings: [itemEmbedding],
+      userFeatureBiases: ['0'],
+      itemFeatureBiases: ['0'],
+    },
+    semanticContentHash: 'e'.repeat(64),
+    createdAt: '2026-07-26T00:00:00Z',
+  };
+};
+
+const v2Candidate = (candidateKey: string) => ({
+  candidateKey,
+  features: [['material-family:electronics', 1]] as const,
+});
+
+describe('LM-07 contained portable V2 scoring', () => {
+  it('scores only the supplied pool and applies the ASCII tie-break', () => {
+    const scorer = buildPortableLightFmV2Scorer(v2Artifact());
+    const result = scorer.score({
+      domain: 'material',
+      userFeatures: [['interest:arduino', 1]],
+      candidates: [v2Candidate('candidate-b'), v2Candidate('candidate-a')],
+    });
+    assert.equal(result.outcome, 'SCORED');
+    if (result.outcome !== 'SCORED') return;
+    assert.deepEqual(result.rankedCandidateKeys, ['candidate-a', 'candidate-b']);
+    assert.equal(result.scored.every((row) => Number.isFinite(row.score)), true);
+    assert.equal(Object.isFrozen(result.scored), true);
+    assert.equal(Object.isFrozen(result.rankedCandidateKeys), true);
+  });
+
+  it('deduplicates identical candidates and rejects conflicting duplicates', () => {
+    const scorer = buildPortableLightFmV2Scorer(v2Artifact(['candidate-a']));
+    const duplicate = v2Candidate('candidate-a');
+    const deduplicated = scorer.score({
+      domain: 'material',
+      userFeatures: [['interest:arduino', 1]],
+      candidates: [duplicate, duplicate],
+    });
+    assert.equal(deduplicated.outcome, 'SCORED');
+    assert.equal(deduplicated.diagnostics.duplicateCandidateCount, 1);
+    if (deduplicated.outcome === 'SCORED') {
+      assert.deepEqual(deduplicated.rankedCandidateKeys, ['candidate-a']);
+    }
+
+    const conflict = scorer.score({
+      domain: 'material',
+      userFeatures: [['interest:arduino', 1]],
+      candidates: [
+        duplicate,
+        { candidateKey: 'candidate-a', features: [] },
+      ],
+    });
+    assert.equal(conflict.outcome, 'UNAVAILABLE');
+    if (conflict.outcome === 'UNAVAILABLE') {
+      assert.equal(conflict.reasonCode, 'DUPLICATE_CANDIDATE_CONFLICT');
+    }
+  });
+
+  it('fails the whole request for missing item mappings with bounded hashed samples', () => {
+    const scorer = buildPortableLightFmV2Scorer(v2Artifact(['candidate-a']));
+    const result = scorer.score({
+      domain: 'material',
+      userFeatures: [['interest:arduino', 1]],
+      candidates: [v2Candidate('missing-private-id')],
+    });
+    assert.equal(result.outcome, 'UNAVAILABLE');
+    if (result.outcome !== 'UNAVAILABLE') return;
+    assert.equal(result.reasonCode, 'CANDIDATE_MAPPING_MISSING');
+    assert.equal(result.diagnostics.missingMappingCount, 1);
+    assert.equal(result.diagnostics.missingMappingKeySamples.length, 1);
+    assert.equal(JSON.stringify(result).includes('missing-private-id'), false);
+    assert.equal('rankedCandidateKeys' in result, false);
+  });
+
+  it('fails closed for domain, feature mapping, and nonfinite inputs', () => {
+    const scorer = buildPortableLightFmV2Scorer(v2Artifact(['candidate-a']));
+    const domain = scorer.score({
+      domain: 'project',
+      userFeatures: [['interest:arduino', 1]],
+      candidates: [v2Candidate('candidate-a')],
+    });
+    assert.equal(domain.outcome, 'UNAVAILABLE');
+    if (domain.outcome === 'UNAVAILABLE') {
+      assert.equal(domain.reasonCode, 'DOMAIN_MISMATCH');
+    }
+
+    const missingFeature = scorer.score({
+      domain: 'material',
+      userFeatures: [['interest:unknown', 1]],
+      candidates: [v2Candidate('candidate-a')],
+    });
+    assert.equal(missingFeature.outcome, 'UNAVAILABLE');
+    if (missingFeature.outcome === 'UNAVAILABLE') {
+      assert.equal(missingFeature.reasonCode, 'FEATURE_MAPPING_MISSING');
+    }
+
+    const nonfinite = scorer.score({
+      domain: 'material',
+      userFeatures: [['interest:arduino', Number.POSITIVE_INFINITY]],
+      candidates: [v2Candidate('candidate-a')],
+    });
+    assert.equal(nonfinite.outcome, 'UNAVAILABLE');
+    if (nonfinite.outcome === 'UNAVAILABLE') {
+      assert.equal(nonfinite.reasonCode, 'NONFINITE_RUNTIME_INPUT');
+    }
   });
 });

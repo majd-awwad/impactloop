@@ -1,7 +1,9 @@
 import type {
   PortableFeature,
   PortableModelArtifact,
+  PortableModelArtifactV2,
 } from './ml-model-artifact.js';
+import { stableOpaqueKey } from './local-ml-training-snapshot.schema.js';
 import {
   buildFeatureReadinessArtifactInput,
   classifyRuntimeFeatureForScorer,
@@ -562,4 +564,383 @@ export const combineNormalizedScores = (
       (a, b) =>
         b.score - a.score || a.candidateKey.localeCompare(b.candidateKey),
     );
+};
+
+export type LocalMlDomain = 'material' | 'project';
+
+export type LocalMlCandidate = {
+  candidateKey: string;
+  features: readonly WeightedFeature[];
+};
+
+export type LocalMlScoringInput = {
+  domain: LocalMlDomain;
+  userFeatures: readonly WeightedFeature[];
+  candidates: readonly LocalMlCandidate[];
+};
+
+export type LocalMlScorerUnavailableReason =
+  | 'DOMAIN_MISMATCH'
+  | 'INVALID_CANDIDATE_KEY'
+  | 'DUPLICATE_CANDIDATE_CONFLICT'
+  | 'DUPLICATE_FEATURE_CONFLICT'
+  | 'CANDIDATE_MAPPING_MISSING'
+  | 'FEATURE_MAPPING_MISSING'
+  | 'INVALID_RUNTIME_FEATURE_WEIGHT'
+  | 'NONFINITE_RUNTIME_INPUT'
+  | 'NONFINITE_INTERMEDIATE'
+  | 'NONFINITE_OUTPUT';
+
+export type LocalMlScorerDiagnostics = Readonly<{
+  candidateCount: number;
+  duplicateCandidateCount: number;
+  scoredCount: number;
+  missingMappingCount: number;
+  missingMappingKeySamples: readonly string[];
+  featureMappingMissingCount: number;
+}>;
+
+export type LocalMlContainedScoringResult =
+  | Readonly<{
+      outcome: 'SCORED';
+      domain: LocalMlDomain;
+      scored: readonly Readonly<ScoredCandidate>[];
+      rankedCandidateKeys: readonly string[];
+      diagnostics: LocalMlScorerDiagnostics;
+    }>
+  | Readonly<{
+      outcome: 'UNAVAILABLE';
+      domain: LocalMlDomain;
+      reasonCode: LocalMlScorerUnavailableReason;
+      diagnostics: LocalMlScorerDiagnostics;
+    }>;
+
+export type PortableLightFmV2ScorerMetadata = Readonly<{
+  domain: LocalMlDomain;
+  semanticContentHash: string;
+  schemaVersion: string;
+  modelVersion: string;
+  featureContractId: string;
+  featureContractVersion: string;
+  aggregationMode: string;
+  taxonomyFingerprint: string;
+  itemCount: number;
+}>;
+
+export type PortableLightFmV2Scorer = Readonly<{
+  domain: LocalMlDomain;
+  metadata: PortableLightFmV2ScorerMetadata;
+  score: (input: LocalMlScoringInput) => LocalMlContainedScoringResult;
+}>;
+
+const asciiCompare = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
+const emptyLocalDiagnostics = (
+  candidateCount: number,
+): LocalMlScorerDiagnostics =>
+  Object.freeze({
+    candidateCount,
+    duplicateCandidateCount: 0,
+    scoredCount: 0,
+    missingMappingCount: 0,
+    missingMappingKeySamples: Object.freeze([] as string[]),
+    featureMappingMissingCount: 0,
+  });
+
+const freezeLocalDiagnostics = (
+  diagnostics: Omit<LocalMlScorerDiagnostics, 'missingMappingKeySamples'> & {
+    missingMappingKeySamples: readonly string[];
+  },
+): LocalMlScorerDiagnostics =>
+  Object.freeze({
+    ...diagnostics,
+    missingMappingKeySamples: Object.freeze([
+      ...diagnostics.missingMappingKeySamples,
+    ]),
+  });
+
+type CanonicalFeatureRow =
+  | { ok: true; features: readonly WeightedFeature[] }
+  | {
+      ok: false;
+      reasonCode:
+        | 'DUPLICATE_FEATURE_CONFLICT'
+        | 'INVALID_RUNTIME_FEATURE_WEIGHT'
+        | 'NONFINITE_RUNTIME_INPUT';
+    };
+
+const canonicalizeLocalFeatureRow = (
+  features: readonly WeightedFeature[],
+): CanonicalFeatureRow => {
+  const byToken = new Map<string, number>();
+  for (const feature of features) {
+    if (
+      !Array.isArray(feature) ||
+      typeof feature[0] !== 'string' ||
+      feature[0].length === 0 ||
+      !Number.isFinite(feature[1])
+    ) {
+      return { ok: false, reasonCode: 'NONFINITE_RUNTIME_INPUT' };
+    }
+    if (feature[1] < 0) {
+      return { ok: false, reasonCode: 'INVALID_RUNTIME_FEATURE_WEIGHT' };
+    }
+    const prior = byToken.get(feature[0]);
+    if (prior !== undefined && prior !== feature[1]) {
+      return { ok: false, reasonCode: 'DUPLICATE_FEATURE_CONFLICT' };
+    }
+    byToken.set(feature[0], feature[1]);
+  }
+  return {
+    ok: true,
+    features: Object.freeze(
+      [...byToken]
+        .sort(([left], [right]) => asciiCompare(left, right))
+        .map(([token, weight]) => Object.freeze([token, weight]) as WeightedFeature),
+    ),
+  };
+};
+
+const numericMatrix = (
+  values: readonly (readonly string[])[],
+): readonly (readonly number[])[] =>
+  Object.freeze(
+    values.map((row) =>
+      Object.freeze(
+        row.map((value) => {
+          const parsed = Number(value);
+          if (!Number.isFinite(parsed)) throw new Error('nonfinite_model_value');
+          return parsed;
+        }),
+      ),
+    ),
+  );
+
+const numericVector = (values: readonly string[]): readonly number[] =>
+  Object.freeze(
+    values.map((value) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) throw new Error('nonfinite_model_value');
+      return parsed;
+    }),
+  );
+
+export const buildPortableLightFmV2Scorer = (
+  artifact: PortableModelArtifactV2,
+): PortableLightFmV2Scorer => {
+  if (artifact.aggregationMode !== 'weighted-sum') {
+    throw new Error('unsupported_aggregation_mode');
+  }
+
+  const dimension = artifact.modelDimensions.embeddingDimension;
+  const userEmbeddings = numericMatrix(
+    artifact.modelComponents.userFeatureEmbeddings,
+  );
+  const itemEmbeddings = numericMatrix(
+    artifact.modelComponents.itemFeatureEmbeddings,
+  );
+  const userBiases = numericVector(artifact.modelComponents.userFeatureBiases);
+  const itemBiases = numericVector(artifact.modelComponents.itemFeatureBiases);
+  const userFeatureIndex = new Map(
+    artifact.featureMapping.user.map((entry) => [entry.token, entry.index]),
+  );
+  const itemFeatureIndex = new Map(
+    artifact.featureMapping.item.map((entry) => [entry.token, entry.index]),
+  );
+  const itemKeys = new Set(artifact.itemMapping.map((entry) => entry.itemKey));
+
+  const metadata: PortableLightFmV2ScorerMetadata = Object.freeze({
+    domain: artifact.domain,
+    semanticContentHash: artifact.semanticContentHash,
+    schemaVersion: artifact.schemaVersion,
+    modelVersion: artifact.modelVersion,
+    featureContractId: artifact.featureContractId,
+    featureContractVersion: artifact.featureContractVersion,
+    aggregationMode: artifact.aggregationMode,
+    taxonomyFingerprint: artifact.taxonomyFingerprint,
+    itemCount: artifact.itemMapping.length,
+  });
+
+  const unavailable = (
+    input: LocalMlScoringInput,
+    reasonCode: LocalMlScorerUnavailableReason,
+    diagnostics = emptyLocalDiagnostics(input.candidates.length),
+  ): LocalMlContainedScoringResult =>
+    Object.freeze({
+      outcome: 'UNAVAILABLE' as const,
+      domain: input.domain,
+      reasonCode,
+      diagnostics,
+    });
+
+  const representation = (
+    features: readonly WeightedFeature[],
+    featureIndex: ReadonlyMap<string, number>,
+    embeddings: readonly (readonly number[])[],
+    biases: readonly number[],
+  ):
+    | { ok: true; embedding: number[]; bias: number }
+    | { ok: false; reasonCode: LocalMlScorerUnavailableReason } => {
+    const embedding = Array<number>(dimension).fill(0);
+    let bias = 0;
+    for (const [token, weight] of features) {
+      const rowIndex = featureIndex.get(token);
+      if (rowIndex === undefined) {
+        return { ok: false, reasonCode: 'FEATURE_MAPPING_MISSING' };
+      }
+      const biasContribution = biases[rowIndex]! * weight;
+      const nextBias = bias + biasContribution;
+      if (!Number.isFinite(biasContribution) || !Number.isFinite(nextBias)) {
+        return { ok: false, reasonCode: 'NONFINITE_INTERMEDIATE' };
+      }
+      bias = nextBias;
+      for (let coordinate = 0; coordinate < dimension; coordinate += 1) {
+        const contribution = embeddings[rowIndex]![coordinate]! * weight;
+        const nextCoordinate = embedding[coordinate]! + contribution;
+        if (!Number.isFinite(contribution) || !Number.isFinite(nextCoordinate)) {
+          return { ok: false, reasonCode: 'NONFINITE_INTERMEDIATE' };
+        }
+        embedding[coordinate] = nextCoordinate;
+      }
+    }
+    return { ok: true, embedding, bias };
+  };
+
+  const score = (input: LocalMlScoringInput): LocalMlContainedScoringResult => {
+    if (input.domain !== artifact.domain) {
+      return unavailable(input, 'DOMAIN_MISMATCH');
+    }
+
+    const userRow = canonicalizeLocalFeatureRow(input.userFeatures);
+    if (!userRow.ok) return unavailable(input, userRow.reasonCode);
+
+    const candidates = new Map<
+      string,
+      { features: readonly WeightedFeature[]; signature: string }
+    >();
+    let duplicateCandidateCount = 0;
+    for (const candidate of input.candidates) {
+      if (typeof candidate.candidateKey !== 'string' || candidate.candidateKey.length === 0) {
+        return unavailable(input, 'INVALID_CANDIDATE_KEY');
+      }
+      const row = canonicalizeLocalFeatureRow(candidate.features);
+      if (!row.ok) return unavailable(input, row.reasonCode);
+      const signature = JSON.stringify(row.features);
+      const prior = candidates.get(candidate.candidateKey);
+      if (prior) {
+        if (prior.signature !== signature) {
+          return unavailable(input, 'DUPLICATE_CANDIDATE_CONFLICT');
+        }
+        duplicateCandidateCount += 1;
+        continue;
+      }
+      candidates.set(candidate.candidateKey, {
+        features: row.features,
+        signature,
+      });
+    }
+
+    const missingOpaqueKeys = [...candidates.keys()]
+      .map((candidateKey) => stableOpaqueKey(artifact.domain, candidateKey))
+      .filter((itemKey) => !itemKeys.has(itemKey))
+      .sort(asciiCompare);
+    if (missingOpaqueKeys.length > 0) {
+      return unavailable(
+        input,
+        'CANDIDATE_MAPPING_MISSING',
+        freezeLocalDiagnostics({
+          candidateCount: input.candidates.length,
+          duplicateCandidateCount,
+          scoredCount: 0,
+          missingMappingCount: missingOpaqueKeys.length,
+          missingMappingKeySamples: missingOpaqueKeys.slice(0, 8),
+          featureMappingMissingCount: 0,
+        }),
+      );
+    }
+
+    const user = representation(
+      userRow.features,
+      userFeatureIndex,
+      userEmbeddings,
+      userBiases,
+    );
+    if (!user.ok) {
+      return unavailable(
+        input,
+        user.reasonCode,
+        freezeLocalDiagnostics({
+          candidateCount: input.candidates.length,
+          duplicateCandidateCount,
+          scoredCount: 0,
+          missingMappingCount: 0,
+          missingMappingKeySamples: [],
+          featureMappingMissingCount:
+            user.reasonCode === 'FEATURE_MAPPING_MISSING' ? 1 : 0,
+        }),
+      );
+    }
+
+    const scored: ScoredCandidate[] = [];
+    for (const [candidateKey, candidate] of candidates) {
+      const item = representation(
+        candidate.features,
+        itemFeatureIndex,
+        itemEmbeddings,
+        itemBiases,
+      );
+      if (!item.ok) {
+        return unavailable(
+          input,
+          item.reasonCode,
+          freezeLocalDiagnostics({
+            candidateCount: input.candidates.length,
+            duplicateCandidateCount,
+            scoredCount: 0,
+            missingMappingCount: 0,
+            missingMappingKeySamples: [],
+            featureMappingMissingCount:
+              item.reasonCode === 'FEATURE_MAPPING_MISSING' ? 1 : 0,
+          }),
+        );
+      }
+      let value = user.bias + item.bias;
+      if (!Number.isFinite(value)) return unavailable(input, 'NONFINITE_OUTPUT');
+      for (let coordinate = 0; coordinate < dimension; coordinate += 1) {
+        const product = user.embedding[coordinate]! * item.embedding[coordinate]!;
+        const next = value + product;
+        if (!Number.isFinite(product) || !Number.isFinite(next)) {
+          return unavailable(input, 'NONFINITE_OUTPUT');
+        }
+        value = next;
+      }
+      scored.push(Object.freeze({ candidateKey, score: value }));
+    }
+
+    scored.sort(
+      (left, right) =>
+        right.score - left.score || asciiCompare(left.candidateKey, right.candidateKey),
+    );
+    const frozenScored = Object.freeze([...scored]);
+    const rankedCandidateKeys = Object.freeze(
+      scored.map((candidate) => candidate.candidateKey),
+    );
+    return Object.freeze({
+      outcome: 'SCORED' as const,
+      domain: input.domain,
+      scored: frozenScored,
+      rankedCandidateKeys,
+      diagnostics: freezeLocalDiagnostics({
+        candidateCount: input.candidates.length,
+        duplicateCandidateCount,
+        scoredCount: scored.length,
+        missingMappingCount: 0,
+        missingMappingKeySamples: [],
+        featureMappingMissingCount: 0,
+      }),
+    });
+  };
+
+  return Object.freeze({ domain: artifact.domain, metadata, score });
 };
