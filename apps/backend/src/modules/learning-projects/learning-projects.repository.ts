@@ -965,29 +965,30 @@ export const findFollowedProjectIds = async (
   return new Set(follows.map((follow) => follow.projectId));
 };
 
-export const setProjectLiked = async (projectId: string, userId: string) => {
-  await prisma.projectLike.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectLiked = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectLike.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetProjectLiked = async (projectId: string, userId: string) => {
-  await prisma.projectLike.deleteMany({
+export const unsetProjectLiked = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectLike.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countLikesForProject = async (projectId: string) => {
@@ -996,57 +997,56 @@ export const countLikesForProject = async (projectId: string) => {
   });
 };
 
-export const setProjectSaved = async (projectId: string, userId: string) => {
-  await prisma.projectSave.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectSaved = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectSave.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetProjectSaved = async (projectId: string, userId: string) => {
-  await prisma.projectSave.deleteMany({
+export const unsetProjectSaved = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectSave.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
-export const setProjectFollowed = async (projectId: string, userId: string) => {
-  await prisma.projectFollow.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectFollowed = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectFollow.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
 export const unsetProjectFollowed = async (
   projectId: string,
   userId: string,
-) => {
-  await prisma.projectFollow.deleteMany({
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectFollow.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countFollowsForProject = async (projectId: string) => {
