@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { IncomingHttpHeaders } from 'node:http';
 import type { NextFunction, Request, Response } from 'express';
 
@@ -17,11 +18,14 @@ import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import { getRequestId } from '../../observability/request-context.js';
 import { RECOMMENDATION_SCORER_VERSION } from '../../config/recommendation-scoring-version.js';
+import { computeIdempotencyRequestHash } from '../../services/idempotency.service.js';
+import { AppError } from '../../utils/app-error.js';
 import {
   RecommendationEventOriginError,
   resolveRecommendationEventSource,
   type WritableRecommendationEventSource,
 } from './recommendation-event-origin.js';
+import { toggleResultingStateForActionType } from './recommendation-action-state.js';
 
 export const RECOMMENDATION_IMPRESSION_HEADER =
   'x-recommendation-impression-id';
@@ -36,6 +40,7 @@ export const RECOMMENDATION_EXPOSURE_OUTBOX_SCHEMA_VERSION =
   'recommendation-exposure-outbox-v1';
 export const RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION =
   'recommendation-action-outbox-v1';
+export const RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE = 'RECOMMENDATION_TOGGLE';
 
 export const RECOMMENDATION_ALGORITHM_NAME = 'deterministic-hybrid';
 export const RECOMMENDATION_ALGORITHM_VERSION =
@@ -154,6 +159,37 @@ const RECOMMENDATION_ACTION_TYPES: readonly RecommendationActionType[] = [
   'PROJECT_BUILD_STARTED',
   'PROJECT_BUILD_PROGRESS_UPDATED',
 ];
+
+const RECOMMENDATION_TOGGLE_ACTION_TYPES: readonly RecommendationActionType[] = [
+  'MATERIAL_LIKE',
+  'MATERIAL_UNLIKE',
+  'PROJECT_LIKE',
+  'PROJECT_UNLIKE',
+  'PROJECT_SAVE',
+  'PROJECT_UNSAVE',
+  'PROJECT_FOLLOW',
+  'PROJECT_UNFOLLOW',
+];
+
+type ToggleRequestContext = {
+  headers: IncomingHttpHeaders;
+};
+
+const toggleRequestStorage = new AsyncLocalStorage<ToggleRequestContext>();
+
+export const runWithRecommendationToggleRequestContext = <T>(
+  context: ToggleRequestContext,
+  fn: () => T,
+): T => toggleRequestStorage.run(context, fn);
+
+export const getRecommendationToggleRequestHeaders = ():
+  | IncomingHttpHeaders
+  | undefined => toggleRequestStorage.getStore()?.headers;
+
+export const recommendationToggleDeduplicationKey = (
+  learnerId: string,
+  sourceOperationId: string,
+): string => `toggle:${learnerId}:${sourceOperationId}`;
 
 export type RecommendationOutboxTrace = {
   entityType: EntityType;
@@ -802,6 +838,271 @@ const createOutboxRowIdempotent = async (
   }
 };
 
+const claimToggleIdempotencyRecord = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    userId: string;
+    key: string;
+    requestHash: string;
+  },
+): Promise<'claimed' | 'exists'> => {
+  const savepoint = `sp_${createHash('sha256')
+    .update(`toggle-idem:${input.userId}:${input.key}`)
+    .digest('hex')
+    .slice(0, 24)}`;
+  await tx.$executeRawUnsafe(`SAVEPOINT ${savepoint}`);
+  try {
+    await tx.idempotencyRecord.create({
+      data: {
+        userId: input.userId,
+        scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+        key: input.key,
+        requestHash: input.requestHash,
+        status: 'IN_PROGRESS',
+      },
+    });
+    await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
+    return 'claimed';
+  } catch (error) {
+    await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+    return 'exists';
+  }
+};
+
+const resolveToggleSourceOperationId = (
+  headers: IncomingHttpHeaders | undefined,
+  explicit?: string,
+): string | undefined =>
+  boundedString(explicit, 191) ??
+  boundedString(
+    headers
+      ? (Array.isArray(headers['idempotency-key'])
+          ? headers['idempotency-key'][0]
+          : headers['idempotency-key'])
+      : undefined,
+    191,
+  ) ??
+  boundedString(getRequestIdFromContext(), 191);
+
+const throwToggleIdempotencyConflict = (): never => {
+  throw new AppError(
+    'Idempotency key was already used with a different request.',
+    409,
+    'IDEMPOTENCY_KEY_REUSED',
+    { reason: 'IDEMPOTENCY_KEY_REUSED' },
+  );
+};
+
+const resolveExistingToggleIdempotency = <TResponse extends object>(input: {
+  requestHash: string;
+  existing: {
+    requestHash: string;
+    status: string;
+    responseJson: Prisma.JsonValue | null;
+  };
+}): { response: TResponse; replayed: true; transitioned: false } => {
+  if (input.existing.requestHash !== input.requestHash) {
+    throwToggleIdempotencyConflict();
+  }
+  if (input.existing.status === 'SUCCEEDED' && input.existing.responseJson) {
+    return {
+      response: input.existing.responseJson as TResponse,
+      replayed: true,
+      transitioned: false,
+    };
+  }
+  if (input.existing.status === 'IN_PROGRESS') {
+    throw new AppError(
+      'Request is already being processed.',
+      409,
+      'IDEMPOTENCY_IN_PROGRESS',
+      { reason: 'REQUEST_IN_PROGRESS' },
+    );
+  }
+  throw new AppError(
+    'Previous request with this idempotency key failed. Start a new request with a new key.',
+    409,
+    'IDEMPOTENCY_PREVIOUSLY_FAILED',
+    { reason: 'IDEMPOTENCY_PREVIOUSLY_FAILED' },
+  );
+};
+
+export const commitRecommendationToggleTransition = async <
+  TResponse extends object,
+>(input: {
+  learnerId: string;
+  actionType: RecommendationActionType;
+  entityType: EntityType;
+  entityId: string;
+  apply: (tx: Prisma.TransactionClient) => Promise<boolean>;
+  buildResponse: (
+    tx: Prisma.TransactionClient,
+    active: boolean,
+  ) => Promise<TResponse>;
+  sourceOperationId?: string;
+  headers?: IncomingHttpHeaders;
+  eventSource?: EventSource;
+  resourceType?: string;
+}): Promise<{
+  response: TResponse;
+  replayed: boolean;
+  transitioned: boolean;
+}> => {
+  if (
+    !boundedString(input.learnerId, 191) ||
+    !RECOMMENDATION_TOGGLE_ACTION_TYPES.includes(input.actionType) ||
+    !boundedString(input.entityId, 191)
+  ) {
+    throw new AppError('Invalid recommendation toggle transition', 400, 'VALIDATION_ERROR');
+  }
+
+  const resulting = toggleResultingStateForActionType(input.actionType);
+  if (!resulting) {
+    throw new AppError('Invalid recommendation toggle action', 400, 'VALIDATION_ERROR');
+  }
+  const desiredActive = resulting === 'active';
+
+  const headers =
+    input.headers ?? getRecommendationToggleRequestHeaders() ?? {};
+  const sourceOperationId = resolveToggleSourceOperationId(
+    headers,
+    input.sourceOperationId,
+  );
+  if (!sourceOperationId) {
+    throw new AppError(
+      'Toggle operation id is required.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const eventSource = resolveRecommendationEventSource(input.eventSource);
+  const impressionId =
+    readRecommendationAttributionHeaders(headers).impressionId ?? null;
+  const requestHash = computeIdempotencyRequestHash({
+    learnerId: input.learnerId,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    actionType: input.actionType,
+    eventSource,
+    sourceOperationId,
+    impressionId,
+  });
+  const resourceType = input.resourceType ?? `recommendation-toggle:${input.actionType}`;
+
+  return prisma.$transaction(async (tx) => {
+    const existing = await tx.idempotencyRecord.findUnique({
+      where: {
+        userId_scope_key: {
+          userId: input.learnerId,
+          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+          key: sourceOperationId,
+        },
+      },
+      select: {
+        requestHash: true,
+        status: true,
+        responseJson: true,
+      },
+    });
+    if (existing) {
+      return resolveExistingToggleIdempotency<TResponse>({
+        requestHash,
+        existing,
+      });
+    }
+
+    const claim = await claimToggleIdempotencyRecord(tx, {
+      userId: input.learnerId,
+      key: sourceOperationId,
+      requestHash,
+    });
+    if (claim === 'exists') {
+      const raced = await tx.idempotencyRecord.findUnique({
+        where: {
+          userId_scope_key: {
+            userId: input.learnerId,
+            scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+            key: sourceOperationId,
+          },
+        },
+        select: {
+          requestHash: true,
+          status: true,
+          responseJson: true,
+        },
+      });
+      if (!raced) {
+        throw new AppError(
+          'Idempotency key was already used with a different request.',
+          409,
+          'IDEMPOTENCY_KEY_REUSED',
+          { reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      return resolveExistingToggleIdempotency<TResponse>({
+        requestHash,
+        existing: raced,
+      });
+    }
+
+    const transitioned = await input.apply(tx);
+    const response = await input.buildResponse(tx, desiredActive);
+
+    if (transitioned) {
+      const payload: RecommendationActionOutboxPayload = {
+        schemaVersion: RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION,
+        actionId: randomUUID(),
+        learnerId: input.learnerId,
+        actionType: input.actionType,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        impressionId,
+        sourceOperationId,
+        occurredAt: new Date().toISOString(),
+        eventSource,
+      };
+      if (payloadByteLength(payload) > MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES) {
+        throw new AppError(
+          'Recommendation toggle outbox payload exceeds the bounded size',
+          500,
+          'RECOMMENDATION_OUTBOX_PAYLOAD_TOO_LARGE',
+        );
+      }
+      await createOutboxRowIdempotent(tx, {
+        eventKind: 'RECOMMENDATION_ACTION',
+        schemaVersion: payload.schemaVersion,
+        deduplicationKey: recommendationToggleDeduplicationKey(
+          input.learnerId,
+          sourceOperationId,
+        ),
+        payload: payload as unknown as Prisma.InputJsonValue,
+      });
+    }
+
+    await tx.idempotencyRecord.update({
+      where: {
+        userId_scope_key: {
+          userId: input.learnerId,
+          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+          key: sourceOperationId,
+        },
+      },
+      data: {
+        status: 'SUCCEEDED',
+        resourceType,
+        resourceId: input.entityId,
+        responseJson: response,
+      },
+    });
+
+    return { response, replayed: false, transitioned };
+  });
+};
+
 export const enqueueRecommendationExposure = async (input: {
   generation: RecommendationGenerationMetadata;
   cacheState: CacheState;
@@ -971,37 +1272,6 @@ const actionPlanFor = (
   }
 
   if (
-    /^\/api\/materials\/[^/]+\/like$/.test(path) &&
-    (method === 'POST' || method === 'DELETE')
-  ) {
-    return plan(
-      method === 'POST' ? 'MATERIAL_LIKE' : 'MATERIAL_UNLIKE',
-      'MATERIAL',
-      materialId,
-    );
-  }
-
-  if (
-    /^\/api\/learning-projects\/[^/]+\/(like|save|follow)$/.test(path) &&
-    (method === 'POST' || method === 'DELETE')
-  ) {
-    const operation = path.split('/').at(-1);
-    const actionType =
-      operation === 'like'
-        ? method === 'POST'
-          ? 'PROJECT_LIKE'
-          : 'PROJECT_UNLIKE'
-        : operation === 'save'
-          ? method === 'POST'
-            ? 'PROJECT_SAVE'
-            : 'PROJECT_UNSAVE'
-          : method === 'POST'
-            ? 'PROJECT_FOLLOW'
-            : 'PROJECT_UNFOLLOW';
-    return plan(actionType as RecommendationActionType, 'PROJECT', projectId);
-  }
-
-  if (
     method === 'POST' &&
     /^\/api\/learning-projects\/[^/]+\/builds\/start$/.test(path)
   ) {
@@ -1124,29 +1394,31 @@ export const recommendationActionAttributionMiddleware = (
   res: Response,
   next: NextFunction,
 ): void => {
-  const originalJson = res.json.bind(res);
-  let actionCaptureAttempted = false;
-  res.json = ((body: unknown) => {
-    if (res.statusCode >= 400 || actionCaptureAttempted) {
-      return originalJson(body);
-    }
+  runWithRecommendationToggleRequestContext({ headers: req.headers }, () => {
+    const originalJson = res.json.bind(res);
+    let actionCaptureAttempted = false;
+    res.json = ((body: unknown) => {
+      if (res.statusCode >= 400 || actionCaptureAttempted) {
+        return originalJson(body);
+      }
 
-    const plan = actionPlanFor(req, body);
-    if (!plan || !req.auth?.sub) {
-      return originalJson(body);
-    }
-    actionCaptureAttempted = true;
+      const plan = actionPlanFor(req, body);
+      if (!plan || !req.auth?.sub) {
+        return originalJson(body);
+      }
+      actionCaptureAttempted = true;
 
-    void enqueueRecommendationAction({
-      learnerId: req.auth.sub,
-      plan,
-      headers: req.headers,
-    }).finally(() => {
-      originalJson(body);
-    });
-    return res;
-  }) as Response['json'];
-  next();
+      void enqueueRecommendationAction({
+        learnerId: req.auth.sub,
+        plan,
+        headers: req.headers,
+      }).finally(() => {
+        originalJson(body);
+      });
+      return res;
+    }) as Response['json'];
+    next();
+  });
 };
 
 export const persistRecommendationExposure = async (input: {

@@ -31,6 +31,7 @@ import {
 import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
+import { commitRecommendationToggleTransition } from '../recommendation-events/recommendation-events.service.js';
 
 import * as materialsRepository from './materials.repository.js';
 import type {
@@ -794,15 +795,25 @@ export const likeMaterialById = async (id: string, userId: string) => {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  await materialsRepository.setMaterialLiked(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const likesCount = await materialsRepository.countLikesForMaterial(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'MATERIAL_LIKE',
+    entityType: 'MATERIAL',
+    entityId: id,
+    resourceType: 'material-like',
+    apply: (tx) => materialsRepository.setMaterialLiked(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      materialId: id,
+      likesCount: await tx.materialLike.count({ where: { materialId: id } }),
+      isLiked: active,
+    }),
+  });
 
-  return {
-    materialId: id,
-    likesCount,
-    isLiked: true,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const unlikeMaterialById = async (id: string, userId: string) => {
@@ -812,15 +823,25 @@ export const unlikeMaterialById = async (id: string, userId: string) => {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  await materialsRepository.unsetMaterialLiked(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const likesCount = await materialsRepository.countLikesForMaterial(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'MATERIAL_UNLIKE',
+    entityType: 'MATERIAL',
+    entityId: id,
+    resourceType: 'material-unlike',
+    apply: (tx) => materialsRepository.unsetMaterialLiked(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      materialId: id,
+      likesCount: await tx.materialLike.count({ where: { materialId: id } }),
+      isLiked: active,
+    }),
+  });
 
-  return {
-    materialId: id,
-    likesCount,
-    isLiked: false,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const checkMaterialPrice = async (

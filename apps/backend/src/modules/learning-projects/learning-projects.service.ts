@@ -5,6 +5,7 @@ import {
   runIdempotentOperation,
 } from '../../services/idempotency.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
+import { commitRecommendationToggleTransition } from '../recommendation-events/recommendation-events.service.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
@@ -951,15 +952,25 @@ export const likeLearningProjectById = async (id: string, userId: string) => {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  await learningProjectsRepository.setProjectLiked(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const likesCount = await learningProjectsRepository.countLikesForProject(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'PROJECT_LIKE',
+    entityType: 'PROJECT',
+    entityId: id,
+    resourceType: 'project-like',
+    apply: (tx) => learningProjectsRepository.setProjectLiked(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      projectId: id,
+      likesCount: await tx.projectLike.count({ where: { projectId: id } }),
+      isLiked: active,
+    }),
+  });
 
-  return {
-    projectId: id,
-    likesCount,
-    isLiked: true,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const unlikeLearningProjectById = async (id: string, userId: string) => {
@@ -971,15 +982,25 @@ export const unlikeLearningProjectById = async (id: string, userId: string) => {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  await learningProjectsRepository.unsetProjectLiked(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const likesCount = await learningProjectsRepository.countLikesForProject(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'PROJECT_UNLIKE',
+    entityType: 'PROJECT',
+    entityId: id,
+    resourceType: 'project-unlike',
+    apply: (tx) => learningProjectsRepository.unsetProjectLiked(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      projectId: id,
+      likesCount: await tx.projectLike.count({ where: { projectId: id } }),
+      isLiked: active,
+    }),
+  });
 
-  return {
-    projectId: id,
-    likesCount,
-    isLiked: false,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const saveLearningProjectById = async (id: string, userId: string) => {
@@ -991,13 +1012,24 @@ export const saveLearningProjectById = async (id: string, userId: string) => {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  await learningProjectsRepository.setProjectSaved(id, userId);
-  invalidateLearnerHomeCache(userId);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'PROJECT_SAVE',
+    entityType: 'PROJECT',
+    entityId: id,
+    resourceType: 'project-save',
+    apply: (tx) => learningProjectsRepository.setProjectSaved(id, userId, tx),
+    buildResponse: async (_tx, active) => ({
+      projectId: id,
+      isSaved: active,
+    }),
+  });
 
-  return {
-    projectId: id,
-    isSaved: true,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const unsaveLearningProjectById = async (id: string, userId: string) => {
@@ -1009,13 +1041,24 @@ export const unsaveLearningProjectById = async (id: string, userId: string) => {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  await learningProjectsRepository.unsetProjectSaved(id, userId);
-  invalidateLearnerHomeCache(userId);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'PROJECT_UNSAVE',
+    entityType: 'PROJECT',
+    entityId: id,
+    resourceType: 'project-unsave',
+    apply: (tx) => learningProjectsRepository.unsetProjectSaved(id, userId, tx),
+    buildResponse: async (_tx, active) => ({
+      projectId: id,
+      isSaved: active,
+    }),
+  });
 
-  return {
-    projectId: id,
-    isSaved: false,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const followLearningProjectById = async (id: string, userId: string) => {
@@ -1027,16 +1070,26 @@ export const followLearningProjectById = async (id: string, userId: string) => {
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  await learningProjectsRepository.setProjectFollowed(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const followersCount =
-    await learningProjectsRepository.countFollowsForProject(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'PROJECT_FOLLOW',
+    entityType: 'PROJECT',
+    entityId: id,
+    resourceType: 'project-follow',
+    apply: (tx) =>
+      learningProjectsRepository.setProjectFollowed(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      projectId: id,
+      followersCount: await tx.projectFollow.count({ where: { projectId: id } }),
+      isFollowing: active,
+    }),
+  });
 
-  return {
-    projectId: id,
-    followersCount,
-    isFollowing: true,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const unfollowLearningProjectById = async (
@@ -1051,16 +1104,26 @@ export const unfollowLearningProjectById = async (
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  await learningProjectsRepository.unsetProjectFollowed(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const followersCount =
-    await learningProjectsRepository.countFollowsForProject(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'PROJECT_UNFOLLOW',
+    entityType: 'PROJECT',
+    entityId: id,
+    resourceType: 'project-unfollow',
+    apply: (tx) =>
+      learningProjectsRepository.unsetProjectFollowed(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      projectId: id,
+      followersCount: await tx.projectFollow.count({ where: { projectId: id } }),
+      isFollowing: active,
+    }),
+  });
 
-  return {
-    projectId: id,
-    followersCount,
-    isFollowing: false,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const reviewLearningProjectById = async (

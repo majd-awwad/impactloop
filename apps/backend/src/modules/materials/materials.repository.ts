@@ -491,29 +491,30 @@ export const findLikedMaterialIds = async (
   return new Set(likes.map((like) => like.materialId));
 };
 
-export const setMaterialLiked = async (materialId: string, userId: string) => {
-  await prisma.materialLike.upsert({
-    where: {
-      materialId_userId: {
-        materialId,
-        userId,
-      },
-    },
-    create: {
-      materialId,
-      userId,
-    },
-    update: {},
+export const setMaterialLiked = async (
+  materialId: string,
+  userId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<boolean> => {
+  const result = await client.materialLike.createMany({
+    data: [{ materialId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetMaterialLiked = async (materialId: string, userId: string) => {
-  await prisma.materialLike.deleteMany({
+export const unsetMaterialLiked = async (
+  materialId: string,
+  userId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<boolean> => {
+  const result = await client.materialLike.deleteMany({
     where: {
       materialId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countLikesForMaterial = async (materialId: string) => {

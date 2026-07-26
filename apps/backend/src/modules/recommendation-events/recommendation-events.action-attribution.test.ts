@@ -1,14 +1,31 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import type { AddressInfo } from 'node:net';
 import { after, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
-import { runWithRecommendationEventOrigin } from './recommendation-event-origin.js';
+import { AppError } from '../../utils/app-error.js';
+import { signAccessToken } from '../../utils/jwt.js';
+import { likeMaterialById, unlikeMaterialById } from '../materials/materials.service.js';
 import {
+  followLearningProjectById,
+  likeLearningProjectById,
+  saveLearningProjectById,
+  unfollowLearningProjectById,
+  unlikeLearningProjectById,
+  unsaveLearningProjectById,
+} from '../learning-projects/learning-projects.service.js';
+import { runWithRecommendationEventOrigin } from './recommendation-event-origin.js';
+import { reduceRecommendationToggleState } from './recommendation-action-state.js';
+import {
+  commitRecommendationToggleTransition,
   enqueueRecommendationAction,
   enqueueRecommendationExposure,
   getRecommendationActionPlan,
   persistRecommendationExposure,
+  recommendationToggleDeduplicationKey,
+  RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+  runWithRecommendationToggleRequestContext,
   type RecommendationActionPlan,
 } from './recommendation-events.service.js';
 import {
@@ -360,7 +377,7 @@ describe('recommendation action outbox attribution', () => {
     }
   });
 
-  test('the response-boundary plan covers supported routes and excludes project views', () => {
+  test('the response-boundary plan no longer emits toggles and still covers builds', () => {
     const request = (method: string, path: string, params: Record<string, string>) => ({
       method,
       path,
@@ -368,19 +385,20 @@ describe('recommendation action outbox attribution', () => {
       headers: { 'idempotency-key': operation('route-plan') },
       auth: { sub: learnerId, roles: ['LEARNER'] },
     });
-    const materialPlan = getRecommendationActionPlan(
-      request('POST', '/api/materials/material-1/like', { id: 'material-1' }) as never,
-      { success: true, data: { likesCount: 1 } },
+    assert.equal(
+      getRecommendationActionPlan(
+        request('POST', '/api/materials/material-1/like', { id: 'material-1' }) as never,
+        { success: true, data: { likesCount: 1 } },
+      ),
+      null,
     );
-    assert.equal(materialPlan?.actionType, 'MATERIAL_LIKE');
-    const mountedMaterialPlan = getRecommendationActionPlan(
-      {
-        ...request('POST', '/material-1/like', { id: 'material-1' }),
-        baseUrl: '/api/materials',
-      } as never,
-      { success: true, data: { likesCount: 1 } },
+    assert.equal(
+      getRecommendationActionPlan(
+        request('DELETE', '/api/learning-projects/project-1/save', { id: 'project-1' }) as never,
+        { success: true, data: { isSaved: false } },
+      ),
+      null,
     );
-    assert.equal(mountedMaterialPlan?.actionType, 'MATERIAL_LIKE');
     const buildPlan = getRecommendationActionPlan(
       request('PATCH', '/api/learning-projects/project-1/builds/me/items/item-1', { id: 'project-1', itemId: 'item-1' }) as never,
       { success: true, data: { id: 'build-1', updatedAt: new Date().toISOString() } },
@@ -388,10 +406,10 @@ describe('recommendation action outbox attribution', () => {
     assert.equal(buildPlan?.actionType, 'PROJECT_BUILD_PROGRESS_UPDATED');
     assert.equal(
       getRecommendationActionPlan(
-        request('GET', '/api/learning-projects/project-1', { id: 'project-1' }) as never,
-        { success: true, data: { id: 'project-1' } },
-      ),
-      null,
+        request('GET', '/api/materials/material-1', { id: 'material-1' }) as never,
+        { success: true, data: { id: 'material-1' } },
+      )?.actionType,
+      'MATERIAL_VIEW',
     );
   });
 
@@ -520,5 +538,682 @@ describe('recommendation action outbox attribution', () => {
       2,
     );
     assert.equal(await prisma.recommendationAction.count({ where: { sourceOperationId: operation('race-operation-1') } }), 1);
+  });
+
+  describe('RP-04.3A stateful recommendation toggle transitions', () => {
+  const PG_CONCURRENT_QUERY_WARNING =
+    'Calling client.query() when the client is already executing a query is deprecated';
+  let materialId = '';
+  let projectId = '';
+  let supplierId = '';
+  let serverUrl = '';
+  let closeServer: (() => Promise<void>) | undefined;
+  const ownedToggleKeys: string[] = [];
+
+  const trackToggleKey = (key: string): void => {
+    ownedToggleKeys.push(key);
+  };
+
+  const withOrigin = <T>(fn: () => Promise<T>): Promise<T> =>
+    runWithRecommendationEventOrigin('TEST', fn);
+
+  before(async () => {
+    const materialCategory = await prisma.category.findFirst({
+      where: {
+        isActive: true,
+        categoryType: { in: ['MATERIAL', 'BOTH'] },
+      },
+      select: { id: true },
+    });
+    const projectCategory = await prisma.category.findFirst({
+      where: {
+        isActive: true,
+        categoryType: { in: ['PROJECT', 'BOTH'] },
+      },
+      select: { id: true },
+    });
+    const location = await prisma.location.findFirst({ select: { id: true } });
+    assert.ok(materialCategory, 'expected an active material category');
+    assert.ok(projectCategory, 'expected an active project category');
+    assert.ok(location, 'expected a location');
+
+    const supplier = await prisma.user.create({
+      data: {
+        displayName: `${TEST_MARKER} toggle-supplier`,
+        email: `${TEST_MARKER}-toggle-supplier-${Date.now()}@impactloop.test`,
+        passwordHash: 'test-only-hash',
+        accountStatus: 'ACTIVE',
+        emailVerifiedAt: new Date(),
+        recommendationEvidenceEligibility: 'EXCLUDED_TEST',
+        roles: { create: [{ role: 'SUPPLIER', isPrimary: true }] },
+      },
+      select: { id: true },
+    });
+    supplierId = supplier.id;
+
+    const material = await prisma.material.create({
+      data: {
+        ownerId: supplierId,
+        categoryId: materialCategory.id,
+        locationId: location.id,
+        title: `${TEST_MARKER} toggle material`,
+        description: 'toggle contract material',
+        materialType: 'Toggle test material',
+        quantity: 1,
+        unit: 'piece',
+        condition: 'GOOD',
+        sourceType: 'WORKSHOP_SURPLUS',
+        status: 'AVAILABLE',
+        isFree: true,
+        pickupAllowed: true,
+        deliveryAllowed: false,
+      },
+      select: { id: true },
+    });
+    materialId = material.id;
+
+    const project = await prisma.learningProject.create({
+      data: {
+        createdBy: learnerId,
+        categoryId: projectCategory.id,
+        title: `${TEST_MARKER} toggle project`,
+        shortDescription: 'toggle contract project',
+        description: 'toggle contract project description',
+        difficulty: 'BEGINNER',
+        status: 'PUBLISHED',
+        submittedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    projectId = project.id;
+
+    const { createApp } = await import('../../app.js');
+    const app = createApp({ recommendationEventOrigin: 'TEST' });
+    const server = app.listen(0);
+    await new Promise<void>((resolve) => server.once('listening', resolve));
+    const address = server.address() as AddressInfo;
+    serverUrl = `http://127.0.0.1:${address.port}`;
+    closeServer = () =>
+      new Promise((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+  });
+
+  after(async () => {
+    if (ownedToggleKeys.length > 0) {
+      await prisma.idempotencyRecord.deleteMany({
+        where: {
+          userId: learnerId,
+          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+          key: { in: ownedToggleKeys },
+        },
+      });
+      await prisma.recommendationEventOutbox.deleteMany({
+        where: {
+          deduplicationKey: {
+            in: ownedToggleKeys.map((key) =>
+              recommendationToggleDeduplicationKey(learnerId, key),
+            ),
+          },
+        },
+      });
+    }
+    if (materialId) {
+      await prisma.materialLike.deleteMany({ where: { materialId } });
+      await prisma.material.deleteMany({ where: { id: materialId } });
+    }
+    if (projectId) {
+      await prisma.projectLike.deleteMany({ where: { projectId } });
+      await prisma.projectSave.deleteMany({ where: { projectId } });
+      await prisma.projectFollow.deleteMany({ where: { projectId } });
+      await prisma.learningProject.deleteMany({ where: { id: projectId } });
+    }
+    if (supplierId) {
+      await prisma.idempotencyRecord.deleteMany({
+        where: {
+          userId: supplierId,
+          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+        },
+      });
+      await prisma.user.deleteMany({ where: { id: supplierId } });
+    }
+    await closeServer?.();
+  });
+
+  const outboxCountFor = async (key: string) =>
+    prisma.recommendationEventOutbox.count({
+      where: {
+        deduplicationKey: recommendationToggleDeduplicationKey(learnerId, key),
+      },
+    });
+
+  const commitMaterialLike = (key: string) => {
+    trackToggleKey(key);
+    return withOrigin(() =>
+      commitRecommendationToggleTransition({
+        learnerId,
+        actionType: 'MATERIAL_LIKE',
+        entityType: 'MATERIAL',
+        entityId: materialId,
+        sourceOperationId: key,
+        apply: (tx) =>
+          tx.materialLike
+            .createMany({
+              data: [{ materialId, userId: learnerId }],
+              skipDuplicates: true,
+            })
+            .then((result) => result.count > 0),
+        buildResponse: async (tx, active) => ({
+          materialId,
+          likesCount: await tx.materialLike.count({ where: { materialId } }),
+          isLiked: active,
+        }),
+      }),
+    );
+  };
+
+  const commitMaterialUnlike = (key: string) => {
+    trackToggleKey(key);
+    return withOrigin(() =>
+      commitRecommendationToggleTransition({
+        learnerId,
+        actionType: 'MATERIAL_UNLIKE',
+        entityType: 'MATERIAL',
+        entityId: materialId,
+        sourceOperationId: key,
+        apply: (tx) =>
+          tx.materialLike
+            .deleteMany({ where: { materialId, userId: learnerId } })
+            .then((result) => result.count > 0),
+        buildResponse: async (tx, active) => ({
+          materialId,
+          likesCount: await tx.materialLike.count({ where: { materialId } }),
+          isLiked: active,
+        }),
+      }),
+    );
+  };
+
+  test('material like and unlike emit one transition each and reconstruct state', async () => {
+    const likeKey = operation('toggle-material-like');
+    const unlikeKey = operation('toggle-material-unlike');
+    const like = await commitMaterialLike(likeKey);
+    assert.equal(like.transitioned, true);
+    assert.equal(like.response.isLiked, true);
+    assert.equal(await outboxCountFor(likeKey), 1);
+    assert.equal(
+      await prisma.materialLike.count({
+        where: { materialId, userId: learnerId },
+      }),
+      1,
+    );
+
+    const unlike = await commitMaterialUnlike(unlikeKey);
+    assert.equal(unlike.transitioned, true);
+    assert.equal(unlike.response.isLiked, false);
+    assert.equal(await outboxCountFor(unlikeKey), 1);
+    assert.equal(
+      await prisma.materialLike.count({
+        where: { materialId, userId: learnerId },
+      }),
+      0,
+    );
+
+    const likePayload = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+      where: {
+        deduplicationKey: recommendationToggleDeduplicationKey(learnerId, likeKey),
+      },
+    });
+    const unlikePayload = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+      where: {
+        deduplicationKey: recommendationToggleDeduplicationKey(
+          learnerId,
+          unlikeKey,
+        ),
+      },
+    });
+    assert.equal((likePayload.payload as { actionType: string }).actionType, 'MATERIAL_LIKE');
+    assert.equal((likePayload.payload as { eventSource: string }).eventSource, 'TEST');
+    assert.equal((unlikePayload.payload as { actionType: string }).actionType, 'MATERIAL_UNLIKE');
+    assert.equal((unlikePayload.payload as { eventSource: string }).eventSource, 'TEST');
+
+    const reconstructed = reduceRecommendationToggleState(
+      {
+        learnerId,
+        entityType: 'MATERIAL',
+        entityId: materialId,
+        family: 'LIKE',
+      },
+      [
+        {
+          actionType: 'MATERIAL_LIKE',
+          learnerId,
+          entityType: 'MATERIAL',
+          entityId: materialId,
+          sourceOperationId: likeKey,
+          eventSource: 'TEST',
+        },
+        {
+          actionType: 'MATERIAL_UNLIKE',
+          learnerId,
+          entityType: 'MATERIAL',
+          entityId: materialId,
+          sourceOperationId: unlikeKey,
+          eventSource: 'TEST',
+        },
+      ],
+    );
+    assert.equal(reconstructed.state, 'inactive');
+  });
+
+  test('duplicate active and inactive material requests emit no second transition', async () => {
+    const likeKey = operation('toggle-material-dup-like');
+    const unlikeKey = operation('toggle-material-dup-unlike');
+    const firstLike = await commitMaterialLike(likeKey);
+    assert.equal(firstLike.transitioned, true);
+    const secondLikeKey = operation('toggle-material-dup-like-2');
+    const secondLike = await commitMaterialLike(secondLikeKey);
+    assert.equal(secondLike.transitioned, false);
+    assert.equal(await outboxCountFor(secondLikeKey), 0);
+
+    const firstUnlike = await commitMaterialUnlike(unlikeKey);
+    assert.equal(firstUnlike.transitioned, true);
+    const secondUnlikeKey = operation('toggle-material-dup-unlike-2');
+    const secondUnlike = await commitMaterialUnlike(secondUnlikeKey);
+    assert.equal(secondUnlike.transitioned, false);
+    assert.equal(await outboxCountFor(secondUnlikeKey), 0);
+  });
+
+  test('exact replay after later unlike returns prior result without reactivation', async () => {
+    const likeKey = operation('toggle-material-replay-like');
+    const unlikeKey = operation('toggle-material-replay-unlike');
+    const first = await commitMaterialLike(likeKey);
+    assert.equal(first.transitioned, true);
+    await commitMaterialUnlike(unlikeKey);
+    assert.equal(
+      await prisma.materialLike.count({
+        where: { materialId, userId: learnerId },
+      }),
+      0,
+    );
+
+    const replay = await commitMaterialLike(likeKey);
+    assert.equal(replay.replayed, true);
+    assert.equal(replay.transitioned, false);
+    assert.equal(replay.response.isLiked, true);
+    assert.equal(
+      await prisma.materialLike.count({
+        where: { materialId, userId: learnerId },
+      }),
+      0,
+    );
+    assert.equal(await outboxCountFor(likeKey), 1);
+  });
+
+  test('conflicting reuse of the same operation key fails closed before mutation', async () => {
+    const key = operation('toggle-material-conflict');
+    await commitMaterialLike(key);
+    await assert.rejects(
+      () => commitMaterialUnlike(key),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'IDEMPOTENCY_KEY_REUSED',
+    );
+    assert.equal(
+      await prisma.materialLike.count({
+        where: { materialId, userId: learnerId },
+      }),
+      1,
+    );
+    assert.equal(await outboxCountFor(key), 1);
+    await commitMaterialUnlike(operation('toggle-material-conflict-cleanup'));
+  });
+
+  test('unauthorized toggle HTTP attempt emits no relation claim outbox or action', async () => {
+    const unauthKey = operation('toggle-http-unauth');
+    const forbiddenKey = operation('toggle-http-forbidden');
+    trackToggleKey(unauthKey);
+    trackToggleKey(forbiddenKey);
+
+    const beforeLikes = await prisma.materialLike.count({
+      where: { materialId },
+    });
+    const beforeActions = await prisma.recommendationAction.count({
+      where: { entityType: 'MATERIAL', entityId: materialId },
+    });
+
+    const unauthenticated = await fetch(
+      `${serverUrl}/api/materials/${materialId}/like`,
+      {
+        method: 'POST',
+        headers: { 'Idempotency-Key': unauthKey },
+      },
+    );
+    assert.equal(unauthenticated.status, 401);
+
+    const supplierToken = signAccessToken({
+      sub: supplierId,
+      roles: ['SUPPLIER'],
+    });
+    const forbidden = await fetch(
+      `${serverUrl}/api/materials/${materialId}/like`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${supplierToken}`,
+          'Idempotency-Key': forbiddenKey,
+        },
+      },
+    );
+    assert.equal(forbidden.status, 403);
+
+    assert.equal(
+      await prisma.materialLike.count({ where: { materialId } }),
+      beforeLikes,
+    );
+    assert.equal(
+      await prisma.idempotencyRecord.count({
+        where: {
+          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+          key: { in: [unauthKey, forbiddenKey] },
+        },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.recommendationEventOutbox.count({
+        where: {
+          deduplicationKey: {
+            in: [
+              recommendationToggleDeduplicationKey(learnerId, unauthKey),
+              recommendationToggleDeduplicationKey(learnerId, forbiddenKey),
+              recommendationToggleDeduplicationKey(supplierId, unauthKey),
+              recommendationToggleDeduplicationKey(supplierId, forbiddenKey),
+            ],
+          },
+        },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.recommendationAction.count({
+        where: { entityType: 'MATERIAL', entityId: materialId },
+      }),
+      beforeActions,
+    );
+  });
+
+  test('post-mutation failure rolls back claim domain and outbox', async () => {
+    const key = operation('toggle-material-rollback');
+    trackToggleKey(key);
+    assert.equal(
+      await prisma.materialLike.count({
+        where: { materialId, userId: learnerId },
+      }),
+      0,
+    );
+
+    await assert.rejects(() =>
+      withOrigin(() =>
+        commitRecommendationToggleTransition({
+          learnerId,
+          actionType: 'MATERIAL_LIKE',
+          entityType: 'MATERIAL',
+          entityId: materialId,
+          sourceOperationId: key,
+          apply: async (tx) => {
+            const result = await tx.materialLike.createMany({
+              data: [{ materialId, userId: learnerId }],
+              skipDuplicates: true,
+            });
+            assert.equal(result.count, 1);
+            return true;
+          },
+          buildResponse: async () => {
+            throw new Error('forced post-mutation toggle failure');
+          },
+        }),
+      ),
+    );
+
+    assert.equal(
+      await prisma.materialLike.count({
+        where: { materialId, userId: learnerId },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.idempotencyRecord.count({
+        where: {
+          userId: learnerId,
+          scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+          key,
+        },
+      }),
+      0,
+    );
+    assert.equal(await outboxCountFor(key), 0);
+    assert.equal(
+      await prisma.recommendationAction.count({
+        where: { sourceOperationId: key },
+      }),
+      0,
+    );
+  });
+
+  test('project save like and follow families emit transitions and suppress no-ops', async () => {
+    const cases = [
+      {
+        family: 'SAVE' as const,
+        activate: 'PROJECT_SAVE' as const,
+        deactivate: 'PROJECT_UNSAVE' as const,
+        activateKey: operation('toggle-project-save'),
+        deactivateKey: operation('toggle-project-unsave'),
+        activateDupKey: operation('toggle-project-save-dup'),
+        serviceActivate: () => saveLearningProjectById(projectId, learnerId),
+        serviceDeactivate: () => unsaveLearningProjectById(projectId, learnerId),
+        readActive: async () =>
+          (await prisma.projectSave.count({
+            where: { projectId, userId: learnerId },
+          })) === 1,
+      },
+      {
+        family: 'LIKE' as const,
+        activate: 'PROJECT_LIKE' as const,
+        deactivate: 'PROJECT_UNLIKE' as const,
+        activateKey: operation('toggle-project-like'),
+        deactivateKey: operation('toggle-project-unlike'),
+        activateDupKey: operation('toggle-project-like-dup'),
+        serviceActivate: () => likeLearningProjectById(projectId, learnerId),
+        serviceDeactivate: () => unlikeLearningProjectById(projectId, learnerId),
+        readActive: async () =>
+          (await prisma.projectLike.count({
+            where: { projectId, userId: learnerId },
+          })) === 1,
+      },
+      {
+        family: 'FOLLOW' as const,
+        activate: 'PROJECT_FOLLOW' as const,
+        deactivate: 'PROJECT_UNFOLLOW' as const,
+        activateKey: operation('toggle-project-follow'),
+        deactivateKey: operation('toggle-project-unfollow'),
+        activateDupKey: operation('toggle-project-follow-dup'),
+        serviceActivate: () => followLearningProjectById(projectId, learnerId),
+        serviceDeactivate: () => unfollowLearningProjectById(projectId, learnerId),
+        readActive: async () =>
+          (await prisma.projectFollow.count({
+            where: { projectId, userId: learnerId },
+          })) === 1,
+      },
+    ];
+
+    for (const entry of cases) {
+      trackToggleKey(entry.activateKey);
+      trackToggleKey(entry.deactivateKey);
+      trackToggleKey(entry.activateDupKey);
+
+      await withOrigin(() =>
+        runWithRecommendationToggleRequestContext(
+          { headers: { 'idempotency-key': entry.activateKey } },
+          () => entry.serviceActivate(),
+        ),
+      );
+      assert.equal(await entry.readActive(), true);
+      assert.equal(await outboxCountFor(entry.activateKey), 1);
+
+      await withOrigin(() =>
+        runWithRecommendationToggleRequestContext(
+          { headers: { 'idempotency-key': entry.activateDupKey } },
+          () => entry.serviceActivate(),
+        ),
+      );
+      assert.equal(await outboxCountFor(entry.activateDupKey), 0);
+
+      await withOrigin(() =>
+        runWithRecommendationToggleRequestContext(
+          { headers: { 'idempotency-key': entry.deactivateKey } },
+          () => entry.serviceDeactivate(),
+        ),
+      );
+      assert.equal(await entry.readActive(), false);
+      assert.equal(await outboxCountFor(entry.deactivateKey), 1);
+
+      const activateRow = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+        where: {
+          deduplicationKey: recommendationToggleDeduplicationKey(
+            learnerId,
+            entry.activateKey,
+          ),
+        },
+      });
+      assert.equal(
+        (activateRow.payload as { actionType: string }).actionType,
+        entry.activate,
+      );
+      assert.equal((activateRow.payload as { eventSource: string }).eventSource, 'TEST');
+    }
+  });
+
+  test('outbox retry preserves toggle direction and origin', async () => {
+    const key = operation('toggle-material-retry');
+    await commitMaterialLike(key);
+    const dedupe = recommendationToggleDeduplicationKey(learnerId, key);
+    await trackOutboxByKeys([dedupe]);
+    const before = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+      where: { deduplicationKey: dedupe },
+    });
+    const payload = before.payload as {
+      actionType: string;
+      eventSource: string;
+    };
+    assert.equal(payload.actionType, 'MATERIAL_LIKE');
+    assert.equal(payload.eventSource, 'TEST');
+
+    await prisma.recommendationEventOutbox.update({
+      where: { id: before.id },
+      data: {
+        status: 'PENDING',
+        availableAt: new Date(0),
+        processedAt: null,
+        lockToken: null,
+        lockedAt: null,
+      },
+    });
+    assert.equal(await processOwnedKeys([dedupe]), 1);
+    const after = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+      where: { deduplicationKey: dedupe },
+    });
+    assert.deepEqual(after.payload, before.payload);
+    await commitMaterialUnlike(operation('toggle-material-retry-cleanup'));
+  });
+
+  test('historical recommendation action rows are not rewritten by toggle commits', async () => {
+    const impressionId = await seedImpression('MATERIAL', materialId);
+    const historicalId = randomUUID();
+    await prisma.recommendationAction.create({
+      data: {
+        id: historicalId,
+        impressionId,
+        learnerId,
+        entityType: 'MATERIAL',
+        entityId: materialId,
+        actionType: 'MATERIAL_LIKE',
+        attributionType: 'ASSISTED',
+        sourceOperationId: operation('historical-action'),
+        eventSource: 'LEGACY_UNCLASSIFIED',
+      },
+    });
+    const before = await prisma.recommendationAction.findUniqueOrThrow({
+      where: { id: historicalId },
+    });
+    await commitMaterialLike(operation('toggle-after-historical'));
+    const after = await prisma.recommendationAction.findUniqueOrThrow({
+      where: { id: historicalId },
+    });
+    assert.equal(after.eventSource, 'LEGACY_UNCLASSIFIED');
+    assert.equal(after.actionType, before.actionType);
+    assert.equal(after.sourceOperationId, before.sourceOperationId);
+    await prisma.recommendationAction.delete({ where: { id: historicalId } });
+    await commitMaterialUnlike(operation('toggle-after-historical-cleanup'));
+  });
+
+  test('concurrent duplicate active requests do not emit a second positive event', async () => {
+    const warnings: string[] = [];
+    const onWarning = (warning: Error) => {
+      warnings.push(warning.message);
+    };
+    process.on('warning', onWarning);
+    try {
+      await prisma.materialLike.deleteMany({
+        where: { materialId, userId: learnerId },
+      });
+      const keyA = operation('toggle-material-concurrent-a');
+      const keyB = operation('toggle-material-concurrent-b');
+      const [first, second] = await Promise.all([
+        commitMaterialLike(keyA),
+        commitMaterialLike(keyB),
+      ]);
+      assert.equal(first.transitioned || second.transitioned, true);
+      assert.equal(
+        Number(first.transitioned) + Number(second.transitioned),
+        1,
+      );
+      assert.equal(
+        await prisma.materialLike.count({
+          where: { materialId, userId: learnerId },
+        }),
+        1,
+      );
+      assert.equal(
+        (await outboxCountFor(keyA)) + (await outboxCountFor(keyB)),
+        1,
+      );
+      assert.equal(
+        warnings.some((message) => message.includes(PG_CONCURRENT_QUERY_WARNING)),
+        false,
+      );
+      await commitMaterialUnlike(operation('toggle-material-concurrent-cleanup'));
+    } finally {
+      process.off('warning', onWarning);
+    }
+  });
+
+  test('service material like path uses toggle ALS and does not plan via middleware mapper', async () => {
+    const key = operation('toggle-service-material-like');
+    trackToggleKey(key);
+    await withOrigin(() =>
+      runWithRecommendationToggleRequestContext(
+        { headers: { 'idempotency-key': key } },
+        () => likeMaterialById(materialId, learnerId),
+      ),
+    );
+    assert.equal(await outboxCountFor(key), 1);
+    await withOrigin(() =>
+      runWithRecommendationToggleRequestContext(
+        { headers: { 'idempotency-key': operation('toggle-service-material-unlike') } },
+        () => unlikeMaterialById(materialId, learnerId),
+      ),
+    );
+    trackToggleKey(operation('toggle-service-material-unlike'));
+  });
   });
 });
