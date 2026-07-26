@@ -2,6 +2,11 @@ import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  defaultComponentConceptLifecycleDeps,
+  type ComponentConceptLifecycleDeps,
+} from '../taxonomy/component-concept-assignment.repository.js';
 import {
   defaultProjectTopicLifecycleDeps,
   type ProjectTopicLifecycleDeps,
@@ -1201,11 +1206,14 @@ export const createLearningProjectForReview = async (input: {
   links?: { url: string; title?: string }[];
   client?: Prisma.TransactionClient;
   topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
   const now = new Date();
   const client = clientOrPrisma(input.client);
   const topicLifecycleDeps =
     input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
 
   const project = await client.learningProject.create({
     data: {
@@ -1260,6 +1268,11 @@ export const createLearningProjectForReview = async (input: {
     project.categoryId,
   );
 
+  await componentLifecycleDeps.reconcileLearningProjectComponents(
+    client,
+    project.id,
+  );
+
   return {
     id: project.id,
     title: project.title,
@@ -1285,11 +1298,14 @@ export const updateMyLearningProjectSubmission = async (input: {
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
   topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
   const topicLifecycleDeps =
     input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
 
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await runSerializableTransaction(async (tx) => {
     const existing = await tx.learningProject.findFirst({
       where: {
         id: input.id,
@@ -1423,6 +1439,11 @@ export const updateMyLearningProjectSubmission = async (input: {
           },
         });
       }
+
+      await componentLifecycleDeps.reconcileLearningProjectComponents(
+        tx,
+        input.id,
+      );
     }
 
     if (input.steps !== undefined) {

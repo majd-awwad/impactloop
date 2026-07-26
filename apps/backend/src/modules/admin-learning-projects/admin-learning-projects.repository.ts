@@ -2,11 +2,17 @@ import type { LearningProjectStatus, Prisma } from '../../generated/prisma/clien
 import { prisma } from '../../database/prisma.js';
 
 import {
+  defaultComponentConceptLifecycleDeps,
+  type ComponentConceptLifecycleDeps,
+} from '../taxonomy/component-concept-assignment.repository.js';
+import {
   defaultProjectTopicLifecycleDeps,
   type ProjectTopicLifecycleDeps,
 } from '../taxonomy/project-concept-assignment.repository.js';
+import { assertEditableProjectStatus } from './admin-learning-projects.component-enrichment.js';
 import type { AdminLearningProjectsListQuery } from './admin-learning-projects.validation.js';
 import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 const startOfUtcDay = (date: Date) => {
   const copy = new Date(date);
@@ -302,10 +308,13 @@ export const approveLearningProjectInTransaction = async (
     id: string;
     moderationData: Prisma.LearningProjectUncheckedUpdateManyInput;
     topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+    componentLifecycleDeps?: ComponentConceptLifecycleDeps;
   },
 ) => {
   const topicLifecycleDeps =
     input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
 
   const updated = await client.learningProject.updateMany({
     where: {
@@ -332,6 +341,11 @@ export const approveLearningProjectInTransaction = async (
     client,
     input.id,
     project.categoryId,
+  );
+
+  await componentLifecycleDeps.reconcileLearningProjectComponents(
+    client,
+    input.id,
   );
 
   return { id: input.id };
@@ -386,21 +400,51 @@ export const updateAdminLearningProjectComponent = async (input: {
   projectId: string;
   componentId: string;
   data: Prisma.ProjectRequiredComponentUpdateInput;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
-  const existing = await prisma.projectRequiredComponent.findFirst({
-    where: {
-      id: input.componentId,
-      projectId: input.projectId,
-    },
-    select: { id: true },
-  });
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
 
-  if (!existing) {
-    return null;
-  }
+  return runSerializableTransaction(async (tx) => {
+    const project = await tx.learningProject.findUniqueOrThrow({
+      where: { id: input.projectId },
+      select: { id: true, status: true },
+    });
+    assertEditableProjectStatus(project.status);
 
-  return prisma.projectRequiredComponent.update({
-    where: { id: input.componentId },
-    data: input.data,
+    const existing = await tx.projectRequiredComponent.findFirst({
+      where: {
+        id: input.componentId,
+        projectId: input.projectId,
+      },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    await tx.projectRequiredComponent.update({
+      where: { id: input.componentId },
+      data: input.data,
+    });
+
+    const committedComponent = await tx.projectRequiredComponent.findUniqueOrThrow({
+      where: { id: input.componentId },
+      select: {
+        id: true,
+        componentName: true,
+        materialType: true,
+      },
+    });
+
+    await componentLifecycleDeps.reconcileProjectRequiredComponent(
+      tx,
+      committedComponent.id,
+    );
+
+    return tx.projectRequiredComponent.findUniqueOrThrow({
+      where: { id: input.componentId },
+    });
   });
 };
