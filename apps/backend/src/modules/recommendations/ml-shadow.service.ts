@@ -5,11 +5,22 @@ import { logger } from "../../observability/logger.js";
 import { redactErrorMessage } from "../../observability/redact.js";
 import type { LogContext } from "../../observability/log-types.js";
 import type {
+  MaterialCondition,
+  ProjectDifficulty,
+} from "../../generated/prisma/client.js";
+import type {
   LearnerInterestRegistryConcept,
   LearnerInterestResolutionStatus,
   LearnerInterestUnmappedReason,
 } from "../taxonomy/learner-interest-resolver.js";
 import { TaxonomyFoundationRepository } from "../taxonomy/taxonomy-foundation.repository.js";
+import {
+  buildCanonicalMaterialRuntimeFeatures,
+  buildCanonicalProjectRuntimeFeatures,
+  canonicalConceptAssociationFromActiveKey,
+  getCanonicalRuntimeFeatureAuthority,
+  type CanonicalRuntimeFeatureAuthority,
+} from "./canonical-runtime-item-features.js";
 import {
   computeArtifactUserFeatureOverlap,
   resolveCanonicalShadowUserFeatures,
@@ -384,8 +395,6 @@ export const resetMlShadowTestStateForTests = (): void => {
   setCompiledRecommendationFeatureReadinessContractForTests(undefined);
 };
 
-const categoryKey = (id: string) =>
-  createHash("sha256").update(`impactloop-category:${id}`).digest("hex");
 const overlap = (left: string[], right: string[], k: number) => {
   const a = new Set(left.slice(0, k));
   return (
@@ -445,32 +454,63 @@ const rankCorrelation = (left: string[], right: string[]) => {
   return 1 - (6 * squared) / (common.length * (common.length ** 2 - 1));
 };
 
-const itemFeatures = (
+const canonicalItemFeatures = (
   candidate: ShadowCandidate,
   domain: "material" | "project",
+  authority: CanonicalRuntimeFeatureAuthority,
 ): WeightedFeature[] => {
-  const features: WeightedFeature[] = [
-    [`category:${categoryKey(candidate.categoryId)}`, 1],
-  ];
-  for (const value of candidate.conceptKeys ?? [])
-    features.push([`concept:${value}`, 1]);
   if (domain === "material") {
-    if (candidate.condition)
-      features.push([`condition:${candidate.condition}`, 1]);
-    if (candidate.isFree !== undefined)
-      features.push([`free:${Number(candidate.isFree)}`, 1]);
-    if (candidate.pickupAllowed !== undefined)
-      features.push([`pickup:${Number(candidate.pickupAllowed)}`, 1]);
-    if (candidate.deliveryAllowed !== undefined)
-      features.push([`delivery:${Number(candidate.deliveryAllowed)}`, 1]);
-  } else {
-    if (candidate.difficulty)
-      features.push([`difficulty:${candidate.difficulty}`, 1]);
-    for (const value of candidate.componentConceptKeys ?? [])
-      features.push([`component:${value}`, 1]);
+    if (
+      candidate.condition === undefined ||
+      candidate.isFree === undefined ||
+      candidate.pickupAllowed === undefined ||
+      candidate.deliveryAllowed === undefined
+    ) {
+      throw new Error("material_runtime_feature_fields_missing");
+    }
+    return buildCanonicalMaterialRuntimeFeatures({
+      authority,
+      concepts: (candidate.conceptKeys ?? []).map((canonicalKey) =>
+        canonicalConceptAssociationFromActiveKey(authority, canonicalKey),
+      ),
+      condition: candidate.condition as MaterialCondition,
+      isFree: candidate.isFree,
+      pickupAllowed: candidate.pickupAllowed,
+      deliveryAllowed: candidate.deliveryAllowed,
+    }).features;
   }
-  return features;
+  if (candidate.difficulty === undefined) {
+    throw new Error("project_runtime_feature_fields_missing");
+  }
+  return buildCanonicalProjectRuntimeFeatures({
+    authority,
+    topicConcepts: (candidate.conceptKeys ?? []).map((canonicalKey) =>
+      canonicalConceptAssociationFromActiveKey(authority, canonicalKey),
+    ),
+    componentConcepts: (candidate.componentConceptKeys ?? []).map(
+      (canonicalKey) => ({
+        ...canonicalConceptAssociationFromActiveKey(authority, canonicalKey),
+        isRequired: true,
+      }),
+    ),
+    difficulty: candidate.difficulty as ProjectDifficulty,
+  }).features;
 };
+
+export const buildCanonicalShadowItemFeaturesForTests = async (
+  candidate: ShadowCandidate,
+  domain: "material" | "project",
+): Promise<WeightedFeature[]> =>
+  canonicalItemFeatures(
+    candidate,
+    domain,
+    await getCanonicalRuntimeFeatureAuthority(),
+  );
+
+// Deterministic recent-intent vocabulary only. Portable runtime item rows use
+// the canonical v3 builders below and never receive category hashes.
+const categoryKey = (id: string) =>
+  createHash("sha256").update(`impactloop-category:${id}`).digest("hex");
 
 const safeLogWarning = (context: LogContext, message: string): void => {
   try {
@@ -660,6 +700,10 @@ const safeWriteProjectDecisionLog = (
 
 const buildProjectShadowDiagnostics = (
   input: ShadowComparisonInput<unknown>,
+  runtimeCandidates: ReadonlyArray<{
+    candidateKey: string;
+    features: readonly WeightedFeature[];
+  }>,
   model: PortableModelArtifact,
   longTerm: Extract<LightFmScorerResult, { outcome: "SCORED" }>,
   started: number,
@@ -677,10 +721,8 @@ const buildProjectShadowDiagnostics = (
   );
   const runtimeFeatureNames = new Set<string>();
   let artifactMappedCandidateCount = 0;
-  for (const candidate of input.candidates) {
-    const featureNames = itemFeatures(candidate, "project").map(
-      ([name]) => name,
-    );
+  for (const candidate of runtimeCandidates) {
+    const featureNames = candidate.features.map(([name]) => name);
     featureNames.forEach((name) => runtimeFeatureNames.add(name));
     if (featureNames.every((name) => artifactFeatureNames.has(name)))
       artifactMappedCandidateCount += 1;
@@ -1074,12 +1116,13 @@ const runMlShadowComparisonInternal = async <T>(
 
     observeMaterialStage(input, started, "portable_artifact_scoring", "start");
 
-    const [model, canonicalUser] = await Promise.all([
+    const [model, canonicalUser, runtimeFeatureAuthority] = await Promise.all([
       artifact(path, input.domain),
       resolveCanonicalShadowUserFeatures({
         storedInterests: input.interests,
         loadRegistry: loadInterestRegistry,
       }),
+      getCanonicalRuntimeFeatureAuthority(),
     ]);
     const userFeatures = canonicalUser.features;
     const artifactOverlap = computeArtifactUserFeatureOverlap({
@@ -1105,7 +1148,11 @@ const runMlShadowComparisonInternal = async <T>(
 
     const candidates = input.candidates.map((value) => ({
       candidateKey: value.candidateKey,
-      features: itemFeatures(value, input.domain),
+      features: canonicalItemFeatures(
+        value,
+        input.domain,
+        runtimeFeatureAuthority,
+      ),
     }));
 
     const compiledContract =
@@ -1167,6 +1214,7 @@ const runMlShadowComparisonInternal = async <T>(
     if (input.domain === "project") {
       const projectDecision = buildProjectShadowDiagnostics(
         input,
+        candidates,
         model,
         longTerm,
         started,
@@ -1345,9 +1393,7 @@ const runMlShadowComparisonInternal = async <T>(
       };
     });
 
-    const itemFeatureCounts = input.candidates.map(
-      (value) => itemFeatures(value, input.domain).length,
-    );
+    const itemFeatureCounts = candidates.map((value) => value.features.length);
 
     const outsideCandidateUniverse = new Set(
       input.recentEvents
