@@ -18,6 +18,7 @@ import {
 import {
   CLARIFICATION_COPY,
   REFUSAL_COPY,
+  buildPlatformGuidanceResponse,
 } from '../ai.policy.js';
 import {
   assessDangerousRequest,
@@ -27,7 +28,7 @@ import { getAiChatProvider } from '../providers/ai-chat-provider.factory.js';
 import type { AiLocale } from '../ai.types.js';
 import { prepareAiPendingAction, buildMaterialSavePayload, buildProjectSavePayload, buildStartBuildPayload, buildLinkMaterialPayload, buildUnsaveMaterialPayload, buildUnsaveProjectPayload, buildUnlinkMaterialPayload, buildReservationPayload, buildUpdateBuildComponentStatusesPayload, saveReservationDraft, cancelReservationDraft, findActiveReservationDraft } from '../ai-action.service.js';
 import * as learningProjectsRepository from '../../learning-projects/learning-projects.repository.js';
-import { normalizeArabicVariants, detectMaterialSearchIntent } from './ai-agent-filter-extractor.service.js';
+import { normalizeArabicVariants, detectMaterialSearchIntent, detectPlatformGuidanceIntent } from './ai-agent-filter-extractor.service.js';
 import { prepareMaterialReservationPayloadSchema } from '../ai-action.payloads.js';
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import type { AiPendingActionType } from '../../../generated/prisma/client.js';
@@ -2087,6 +2088,24 @@ const textBlock = (
   purpose,
 });
 
+const handlePlatformGuidanceTurn = (input: {
+  userMessage: string;
+  locale: AiLocale;
+}): AgentTurnExecutionResult => {
+  const topic = detectPlatformGuidanceIntent(input.userMessage) ?? 'GENERAL_PLATFORM';
+
+  return {
+    blocks: [textBlock(buildPlatformGuidanceResponse(topic, input.locale), 'answer')],
+    usedProvider: false,
+    providerName: 'system',
+    model: null,
+    latencyMs: null,
+    inputTokens: null,
+    outputTokens: null,
+    route: 'PLATFORM_GUIDANCE',
+  };
+};
+
 const isPlatformRoute = (route: AiAgentRouteType): boolean =>
   PLATFORM_ROUTES.has(route);
 
@@ -2614,6 +2633,7 @@ export type AgentTurnExecutionResult = {
   inputTokens: number | null;
   outputTokens: number | null;
   route: AiAgentRouteType;
+  semanticRoute?: import('./ai-agent.types.js').SemanticRoute;
 };
 
 export const executeLearnerAgentPlatformTurn = async (input: {
@@ -2689,11 +2709,6 @@ export const executeLearnerAgentPlatformTurn = async (input: {
     }
   }
 
-  const initialRoute = resolveAgentRoute({
-    userMessage: input.userMessage,
-    locale: responseLocale,
-  });
-
   if (detectComparisonFollowUpIntent(input.userMessage)) {
     const comparisonBlock = await findLatestComparisonBlock(input.conversationId);
     if (comparisonBlock) {
@@ -2720,26 +2735,6 @@ export const executeLearnerAgentPlatformTurn = async (input: {
     }
   }
 
-  if (initialRoute.route === 'ACTION_REQUEST') {
-    return handleActionRequestTurn({
-      userMessage: input.userMessage,
-      locale: responseLocale,
-      conversationId: input.conversationId,
-      authenticatedUserId: input.authenticatedUserId,
-      clientMessageId: input.clientMessageId,
-      trustedProjectBuildId: conversation?.projectBuildId ?? undefined,
-    });
-  }
-
-  if (initialRoute.route === 'EXTERNAL_DOMAIN_KNOWLEDGE') {
-    return handleExternalDomainKnowledgeTurn({
-      userMessage: input.userMessage,
-      locale: responseLocale,
-      requestId: input.requestId,
-      history: input.history,
-    });
-  }
-
   const executionPlan = await resolveAgentExecutionPlan({
     userMessage: input.userMessage,
     locale: responseLocale,
@@ -2753,12 +2748,23 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       : ('deterministic' as const),
   };
 
-  if (executionPlan.route === 'OUT_OF_SCOPE') {
-    const deterministicScope = classifyScopeDeterministic(input.userMessage);
-    if (deterministicScope.classification === 'DOMAIN_KNOWLEDGE') {
-      return null;
-    }
+  const semanticRoute = executionPlan.semanticUnderstandingRoute;
 
+  if (executionPlan.route === 'ACTION_REQUEST') {
+    const actionTurn = await handleActionRequestTurn({
+      userMessage: input.userMessage,
+      locale: responseLocale,
+      conversationId: input.conversationId,
+      authenticatedUserId: input.authenticatedUserId,
+      clientMessageId: input.clientMessageId,
+      trustedProjectBuildId: conversation?.projectBuildId ?? undefined,
+    });
+    if (actionTurn) {
+      return { ...actionTurn, semanticRoute };
+    }
+  }
+
+  if (executionPlan.route === 'OUT_OF_SCOPE') {
     return {
       blocks: [textBlock(REFUSAL_COPY[responseLocale], 'refusal')],
       usedProvider: false,
@@ -2768,6 +2774,7 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       inputTokens: null,
       outputTokens: null,
       route: 'OUT_OF_SCOPE',
+      semanticRoute: semanticRoute ?? 'OUT_OF_SCOPE',
     };
   }
 
@@ -2828,8 +2835,26 @@ export const executeLearnerAgentPlatformTurn = async (input: {
     };
   }
 
+  if (executionPlan.route === 'PLATFORM_GUIDANCE') {
+    const guidanceTurn = await handlePlatformGuidanceTurn({
+      userMessage: input.userMessage,
+      locale: responseLocale,
+    });
+    return { ...guidanceTurn, semanticRoute: semanticRoute ?? 'PLATFORM_GUIDANCE' };
+  }
+
   if (executionPlan.route === 'GENERAL_LEARNING') {
-    return null;
+    return {
+      blocks: [],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'GENERAL_LEARNING',
+      semanticRoute: 'GENERAL_LEARNING',
+    };
   }
 
   if (!isPlatformRoute(routeDecision.route)) {
@@ -3145,6 +3170,11 @@ export const resolveStaticAgentResponse = (
 
   if (route.route === 'OUT_OF_SCOPE') {
     return [textBlock(REFUSAL_COPY[locale], 'refusal')];
+  }
+
+  if (route.route === 'PLATFORM_GUIDANCE') {
+    const topic = detectPlatformGuidanceIntent(userMessage) ?? 'GENERAL_PLATFORM';
+    return [textBlock(buildPlatformGuidanceResponse(topic, locale), 'answer')];
   }
 
   const conversationalIntent = detectConversationalIntent(userMessage);

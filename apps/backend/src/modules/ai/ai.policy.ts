@@ -1,3 +1,7 @@
+import type { PlatformGuidanceTopic } from './agent/ai-agent.types.js';
+
+export type { PlatformGuidanceTopic } from './agent/ai-agent.types.js';
+
 export const GENERAL_LEARNING_POLICY_VERSION = 'GENERAL_LEARNING_POLICY_V1';
 
 export const GENERAL_LEARNING_SYSTEM_POLICY = [
@@ -80,3 +84,106 @@ export const AI_DISABLED_COPY = {
   en: 'The learning assistant is temporarily unavailable.',
   ar: 'مساعد التعلم غير متاح مؤقتًا.',
 } as const;
+
+export const PLATFORM_GUIDANCE_TOPICS = [
+  'MATERIAL_RESERVATION',
+  'SAVE_PROJECT',
+  'MATERIAL_DELIVERY',
+  'RESERVATION_AFTER_SUPPLIER',
+  'GENERAL_PLATFORM',
+] as const satisfies readonly PlatformGuidanceTopic[];
+
+export const PLATFORM_GUIDANCE_COPY: Record<
+  PlatformGuidanceTopic,
+  Record<'en' | 'ar', string>
+> = {
+  MATERIAL_RESERVATION: {
+    en: [
+      'To reserve a material on ImpactLoop:',
+      '1) Open an available material from discovery or search results.',
+      '2) Choose the quantity you need and the fulfillment option offered for that material (supplier pickup and/or delivery when enabled).',
+      '3) Select your preferred pickup or delivery windows, add an optional note, and submit the reservation request.',
+      '4) The supplier reviews the request and may accept it or propose different windows.',
+      '5) If the supplier proposes changes, confirm or cancel from My Reservations before the reservation is finalized.',
+      'Track the status anytime under My Reservations in the app.',
+    ].join('\n'),
+    ar: [
+      'لحجز مادة على ImpactLoop:',
+      '1) افتح صفحة مادة متاحة من الاستكشاف أو نتائج البحث.',
+      '2) اختر الكمية المطلوبة وطريقة الاستلام المتاحة للمادة (استلام من المورد و/أو توصيل إن كانت مفعّلة).',
+      '3) حدّد نوافذ الاستلام أو التوصيل المفضلة، وأضف ملاحظة اختيارية، ثم أرسل طلب الحجز.',
+      '4) يراجع المورد الطلب وقد يقبله أو يقترح نوافذ بديلة.',
+      '5) إذا اقترح المورد تغييرات، أكّد أو ألغِ من قسم «حجوزاتي» قبل اكتمال الحجز.',
+      'يمكنك متابعة الحالة في أي وقت من «حجوزاتي» داخل التطبيق.',
+    ].join('\n'),
+  },
+  SAVE_PROJECT: {
+    en: [
+      'To save a learning project on ImpactLoop:',
+      '1) Open the project page you want to keep.',
+      '2) Tap Save on the project.',
+      '3) Find saved projects later under Saved Projects or from the assistant when you ask about your saved projects.',
+      'Saving a project does not start a build or reserve materials by itself.',
+    ].join('\n'),
+    ar: [
+      'لحفظ مشروع تعلّم على ImpactLoop:',
+      '1) افتح صفحة المشروع الذي تريد الاحتفاظ به.',
+      '2) اضغط حفظ في صفحة المشروع.',
+      '3) تجد المشاريع المحفوظة لاحقًا في قسم المشاريع المحفوظة أو عبر المساعد عند السؤال عن مشاريعك المحفوظة.',
+      'حفظ المشروع لا يبدأ البناء ولا يحجز موادًا تلقائيًا.',
+    ].join('\n'),
+  },
+  MATERIAL_DELIVERY: {
+    en: [
+      'To request delivery for a material on ImpactLoop:',
+      '1) Open the material and start a reservation.',
+      '2) Choose delivery if the material allows it.',
+      '3) Enter the drop-off location details and preferred delivery window.',
+      '4) Submit the reservation and wait for the supplier response.',
+      '5) Confirm any supplier proposal from My Reservations when required.',
+      'Delivery availability and fees depend on the material and your location.',
+    ].join('\n'),
+    ar: [
+      'لطلب توصيل لمادة على ImpactLoop:',
+      '1) افتح المادة وابدأ طلب الحجز.',
+      '2) اختر التوصيل إذا كانت المادة تدعمه.',
+      '3) أدخل تفاصيل موقع التسليم ونافذة التوصيل المفضلة.',
+      '4) أرسل طلب الحجز وانتظر رد المورد.',
+      '5) أكّد أي اقتراح من المورد من «حجوزاتي» عند الحاجة.',
+      'توفر التوصيل والرسوم يعتمد على المادة وموقعك.',
+    ].join('\n'),
+  },
+  RESERVATION_AFTER_SUPPLIER: {
+    en: [
+      'After a supplier responds to your reservation on ImpactLoop:',
+      '• If they accept as requested, the reservation moves forward in My Reservations.',
+      '• If they propose different pickup or delivery windows, you will be asked to confirm or cancel.',
+      '• Open the reservation, review the proposal, and accept or cancel before it expires.',
+      'You can also message the supplier from the reservation thread when messaging is available.',
+    ].join('\n'),
+    ar: [
+      'بعد رد المورد على حجزك في ImpactLoop:',
+      '• إذا قبل الطلب كما هو، يتابع الحجز من «حجوزاتي».',
+      '• إذا اقترح نوافذ استلام أو توصيل مختلفة، سيُطلب منك التأكيد أو الإلغاء.',
+      '• افتح الحجز، راجع الاقتراح، ثم أكّد أو ألغِ قبل انتهاء المهلة.',
+      'يمكنك أيضًا مراسلة المورد من محادثة الحجز عند توفر المراسلة.',
+    ].join('\n'),
+  },
+  GENERAL_PLATFORM: {
+    en: [
+      'I can guide you through ImpactLoop workflows such as reserving materials, saving projects, delivery requests, and tracking reservations.',
+      'Ask a specific how-to question—for example: "How can I reserve a material in the app?"—and I will explain the steps.',
+      'If you want me to search your data or perform an action for you, ask directly (for example: "Show available Arduino materials" or "Reserve this material for me").',
+    ].join('\n'),
+    ar: [
+      'أستطيع إرشادك في مسارات ImpactLoop مثل حجز المواد وحفظ المشاريع وطلب التوصيل ومتابعة الحجوزات.',
+      'اسأل سؤالًا إرشاديًا محددًا—مثل: «كيف أقدر أحجز مادة من التطبيق؟»—وسأشرح الخطوات.',
+      'إذا أردت البحث في بياناتك أو تنفيذ إجراء نيابةً عنك، اطلب ذلك مباشرة (مثل: «اعرضلي مواد Arduino المتاحة» أو «احجز لي هذه المادة»).',
+    ].join('\n'),
+  },
+};
+
+export const buildPlatformGuidanceResponse = (
+  topic: PlatformGuidanceTopic,
+  locale: 'en' | 'ar',
+): string => PLATFORM_GUIDANCE_COPY[topic][locale];

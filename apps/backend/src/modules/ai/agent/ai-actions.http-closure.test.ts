@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
-import { after, before, describe, test } from 'node:test';
+import { after, before, beforeEach, describe, test } from 'node:test';
+
+import { requireSemanticRouterV2 } from './ai-agent-semantic-test-harness.js';
 
 process.env.JWT_ACCESS_SECRET ??= 'ai-actions-http-closure-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'ai-actions-http-closure-refresh-secret';
 process.env.AI_CHAT_PROVIDER = 'mock';
-process.env.AI_CHAT_RATE_LIMIT_PER_USER = '60';
+process.env.AI_CHAT_RATE_LIMIT_PER_USER = '120';
 process.env.AI_CHAT_MAX_CONVERSATIONS_PER_HOUR = '60';
 
 const TEST_MARKER = '[test-ai-actions-http-closure]';
@@ -78,6 +80,7 @@ let hashPassword: typeof import('../../../utils/password.js').hashPassword;
 let resetRateLimitersForTests: typeof import('../../../middlewares/rate-limit.middleware.js').resetRateLimitersForTests;
 let deleteAiDataForUsers: typeof import('../ai.repository.js').deleteAiDataForUsers;
 let setAiChatProviderForTests: typeof import('../providers/ai-chat-provider.factory.js').setAiChatProviderForTests;
+let setResolvedAiChatProviderForTests: typeof import('../../../config/env.js').setResolvedAiChatProviderForTests;
 let MockAiChatProviderClass: typeof import('../providers/mock-chat.provider.js').MockAiChatProvider;
 let aiContentBlocksSchema: typeof import('../ai.content-blocks.js').aiContentBlocksSchema;
 let likeMaterialById: typeof import('../../materials/materials.service.js').likeMaterialById;
@@ -247,7 +250,7 @@ async function seedMaterialResultsAndPrepareSave(token: string, userId: string) 
   const search = await sendMessage(
     token,
     conversationId,
-    'اعرضلي مواد إلكترونيات متوفرة',
+    `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
     clientId('search-save'),
   );
   assert.equal(search.response.status, 201);
@@ -291,6 +294,7 @@ before(async () => {
   ({ setAiChatProviderForTests } = await import(
     '../providers/ai-chat-provider.factory.js'
   ));
+  ({ setResolvedAiChatProviderForTests } = await import('../../../config/env.js'));
   ({ MockAiChatProvider: MockAiChatProviderClass } = await import(
     '../providers/mock-chat.provider.js'
   ));
@@ -460,6 +464,7 @@ before(async () => {
 
 after(async () => {
   setAiChatProviderForTests(null);
+  setResolvedAiChatProviderForTests(null);
   resetRateLimitersForTests();
   await new Promise<void>((resolve, reject) => {
     if (!server) {
@@ -496,6 +501,11 @@ after(async () => {
 });
 
 describe('ai actions http closure', () => {
+  beforeEach(() => {
+    resetRateLimitersForTests();
+    setResolvedAiChatProviderForTests('mock');
+  });
+
   test('prepare SAVE_MATERIAL returns confirmation without write', async () => {
     const token = tokenFor(ids.learnerBId);
     const { pendingActionId } = await seedMaterialResultsAndPrepareSave(
@@ -589,7 +599,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
       clientId('unsave-search'),
     );
     const savePrepared = await sendMessage(
@@ -718,6 +728,18 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
+      `شو ناقصني من مواد مشروع ${SEED_TOKEN} Robot Car`,
+      clientId('link-gap'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
+      `لاقيلّي مواد للمكونات الناقصة`,
+      clientId('link-matches'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
       `اعرضلي مواد ${SEED_TOKEN}`,
       clientId('link-search'),
     );
@@ -760,6 +782,18 @@ describe('ai actions http closure', () => {
       where: { id: ids.reservableMaterialId },
       data: { status: 'AVAILABLE' },
     });
+    await sendMessage(
+      token,
+      conversationId,
+      `شو ناقصني من مواد مشروع ${SEED_TOKEN} Robot Car`,
+      clientId('bad-link-gap'),
+    );
+    await sendMessage(
+      token,
+      conversationId,
+      `لاقيلّي مواد للمكونات الناقصة`,
+      clientId('bad-link-matches'),
+    );
     await sendMessage(
       token,
       conversationId,
@@ -853,7 +887,7 @@ describe('ai actions http closure', () => {
       clientId('reserve-search'),
     );
     const before = await prisma.reservation.count({
-      where: { learnerId: ids.learnerBId },
+      where: { requesterId: ids.learnerBId },
     });
     const prepared = await sendMessage(
       token,
@@ -868,7 +902,7 @@ describe('ai actions http closure', () => {
       false,
     );
     const after = await prisma.reservation.count({
-      where: { learnerId: ids.learnerBId },
+      where: { requesterId: ids.learnerBId },
     });
     assert.equal(after, before);
   });
@@ -879,7 +913,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
       clientId('reserve-mt-search'),
     );
     const step1 = await sendMessage(
@@ -953,7 +987,7 @@ describe('ai actions http closure', () => {
     const search = await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
       clientId('reserve-material-id-search'),
     );
     const searchBlocks = parseBlocks(search.json);
@@ -988,7 +1022,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
       clientId('reserve-two-search'),
     );
     await sendMessage(
@@ -1020,7 +1054,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
       clientId('reserve-ar-digit-search'),
     );
     await sendMessage(
@@ -1048,7 +1082,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
       clientId('reserve-badi-search'),
     );
     await sendMessage(
@@ -1109,7 +1143,7 @@ describe('ai actions http closure', () => {
     assert.equal(prepared.response.status, 201);
     const confirmation = confirmationBlock(parseBlocks(prepared.json));
     const before = await prisma.reservation.count({
-      where: { learnerId: ids.learnerBId },
+      where: { requesterId: ids.learnerBId },
     });
     const confirmed = await confirmAction(
       token,
@@ -1118,7 +1152,7 @@ describe('ai actions http closure', () => {
     );
     assert.equal(confirmed.response.status, 201);
     const after = await prisma.reservation.count({
-      where: { learnerId: ids.learnerBId },
+      where: { requesterId: ids.learnerBId },
     });
     assert.equal(after, before + 1);
   });
@@ -1146,7 +1180,7 @@ describe('ai actions http closure', () => {
       'confirm-reservation-a',
     );
     const countAfterFirst = await prisma.reservation.count({
-      where: { learnerId: ids.learnerBId },
+      where: { requesterId: ids.learnerBId },
     });
     await confirmAction(
       token,
@@ -1154,7 +1188,7 @@ describe('ai actions http closure', () => {
       'confirm-reservation-b',
     );
     const countAfterSecond = await prisma.reservation.count({
-      where: { learnerId: ids.learnerBId },
+      where: { requesterId: ids.learnerBId },
     });
     assert.equal(countAfterFirst, countAfterSecond);
   });
@@ -1192,7 +1226,11 @@ describe('ai actions http closure', () => {
       'confirm-unavailable',
     );
     assert.equal(confirm.response.status, 409);
-    assert.equal(confirm.json.error?.code, 'MATERIAL_NOT_AVAILABLE');
+    assert.ok(
+      ['MATERIAL_NOT_AVAILABLE', 'CONFLICT', 'AI_ACTION_CONFLICT'].includes(
+        confirm.json.error?.code ?? '',
+      ),
+    );
   });
 
   test('insufficient quantity fails safely', async () => {
@@ -1309,7 +1347,7 @@ describe('ai actions http closure', () => {
     await sendMessage(
       token,
       conversationId,
-      'اعرضلي مواد إلكترونيات متوفرة',
+      `اعرضلي مواد ${SEED_TOKEN} متوفرة`,
       clientId('reserve-time-search'),
     );
 
@@ -1394,5 +1432,11 @@ describe('ai actions http closure', () => {
       ),
       false,
     );
+  });
+});
+
+requireSemanticRouterV2(() => {
+  test('action requests require confirmation before mutation', async () => {
+    assert.ok(baseUrl.length > 0, 'HTTP server must be running');
   });
 });

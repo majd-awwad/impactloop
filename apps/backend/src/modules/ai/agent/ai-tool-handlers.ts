@@ -288,8 +288,9 @@ const resolveCategoryId = async (categoryText?: string): Promise<string | undefi
 const toMaterialsQuery = async (
   input: ReturnType<typeof searchAvailableMaterialsInputSchema.parse>,
   context: AiToolExecutionContext,
+  options?: { queryLimit?: number },
 ): Promise<MaterialsQuery> => {
-  const limit = Math.min(input.limit ?? 10, 10);
+  const limit = options?.queryLimit ?? Math.min(input.limit ?? 10, 10);
   const query: MaterialsQuery = {
     page: 1,
     limit,
@@ -1030,9 +1031,14 @@ export const executeLearnerAgentTool = async (
 
     case 'search_available_materials': {
       const input = searchAvailableMaterialsInputSchema.parse(rawInput ?? {});
-      const query = await toMaterialsQuery(input, context);
-      const result = await getMaterials(query, viewer);
       const limit = Math.min(input.limit ?? 10, 10);
+      const needsPostFilter =
+        input.maxPrice != null ||
+        input.maxDistanceKm != null ||
+        input.nearLearner === true;
+      const fetchLimit = needsPostFilter ? Math.min(Math.max(limit * 10, 50), 100) : limit;
+      const query = await toMaterialsQuery(input, context, { queryLimit: fetchLimit });
+      const result = await getMaterials(query, viewer);
       let items = [...result.items].filter(
         (item) => !shouldHideE2eFixtureTitle(item.title),
       );

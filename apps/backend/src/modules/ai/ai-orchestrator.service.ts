@@ -248,124 +248,71 @@ export const processGeneralLearningTurn = async (input: {
     }
 
     const responseLocale = detectResponseLocale(input.text, input.locale);
-    const deterministic = classifyScopeDeterministic(input.text);
-    const conversationalIntent = detectConversationalIntent(input.text);
 
     let blocks: AiContentBlock[] = [];
     let assistantStatus: 'COMPLETED' | 'REFUSED' = 'COMPLETED';
-    let scopeClassification = deterministic.classification;
+    let scopeClassification: AiScopeClassification = 'DOMAIN_KNOWLEDGE';
     let providerName = 'system';
     let model: string | null = null;
     let latencyMs: number | null = null;
     let inputTokens: number | null = null;
     let outputTokens: number | null = null;
-    let usedClassifier = false;
 
-    if (deterministic.classification === 'OUT_OF_SCOPE') {
-      blocks = [textBlock(REFUSAL_COPY[responseLocale])];
-      assistantStatus = 'REFUSED';
-    } else if (deterministic.classification === 'DANGEROUS_REQUEST') {
-      blocks = [textBlock(DANGEROUS_SAFETY_COPY[responseLocale], 'safety')];
-      assistantStatus = 'REFUSED';
-      scopeClassification = 'DANGEROUS_REQUEST';
-    } else if (conversationalIntent !== 'NONE') {
-      blocks = [
-        textBlock(
-          buildConversationalResponseText(conversationalIntent, responseLocale),
-        ),
-      ];
-      scopeClassification = 'UNCLEAR';
-    } else {
-      const history = buildBoundedConversationHistory(
-        await loadRecentConversationMessages({
-          conversationId: input.conversation.id,
-          limit: env.aiChatMaxHistoryMessages,
-        }),
-        env.aiChatMaxHistoryMessages,
-      );
-
-      const agentResult = await executeLearnerAgentPlatformTurn({
-        userMessage: input.text,
-        locale: responseLocale,
+    const history = buildBoundedConversationHistory(
+      await loadRecentConversationMessages({
         conversationId: input.conversation.id,
-        authenticatedUserId: input.conversation.userId,
-        clientMessageId: input.clientMessageId,
-        requestId: null,
+        limit: env.aiChatMaxHistoryMessages,
+      }),
+      env.aiChatMaxHistoryMessages,
+    );
+
+    const agentResult = await executeLearnerAgentPlatformTurn({
+      userMessage: input.text,
+      locale: responseLocale,
+      conversationId: input.conversation.id,
+      authenticatedUserId: input.conversation.userId,
+      clientMessageId: input.clientMessageId,
+      requestId: null,
+      history,
+    });
+
+    if (agentResult?.semanticRoute === 'GENERAL_LEARNING') {
+      assertProviderOperational(responseLocale);
+
+      const provider = getAiChatProvider();
+      const answer = await provider.generateGeneralLearningAnswer({
+        locale: responseLocale,
+        userMessage: input.text,
         history,
+        scopeClassification: 'DOMAIN_KNOWLEDGE',
       });
 
-      if (agentResult) {
-        blocks = agentResult.blocks;
-        providerName = agentResult.providerName;
-        model = agentResult.model;
-        latencyMs = agentResult.latencyMs;
-        inputTokens = agentResult.inputTokens;
-        outputTokens = agentResult.outputTokens;
-        if (agentResult.route === 'OUT_OF_SCOPE') {
-          scopeClassification = 'OUT_OF_SCOPE';
-          assistantStatus = 'REFUSED';
-        } else if (agentResult.route === 'DANGEROUS_REQUEST') {
-          scopeClassification = 'DANGEROUS_REQUEST';
-          assistantStatus = 'REFUSED';
-        } else {
-          scopeClassification = 'DOMAIN_KNOWLEDGE';
-        }
-      } else if (
-        deterministic.classification === 'DOMAIN_KNOWLEDGE' ||
-        deterministic.classification === 'MIXED'
-      ) {
-        assertProviderOperational(responseLocale);
-
-        const provider = getAiChatProvider();
-        const answer = await provider.generateGeneralLearningAnswer({
-          locale: responseLocale,
-          userMessage: input.text,
-          history,
-          scopeClassification: deterministic.classification,
-        });
-
-        blocks = answer.data.blocks;
-        providerName = answer.provider;
-        model = answer.model;
-        latencyMs = answer.latencyMs;
-        inputTokens = answer.usage.inputTokens;
-        outputTokens = answer.usage.outputTokens;
+      blocks = answer.data.blocks;
+      providerName = answer.provider;
+      model = answer.model;
+      latencyMs = answer.latencyMs;
+      inputTokens = answer.usage.inputTokens;
+      outputTokens = answer.usage.outputTokens;
+      scopeClassification = 'DOMAIN_KNOWLEDGE';
+    } else if (agentResult) {
+      blocks = agentResult.blocks;
+      providerName = agentResult.providerName;
+      model = agentResult.model;
+      latencyMs = agentResult.latencyMs;
+      inputTokens = agentResult.inputTokens;
+      outputTokens = agentResult.outputTokens;
+      if (agentResult.route === 'OUT_OF_SCOPE') {
+        scopeClassification = 'OUT_OF_SCOPE';
+        assistantStatus = 'REFUSED';
+      } else if (agentResult.route === 'DANGEROUS_REQUEST') {
+        scopeClassification = 'DANGEROUS_REQUEST';
+        assistantStatus = 'REFUSED';
       } else {
-        const scope = await resolveScope(input.text, responseLocale);
-        scopeClassification = scope.classification;
-        usedClassifier = scope.usedClassifier;
-
-        if (shouldSkipAnswerProvider(scope.classification)) {
-          blocks = [textBlock(REFUSAL_COPY[responseLocale])];
-          assistantStatus = 'REFUSED';
-        } else if (scope.classification === 'UNCLEAR') {
-          blocks = [textBlock(CLARIFICATION_COPY[responseLocale])];
-        } else if (shouldUseAnswerProvider(scope.classification)) {
-          assertProviderOperational(responseLocale);
-
-          const provider = getAiChatProvider();
-          const answer = await provider.generateGeneralLearningAnswer({
-            locale: responseLocale,
-            userMessage: input.text,
-            history,
-            scopeClassification: scope.classification,
-          });
-
-          blocks = answer.data.blocks;
-          providerName = answer.provider;
-          model = answer.model;
-          latencyMs = answer.latencyMs;
-          inputTokens = answer.usage.inputTokens;
-          outputTokens = answer.usage.outputTokens;
-
-          if (scope.classification === 'DANGEROUS_REQUEST') {
-            assistantStatus = 'REFUSED';
-          }
-        } else {
-          blocks = [textBlock(CLARIFICATION_COPY[responseLocale])];
-          scopeClassification = 'UNCLEAR';
-        }
+        scopeClassification = 'DOMAIN_KNOWLEDGE';
       }
+    } else {
+      blocks = [textBlock(CLARIFICATION_COPY[responseLocale])];
+      scopeClassification = 'UNCLEAR';
     }
 
     const validatedBlocks = aiContentBlocksSchema.parse(blocks);
@@ -404,9 +351,6 @@ export const processGeneralLearningTurn = async (input: {
         provider: providerName,
         model,
         latencyMs,
-        usedClassifier,
-        conversationalIntent:
-          conversationalIntent === 'NONE' ? null : conversationalIntent,
       },
       'general learning turn completed',
     );

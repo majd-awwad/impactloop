@@ -5,6 +5,7 @@ import { AppError } from '../../../utils/app-error.js';
 import {
   GeminiAiChatProvider,
   buildGeminiAnswerContents,
+  parseSemanticPlannerResponseText,
   setGeminiChatClientFactoryForTests,
 } from './gemini-chat.provider.js';
 import { ADMIN_PROJECT_REVIEW_MARKER } from '../../admin-learning-projects/admin-learning-projects.ai-review.js';
@@ -478,5 +479,113 @@ describe('GeminiAiChatProvider multimodal contents', () => {
       assert.ok(block.text.includes('Visual evidence supports'));
       assert.equal(block.text.includes(MINIMAL_JPEG_BASE64), false);
     }
+  });
+});
+
+describe('Gemini semantic planner response parsing', () => {
+  afterEach(() => {
+    setGeminiChatClientFactoryForTests(null);
+  });
+
+  test('parseSemanticPlannerResponseText accepts direct JSON objects', () => {
+    const parsed = parseSemanticPlannerResponseText(
+      JSON.stringify({ route: 'GENERAL_LEARNING', confidence: 0.9 }),
+    );
+    assert.equal((parsed as { route?: string }).route, 'GENERAL_LEARNING');
+  });
+
+  test('parseSemanticPlannerResponseText accepts bounded fenced JSON', () => {
+    const parsed = parseSemanticPlannerResponseText(
+      '```json\n{"route":"OUT_OF_SCOPE","confidence":0.99}\n```',
+    );
+    assert.equal((parsed as { route?: string }).route, 'OUT_OF_SCOPE');
+  });
+
+  test('parseSemanticPlannerResponseText rejects prose plus JSON', () => {
+    assert.throws(
+      () =>
+        parseSemanticPlannerResponseText(
+          'Here is the classification: {"route":"GENERAL_LEARNING","confidence":0.9}',
+        ),
+      SyntaxError,
+    );
+  });
+
+  test('classifySemanticUnderstanding rejects learner answer-block JSON', async () => {
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async () => ({
+          text: JSON.stringify({
+            blocks: [{ type: 'text', text: 'hello', purpose: 'answer' }],
+          }),
+          modelVersion: 'gemini-2.5-flash',
+        }),
+      },
+    }));
+
+    const provider = new GeminiAiChatProvider();
+    await assert.rejects(
+      () =>
+        provider.classifySemanticUnderstanding({
+          prompt: 'classify this message',
+          locale: 'ar',
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'AI_RESPONSE_INVALID');
+        return true;
+      },
+    );
+  });
+
+  test('classifySemanticUnderstanding returns direct semantic JSON payload', async () => {
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async () => ({
+          text: JSON.stringify({
+            route: 'GENERAL_LEARNING',
+            confidence: 0.94,
+          }),
+          modelVersion: 'gemini-2.5-flash',
+        }),
+      },
+    }));
+
+    const provider = new GeminiAiChatProvider();
+    const result = await provider.classifySemanticUnderstanding({
+      prompt: 'classify educational question',
+      locale: 'ar',
+    });
+
+    assert.equal((result.data as { route?: string }).route, 'GENERAL_LEARNING');
+  });
+
+  test('admin review direct JSON remains unchanged for learner answer path', async () => {
+    setGeminiChatClientFactoryForTests(() => ({
+      models: {
+        generateContent: async () => ({
+          text: JSON.stringify({
+            summary: 'Looks consistent.',
+            attentionLevel: 'LOW',
+            strengths: [],
+            importantConcerns: [],
+            safetyNotes: [],
+            improvementSuggestions: [],
+            manualReviewNotes: [],
+          }),
+          modelVersion: 'gemini-2.5-flash',
+        }),
+      },
+    }));
+
+    const provider = new GeminiAiChatProvider();
+    const result = await provider.generateGeneralLearningAnswer({
+      locale: 'en',
+      userMessage: `${ADMIN_PROJECT_REVIEW_MARKER}\nreview`,
+      history: [],
+      scopeClassification: 'DOMAIN_KNOWLEDGE',
+    });
+
+    assert.equal(result.data.blocks.length, 1);
   });
 });

@@ -25,6 +25,7 @@ import type {
   AiChatProvider,
   AiChatProviderResult,
 } from './ai-chat-provider.types.js';
+import type { AiLocale } from '../ai.types.js';
 
 const ADMIN_PROJECT_REVIEW_MARKER = 'ADMIN_PROJECT_REVIEW_V1';
 
@@ -588,6 +589,56 @@ export const buildGeminiAnswerContents = (
   ];
 };
 
+/** Marks semantic-planner JSON requests; must not share learner answer-block parsing. */
+export const SEMANTIC_PLANNER_OPERATION = 'classifySemanticUnderstanding';
+
+export const isLearnerAnswerBlocksPayload = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return Array.isArray(candidate.blocks);
+};
+
+export const isAdminReviewDirectPayload = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.summary === 'string' &&
+    typeof candidate.attentionLevel === 'string' &&
+    !('route' in candidate)
+  );
+};
+
+export const shouldRejectAsNonSemanticPayload = (value: unknown): boolean =>
+  isLearnerAnswerBlocksPayload(value) || isAdminReviewDirectPayload(value);
+
+/**
+ * Semantic planner JSON extraction: direct object text or bounded fenced JSON only.
+ * Rejects prose wrappers that are not safely fenced.
+ */
+export const parseSemanticPlannerResponseText = (content: string): unknown => {
+  const trimmed = content.trim();
+  if (trimmed.length === 0) {
+    throw new SyntaxError('Semantic planner response was empty.');
+  }
+
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```\s*$/i);
+  if (fenced?.[1]) {
+    return JSON.parse(fenced[1].trim());
+  }
+
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    return JSON.parse(trimmed);
+  }
+
+  throw new SyntaxError(
+    'Semantic planner response was not a direct JSON object or fenced JSON block.',
+  );
+};
+
 export class GeminiAiChatProvider implements AiChatProvider {
   readonly name = 'gemini';
 
@@ -724,6 +775,56 @@ export class GeminiAiChatProvider implements AiChatProvider {
         'generateGeneralLearningAnswer',
         'generation_request',
       );
+    }
+  }
+
+  async classifySemanticUnderstanding(input: {
+    prompt: string;
+    locale: AiLocale;
+  }): Promise<AiChatProviderResult<unknown>> {
+    const startedAt = Date.now();
+    const ai = this.getClient();
+
+    try {
+      const { response, model } = await withTimeout(
+        generateContentWithModelFallback(ai, SEMANTIC_PLANNER_OPERATION, (modelName) => ({
+          model: modelName,
+          contents: input.prompt,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 1024,
+            responseMimeType: 'application/json',
+            systemInstruction:
+              'You are a strict semantic classifier for ImpactLoop learner chat. Return one JSON object only matching the requested semantic understanding schema. Never return answer blocks or prose.',
+          },
+        })),
+        env.aiChatTimeoutMs,
+        'AI_PROVIDER_TIMEOUT',
+      );
+
+      const responseText = readGeminiResponseText(response, 'generation_request');
+      const extracted = parseSemanticPlannerResponseText(responseText);
+      if (shouldRejectAsNonSemanticPayload(extracted)) {
+        throw new SyntaxError('Semantic planner response used a non-semantic payload shape.');
+      }
+
+      return {
+        provider: this.name,
+        model: response.modelVersion ?? model,
+        data: extracted,
+        usage: {
+          inputTokens: response.usageMetadata?.promptTokenCount ?? null,
+          outputTokens: response.usageMetadata?.candidatesTokenCount ?? null,
+        },
+        latencyMs: Date.now() - startedAt,
+      };
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        logGeminiFailure(error, SEMANTIC_PLANNER_OPERATION, 'json_extraction');
+        throw mapGeminiFailureToAppError(error, 'json_extraction');
+      }
+
+      throw toProviderError(error, SEMANTIC_PLANNER_OPERATION, 'generation_request');
     }
   }
 }

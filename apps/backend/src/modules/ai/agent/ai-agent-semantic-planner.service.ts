@@ -6,11 +6,31 @@ import {
   getConfiguredGeminiApiKey,
   getGeminiChatModelCandidates,
   isAiChatProviderOperational,
+  resolveAiChatProvider,
 } from '../../../config/env.js';
 import { logger } from '../../../observability/logger.js';
+import { AppError } from '../../../utils/app-error.js';
 import { extractJsonObject } from '../../../services/gemini-price-suggestion.provider.js';
 import type { AiLocale } from '../ai.types.js';
-import type { AiAgentRouteType } from './ai-agent.types.js';
+import { PLATFORM_GUIDANCE_TOPICS } from '../ai.policy.js';
+import type {
+  AiAgentRouteType,
+  PlatformGuidanceTopic,
+  SemanticActionType,
+  SemanticExecutionPlan,
+  SemanticRoute,
+  SystemDataTopic,
+} from './ai-agent.types.js';
+import { routeToToolName } from './ai-agent-route-mapping.js';
+import { resolveAgentRoute } from './ai-agent-router.service.js';
+import {
+  detectEducationalLearningIntent,
+  detectPlatformGuidanceIntent,
+  extractBudgetBound,
+  parseProjectsWithinBudgetInput,
+} from './ai-agent-filter-extractor.service.js';
+import { classifyScopeDeterministic } from '../ai-scope-guard.js';
+import { buildToolInputForRoute } from './ai-agent-input-parser.service.js';
 import { getRegisteredTool, isRegisteredToolName } from './ai-tool-registry.js';
 import {
   mergeMaterialSearchPlan,
@@ -23,6 +43,714 @@ import {
   summarizePlannerContextForPrompt,
   type PlannerConversationContext,
 } from './ai-agent-planner-context.service.js';
+import { detectBuildGuideLinkAction } from './ai-agent-reference-resolver.service.js';
+
+const resolveSemanticActionFromMessage = (
+  userMessage: string,
+): SemanticActionType | null => {
+  const text = userMessage.toLowerCase();
+  if (
+    /(احفظ|save)/i.test(text) &&
+    (/(مادة|material)/i.test(text) || /(أرخص|ارخص|cheaper)/i.test(text))
+  ) {
+    return 'SAVE_MATERIAL';
+  }
+  if (
+    (/(شيل|remove|الغ|إلغاء|unsave)/i.test(text) &&
+      /(المحفوظات|من المحفوظ|saved)/i.test(text) &&
+      !/(مشروع|project)/i.test(text)) ||
+    (/(الغ|إلغاء|unsave|remove).*(حفظ|save)/i.test(text) && /(مادة|material)/i.test(text))
+  ) {
+    return 'UNSAVE_MATERIAL';
+  }
+  if (/(احجز|reserve|book)/i.test(text)) {
+    return 'PREPARE_MATERIAL_RESERVATION';
+  }
+  if (
+    /(ابدأ|start)/i.test(text) &&
+    (/(مشروع|project|build)/i.test(text) || /(أسهل|اسهل|easier)/i.test(text))
+  ) {
+    return 'START_PROJECT_BUILD';
+  }
+  if (
+    /(فك الربط|فك ربط|الغ.? الربط|شيل المادة المربوطة|افصل المادة عن المكون|unlink it|remove the linked material)/i.test(
+      text,
+    )
+  ) {
+    return 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT';
+  }
+  if (
+    (/(فك الربط|فك ربط|unlink)/i.test(text) && /(مكون|component|هالمكون|هالكومبوننت)/i.test(text)) ||
+    (/(الغ|إلغاء|unlink).*(ربط|link)/i.test(text) && /(مادة|material|مكون|component)/i.test(text))
+  ) {
+    return 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT';
+  }
+  if (/\bunlink\b/i.test(text) && /\b(material|component)\b/i.test(text)) {
+    return 'UNLINK_MATERIAL_FROM_BUILD_COMPONENT';
+  }
+  if (detectBuildGuideLinkAction(userMessage) && !/\bunlink\b/i.test(text)) {
+    return 'LINK_MATERIAL_TO_BUILD_COMPONENT';
+  }
+  if (
+    /(احفظ|save)/i.test(text) &&
+    (/(مشروع|project)/i.test(text) || /(أسهل|اسهل|easier)/i.test(text))
+  ) {
+    return 'SAVE_PROJECT';
+  }
+  if (
+    /(احفظ|save)/i.test(text) &&
+    /(أول|الاول|ثاني|الثاني|third|ثالث)/i.test(text) &&
+    !/(مادة|material|أرخص|ارخص|cheaper)/i.test(text)
+  ) {
+    return 'SAVE_PROJECT';
+  }
+  if (
+    (/(شيل|remove|الغ|إلغاء|unsave)/i.test(text) &&
+      /(المشاريع المحفوظة|من المحفوظ|saved project)/i.test(text)) ||
+    (/(الغ|إلغاء|unsave|remove).*(حفظ|save)/i.test(text) && /(مشروع|project)/i.test(text))
+  ) {
+    return 'UNSAVE_PROJECT';
+  }
+  return null;
+};
+
+/** Production capability marker — semantic-first routing active at version 2. */
+export const AI_SEMANTIC_ROUTER_VERSION = 2;
+
+const SEMANTIC_ROUTES = [
+  'PLATFORM_GUIDANCE',
+  'SYSTEM_DATA_QUERY',
+  'ACTION_REQUEST',
+  'GENERAL_LEARNING',
+  'OUT_OF_SCOPE',
+  'CLARIFICATION_REQUIRED',
+] as const;
+
+const SYSTEM_DATA_TOPICS = [
+  'MATERIAL_SEARCH',
+  'MATERIAL_DETAILS',
+  'PROJECT_SEARCH',
+  'PROJECT_DETAILS',
+  'PROJECT_COMPONENTS',
+  'SAVED_PROJECTS',
+  'ACTIVE_PROJECT_BUILDS',
+  'BUILD_GAP_ANALYSIS',
+  'COMPONENT_MATERIAL_MATCHING',
+  'PROJECT_MATERIAL_AVAILABILITY',
+  'PROJECT_BUDGET_ESTIMATION',
+  'PROJECTS_WITHIN_BUDGET',
+  'OWNED_MATERIALS_PROJECT_MATCH',
+  'MATERIAL_COMPARISON',
+  'PROJECT_COMPARISON',
+  'PERSONALIZED_RECOMMENDATION',
+] as const;
+
+const SEMANTIC_ACTION_TYPES = [
+  'SAVE_MATERIAL',
+  'UNSAVE_MATERIAL',
+  'SAVE_PROJECT',
+  'UNSAVE_PROJECT',
+  'START_PROJECT_BUILD',
+  'LINK_MATERIAL_TO_BUILD_COMPONENT',
+  'UNLINK_MATERIAL_FROM_BUILD_COMPONENT',
+  'PREPARE_MATERIAL_RESERVATION',
+] as const;
+
+const semanticEntitySchema = z
+  .object({
+    type: z.enum(['MATERIAL', 'PROJECT', 'BUILD', 'COMPONENT']),
+    mention: z.string().trim().min(1).max(120),
+    referenceType: z.enum([
+      'EXPLICIT_NAME',
+      'RECENT_RESULT',
+      'RESULT_INDEX',
+      'PRONOUN',
+      'UNKNOWN',
+    ]),
+    resultIndex: z.number().int().nullable().optional(),
+  })
+  .strict();
+
+const semanticFiltersSchema = z
+  .object({
+    query: z.string().trim().min(1).max(120).nullable().optional(),
+    categoryText: z.string().trim().min(1).max(80).nullable().optional(),
+    isFree: z.boolean().nullable().optional(),
+    minPrice: z.number().nullable().optional(),
+    maxPrice: z.number().nullable().optional(),
+    city: z.string().trim().min(1).max(80).nullable().optional(),
+    area: z.string().trim().min(1).max(80).nullable().optional(),
+    nearLearner: z.boolean().nullable().optional(),
+    pickupAllowed: z.boolean().nullable().optional(),
+    deliveryAllowed: z.boolean().nullable().optional(),
+    limit: z.number().int().positive().max(20).nullable().optional(),
+  })
+  .strict();
+
+export const semanticUnderstandingSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    route: z.enum(SEMANTIC_ROUTES),
+    topic: z
+      .union([z.enum(PLATFORM_GUIDANCE_TOPICS), z.enum(SYSTEM_DATA_TOPICS)])
+      .nullable(),
+    action: z.enum(SEMANTIC_ACTION_TYPES).nullable(),
+    entities: z.array(semanticEntitySchema).max(12).default([]),
+    filters: semanticFiltersSchema.optional(),
+    confidence: z.number().min(0).max(1),
+    needsClarification: z.boolean().default(false),
+    clarificationQuestion: z.string().trim().min(1).max(500).nullable(),
+    toolCall: z
+      .object({
+        name: z.string().trim().min(1),
+        arguments: z.record(z.string(), z.unknown()).default({}),
+      })
+      .nullable()
+      .optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.needsClarification && !value.clarificationQuestion) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'clarificationQuestion is required when needsClarification is true',
+      });
+    }
+    if (value.route === 'PLATFORM_GUIDANCE' && !value.topic) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'topic is required for PLATFORM_GUIDANCE',
+      });
+    }
+    if (value.route === 'SYSTEM_DATA_QUERY' && !value.topic && !value.toolCall) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'topic or toolCall is required for SYSTEM_DATA_QUERY',
+      });
+    }
+    if (value.route === 'ACTION_REQUEST' && !value.action && !value.needsClarification) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'action is required for ACTION_REQUEST unless needsClarification',
+      });
+    }
+  });
+
+export type SemanticUnderstanding = z.infer<typeof semanticUnderstandingSchema>;
+
+export type SemanticPlannerFailureReason = 'provider_unavailable';
+
+export type SemanticPlannerResult =
+  | { status: 'success'; understanding: SemanticUnderstanding }
+  | { status: 'failure'; reason: SemanticPlannerFailureReason };
+
+const SEMANTIC_PLANNER_PROVIDER_FAILURE_CODES = new Set([
+  'AI_DISABLED',
+  'AI_PROVIDER_AUTH_ERROR',
+  'AI_PROVIDER_ERROR',
+  'AI_PROVIDER_MODEL_UNAVAILABLE',
+  'AI_PROVIDER_QUOTA_EXCEEDED',
+  'AI_PROVIDER_TIMEOUT',
+  'AI_RESPONSE_INVALID',
+]);
+
+export const isSemanticPlannerProviderFailure = (
+  error: unknown,
+): boolean => {
+  if (error instanceof AppError) {
+    return SEMANTIC_PLANNER_PROVIDER_FAILURE_CODES.has(error.code);
+  }
+
+  if (error instanceof SyntaxError) {
+    return true;
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    return (
+      message.includes('timeout') ||
+      message.includes('timed out') ||
+      message.includes('network') ||
+      message.includes('econnreset') ||
+      message.includes('fetch failed') ||
+      message.includes('429') ||
+      message.includes('quota')
+    );
+  }
+
+  return false;
+};
+
+const toSemanticPlannerFailure = (
+  reason: SemanticPlannerFailureReason = 'provider_unavailable',
+): SemanticPlannerResult => ({
+  status: 'failure',
+  reason,
+});
+
+const normalizeSemanticPlannerOverrideResult = (
+  result: SemanticPlannerResult | SemanticUnderstanding | null,
+): SemanticPlannerResult => {
+  if (result === null) {
+    return toSemanticPlannerFailure();
+  }
+
+  if ('status' in result) {
+    return result;
+  }
+
+  return { status: 'success', understanding: result };
+};
+
+const ACTION_CONFIDENCE_THRESHOLD = 0.72;
+
+const LEGACY_PLANNER_SYSTEM_DATA_ROUTES = new Set<string>(SYSTEM_DATA_TOPICS);
+
+const compactNullableRecord = (
+  value: unknown,
+): Record<string, unknown> | undefined => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const compact: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry !== null && entry !== undefined) {
+      compact[key] = entry;
+    }
+  }
+
+  return Object.keys(compact).length > 0 ? compact : undefined;
+};
+
+const normalizeSemanticEntities = (
+  value: unknown,
+): SemanticUnderstanding['entities'] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const entities: SemanticUnderstanding['entities'] = [];
+  for (const entry of value) {
+    const parsed = semanticEntitySchema.safeParse(entry);
+    if (parsed.success) {
+      entities.push(parsed.data);
+    }
+  }
+  return entities;
+};
+
+/**
+ * Normalizes raw Gemini / legacy planner JSON into the v2 semantic contract
+ * before strict Zod validation. Rejects unrelated payload shapes upstream.
+ */
+export const coerceSemanticUnderstandingFromGemini = (
+  raw: unknown,
+): unknown => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return raw;
+  }
+
+  const source = raw as Record<string, unknown>;
+  let route = source.route;
+
+  if (typeof route === 'string' && LEGACY_PLANNER_SYSTEM_DATA_ROUTES.has(route)) {
+    return {
+      schemaVersion: 1,
+      route: 'SYSTEM_DATA_QUERY',
+      topic: route,
+      action: null,
+      entities: normalizeSemanticEntities(source.entities),
+      filters: compactNullableRecord(source.filters),
+      confidence: typeof source.confidence === 'number' ? source.confidence : 0.85,
+      needsClarification:
+        source.needsClarification === true || source.clarificationNeeded === true,
+      clarificationQuestion:
+        typeof source.clarificationQuestion === 'string'
+          ? source.clarificationQuestion
+          : typeof source.clarificationReason === 'string'
+            ? source.clarificationReason
+            : null,
+      toolCall: source.toolCall ?? null,
+    };
+  }
+
+  if (route === 'CLARIFICATION') {
+    route = 'CLARIFICATION_REQUIRED';
+  }
+
+  const needsClarification =
+    source.needsClarification === true || source.clarificationNeeded === true;
+
+  return {
+    schemaVersion: source.schemaVersion ?? 1,
+    route,
+    topic: source.topic ?? null,
+    action: source.action ?? null,
+    entities: normalizeSemanticEntities(source.entities),
+    filters: compactNullableRecord(source.filters),
+    confidence: typeof source.confidence === 'number' ? source.confidence : 0.85,
+    needsClarification,
+    clarificationQuestion:
+      typeof source.clarificationQuestion === 'string'
+        ? source.clarificationQuestion
+        : typeof source.clarificationReason === 'string'
+          ? source.clarificationReason
+          : null,
+    toolCall: source.toolCall ?? null,
+  };
+};
+
+export const validateSemanticUnderstanding = (
+  raw: unknown,
+): SemanticUnderstanding | null => {
+  const coerced = coerceSemanticUnderstandingFromGemini(raw);
+  const parsed = semanticUnderstandingSchema.safeParse(coerced);
+  if (!parsed.success) {
+    return null;
+  }
+
+  const data = parsed.data;
+
+  if (data.toolCall?.name) {
+    if (!isRegisteredToolName(data.toolCall.name)) {
+      return null;
+    }
+    try {
+      sanitizePlannerArguments(
+        data.toolCall.name,
+        data.toolCall.arguments ?? {},
+      );
+    } catch {
+      return null;
+    }
+  }
+
+  return data;
+};
+
+const systemDataTopicToRoute = (
+  topic: SystemDataTopic,
+): AiAgentRouteType => topic as AiAgentRouteType;
+
+export const mapSemanticToExecutionPlan = (
+  understanding: SemanticUnderstanding,
+): SemanticExecutionPlan => {
+  if (
+    understanding.route === 'ACTION_REQUEST' &&
+    (understanding.needsClarification ||
+      understanding.confidence < ACTION_CONFIDENCE_THRESHOLD)
+  ) {
+    return {
+      route: 'CLARIFICATION',
+      toolName: null,
+      toolInput: {},
+      clarificationReason:
+        understanding.clarificationQuestion ??
+        'Please clarify what action you want me to perform.',
+      semanticRoute: 'CLARIFICATION_REQUIRED',
+      plannerConfidence: understanding.confidence,
+    };
+  }
+
+  if (understanding.route === 'CLARIFICATION_REQUIRED' || understanding.needsClarification) {
+    return {
+      route: 'CLARIFICATION',
+      toolName: null,
+      toolInput: {},
+      clarificationReason:
+        understanding.clarificationQuestion ??
+        'Please clarify your request.',
+      semanticRoute: 'CLARIFICATION_REQUIRED',
+      plannerConfidence: understanding.confidence,
+    };
+  }
+
+  if (understanding.route === 'PLATFORM_GUIDANCE') {
+    return {
+      route: 'PLATFORM_GUIDANCE',
+      toolName: null,
+      toolInput: {},
+      semanticRoute: 'PLATFORM_GUIDANCE',
+      platformGuidanceTopic: understanding.topic as PlatformGuidanceTopic,
+      plannerConfidence: understanding.confidence,
+    };
+  }
+
+  if (understanding.route === 'GENERAL_LEARNING') {
+    return {
+      route: 'GENERAL_LEARNING',
+      toolName: null,
+      toolInput: {},
+      semanticRoute: 'GENERAL_LEARNING',
+      plannerConfidence: understanding.confidence,
+    };
+  }
+
+  if (understanding.route === 'OUT_OF_SCOPE') {
+    return {
+      route: 'OUT_OF_SCOPE',
+      toolName: null,
+      toolInput: {},
+      semanticRoute: 'OUT_OF_SCOPE',
+      plannerConfidence: understanding.confidence,
+    };
+  }
+
+  if (understanding.route === 'ACTION_REQUEST') {
+    return {
+      route: 'ACTION_REQUEST',
+      toolName: 'prepare_action',
+      toolInput: {
+        action: understanding.action,
+        entities: understanding.entities,
+      },
+      semanticRoute: 'ACTION_REQUEST',
+      plannerConfidence: understanding.confidence,
+    };
+  }
+
+  const granularRoute = systemDataTopicToRoute(
+    (understanding.topic ??
+      'MATERIAL_SEARCH') as SystemDataTopic,
+  );
+  const toolName =
+    understanding.toolCall?.name ?? routeToToolName(granularRoute);
+  let toolInput: Record<string, unknown> = {};
+
+  if (understanding.toolCall?.name && isRegisteredToolName(understanding.toolCall.name)) {
+    try {
+      toolInput = sanitizePlannerArguments(
+        understanding.toolCall.name,
+        understanding.toolCall.arguments ?? {},
+      );
+    } catch {
+      toolInput = {};
+    }
+  } else if (understanding.filters) {
+    const compact: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(understanding.filters)) {
+      if (value !== null && value !== undefined) {
+        compact[key] = value;
+      }
+    }
+    toolInput = compact;
+  }
+
+  return {
+    route: granularRoute,
+    toolName,
+    toolInput,
+    semanticRoute: 'SYSTEM_DATA_QUERY',
+    plannerConfidence: understanding.confidence,
+  };
+};
+
+export const buildSemanticPlannerPrompt = (input: {
+  userMessage: string;
+  locale: AiLocale;
+  conversationContext?: PlannerConversationContext;
+}) =>
+  [
+    'You classify learner messages for ImpactLoop unified chat.',
+    'Return strict JSON only matching the semantic understanding schema.',
+    'Understand Arabic (MSA and Levantine dialect), English, and code-switching.',
+    'Semantic routes (choose exactly one):',
+    '- PLATFORM_GUIDANCE: how-to questions about ImpactLoop workflows (reserve, save, delivery) without asking you to perform the action',
+    '- SYSTEM_DATA_QUERY: search or read learner/platform data (materials, projects, builds, budgets, owned-materials matching)',
+    '- ACTION_REQUEST: imperative requests to save, reserve, link, start build, etc. (requires confirmation)',
+    '- GENERAL_LEARNING: educational explanations without platform data lookup',
+    '- OUT_OF_SCOPE: weather, news, sports, unrelated general knowledge',
+    '- CLARIFICATION_REQUIRED: ambiguous message needing more detail',
+    'Platform guidance topics:',
+    PLATFORM_GUIDANCE_TOPICS.join(', '),
+    'System data topics:',
+    SYSTEM_DATA_TOPICS.join(', '),
+    'Action types:',
+    SEMANTIC_ACTION_TYPES.join(', '),
+    'Never include userId, coordinates, conversationId, or arbitrary database IDs.',
+    'Never invent inventory facts.',
+    'Always include every top-level field: schemaVersion, route, topic, action, entities, confidence, needsClarification, clarificationQuestion.',
+    'Use null for topic, action, and clarificationQuestion when not applicable.',
+    'Representative examples (meaning only):',
+    '- "شو أعمل عشان أطلب قطعة من المواد الموجودة؟" -> PLATFORM_GUIDANCE, topic MATERIAL_RESERVATION',
+    '- "ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino" -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, filters.categoryText electronics, filters.query arduino',
+    '- "اشرحلي كيف بشتغل حساس الضوء LDR" -> GENERAL_LEARNING',
+    '- "شو الطقس اليوم؟" -> OUT_OF_SCOPE',
+    '- "بدي آخذ هالخشبة" without trusted prior material -> CLARIFICATION_REQUIRED with a focused question',
+    'Output shape:',
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        route: 'SYSTEM_DATA_QUERY',
+        topic: 'MATERIAL_SEARCH',
+        action: null,
+        entities: [],
+        filters: { categoryText: 'electronics', query: 'arduino' },
+        confidence: 0.93,
+        needsClarification: false,
+        clarificationQuestion: null,
+        toolCall: null,
+      },
+      null,
+      2,
+    ),
+    `Locale: ${input.locale}`,
+    input.conversationContext
+      ? `Trusted conversation context:\n${summarizePlannerContextForPrompt(input.conversationContext)}`
+      : 'Trusted conversation context: none',
+    `User message: ${JSON.stringify(input.userMessage)}`,
+  ].join('\n\n');
+
+const buildMockSemanticUnderstanding = (input: {
+  userMessage: string;
+  locale: AiLocale;
+}): SemanticUnderstanding | null => {
+  const scope = classifyScopeDeterministic(input.userMessage);
+  if (scope.classification === 'OUT_OF_SCOPE') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'OUT_OF_SCOPE',
+      topic: null,
+      action: null,
+      entities: [],
+      confidence: scope.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+
+  const guidanceTopic = detectPlatformGuidanceIntent(input.userMessage);
+  if (guidanceTopic) {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'PLATFORM_GUIDANCE',
+      topic: guidanceTopic,
+      action: null,
+      entities: [],
+      confidence: 0.94,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+
+  if (detectEducationalLearningIntent(input.userMessage)) {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'GENERAL_LEARNING',
+      topic: null,
+      action: null,
+      entities: [],
+      confidence: 0.9,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+
+  const routeDecision = resolveAgentRoute({
+    userMessage: input.userMessage,
+    locale: input.locale,
+  });
+
+  if (routeDecision.route === 'PLATFORM_GUIDANCE') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'PLATFORM_GUIDANCE',
+      topic: detectPlatformGuidanceIntent(input.userMessage) ?? 'GENERAL_PLATFORM',
+      action: null,
+      entities: [],
+      confidence: routeDecision.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+
+  if (routeDecision.route === 'OUT_OF_SCOPE') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'OUT_OF_SCOPE',
+      topic: null,
+      action: null,
+      entities: [],
+      confidence: routeDecision.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+
+  if (routeDecision.route === 'GENERAL_LEARNING') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'GENERAL_LEARNING',
+      topic: null,
+      action: null,
+      entities: [],
+      confidence: routeDecision.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+
+  if (routeDecision.route === 'ACTION_REQUEST') {
+    const action = resolveSemanticActionFromMessage(input.userMessage);
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'ACTION_REQUEST',
+      topic: null,
+      action: action ?? 'PREPARE_MATERIAL_RESERVATION',
+      entities: [],
+      confidence: routeDecision.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+
+  if (routeDecision.route === 'CLARIFICATION') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'CLARIFICATION_REQUIRED',
+      topic: null,
+      action: null,
+      entities: [],
+      confidence: routeDecision.confidence,
+      needsClarification: true,
+      clarificationQuestion: 'Please clarify your request.',
+      toolCall: null,
+    });
+  }
+
+  const systemTopic = SYSTEM_DATA_TOPICS.find(
+    (topic) => topic === routeDecision.route,
+  );
+  if (!systemTopic) {
+    return null;
+  }
+
+  const toolName = routeDecision.suggestedTool ?? routeToToolName(routeDecision.route);
+  const toolCall = toolName
+    ? tryBuildValidatedToolCall(toolName, routeDecision.route, input.userMessage)
+    : null;
+
+  return validateSemanticUnderstanding({
+    schemaVersion: 1,
+    route: 'SYSTEM_DATA_QUERY',
+    topic: systemTopic,
+    action: null,
+    entities: [],
+    confidence: routeDecision.confidence,
+    needsClarification: false,
+    clarificationQuestion: null,
+    toolCall,
+  });
+};
 
 const PLANNER_ROUTES = [
   'GENERAL_LEARNING',
@@ -207,6 +935,36 @@ const sanitizePlannerArguments = (
   return tool.inputSchema.parse(sanitized) as Record<string, unknown>;
 };
 
+const tryBuildValidatedToolCall = (
+  toolName: string,
+  route: AiAgentRouteType,
+  userMessage: string,
+): SemanticUnderstanding['toolCall'] => {
+  let toolInput: Record<string, unknown>;
+  if (route === 'PROJECTS_WITHIN_BUDGET') {
+    const budgetBound = extractBudgetBound(userMessage);
+    if (!budgetBound?.maxBudgetNis) {
+      return null;
+    }
+    toolInput = parseProjectsWithinBudgetInput(userMessage) as Record<string, unknown>;
+  } else {
+    toolInput = buildToolInputForRoute(route, userMessage);
+  }
+
+  if (Object.keys(toolInput).length === 0) {
+    return null;
+  }
+
+  try {
+    return {
+      name: toolName,
+      arguments: sanitizePlannerArguments(toolName, toolInput),
+    };
+  } catch {
+    return null;
+  }
+};
+
 let plannerClientFactoryOverride: (() => GoogleGenAI) | null = null;
 let plannerOverrideForTests:
   | ((input: {
@@ -217,6 +975,26 @@ let plannerOverrideForTests:
       conversationContext?: PlannerConversationContext;
     }) => Promise<AgentPlannerOutput | null>)
   | null = null;
+
+let semanticUnderstandingOverrideForTests:
+  | ((input: {
+      userMessage: string;
+      locale: AiLocale;
+      conversationContext?: PlannerConversationContext;
+    }) => Promise<SemanticPlannerResult | SemanticUnderstanding | null>)
+  | null = null;
+
+export const setSemanticUnderstandingOverrideForTests = (
+  override:
+    | ((input: {
+        userMessage: string;
+        locale: AiLocale;
+        conversationContext?: PlannerConversationContext;
+      }) => Promise<SemanticPlannerResult | SemanticUnderstanding | null>)
+    | null,
+) => {
+  semanticUnderstandingOverrideForTests = override;
+};
 
 export const setAgentPlannerClientFactoryForTests = (
   factory: (() => GoogleGenAI) | null,
@@ -343,6 +1121,176 @@ export const validatePlannerOutput = (raw: unknown): AgentPlannerOutput | null =
   return null;
 };
 
+const plannerOutputToSemanticUnderstanding = (
+  planner: AgentPlannerOutput,
+): SemanticUnderstanding | null => {
+  if (planner.clarificationNeeded) {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'CLARIFICATION_REQUIRED',
+      topic: null,
+      action: null,
+      entities: planner.entities,
+      confidence: planner.confidence,
+      needsClarification: true,
+      clarificationQuestion: planner.clarificationReason ?? 'Please clarify.',
+      toolCall: null,
+    });
+  }
+  if (planner.route === 'GENERAL_LEARNING') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'GENERAL_LEARNING',
+      topic: null,
+      action: null,
+      entities: planner.entities,
+      confidence: planner.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+  if (planner.route === 'OUT_OF_SCOPE') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'OUT_OF_SCOPE',
+      topic: null,
+      action: null,
+      entities: planner.entities,
+      confidence: planner.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+  if (planner.route === 'ACTION_REQUEST') {
+    return validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'ACTION_REQUEST',
+      topic: null,
+      action: 'PREPARE_MATERIAL_RESERVATION',
+      entities: planner.entities,
+      confidence: planner.confidence,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: null,
+    });
+  }
+  const systemTopic = SYSTEM_DATA_TOPICS.find((topic) => topic === planner.route);
+  if (!systemTopic) {
+    return null;
+  }
+  let toolCall: SemanticUnderstanding['toolCall'] = null;
+  if (planner.toolCall?.name && isRegisteredToolName(planner.toolCall.name)) {
+    try {
+      toolCall = {
+        name: planner.toolCall.name,
+        arguments: sanitizePlannerArguments(
+          planner.toolCall.name,
+          planner.toolCall.arguments ?? {},
+        ),
+      };
+    } catch {
+      toolCall = null;
+    }
+  }
+
+  return validateSemanticUnderstanding({
+    schemaVersion: 1,
+    route: 'SYSTEM_DATA_QUERY',
+    topic: systemTopic,
+    action: null,
+    entities: planner.entities,
+    filters: planner.filters,
+    confidence: planner.confidence,
+    needsClarification: false,
+    clarificationQuestion: null,
+    toolCall,
+  });
+};
+
+export const buildMockSemanticUnderstandingForTests = buildMockSemanticUnderstanding;
+
+export const planSemanticUnderstanding = async (input: {
+  userMessage: string;
+  locale: AiLocale;
+  conversationContext?: PlannerConversationContext;
+}): Promise<SemanticPlannerResult> => {
+  if (semanticUnderstandingOverrideForTests) {
+    try {
+      return normalizeSemanticPlannerOverrideResult(
+        await semanticUnderstandingOverrideForTests(input),
+      );
+    } catch (error) {
+      if (isSemanticPlannerProviderFailure(error)) {
+        return toSemanticPlannerFailure();
+      }
+      throw error;
+    }
+  }
+
+  if (plannerOverrideForTests) {
+    const legacyPlanner = await plannerOverrideForTests({
+      userMessage: input.userMessage,
+      locale: input.locale,
+      deterministicRoute: 'GENERAL_LEARNING',
+      deterministicArguments: {},
+      conversationContext: input.conversationContext,
+    });
+    if (legacyPlanner) {
+      const understanding = plannerOutputToSemanticUnderstanding(legacyPlanner);
+      if (!understanding) {
+        return toSemanticPlannerFailure();
+      }
+      return { status: 'success', understanding };
+    }
+  }
+
+  if (!isAiChatProviderOperational()) {
+    return toSemanticPlannerFailure();
+  }
+
+  if (resolveAiChatProvider() === 'mock') {
+    return {
+      status: 'success',
+      understanding: buildMockSemanticUnderstanding(input),
+    };
+  }
+
+  if (resolveAiChatProvider() !== 'gemini') {
+    return toSemanticPlannerFailure();
+  }
+
+  try {
+    const { GeminiAiChatProvider } = await import('../providers/gemini-chat.provider.js');
+    const provider = new GeminiAiChatProvider();
+    const result = await provider.classifySemanticUnderstanding({
+      prompt: buildSemanticPlannerPrompt(input),
+      locale: input.locale,
+    });
+    const understanding = validateSemanticUnderstanding(result.data);
+    if (!understanding) {
+      logger.warn(
+        { userMessageLength: input.userMessage.length },
+        'AI semantic understanding planner returned invalid output',
+      );
+      return toSemanticPlannerFailure();
+    }
+    return { status: 'success', understanding };
+  } catch (error) {
+    logger.warn(
+      {
+        error: error instanceof Error ? error.message.slice(0, 180) : 'unknown',
+      },
+      'AI semantic understanding planner failed',
+    );
+    if (isSemanticPlannerProviderFailure(error)) {
+      return toSemanticPlannerFailure();
+    }
+    throw error;
+  }
+};
+
 export const planLearnerAgentTurn = async (input: {
   userMessage: string;
   locale: AiLocale;
@@ -350,11 +1298,78 @@ export const planLearnerAgentTurn = async (input: {
   deterministicArguments: Record<string, unknown>;
   conversationContext?: PlannerConversationContext;
 }): Promise<AgentPlannerOutput | null> => {
+  if (AI_SEMANTIC_ROUTER_VERSION >= 2) {
+    const plannerResult = await planSemanticUnderstanding({
+      userMessage: input.userMessage,
+      locale: input.locale,
+      conversationContext: input.conversationContext,
+    });
+    if (plannerResult.status === 'failure') {
+      return null;
+    }
+    const understanding = plannerResult.understanding;
+    const execution = mapSemanticToExecutionPlan(understanding);
+    if (execution.route === 'CLARIFICATION') {
+      return {
+        route: 'CLARIFICATION',
+        confidence: understanding.confidence,
+        entities: understanding.entities,
+        clarificationNeeded: true,
+        clarificationReason: execution.clarificationReason,
+      };
+    }
+    if (execution.route === 'PLATFORM_GUIDANCE') {
+      return {
+        route: 'GENERAL_LEARNING',
+        confidence: understanding.confidence,
+        entities: understanding.entities,
+        clarificationNeeded: false,
+      };
+    }
+    if (execution.route === 'GENERAL_LEARNING') {
+      return {
+        route: 'GENERAL_LEARNING',
+        confidence: understanding.confidence,
+        entities: understanding.entities,
+        clarificationNeeded: false,
+      };
+    }
+    if (execution.route === 'OUT_OF_SCOPE') {
+      return {
+        route: 'OUT_OF_SCOPE',
+        confidence: understanding.confidence,
+        entities: understanding.entities,
+        clarificationNeeded: false,
+      };
+    }
+    if (execution.route === 'ACTION_REQUEST') {
+      return {
+        route: 'ACTION_REQUEST',
+        confidence: understanding.confidence,
+        entities: understanding.entities,
+        clarificationNeeded: false,
+      };
+    }
+    return {
+      route: execution.route as AgentPlannerOutput['route'],
+      confidence: understanding.confidence,
+      entities: understanding.entities,
+      filters: understanding.filters,
+      toolCall: execution.toolName
+        ? {
+            name: execution.toolName,
+            arguments: execution.toolInput,
+          }
+        : undefined,
+      clarificationNeeded: false,
+    };
+  }
+
   if (plannerOverrideForTests) {
     return plannerOverrideForTests(input);
   }
 
-  if (!isAiChatProviderOperational() || env.aiChatProvider !== 'gemini') {
+  if (!isAiChatProviderOperational() || resolveAiChatProvider() !== 'gemini') {
     return null;
   }
 

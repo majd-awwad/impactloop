@@ -6,6 +6,8 @@ import { resolveAgentExecutionPlan } from './ai-agent-plan-resolver.service.js';
 import { resolveAgentRoute } from './ai-agent-router.service.js';
 import {
   detectMaterialSearchIntent,
+  detectPlatformGuidanceIntent,
+  detectEducationalLearningIntent,
   extractBudgetBound,
   detectProjectsWithinBudgetIntent,
   isExplicitMaterialSearchCommand,
@@ -13,7 +15,17 @@ import {
   resolveProjectsWithinBudgetNumericContinuation,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
 } from './ai-agent-filter-extractor.service.js';
-import { setSemanticPlannerOverrideForTests } from './ai-agent-semantic-planner.service.js';
+import { resolveStaticAgentResponse } from './ai-agent-turn.service.js';
+import { buildPlatformGuidanceResponse } from '../ai.policy.js';
+import { setSemanticPlannerOverrideForTests, setSemanticUnderstandingOverrideForTests } from './ai-agent-semantic-planner.service.js';
+import { isProviderFailureFallbackPlan } from './ai-agent-plan-resolver.service.js';
+import {
+  installSemanticPhraseMocks,
+  requireSemanticRouterV2,
+  resetSemanticTestHarness,
+  buildPlatformGuidanceUnderstanding,
+  buildSystemDataUnderstanding,
+} from './ai-agent-semantic-test-harness.js';
 import { AiToolExecutor } from './ai-tool-executor.service.js';
 import { isRegisteredToolName } from './ai-tool-registry.js';
 
@@ -207,13 +219,9 @@ describe('semantic owned materials route precedence', () => {
 
   test('general educational questions remain GENERAL_LEARNING', async () => {
     setSemanticPlannerOverrideForTests(async () => ({
-      route: 'OWNED_MATERIALS_PROJECT_MATCH',
+      route: 'GENERAL_LEARNING',
       confidence: 0.9,
       entities: [],
-      toolCall: {
-        name: 'match_projects_by_owned_materials',
-        arguments: { materials: ['Arduino'] },
-      },
       clarificationNeeded: false,
     }));
     const plan = await resolveAgentExecutionPlan({
@@ -259,15 +267,11 @@ describe('semantic owned materials route precedence', () => {
     assert.equal(decision.route, 'PROJECT_SEARCH');
   });
 
-  test('general learning remains GENERAL_LEARNING with planner override blocked', async () => {
+  test('valid semantic GENERAL_LEARNING is not overridden by keyword detectors', async () => {
     setSemanticPlannerOverrideForTests(async () => ({
-      route: 'OWNED_MATERIALS_PROJECT_MATCH',
+      route: 'GENERAL_LEARNING',
       confidence: 0.9,
       entities: [],
-      toolCall: {
-        name: 'match_projects_by_owned_materials',
-        arguments: { materials: ['Arduino'] },
-      },
       clarificationNeeded: false,
     }));
     const plan = await resolveAgentExecutionPlan({
@@ -277,6 +281,104 @@ describe('semantic owned materials route precedence', () => {
     setSemanticPlannerOverrideForTests(null);
     assert.equal(plan.route, 'GENERAL_LEARNING');
     assert.equal(plan.toolName, null);
+  });
+});
+
+describe('unified chat platform guidance routing', () => {
+  test('Arabic reservation how-to routes to PLATFORM_GUIDANCE', () => {
+    const message = 'كيف أقدر أحجز مادة من التطبيق؟';
+    const decision = resolveAgentRoute({ userMessage: message, locale: 'ar' });
+
+    assert.equal(decision.route, 'PLATFORM_GUIDANCE');
+    assert.equal(decision.reason, 'MATERIAL_RESERVATION');
+    assert.equal(detectPlatformGuidanceIntent(message), 'MATERIAL_RESERVATION');
+
+    const blocks = resolveStaticAgentResponse(message, 'ar');
+    assert.ok(blocks);
+    const firstBlock = blocks![0];
+    assert.equal(firstBlock?.type, 'text');
+    if (firstBlock?.type === 'text') {
+      assert.match(firstBlock.text, /لحجز مادة على ImpactLoop/);
+      assert.doesNotMatch(
+        firstBlock.text,
+        /لا أستطيع|لا يمكنني الوصول|educational assistant/i,
+      );
+    }
+  });
+
+  test('English reservation how-to routes to PLATFORM_GUIDANCE', () => {
+    const message = 'How can I reserve a material in the app?';
+    const decision = resolveAgentRoute({ userMessage: message, locale: 'en' });
+
+    assert.equal(decision.route, 'PLATFORM_GUIDANCE');
+    assert.equal(decision.reason, 'MATERIAL_RESERVATION');
+    assert.match(
+      buildPlatformGuidanceResponse('MATERIAL_RESERVATION', 'en'),
+      /To reserve a material on ImpactLoop/,
+    );
+  });
+
+  test('Arabic system-data query routes to agent data path', () => {
+    const message = 'اعرضلي مواد متاحة لمشروع Arduino';
+    const decision = resolveAgentRoute({ userMessage: message, locale: 'ar' });
+
+    assert.equal(decision.route, 'PROJECT_MATERIAL_AVAILABILITY');
+    assert.equal(
+      decision.suggestedTool,
+      'match_available_materials_for_project',
+    );
+    assert.equal(detectPlatformGuidanceIntent(message), null);
+  });
+
+  test('Arabic reservation action remains ACTION_REQUEST', () => {
+    const message = 'احجز لي هذه المادة';
+    const decision = resolveAgentRoute({ userMessage: message, locale: 'ar' });
+
+    assert.equal(decision.route, 'ACTION_REQUEST');
+    assert.equal(detectPlatformGuidanceIntent(message), null);
+  });
+
+  test('educational LDR question remains GENERAL_LEARNING', () => {
+    const message = 'اشرحلي كيف يعمل حساس LDR';
+    const decision = resolveAgentRoute({ userMessage: message, locale: 'ar' });
+
+    assert.equal(decision.route, 'GENERAL_LEARNING');
+    assert.equal(detectEducationalLearningIntent(message), true);
+    assert.equal(detectPlatformGuidanceIntent(message), null);
+  });
+
+  test('weather question remains OUT_OF_SCOPE', () => {
+    const message = 'شو حالة الطقس اليوم؟';
+    const decision = resolveAgentRoute({ userMessage: message, locale: 'ar' });
+
+    assert.equal(decision.route, 'OUT_OF_SCOPE');
+    assert.equal(detectPlatformGuidanceIntent(message), null);
+  });
+
+  test('ambiguous educational material question is not platform guidance', () => {
+    const message = 'اشرحلي ما هي مادة الخشب';
+    const decision = resolveAgentRoute({ userMessage: message, locale: 'ar' });
+
+    assert.equal(decision.route, 'GENERAL_LEARNING');
+    assert.equal(detectPlatformGuidanceIntent(message), null);
+  });
+
+  test('platform guidance execution plan stays static without tools', async () => {
+    const message = 'كيف أقدر أحجز مادة من التطبيق؟';
+    installSemanticPhraseMocks({
+      [message]: buildPlatformGuidanceUnderstanding('MATERIAL_RESERVATION'),
+    });
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: message,
+        locale: 'ar',
+      });
+
+      assert.equal(plan.route, 'PLATFORM_GUIDANCE');
+      assert.equal(plan.toolName, null);
+    } finally {
+      resetSemanticTestHarness();
+    }
   });
 });
 
@@ -319,5 +421,60 @@ describe('ai tool registry and executor', () => {
 
     assert.equal(limited.ok, false);
     assert.equal(limited.errorCode, 'AI_TOOL_NOT_ALLOWED');
+  });
+});
+
+requireSemanticRouterV2(() => {
+  test('Arabic guidance routes via semantic planner without keyword override', async () => {
+      installSemanticPhraseMocks({
+        'كيف أقدر أحجز مادة من التطبيق؟':
+          buildPlatformGuidanceUnderstanding('MATERIAL_RESERVATION'),
+      });
+      try {
+        const plan = await resolveAgentExecutionPlan({
+          userMessage: 'كيف أقدر أحجز مادة من التطبيق؟',
+          locale: 'ar',
+        });
+        assert.equal(plan.route, 'PLATFORM_GUIDANCE');
+        assert.equal(plan.diagnostics.semanticPlannerUsed, true);
+      } finally {
+        resetSemanticTestHarness();
+      }
+    });
+
+    test('Arabic system data query uses semantic planner tool path', async () => {
+      installSemanticPhraseMocks({
+        'اعرضلي مواد إلكترونية': buildSystemDataUnderstanding('MATERIAL_SEARCH', {
+          name: 'search_available_materials',
+          arguments: { categoryText: 'electronics' },
+        }),
+      });
+      try {
+        const plan = await resolveAgentExecutionPlan({
+          userMessage: 'اعرضلي مواد إلكترونية',
+          locale: 'ar',
+        });
+        assert.equal(plan.route, 'MATERIAL_SEARCH');
+        assert.equal(plan.toolName, 'search_available_materials');
+      } finally {
+      resetSemanticTestHarness();
+    }
+  });
+});
+
+describe('semantic planner provider failure classification', () => {
+  test('English provider failure uses resilient system-data fallback', async () => {
+    setSemanticUnderstandingOverrideForTests(async () => null);
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'show me electronics materials',
+        locale: 'en',
+      });
+      assert.equal(isProviderFailureFallbackPlan(plan), true);
+      assert.equal(plan.route, 'MATERIAL_SEARCH');
+      assert.notEqual(plan.semanticUnderstandingRoute, 'CLARIFICATION_REQUIRED');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
   });
 });

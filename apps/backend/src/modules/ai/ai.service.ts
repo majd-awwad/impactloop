@@ -117,12 +117,13 @@ export const createGeneralLearningConversationForUser = async (
 
 export const listGeneralLearningConversationsForUser = async (
   userId: string,
-  input: { limit: number; offset: number },
+  input: { limit: number; offset: number; status?: 'ACTIVE' | 'ARCHIVED' },
 ) => {
   const { items, total } = await listConversationsForUser({
     userId,
     limit: input.limit,
     offset: input.offset,
+    status: input.status,
   });
 
   return {

@@ -515,6 +515,184 @@ export const detectEducationalLearningIntent = (userMessage: string): boolean =>
   return educationalCue && !platformSearchCue;
 };
 
+/**
+ * Keyword/regex intent detectors in this module are used only by
+ * `buildSemanticFallbackPlan` after semantic planner failure in production v2.
+ * They must not be invoked as a primary routing path before Gemini.
+ */
+export type PlatformGuidanceTopic =
+  | 'MATERIAL_RESERVATION'
+  | 'SAVE_PROJECT'
+  | 'MATERIAL_DELIVERY'
+  | 'RESERVATION_AFTER_SUPPLIER'
+  | 'GENERAL_PLATFORM';
+
+const hasPlatformGuidanceHowToCue = (text: string, normalized: string): boolean =>
+  /(كيف\s+(?:أ|ا)?(?:قدر|قدر|بقدر)|how\s+(?:can|do)\s+i|how\s+to|كيف\s+(?:أ|ا)?(?:حفظ|احفظ|احجز|اطلب|أطلب)|what\s+(?:happens|is\s+the\s+process)|شو\s+بيصير|شو\s+بصير|ما\s+الخطوات|what\s+are\s+the\s+steps)/i.test(
+    normalized,
+  ) ||
+  /(كيف\s+(?:أ|ا)?(?:قدر|قدر)|how\s+(?:can|do)\s+i)/i.test(text) ||
+  /(شو\s+أعمل|شو\s+اعمل|what\s+(?:should|do)\s+i\s+do)/i.test(normalized);
+
+const isReservationWorkflowGuidanceQuestion = (
+  userMessage: string,
+  normalized: string,
+): boolean =>
+  /(شو\s+أعمل|شو\s+اعمل|what\s+(?:should|do)\s+i\s+do)/i.test(normalized) &&
+  /(اطلب|أطلب|طلب|قطعة|piece|order|reserve|حجز|احجز)/i.test(normalized) &&
+  /(مواد|مادة|material)/i.test(normalized);
+
+const isImperativePlatformAction = (
+  userMessage: string,
+  normalized: string,
+): boolean => {
+  if (hasPlatformGuidanceHowToCue(userMessage, normalized)) {
+    return false;
+  }
+
+  return (
+    /(?:^|\s)(?:احجزلي|احجز\s+لي|احفظلي|احفظ\s+لي|الغ\s+لي|الغي\s+لي|احجز\s+ها?|reserve\s+(?:this|me|the)|book\s+(?:this|me|the)|save\s+(?:this|for\s+me|the))/i.test(
+      userMessage,
+    ) ||
+    /(?:احجزلي|احجز\s+لي|احفظلي|احفظ\s+لي|reserve\s+for\s+me|book\s+for\s+me)/i.test(
+      normalized,
+    ) ||
+    (/(احجز|احفظ|reserve|book|save|cancel)\s+(لي|me)\b/i.test(normalized) &&
+      !/(كيف|how)\b/i.test(normalized))
+  );
+};
+
+export const detectPlatformGuidanceIntent = (
+  userMessage: string,
+): PlatformGuidanceTopic | null => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return null;
+  }
+
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+
+  if (isImperativePlatformAction(userMessage, normalized)) {
+    return null;
+  }
+
+  if (isReservationWorkflowGuidanceQuestion(userMessage, normalized)) {
+    return 'MATERIAL_RESERVATION';
+  }
+
+  if (
+    /(حجوزات|reservations?)/i.test(normalized) &&
+    /(معلقة|pending|status|حالتها|حالة)/i.test(normalized)
+  ) {
+    return 'GENERAL_PLATFORM';
+  }
+
+  if (
+    /(هل\s+عندي|do\s+i\s+have)/i.test(normalized) &&
+    /(حجوز|reservation)/i.test(normalized)
+  ) {
+    return 'GENERAL_PLATFORM';
+  }
+
+  const hasAppContext =
+    /(من\s+التطبيق|بالتطبيق|in\s+the\s+app|on\s+impactloop|impactloop|حجوزاتي|my\s+reservations)/i.test(
+      normalized,
+    );
+  const isHowTo = hasPlatformGuidanceHowToCue(userMessage, normalized);
+
+  if (!isHowTo && !hasAppContext) {
+    return null;
+  }
+
+  if (
+    /(احجز|حجز|reserve|reservation|booking|حجوز)/i.test(normalized) &&
+    /(بعد|after|موافق|approve|supplier|مورد|تأكيد|confirm|اقتراح|proposal)/i.test(
+      normalized,
+    )
+  ) {
+    return 'RESERVATION_AFTER_SUPPLIER';
+  }
+
+  if (
+    /(احجز|حجز|reserve|reservation|booking|حجوز)/i.test(normalized) &&
+    (isHowTo || hasAppContext)
+  ) {
+    return 'MATERIAL_RESERVATION';
+  }
+
+  if (
+    /(احفظ|حفظ|save)/i.test(normalized) &&
+    /(مشروع|project)/i.test(normalized) &&
+    (isHowTo || hasAppContext)
+  ) {
+    return 'SAVE_PROJECT';
+  }
+
+  if (
+    /(توصيل|delivery|deliver)/i.test(normalized) &&
+    (isHowTo || hasAppContext)
+  ) {
+    return 'MATERIAL_DELIVERY';
+  }
+
+  if (detectMaterialSearchIntent(userMessage).detected) {
+    return null;
+  }
+
+  if (detectOwnedMaterialsProjectIntent(userMessage)) {
+    return null;
+  }
+
+  if (detectProjectMaterialAvailabilityIntent(userMessage)) {
+    return null;
+  }
+
+  if (
+    isHowTo &&
+    /(تطبيق|app|impactloop|platform|حجز|حفظ|توصيل|reservation|delivery|مشروع|project)/i.test(
+      normalized,
+    )
+  ) {
+    return 'GENERAL_PLATFORM';
+  }
+
+  return null;
+};
+
+export const detectDeterministicPlatformActionIntent = (
+  userMessage: string,
+): boolean => {
+  if (detectPlatformGuidanceIntent(userMessage)) {
+    return false;
+  }
+
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+  if (
+    /(هل\s+عندي|do\s+i\s+have|are\s+there)/i.test(normalized) &&
+    /(حجوز|reservation)/i.test(normalized)
+  ) {
+    return false;
+  }
+
+  if (isImperativePlatformAction(userMessage, normalized)) {
+    return true;
+  }
+
+  return (
+    (/\b(save|reserve|book|link|start|unlink|cancel)\b/i.test(normalized) ||
+      /(احفظ|احفظلي|احجز|احجزلي|اربط|ابدأ|ابدألي|الغي|إلغاء|الغ)/i.test(
+        normalized,
+      )) &&
+    !hasPlatformGuidanceHowToCue(userMessage, normalized)
+  );
+};
+
+export const detectAmbiguousLearnerRequest = (userMessage: string): boolean => {
+  const normalized = normalizeArabicVariants(normalize(userMessage)).trim();
+  return /^(اعملها|اعملو|do it|هاتها|بدي إياها|بدي اياها|بدّي إياها)[\s؟?!.]*$/iu.test(
+    normalized,
+  );
+};
+
 export const detectComparisonFollowUpIntent = (userMessage: string): boolean => {
   const normalized = normalize(userMessage);
   const asksWhich =

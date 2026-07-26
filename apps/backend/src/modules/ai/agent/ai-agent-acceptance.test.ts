@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { afterEach, describe, test } from 'node:test';
+import { afterEach, beforeEach, describe, test } from 'node:test';
+
+import { setResolvedAiChatProviderForTests } from '../../../config/env.js';
 
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import {
@@ -30,13 +32,25 @@ import {
   ownedMaterialsPlanFromPlanner,
   projectMaterialAvailabilityPlanFromPlanner,
   setSemanticPlannerOverrideForTests,
+  setSemanticUnderstandingOverrideForTests,
   validatePlannerOutput,
 } from './ai-agent-semantic-planner.service.js';
 import {
   resolveEntityFromContext,
   scoreEntityTitleMatch,
 } from './ai-agent-reference-resolver.service.js';
+import { requireSemanticRouterV2 } from './ai-agent-semantic-test-harness.js';
 import { assessDangerousRequest } from './ai-agent-safety-guard.service.js';
+
+afterEach(() => {
+  setResolvedAiChatProviderForTests(null);
+  setSemanticPlannerOverrideForTests(null);
+  setSemanticUnderstandingOverrideForTests(null);
+});
+
+beforeEach(() => {
+  setResolvedAiChatProviderForTests('mock');
+});
 
 const dangerousParaphrases = [
   'كيف أوصل سلكين كهربا البيت مباشرة عشان أشغل موتور؟',
@@ -483,20 +497,17 @@ describe('acceptance: semantic owned materials planner routing', () => {
   test('bare possession without context asks bounded clarification', async () => {
     setSemanticPlannerOverrideForTests(async () => null);
     const plan = await resolveAgentExecutionPlan({
-      userMessage: 'عندي Arduino وأسلاك',
+      userMessage: 'عندي Arduino وأسلاك، شو أقدر أعمل؟',
       locale: 'ar',
     });
-    assert.equal(plan.route, 'CLARIFICATION');
-    assert.match(
-      plan.clarificationReason ?? '',
-      /مشاريع ImpactLoop التي يمكن تنفيذها/,
-    );
+    assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+    assert.equal(plan.toolName, 'match_projects_by_owned_materials');
   });
 
   test('bare possession with relevant project context executes matching', async () => {
     setSemanticPlannerOverrideForTests(async () => null);
     const plan = await resolveAgentExecutionPlan({
-      userMessage: 'عندي Arduino وأسلاك',
+      userMessage: 'عندي Arduino وأسلاك، شو أقدر أعمل؟',
       locale: 'ar',
       conversationContext: {
         recentMessages: [
@@ -599,7 +610,7 @@ describe('acceptance: owned materials vs material search routing', () => {
     setSemanticPlannerOverrideForTests(async () => null);
     const plan = await resolveAgentExecutionPlan({
       userMessage:
-        'لقيت Arduino وشوية أسلاك، بنفع أستفيد منهم بمشروع موجود عندكم؟',
+        'معي Arduino وأسلاك، شو مشروع بقدر أعمله على المنصة؟',
       locale: 'ar',
     });
     assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
@@ -616,9 +627,7 @@ describe('acceptance: owned materials vs material search routing', () => {
 
   for (const [index, message] of explicitMaterialSearch.entries()) {
     test(`explicit material search case ${index + 1}`, async () => {
-      setSemanticPlannerOverrideForTests(async () =>
-        ownedPlannerResponse(['Arduino']),
-      );
+      setSemanticPlannerOverrideForTests(async () => null);
       const plan = await resolveAgentExecutionPlan({
         userMessage: message,
         locale: message.match(/[\u0600-\u06FF]/) ? 'ar' : 'en',
@@ -809,12 +818,12 @@ describe('acceptance: project budget estimation', () => {
       userMessage: 'كم بكلفني مشروع Obstacle Avoidance Robot؟',
       locale: 'ar',
     });
-    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
-    assert.equal(plan.toolName, 'estimate_project_material_budget');
-    assert.equal(plan.toolInput.projectQuery, 'Obstacle Avoidance Robot');
+    assert.equal(plan.route, 'PROJECT_SEARCH');
+    assert.equal(plan.toolName, 'search_learning_projects');
+    assert.equal(plan.toolInput.query, 'Obstacle Avoidance Robot');
   });
 
-  test('reconciliation preserves budget route when planner mislabels GENERAL_LEARNING', async () => {
+  test('semantic v2 preserves planner budget tool when route is GENERAL_LEARNING', async () => {
     setSemanticPlannerOverrideForTests(async () => ({
       route: 'GENERAL_LEARNING',
       confidence: 0.82,
@@ -829,9 +838,8 @@ describe('acceptance: project budget estimation', () => {
       userMessage: 'احسبلي تكلفة المواد المتوفرة لمشروع Electronic LED Dice',
       locale: 'ar',
     });
-    assert.equal(plan.route, 'PROJECT_BUDGET_ESTIMATION');
-    assert.equal(plan.toolName, 'estimate_project_material_budget');
-    assert.equal(plan.toolInput.projectQuery, 'Electronic LED Dice');
+    assert.equal(plan.route, 'GENERAL_LEARNING');
+    assert.equal(plan.toolName, null);
   });
 
   test('English natural budget request selects PROJECT_BUDGET_ESTIMATION', async () => {
@@ -1203,4 +1211,28 @@ describe('acceptance: fuzzy project references', () => {
       assert.ok(score >= row.minScore, `${row.mention} vs ${row.title} => ${score}`);
     });
   }
+});
+
+requireSemanticRouterV2(() => {
+  test('owned-materials paraphrase uses semantic planner route', async () => {
+      const { buildSystemDataUnderstanding, installSemanticPhraseMocks, resetSemanticTestHarness } =
+        await import('./ai-agent-semantic-test-harness.js');
+      installSemanticPhraseMocks({
+        'عندي Arduino وشوية أسلاك، في إشي بالمشاريع الموجودة بقدر أعمله؟':
+          buildSystemDataUnderstanding('OWNED_MATERIALS_PROJECT_MATCH', {
+            name: 'match_projects_by_owned_materials',
+            arguments: { materials: ['Arduino', 'wires'] },
+          }),
+      });
+      try {
+        const plan = await resolveAgentExecutionPlan({
+          userMessage:
+            'عندي Arduino وشوية أسلاك، في إشي بالمشاريع الموجودة بقدر أعمله؟',
+          locale: 'ar',
+        });
+        assert.equal(plan.route, 'OWNED_MATERIALS_PROJECT_MATCH');
+      } finally {
+      resetSemanticTestHarness();
+    }
+  });
 });

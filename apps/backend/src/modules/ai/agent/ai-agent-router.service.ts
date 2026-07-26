@@ -9,6 +9,7 @@ import {
   detectMaterialDetailsIntent,
   detectMaterialSearchIntent,
   detectOwnedMaterialsProjectIntent,
+  detectPlatformGuidanceIntent,
   detectProjectComponentsIntent,
   detectProjectBudgetEstimationIntent,
   detectProjectsWithinBudgetIntent,
@@ -321,7 +322,7 @@ const matchSemanticPlatformRoute = (text: string): AiAgentRouteDecision | null =
   }
 
   const materialIntent = detectMaterialSearchIntent(text);
-  if (materialIntent.detected) {
+  if (materialIntent.detected && !detectPlatformGuidanceIntent(text)) {
     return {
       route: 'MATERIAL_SEARCH',
       confidence: materialIntent.confidence,
@@ -366,6 +367,12 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
   for (const candidate of PLATFORM_ROUTE_PATTERNS) {
     if (candidate.patterns.some((pattern) => pattern.test(normalized) || pattern.test(text))) {
       if (
+        candidate.route === 'ACTION_REQUEST' &&
+        detectPlatformGuidanceIntent(text)
+      ) {
+        continue;
+      }
+      if (
         candidate.route === 'PROJECT_COMPONENTS' &&
         detectBuildGapIntent(text)
       ) {
@@ -402,6 +409,19 @@ const matchPlatformRoute = (text: string): AiAgentRouteDecision | null => {
   return matchSemanticPlatformRoute(text);
 };
 
+export const assessHardSafetyRoute = (userMessage: string): AiAgentRouteDecision | null => {
+  const scope = classifyScopeDeterministic(userMessage);
+  if (scope.classification === 'DANGEROUS_REQUEST') {
+    return {
+      route: 'DANGEROUS_REQUEST',
+      confidence: scope.confidence,
+      source: 'deterministic',
+    };
+  }
+  return null;
+};
+
+/** @deprecated Functional keyword router — retained for legacy tests; not used in semantic-first v2 production path. */
 export const resolveAgentRoute = (input: {
   userMessage: string;
   locale: 'en' | 'ar';
@@ -433,6 +453,16 @@ export const resolveAgentRoute = (input: {
   const platformRoute = matchPlatformRoute(routingMessage);
   if (platformRoute) {
     return platformRoute;
+  }
+
+  const platformGuidanceTopic = detectPlatformGuidanceIntent(routingMessage);
+  if (platformGuidanceTopic) {
+    return {
+      route: 'PLATFORM_GUIDANCE',
+      confidence: 0.94,
+      source: 'deterministic',
+      reason: platformGuidanceTopic,
+    };
   }
 
   const externalKnowledge = matchExternalKnowledgeRoute(routingMessage);
