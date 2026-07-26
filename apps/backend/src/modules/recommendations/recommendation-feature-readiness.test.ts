@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 
 import {
   classifyArtifactFeatureToken,
+  classifyRuntimeFeatureForScorer,
   classifyRuntimeFeatureToken,
   compileRecommendationFeatureReadinessContract,
   createFeatureReadinessSampleCollector,
@@ -204,6 +205,53 @@ describe('RP-01.5 recommendation feature readiness (corrected)', () => {
         artifactFeatureNames: new Set(),
       }).state,
       'INVALID_RUNTIME_FEATURE_VALUE',
+    );
+  });
+
+  it('refines scorer nonportable features without changing readiness classifications', () => {
+    const base = {
+      compiledContract: compiled,
+      domain: 'material' as const,
+      side: 'item' as const,
+      artifactFeatureNames: new Set<string>(),
+    };
+    assert.equal(
+      classifyRuntimeFeatureToken({ ...base, token: 'category:legacy' }).state,
+      'UNSUPPORTED_RUNTIME_FEATURE',
+    );
+    assert.equal(
+      classifyRuntimeFeatureForScorer({
+        ...base,
+        token: 'category:legacy',
+      }).state,
+      'NONPORTABLE_RUNTIME_FEATURE',
+    );
+    assert.equal(
+      classifyRuntimeFeatureForScorer({
+        ...base,
+        token: 'project-topic:robotics',
+      }).state,
+      'UNSUPPORTED_RUNTIME_FEATURE',
+    );
+    assert.equal(
+      classifyRuntimeFeatureForScorer({ ...base, token: 'invented:value' })
+        .state,
+      'UNKNOWN_RUNTIME_FEATURE',
+    );
+    assert.equal(
+      classifyRuntimeFeatureForScorer({
+        ...base,
+        token: 'material-condition:destroyed',
+      }).state,
+      'INVALID_RUNTIME_FEATURE_VALUE',
+    );
+    assert.equal(
+      classifyRuntimeFeatureForScorer({
+        ...base,
+        token: 'material-family:electronics',
+        weight: 2,
+      }).state,
+      'INVALID_RUNTIME_FEATURE_WEIGHT',
     );
   });
 

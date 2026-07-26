@@ -16,6 +16,7 @@ import {
   type ArtifactUserFeatureOverlapStatus,
 } from "./canonical-shadow-user-features.js";
 import {
+  buildFeatureReadinessArtifactInput,
   evaluateRecommendationFeatureReadiness,
   getCompiledRecommendationFeatureReadinessContract,
   setCompiledRecommendationFeatureReadinessContractForTests,
@@ -24,6 +25,9 @@ import {
 import {
   combineNormalizedScores,
   scorePortableLightFm,
+  type LightFmScorerDiagnostics,
+  type LightFmScorerReasonCode,
+  type LightFmScorerResult,
   type WeightedFeature,
 } from "./ml-lightfm-scorer.js";
 import {
@@ -203,6 +207,10 @@ export type ShadowDiagnostics = {
   artifactVersion?: string;
   featureSchemaVersion?: string;
   missingFeatureCount?: number;
+  scorerOutcome?: LightFmScorerResult["outcome"];
+  scorerReadiness?: LightFmScorerResult["scoringReadiness"];
+  scorerReasonCodes?: LightFmScorerReasonCode[];
+  scorerDiagnostics?: LightFmScorerDiagnostics;
   resolutionStatus?: LearnerInterestResolutionStatus;
   canonicalFeatureCount?: number;
   mappedInputCount?: number;
@@ -653,7 +661,7 @@ const safeWriteProjectDecisionLog = (
 const buildProjectShadowDiagnostics = (
   input: ShadowComparisonInput<unknown>,
   model: PortableModelArtifact,
-  longTerm: ReturnType<typeof scorePortableLightFm>,
+  longTerm: Extract<LightFmScorerResult, { outcome: "SCORED" }>,
   started: number,
   scorerDurationMs: number,
   featureReadiness: RecommendationFeatureReadiness,
@@ -753,7 +761,11 @@ const buildProjectShadowDiagnostics = (
     scoringDurationMs: scorerDurationMs,
     artifactVersion: model.model_version,
     featureSchemaVersion: model.feature_schema_version,
-    missingFeatureCount: longTerm.missingFeatures.length,
+    missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+    scorerOutcome: longTerm.outcome,
+    scorerReadiness: longTerm.scoringReadiness,
+    scorerReasonCodes: longTerm.reasonCodes,
+    scorerDiagnostics: longTerm.diagnostics,
     shadowTop5Keys: ml.slice(0, 5).map(privacyKey),
     currentTop5Keys: deterministic.slice(0, 5).map(privacyKey),
     longTermTop5Keys: ml.slice(0, 5).map(privacyKey),
@@ -932,7 +944,11 @@ const buildProjectShadowDiagnostics = (
       scoringDurationMs: scorerDurationMs,
       artifactVersion: model.model_version,
       featureSchemaVersion: model.feature_schema_version,
-      missingFeatureCount: longTerm.missingFeatures.length,
+      missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+      scorerOutcome: longTerm.outcome,
+      scorerReadiness: longTerm.scoringReadiness,
+      scorerReasonCodes: longTerm.reasonCodes,
+      scorerDiagnostics: longTerm.diagnostics,
       shadowTop5Keys: fusedTop.slice(0, 5).map(privacyKey),
       currentTop5Keys: deterministic.slice(0, 5).map(privacyKey),
       longTermTop5Keys: longTermTop.slice(0, 5).map(privacyKey),
@@ -1094,7 +1110,7 @@ const runMlShadowComparisonInternal = async <T>(
 
     const compiledContract =
       await getCompiledRecommendationFeatureReadinessContract();
-    const featureReadiness = evaluateRecommendationFeatureReadiness({
+    const featureReadinessInput = {
       compiledContract,
       domain: input.domain,
       user: {
@@ -1102,43 +1118,18 @@ const runMlShadowComparisonInternal = async <T>(
         resolutionStatus: canonicalUser.resolutionStatus,
       },
       itemRows: candidates,
-      artifact: {
-        modelVersion: model.model_version,
-        featureSchemaVersion: model.feature_schema_version,
-        feature_contract_id:
-          "feature_contract_id" in model &&
-          typeof (model as { feature_contract_id?: unknown }).feature_contract_id ===
-            "string"
-            ? (model as { feature_contract_id: string }).feature_contract_id
-            : null,
-        feature_contract_version:
-          "feature_contract_version" in model &&
-          typeof (model as { feature_contract_version?: unknown })
-            .feature_contract_version === "string"
-            ? (model as { feature_contract_version: string })
-                .feature_contract_version
-            : null,
-        feature_contract_fingerprint:
-          "feature_contract_fingerprint" in model &&
-          typeof (model as { feature_contract_fingerprint?: unknown })
-            .feature_contract_fingerprint === "string"
-            ? (model as { feature_contract_fingerprint: string })
-                .feature_contract_fingerprint
-            : null,
-        feature_aggregation_mode:
-          "feature_aggregation_mode" in model &&
-          typeof (model as { feature_aggregation_mode?: unknown })
-            .feature_aggregation_mode === "string"
-            ? (model as { feature_aggregation_mode: string })
-                .feature_aggregation_mode
-            : null,
-        userFeatureNames: model.user_features.map((entry) => entry.name),
-        itemFeatureNames: model.item_features.map((entry) => entry.name),
-      },
-    });
+      artifact: buildFeatureReadinessArtifactInput(model),
+    } as const;
+    const featureReadiness =
+      evaluateRecommendationFeatureReadiness(featureReadinessInput);
 
     const scorerStarted = performance.now();
-    const longTerm = scorePortableLightFm(model, userFeatures, candidates);
+    const longTerm = scorePortableLightFm(
+      model,
+      userFeatures,
+      candidates,
+      { readinessInput: featureReadinessInput, featureReadiness },
+    );
     const scorerDurationMs = Math.max(0, performance.now() - scorerStarted);
 
     observeMaterialStage(
@@ -1147,6 +1138,31 @@ const runMlShadowComparisonInternal = async <T>(
       "portable_artifact_scoring",
       "complete",
     );
+
+    if (longTerm.outcome === "FAILED_CLOSED") {
+      const diagnostics: ShadowDiagnostics = {
+        ...reportMlShadowFallback(
+          input.domain,
+          input.candidates.length,
+          new Error("lightfm_scorer_failed_closed"),
+        ),
+        ...canonicalUserDiagnostics,
+        featureReadiness,
+        scoringDurationMs: scorerDurationMs,
+        missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+        scorerOutcome: longTerm.outcome,
+        scorerReadiness: longTerm.scoringReadiness,
+        scorerReasonCodes: longTerm.reasonCodes,
+        scorerDiagnostics: longTerm.diagnostics,
+      };
+      if (input.domain === "material") {
+        safeWriteMaterialDecisionLog(input, diagnostics, started, "FALLBACK");
+      } else {
+        safeWriteProjectDecisionLog(input, diagnostics, started, "FALLBACK");
+      }
+      safeObserve({ ...diagnostics, domain: input.domain });
+      return { response: input.response, diagnostics };
+    }
 
     if (input.domain === "project") {
       const projectDecision = buildProjectShadowDiagnostics(
@@ -1459,7 +1475,11 @@ const runMlShadowComparisonInternal = async <T>(
       scoringDurationMs,
       artifactVersion: model.model_version,
       featureSchemaVersion: model.feature_schema_version,
-      missingFeatureCount: longTerm.missingFeatures.length,
+      missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+      scorerOutcome: longTerm.outcome,
+      scorerReadiness: longTerm.scoringReadiness,
+      scorerReasonCodes: longTerm.reasonCodes,
+      scorerDiagnostics: longTerm.diagnostics,
       ...canonicalUserDiagnostics,
       featureReadiness,
       currentTop5Keys: deduplicatedCurrent.slice(0, 5).map(privacyKey),
