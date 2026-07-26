@@ -6916,6 +6916,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         accountStatus: "ACTIVE",
         activeRole: "LEARNER",
         emailVerifiedAt: now(),
+        recommendationEvidenceEligibility: "EXCLUDED_DEMO",
         roles: { create: [{ role: "LEARNER", isPrimary: true }] },
         learnerProfile: {
           create: {
@@ -6976,6 +6977,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         accountStatus: "ACTIVE",
         activeRole: "SUPPLIER",
         emailVerifiedAt: now(),
+        recommendationEvidenceEligibility: "EXCLUDED_DEMO",
         roles: { create: [{ role: "SUPPLIER", isPrimary: true }] },
         supplierProfile: {
           create: {
@@ -7061,6 +7063,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         accountStatus: "ACTIVE",
         activeRole: "DRIVER",
         emailVerifiedAt: now(),
+        recommendationEvidenceEligibility: "EXCLUDED_INTERNAL",
         roles: { create: [{ role: "DRIVER", isPrimary: true }] },
         driverProfile: {
           create: {
@@ -7104,6 +7107,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
         accountStatus: "ACTIVE",
         activeRole: "ADMIN",
         emailVerifiedAt: now(),
+        recommendationEvidenceEligibility: "EXCLUDED_INTERNAL",
         roles: { create: [{ role: "ADMIN", isPrimary: true }] },
       },
       select: { id: true },
@@ -7128,6 +7132,7 @@ const createAdditionalLearners = async (
       accountStatus: "ACTIVE" as const,
       activeRole: "LEARNER" as const,
       emailVerifiedAt: now(),
+      recommendationEvidenceEligibility: "EXCLUDED_DEMO" as const,
       profileImageUrl: `https://api.dicebear.com/9.x/initials/png?seed=${encodeURIComponent(
         learner.displayName,
       )}`,

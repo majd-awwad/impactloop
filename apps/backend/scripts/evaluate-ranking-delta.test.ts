@@ -251,7 +251,14 @@ const buildFakeDeps = (
 ): EvaluatorDeps => ({
   prisma: {
     user: {
-      findMany: async () => [{ id: 'user-1', email: 'learner@test.com' }],
+      findMany: async () => [
+        {
+          id: 'user-1',
+          email: 'learner@test.com',
+          accountStatus: 'ACTIVE',
+          recommendationEvidenceEligibility: 'ELIGIBLE',
+        },
+      ],
     },
     $disconnect: async () => {},
   },
@@ -1184,6 +1191,21 @@ describe('runRankingDeltaEvaluation (synthetic deps, no Prisma)', () => {
     assert.equal(result.candidatePool.projectCount, 3);
     assert.equal(result.inputPoolMutationDetected, false);
     assert.equal(result.canonicalFallbacks.total, 0);
+  });
+
+  test('ineligible learner accounts fail closed before ranking', async () => {
+    const deps = buildFakeDeps(defaultFixture());
+    deps.prisma.user.findMany = async () => [
+      {
+        id: 'user-1',
+        email: 'learner@test.com',
+        accountStatus: 'ACTIVE',
+        recommendationEvidenceEligibility: 'EXCLUDED_DEMO',
+      },
+    ];
+    const result = await runRankingDeltaEvaluation(baseOptions(), deps);
+    assert.equal(result.status, 'INVALID');
+    assert.ok(result.invalidResultReasons.includes('LEARNER_NOT_EVIDENCE_ELIGIBLE'));
   });
 
   test('material scoring-identity failure (silent drop) invalidates the run, never reinterpreted as filtering', async () => {

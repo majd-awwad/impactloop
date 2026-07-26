@@ -27,17 +27,75 @@ const row = (overrides: Partial<RawInteraction>): RawInteraction => ({
   ...overrides,
 });
 
-test("data origin classification is deterministic and keeps test/seed origins separate", () => {
-  assert.equal(classifyOrigin({ userEmail: "majd@learner.com" }), "DEMO_SEED");
+test("data origin classification uses eventSource and account eligibility only", () => {
   assert.equal(
-    classifyOrigin({ eventSource: "TEST", userEmail: "real@example.com" }),
+    classifyOrigin({
+      evidenceEligibility: "EXCLUDED_DEMO",
+      accountStatus: "ACTIVE",
+    }),
+    "DEMO_SEED",
+  );
+  assert.equal(
+    classifyOrigin({
+      eventSource: "TEST",
+      evidenceEligibility: "ELIGIBLE",
+      accountStatus: "ACTIVE",
+      recommendationObservability: true,
+    }),
     "TEST_FIXTURE",
   );
-  assert.equal(classifyOrigin({ eventSource: "LOAD_TEST" }), "BENCHMARK");
-  assert.equal(classifyOrigin({ userEmail: "real@example.com" }), "REAL_USER");
   assert.equal(
-    classifyOrigin({ itemText: "[test-internal-delivery] copy" }),
-    "TEST_FIXTURE",
+    classifyOrigin({
+      eventSource: "LOAD_TEST",
+      recommendationObservability: true,
+    }),
+    "BENCHMARK",
+  );
+  assert.equal(
+    classifyOrigin({
+      eventSource: "SYNTHETIC",
+      recommendationObservability: true,
+    }),
+    "SYNTHETIC",
+  );
+  assert.equal(
+    classifyOrigin({
+      eventSource: "LEGACY_UNCLASSIFIED",
+      recommendationObservability: true,
+    }),
+    "UNKNOWN",
+  );
+  assert.equal(
+    classifyOrigin({
+      eventSource: "REAL",
+      evidenceEligibility: "ELIGIBLE",
+      accountStatus: "ACTIVE",
+      recommendationObservability: true,
+    }),
+    "REAL_USER",
+  );
+  assert.equal(
+    classifyOrigin({
+      eventSource: "REAL",
+      evidenceEligibility: "UNCLASSIFIED",
+      accountStatus: "ACTIVE",
+      recommendationObservability: true,
+    }),
+    "UNKNOWN",
+  );
+  assert.equal(
+    classifyOrigin({
+      evidenceEligibility: "ELIGIBLE",
+      accountStatus: "ACTIVE",
+    }),
+    "REAL_USER",
+  );
+  assert.equal(
+    classifyOrigin({
+      evidenceEligibility: "UNCLASSIFIED",
+      accountStatus: "ACTIVE",
+    }),
+    "UNKNOWN",
   );
   assert.equal(classifyOrigin({}), "UNKNOWN");
 });

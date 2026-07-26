@@ -17,6 +17,11 @@ import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import { getRequestId } from '../../observability/request-context.js';
 import { RECOMMENDATION_SCORER_VERSION } from '../../config/recommendation-scoring-version.js';
+import {
+  RecommendationEventOriginError,
+  resolveRecommendationEventSource,
+  type WritableRecommendationEventSource,
+} from './recommendation-event-origin.js';
 
 export const RECOMMENDATION_IMPRESSION_HEADER =
   'x-recommendation-impression-id';
@@ -44,7 +49,36 @@ export const RECOMMENDATION_SURFACES = [
 
 type EntityType = RecommendationEntityType;
 type EventSource = RecommendationEventSource;
+type WritableEventSource = WritableRecommendationEventSource;
 type CacheState = RecommendationCacheState;
+
+export class RecommendationOutboxIdentityConflictError extends Error {
+  readonly code = 'outbox_identity_conflict' as const;
+  readonly eventKind: RecommendationOutboxEventKind;
+  readonly phase = 'enqueue' as const;
+  readonly attemptedOrigin?: string;
+  readonly storedOrigin?: string;
+  readonly dedupeKeyPrefix?: string;
+
+  constructor(input: {
+    eventKind: RecommendationOutboxEventKind;
+    attemptedOrigin?: string;
+    storedOrigin?: string;
+    deduplicationKey?: string;
+  }) {
+    super('Recommendation outbox identity conflict');
+    this.name = 'RecommendationOutboxIdentityConflictError';
+    this.eventKind = input.eventKind;
+    this.attemptedOrigin = input.attemptedOrigin;
+    this.storedOrigin = input.storedOrigin;
+    this.dedupeKeyPrefix = input.deduplicationKey
+      ? createHash('sha256')
+          .update(input.deduplicationKey)
+          .digest('hex')
+          .slice(0, 12)
+      : undefined;
+  }
+}
 
 export type RecommendationCandidateTraceInput = {
   entityType: EntityType;
@@ -285,6 +319,7 @@ const validTrace = (trace: RecommendationCandidateTraceInput): boolean =>
 const prepareTraces = (
   traces: RecommendationCandidateTraceInput[],
   generationKey: string,
+  defaultEventSource: WritableEventSource,
 ) =>
   traces
     .filter(validTrace)
@@ -310,7 +345,9 @@ const prepareTraces = (
         : {}),
       exclusionReason: boundedString(trace.exclusionReason, 191) ?? null,
       selected: trace.selected === true,
-      eventSource: trace.eventSource ?? 'REAL',
+      eventSource: trace.eventSource
+        ? resolveRecommendationEventSource(trace.eventSource)
+        : defaultEventSource,
     }));
 
 const prepareExposureItems = (items: RecommendationExposureItem[]) =>
@@ -362,6 +399,7 @@ const prepareScoreComponents = (
 
 const outboxTraceFor = (
   trace: RecommendationCandidateTraceInput,
+  defaultEventSource: WritableEventSource,
 ): RecommendationOutboxTrace | null => {
   if (!validTrace(trace)) {
     return null;
@@ -381,7 +419,9 @@ const outboxTraceFor = (
     ...(scoreComponents ? { scoreComponents } : {}),
     exclusionReason: boundedString(trace.exclusionReason, 191) ?? null,
     selected: trace.selected === true,
-    eventSource: trace.eventSource ?? 'REAL',
+    eventSource: trace.eventSource
+      ? resolveRecommendationEventSource(trace.eventSource)
+      : defaultEventSource,
   };
 };
 
@@ -390,10 +430,11 @@ const payloadByteLength = (payload: unknown): number =>
 
 const buildGenerationOutboxPayload = (
   generation: RecommendationGenerationMetadata,
+  eventSource: WritableEventSource,
 ): RecommendationGenerationOutboxPayload | null => {
   const sourceTraces = generation.candidateTraces;
   const traces = sourceTraces
-    .map(outboxTraceFor)
+    .map((trace) => outboxTraceFor(trace, eventSource))
     .filter((trace): trace is RecommendationOutboxTrace => trace !== null)
     .slice(0, MAX_RECOMMENDATION_TRACE_ROWS);
   const traceTruncated = traces.length !== sourceTraces.length;
@@ -413,7 +454,7 @@ const buildGenerationOutboxPayload = (
     persistedTraceCount: traces.length,
     traceTruncated,
     candidateTraces: traces,
-    eventSource: generation.eventSource ?? 'REAL',
+    eventSource,
   };
 
   while (
@@ -435,6 +476,7 @@ const buildExposureOutboxPayload = (input: {
   cacheState: CacheState;
   correlationId?: string;
   items: RecommendationExposureItem[];
+  eventSource: WritableEventSource;
 }): {
   payload: RecommendationExposureOutboxPayload;
   impressionIds: Map<string, string>;
@@ -477,7 +519,7 @@ const buildExposureOutboxPayload = (input: {
       algorithmVersion: input.generation.algorithmVersion,
       policyVersion: input.generation.policyVersion,
       impressions,
-      eventSource: input.generation.eventSource ?? 'REAL',
+      eventSource: input.eventSource,
     },
     impressionIds,
   };
@@ -502,6 +544,264 @@ const isUniqueConstraintError = (error: unknown): boolean =>
       error.code === 'P2002',
   );
 
+const canonicalJson = (value: unknown): string => {
+  const normalize = (input: unknown): unknown => {
+    if (input === null || typeof input !== 'object') {
+      return input;
+    }
+    if (Array.isArray(input)) {
+      return input.map(normalize);
+    }
+    const record = input as Record<string, unknown>;
+    const sorted: Record<string, unknown> = {};
+    for (const key of Object.keys(record).sort()) {
+      sorted[key] = normalize(record[key]);
+    }
+    return sorted;
+  };
+  return JSON.stringify(normalize(value));
+};
+
+const readOutboxPayload = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+};
+
+const readPayloadEventSource = (payload: unknown): string | undefined => {
+  const record = readOutboxPayload(payload);
+  return typeof record?.eventSource === 'string' ? record.eventSource : undefined;
+};
+
+const conflictLogFields = (error: RecommendationOutboxIdentityConflictError) => ({
+  conflictCode: error.code,
+  eventKind: error.eventKind,
+  phase: error.phase,
+  ...(error.attemptedOrigin ? { attemptedOrigin: error.attemptedOrigin } : {}),
+  ...(error.storedOrigin ? { storedOrigin: error.storedOrigin } : {}),
+  ...(error.dedupeKeyPrefix ? { dedupeKeyPrefix: error.dedupeKeyPrefix } : {}),
+});
+
+const impressionIdsFromExposurePayload = (
+  payload: RecommendationExposureOutboxPayload,
+): Map<string, string> => {
+  const impressionIds = new Map<string, string>();
+  for (const item of payload.impressions) {
+    impressionIds.set(
+      `${item.entityType}:${item.entityId}:${item.sectionKey}:${item.position}`,
+      item.impressionId,
+    );
+  }
+  return impressionIds;
+};
+
+const generationIdentityFingerprint = (
+  payload: RecommendationGenerationOutboxPayload,
+): string =>
+  canonicalJson({
+    schemaVersion: payload.schemaVersion,
+    generationId: payload.generationId,
+    learnerId: payload.learnerId,
+    surface: payload.surface,
+    algorithmName: payload.algorithmName,
+    algorithmVersion: payload.algorithmVersion,
+    policyVersion: payload.policyVersion,
+    generatedAt: payload.generatedAt,
+    cacheState: payload.cacheState,
+    candidateCount: payload.candidateCount,
+    shownItemCount: payload.shownItemCount,
+    generationDurationMs: payload.generationDurationMs,
+    persistedTraceCount: payload.persistedTraceCount,
+    traceTruncated: payload.traceTruncated,
+    eventSource: payload.eventSource,
+    candidateTraces: payload.candidateTraces.map((trace) => ({
+      entityType: trace.entityType,
+      entityId: trace.entityId,
+      surface: trace.surface,
+      sectionKey: trace.sectionKey,
+      candidateSource: trace.candidateSource,
+      eligibilityResult: trace.eligibilityResult,
+      rankBeforeSelection: trace.rankBeforeSelection,
+      finalScore: trace.finalScore,
+      ...(trace.scoreComponents ? { scoreComponents: trace.scoreComponents } : {}),
+      exclusionReason: trace.exclusionReason,
+      selected: trace.selected,
+      eventSource: trace.eventSource,
+    })),
+  });
+
+const exposureIdentityFingerprint = (
+  payload: RecommendationExposureOutboxPayload,
+): string =>
+  canonicalJson({
+    schemaVersion: payload.schemaVersion,
+    generationId: payload.generationId,
+    learnerId: payload.learnerId,
+    surface: payload.surface,
+    cacheState: payload.cacheState,
+    correlationId: payload.correlationId,
+    candidateCount: payload.candidateCount,
+    shownItemCount: payload.shownItemCount,
+    generationDurationMs: payload.generationDurationMs,
+    algorithmName: payload.algorithmName,
+    algorithmVersion: payload.algorithmVersion,
+    policyVersion: payload.policyVersion,
+    eventSource: payload.eventSource,
+    impressions: [...payload.impressions]
+      .map((item) => ({
+        entityType: item.entityType,
+        entityId: item.entityId,
+        sectionKey: item.sectionKey,
+        position: item.position,
+        score: item.score,
+        reasonCode: item.reasonCode,
+      }))
+      .sort((left, right) =>
+        left.position !== right.position
+          ? left.position - right.position
+          : left.sectionKey.localeCompare(right.sectionKey),
+      ),
+  });
+
+export const recommendationExposureOutboxDeduplicationKey = (
+  payload: RecommendationExposureOutboxPayload,
+): string =>
+  `exposure:${createHash('sha256')
+    .update(exposureIdentityFingerprint(payload))
+    .digest('hex')
+    .slice(0, 40)}`;
+
+const actionIdentityFingerprint = (
+  payload: RecommendationActionOutboxPayload,
+): string =>
+  canonicalJson({
+    schemaVersion: payload.schemaVersion,
+    learnerId: payload.learnerId,
+    actionType: payload.actionType,
+    entityType: payload.entityType,
+    entityId: payload.entityId,
+    impressionId: payload.impressionId,
+    sourceOperationId: payload.sourceOperationId,
+    eventSource: payload.eventSource,
+  });
+
+const assertMatchingOutboxIdentity = (input: {
+  eventKind: RecommendationOutboxEventKind;
+  deduplicationKey: string;
+  existingPayload: unknown;
+  nextPayload: unknown;
+}): void => {
+  const existing = readOutboxPayload(input.existingPayload);
+  const attemptedOrigin = readPayloadEventSource(input.nextPayload);
+  const storedOrigin = readPayloadEventSource(input.existingPayload);
+  if (!existing || storedOrigin == null) {
+    throw new RecommendationOutboxIdentityConflictError({
+      eventKind: input.eventKind,
+      attemptedOrigin,
+      storedOrigin,
+      deduplicationKey: input.deduplicationKey,
+    });
+  }
+
+  if (input.eventKind === 'RECOMMENDATION_GENERATION') {
+    if (
+      generationIdentityFingerprint(
+        existing as unknown as RecommendationGenerationOutboxPayload,
+      ) !==
+      generationIdentityFingerprint(
+        input.nextPayload as RecommendationGenerationOutboxPayload,
+      )
+    ) {
+      throw new RecommendationOutboxIdentityConflictError({
+        eventKind: input.eventKind,
+        attemptedOrigin,
+        storedOrigin,
+        deduplicationKey: input.deduplicationKey,
+      });
+    }
+    return;
+  }
+
+  if (input.eventKind === 'RECOMMENDATION_EXPOSURE') {
+    if (
+      exposureIdentityFingerprint(
+        existing as unknown as RecommendationExposureOutboxPayload,
+      ) !==
+      exposureIdentityFingerprint(
+        input.nextPayload as RecommendationExposureOutboxPayload,
+      )
+    ) {
+      throw new RecommendationOutboxIdentityConflictError({
+        eventKind: input.eventKind,
+        attemptedOrigin,
+        storedOrigin,
+        deduplicationKey: input.deduplicationKey,
+      });
+    }
+    return;
+  }
+
+  if (
+    actionIdentityFingerprint(
+      existing as unknown as RecommendationActionOutboxPayload,
+    ) !==
+    actionIdentityFingerprint(input.nextPayload as RecommendationActionOutboxPayload)
+  ) {
+    throw new RecommendationOutboxIdentityConflictError({
+      eventKind: input.eventKind,
+      attemptedOrigin,
+      storedOrigin,
+      deduplicationKey: input.deduplicationKey,
+    });
+  }
+};
+
+const createOutboxRowIdempotent = async (
+  tx: Prisma.TransactionClient,
+  row: {
+    eventKind: RecommendationOutboxEventKind;
+    schemaVersion: string;
+    deduplicationKey: string;
+    payload: Prisma.InputJsonValue;
+  },
+): Promise<{ outcome: 'created' | 'idempotent'; payload: unknown }> => {
+  const savepoint = `sp_${createHash('sha256')
+    .update(row.deduplicationKey)
+    .digest('hex')
+    .slice(0, 24)}`;
+  await tx.$executeRawUnsafe(`SAVEPOINT ${savepoint}`);
+  try {
+    await tx.recommendationEventOutbox.create({ data: row });
+    await tx.$executeRawUnsafe(`RELEASE SAVEPOINT ${savepoint}`);
+    return { outcome: 'created', payload: row.payload };
+  } catch (error) {
+    await tx.$executeRawUnsafe(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+    const existing = await tx.recommendationEventOutbox.findUnique({
+      where: { deduplicationKey: row.deduplicationKey },
+      select: { payload: true, eventKind: true },
+    });
+    if (!existing || existing.eventKind !== row.eventKind) {
+      throw new RecommendationOutboxIdentityConflictError({
+        eventKind: row.eventKind,
+        attemptedOrigin: readPayloadEventSource(row.payload),
+        storedOrigin: readPayloadEventSource(existing?.payload),
+        deduplicationKey: row.deduplicationKey,
+      });
+    }
+    assertMatchingOutboxIdentity({
+      eventKind: row.eventKind,
+      deduplicationKey: row.deduplicationKey,
+      existingPayload: existing.payload,
+      nextPayload: row.payload,
+    });
+    return { outcome: 'idempotent', payload: existing.payload };
+  }
+};
+
 export const enqueueRecommendationExposure = async (input: {
   generation: RecommendationGenerationMetadata;
   cacheState: CacheState;
@@ -510,78 +810,87 @@ export const enqueueRecommendationExposure = async (input: {
   includeGeneration: boolean;
 }): Promise<RecommendationOutboxEnqueueResult> => {
   try {
-    const exposure = buildExposureOutboxPayload(input);
+    const eventSource = resolveRecommendationEventSource(
+      input.generation.eventSource,
+    );
+    const exposure = buildExposureOutboxPayload({ ...input, eventSource });
     const generation = input.includeGeneration
-      ? buildGenerationOutboxPayload(input.generation)
+      ? buildGenerationOutboxPayload(input.generation, eventSource)
       : null;
 
-  if (input.includeGeneration && !generation) {
-    logger.warn(
-      writeFailureContext({
-        learnerId: input.generation.learnerId,
-        correlationId: input.correlationId,
-        phase: 'recommendation-outbox-payload',
-      }),
-      'Recommendation generation outbox payload exceeded its bounded size',
+    if (input.includeGeneration && !generation) {
+      logger.warn(
+        writeFailureContext({
+          learnerId: input.generation.learnerId,
+          correlationId: input.correlationId,
+          phase: 'recommendation-outbox-payload',
+        }),
+        'Recommendation generation outbox payload exceeded its bounded size',
+      );
+      return { enqueued: false, impressionIds: new Map() };
+    }
+
+    if (
+      payloadByteLength(exposure.payload) >
+      MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES
+    ) {
+      logger.warn(
+        writeFailureContext({
+          learnerId: input.generation.learnerId,
+          correlationId: input.correlationId,
+          phase: 'recommendation-outbox-payload',
+        }),
+        'Recommendation exposure outbox payload exceeded its bounded size',
+      );
+      return { enqueued: false, impressionIds: new Map() };
+    }
+
+    const exposureDeduplicationKey = recommendationExposureOutboxDeduplicationKey(
+      exposure.payload,
     );
-    return { enqueued: false, impressionIds: new Map() };
-  }
+    let storedExposure = exposure.payload;
 
-  if (
-    payloadByteLength(exposure.payload) >
-    MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES
-  ) {
-    logger.warn(
-      writeFailureContext({
-        learnerId: input.generation.learnerId,
-        correlationId: input.correlationId,
-        phase: 'recommendation-outbox-payload',
-      }),
-      'Recommendation exposure outbox payload exceeded its bounded size',
-    );
-    return { enqueued: false, impressionIds: new Map() };
-  }
-
-  const rows = [
-    ...(generation
-      ? [
-          {
-            eventKind:
-              'RECOMMENDATION_GENERATION' as RecommendationOutboxEventKind,
-            schemaVersion: generation.schemaVersion,
-            deduplicationKey: `generation:${generation.generationId}`,
-            payload: generation as unknown as Prisma.InputJsonValue,
-          },
-        ]
-      : []),
-    {
-      eventKind: 'RECOMMENDATION_EXPOSURE' as RecommendationOutboxEventKind,
-      schemaVersion: exposure.payload.schemaVersion,
-      deduplicationKey: `exposure:${exposure.payload.exposureId}`,
-      payload: exposure.payload as unknown as Prisma.InputJsonValue,
-    },
-  ];
-
-    await prisma.recommendationEventOutbox.createMany({
-      data: rows,
-      skipDuplicates: true,
+    await prisma.$transaction(async (tx) => {
+      if (generation) {
+        await createOutboxRowIdempotent(tx, {
+          eventKind: 'RECOMMENDATION_GENERATION',
+          schemaVersion: generation.schemaVersion,
+          deduplicationKey: `generation:${generation.generationId}`,
+          payload: generation as unknown as Prisma.InputJsonValue,
+        });
+      }
+      const exposureResult = await createOutboxRowIdempotent(tx, {
+        eventKind: 'RECOMMENDATION_EXPOSURE',
+        schemaVersion: exposure.payload.schemaVersion,
+        deduplicationKey: exposureDeduplicationKey,
+        payload: exposure.payload as unknown as Prisma.InputJsonValue,
+      });
+      storedExposure =
+        exposureResult.payload as RecommendationExposureOutboxPayload;
     });
 
     return {
       enqueued: true,
-      exposureId: exposure.payload.exposureId,
-      impressionIds: exposure.impressionIds,
+      exposureId: storedExposure.exposureId,
+      impressionIds: impressionIdsFromExposurePayload(storedExposure),
     };
   } catch (error) {
     logger.warn(
-      writeFailureContext({
-        learnerId: input.generation.learnerId,
-        correlationId: input.correlationId,
-        phase: 'recommendation-outbox-enqueue',
-      }),
-      error instanceof Error
-        ? error.message.slice(0, 191)
-        : 'Recommendation outbox enqueue failed',
+      {
+        ...writeFailureContext({
+          phase: 'recommendation-outbox-enqueue',
+        }),
+        ...(error instanceof RecommendationOutboxIdentityConflictError
+          ? conflictLogFields(error)
+          : error instanceof RecommendationEventOriginError
+            ? { conflictCode: 'origin_rejected' }
+            : {}),
+      },
+      error instanceof RecommendationOutboxIdentityConflictError
+        ? error.code
+        : error instanceof Error
+          ? error.message.slice(0, 191)
+          : 'Recommendation outbox enqueue failed',
     );
     return { enqueued: false, impressionIds: new Map() };
   }
@@ -760,6 +1069,7 @@ export const enqueueRecommendationAction = async (input: {
       return false;
     }
 
+    const eventSource = resolveRecommendationEventSource(input.eventSource);
     const payload: RecommendationActionOutboxPayload = {
       schemaVersion: RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION,
       actionId: randomUUID(),
@@ -771,35 +1081,39 @@ export const enqueueRecommendationAction = async (input: {
         readRecommendationAttributionHeaders(input.headers).impressionId ?? null,
       sourceOperationId: input.plan.sourceOperationId,
       occurredAt: (input.occurredAt ?? new Date()).toISOString(),
-      eventSource: input.eventSource ?? 'REAL',
+      eventSource,
     };
 
     if (payloadByteLength(payload) > MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES) {
       return false;
     }
 
-    await prisma.recommendationEventOutbox.createMany({
-      data: [
-        {
-          eventKind: 'RECOMMENDATION_ACTION' as RecommendationOutboxEventKind,
-          schemaVersion: payload.schemaVersion,
-          deduplicationKey: `action:${payload.actionType}:${payload.sourceOperationId}`,
-          payload: payload as unknown as Prisma.InputJsonValue,
-        },
-      ],
-      skipDuplicates: true,
+    await prisma.$transaction(async (tx) => {
+      await createOutboxRowIdempotent(tx, {
+        eventKind: 'RECOMMENDATION_ACTION',
+        schemaVersion: payload.schemaVersion,
+        deduplicationKey: `action:${payload.actionType}:${payload.sourceOperationId}`,
+        payload: payload as unknown as Prisma.InputJsonValue,
+      });
     });
     return true;
   } catch (error) {
     logger.warn(
-      writeFailureContext({
-        learnerId: input.learnerId,
-        correlationId: getRequestIdFromContext(),
-        phase: 'recommendation-action-outbox-enqueue',
-      }),
-      error instanceof Error
-        ? error.message.slice(0, 191)
-        : 'Recommendation action outbox enqueue failed',
+      {
+        ...writeFailureContext({
+          phase: 'recommendation-action-outbox-enqueue',
+        }),
+        ...(error instanceof RecommendationOutboxIdentityConflictError
+          ? conflictLogFields(error)
+          : error instanceof RecommendationEventOriginError
+            ? { conflictCode: 'origin_rejected' }
+            : {}),
+      },
+      error instanceof RecommendationOutboxIdentityConflictError
+        ? error.code
+        : error instanceof Error
+          ? error.message.slice(0, 191)
+          : 'Recommendation action outbox enqueue failed',
     );
     return false;
   }
@@ -843,6 +1157,20 @@ export const persistRecommendationExposure = async (input: {
 }): Promise<Map<string, string>> => {
   const items = prepareExposureItems(input.items);
   const impressionIds = new Map<string, string>();
+  let eventSource: WritableEventSource;
+  try {
+    eventSource = resolveRecommendationEventSource(input.generation.eventSource);
+  } catch (error) {
+    logger.error(
+      writeFailureContext({
+        learnerId: input.generation.learnerId,
+        correlationId: input.correlationId,
+        phase: 'recommendation-exposure',
+      }),
+      error instanceof Error ? error.message : 'Recommendation origin required',
+    );
+    return new Map();
+  }
 
   for (const item of items) {
     impressionIds.set(
@@ -867,7 +1195,7 @@ export const persistRecommendationExposure = async (input: {
           candidateCount: input.generation.candidateCount,
           shownItemCount: input.generation.shownItemCount,
           generationDurationMs: input.generation.generationDurationMs,
-          eventSource: input.generation.eventSource ?? 'REAL',
+          eventSource,
         },
         update: {},
       });
@@ -880,6 +1208,7 @@ export const persistRecommendationExposure = async (input: {
         const traces = prepareTraces(
           input.generation.candidateTraces,
           input.generation.generationKey,
+          eventSource,
         ).map((trace) => ({ ...trace, generationId: generation.id }));
         if (traces.length > 0) {
           await tx.recommendationCandidateTrace.createMany({
@@ -902,7 +1231,7 @@ export const persistRecommendationExposure = async (input: {
           candidateCount: input.generation.candidateCount,
           shownItemCount: items.length,
           generationDurationMs: input.generation.generationDurationMs,
-          eventSource: input.generation.eventSource ?? 'REAL',
+          eventSource,
         },
       });
 
@@ -924,7 +1253,7 @@ export const persistRecommendationExposure = async (input: {
             algorithmName: input.generation.algorithmName,
             algorithmVersion: input.generation.algorithmVersion,
             shownAt: new Date(),
-            eventSource: input.generation.eventSource ?? 'REAL',
+            eventSource,
           })),
         });
       }

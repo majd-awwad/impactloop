@@ -1035,7 +1035,16 @@ export const withFrozenClock = <T>(fixedMs: number, run: () => T): T => {
 
 export type EvaluatorPrismaLike = {
   user: {
-    findMany: (args: unknown) => Promise<Array<{ id: string; email: string }>>;
+    findMany: (
+      args: unknown,
+    ) => Promise<
+      Array<{
+        id: string;
+        email: string;
+        accountStatus: string;
+        recommendationEvidenceEligibility: string;
+      }>
+    >;
   };
   $disconnect: () => Promise<void>;
 };
@@ -1277,7 +1286,12 @@ export const runRankingDeltaEvaluation = async (
   // ---- Resolve learner (bounded, explicit input only; no default list). ----
   const users = await deps.prisma.user.findMany({
     where: options.userId ? { id: options.userId } : { email: options.email },
-    select: { id: true, email: true },
+    select: {
+      id: true,
+      email: true,
+      accountStatus: true,
+      recommendationEvidenceEligibility: true,
+    },
   });
   if (users.length !== 1) {
     const draft = buildEmptyInvalidResult(
@@ -1287,6 +1301,13 @@ export const runRankingDeltaEvaluation = async (
     return finalizeResult(draft);
   }
   const user = users[0]!;
+  if (
+    user.accountStatus !== 'ACTIVE' ||
+    user.recommendationEvidenceEligibility !== 'ELIGIBLE'
+  ) {
+    const draft = buildEmptyInvalidResult(options, 'LEARNER_NOT_EVIDENCE_ELIGIBLE');
+    return finalizeResult(draft);
+  }
 
   // ---- Retrieval: exactly once per domain, order preserved verbatim. ----
   const [rawInterests, savedLocation, projectContext] = await Promise.all([

@@ -10,6 +10,10 @@ import {
 import { prisma } from '../../database/prisma.js';
 import { logger } from '../../observability/logger.js';
 import {
+  isPersistedRecommendationEventSource,
+  type PersistedRecommendationEventSource,
+} from './recommendation-event-origin.js';
+import {
   MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES,
   MAX_RECOMMENDATION_SCORE_COMPONENTS,
   MAX_RECOMMENDATION_TRACE_ROWS,
@@ -245,6 +249,45 @@ const parseDate = (record: Record<string, unknown>, key: string): Date => {
   return parsed;
 };
 
+const requiredPersistedEventSource = (
+  value: Record<string, unknown>,
+  field = 'eventSource',
+): PersistedRecommendationEventSource => {
+  const raw = value[field];
+  if (raw === undefined || raw === null) {
+    throw new PoisonOutboxPayloadError(
+      'missing_event_source',
+      'Outbox payload eventSource is required',
+    );
+  }
+  if (!isPersistedRecommendationEventSource(raw)) {
+    throw new PoisonOutboxPayloadError(
+      'invalid_event_source',
+      'Outbox payload eventSource is unsupported',
+    );
+  }
+  return raw;
+};
+
+const assertExistingEventSourceCompatible = (
+  existing: string | null | undefined,
+  incoming: PersistedRecommendationEventSource,
+  entity: string,
+): void => {
+  if (existing == null) {
+    throw new PoisonOutboxPayloadError(
+      'materialized_origin_conflict',
+      `${entity} is missing stored eventSource`,
+    );
+  }
+  if (existing !== incoming) {
+    throw new PoisonOutboxPayloadError(
+      'materialized_origin_conflict',
+      `${entity} eventSource conflict`,
+    );
+  }
+};
+
 const validateTrace = (value: unknown): RecommendationOutboxTrace => {
   if (!isRecord(value)) {
     throw new PoisonOutboxPayloadError('invalid_trace', 'Trace is not an object');
@@ -298,12 +341,7 @@ const validateTrace = (value: unknown): RecommendationOutboxTrace => {
         ? null
         : requiredString(value, 'exclusionReason'),
     selected: value.selected === true,
-    eventSource:
-      value.eventSource === 'SYNTHETIC' ||
-      value.eventSource === 'TEST' ||
-      value.eventSource === 'LOAD_TEST'
-        ? value.eventSource
-        : 'REAL',
+    eventSource: requiredPersistedEventSource(value),
   };
 };
 
@@ -338,12 +376,7 @@ const validateGenerationPayload = (
     persistedTraceCount: requiredNonNegativeInteger(value, 'persistedTraceCount'),
     traceTruncated: value.traceTruncated === true,
     candidateTraces: traces.map(validateTrace),
-    eventSource:
-      value.eventSource === 'SYNTHETIC' ||
-      value.eventSource === 'TEST' ||
-      value.eventSource === 'LOAD_TEST'
-        ? value.eventSource
-        : 'REAL',
+    eventSource: requiredPersistedEventSource(value),
   };
 };
 
@@ -404,22 +437,8 @@ const validateExposurePayload = (
     algorithmVersion: requiredString(value, 'algorithmVersion', 100),
     policyVersion: requiredString(value, 'policyVersion', 100),
     impressions,
-    eventSource:
-      value.eventSource === 'SYNTHETIC' ||
-      value.eventSource === 'TEST' ||
-      value.eventSource === 'LOAD_TEST'
-        ? value.eventSource
-        : 'REAL',
+    eventSource: requiredPersistedEventSource(value),
   };
-};
-
-const validatePayloadSize = (payload: unknown): void => {
-  if (payloadByteLength(payload) > MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES) {
-    throw new PoisonOutboxPayloadError(
-      'payload_too_large',
-      'Outbox payload exceeds the bounded size',
-    );
-  }
 };
 
 const actionTypeForEntity: Record<'MATERIAL' | 'PROJECT', readonly string[]> = {
@@ -471,13 +490,17 @@ const validateActionPayload = (
         ? null
         : requiredString(value, 'sourceOperationId'),
     occurredAt: requiredString(value, 'occurredAt', 64),
-    eventSource:
-      value.eventSource === 'SYNTHETIC' ||
-      value.eventSource === 'TEST' ||
-      value.eventSource === 'LOAD_TEST'
-        ? value.eventSource
-        : 'REAL',
+    eventSource: requiredPersistedEventSource(value),
   };
+};
+
+const validatePayloadSize = (payload: unknown): void => {
+  if (payloadByteLength(payload) > MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES) {
+    throw new PoisonOutboxPayloadError(
+      'payload_too_large',
+      'Outbox payload exceeds the bounded size',
+    );
+  }
 };
 
 export const recoverStaleRecommendationOutbox = async (
@@ -554,6 +577,18 @@ const materializeGeneration = async (
   }
 
   await prisma.$transaction(async (tx) => {
+    const existing = await tx.recommendationGeneration.findUnique({
+      where: { id: payload.generationId },
+      select: { eventSource: true },
+    });
+    if (existing) {
+      assertExistingEventSourceCompatible(
+        existing.eventSource,
+        payload.eventSource,
+        'generation',
+      );
+    }
+
     await tx.recommendationGeneration.upsert({
       where: { id: payload.generationId },
       create: {
@@ -575,25 +610,45 @@ const materializeGeneration = async (
     });
 
     if (payload.candidateTraces.length > 0) {
+      const traces = payload.candidateTraces.map((trace, index) => ({
+        id: traceIdFor(payload.generationId, index),
+        generationId: payload.generationId,
+        entityType: trace.entityType,
+        entityId: trace.entityId,
+        surface: trace.surface,
+        sectionKey: trace.sectionKey,
+        candidateSource: trace.candidateSource,
+        eligibilityResult: trace.eligibilityResult,
+        rankBeforeSelection: trace.rankBeforeSelection,
+        finalScore: trace.finalScore,
+        ...(trace.scoreComponents
+          ? { scoreComponents: trace.scoreComponents as Prisma.InputJsonValue }
+          : {}),
+        exclusionReason: trace.exclusionReason,
+        selected: trace.selected,
+        eventSource: trace.eventSource,
+      }));
+
+      const existingTraces = await tx.recommendationCandidateTrace.findMany({
+        where: { id: { in: traces.map((trace) => trace.id) } },
+        select: { id: true, eventSource: true },
+      });
+      const existingById = new Map(
+        existingTraces.map((row) => [row.id, row.eventSource] as const),
+      );
+      for (const trace of traces) {
+        const existingOrigin = existingById.get(trace.id);
+        if (existingOrigin !== undefined) {
+          assertExistingEventSourceCompatible(
+            existingOrigin,
+            trace.eventSource,
+            'candidate_trace',
+          );
+        }
+      }
+
       await tx.recommendationCandidateTrace.createMany({
-        data: payload.candidateTraces.map((trace, index) => ({
-          id: traceIdFor(payload.generationId, index),
-          generationId: payload.generationId,
-          entityType: trace.entityType,
-          entityId: trace.entityId,
-          surface: trace.surface,
-          sectionKey: trace.sectionKey,
-          candidateSource: trace.candidateSource,
-          eligibilityResult: trace.eligibilityResult,
-          rankBeforeSelection: trace.rankBeforeSelection,
-          finalScore: trace.finalScore,
-          ...(trace.scoreComponents
-            ? { scoreComponents: trace.scoreComponents as Prisma.InputJsonValue }
-            : {}),
-          exclusionReason: trace.exclusionReason,
-          selected: trace.selected,
-          eventSource: trace.eventSource,
-        })),
+        data: traces,
         skipDuplicates: true,
       });
     }
@@ -620,6 +675,18 @@ const materializeExposure = async (
       );
     }
 
+    const existingRequest = await tx.recommendationRequest.findUnique({
+      where: { id: payload.exposureId },
+      select: { eventSource: true },
+    });
+    if (existingRequest) {
+      assertExistingEventSourceCompatible(
+        existingRequest.eventSource,
+        payload.eventSource,
+        'exposure',
+      );
+    }
+
     await tx.recommendationRequest.upsert({
       where: { id: payload.exposureId },
       create: {
@@ -642,23 +709,72 @@ const materializeExposure = async (
     });
 
     if (payload.impressions.length > 0) {
+      const impressions = payload.impressions.map((impression) => ({
+        id: impression.impressionId,
+        requestId: payload.exposureId,
+        learnerId: payload.learnerId,
+        entityType: impression.entityType,
+        entityId: impression.entityId,
+        surface: payload.surface,
+        sectionKey: impression.sectionKey,
+        position: impression.position,
+        score: impression.score,
+        reasonCode: impression.reasonCode,
+        algorithmName: payload.algorithmName,
+        algorithmVersion: payload.algorithmVersion,
+        shownAt: exposedAt,
+        eventSource: payload.eventSource,
+      }));
+
+      const existingImpressions = await tx.recommendationImpression.findMany({
+        where: {
+          OR: [
+            { id: { in: impressions.map((row) => row.id) } },
+            {
+              OR: impressions.map((row) => ({
+                requestId: row.requestId,
+                entityType: row.entityType,
+                entityId: row.entityId,
+                sectionKey: row.sectionKey,
+                position: row.position,
+              })),
+            },
+          ],
+        },
+        select: {
+          id: true,
+          requestId: true,
+          entityType: true,
+          entityId: true,
+          sectionKey: true,
+          position: true,
+          eventSource: true,
+        },
+      });
+
+      for (const existing of existingImpressions) {
+        const match =
+          impressions.find((row) => row.id === existing.id) ??
+          impressions.find(
+            (row) =>
+              row.requestId === existing.requestId &&
+              row.entityType === existing.entityType &&
+              row.entityId === existing.entityId &&
+              row.sectionKey === existing.sectionKey &&
+              row.position === existing.position,
+          );
+        if (!match) {
+          continue;
+        }
+        assertExistingEventSourceCompatible(
+          existing.eventSource,
+          match.eventSource,
+          'impression',
+        );
+      }
+
       await tx.recommendationImpression.createMany({
-        data: payload.impressions.map((impression) => ({
-          id: impression.impressionId,
-          requestId: payload.exposureId,
-          learnerId: payload.learnerId,
-          entityType: impression.entityType,
-          entityId: impression.entityId,
-          surface: payload.surface,
-          sectionKey: impression.sectionKey,
-          position: impression.position,
-          score: impression.score,
-          reasonCode: impression.reasonCode,
-          algorithmName: payload.algorithmName,
-          algorithmVersion: payload.algorithmVersion,
-          shownAt: exposedAt,
-          eventSource: payload.eventSource,
-        })),
+        data: impressions,
         skipDuplicates: true,
       });
     }
@@ -764,6 +880,18 @@ const materializeAction = async (
     return;
   }
 
+  const existingAction = await prisma.recommendationAction.findUnique({
+    where: { id: payload.actionId },
+    select: { eventSource: true },
+  });
+  if (existingAction) {
+    assertExistingEventSourceCompatible(
+      existingAction.eventSource,
+      payload.eventSource,
+      'action',
+    );
+  }
+
   await prisma.recommendationAction.upsert({
     where: { id: payload.actionId },
     create: {
@@ -836,9 +964,15 @@ const failOutboxRecord = async (
     {
       operation: 'recommendation.outbox.processing_failed',
       outboxId: row.id,
-      deduplicationKey: row.deduplication_key,
+      dedupeKeyPrefix: createHash('sha256')
+        .update(row.deduplication_key)
+        .digest('hex')
+        .slice(0, 12),
       attempt,
       status: dead ? 'DEAD' : 'RETRY',
+      ...(error instanceof PoisonOutboxPayloadError || error instanceof RetryableOutboxError
+        ? { conflictCode: error.code }
+        : { conflictCode: 'processing_failed' }),
     },
     boundedErrorSummary(error),
   );
