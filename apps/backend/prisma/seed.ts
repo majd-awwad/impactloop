@@ -1,5 +1,7 @@
 import { Prisma } from "../src/generated/prisma/client.js";
 import { prisma } from "../src/database/prisma.js";
+import { seedTaxonomyCompatibilityRelations } from "../src/modules/taxonomy/taxonomy-compatibility-relations.seed.js";
+import { seedTaxonomyFoundation } from "../src/modules/taxonomy/taxonomy-foundation.repository.js";
 import { hashPassword } from "../src/utils/password.js";
 import { normalizeSearchText } from "../src/utils/normalize-search-text.js";
 
@@ -8551,6 +8553,8 @@ const main = async () => {
   await createUsers(passwordHash, context);
   await createMaterials(context);
   await createProjects(context);
+  await seedTaxonomyFoundation();
+  await seedTaxonomyCompatibilityRelations();
   const engagementCounts = await createLearnerEngagement(context);
   await createReservations(context);
   await createDeliveries(context);
