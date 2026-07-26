@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { LearnerInterestResolutionStatus } from '../taxonomy/learner-interest-resolver.js';
 import { TAXONOMY_CONCEPT_SEEDS } from '../taxonomy/taxonomy-foundation.data.js';
 import { asciiCompare } from './canonical-shadow-user-features.js';
+import type { PortableModelArtifact } from './ml-model-artifact.js';
 import type { WeightedFeature } from './ml-lightfm-scorer.js';
 import type {
   RecommendationFeatureDomain,
@@ -52,11 +53,13 @@ export type ReadinessReasonCode =
   | 'INVALID_RUNTIME_CARDINALITY';
 
 export type FeatureReadinessIssueCode =
+  | 'SCORER_MISSING_FEATURE'
   | 'MISSING_CRITICAL_RUNTIME_GROUP'
   | 'MISSING_CRITICAL_ARTIFACT_FEATURE'
   | 'MISSING_OPTIONAL_ARTIFACT_FEATURE'
   | 'UNKNOWN_RUNTIME_FEATURE'
   | 'UNSUPPORTED_RUNTIME_FEATURE'
+  | 'NONPORTABLE_RUNTIME_FEATURE'
   | 'INVALID_RUNTIME_FEATURE_VALUE'
   | 'INVALID_RUNTIME_FEATURE_WEIGHT'
   | 'INVALID_RUNTIME_CARDINALITY'
@@ -109,6 +112,8 @@ export type GroupCoverageSnapshot = {
 
 export type RecommendationFeatureReadiness = {
   schemaVersion: typeof FEATURE_READINESS_SCHEMA_VERSION;
+  /** Privacy-safe binding to the exact contract, artifact, and runtime rows evaluated. */
+  inputFingerprint: string;
   domain: RecommendationFeatureDomain;
   /** Fail-closed overall readiness, including contract activation gate. */
   status: 'READY' | 'NOT_READY';
@@ -216,6 +221,7 @@ export type CompiledRecommendationFeatureReadinessContract = {
 };
 
 export type FeatureReadinessArtifactInput = {
+  artifactIdentity?: string | null;
   modelVersion: string;
   featureSchemaVersion: string;
   feature_contract_id?: string | null;
@@ -252,10 +258,131 @@ export const hashFeatureReadinessCandidateKey = (
     .update(`recommendation-feature-readiness-candidate-v1:${candidateKey}`)
     .digest('hex');
 
+const artifactStringMetadata = (
+  artifact: PortableModelArtifact,
+  key:
+    | 'feature_contract_id'
+    | 'feature_contract_version'
+    | 'feature_contract_fingerprint'
+    | 'feature_aggregation_mode',
+): string | null => {
+  const value = (artifact as PortableModelArtifact & Record<string, unknown>)[
+    key
+  ];
+  return typeof value === 'string' ? value : null;
+};
+
+export const buildFeatureReadinessArtifactInput = (
+  artifact: PortableModelArtifact,
+): FeatureReadinessArtifactInput => ({
+  artifactIdentity: artifact.content_hash,
+  modelVersion: artifact.model_version,
+  featureSchemaVersion: artifact.feature_schema_version,
+  feature_contract_id: artifactStringMetadata(artifact, 'feature_contract_id'),
+  feature_contract_version: artifactStringMetadata(
+    artifact,
+    'feature_contract_version',
+  ),
+  feature_contract_fingerprint: artifactStringMetadata(
+    artifact,
+    'feature_contract_fingerprint',
+  ),
+  feature_aggregation_mode: artifactStringMetadata(
+    artifact,
+    'feature_aggregation_mode',
+  ),
+  userFeatureNames: artifact.user_features.map((entry) => entry.name),
+  itemFeatureNames: artifact.item_features.map((entry) => entry.name),
+});
+
 const toNameSet = (
   names: ReadonlySet<string> | readonly string[],
 ): ReadonlySet<string> =>
   names instanceof Set ? names : new Set(names);
+
+const fingerprintNumber = (value: number): string => {
+  if (Number.isNaN(value)) return 'NaN';
+  if (value === Number.POSITIVE_INFINITY) return '+Infinity';
+  if (value === Number.NEGATIVE_INFINITY) return '-Infinity';
+  if (Object.is(value, -0)) return '-0';
+  return String(value);
+};
+
+const fingerprintFeatures = (features: readonly WeightedFeature[]) =>
+  features.map(([token, weight]) => [token, fingerprintNumber(weight)]);
+
+export const fingerprintRecommendationFeatureReadinessInput = (
+  input: FeatureReadinessEvaluateInput,
+): string => {
+  const { compiledContract, artifact } = input;
+  const contractIdentity = {
+    expectedContractId: compiledContract.expectedContractId,
+    expectedContractVersion: compiledContract.expectedContractVersion,
+    expectedTaxonomyFingerprint:
+      compiledContract.expectedTaxonomyFingerprint,
+    lifecycle: compiledContract.lifecycle,
+    runtimeActivation: compiledContract.runtimeActivation,
+    aggregationBlocked: compiledContract.aggregationBlocked,
+    aggregationStatus: compiledContract.aggregationStatus,
+    aggregationSelectedMode: compiledContract.aggregationSelectedMode,
+    portableActivationAllowed: compiledContract.portableActivationAllowed,
+    rejectedTokenPrefixes: [...compiledContract.rejectedTokenPrefixes],
+    namespaces: compiledContract.namespaces.map((namespace) => ({
+      id: namespace.id,
+      kind: namespace.kind,
+      conceptType: namespace.conceptType,
+      pattern: namespace.pattern.source,
+      membership: [...namespace.membership].sort(asciiCompare),
+    })),
+    groups: compiledContract.groups.map((group) => ({
+      id: group.id,
+      side: group.side,
+      domains: [...group.domains],
+      namespaceId: group.namespaceId,
+      criticality: group.criticality,
+      minimum: group.minimum,
+      maximum: group.maximum,
+      baseWeight: fingerprintNumber(group.baseWeight),
+      portableRuntimeEligible: group.portableRuntimeEligible,
+    })),
+    groupOrder: [...compiledContract.groupOrder],
+    criticalClosedTokensByDomain: [...compiledContract.criticalClosedTokensByDomain]
+      .sort(([left], [right]) => asciiCompare(left, right))
+      .map(([domain, tokens]) => [domain, [...tokens].sort(asciiCompare)]),
+  };
+  const fingerprintPayload = {
+    contract: contractIdentity,
+    domain: input.domain,
+    user: {
+      resolutionStatus: input.user.resolutionStatus,
+      features: fingerprintFeatures(input.user.features),
+    },
+    itemRows: input.itemRows.map((row) => ({
+      candidateKey: row.candidateKey,
+      features: fingerprintFeatures(row.features),
+    })),
+    artifact: {
+      artifactIdentity: artifact.artifactIdentity ?? null,
+      modelVersion: artifact.modelVersion,
+      featureSchemaVersion: artifact.featureSchemaVersion,
+      featureContractId: artifact.feature_contract_id ?? null,
+      featureContractVersion: artifact.feature_contract_version ?? null,
+      featureContractFingerprint:
+        artifact.feature_contract_fingerprint ?? null,
+      featureAggregationMode: artifact.feature_aggregation_mode ?? null,
+      userFeatureNames: [...toNameSet(artifact.userFeatureNames)].sort(
+        asciiCompare,
+      ),
+      itemFeatureNames: [...toNameSet(artifact.itemFeatureNames)].sort(
+        asciiCompare,
+      ),
+    },
+  };
+  return createHash('sha256')
+    .update('recommendation-feature-readiness-input-v1:')
+    .update(JSON.stringify(fingerprintPayload))
+    .digest('hex');
+};
 
 const groupsFor = (
   compiled: CompiledRecommendationFeatureReadinessContract,
@@ -442,6 +569,37 @@ export const classifyRuntimeFeatureToken = (input: {
   };
 };
 
+/**
+ * Scorer-only refinement of the RP-01.5 runtime classifier. The external
+ * readiness contract intentionally continues to report rejected legacy
+ * prefixes as unsupported, while the scorer exposes them as nonportable.
+ */
+export const classifyRuntimeFeatureForScorer = (input: {
+  compiledContract: CompiledRecommendationFeatureReadinessContract;
+  domain: RecommendationFeatureDomain;
+  side: RecommendationFeatureSide;
+  token: string;
+  weight?: number;
+  artifactFeatureNames: ReadonlySet<string>;
+}):
+  | ReturnType<typeof classifyRuntimeFeatureToken>
+  | {
+      token: string;
+      groupId: null;
+      criticality: null;
+      state: 'NONPORTABLE_RUNTIME_FEATURE';
+    } => {
+  if (findRejectedPrefix(input.compiledContract, input.token)) {
+    return {
+      token: input.token,
+      groupId: null,
+      criticality: null,
+      state: 'NONPORTABLE_RUNTIME_FEATURE',
+    };
+  }
+  return classifyRuntimeFeatureToken(input);
+};
+
 export const classifyArtifactFeatureToken = (input: {
   compiledContract: CompiledRecommendationFeatureReadinessContract;
   domain: RecommendationFeatureDomain;
@@ -608,7 +766,7 @@ export const compileRecommendationFeatureReadinessContract = (
   };
 };
 
-const compareSampleEntries = (
+export const compareFeatureReadinessSampleEntries = (
   left: BoundedSampleEntry,
   right: BoundedSampleEntry,
 ): number =>
@@ -619,18 +777,19 @@ const compareSampleEntries = (
   asciiCompare(left.criticality ?? '', right.criticality ?? '') ||
   asciiCompare(left.source, right.source);
 
-type SampleCollector = {
+export type FeatureReadinessSampleCollector = {
   totals: Map<FeatureReadinessIssueCode, number>;
   entries: Map<FeatureReadinessIssueCode, BoundedSampleEntry[]>;
 };
 
-export const createFeatureReadinessSampleCollector = (): SampleCollector => ({
+export const createFeatureReadinessSampleCollector =
+  (): FeatureReadinessSampleCollector => ({
   totals: new Map(),
   entries: new Map(),
 });
 
 export const recordFeatureReadinessIssue = (
-  collector: SampleCollector,
+  collector: FeatureReadinessSampleCollector,
   entry: BoundedSampleEntry,
 ): void => {
   collector.totals.set(
@@ -641,7 +800,10 @@ export const recordFeatureReadinessIssue = (
   // Deterministic bounded top-N: insert in order, keep at most SAMPLE_LIMIT.
   let insertAt = bucket.length;
   for (let index = 0; index < bucket.length; index += 1) {
-    const comparison = compareSampleEntries(entry, bucket[index]!);
+    const comparison = compareFeatureReadinessSampleEntries(
+      entry,
+      bucket[index]!,
+    );
     if (comparison === 0) {
       // Identical sample identity — keep one, still counted in total above.
       collector.entries.set(entry.issueCode, bucket);
@@ -660,7 +822,7 @@ export const recordFeatureReadinessIssue = (
 };
 
 export const finalizeFeatureReadinessSamples = (
-  collector: SampleCollector,
+  collector: FeatureReadinessSampleCollector,
 ): {
   issueTotals: Partial<Record<FeatureReadinessIssueCode, number>>;
   samples: Partial<Record<FeatureReadinessIssueCode, BoundedSampleBucket>>;
@@ -731,7 +893,7 @@ const accumulateSide = (input: {
     features: readonly WeightedFeature[];
   }>;
   artifactVocab: ReadonlySet<string>;
-  collector: SampleCollector;
+  collector: FeatureReadinessSampleCollector;
   reasons: Set<ReadinessReasonCode>;
 }): SideAccumulateResult => {
   const {
@@ -1377,6 +1539,7 @@ export const evaluateRecommendationFeatureReadiness = (
 
   return {
     schemaVersion: FEATURE_READINESS_SCHEMA_VERSION,
+    inputFingerprint: fingerprintRecommendationFeatureReadinessInput(input),
     domain,
     status,
     coverageStatus,

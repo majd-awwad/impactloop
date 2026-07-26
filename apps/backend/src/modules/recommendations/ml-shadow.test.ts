@@ -85,6 +85,8 @@ test('Python and TypeScript LightFM scores and Top-K match', async () => {
   for (const fixture of fixtures.lightfm_cases) {
     const artifact = await loadPortableModelArtifact(path.join(portableRoot, `${fixture.domain}-hybrid.json`), fixture.domain);
     const result = scorePortableLightFm(artifact, fixture.user_features, fixture.candidates.map((candidate: any) => ({ candidateKey: candidate.candidate_key, features: candidate.features })));
+    assert.equal(result.outcome, 'SCORED');
+    assert.equal(result.scoringReadiness, 'NOT_READY');
     for (const candidate of fixture.candidates) {
       const actual = result.scored.find((value) => value.candidateKey === candidate.candidate_key)!.score;
       assert.ok(Math.abs(actual - candidate.python_score) <= 1e-9);
@@ -873,7 +875,7 @@ isolatedRecommendationTest('RP-01.5 feature readiness attaches and keeps serve k
       recentEvents: [],
       evaluationTimestamp: '2026-08-10T00:00:00Z',
     });
-    assert.equal(material.diagnostics.status, 'SCORED');
+    assert.equal(material.diagnostics.status, 'FALLBACK');
     assert.equal(material.diagnostics.featureReadiness?.status, 'NOT_READY');
     assert.ok(
       material.diagnostics.featureReadiness?.reasons.includes(
@@ -885,11 +887,13 @@ isolatedRecommendationTest('RP-01.5 feature readiness attaches and keeps serve k
         (material.diagnostics.featureReadiness?.items.unsupportedOccurrenceCount ?? 0) >
         0,
     );
-    assert.notEqual(
-      material.diagnostics.featureReadiness?.items.missingCriticalOccurrenceCount,
+    assert.equal(material.diagnostics.scorerOutcome, 'FAILED_CLOSED');
+    assert.equal(material.diagnostics.scorerReadiness, 'NOT_READY');
+    assert.equal(
       material.diagnostics.missingFeatureCount,
+      material.diagnostics.scorerDiagnostics?.missing.occurrenceCount,
     );
-    assert.equal(material.diagnostics.featureCoverage?.zeroFeatureUser, false);
+    assert.ok((material.diagnostics.scorerReasonCodes?.length ?? 0) > 0);
     assert.equal(material.rankedCandidateKeys, undefined);
     assert.equal(
       material.diagnostics.servingSuppressedReason,
@@ -914,9 +918,10 @@ isolatedRecommendationTest('RP-01.5 feature readiness attaches and keeps serve k
       recentEvents: [],
       evaluationTimestamp: '2026-08-10T00:00:00Z',
     });
-    assert.equal(project.diagnostics.status, 'SCORED');
-    assert.equal(project.diagnostics.projectReadinessStatus, 'NOT_READY');
+    assert.equal(project.diagnostics.status, 'FALLBACK');
+    assert.equal(project.diagnostics.projectReadinessStatus, 'FALLBACK');
     assert.equal(project.diagnostics.featureReadiness?.status, 'NOT_READY');
+    assert.equal(project.diagnostics.scorerOutcome, 'FAILED_CLOSED');
     assert.equal(project.rankedCandidateKeys, undefined);
   } finally {
     env.recommendationMlShadowEnabled = prior.shadow;
