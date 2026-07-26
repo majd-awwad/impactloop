@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
+import { runWithRecommendationEventOrigin } from '../recommendation-events/recommendation-event-origin.js';
 import { runWithRequestContext } from '../../observability/request-context.js';
 import {
   getLearnerHome,
@@ -57,29 +58,35 @@ test('Learner Home enqueues bounded outbox exposures without synchronous domain 
   };
 
   invalidateLearnerHomeCache(learner.id);
-  const miss = await runWithRequestContext(
-    {
-      requestId: `${TEST_PREFIX}-miss`,
-      startedAt: Date.now(),
-      method: 'GET',
-      path: '/api/learner/home',
-      userId: learner.id,
-      activeRole: 'LEARNER',
-    },
-    () => getLearnerHome(learner.id),
+  const miss = await runWithRecommendationEventOrigin('TEST', () =>
+    runWithRequestContext(
+      {
+        requestId: `${TEST_PREFIX}-miss`,
+        startedAt: Date.now(),
+        method: 'GET',
+        path: '/api/learner/home',
+        userId: learner.id,
+        activeRole: 'LEARNER',
+      },
+      () => getLearnerHome(learner.id),
+    ),
   );
-  const hit = await runWithRequestContext(
-    {
-      requestId: `${TEST_PREFIX}-hit`,
-      startedAt: Date.now(),
-      method: 'GET',
-      path: '/api/learner/home',
-      userId: learner.id,
-      activeRole: 'LEARNER',
-    },
-    () => getLearnerHome(learner.id),
+  const hit = await runWithRecommendationEventOrigin('TEST', () =>
+    runWithRequestContext(
+      {
+        requestId: `${TEST_PREFIX}-hit`,
+        startedAt: Date.now(),
+        method: 'GET',
+        path: '/api/learner/home',
+        userId: learner.id,
+        activeRole: 'LEARNER',
+      },
+      () => getLearnerHome(learner.id),
+    ),
   );
-  const cachedResponse = await getLearnerHome(learner.id);
+  const cachedResponse = await runWithRecommendationEventOrigin('TEST', () =>
+    getLearnerHome(learner.id),
+  );
 
   assert.deepEqual(Object.keys(miss), ['profileCompletion', 'sections']);
   assert.equal(hasImpressionIdentifier(miss), true);
@@ -104,6 +111,9 @@ test('Learner Home enqueues bounded outbox exposures without synchronous domain 
   });
   assert.equal(exposures.length, 2);
   assert.equal(generations.length, 1);
+  for (const row of [...exposures, ...generations]) {
+    assert.equal((row.payload as { eventSource?: string }).eventSource, 'TEST');
+  }
   assert.equal(await prisma.recommendationGeneration.count({ where: { learnerId: learner.id } }), domainBefore.generations);
   assert.equal(await prisma.recommendationImpression.count({ where: { learnerId: learner.id } }), domainBefore.impressions);
 

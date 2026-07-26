@@ -5,7 +5,12 @@ import type { PrismaClient } from "../src/generated/prisma/client.js";
 import { prisma } from "../src/database/prisma.js";
 
 export type InteractionOrigin =
-  "REAL_USER" | "DEMO_SEED" | "TEST_FIXTURE" | "BENCHMARK" | "UNKNOWN";
+  | "REAL_USER"
+  | "DEMO_SEED"
+  | "TEST_FIXTURE"
+  | "BENCHMARK"
+  | "SYNTHETIC"
+  | "UNKNOWN";
 export type EntityType = "MATERIAL" | "PROJECT";
 export type SignalKind =
   | "VIEW"
@@ -51,61 +56,44 @@ export type ResolvedInteraction = RawInteraction & {
 export const MAX_PROFILE_ROWS = 250_000;
 export const VIEW_CAP_PER_USER_ITEM_DAY = 3;
 
-const SEED_USER_EMAILS = new Set([
-  "majd@learner.com",
-  "israa@learner.com",
-  "learner@learner.com",
-  "seed-learner-ahmad@impactloop.test",
-  "seed-learner-sara@impactloop.test",
-  "seed-learner-omar@impactloop.test",
-  "seed-learner-lina@impactloop.test",
-  "seed-learner-yousef@impactloop.test",
-  "seed-supplier@impactloop.test",
-  "majd@supplier.com",
-  "israa@supplier.com",
-  "supplier@supplier.com",
-]);
-const hasMarker = (value: unknown, markers: readonly string[]) =>
-  markers.some((marker) =>
-    String(value ?? "")
-      .toLowerCase()
-      .includes(marker),
-  );
-
 export const classifyOrigin = (input: {
   eventSource?: string | null;
-  userEmail?: string | null;
-  itemText?: string | null;
-  sourceText?: string | null;
+  evidenceEligibility?: string | null;
+  accountStatus?: string | null;
+  /** True when the row comes from recommendation_* tables that carry eventSource. */
+  recommendationObservability?: boolean;
 }): InteractionOrigin => {
-  const eventSource = input.eventSource?.toUpperCase();
+  const eventSource = input.eventSource?.toUpperCase() ?? null;
+  const eligibility = input.evidenceEligibility ?? null;
+  const active = input.accountStatus === "ACTIVE";
+  const accountEligible = eligibility === "ELIGIBLE" && active;
+
   if (eventSource === "LOAD_TEST") return "BENCHMARK";
   if (eventSource === "TEST") return "TEST_FIXTURE";
-  if (eventSource === "SYNTHETIC") return "DEMO_SEED";
-  if (
-    hasMarker(input.userEmail, [
-      "test-",
-      "test_",
-      "fixture",
-      "benchmark",
-      "load-test",
-    ]) ||
-    hasMarker(input.itemText, ["[test-", "test-internal", "fixture"]) ||
-    hasMarker(input.sourceText, ["[test-", "fixture"])
-  )
-    return "TEST_FIXTURE";
-  if (
-    SEED_USER_EMAILS.has((input.userEmail ?? "").toLowerCase()) ||
-    hasMarker(input.itemText, [
-      "[realistic-impactloop-seed]",
-      "(spare batch)",
-    ]) ||
-    hasMarker(input.sourceText, ["viewsource:seed", "seed reservation"])
-  )
-    return "DEMO_SEED";
-  if (eventSource === "REAL" || input.userEmail) return "REAL_USER";
+  if (eventSource === "DEMO_SEED") return "DEMO_SEED";
+  if (eventSource === "SYNTHETIC") return "SYNTHETIC";
+  if (eventSource === "LEGACY_UNCLASSIFIED") return "UNKNOWN";
+
+  if (input.recommendationObservability) {
+    if (eventSource === "REAL" && accountEligible) return "REAL_USER";
+    return "UNKNOWN";
+  }
+
+  // Product-domain interactions without eventSource: account eligibility only.
+  if (eligibility === "EXCLUDED_DEMO") return "DEMO_SEED";
+  if (eligibility === "EXCLUDED_TEST") return "TEST_FIXTURE";
+  if (eligibility === "EXCLUDED_INTERNAL") return "UNKNOWN";
+  if (accountEligible) return "REAL_USER";
   return "UNKNOWN";
 };
+
+const evidenceFromUser = (user?: {
+  recommendationEvidenceEligibility?: string | null;
+  accountStatus?: string | null;
+} | null) => ({
+  evidenceEligibility: user?.recommendationEvidenceEligibility ?? null,
+  accountStatus: user?.accountStatus ?? null,
+});
 
 const utcDay = (date: Date) => date.toISOString().slice(0, 10);
 const reversal = (signal: SignalKind) =>
@@ -484,7 +472,12 @@ export async function profileDatabase(client: PrismaClient = prisma) {
   const [users, materials, projects] = await Promise.all([
     client.user.findMany({
       where: { roles: { some: { role: "LEARNER" } } },
-      select: { id: true, email: true, accountStatus: true },
+      select: {
+        id: true,
+        email: true,
+        accountStatus: true,
+        recommendationEvidenceEligibility: true,
+      },
     }),
     client.material.findMany({
       take: MAX_PROFILE_ROWS,
@@ -713,6 +706,15 @@ export async function profileDatabase(client: PrismaClient = prisma) {
   const userById = new Map(users.map((user) => [user.id, user]));
   const materialById = new Map(materials.map((item) => [item.id, item]));
   const projectById = new Map(projects.map((item) => [item.id, item]));
+  const originForUser = (
+    userId: string | null | undefined,
+    extras?: { eventSource?: string | null; recommendationObservability?: boolean },
+  ) =>
+    classifyOrigin({
+      ...evidenceFromUser(userId ? userById.get(userId) : null),
+      eventSource: extras?.eventSource,
+      recommendationObservability: extras?.recommendationObservability,
+    });
   const raw: RawInteraction[] = [];
   const add = (row: RawInteraction) => raw.push(row);
   for (const row of views.rows)
@@ -725,11 +727,7 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       state: null,
       occurredAt: row.createdAt,
       source: row.viewSource ?? "material_views",
-      origin: classifyOrigin({
-        userEmail: userById.get(row.viewerUserId ?? "")?.email,
-        itemText: `${row.material.title} ${row.material.description}`,
-        sourceText: row.viewSource,
-      }),
+      origin: originForUser(row.viewerUserId),
     });
   for (const row of likes.rows)
     add({
@@ -741,10 +739,7 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       state: "ACTIVE",
       occurredAt: row.createdAt,
       source: "material_likes",
-      origin: classifyOrigin({
-        userEmail: row.user.email,
-        itemText: `${row.material.title} ${row.material.description}`,
-      }),
+      origin: originForUser(row.userId),
     });
   for (const row of reservations.rows)
     add({
@@ -757,11 +752,7 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       occurredAt: row.createdAt,
       source: "reservations",
       operationId: row.id,
-      origin: classifyOrigin({
-        userEmail: row.requester.email,
-        itemText: `${row.material.title} ${row.material.description}`,
-        sourceText: row.message,
-      }),
+      origin: originForUser(row.requesterId),
     });
   for (const row of projectLikes.rows)
     add({
@@ -773,10 +764,7 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       state: "ACTIVE",
       occurredAt: row.createdAt,
       source: "project_likes",
-      origin: classifyOrigin({
-        userEmail: row.user.email,
-        itemText: row.project.title,
-      }),
+      origin: originForUser(row.userId),
     });
   for (const row of saves.rows)
     add({
@@ -788,10 +776,7 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       state: "ACTIVE",
       occurredAt: row.createdAt,
       source: "project_saves",
-      origin: classifyOrigin({
-        userEmail: row.user.email,
-        itemText: row.project.title,
-      }),
+      origin: originForUser(row.userId),
     });
   for (const row of follows.rows)
     add({
@@ -803,16 +788,10 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       state: "ACTIVE",
       occurredAt: row.createdAt,
       source: "project_follows",
-      origin: classifyOrigin({
-        userEmail: row.user.email,
-        itemText: row.project.title,
-      }),
+      origin: originForUser(row.userId),
     });
   for (const row of builds.rows) {
-    const origin = classifyOrigin({
-      userEmail: row.learner.email,
-      itemText: row.project.title,
-    });
+    const origin = originForUser(row.learnerId);
     add({
       id: `${row.id}:start`,
       userId: row.learnerId,
@@ -853,9 +832,9 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       occurredAt: row.shownAt,
       source: "recommendation_impressions",
       eventSource: row.eventSource,
-      origin: classifyOrigin({
+      origin: originForUser(row.learnerId, {
         eventSource: row.eventSource,
-        userEmail: row.learner.email,
+        recommendationObservability: true,
       }),
     });
   for (const row of actions.rows)
@@ -871,9 +850,9 @@ export async function profileDatabase(client: PrismaClient = prisma) {
       eventSource: row.eventSource,
       attributionType: row.attributionType,
       operationId: row.sourceOperationId,
-      origin: classifyOrigin({
+      origin: originForUser(row.learnerId, {
         eventSource: row.eventSource,
-        userEmail: row.learner.email,
+        recommendationObservability: true,
       }),
     });
   const resolved = resolveInteractionRecords(raw);
@@ -946,6 +925,7 @@ export async function profileDatabase(client: PrismaClient = prisma) {
         "DEMO_SEED",
         "TEST_FIXTURE",
         "BENCHMARK",
+        "SYNTHETIC",
         "UNKNOWN",
       ] as InteractionOrigin[]
     ).map((origin) => [

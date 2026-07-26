@@ -1,42 +1,115 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { after, before, describe, test } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
+import { runWithRecommendationEventOrigin } from './recommendation-event-origin.js';
 import {
   enqueueRecommendationAction,
+  enqueueRecommendationExposure,
   getRecommendationActionPlan,
   persistRecommendationExposure,
   type RecommendationActionPlan,
 } from './recommendation-events.service.js';
 import {
-  RecommendationOutboxWorker,
+  processRecommendationOutboxRecord,
 } from './recommendation-events.outbox.worker.js';
 
 const TEST_MARKER = '[test-recommendation-action-outbox]';
 const RUN_ID = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const ownedOutboxIds = new Set<string>();
 let learnerId: string;
 let otherLearnerId: string;
 
 const operation = (label: string): string => `${TEST_MARKER}-${RUN_ID}-${label}`;
 
-const cleanupTestOutbox = async (): Promise<void> => {
+const trackOutboxId = (id: string): void => {
+  ownedOutboxIds.add(id);
+};
+
+const trackOutboxByKeys = async (keys: string[]): Promise<void> => {
   const rows = await prisma.recommendationEventOutbox.findMany({
-    select: { id: true, eventKind: true, payload: true },
+    where: { deduplicationKey: { in: keys } },
+    select: { id: true },
   });
-  const ids = rows
-    .filter((row) => {
-      const payload = row.payload as { learnerId?: unknown; generationId?: unknown };
-      return (
-        row.eventKind === 'RECOMMENDATION_ACTION' ||
-        payload.learnerId === learnerId ||
-        payload.learnerId === otherLearnerId ||
-        (typeof payload.generationId === 'string' && payload.generationId.startsWith(TEST_MARKER))
-      );
-    })
-    .map((row) => row.id);
-  if (ids.length > 0) {
-    await prisma.recommendationEventOutbox.deleteMany({ where: { id: { in: ids } } });
+  for (const row of rows) {
+    trackOutboxId(row.id);
   }
+};
+
+const cleanupOwnedOutbox = async (): Promise<void> => {
+  if (ownedOutboxIds.size === 0) {
+    return;
+  }
+  await prisma.recommendationEventOutbox.deleteMany({
+    where: { id: { in: [...ownedOutboxIds] } },
+  });
+  ownedOutboxIds.clear();
+};
+
+const processOwnedKeys = async (
+  deduplicationKeys: string[],
+  config: { maxAttempts?: number; batchSize?: number } = {},
+): Promise<number> => {
+  const workerConfig = {
+    pollIntervalMs: 10,
+    batchSize: config.batchSize ?? 10,
+    maxAttempts: config.maxAttempts ?? 5,
+    leaseMs: 1_000,
+  };
+  await trackOutboxByKeys(deduplicationKeys);
+  const rows = await prisma.recommendationEventOutbox.findMany({
+    where: {
+      deduplicationKey: { in: deduplicationKeys },
+      status: { in: ['PENDING', 'RETRY'] },
+    },
+  });
+  rows.sort((left, right) => {
+    if (left.eventKind === right.eventKind) {
+      return left.createdAt.getTime() - right.createdAt.getTime();
+    }
+    if (left.eventKind === 'RECOMMENDATION_GENERATION') return -1;
+    if (right.eventKind === 'RECOMMENDATION_GENERATION') return 1;
+    if (left.eventKind === 'RECOMMENDATION_EXPOSURE') return -1;
+    if (right.eventKind === 'RECOMMENDATION_EXPOSURE') return 1;
+    return 0;
+  });
+
+  let processed = 0;
+  for (const row of rows) {
+    const lockToken = `${TEST_MARKER}:${randomUUID()}`;
+    const updated = await prisma.recommendationEventOutbox.update({
+      where: { id: row.id },
+      data: {
+        status: 'PROCESSING',
+        attemptCount: { increment: 1 },
+        lockedAt: new Date(),
+        lockToken,
+      },
+    });
+    await processRecommendationOutboxRecord(
+      {
+        id: updated.id,
+        event_kind: updated.eventKind,
+        schema_version: updated.schemaVersion,
+        deduplication_key: updated.deduplicationKey,
+        payload: updated.payload,
+        status: updated.status,
+        attempt_count: updated.attemptCount,
+        available_at: updated.availableAt,
+        locked_at: updated.lockedAt,
+        lock_token: updated.lockToken,
+        processed_at: updated.processedAt,
+        last_error_code: updated.lastErrorCode,
+        last_error_summary: updated.lastErrorSummary,
+        created_at: updated.createdAt,
+        updated_at: updated.updatedAt,
+      },
+      workerConfig,
+    );
+    processed += 1;
+  }
+  return processed;
 };
 
 const createLearner = async (label: string): Promise<string> => {
@@ -47,6 +120,7 @@ const createLearner = async (label: string): Promise<string> => {
       passwordHash: 'test-only-hash',
       accountStatus: 'ACTIVE',
       emailVerifiedAt: new Date(),
+      recommendationEvidenceEligibility: 'EXCLUDED_TEST',
       roles: { create: [{ role: 'LEARNER', isPrimary: true }] },
       learnerProfile: { create: { learnerType: 'STUDENT' } },
     },
@@ -56,33 +130,35 @@ const createLearner = async (label: string): Promise<string> => {
 };
 
 const seedImpression = async (entityType: 'MATERIAL' | 'PROJECT', entityId: string) => {
-  const result = await persistRecommendationExposure({
-    generation: {
-      generationKey: `${TEST_MARKER}-${Date.now()}-${Math.random()}`,
-      learnerId,
-      surface: 'LEARNER_HOME',
-      algorithmName: 'deterministic-hybrid',
-      algorithmVersion: 'learner-home-v1',
-      policyVersion: 'learner-home-policy-v1',
-      generatedAt: new Date(),
-      candidateCount: 1,
-      shownItemCount: 1,
-      generationDurationMs: 1,
-      generationCacheState: 'HIT',
-      candidateTraces: [],
-    },
-    cacheState: 'HIT',
-    items: [
-      {
-        entityType,
-        entityId,
-        sectionKey: 'test_section',
-        position: 1,
-        score: 1,
-        reasons: ['Matches your interests'],
+  const result = await runWithRecommendationEventOrigin('TEST', () =>
+    persistRecommendationExposure({
+      generation: {
+        generationKey: `${TEST_MARKER}-${Date.now()}-${Math.random()}`,
+        learnerId,
+        surface: 'LEARNER_HOME',
+        algorithmName: 'deterministic-hybrid',
+        algorithmVersion: 'learner-home-v1',
+        policyVersion: 'learner-home-policy-v1',
+        generatedAt: new Date(),
+        candidateCount: 1,
+        shownItemCount: 1,
+        generationDurationMs: 1,
+        generationCacheState: 'HIT',
+        candidateTraces: [],
       },
-    ],
-  });
+      cacheState: 'HIT',
+      items: [
+        {
+          entityType,
+          entityId,
+          sectionKey: 'test_section',
+          position: 1,
+          score: 1,
+          reasons: ['Matches your interests'],
+        },
+      ],
+    }),
+  );
   return [...result.values()][0]!;
 };
 
@@ -90,8 +166,8 @@ const enqueueAction = async (
   plan: RecommendationActionPlan,
   impressionId?: string,
   actionLearnerId = learnerId,
-) =>
-  enqueueRecommendationAction({
+) => {
+  const result = await enqueueRecommendationAction({
     learnerId: actionLearnerId,
     plan,
     headers: impressionId
@@ -99,18 +175,50 @@ const enqueueAction = async (
       : {},
     eventSource: 'TEST',
   });
+  await trackOutboxByKeys([`action:${plan.actionType}:${plan.sourceOperationId}`]);
+  return result;
+};
 
 describe('recommendation action outbox attribution', () => {
   before(async () => {
     learnerId = await createLearner('primary');
     otherLearnerId = await createLearner('other');
-    await cleanupTestOutbox();
   });
 
   after(async () => {
-    await cleanupTestOutbox();
+    await cleanupOwnedOutbox();
     await prisma.user.deleteMany({ where: { id: { in: [learnerId, otherLearnerId] } } });
     await prisma.$disconnect();
+  });
+
+  test('cleanup leaves unrelated claimable outbox rows untouched', async () => {
+    const foreign = await prisma.recommendationEventOutbox.create({
+      data: {
+        eventKind: 'RECOMMENDATION_ACTION',
+        schemaVersion: 'recommendation-action-outbox-v1',
+        deduplicationKey: `foreign-action-unrelated-${RUN_ID}`,
+        payload: { marker: 'foreign-pending-regression' },
+      },
+    });
+    try {
+      await enqueueAction({
+        actionType: 'MATERIAL_VIEW',
+        entityType: 'MATERIAL',
+        entityId: 'cleanup-probe',
+        sourceOperationId: operation('cleanup-probe'),
+      });
+      await cleanupOwnedOutbox();
+      const surviving = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+        where: { id: foreign.id },
+        select: { status: true, deduplicationKey: true },
+      });
+      assert.equal(surviving.status, 'PENDING');
+      assert.equal(surviving.deduplicationKey, `foreign-action-unrelated-${RUN_ID}`);
+    } finally {
+      await prisma.recommendationEventOutbox
+        .delete({ where: { id: foreign.id } })
+        .catch(() => undefined);
+    }
   });
 
   test('enqueue is bulk-shaped and does not synchronously write actions', async () => {
@@ -135,6 +243,7 @@ describe('recommendation action outbox attribution', () => {
 
   test('worker records direct attribution and remains idempotent', async () => {
     const impressionId = await seedImpression('MATERIAL', 'action-material-2');
+    const key = `action:MATERIAL_VIEW:${operation('view-operation-2')}`;
     await enqueueAction(
       {
         actionType: 'MATERIAL_VIEW',
@@ -144,18 +253,17 @@ describe('recommendation action outbox attribution', () => {
       },
       impressionId,
     );
-    const worker = new RecommendationOutboxWorker({ batchSize: 10 });
-    assert.ok((await worker.processOnce()) >= 1);
+    assert.equal(await processOwnedKeys([key]), 1);
     const action = await prisma.recommendationAction.findFirstOrThrow({
       where: { learnerId, entityId: 'action-material-2' },
     });
     assert.equal(action.attributionType, 'DIRECT');
 
     await prisma.recommendationEventOutbox.updateMany({
-      where: { deduplicationKey: `action:MATERIAL_VIEW:${operation('view-operation-2')}` },
+      where: { deduplicationKey: key },
       data: { status: 'PENDING', availableAt: new Date(0), processedAt: null },
     });
-    assert.equal(await worker.processOnce(), 1);
+    assert.equal(await processOwnedKeys([key]), 1);
     assert.equal(
       await prisma.recommendationAction.count({ where: { id: action.id } }),
       1,
@@ -166,14 +274,14 @@ describe('recommendation action outbox attribution', () => {
     const first = await seedImpression('PROJECT', 'action-project-1');
     await new Promise((resolve) => setTimeout(resolve, 5));
     const second = await seedImpression('PROJECT', 'action-project-1');
+    const key = `action:PROJECT_SAVE:${operation('save-operation-1')}`;
     await enqueueAction({
       actionType: 'PROJECT_SAVE',
       entityType: 'PROJECT',
       entityId: 'action-project-1',
       sourceOperationId: operation('save-operation-1'),
     });
-    const worker = new RecommendationOutboxWorker({ batchSize: 10 });
-    assert.equal(await worker.processOnce(), 1);
+    assert.equal(await processOwnedKeys([key]), 1);
     const action = await prisma.recommendationAction.findFirstOrThrow({
       where: { learnerId, entityId: 'action-project-1' },
     });
@@ -184,6 +292,7 @@ describe('recommendation action outbox attribution', () => {
 
   test('foreign learner and entity mismatch are processed without an action row', async () => {
     const impressionId = await seedImpression('MATERIAL', 'action-material-3');
+    const key = `action:MATERIAL_LIKE:${operation('foreign-operation-3')}`;
     await enqueueAction(
       {
         actionType: 'MATERIAL_LIKE',
@@ -194,15 +303,14 @@ describe('recommendation action outbox attribution', () => {
       impressionId,
       otherLearnerId,
     );
-    const worker = new RecommendationOutboxWorker({ batchSize: 10 });
-    assert.equal(await worker.processOnce(), 1);
+    assert.equal(await processOwnedKeys([key]), 1);
     assert.equal(
       await prisma.recommendationAction.count({ where: { sourceOperationId: operation('foreign-operation-3') } }),
       0,
     );
     assert.equal(
       await prisma.recommendationEventOutbox.count({
-        where: { deduplicationKey: `action:MATERIAL_LIKE:${operation('foreign-operation-3')}`, status: 'PROCESSED' },
+        where: { deduplicationKey: key, status: 'PROCESSED' },
       }),
       1,
     );
@@ -214,6 +322,7 @@ describe('recommendation action outbox attribution', () => {
       where: { id: impressionId },
       data: { shownAt: new Date(Date.now() - 25 * 60 * 60 * 1000) },
     });
+    const key = `action:MATERIAL_VIEW:${operation('expired-operation-1')}`;
     await enqueueAction(
       {
         actionType: 'MATERIAL_VIEW',
@@ -223,17 +332,18 @@ describe('recommendation action outbox attribution', () => {
       },
       impressionId,
     );
-    const worker = new RecommendationOutboxWorker({ batchSize: 10 });
-    assert.ok((await worker.processOnce()) >= 1);
+    assert.equal(await processOwnedKeys([key]), 1);
     assert.equal(
       await prisma.recommendationAction.count({ where: { sourceOperationId: operation('expired-operation-1') } }),
       0,
     );
 
-    const originalCreateMany = prisma.recommendationEventOutbox.createMany;
-    Object.defineProperty(prisma.recommendationEventOutbox, 'createMany', {
+    const originalTransaction = prisma.$transaction.bind(prisma);
+    Object.defineProperty(prisma, '$transaction', {
       configurable: true,
-      value: async () => { throw new Error('test action enqueue failure'); },
+      value: async () => {
+        throw new Error('test action enqueue failure');
+      },
     });
     try {
       await assert.doesNotReject(() => enqueueAction({
@@ -243,9 +353,9 @@ describe('recommendation action outbox attribution', () => {
         sourceOperationId: operation('failure-operation-1'),
       }));
     } finally {
-      Object.defineProperty(prisma.recommendationEventOutbox, 'createMany', {
+      Object.defineProperty(prisma, '$transaction', {
         configurable: true,
-        value: originalCreateMany,
+        value: originalTransaction,
       });
     }
   });
@@ -309,6 +419,8 @@ describe('recommendation action outbox attribution', () => {
 
   test('malformed hints fall back to assisted attribution and unsupported entity actions are dead', async () => {
     const impressionId = await seedImpression('MATERIAL', 'action-security-1');
+    const likeKey = `action:MATERIAL_LIKE:${operation('malformed-hint-1')}`;
+    const badKey = `action:PROJECT_LIKE:${operation('unsupported-entity-1')}`;
     await enqueueAction(
       {
         actionType: 'MATERIAL_LIKE',
@@ -324,8 +436,7 @@ describe('recommendation action outbox attribution', () => {
       entityId: 'action-security-1',
       sourceOperationId: operation('unsupported-entity-1'),
     });
-    const worker = new RecommendationOutboxWorker({ batchSize: 10 });
-    assert.equal(await worker.processOnce(), 2);
+    assert.equal(await processOwnedKeys([likeKey, badKey]), 2);
     const assisted = await prisma.recommendationAction.findFirstOrThrow({
       where: { sourceOperationId: operation('malformed-hint-1') },
     });
@@ -333,7 +444,7 @@ describe('recommendation action outbox attribution', () => {
     assert.equal(assisted.attributionType, 'ASSISTED');
     assert.equal(
       await prisma.recommendationEventOutbox.count({
-        where: { deduplicationKey: `action:PROJECT_LIKE:${operation('unsupported-entity-1')}`, status: 'DEAD' },
+        where: { deduplicationKey: badKey, status: 'DEAD' },
       }),
       1,
     );
@@ -353,43 +464,61 @@ describe('recommendation action outbox attribution', () => {
       generationDurationMs: 1,
       generationCacheState: 'MISS' as const,
       candidateTraces: [],
+      eventSource: 'TEST' as const,
     };
-    const exposure = await import('./recommendation-events.service.js').then(({ enqueueRecommendationExposure }) =>
-      enqueueRecommendationExposure({
-        generation,
-        cacheState: 'MISS',
-        includeGeneration: true,
-        items: [{ entityType: 'MATERIAL', entityId: 'action-race-1', sectionKey: 'test', position: 1, score: 1, reasons: ['Popular'] }],
-      }));
+    const exposure = await enqueueRecommendationExposure({
+      generation,
+      cacheState: 'MISS',
+      includeGeneration: true,
+      items: [{ entityType: 'MATERIAL', entityId: 'action-race-1', sectionKey: 'test', position: 1, score: 1, reasons: ['Popular'] }],
+    });
+    const exposureRow = await prisma.recommendationEventOutbox.findFirstOrThrow({
+      where: {
+        eventKind: 'RECOMMENDATION_EXPOSURE',
+        payload: { path: ['exposureId'], equals: exposure.exposureId },
+      },
+      select: { id: true, deduplicationKey: true },
+    });
+    trackOutboxId(exposureRow.id);
+    await trackOutboxByKeys([`generation:${generation.generationKey}`]);
+    const actionKey = `action:MATERIAL_LIKE:${operation('race-operation-1')}`;
     await enqueueAction(
       { actionType: 'MATERIAL_LIKE', entityType: 'MATERIAL', entityId: 'action-race-1', sourceOperationId: operation('race-operation-1') },
       [...exposure.impressionIds.values()][0],
     );
-    await prisma.recommendationEventOutbox.updateMany({
-      where: { deduplicationKey: `exposure:${exposure.exposureId}` },
-      data: { availableAt: new Date(Date.now() + 60_000) },
-    });
-    const worker = new RecommendationOutboxWorker({ batchSize: 10, maxAttempts: 3 });
-    assert.ok((await worker.processOnce()) >= 2);
+
+    assert.equal(
+      await processOwnedKeys([
+        `generation:${generation.generationKey}`,
+        actionKey,
+      ]),
+      2,
+    );
     const retry = await prisma.recommendationEventOutbox.findUniqueOrThrow({
-      where: { deduplicationKey: `action:MATERIAL_LIKE:${operation('race-operation-1')}` },
+      where: { deduplicationKey: actionKey },
     });
     assert.equal(retry.status, 'RETRY');
     assert.equal(retry.lastErrorCode, 'impression_not_ready');
     assert.equal(await prisma.recommendationAction.count({ where: { sourceOperationId: operation('race-operation-1') } }), 0);
 
     await prisma.recommendationEventOutbox.updateMany({
-      where: { deduplicationKey: { in: [`exposure:${exposure.exposureId}`, `action:MATERIAL_LIKE:${operation('race-operation-1')}`] } },
-      data: { availableAt: new Date(0) },
+      where: {
+        deduplicationKey: {
+          in: [exposureRow.deduplicationKey, actionKey],
+        },
+      },
+      data: {
+        availableAt: new Date(0),
+        status: 'PENDING',
+        processedAt: null,
+        lockToken: null,
+        lockedAt: null,
+      },
     });
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      if ((await prisma.recommendationAction.count({ where: { sourceOperationId: operation('race-operation-1') } })) === 1) break;
-      await worker.processOnce();
-      await prisma.recommendationEventOutbox.updateMany({
-        where: { deduplicationKey: `action:MATERIAL_LIKE:${operation('race-operation-1')}` },
-        data: { availableAt: new Date(0) },
-      });
-    }
+    assert.equal(
+      await processOwnedKeys([exposureRow.deduplicationKey, actionKey]),
+      2,
+    );
     assert.equal(await prisma.recommendationAction.count({ where: { sourceOperationId: operation('race-operation-1') } }), 1);
   });
 });

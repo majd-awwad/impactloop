@@ -173,7 +173,7 @@ describe('evaluate-ranking-delta orchestration (real production functions, faked
       const deps: EvaluatorDeps = {
         ...realDeps,
         prisma: {
-          user: { findMany: async () => [{ id: 'user-1', email: 'learner@test.com' }] },
+          user: { findMany: async () => [{ id: 'user-1', email: 'learner@test.com', accountStatus: 'ACTIVE', recommendationEvidenceEligibility: 'ELIGIBLE' }] },
           $disconnect: async () => {},
         },
         loadLearnerInterests: async () => ['arduino'],
@@ -262,7 +262,7 @@ describe('evaluate-ranking-delta orchestration (real production functions, faked
     const deps: EvaluatorDeps = {
       ...realDeps,
       prisma: {
-        user: { findMany: async () => [{ id: 'user-1', email: 'learner@test.com' }] },
+        user: { findMany: async () => [{ id: 'user-1', email: 'learner@test.com', accountStatus: 'ACTIVE', recommendationEvidenceEligibility: 'ELIGIBLE' }] },
         $disconnect: async () => {},
       },
       loadLearnerInterests: async () => [],
@@ -330,7 +330,7 @@ describe('evaluate-ranking-delta orchestration (real production functions, faked
     const deps: EvaluatorDeps = {
       ...realDeps,
       prisma: {
-        user: { findMany: async () => [{ id: 'user-1', email: 'learner@test.com' }] },
+        user: { findMany: async () => [{ id: 'user-1', email: 'learner@test.com', accountStatus: 'ACTIVE', recommendationEvidenceEligibility: 'ELIGIBLE' }] },
         $disconnect: async () => {},
       },
       loadLearnerInterests: async () => [],

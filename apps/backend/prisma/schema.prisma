@@ -372,9 +372,19 @@ enum RecommendationAttributionType {
 
 enum RecommendationEventSource {
   REAL
-  SYNTHETIC
+  DEMO_SEED
   TEST
   LOAD_TEST
+  SYNTHETIC
+  LEGACY_UNCLASSIFIED
+}
+
+enum RecommendationEvidenceEligibility {
+  UNCLASSIFIED
+  ELIGIBLE
+  EXCLUDED_DEMO
+  EXCLUDED_TEST
+  EXCLUDED_INTERNAL
 }
 
 enum RecommendationEligibilityResult {
@@ -403,6 +413,7 @@ model User {
   phone                         String?                    @unique
   passwordHash                  String                     @map("password_hash")
   accountStatus                 AccountStatus              @default(PENDING_VERIFICATION) @map("account_status")
+  recommendationEvidenceEligibility RecommendationEvidenceEligibility @default(ELIGIBLE) @map("recommendation_evidence_eligibility")
   profileImageUrl               String?                    @map("profile_image_url")
   emailVerifiedAt               DateTime?                  @map("email_verified_at")
   phoneVerifiedAt               DateTime?                  @map("phone_verified_at")
@@ -1689,7 +1700,7 @@ model RecommendationGeneration {
   candidateCount       Int                            @map("candidate_count")
   shownItemCount       Int                            @map("shown_item_count")
   generationDurationMs Int                            @map("generation_duration_ms")
-  eventSource          RecommendationEventSource      @default(REAL) @map("event_source")
+  eventSource          RecommendationEventSource      @map("event_source")
   createdAt            DateTime                       @default(now()) @map("created_at")
   learner              User                           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
   requests             RecommendationRequest[]
@@ -1714,7 +1725,7 @@ model RecommendationRequest {
   candidateCount       Int                       @map("candidate_count")
   shownItemCount       Int                       @map("shown_item_count")
   generationDurationMs Int                       @map("generation_duration_ms")
-  eventSource          RecommendationEventSource @default(REAL) @map("event_source")
+  eventSource          RecommendationEventSource @map("event_source")
   createdAt            DateTime                  @default(now()) @map("created_at")
   learner              User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
   generation           RecommendationGeneration  @relation(fields: [generationId], references: [id], onDelete: Cascade)
@@ -1740,7 +1751,7 @@ model RecommendationCandidateTrace {
   scoreComponents     Json?                           @map("score_components")
   exclusionReason     String?                          @map("exclusion_reason")
   selected            Boolean                         @default(false)
-  eventSource         RecommendationEventSource       @default(REAL) @map("event_source")
+  eventSource         RecommendationEventSource       @map("event_source")
   createdAt           DateTime                        @default(now()) @map("created_at")
   generation          RecommendationGeneration       @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
@@ -1763,7 +1774,7 @@ model RecommendationImpression {
   algorithmName     String                    @map("algorithm_name")
   algorithmVersion  String                    @map("algorithm_version")
   shownAt           DateTime                  @default(now()) @map("shown_at")
-  eventSource       RecommendationEventSource @default(REAL) @map("event_source")
+  eventSource       RecommendationEventSource @map("event_source")
   request           RecommendationRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
   learner           User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
   actions           RecommendationAction[]
@@ -1785,7 +1796,7 @@ model RecommendationAction {
   attributionType   RecommendationAttributionType @map("attribution_type")
   actionAt          DateTime                       @default(now()) @map("action_at")
   sourceOperationId String?                        @map("source_operation_id")
-  eventSource       RecommendationEventSource      @default(REAL) @map("event_source")
+  eventSource       RecommendationEventSource      @map("event_source")
   createdAt         DateTime                       @default(now()) @map("created_at")
   impression        RecommendationImpression       @relation(fields: [impressionId], references: [id], onDelete: Cascade)
   learner           User                           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
