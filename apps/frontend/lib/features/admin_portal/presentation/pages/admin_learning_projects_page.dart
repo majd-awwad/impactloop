@@ -167,6 +167,17 @@ class AdminLearningProjectsPage extends ConsumerStatefulWidget {
       _AdminLearningProjectsPageState();
 }
 
+@visibleForTesting
+Widget adminLearningProjectDetailDialogForTest({
+  required String projectId,
+  VoidCallback? onActionCompleted,
+}) {
+  return _ProjectDetailDialog(
+    projectId: projectId,
+    onActionCompleted: onActionCompleted ?? () {},
+  );
+}
+
 class _AdminLearningProjectsPageState
     extends ConsumerState<AdminLearningProjectsPage> {
   final _searchController = TextEditingController();
@@ -959,6 +970,17 @@ class _ProjectDetailDialog extends ConsumerStatefulWidget {
 class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
   late Future<AdminLearningProjectDetail> _detailFuture;
   final bool _referenceLayoutEnabled = true;
+  bool _aiFetching = false;
+  bool _aiLoading = false;
+  bool _aiFetchFailed = false;
+  bool _aiPostFailed = false;
+  AdminLearningProjectAiReviewDisplayState? _aiReview;
+  String? _loadedLocale;
+  int _fetchRequestId = 0;
+  int _postRequestId = 0;
+
+  static bool isAiReviewEligible(String status) =>
+      status == 'PENDING_REVIEW' || status == 'CHANGES_REQUESTED';
 
   @override
   void initState() {
@@ -966,6 +988,23 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
     _detailFuture = ref
         .read(adminLearningProjectsApiProvider)
         .fetchProjectDetail(widget.projectId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedAiReview(force: true);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final locale = _reviewLocale();
+    if (_loadedLocale != null && _loadedLocale != locale) {
+      _loadSavedAiReview(force: true);
+    }
+  }
+
+  String _reviewLocale() {
+    final l = AdminL10n.of(context);
+    return l.isArabic ? 'ar' : 'en';
   }
 
   Future<void> _reloadDetail() async {
@@ -975,6 +1014,387 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
           .fetchProjectDetail(widget.projectId);
     });
     await _detailFuture;
+  }
+
+  Future<void> _loadSavedAiReview({required bool force}) async {
+    if (!mounted) return;
+    final locale = _reviewLocale();
+    if (!force && _loadedLocale == locale && !_aiFetchFailed) {
+      return;
+    }
+
+    final requestId = ++_fetchRequestId;
+    setState(() {
+      _aiFetching = true;
+      _aiFetchFailed = false;
+    });
+
+    try {
+      final response = await ref
+          .read(adminLearningProjectsApiProvider)
+          .getSavedAiReview(projectId: widget.projectId, locale: locale);
+      if (!mounted || requestId != _fetchRequestId) return;
+      if (response.projectId != widget.projectId || response.locale != locale) {
+        return;
+      }
+
+      setState(() {
+        _aiFetching = false;
+        _loadedLocale = locale;
+        _aiReview = response.savedReview == null
+            ? null
+            : AdminLearningProjectAiReviewDisplayState.fromSaved(
+                response.savedReview!,
+              );
+        _aiFetchFailed = false;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _fetchRequestId) return;
+      setState(() {
+        _aiFetching = false;
+        _aiFetchFailed = true;
+        _aiReview = null;
+      });
+    }
+  }
+
+  Future<void> _runAiReview(AdminLearningProjectDetail detail) async {
+    if (_aiLoading || !isAiReviewEligible(detail.status)) return;
+    final locale = _reviewLocale();
+    final hadReview = _aiReview != null;
+    final requestId = ++_postRequestId;
+
+    setState(() {
+      _aiLoading = true;
+      _aiPostFailed = false;
+    });
+
+    try {
+      final result = await ref
+          .read(adminLearningProjectsApiProvider)
+          .runAiReview(projectId: detail.id, locale: locale);
+      if (!mounted || requestId != _postRequestId) return;
+      if (result.projectId != detail.id) return;
+
+      setState(() {
+        _aiReview = AdminLearningProjectAiReviewDisplayState.fromPost(result);
+        _aiLoading = false;
+        _aiPostFailed = false;
+        _loadedLocale = locale;
+      });
+    } catch (_) {
+      if (!mounted || requestId != _postRequestId) return;
+      setState(() {
+        _aiLoading = false;
+        _aiPostFailed = true;
+        if (!hadReview) {
+          _aiReview = null;
+        }
+      });
+    }
+  }
+
+  String _formatGeneratedAt(String generatedAt, AdminL10n l) {
+    try {
+      final parsed = DateTime.parse(generatedAt).toLocal();
+      String two(int value) => value.toString().padLeft(2, '0');
+      final formatted =
+          '${parsed.year}-${two(parsed.month)}-${two(parsed.day)} '
+          '${two(parsed.hour)}:${two(parsed.minute)}';
+      return l.t('Generated $formatted', 'تم الإنشاء $formatted');
+    } catch (_) {
+      return l.t('Generated recently', 'تم الإنشاء مؤخرًا');
+    }
+  }
+
+  Widget _buildAiReviewMetadata(
+    AdminLearningProjectAiReviewDisplayState review,
+  ) {
+    final l = AdminL10n.of(context);
+    final metadata = <String>[
+      _formatGeneratedAt(review.generatedAt, l),
+      l.t('Provider: ${review.provider}', 'المزود: ${review.provider}'),
+      if (review.model != null && review.model!.trim().isNotEmpty)
+        l.t('Model: ${review.model}', 'النموذج: ${review.model}'),
+    ];
+
+    return Text(
+      key: const Key('admin-ai-review-metadata'),
+      metadata.join(' · '),
+      style: Theme.of(context).textTheme.bodySmall,
+    );
+  }
+
+  Widget _buildAiReviewContent(
+    AdminLearningProjectAiReviewDisplayState review,
+  ) {
+    final l = AdminL10n.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (review.isStale) ...[
+          Text(
+            key: const Key('admin-ai-review-stale-warning'),
+            l.t(
+              'This AI review may be outdated because the project content changed after it was generated. Review the current project manually or run the AI review again.',
+              'قد تكون مراجعة الذكاء الاصطناعي قديمة لأن محتوى المشروع تغيّر بعد إنشائها. راجع المحتوى الحالي يدويًا أو شغّل المراجعة مرة أخرى.',
+            ),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        _buildAiReviewMetadata(review),
+        const SizedBox(height: 12),
+        if (review.coverage.contentTruncated) ...[
+          Text(
+            key: const Key('admin-ai-review-partial-notice'),
+            l.t(
+              'This AI review covered only part of the submitted content. Review all project steps and components manually before making a decision.',
+              'غطّت مراجعة الذكاء الاصطناعي جزءًا فقط من المحتوى المرسل. راجع جميع خطوات المشروع ومكوناته يدويًا قبل اتخاذ القرار.',
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l.t(
+              'Covered ${review.coverage.includedSteps}/${review.coverage.totalSteps} steps · ${review.coverage.includedComponents}/${review.coverage.totalComponents} components',
+              'شملت ${review.coverage.includedSteps}/${review.coverage.totalSteps} خطوات · ${review.coverage.includedComponents}/${review.coverage.totalComponents} مكونات',
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            AppStatusBadge(
+              label:
+                  '${l.t('AI attention level', 'مستوى الانتباه حسب المراجعة')}: ${review.review.attentionLevel}',
+              tone: switch (review.review.attentionLevel) {
+                'HIGH' => AppStatusTone.danger,
+                'MEDIUM' => AppStatusTone.warning,
+                _ => AppStatusTone.neutral,
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(key: const Key('admin-ai-review-summary'), review.review.summary),
+        if (review.review.strengths.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            l.t('Strengths', 'نقاط القوة'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          ...review.review.strengths.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('• $item'),
+            ),
+          ),
+        ],
+        if (review.review.importantConcerns.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            l.t('Important concerns', 'ملاحظات مهمة'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          ...review.review.importantConcerns.map(
+            (concern) => Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppStatusBadge(
+                    label: concern.severity,
+                    tone: switch (concern.severity) {
+                      'HIGH' => AppStatusTone.danger,
+                      'WARNING' => AppStatusTone.warning,
+                      _ => AppStatusTone.neutral,
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  Text(concern.message),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (review.review.safetyNotes.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            l.t('Safety notes', 'ملاحظات السلامة'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          ...review.review.safetyNotes.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('• $item'),
+            ),
+          ),
+        ],
+        if (review.review.improvementSuggestions.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            l.t('Improvement suggestions', 'اقتراحات التحسين'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          ...review.review.improvementSuggestions.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('• $item'),
+            ),
+          ),
+        ],
+        if (review.review.manualReviewNotes.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            l.t('Manual-review reminders', 'تذكيرات للمراجعة اليدوية'),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          ...review.review.manualReviewNotes.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text('• $item'),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAiUnavailableMessage({Key? key, bool includeRetry = false}) {
+    final l = AdminL10n.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          key: key,
+          l.t(
+            'AI review is temporarily unavailable. You can continue the manual review.',
+            'مراجعة الذكاء الاصطناعي غير متاحة مؤقتًا. يمكنك متابعة المراجعة اليدوية.',
+          ),
+        ),
+        if (includeRetry) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: OutlinedButton(
+              key: const Key('admin-ai-review-retry'),
+              onPressed: _aiLoading
+                  ? null
+                  : () => _loadSavedAiReview(force: true),
+              child: Text(l.t('Retry', 'إعادة المحاولة')),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildAiAssistedReviewSection(AdminLearningProjectDetail detail) {
+    final l = AdminL10n.of(context);
+    final eligible = isAiReviewEligible(detail.status);
+    final title = l.t('AI-assisted review', 'مراجعة مساعدة بالذكاء الاصطناعي');
+    final advisory = l.t(
+      'Advisory only. You remain responsible for the final moderation decision.',
+      'استشارية فقط. تبقى أنت المسؤول عن قرار المراجعة النهائي.',
+    );
+    final ineligibleMessage = l.t(
+      'AI review is available only for projects pending review or with changes requested.',
+      'مراجعة الذكاء الاصطناعي متاحة فقط للمشاريع قيد المراجعة أو التي طُلب تعديلها.',
+    );
+
+    return KeyedSubtree(
+      key: const Key('admin-ai-review-section'),
+      child: _ReviewSectionCard(
+        title: title,
+        icon: Icons.psychology_alt_outlined,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(advisory),
+            const SizedBox(height: 12),
+            if (_aiFetching)
+              const Padding(
+                key: Key('admin-ai-review-loading'),
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_aiFetchFailed)
+              _buildAiUnavailableMessage(
+                key: const Key('admin-ai-review-failure'),
+                includeRetry: true,
+              )
+            else ...[
+              if (_aiReview != null) _buildAiReviewContent(_aiReview!),
+              if (!eligible) ...[
+                if (_aiReview != null) const SizedBox(height: 12),
+                Text(ineligibleMessage),
+              ] else ...[
+                if (_aiPostFailed) ...[
+                  const SizedBox(height: 12),
+                  _buildAiUnavailableMessage(
+                    key: const Key('admin-ai-review-failure'),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton(
+                      key: const Key('admin-ai-review-retry'),
+                      onPressed: _aiLoading ? null : () => _runAiReview(detail),
+                      child: Text(l.t('Retry', 'إعادة المحاولة')),
+                    ),
+                  ),
+                ],
+                if (_aiLoading && _aiReview != null)
+                  const Padding(
+                    key: Key('admin-ai-review-rerun-loading'),
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+                if (_aiReview == null) ...[
+                  if (_aiLoading)
+                    const Padding(
+                      key: Key('admin-ai-review-loading'),
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FilledButton.tonal(
+                        key: const Key('admin-ai-review-run'),
+                        onPressed: () => _runAiReview(detail),
+                        child: Text(l.t('Run AI review', 'تشغيل مراجعة AI')),
+                      ),
+                    ),
+                ] else ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton(
+                      key: const Key('admin-ai-review-run-again'),
+                      onPressed: _aiLoading ? null : () => _runAiReview(detail),
+                      child: Text(l.t('Run again', 'تشغيل المراجعة مجددًا')),
+                    ),
+                  ),
+                ],
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Future<String?> _promptReason(
@@ -1426,6 +1846,8 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 12),
+                        _buildAiAssistedReviewSection(detail),
                         AdminDetailSection(
                           title: 'Images',
                           children: [
@@ -1796,6 +2218,8 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
                     children: [
                       overview,
                       const SizedBox(height: 14),
+                      _buildAiAssistedReviewSection(detail),
+                      const SizedBox(height: 14),
                       card(
                         'Featured image',
                         detail.coverImageUrl == null
@@ -1907,14 +2331,35 @@ class _ProjectDetailDialogState extends ConsumerState<_ProjectDetailDialog> {
           ),
           footer: AppDialogFooter.actions(
             actions: [
+              if (detail.allowedActions.canApprove)
+                FilledButton(
+                  key: const Key('admin-project-approve'),
+                  onPressed: () => _runAction('approve', detail),
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.success,
+                  ),
+                  child: const Text('Approve'),
+                ),
               if (detail.allowedActions.canRequestChanges)
                 OutlinedButton(
+                  key: const Key('admin-project-request-changes'),
                   onPressed: () => _runAction('request-changes', detail),
                   style: AppStatusButtonStyle.outlined(
                     context,
                     AppStatusTone.warning,
                   ),
                   child: const Text('Request changes'),
+                ),
+              if (detail.allowedActions.canReject)
+                OutlinedButton(
+                  key: const Key('admin-project-reject'),
+                  onPressed: () => _runAction('reject', detail),
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.danger,
+                  ),
+                  child: const Text('Reject'),
                 ),
               if (detail.allowedActions.canHide)
                 OutlinedButton(

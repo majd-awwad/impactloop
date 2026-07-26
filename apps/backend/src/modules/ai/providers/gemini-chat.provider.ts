@@ -26,6 +26,39 @@ import type {
   AiChatProviderResult,
 } from './ai-chat-provider.types.js';
 
+const ADMIN_PROJECT_REVIEW_MARKER = 'ADMIN_PROJECT_REVIEW_V1';
+
+const isAdminProjectReviewInput = (input: AiChatGenerateAnswerInput): boolean =>
+  input.userMessage.includes(ADMIN_PROJECT_REVIEW_MARKER);
+
+const normalizeAdminProjectReviewProviderAnswer = (value: unknown): unknown => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if ('blocks' in candidate) {
+    return value;
+  }
+
+  if (
+    typeof candidate.summary === 'string' &&
+    typeof candidate.attentionLevel === 'string'
+  ) {
+    return {
+      blocks: [
+        {
+          type: 'text',
+          text: JSON.stringify(value),
+          purpose: 'answer',
+        },
+      ],
+    };
+  }
+
+  return value;
+};
+
 type GeminiGenerateContentResponse = {
   modelVersion?: string | null;
   text?: string | null;
@@ -533,6 +566,28 @@ const toProviderError = (
   return mapped;
 };
 
+export const buildGeminiAnswerContents = (
+  input: AiChatGenerateAnswerInput,
+): string | Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> => {
+  const prompt = isAdminProjectReviewInput(input)
+    ? input.userMessage
+    : buildAnswerUserPrompt(input);
+  const imageInputs = input.imageInputs ?? [];
+  if (imageInputs.length === 0) {
+    return prompt;
+  }
+
+  return [
+    { text: prompt },
+    ...imageInputs.map((image) => ({
+      inlineData: {
+        mimeType: image.mimeType,
+        data: image.dataBase64,
+      },
+    })),
+  ];
+};
+
 export class GeminiAiChatProvider implements AiChatProvider {
   readonly name = 'gemini';
 
@@ -622,7 +677,7 @@ export class GeminiAiChatProvider implements AiChatProvider {
           'generateGeneralLearningAnswer',
           (modelName) => ({
             model: modelName,
-            contents: buildAnswerUserPrompt(input),
+            contents: buildGeminiAnswerContents(input),
             config: {
               temperature: 0.4,
               maxOutputTokens: env.aiChatMaxOutputTokens,
@@ -635,11 +690,13 @@ export class GeminiAiChatProvider implements AiChatProvider {
         'AI_PROVIDER_TIMEOUT',
       );
 
-      const parsed = aiProviderAnswerSchema.parse(
-        extractJsonObject(
-          readGeminiResponseText(response, 'generation_request'),
-        ),
-      );
+      const responseText = readGeminiResponseText(response, 'generation_request');
+      const extracted = extractJsonObject(responseText);
+      const normalized = isAdminProjectReviewInput(input)
+        ? normalizeAdminProjectReviewProviderAnswer(extracted)
+        : extracted;
+
+      const parsed = aiProviderAnswerSchema.parse(normalized);
 
       return {
         provider: this.name,

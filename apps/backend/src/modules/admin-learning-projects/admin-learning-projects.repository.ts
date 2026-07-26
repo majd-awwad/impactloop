@@ -1,6 +1,16 @@
 import type { LearningProjectStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
+import type {
+  AdminAiReviewContent,
+  AdminAiReviewCoverage,
+} from './admin-learning-projects.ai-review.js';
+import {
+  ADMIN_AI_REVIEW_SCHEMA_VERSION,
+  buildAdminReviewContentFingerprint,
+} from './admin-learning-projects.ai-review.js';
 import type { AdminLearningProjectsListQuery } from './admin-learning-projects.validation.js';
 
 const startOfUtcDay = (date: Date) => {
@@ -96,12 +106,14 @@ export const adminLearningProjectDetailInclude = {
       id: true,
       imageUrl: true,
       sortOrder: true,
+      createdAt: true,
     },
   },
   requiredComponents: {
     orderBy: { createdAt: 'asc' as const },
     select: {
       id: true,
+      createdAt: true,
       componentName: true,
       materialType: true,
       quantity: true,
@@ -141,6 +153,7 @@ export const adminLearningProjectDetailInclude = {
     orderBy: { createdAt: 'asc' as const },
     select: {
       id: true,
+      createdAt: true,
       linkType: true,
       url: true,
       title: true,
@@ -149,7 +162,7 @@ export const adminLearningProjectDetailInclude = {
   },
   tags: {
     orderBy: { tag: 'asc' as const },
-    select: { tag: true },
+    select: { id: true, tag: true },
   },
 } satisfies Prisma.LearningProjectInclude;
 
@@ -352,3 +365,82 @@ export const updateAdminLearningProjectComponent = async (input: {
     data: input.data,
   });
 };
+
+export type PersistAdminLearningProjectAiReviewInput = {
+  projectId: string;
+  locale: string;
+  preProviderFingerprint: string;
+  generatedByAdminUserId: string;
+  generatedAt: Date;
+  provider: string;
+  model: string | null;
+  coverage: AdminAiReviewCoverage;
+  review: AdminAiReviewContent;
+};
+
+export const findPersistedAdminLearningProjectAiReview = async (
+  projectId: string,
+  locale: string,
+) =>
+  prisma.learningProjectAdminAiReview.findUnique({
+    where: {
+      projectId_locale: {
+        projectId,
+        locale,
+      },
+    },
+  });
+
+export const persistAdminLearningProjectAiReviewGuarded = async (
+  input: PersistAdminLearningProjectAiReviewInput,
+) =>
+  runSerializableTransaction(async (tx) => {
+    const project = await tx.learningProject.findUnique({
+      where: { id: input.projectId },
+      include: adminLearningProjectDetailInclude,
+    });
+
+    if (!project) {
+      throw new AppError('Learning project not found.', 404, 'NOT_FOUND');
+    }
+
+    const currentFingerprint = buildAdminReviewContentFingerprint(project);
+    if (currentFingerprint !== input.preProviderFingerprint) {
+      throw new AppError(
+        'Project content changed while the AI review was being generated.',
+        409,
+        'AI_REVIEW_CONTENT_CHANGED',
+      );
+    }
+
+    return tx.learningProjectAdminAiReview.upsert({
+      where: {
+        projectId_locale: {
+          projectId: input.projectId,
+          locale: input.locale,
+        },
+      },
+      create: {
+        projectId: input.projectId,
+        locale: input.locale,
+        reviewSchemaVersion: ADMIN_AI_REVIEW_SCHEMA_VERSION,
+        contentFingerprint: currentFingerprint,
+        provider: input.provider,
+        model: input.model,
+        coverage: input.coverage as Prisma.InputJsonValue,
+        review: input.review as Prisma.InputJsonValue,
+        generatedByAdminUserId: input.generatedByAdminUserId,
+        generatedAt: input.generatedAt,
+      },
+      update: {
+        reviewSchemaVersion: ADMIN_AI_REVIEW_SCHEMA_VERSION,
+        contentFingerprint: currentFingerprint,
+        provider: input.provider,
+        model: input.model,
+        coverage: input.coverage as Prisma.InputJsonValue,
+        review: input.review as Prisma.InputJsonValue,
+        generatedByAdminUserId: input.generatedByAdminUserId,
+        generatedAt: input.generatedAt,
+      },
+    });
+  });

@@ -17,11 +17,20 @@ export type AiChatProviderResult<T> = {
   latencyMs: number;
 };
 
+export type AiChatImageMimeType = 'image/jpeg' | 'image/png' | 'image/webp';
+
+export type AiChatImageInput = {
+  mimeType: AiChatImageMimeType;
+  dataBase64: string;
+  sourceLabel: string;
+};
+
 export type AiChatGenerateAnswerInput = {
   locale: AiLocale;
   userMessage: string;
   history: BoundedHistoryMessage[];
   scopeClassification: string;
+  imageInputs?: AiChatImageInput[];
 };
 
 export type AiChatClassifyScopeInput = {

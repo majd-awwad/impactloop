@@ -294,13 +294,11 @@ class AdminLearningProjectComponentQuality {
 
 bool adminApproveBlockedByComponentQuality(
   AdminLearningProjectComponentQuality quality,
-) =>
-    !quality.canApprove;
+) => !quality.canApprove;
 
 bool adminApproveNeedsSoftWarningConfirmation(
   AdminLearningProjectComponentQuality quality,
-) =>
-    quality.canApprove && quality.softWarnings.isNotEmpty;
+) => quality.canApprove && quality.softWarnings.isNotEmpty;
 
 class AdminLearningProjectImage {
   const AdminLearningProjectImage({
@@ -657,7 +655,9 @@ class AdminLearningProjectsListResponse {
   final AdminLearningProjectsPagination pagination;
   final AdminLearningProjectsFilterOptions filterOptions;
 
-  factory AdminLearningProjectsListResponse.fromJson(Map<String, dynamic> json) {
+  factory AdminLearningProjectsListResponse.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return AdminLearningProjectsListResponse(
       summary: AdminLearningProjectsSummary.fromJson(
         json['summary'] as Map<String, dynamic>? ?? const {},
@@ -676,6 +676,407 @@ class AdminLearningProjectsListResponse {
       filterOptions: AdminLearningProjectsFilterOptions.fromJson(
         json['filterOptions'] as Map<String, dynamic>? ?? const {},
       ),
+    );
+  }
+}
+
+class AdminLearningProjectAiReviewCoverage {
+  const AdminLearningProjectAiReviewCoverage({
+    required this.includedSteps,
+    required this.totalSteps,
+    required this.includedComponents,
+    required this.totalComponents,
+    required this.contentTruncated,
+  });
+
+  final int includedSteps;
+  final int totalSteps;
+  final int includedComponents;
+  final int totalComponents;
+  final bool contentTruncated;
+
+  factory AdminLearningProjectAiReviewCoverage.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return AdminLearningProjectAiReviewCoverage(
+      includedSteps: _requireCoverageInt(json, 'includedSteps'),
+      totalSteps: _requireCoverageInt(json, 'totalSteps'),
+      includedComponents: _requireCoverageInt(json, 'includedComponents'),
+      totalComponents: _requireCoverageInt(json, 'totalComponents'),
+      contentTruncated: _requireCoverageBool(json, 'contentTruncated'),
+    );
+  }
+
+  static int _requireCoverageInt(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is! int) {
+      throw FormatException('Invalid AI review coverage $key');
+    }
+    return value;
+  }
+
+  static bool _requireCoverageBool(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is! bool) {
+      throw FormatException('Invalid AI review coverage $key');
+    }
+    return value;
+  }
+}
+
+class AdminLearningProjectAiReviewConcern {
+  const AdminLearningProjectAiReviewConcern({
+    required this.code,
+    required this.severity,
+    required this.message,
+    this.relatedStepNumber,
+    this.relatedComponentId,
+  });
+
+  final String code;
+  final String severity;
+  final String message;
+  final int? relatedStepNumber;
+  final String? relatedComponentId;
+
+  factory AdminLearningProjectAiReviewConcern.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final message = json['message'];
+    if (message is! String || message.trim().isEmpty) {
+      throw const FormatException('Invalid AI review concern message');
+    }
+    final code = json['code'];
+    final severity = json['severity'];
+    if (code is! String || code.trim().isEmpty) {
+      throw const FormatException('Invalid AI review concern code');
+    }
+    if (severity is! String || severity.trim().isEmpty) {
+      throw const FormatException('Invalid AI review concern severity');
+    }
+    return AdminLearningProjectAiReviewConcern(
+      code: code.trim(),
+      severity: severity.trim(),
+      message: message.trim(),
+      relatedStepNumber: (json['relatedStepNumber'] as num?)?.toInt(),
+      relatedComponentId: json['relatedComponentId'] as String?,
+    );
+  }
+}
+
+class AdminLearningProjectAiReviewContent {
+  const AdminLearningProjectAiReviewContent({
+    required this.summary,
+    required this.attentionLevel,
+    required this.strengths,
+    required this.importantConcerns,
+    required this.safetyNotes,
+    required this.improvementSuggestions,
+    required this.manualReviewNotes,
+  });
+
+  final String summary;
+  final String attentionLevel;
+  final List<String> strengths;
+  final List<AdminLearningProjectAiReviewConcern> importantConcerns;
+  final List<String> safetyNotes;
+  final List<String> improvementSuggestions;
+  final List<String> manualReviewNotes;
+
+  static const _attentionLevels = {'LOW', 'MEDIUM', 'HIGH'};
+
+  factory AdminLearningProjectAiReviewContent.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final summary = json['summary'];
+    final attentionLevel = json['attentionLevel'];
+    if (summary is! String || summary.trim().isEmpty) {
+      throw const FormatException('Invalid AI review summary');
+    }
+    if (attentionLevel is! String ||
+        !_attentionLevels.contains(attentionLevel.trim())) {
+      throw const FormatException('Invalid AI review attentionLevel');
+    }
+    if (json['strengths'] is! List ||
+        json['importantConcerns'] is! List ||
+        json['safetyNotes'] is! List ||
+        json['improvementSuggestions'] is! List ||
+        json['manualReviewNotes'] is! List) {
+      throw const FormatException('Invalid AI review arrays');
+    }
+
+    return AdminLearningProjectAiReviewContent(
+      summary: summary.trim(),
+      attentionLevel: attentionLevel.trim(),
+      strengths: (json['strengths'] as List<dynamic>)
+          .map((item) => item.toString())
+          .where((item) => item.trim().isNotEmpty)
+          .toList(),
+      importantConcerns: (json['importantConcerns'] as List<dynamic>)
+          .whereType<Map>()
+          .map(
+            (item) => AdminLearningProjectAiReviewConcern.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
+      safetyNotes: (json['safetyNotes'] as List<dynamic>)
+          .map((item) => item.toString())
+          .where((item) => item.trim().isNotEmpty)
+          .toList(),
+      improvementSuggestions: (json['improvementSuggestions'] as List<dynamic>)
+          .map((item) => item.toString())
+          .where((item) => item.trim().isNotEmpty)
+          .toList(),
+      manualReviewNotes: (json['manualReviewNotes'] as List<dynamic>)
+          .map((item) => item.toString())
+          .where((item) => item.trim().isNotEmpty)
+          .toList(),
+    );
+  }
+}
+
+class AdminLearningProjectAiReviewResult {
+  const AdminLearningProjectAiReviewResult({
+    required this.projectId,
+    required this.generatedAt,
+    required this.provider,
+    this.model,
+    required this.coverage,
+    required this.review,
+  });
+
+  final String projectId;
+  final String generatedAt;
+  final String provider;
+  final String? model;
+  final AdminLearningProjectAiReviewCoverage coverage;
+  final AdminLearningProjectAiReviewContent review;
+
+  factory AdminLearningProjectAiReviewResult.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final projectId = json['projectId'];
+    final generatedAt = json['generatedAt'];
+    final provider = json['provider'];
+    final coverage = json['coverage'];
+    final review = json['review'];
+    if (projectId is! String || projectId.trim().isEmpty) {
+      throw const FormatException('Invalid AI review projectId');
+    }
+    if (generatedAt is! String || generatedAt.trim().isEmpty) {
+      throw const FormatException('Invalid AI review generatedAt');
+    }
+    if (provider is! String || provider.trim().isEmpty) {
+      throw const FormatException('Invalid AI review provider');
+    }
+    if (coverage is! Map || review is! Map) {
+      throw const FormatException('Invalid AI review payload');
+    }
+
+    return AdminLearningProjectAiReviewResult(
+      projectId: projectId.trim(),
+      generatedAt: generatedAt.trim(),
+      provider: provider.trim(),
+      model: json['model'] as String?,
+      coverage: AdminLearningProjectAiReviewCoverage.fromJson(
+        Map<String, dynamic>.from(coverage),
+      ),
+      review: AdminLearningProjectAiReviewContent.fromJson(
+        Map<String, dynamic>.from(review),
+      ),
+    );
+  }
+}
+
+const int adminLearningProjectAiReviewSchemaVersion = 1;
+
+class AdminLearningProjectSavedAiReview {
+  const AdminLearningProjectSavedAiReview({
+    required this.generatedAt,
+    required this.generatedByAdminUserId,
+    required this.provider,
+    this.model,
+    required this.schemaVersion,
+    required this.isStale,
+    required this.coverage,
+    required this.review,
+  });
+
+  final String generatedAt;
+  final String generatedByAdminUserId;
+  final String provider;
+  final String? model;
+  final int schemaVersion;
+  final bool isStale;
+  final AdminLearningProjectAiReviewCoverage coverage;
+  final AdminLearningProjectAiReviewContent review;
+
+  factory AdminLearningProjectSavedAiReview.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    if (!json.containsKey('generatedAt') ||
+        !json.containsKey('generatedByAdminUserId') ||
+        !json.containsKey('provider') ||
+        !json.containsKey('schemaVersion') ||
+        !json.containsKey('isStale') ||
+        !json.containsKey('coverage') ||
+        !json.containsKey('review')) {
+      throw const FormatException('Invalid saved AI review payload');
+    }
+
+    final generatedAt = json['generatedAt'];
+    final generatedByAdminUserId = json['generatedByAdminUserId'];
+    final provider = json['provider'];
+    final schemaVersion = json['schemaVersion'];
+    final isStale = json['isStale'];
+    final coverage = json['coverage'];
+    final review = json['review'];
+
+    if (generatedAt is! String || generatedAt.trim().isEmpty) {
+      throw const FormatException('Invalid saved AI review generatedAt');
+    }
+    DateTime.parse(generatedAt.trim());
+
+    if (generatedByAdminUserId is! String ||
+        generatedByAdminUserId.trim().isEmpty) {
+      throw const FormatException(
+        'Invalid saved AI review generatedByAdminUserId',
+      );
+    }
+    if (provider is! String || provider.trim().isEmpty) {
+      throw const FormatException('Invalid saved AI review provider');
+    }
+    if (schemaVersion is! int ||
+        schemaVersion != adminLearningProjectAiReviewSchemaVersion) {
+      throw const FormatException('Invalid saved AI review schemaVersion');
+    }
+    if (isStale is! bool) {
+      throw const FormatException('Invalid saved AI review isStale');
+    }
+    if (coverage is! Map || review is! Map) {
+      throw const FormatException('Invalid saved AI review payload');
+    }
+
+    final model = json['model'];
+    if (model != null && model is! String) {
+      throw const FormatException('Invalid saved AI review model');
+    }
+
+    return AdminLearningProjectSavedAiReview(
+      generatedAt: generatedAt.trim(),
+      generatedByAdminUserId: generatedByAdminUserId.trim(),
+      provider: provider.trim(),
+      model: model as String?,
+      schemaVersion: schemaVersion,
+      isStale: isStale,
+      coverage: AdminLearningProjectAiReviewCoverage.fromJson(
+        Map<String, dynamic>.from(coverage),
+      ),
+      review: AdminLearningProjectAiReviewContent.fromJson(
+        Map<String, dynamic>.from(review),
+      ),
+    );
+  }
+}
+
+class AdminLearningProjectSavedAiReviewResponse {
+  const AdminLearningProjectSavedAiReviewResponse({
+    required this.projectId,
+    required this.locale,
+    required this.savedReview,
+  });
+
+  final String projectId;
+  final String locale;
+  final AdminLearningProjectSavedAiReview? savedReview;
+
+  factory AdminLearningProjectSavedAiReviewResponse.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    if (!json.containsKey('savedReview')) {
+      throw const FormatException('Invalid saved AI review response');
+    }
+
+    final projectId = json['projectId'];
+    final locale = json['locale'];
+    if (projectId is! String || projectId.trim().isEmpty) {
+      throw const FormatException('Invalid saved AI review projectId');
+    }
+    if (locale is! String || (locale != 'ar' && locale != 'en')) {
+      throw const FormatException('Invalid saved AI review locale');
+    }
+
+    final rawSavedReview = json['savedReview'];
+    if (rawSavedReview == null) {
+      return AdminLearningProjectSavedAiReviewResponse(
+        projectId: projectId.trim(),
+        locale: locale,
+        savedReview: null,
+      );
+    }
+    if (rawSavedReview is! Map) {
+      throw const FormatException('Invalid saved AI review savedReview');
+    }
+
+    return AdminLearningProjectSavedAiReviewResponse(
+      projectId: projectId.trim(),
+      locale: locale,
+      savedReview: AdminLearningProjectSavedAiReview.fromJson(
+        Map<String, dynamic>.from(rawSavedReview),
+      ),
+    );
+  }
+}
+
+class AdminLearningProjectAiReviewDisplayState {
+  const AdminLearningProjectAiReviewDisplayState({
+    required this.generatedAt,
+    required this.generatedByAdminUserId,
+    required this.provider,
+    this.model,
+    required this.schemaVersion,
+    required this.isStale,
+    required this.coverage,
+    required this.review,
+  });
+
+  final String generatedAt;
+  final String generatedByAdminUserId;
+  final String provider;
+  final String? model;
+  final int schemaVersion;
+  final bool isStale;
+  final AdminLearningProjectAiReviewCoverage coverage;
+  final AdminLearningProjectAiReviewContent review;
+
+  factory AdminLearningProjectAiReviewDisplayState.fromSaved(
+    AdminLearningProjectSavedAiReview saved,
+  ) {
+    return AdminLearningProjectAiReviewDisplayState(
+      generatedAt: saved.generatedAt,
+      generatedByAdminUserId: saved.generatedByAdminUserId,
+      provider: saved.provider,
+      model: saved.model,
+      schemaVersion: saved.schemaVersion,
+      isStale: saved.isStale,
+      coverage: saved.coverage,
+      review: saved.review,
+    );
+  }
+
+  factory AdminLearningProjectAiReviewDisplayState.fromPost(
+    AdminLearningProjectAiReviewResult result,
+  ) {
+    return AdminLearningProjectAiReviewDisplayState(
+      generatedAt: result.generatedAt,
+      generatedByAdminUserId: '',
+      provider: result.provider,
+      model: result.model,
+      schemaVersion: adminLearningProjectAiReviewSchemaVersion,
+      isStale: false,
+      coverage: result.coverage,
+      review: result.review,
     );
   }
 }

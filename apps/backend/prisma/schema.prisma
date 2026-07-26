@@ -439,8 +439,9 @@ model User {
   accountsReactivated           User[]                     @relation("UserReactivatedBy")
   adminActivityLogs             AdminActivityLog[]
   aiConversations               AiConversation[]
-  projectAuthoringSessions      ProjectAuthoringSession[]
-  aiPendingActions              AiPendingAction[]
+  projectAuthoringSessions               ProjectAuthoringSession[]
+  aiPendingActions                       AiPendingAction[]
+  generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviewGeneratedBy")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -738,12 +739,36 @@ model LearningProject {
   builds                   ProjectBuild[]
   authoringConversation    AiConversation?            @relation("ProjectAuthoringConversation")
   projectAuthoringSession  ProjectAuthoringSession?
+  adminAiReviews           LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviews")
 
   @@index([categoryId])
   @@index([createdBy])
   @@index([reviewedBy])
   @@index([status, createdAt])
   @@map("learning_projects")
+}
+
+model LearningProjectAdminAiReview {
+  id                     String   @id @default(cuid())
+  projectId              String   @map("project_id")
+  locale                 String
+  reviewSchemaVersion    Int      @default(1) @map("review_schema_version")
+  contentFingerprint     String   @map("content_fingerprint")
+  provider               String
+  model                  String?
+  coverage               Json
+  review                 Json
+  generatedByAdminUserId String   @map("generated_by_admin_user_id")
+  generatedAt            DateTime @map("generated_at")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  project          LearningProject @relation("LearningProjectAdminAiReviews", fields: [projectId], references: [id], onDelete: Cascade)
+  generatedByAdmin User            @relation("LearningProjectAdminAiReviewGeneratedBy", fields: [generatedByAdminUserId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, locale])
+  @@index([projectId])
+  @@map("learning_project_admin_ai_reviews")
 }
 
 model ProjectImage {

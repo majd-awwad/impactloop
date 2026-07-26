@@ -112,14 +112,17 @@ import {
   approveAdminLearningProjectHandler,
   archiveAdminLearningProjectHandler,
   getAdminLearningProjectHandler,
+  getSavedAdminLearningProjectAiReviewHandler,
   hideAdminLearningProjectHandler,
   listAdminLearningProjectsHandler,
   rejectAdminLearningProjectHandler,
   requestChangesAdminLearningProjectHandler,
   restoreAdminLearningProjectHandler,
+  reviewAdminLearningProjectWithAiHandler,
   updateAdminLearningProjectComponentHandler,
 } from '../admin-learning-projects/admin-learning-projects.controller.js';
 import {
+  adminAiReviewBodySchema,
   adminLearningProjectComponentParamsSchema,
   adminLearningProjectIdParamSchema,
   adminLearningProjectsListQuerySchema,
@@ -495,6 +498,24 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   asyncHandler(getAdminLearningProjectHandler),
+);
+
+adminRouter.get(
+  '/learning-projects/:id/ai-review',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(adminAiReviewBodySchema, 'query'),
+  asyncHandler(getSavedAdminLearningProjectAiReviewHandler),
+);
+
+adminRouter.post(
+  '/learning-projects/:id/ai-review',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(adminAiReviewBodySchema),
+  asyncHandler(reviewAdminLearningProjectWithAiHandler),
 );
 
 adminRouter.patch(

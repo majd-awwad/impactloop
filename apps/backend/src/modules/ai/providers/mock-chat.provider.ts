@@ -61,6 +61,55 @@ export class MockAiChatProvider implements AiChatProvider {
     );
     const isArabic = input.locale === 'ar';
 
+    if (input.userMessage.includes('ADMIN_PROJECT_REVIEW_V1')) {
+      const hasImages = (input.imageInputs?.length ?? 0) > 0;
+      const reviewJson = JSON.stringify(
+        isArabic
+          ? {
+              summary: hasImages
+                ? 'مراجعة تجريبية حتمية: الصورة المرفقة تبدو مرتبطة بوصف المشروع.'
+                : 'مراجعة تجريبية حتمية: المشروع يبدو منظمًا بما يكفي للمراجعة اليدوية.',
+              attentionLevel: 'LOW',
+              strengths: hasImages
+                ? ['الصورة المرئية تدعم وصف المشروع بشكل عام.']
+                : ['عنوان ووصف واضحا للمشروع.'],
+              importantConcerns: [],
+              safetyNotes: ['تحقق يدويًا من احتياطات السلامة قبل الموافقة.'],
+              improvementSuggestions: ['أضف تفاصيل أوضح للخطوات عند الحاجة.'],
+              manualReviewNotes: ['هذه نتيجة مزود وهمي للاختبار فقط.'],
+            }
+          : {
+              summary: hasImages
+                ? 'Deterministic mock review: the attached project image appears related to the description.'
+                : 'Deterministic mock review: the project looks organized enough for manual review.',
+              attentionLevel: 'LOW',
+              strengths: hasImages
+                ? ['The attached visual evidence broadly supports the project description.']
+                : ['Clear project title and description.'],
+              importantConcerns: [],
+              safetyNotes: ['Manually verify safety precautions before approval.'],
+              improvementSuggestions: ['Add clearer step details where needed.'],
+              manualReviewNotes: ['This is a mock-provider result for testing only.'],
+            },
+      );
+
+      return {
+        provider: this.name,
+        model: 'mock-general-learning',
+        data: aiProviderAnswerSchema.parse({
+          blocks: [
+            {
+              type: 'text',
+              purpose: 'answer',
+              text: reviewJson,
+            },
+          ],
+        }),
+        usage: mockUsage(),
+        latencyMs: 8,
+      };
+    }
+
     if (input.scopeClassification === 'OUT_OF_SCOPE') {
       return {
         provider: this.name,
