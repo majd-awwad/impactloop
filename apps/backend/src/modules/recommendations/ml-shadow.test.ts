@@ -8,7 +8,7 @@ import { env } from '../../config/env.js';
 import { resetLoggerForTests, setLoggerDestinationForTests } from '../../observability/logger.js';
 import { combineNormalizedScores, scorePortableLightFm } from './ml-lightfm-scorer.js';
 import { loadPortableModelArtifact, validatePortableModelArtifact } from './ml-model-artifact.js';
-import { calculateProjectTop10RankMovement, calculateProjectTopKOverlap, clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowInterestRegistryLoaderForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
+import { buildCanonicalShadowItemFeaturesForTests, calculateProjectTop10RankMovement, calculateProjectTopKOverlap, clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowInterestRegistryLoaderForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
 import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
 import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG } from './short-term-intent.js';
 import {
@@ -60,6 +60,59 @@ const fixtureInterestRegistry = async (): Promise<
 
 const repositoryRoot = process.cwd().endsWith(path.join('apps', 'backend')) ? path.resolve(process.cwd(), '../..') : process.cwd();
 const portableRoot = path.join(repositoryRoot, 'ml/recommendation/generated/portable-model');
+
+test('LM-03 shadow item boundary emits canonical v3 rows only', async () => {
+  const material = await buildCanonicalShadowItemFeaturesForTests(
+    {
+      candidateKey: 'material-v3',
+      categoryId: 'ignored-category',
+      categoryLabel: 'Ignored category',
+      conceptKeys: [
+        'material-form:arduino-uno',
+        'material-family:electronics',
+      ],
+      condition: 'LIKE_NEW',
+      isFree: false,
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    },
+    'material',
+  );
+  assert.deepEqual(material, [
+    ['material-condition:like-new', 1],
+    ['material-delivery-allowed:false', 1],
+    ['material-family:electronics', 1],
+    ['material-form:arduino-uno', 1],
+    ['material-is-free:false', 1],
+    ['material-pickup-allowed:true', 1],
+  ]);
+
+  const project = await buildCanonicalShadowItemFeaturesForTests(
+    {
+      candidateKey: 'project-v3',
+      categoryId: 'ignored-category',
+      categoryLabel: 'Ignored category',
+      conceptKeys: ['project-topic:robotics'],
+      componentConceptKeys: ['component:dc-gear-motors'],
+      difficulty: 'BEGINNER',
+    },
+    'project',
+  );
+  assert.deepEqual(project, [
+    ['component:dc-gear-motors', 1],
+    ['project-difficulty:beginner', 1],
+    ['project-topic:robotics', 1],
+  ]);
+  assert.ok(
+    [...material, ...project].every(
+      ([token]) =>
+        !token.startsWith('category:') &&
+        !token.startsWith('concept:') &&
+        !token.startsWith('difficulty:') &&
+        !token.startsWith('component:component:'),
+    ),
+  );
+});
 
 test('portable artifacts exclude Benchmark B and prohibited features', async () => {
   for (const domain of ['material', 'project'] as const) {

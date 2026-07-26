@@ -2,12 +2,16 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import test from 'node:test';
+import test, { before } from 'node:test';
 
 import { prisma } from '../../database/prisma.js';
 import { env } from '../../config/env.js';
 import { loadMlShadowConcepts, loadProjectPool } from '../learner-home/learner-home.repository.js';
 import { loadPortableModelArtifact } from './ml-model-artifact.js';
+import {
+  compileCanonicalRuntimeFeatureAuthority,
+  type CanonicalRuntimeFeatureAuthority,
+} from './canonical-runtime-item-features.js';
 import {
   clearMlArtifactCacheForTests,
   runMlShadowComparison,
@@ -19,6 +23,7 @@ import {
   selectRequiredComponentConceptKeys,
 } from './project-runtime-candidate-mapping.js';
 import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
+import { loadRecommendationFeatureTokenContract } from './recommendation-feature-token-contract.js';
 
 const root = process.cwd().endsWith(path.join('apps', 'backend'))
   ? path.resolve(process.cwd(), '../..')
@@ -26,6 +31,13 @@ const root = process.cwd().endsWith(path.join('apps', 'backend'))
 const portableRoot = path.join(root, 'ml/recommendation/generated/portable-model');
 const projectKey = (id: string) => createHash('sha256').update(`impactloop-project:${id}`).digest('hex');
 const emptyInterestRegistry = async () => [];
+let authority: CanonicalRuntimeFeatureAuthority;
+
+before(async () => {
+  authority = compileCanonicalRuntimeFeatureAuthority(
+    await loadRecommendationFeatureTokenContract(),
+  );
+});
 
 test('required-only component concepts match catalog export eligibility', () => {
   const keys = selectRequiredComponentConceptKeys([
@@ -41,20 +53,31 @@ test('required-only component concepts match catalog export eligibility', () => 
   assert.deepEqual(keys, ['component:fabric-scraps']);
 });
 
-test('realistic artifact/runtime keys map exactly for catalog snapshot projects', async () => {
+test('catalog snapshot projects construct canonical v3 runtime keys', async () => {
   const catalog = JSON.parse(
     await readFile(path.join(root, 'ml/recommendation/generated/catalog-snapshot/projects.json'), 'utf8'),
   ) as { rows: Array<{ category_key: string; difficulty: string; concept_keys: string[]; component_concept_keys: string[] }> };
-  const artifact = await loadPortableModelArtifact(path.join(portableRoot, 'project-hybrid-runtime-v2.json'), 'project');
-  const artifactNames = new Set(artifact.item_features.map((feature) => feature.name));
   for (const row of catalog.rows) {
-    const featureNames = [
-      `category:${row.category_key}`,
-      ...row.concept_keys.map((value) => `concept:${value}`),
-      `difficulty:${row.difficulty}`,
-      ...row.component_concept_keys.map((value) => `component:${value}`),
-    ];
-    assert.ok(featureNames.every((name) => artifactNames.has(name)), `missing catalog feature mapping for ${row.difficulty}`);
+    const featureNames = projectItemFeatureNames(
+      {
+        categoryId: row.category_key,
+        difficulty: row.difficulty as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED',
+        conceptKeys: row.concept_keys,
+        componentConceptKeys: row.component_concept_keys,
+      },
+      authority,
+    );
+    assert.ok(featureNames.some((name) => name.startsWith('project-topic:')));
+    assert.ok(featureNames.some((name) => name.startsWith('project-difficulty:')));
+    assert.ok(
+      featureNames.every(
+        (name) =>
+          !name.startsWith('category:') &&
+          !name.startsWith('concept:') &&
+          !name.startsWith('difficulty:') &&
+          !name.startsWith('component:component:'),
+      ),
+    );
   }
 });
 
@@ -62,14 +85,15 @@ test('optional component concepts never enter required runtime mapping', () => {
   const names = projectItemFeatureNames({
     categoryId: 'category-a',
     difficulty: 'BEGINNER',
-    conceptKeys: ['concept:textiles'],
+    conceptKeys: ['project-topic:textile-crafts'],
     componentConceptKeys: selectRequiredComponentConceptKeys([
       { isRequired: false, taxonomyConcepts: [{ concept: { canonicalKey: 'component:denim-offcuts' } }] },
       { isRequired: true, taxonomyConcepts: [{ concept: { canonicalKey: 'component:fabric-scraps' } }] },
     ]),
-  });
-  assert.ok(names.includes('component:component:fabric-scraps'));
-  assert.ok(!names.includes('component:component:denim-offcuts'));
+  }, authority);
+  assert.ok(names.includes('component:fabric-scraps'));
+  assert.ok(!names.includes('component:denim-offcuts'));
+  assert.ok(!names.some((name) => name.startsWith('component:component:')));
 });
 
 isolatedRecommendationTest('missing eligible runtime mappings preserve NOT_READY', async () => {
@@ -140,12 +164,19 @@ isolatedRecommendationTest('duplicate runtime keys preserve NOT_READY', async ()
   }
 });
 
-test('non-finite scores preserve NOT_READY', () => {
-  const counts = countArtifactMappedCandidates([], new Set());
+test('empty artifact mapping remains empty', () => {
+  const counts = countArtifactMappedCandidates([], new Set(), authority);
   assert.equal(counts.artifactMappedCandidateCount, 0);
+  const missingTopic = countArtifactMappedCandidates(
+    [{ difficulty: 'BEGINNER', conceptKeys: [] }],
+    new Set(['project-difficulty:beginner']),
+    authority,
+  );
+  assert.equal(missingTopic.artifactMappedCandidateCount, 0);
+  assert.equal(missingTopic.missingArtifactCandidateCount, 1);
 });
 
-test('live PostgreSQL runtime projects map completely to runtime-v2 artifact', async () => {
+test('live PostgreSQL runtime projects use v3 keys while legacy artifacts remain unmapped', async () => {
   const projects = await loadProjectPool(120);
   const concepts = await loadMlShadowConcepts([], projects.map((project) => project.id));
   const artifact = await loadPortableModelArtifact(path.join(portableRoot, 'project-hybrid-runtime-v2.json'), 'project');
@@ -156,10 +187,10 @@ test('live PostgreSQL runtime projects map completely to runtime-v2 artifact', a
     conceptKeys: concepts.projectConcepts.get(project.id) ?? [],
     componentConceptKeys: concepts.projectComponentConcepts.get(project.id) ?? [],
   }));
-  const counts = countArtifactMappedCandidates(candidates, artifactNames);
+  const counts = countArtifactMappedCandidates(candidates, artifactNames, authority);
   assert.equal(projects.length, 29);
-  assert.equal(counts.missingArtifactCandidateCount, 0);
-  assert.equal(counts.artifactMappedCandidateCount, 29);
+  assert.equal(counts.missingArtifactCandidateCount, projects.length);
+  assert.equal(counts.artifactMappedCandidateCount, 0);
 });
 
 isolatedRecommendationTest('READY executes recent intent and fusion and exposes fused ranking when serving is enabled', async () => {

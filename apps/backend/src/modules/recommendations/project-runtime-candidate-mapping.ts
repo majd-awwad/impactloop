@@ -1,7 +1,11 @@
-import { createHash } from 'node:crypto';
-
+import type { ProjectDifficulty } from '../../generated/prisma/client.js';
 import { selectSuggestedProjectItems } from '../learner-home/learner-home.section-builders.js';
 import type { LearnerHomeProjectItem } from '../learner-home/learner-home.types.js';
+import {
+  buildCanonicalProjectRuntimeFeatures,
+  canonicalConceptAssociationFromActiveKey,
+  type CanonicalRuntimeFeatureAuthority,
+} from './canonical-runtime-item-features.js';
 
 export type ProjectComponentConceptSource = {
   isRequired: boolean;
@@ -9,14 +13,11 @@ export type ProjectComponentConceptSource = {
 };
 
 export type ProjectRuntimeCandidateFeatures = {
-  categoryId: string;
-  difficulty?: string;
+  categoryId?: string;
+  difficulty: ProjectDifficulty;
   conceptKeys?: string[];
   componentConceptKeys?: string[];
 };
-
-export const categoryKey = (id: string) =>
-  createHash('sha256').update(`impactloop-category:${id}`).digest('hex');
 
 export const selectRequiredComponentConceptKeys = (
   components: ProjectComponentConceptSource[],
@@ -28,22 +29,45 @@ export const selectRequiredComponentConceptKeys = (
   ),
 ].sort();
 
-export const projectItemFeatureNames = (candidate: ProjectRuntimeCandidateFeatures): string[] => {
-  const features = [`category:${categoryKey(candidate.categoryId)}`];
-  for (const value of candidate.conceptKeys ?? []) features.push(`concept:${value}`);
-  if (candidate.difficulty) features.push(`difficulty:${candidate.difficulty}`);
-  for (const value of candidate.componentConceptKeys ?? []) features.push(`component:${value}`);
-  return features;
-};
+const buildProjectItemFeatures = (
+  candidate: ProjectRuntimeCandidateFeatures,
+  authority: CanonicalRuntimeFeatureAuthority,
+) =>
+  buildCanonicalProjectRuntimeFeatures({
+    authority,
+    topicConcepts: (candidate.conceptKeys ?? []).map((canonicalKey) =>
+      canonicalConceptAssociationFromActiveKey(authority, canonicalKey),
+    ),
+    componentConcepts: (candidate.componentConceptKeys ?? []).map(
+      (canonicalKey) => ({
+        ...canonicalConceptAssociationFromActiveKey(authority, canonicalKey),
+        isRequired: true,
+      }),
+    ),
+    difficulty: candidate.difficulty,
+  });
+
+export const projectItemFeatureNames = (
+  candidate: ProjectRuntimeCandidateFeatures,
+  authority: CanonicalRuntimeFeatureAuthority,
+): string[] =>
+  buildProjectItemFeatures(candidate, authority).features.map(([name]) => name);
 
 export const countArtifactMappedCandidates = (
   candidates: ProjectRuntimeCandidateFeatures[],
   artifactFeatureNames: ReadonlySet<string>,
+  authority: CanonicalRuntimeFeatureAuthority,
 ): { artifactMappedCandidateCount: number; missingArtifactCandidateCount: number } => {
   let artifactMappedCandidateCount = 0;
   for (const candidate of candidates) {
-    const featureNames = projectItemFeatureNames(candidate);
-    if (featureNames.every((name) => artifactFeatureNames.has(name))) artifactMappedCandidateCount += 1;
+    const built = buildProjectItemFeatures(candidate, authority);
+    const featureNames = built.features.map(([name]) => name);
+    if (
+      built.scoringEligible &&
+      featureNames.every((name) => artifactFeatureNames.has(name))
+    ) {
+      artifactMappedCandidateCount += 1;
+    }
   }
   return {
     artifactMappedCandidateCount,
