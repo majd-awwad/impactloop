@@ -68,7 +68,11 @@ import type {
   LearnerAffinityProfile,
   LearnerBehaviorContext,
 } from './learner-home.types.js';
-import type { ReservationStatus } from '../../generated/prisma/client.js';
+import type {
+  MaterialCondition,
+  ProjectDifficulty,
+  ReservationStatus,
+} from '../../generated/prisma/client.js';
 import { isActiveReservationBehaviorStatus } from '../reservations/reservations.quantity.js';
 import { getRequestId } from '../../observability/request-context.js';
 import {
@@ -80,8 +84,14 @@ import {
   type RecommendationCandidateTraceInput,
   type RecommendationGenerationMetadata,
 } from '../recommendation-events/recommendation-events.service.js';
-import { reportMlShadowFallback, runMlShadowComparison, type MlShadowComparisonResult } from '../recommendations/ml-shadow.service.js';
-import { buildServedSuggestedProjectsItems } from '../recommendations/project-runtime-candidate-mapping.js';
+import { reportMlShadowFallback, runMlShadowComparison } from '../recommendations/ml-shadow.service.js';
+import {
+  buildLearnerHomeMlRuntimeIdentity,
+  rankLearnerHomeMlCandidatePool,
+  type LearnerHomeMlOrderedPool,
+  type LearnerHomeMlOrderingDecision,
+} from './learner-home.ml-ordering.js';
+import { getRecommendationMlRuntimeSnapshot } from '../recommendations/ml-runtime-state.service.js';
 
 const MATERIAL_SECTION_KEYS: ReadonlySet<LearnerHomeSectionKey> = new Set([
   'suggested_materials',
@@ -104,6 +114,65 @@ const algorithmVersionForSection = (
       ? context.modeDecision.effectiveMaterialScoringMode
       : context.modeDecision.effectiveProjectScoringMode,
   );
+
+const mlDecisionToken = (decision: LearnerHomeMlOrderingDecision): string => {
+  switch (decision.status) {
+    case 'ML_RANKED': return 'ml-local';
+    case 'FALLBACK_NOT_READY': return 'fb-not-ready';
+    case 'FALLBACK_FAILED': return 'fb-failed';
+    default: return 'deterministic';
+  }
+};
+
+const algorithmVersionForMlSection = (
+  context: LearnerHomeContext,
+  sectionKey: LearnerHomeSectionKey,
+  decision?: LearnerHomeMlOrderingDecision,
+): string => {
+  if (!decision || decision.runtimeMode !== 'ML_LOCAL') {
+    return algorithmVersionForSection(context, sectionKey);
+  }
+  const sectionToken = sectionKey === 'suggested_materials'
+    ? 'sm'
+    : sectionKey === 'suggested_projects'
+      ? 'sp'
+      : undefined;
+  if (!sectionToken) return algorithmVersionForSection(context, sectionKey);
+  const base = MATERIAL_SECTION_KEYS.has(sectionKey)
+    ? context.modeDecision.effectiveMaterialScoringMode
+    : context.modeDecision.effectiveProjectScoringMode;
+  return `learner-home-v1:base=${base};${sectionToken}=${mlDecisionToken(decision)}`;
+};
+
+/**
+ * Full-Home ML algorithm stamp. Must stay <=100 characters for every valid
+ * supported scorer/decision combination (outbox `algorithmVersion` contract).
+ * Equal domain bases are encoded once; mixed bases use compact `m=`/`p=` form.
+ */
+const algorithmVersionForMlHome = (
+  context: Pick<LearnerHomeContext, 'modeDecision'>,
+  material: LearnerHomeMlOrderingDecision,
+  project: LearnerHomeMlOrderingDecision,
+): string => {
+  if (material.runtimeMode !== 'ML_LOCAL' && project.runtimeMode !== 'ML_LOCAL') {
+    return algorithmVersionForModeDecision(context.modeDecision);
+  }
+  const materialBase = context.modeDecision.effectiveMaterialScoringMode;
+  const projectBase = context.modeDecision.effectiveProjectScoringMode;
+  const base = materialBase === projectBase
+    ? `base=${materialBase}`
+    : `m=${materialBase};p=${projectBase}`;
+  return `learner-home-v1:${base};sm=${mlDecisionToken(material)};sp=${mlDecisionToken(project)}`;
+};
+
+/** @internal Focused pure-test seam for full-Home ML algorithm-version length. */
+export const algorithmVersionForMlHomeForTests = algorithmVersionForMlHome;
+
+const algorithmNameForMlDecisions = (
+  ...decisions: Array<LearnerHomeMlOrderingDecision | undefined>
+): string => decisions.some((value) => value?.status === 'ML_RANKED')
+  ? 'local-ml-hybrid'
+  : RECOMMENDATION_ALGORITHM_NAME;
 
 const SECTION_LIMITS = {
   suggested_materials: 4,
@@ -208,32 +277,6 @@ const buildProjectShadowInput = (
   })),
   evaluationTimestamp: new Date().toISOString(),
 });
-
-const applyServedSuggestedProjects = (
-  context: LearnerHomeContext,
-  response: LearnerHomeResponse,
-  projectShadow: MlShadowComparisonResult<LearnerHomeResponse> | undefined,
-  limit: number,
-): LearnerHomeResponse => {
-  if (
-    projectShadow?.diagnostics.status !== 'SCORED'
-    || projectShadow.diagnostics.projectReadinessStatus !== 'READY'
-    || !projectShadow.rankedCandidateKeys
-  ) {
-    return response;
-  }
-  try {
-    const items = buildSuggestedProjectsItems(context, limit, projectShadow.rankedCandidateKeys);
-    return {
-      ...response,
-      sections: response.sections.map((section) =>
-        section.key === 'suggested_projects' ? { ...section, items } : section,
-      ),
-    };
-  } catch {
-    return response;
-  }
-};
 
 type LearnerHomeCacheLoader<T> = (userId: string) => Promise<T>;
 
@@ -594,6 +637,11 @@ export type LearnerHomeCachedEnvelope = {
   cacheable: boolean;
   /** @internal Not exposed on the public HTTP response. */
   modeDecision: LearnerHomeModeDecision;
+  /** @internal Bounded LM ordering decisions; never serialized to LearnerHomeResponse. */
+  mlOrdering: {
+    material: LearnerHomeMlOrderingDecision;
+    project: LearnerHomeMlOrderingDecision;
+  };
 };
 
 const buildCanonicalScoringContextForMaterials = async (input: {
@@ -1036,23 +1084,6 @@ type RankedMaterialEntry = {
   ownerId: string;
 };
 
-const reorderRankedMaterialEntries = (
-  entries: RankedMaterialEntry[],
-  rankedCandidateKeys?: string[],
-): RankedMaterialEntry[] => {
-  if (!rankedCandidateKeys) return entries;
-
-  const ranks = new Map(rankedCandidateKeys.map((key, index) => [key, index]));
-  const originalOrder = new Map(entries.map((entry, index) => [entry, index]));
-  const itemKey = (entry: RankedMaterialEntry) => String(entry.material.id ?? '');
-
-  return [...entries].sort((left, right) =>
-    (ranks.get(itemKey(left)) ?? Number.MAX_SAFE_INTEGER) -
-      (ranks.get(itemKey(right)) ?? Number.MAX_SAFE_INTEGER) ||
-    originalOrder.get(left)! - originalOrder.get(right)!,
-  );
-};
-
 const toMaterialItem = ({
   ownerId: _ownerId,
   tier: _tier,
@@ -1068,17 +1099,14 @@ const rankMaterialsFromPreScored = (
   useDiversityCap: boolean,
   useTieredSuggestedRanking = false,
   browseAllTierSort = false,
-  rankedCandidateKeys?: string[],
 ): LearnerHomeMaterialItem[] => {
-  const rankedEntries = reorderRankedMaterialEntries(
-    rankPreScoredMaterialEntries(
-      entries,
-      scoreKey,
-      useTieredSuggestedRanking,
-      browseAllTierSort,
-    ),
-    rankedCandidateKeys,
+  const rankedEntries = rankPreScoredMaterialEntries(
+    entries,
+    scoreKey,
+    useTieredSuggestedRanking,
+    browseAllTierSort,
   );
+
   const selected = rankedEntries.slice(0, limit);
 
   if (useDiversityCap) {
@@ -1095,12 +1123,11 @@ const rankMaterialsPageFromPreScored = (
   scoreKey: keyof PreScoredMaterialEntry['scores'],
   limit: number,
   offset: number,
-  rankedCandidateKeys?: string[],
+  orderedEntries?: readonly RankedMaterialEntry[],
 ): { items: LearnerHomeMaterialItem[]; hasMore: boolean; nextOffset: number | null } => {
-  const sorted = reorderRankedMaterialEntries(
-    rankPreScoredMaterialEntries(entries, scoreKey, true, true),
-    rankedCandidateKeys,
-  );
+  const sorted = orderedEntries
+    ? [...orderedEntries]
+    : rankPreScoredMaterialEntries(entries, scoreKey, true, true);
   const pageEntries = sorted.slice(offset, offset + limit);
   const items = dedupeMaterialItems(pageEntries.map(toMaterialItem), limit);
   const nextOffset = offset + items.length;
@@ -1117,7 +1144,7 @@ const buildRankedHomeMaterialSections = (
   context: LearnerHomeContext,
   preScoredMaterials: PreScoredMaterialEntry[],
   profiler?: ReturnType<typeof createLearnerHomeProfiler>,
-  rankedCandidateKeys?: string[],
+  orderedSuggestedEntries?: readonly RankedMaterialEntry[],
 ) => {
   let rankedMaterialsForSavedProjects: LearnerHomeMaterialItem[] = [];
   const rankSaved = () => {
@@ -1142,15 +1169,19 @@ const buildRankedHomeMaterialSections = (
 
   let rankedSuggestedMaterials: LearnerHomeMaterialItem[] = [];
   const rankSuggested = () => {
-    rankedSuggestedMaterials = rankMaterialsFromPreScored(
-      preScoredMaterials,
-      'suggested',
-      rankedCandidateKeys ? preScoredMaterials.length : RANK_POOL_SIZE,
-      false,
-      true,
-      false,
-      rankedCandidateKeys,
-    );
+    rankedSuggestedMaterials = orderedSuggestedEntries
+      ? dedupeMaterialItems(
+          orderedSuggestedEntries.slice(0, RANK_POOL_SIZE).map(toMaterialItem),
+          RANK_POOL_SIZE,
+        )
+      : rankMaterialsFromPreScored(
+          preScoredMaterials,
+          'suggested',
+          RANK_POOL_SIZE,
+          false,
+          true,
+          false,
+        );
   };
 
   if (profiler) {
@@ -1250,7 +1281,7 @@ export const rankProjects = (
 const buildSuggestedProjectsItems = (
   context: LearnerHomeContext,
   limit: number,
-  rankedCandidateKeys?: string[],
+  orderedPool?: readonly LearnerHomeProjectItem[],
 ): LearnerHomeProjectItem[] => {
   const availableMaterials = context.materials.filter(
     (material) =>
@@ -1266,27 +1297,6 @@ const buildSuggestedProjectsItems = (
       behavior: context.behavior,
     });
 
-  if (rankedCandidateKeys) {
-    const projectsById = new Map(context.projects.map((project) => [project.id, project]));
-    return buildServedSuggestedProjectsItems({
-      rankedCandidateKeys,
-      savedProjectIds: context.savedProjectIds,
-      limit,
-      buildProjectItem: (projectId) => {
-        const project = projectsById.get(projectId);
-        if (!project) return undefined;
-        const scored = scoreProject(project);
-        if (scored.score <= 0) return undefined;
-        return {
-          type: 'project' as const,
-          score: scored.score,
-          reasons: scored.reasons,
-          project: project.mapped,
-        };
-      },
-    });
-  }
-
   const unsavedProjects = context.projects.filter(
     (project) => !context.savedProjectIds.has(project.id),
   );
@@ -1294,11 +1304,158 @@ const buildSuggestedProjectsItems = (
     context.savedProjectIds.has(project.id),
   );
 
+  const deterministicPool = [
+    ...rankProjects(unsavedProjects, scoreProject, context.projects.length, true),
+    ...rankProjects(savedProjects, scoreProject, context.projects.length, true),
+  ];
+  const selectedPool = orderedPool ? [...orderedPool] : deterministicPool;
   return selectSuggestedProjectItems(
-    rankProjects(unsavedProjects, scoreProject, limit, true),
-    rankProjects(savedProjects, scoreProject, limit, true),
+    selectedPool.filter(
+      (item) => !context.savedProjectIds.has(String(item.project.id ?? '')),
+    ),
+    selectedPool.filter((item) =>
+      context.savedProjectIds.has(String(item.project.id ?? '')),
+    ),
     limit,
   );
+};
+
+const buildSuggestedProjectsCandidatePool = (
+  context: LearnerHomeContext,
+): LearnerHomeProjectItem[] => buildSuggestedProjectsItems(
+  context,
+  context.projects.length,
+);
+
+const buildSuggestedMaterialCandidatePool = (
+  entries: PreScoredMaterialEntry[],
+  browseAll: boolean,
+): RankedMaterialEntry[] => rankPreScoredMaterialEntries(
+  entries,
+  'suggested',
+  true,
+  browseAll,
+).slice(0, browseAll ? entries.length : RANK_POOL_SIZE);
+
+const failedMlOrderingResult = <T>(
+  domain: 'material' | 'project',
+  pool: readonly T[],
+  reasonCode: string,
+): LearnerHomeMlOrderedPool<T> => ({
+  ordered: Object.freeze([...pool]),
+  decision: {
+    domain,
+    runtimeMode: getRecommendationMlRuntimeSnapshot().mode,
+    status: 'FALLBACK_FAILED',
+    reasonCode,
+    diagnostics: {
+      candidateCount: pool.length,
+      scoredCount: 0,
+      retryCount: 0,
+      unmappedCandidateCount: 0,
+      omittedMappedCandidateCount: 0,
+      unknownRankedKeyCount: 0,
+      duplicateRankedKeyCount: 0,
+      opaqueKeySamples: [],
+    },
+  },
+});
+
+const rankSuggestedMaterialPoolWithMl = async (
+  context: LearnerHomeContext,
+  pool: readonly RankedMaterialEntry[],
+) => {
+  const snapshot = getRecommendationMlRuntimeSnapshot();
+  let materialConcepts = new Map<string, string[]>();
+  let conceptLoadFailed = false;
+  if (snapshot.mode === 'ML_LOCAL') {
+    try {
+      materialConcepts = (
+        await learnerHomeRepository.loadMlShadowConcepts(
+          pool.map((entry) => String(entry.material.id ?? '')).filter(Boolean),
+          [],
+        )
+      ).materialConcepts;
+    } catch {
+      conceptLoadFailed = true;
+    }
+  }
+  const sourceById = new Map(context.materials.map((material) => [material.id, material]));
+  const candidates = pool.flatMap((entry) => {
+    const candidateKey = String(entry.material.id ?? '');
+    const source = sourceById.get(candidateKey);
+    if (!source || candidateKey.length === 0) return [];
+    return [{
+      candidateKey,
+      item: entry,
+      conceptKeys: materialConcepts.get(candidateKey) ?? [],
+      condition: source.mapped.condition as MaterialCondition,
+      isFree: source.isFree,
+      pickupAllowed: source.pickupAllowed,
+      deliveryAllowed: source.deliveryAllowed,
+    }];
+  });
+  if (candidates.length !== pool.length) {
+    return failedMlOrderingResult('material', pool, 'CANDIDATE_INPUT_MAPPING_FAILED');
+  }
+  return rankLearnerHomeMlCandidatePool({
+    domain: 'material',
+    interests: context.interests,
+    candidates,
+  }, {
+    getSnapshot: () => snapshot,
+    ...(conceptLoadFailed
+      ? { loadUserFeatures: async () => { throw new Error('material_concept_load_failed'); } }
+      : {}),
+  });
+};
+
+const rankSuggestedProjectPoolWithMl = async (
+  context: LearnerHomeContext,
+  pool: readonly LearnerHomeProjectItem[],
+) => {
+  const snapshot = getRecommendationMlRuntimeSnapshot();
+  let projectConcepts = new Map<string, string[]>();
+  let projectComponentConcepts = new Map<string, string[]>();
+  let conceptLoadFailed = false;
+  if (snapshot.mode === 'ML_LOCAL') {
+    try {
+      const concepts = await learnerHomeRepository.loadMlShadowConcepts(
+        [],
+        pool.map((item) => String(item.project.id ?? '')).filter(Boolean),
+      );
+      projectConcepts = concepts.projectConcepts;
+      projectComponentConcepts = concepts.projectComponentConcepts;
+    } catch {
+      conceptLoadFailed = true;
+    }
+  }
+  const sourceById = new Map(context.projects.map((project) => [project.id, project]));
+  const candidates = pool.flatMap((item) => {
+    const candidateKey = String(item.project.id ?? '');
+    const source = sourceById.get(candidateKey);
+    if (!source || candidateKey.length === 0) return [];
+    return [{
+      candidateKey,
+      item,
+      conceptKeys: projectConcepts.get(candidateKey) ?? [],
+      componentConceptKeys: projectComponentConcepts.get(candidateKey) ?? [],
+      difficulty: source.difficulty as ProjectDifficulty,
+    }];
+  });
+  if (candidates.length !== pool.length) {
+    return failedMlOrderingResult('project', pool, 'CANDIDATE_INPUT_MAPPING_FAILED');
+  }
+  return rankLearnerHomeMlCandidatePool({
+    domain: 'project',
+    interests: context.interests,
+    candidates,
+  }, {
+    getSnapshot: () => snapshot,
+    ...(conceptLoadFailed
+      ? { loadUserFeatures: async () => { throw new Error('project_concept_load_failed'); } }
+      : {}),
+  });
 };
 
 const buildContinueProjectsItems = async (
@@ -1398,8 +1555,8 @@ const buildSectionItems = async (
   limit: number,
   offset = 0,
   preScoredMaterials?: PreScoredMaterialEntry[],
-  rankedCandidateKeys?: string[],
-  rankedProjectCandidateKeys?: string[],
+  orderedSuggestedMaterialEntries?: readonly RankedMaterialEntry[],
+  orderedSuggestedProjectItems?: readonly LearnerHomeProjectItem[],
 ): Promise<{
   title: string;
   subtitle: string;
@@ -1416,7 +1573,7 @@ const buildSectionItems = async (
         'suggested',
         limit,
         offset,
-        rankedCandidateKeys,
+        orderedSuggestedMaterialEntries,
       );
 
       return {
@@ -1474,7 +1631,11 @@ const buildSectionItems = async (
       };
     }
     case 'suggested_projects': {
-      const items = buildSuggestedProjectsItems(context, limit, rankedProjectCandidateKeys);
+      const items = buildSuggestedProjectsItems(
+        context,
+        limit,
+        orderedSuggestedProjectItems,
+      );
       return {
         title: SECTION_META.suggested_projects.title,
         subtitle: resolveSuggestedProjectsSubtitle({
@@ -1571,7 +1732,22 @@ export const getLearnerHomeSectionForAudit = async (
     );
   }
 
-  let built = await profiler.time(`buildSection:${sectionKey}`, () =>
+  let orderedSuggestedMaterialEntries: readonly RankedMaterialEntry[] | undefined;
+  let orderedSuggestedProjectItems: readonly LearnerHomeProjectItem[] | undefined;
+  let mlDecision: LearnerHomeMlOrderingDecision | undefined;
+  if (sectionKey === 'suggested_materials' && preScoredMaterials) {
+    const pool = buildSuggestedMaterialCandidatePool(preScoredMaterials, true);
+    const mlResult = await rankSuggestedMaterialPoolWithMl(context, pool);
+    orderedSuggestedMaterialEntries = mlResult.ordered;
+    mlDecision = mlResult.decision;
+  } else if (sectionKey === 'suggested_projects') {
+    const pool = buildSuggestedProjectsCandidatePool(context);
+    const mlResult = await rankSuggestedProjectPoolWithMl(context, pool);
+    orderedSuggestedProjectItems = mlResult.ordered;
+    mlDecision = mlResult.decision;
+  }
+
+  const built = await profiler.time(`buildSection:${sectionKey}`, () =>
     buildSectionItems(
       context,
       userId,
@@ -1579,13 +1755,15 @@ export const getLearnerHomeSectionForAudit = async (
       limit,
       offset,
       preScoredMaterials,
+      orderedSuggestedMaterialEntries,
+      orderedSuggestedProjectItems,
     ),
   );
 
   profiler.record('totalGetLearnerHomeSection', performance.now() - startedAt);
   profiler.report({ userId, scope: 'getLearnerHomeSection' });
 
-  let sectionResponse = {
+  const sectionResponse = {
     key: sectionKey,
     title: built.title,
     subtitle: built.subtitle,
@@ -1596,7 +1774,10 @@ export const getLearnerHomeSectionForAudit = async (
     hasMore: built.hasMore,
   };
 
-  if (sectionKey === 'suggested_materials') {
+  if (
+    getRecommendationMlRuntimeSnapshot().mode === 'SHADOW' &&
+    sectionKey === 'suggested_materials'
+  ) {
     try {
       const shadowConcepts = env.recommendationMlShadowEnabled
         ? await learnerHomeRepository.loadMlShadowConcepts(
@@ -1613,7 +1794,7 @@ export const getLearnerHomeSectionForAudit = async (
         .filter((item): item is LearnerHomeMaterialItem => item.type === 'material')
         .map((item) => String(item.material.id ?? ''))
         .filter(Boolean);
-      const materialShadow = await runMlShadowComparison({
+      await runMlShadowComparison({
         response: shadowResponse,
         domain: 'material',
         interests: context.interests,
@@ -1635,33 +1816,15 @@ export const getLearnerHomeSectionForAudit = async (
         })),
         evaluationTimestamp: new Date().toISOString(),
       });
-      if (materialShadow.diagnostics.status === 'SCORED' && materialShadow.rankedCandidateKeys) {
-        built = await profiler.time('buildServedSuggestedMaterialsSection', () =>
-          buildSectionItems(
-            context,
-            userId,
-            sectionKey,
-            limit,
-            offset,
-            preScoredMaterials,
-            materialShadow.rankedCandidateKeys,
-          ),
-        );
-        sectionResponse = {
-          ...sectionResponse,
-          title: built.title,
-          subtitle: built.subtitle,
-          items: built.items,
-          nextOffset: built.nextOffset,
-          hasMore: built.hasMore,
-        };
-      }
     } catch (error) {
       reportMlShadowFallback('material', context.materials.length, error);
     }
   }
 
-  if (sectionKey === 'suggested_projects') {
+  if (
+    getRecommendationMlRuntimeSnapshot().mode === 'SHADOW' &&
+    sectionKey === 'suggested_projects'
+  ) {
     try {
       const shadowConcepts = env.recommendationMlShadowEnabled
         ? await learnerHomeRepository.loadMlShadowConcepts(
@@ -1684,39 +1847,9 @@ export const getLearnerHomeSectionForAudit = async (
           items: sectionResponse.items,
         }],
       };
-      const projectShadow = await runMlShadowComparison(
+      await runMlShadowComparison(
         buildProjectShadowInput(context, shadowResponse, shadowConcepts),
       );
-      if (
-        projectShadow.diagnostics.status === 'SCORED'
-        && projectShadow.diagnostics.projectReadinessStatus === 'READY'
-        && projectShadow.rankedCandidateKeys
-      ) {
-        try {
-          built = await profiler.time('buildServedSuggestedProjectsSection', () =>
-            buildSectionItems(
-              context,
-              userId,
-              sectionKey,
-              limit,
-              offset,
-              preScoredMaterials,
-              undefined,
-              projectShadow.rankedCandidateKeys,
-            ),
-          );
-          sectionResponse = {
-            ...sectionResponse,
-            title: built.title,
-            subtitle: built.subtitle,
-            items: built.items,
-            nextOffset: built.nextOffset,
-            hasMore: built.hasMore,
-          };
-        } catch {
-          // Fail closed to the deterministic section response.
-        }
-      }
     } catch (error) {
       reportMlShadowFallback('project', context.projects.length, error);
     }
@@ -1728,8 +1861,8 @@ export const getLearnerHomeSectionForAudit = async (
       generationKey: randomUUID(),
       learnerId: userId,
       surface: 'LEARNER_HOME_SECTION',
-      algorithmName: RECOMMENDATION_ALGORITHM_NAME,
-      algorithmVersion: algorithmVersionForSection(context, sectionKey),
+      algorithmName: algorithmNameForMlDecisions(mlDecision),
+      algorithmVersion: algorithmVersionForMlSection(context, sectionKey, mlDecision),
       policyVersion: RECOMMENDATION_POLICY_VERSION,
       generatedAt: new Date(),
       candidateCount: context.materials.length + context.projects.length,
@@ -1769,6 +1902,7 @@ export const getLearnerHomeSectionForAudit = async (
     effectiveMaterialScoringMode: modeDecision.effectiveMaterialScoringMode,
     fallbackCode: modeDecision.fallbackCode,
     cacheable: modeDecision.cacheable,
+    mlOrdering: mlDecision,
     timingsMs: Object.fromEntries(
       [...profiler.getTimings().entries()].map(([step, durationMs]) => [
         step,
@@ -1806,6 +1940,9 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
   profiler?: ReturnType<typeof createLearnerHomeProfiler>;
   /** Wall-clock start of the full uncached load (includes context load when provided). */
   startedAt?: number;
+  /** @internal Focused service-test seams for domain-independent ML ordering. */
+  rankMaterialPool?: typeof rankSuggestedMaterialPoolWithMl;
+  rankProjectPool?: typeof rankSuggestedProjectPoolWithMl;
 }): Promise<LearnerHomeCachedEnvelope> => {
   const profiler =
     input.profiler ?? createLearnerHomeProfiler('getLearnerHome');
@@ -1826,7 +1963,7 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
   };
 
   let preScoredMaterials!: PreScoredMaterialEntry[];
-  const [dedupedMaterials, continueProjectsSection, savedProjectsSection] =
+  const [deterministicMaterials, continueProjectsSection, savedProjectsSection] =
     await Promise.all([
       profiler.time('rankMaterialSections', async () => {
         preScoredMaterials = await profiler.time(
@@ -1857,6 +1994,40 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
         ),
       })),
     ]);
+
+  const deterministicMaterialPool = buildSuggestedMaterialCandidatePool(
+    preScoredMaterials,
+    false,
+  );
+  const deterministicProjectPool = buildSuggestedProjectsCandidatePool(context);
+  const [materialSettled, projectSettled] = await Promise.allSettled([
+    Promise.resolve().then(() =>
+      (input.rankMaterialPool ?? rankSuggestedMaterialPoolWithMl)(
+        context,
+        deterministicMaterialPool,
+      ),
+    ),
+    Promise.resolve().then(() =>
+      (input.rankProjectPool ?? rankSuggestedProjectPoolWithMl)(
+        context,
+        deterministicProjectPool,
+      ),
+    ),
+  ]);
+  const materialMl = materialSettled.status === 'fulfilled'
+    ? materialSettled.value
+    : failedMlOrderingResult('material', deterministicMaterialPool, 'SCORER_EXCEPTION');
+  const projectMl = projectSettled.status === 'fulfilled'
+    ? projectSettled.value
+    : failedMlOrderingResult('project', deterministicProjectPool, 'SCORER_EXCEPTION');
+  const dedupedMaterials = materialMl.decision.status === 'ML_RANKED'
+    ? buildRankedHomeMaterialSections(
+        context,
+        preScoredMaterials,
+        undefined,
+        materialMl.ordered,
+      )
+    : deterministicMaterials;
 
   profiler.record('totalGetLearnerHome', performance.now() - startedAt);
   profiler.report({ userId: input.userId, scope: 'getLearnerHome' });
@@ -1889,6 +2060,7 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
       items: buildSuggestedProjectsItems(
         context,
         SECTION_LIMITS.suggested_projects,
+        projectMl.ordered,
       ),
     },
     continueProjectsSection,
@@ -1910,7 +2082,7 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
     },
   ];
 
-  let response: LearnerHomeResponse = {
+  const response: LearnerHomeResponse = {
     profileCompletion,
     sections,
   };
@@ -1932,66 +2104,41 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
     candidateKeys: section.items.flatMap((item) => domain === 'material' && item.type === 'material' ? [String(item.material.id ?? '')] : domain === 'project' && item.type === 'project' ? [String(item.project.id ?? '')] : []).filter(Boolean),
   })).filter((section) => section.candidateKeys.length > 0);
 
-  // Shadow work is fail-safe. Material serving can only replace the order of
-  // the already-built suggested_materials items after a scored result.
-  try {
-    const shadowConcepts = env.recommendationMlShadowEnabled
-      ? await learnerHomeRepository.loadMlShadowConcepts(
-          context.materials.map((material) => material.id),
-          context.projects.map((project) => project.id),
-        )
-      : emptyMlShadowConcepts;
-    const shadowResults = await Promise.allSettled([
-    runMlShadowComparison({
-      response,
-      domain: 'material',
-      interests: context.interests,
-      candidates: buildMaterialShadowCandidates(context, shadowConcepts.materialConcepts),
-      currentTopKeys: currentTopKeys('material'),
-      currentSections: currentSections('material'),
-      activeCandidateKeys: context.materials.filter((material) => material.status === 'AVAILABLE' && material.availableQuantity > 0).map((material) => material.id),
-      recentEvents: context.behavior.recentRecommendationEvents ?? [],
-      recentEntityMetadata: context.projects.map((project) => ({
-        entityKey: project.id,
-        candidateKey: project.id,
-        categoryId: project.categoryId,
-        categoryLabel: project.categoryNameEn,
-        conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
-        componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
-      })),
-      evaluationTimestamp: new Date().toISOString(),
-    }),
-    runMlShadowComparison(buildProjectShadowInput(context, response, shadowConcepts)),
-    ]);
-    const materialShadow = shadowResults[0];
-    if (materialShadow?.status === 'fulfilled' && materialShadow.value.diagnostics.status === 'SCORED' && materialShadow.value.rankedCandidateKeys) {
-      const servedMaterialSections = buildRankedHomeMaterialSections(
-        context,
-        preScoredMaterials,
-        undefined,
-        materialShadow.value.rankedCandidateKeys,
-      );
-      response = {
-        ...response,
-        sections: response.sections.map((section) =>
-          section.key === 'suggested_materials'
-            ? { ...section, items: servedMaterialSections.suggestedMaterials }
-            : section,
-        ),
-      };
+  // Shadow work is fail-safe and has no user-visible ordering effect.
+  if (getRecommendationMlRuntimeSnapshot().mode === 'SHADOW') {
+    try {
+      const shadowConcepts = env.recommendationMlShadowEnabled
+        ? await learnerHomeRepository.loadMlShadowConcepts(
+            context.materials.map((material) => material.id),
+            context.projects.map((project) => project.id),
+          )
+        : emptyMlShadowConcepts;
+      await Promise.allSettled([
+        runMlShadowComparison({
+          response,
+          domain: 'material',
+          interests: context.interests,
+          candidates: buildMaterialShadowCandidates(context, shadowConcepts.materialConcepts),
+          currentTopKeys: currentTopKeys('material'),
+          currentSections: currentSections('material'),
+          activeCandidateKeys: context.materials.filter((material) => material.status === 'AVAILABLE' && material.availableQuantity > 0).map((material) => material.id),
+          recentEvents: context.behavior.recentRecommendationEvents ?? [],
+          recentEntityMetadata: context.projects.map((project) => ({
+            entityKey: project.id,
+            candidateKey: project.id,
+            categoryId: project.categoryId,
+            categoryLabel: project.categoryNameEn,
+            conceptKeys: shadowConcepts.projectConcepts.get(project.id) ?? [],
+            componentConceptKeys: shadowConcepts.projectComponentConcepts.get(project.id) ?? [],
+          })),
+          evaluationTimestamp: new Date().toISOString(),
+        }),
+        runMlShadowComparison(buildProjectShadowInput(context, response, shadowConcepts)),
+      ]);
+    } catch (error) {
+      reportMlShadowFallback('material', context.materials.length, error);
+      reportMlShadowFallback('project', context.projects.length, error);
     }
-    const projectShadow = shadowResults[1];
-    if (projectShadow?.status === 'fulfilled') {
-      response = applyServedSuggestedProjects(
-        context,
-        response,
-        projectShadow.value,
-        SECTION_LIMITS.suggested_projects,
-      );
-    }
-  } catch (error) {
-    reportMlShadowFallback('material', context.materials.length, error);
-    reportMlShadowFallback('project', context.projects.length, error);
   }
 
   return {
@@ -2000,8 +2147,15 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
       generationKey: randomUUID(),
       learnerId: input.userId,
       surface: 'LEARNER_HOME',
-      algorithmName: RECOMMENDATION_ALGORITHM_NAME,
-      algorithmVersion: algorithmVersionForModeDecision(context.modeDecision),
+      algorithmName: algorithmNameForMlDecisions(
+        materialMl.decision,
+        projectMl.decision,
+      ),
+      algorithmVersion: algorithmVersionForMlHome(
+        context,
+        materialMl.decision,
+        projectMl.decision,
+      ),
       policyVersion: RECOMMENDATION_POLICY_VERSION,
       generatedAt: new Date(),
       candidateCount: context.materials.length + context.projects.length,
@@ -2015,6 +2169,10 @@ export const assembleLearnerHomeCachedEnvelope = async (input: {
     },
     cacheable: context.modeDecision.cacheable,
     modeDecision: context.modeDecision,
+    mlOrdering: {
+      material: materialMl.decision,
+      project: projectMl.decision,
+    },
   };
 };
 
@@ -2042,11 +2200,15 @@ async function loadLearnerHomeUncached(
 export type LearnerHomeCacheKeyInput = {
   userId: string;
   scorerVersion: RecommendationScorerVersion;
-  mlShadowEnabled: boolean;
-  mlMaterialServingEnabled: boolean;
-  mlMaterialArtifactPath: string;
-  mlProjectServingEnabled: boolean;
-  mlProjectArtifactPath: string;
+  runtimeMode?: 'DETERMINISTIC' | 'SHADOW' | 'ML_LOCAL';
+  materialRuntimeIdentity?: string;
+  projectRuntimeIdentity?: string;
+  /** @deprecated Compatibility inputs for existing deterministic cache tests. */
+  mlShadowEnabled?: boolean;
+  mlMaterialServingEnabled?: boolean;
+  mlMaterialArtifactPath?: string;
+  mlProjectServingEnabled?: boolean;
+  mlProjectArtifactPath?: string;
 };
 
 /**
@@ -2059,23 +2221,31 @@ export const buildLearnerHomeCacheKey = (
   [
     input.userId,
     input.scorerVersion,
-    input.mlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC',
-    input.mlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
-    input.mlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
-    input.mlProjectServingEnabled ? 'PROJECT_SERVED' : 'PROJECT_NOT_SERVED',
-    input.mlProjectArtifactPath || 'NO_PROJECT_ARTIFACT',
+    input.runtimeMode ?? (input.mlShadowEnabled ? 'SHADOW' : 'DETERMINISTIC'),
+    input.materialRuntimeIdentity ?? [
+      input.mlMaterialServingEnabled ? 'MATERIAL_SERVED' : 'MATERIAL_NOT_SERVED',
+      input.mlMaterialArtifactPath || 'NO_MATERIAL_ARTIFACT',
+    ].join(':'),
+    input.projectRuntimeIdentity ?? [
+      input.mlProjectServingEnabled ? 'PROJECT_SERVED' : 'PROJECT_NOT_SERVED',
+      input.mlProjectArtifactPath || 'NO_PROJECT_ARTIFACT',
+    ].join(':'),
   ].join('\u0000');
 
-const learnerHomeCacheKey = (userId: string): string =>
-  buildLearnerHomeCacheKey({
+const learnerHomeCacheKey = (userId: string): string => {
+  const runtimeIdentity = buildLearnerHomeMlRuntimeIdentity({
+    snapshot: getRecommendationMlRuntimeSnapshot(),
+    materialArtifactPath: env.recommendationMlMaterialArtifactPath,
+    projectArtifactPath: env.recommendationMlProjectArtifactPath,
+  });
+  return buildLearnerHomeCacheKey({
     userId,
     scorerVersion: RECOMMENDATION_SCORER_VERSION,
-    mlShadowEnabled: env.recommendationMlShadowEnabled,
-    mlMaterialServingEnabled: env.recommendationMlMaterialServingEnabled,
-    mlMaterialArtifactPath: env.recommendationMlMaterialArtifactPath || '',
-    mlProjectServingEnabled: env.recommendationMlProjectServingEnabled,
-    mlProjectArtifactPath: env.recommendationMlProjectArtifactPath || '',
+    runtimeMode: runtimeIdentity.mode,
+    materialRuntimeIdentity: runtimeIdentity.material,
+    projectRuntimeIdentity: runtimeIdentity.project,
   });
+};
 
 const learnerHomeCache = createLearnerHomeCache(
   loadLearnerHomeUncached,
@@ -2129,6 +2299,7 @@ export const runLearnerHomeUncachedAudit = async (userId: string) => {
       envelope.modeDecision.effectiveMaterialScoringMode,
     fallbackCode: envelope.modeDecision.fallbackCode,
     cacheable: envelope.cacheable,
+    mlOrdering: envelope.mlOrdering,
   };
 };
 
@@ -2143,6 +2314,7 @@ export const getLearnerHomeWithCacheStateForAudit = async (userId: string) => {
     cacheable: cacheRead.payload.cacheable,
     response: cacheRead.payload.response,
     modeDecision: cacheRead.payload.modeDecision,
+    mlOrdering: cacheRead.payload.mlOrdering,
     candidateCount: cacheRead.payload.generation.candidateCount,
   };
 };
