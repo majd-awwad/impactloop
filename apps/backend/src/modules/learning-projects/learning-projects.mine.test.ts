@@ -33,6 +33,12 @@ import {
   updateMyLearningProjectSubmissionById,
 } from './learning-projects.service.js';
 import type { ProjectTopicLifecycleDeps } from '../taxonomy/project-concept-assignment.repository.js';
+import {
+  createComponentConceptLifecycleDeps,
+  defaultComponentConceptAssignmentPersistenceDeps,
+  defaultComponentConceptLifecycleDeps,
+  type ComponentConceptLifecycleDeps,
+} from '../taxonomy/component-concept-assignment.repository.js';
 
 const TEST_MARKER = '[test-learning-projects-mine]';
 
@@ -1164,5 +1170,597 @@ describe('project topic lifecycle', () => {
     assert.equal(concepts.length, 1);
     assert.equal(concepts[0]?.id, existingConcept.id);
     assert.equal(concepts[0]?.conceptId, projectCategory.topicConceptId);
+  });
+});
+
+describe('required component concept lifecycle', () => {
+  test('submit create maps reviewed component evidence to one assignment', async () => {
+    const owner = await createLearnerUser('component-submit');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+
+    const { response } = await submitLearningProjectForReview(
+      owner.id,
+      {
+        title: `${TEST_MARKER} component submit`,
+        shortDescription: `${TEST_MARKER} component submit short description.`,
+        description: `${TEST_MARKER} component submit full description.`,
+        categoryId: projectCategory.id,
+        difficulty: 'BEGINNER',
+        requiredComponents: [
+          {
+            name: 'Breadboard',
+            materialType: 'Breadboard',
+            quantity: 1,
+            unit: 'piece',
+          },
+        ],
+      },
+      `idem-component-submit-${Date.now()}`,
+    );
+    ids.projects.push(response.id);
+
+    const components = await prisma.projectRequiredComponent.findMany({
+      where: { projectId: response.id },
+      select: { id: true },
+    });
+    assert.equal(components.length, 1);
+
+    const joins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: components[0]!.id },
+      include: { concept: { select: { canonicalKey: true, conceptType: true } } },
+    });
+    assert.equal(joins.length, 1);
+    assert.equal(joins[0]?.concept.conceptType, 'COMPONENT');
+    assert.equal(joins[0]?.concept.canonicalKey, 'component:breadboard');
+
+    const topics = await prisma.learningProjectConcept.findMany({
+      where: { projectId: response.id },
+    });
+    assert.equal(topics.length, 1);
+    assert.equal(topics[0]?.conceptId, projectCategory.topicConceptId);
+  });
+
+  test('semantic update replaces assignment; non-semantic preserves join row id', async () => {
+    const owner = await createLearnerUser('component-semantic');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:electronics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component semantic`,
+    });
+    const topicJoin = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: projectCategory.topicConceptId,
+      },
+    });
+    const breadboard = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:breadboard', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    const component = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Breadboard',
+        materialType: 'Breadboard',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const existingJoin = await prisma.projectComponentConcept.create({
+      data: {
+        componentId: component.id,
+        conceptId: breadboard.id,
+      },
+    });
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} component semantic`,
+      shortDescription: `${TEST_MARKER} component semantic short.`,
+      description: `${TEST_MARKER} component semantic full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+      requiredComponents: [
+        {
+          id: component.id,
+          name: 'Breadboard',
+          materialType: 'Breadboard',
+          quantity: 3,
+          unit: 'piece',
+          notes: 'quantity-only change',
+        },
+      ],
+    });
+
+    const afterNonSemantic = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+    });
+    assert.equal(afterNonSemantic.length, 1);
+    assert.equal(afterNonSemantic[0]?.id, existingJoin.id);
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} component semantic`,
+      shortDescription: `${TEST_MARKER} component semantic short.`,
+      description: `${TEST_MARKER} component semantic full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+      requiredComponents: [
+        {
+          id: component.id,
+          name: 'Arduino board',
+          materialType: 'Arduino Uno',
+          quantity: 3,
+          unit: 'piece',
+        },
+      ],
+    });
+
+    const afterSemantic = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(afterSemantic.length, 1);
+    assert.equal(afterSemantic[0]?.concept.canonicalKey, 'component:arduino-board');
+    assert.notEqual(afterSemantic[0]?.id, existingJoin.id);
+
+    const topics = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(topics.length, 1);
+    assert.equal(topics[0]?.id, topicJoin.id);
+    assert.equal(topics[0]?.conceptId, projectCategory.topicConceptId);
+  });
+
+  test('replacement and deletion cascade; sibling and other project intact', async () => {
+    const owner = await createLearnerUser('component-replace');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const otherCategory = await createCategory(
+      'PROJECT',
+      'project-topic:woodworking',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component replace`,
+    });
+    const otherProject = await createProject({
+      createdBy: owner.id,
+      categoryId: otherCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component other project`,
+    });
+
+    const keep = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Breadboard',
+        materialType: 'Breadboard',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const remove = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'LED',
+        materialType: 'LED Pack',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const otherComponent = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: otherProject.id,
+        componentName: 'Wood glue',
+        materialType: 'Wood Glue',
+        quantity: 1,
+        unit: 'bottle',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+
+    const breadboard = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:breadboard' },
+      select: { id: true },
+    });
+    const led = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:led' },
+      select: { id: true },
+    });
+    const woodGlue = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:wood-glue' },
+      select: { id: true },
+    });
+
+    await prisma.projectComponentConcept.createMany({
+      data: [
+        { componentId: keep.id, conceptId: breadboard.id },
+        { componentId: remove.id, conceptId: led.id },
+        { componentId: otherComponent.id, conceptId: woodGlue.id },
+      ],
+    });
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} component replace`,
+      shortDescription: `${TEST_MARKER} component replace short.`,
+      description: `${TEST_MARKER} component replace full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+      requiredComponents: [
+        {
+          id: keep.id,
+          name: 'Breadboard',
+          materialType: 'Breadboard',
+          quantity: 1,
+          unit: 'piece',
+        },
+        {
+          name: 'Jumper wires',
+          materialType: 'Jumper Wires',
+          quantity: 1,
+          unit: 'pack',
+        },
+      ],
+    });
+
+    assert.equal(
+      await prisma.projectRequiredComponent.count({ where: { id: remove.id } }),
+      0,
+    );
+    assert.equal(
+      await prisma.projectComponentConcept.count({
+        where: { componentId: remove.id },
+      }),
+      0,
+    );
+
+    const keepJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: keep.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(keepJoins.length, 1);
+    assert.equal(keepJoins[0]?.concept.canonicalKey, 'component:breadboard');
+
+    const created = await prisma.projectRequiredComponent.findFirstOrThrow({
+      where: {
+        projectId: project.id,
+        componentName: 'Jumper wires',
+      },
+      select: { id: true },
+    });
+    const createdJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: created.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(createdJoins.length, 1);
+    assert.equal(createdJoins[0]?.concept.canonicalKey, 'component:jumper-wires');
+
+    const otherJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: otherComponent.id },
+    });
+    assert.equal(otherJoins.length, 1);
+    assert.equal(otherJoins[0]?.conceptId, woodGlue.id);
+  });
+
+  test('missing and stale assignments self-heal on update; retry stays idempotent', async () => {
+    const owner = await createLearnerUser('component-heal');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component heal`,
+    });
+    const component = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Breadboard',
+        materialType: 'Breadboard',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const wrong = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:led' },
+      select: { id: true },
+    });
+    await prisma.projectComponentConcept.create({
+      data: { componentId: component.id, conceptId: wrong.id },
+    });
+
+    const payload = {
+      title: `${TEST_MARKER} component heal`,
+      shortDescription: `${TEST_MARKER} component heal short.`,
+      description: `${TEST_MARKER} component heal full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER' as const,
+      requiredComponents: [
+        {
+          id: component.id,
+          name: 'Breadboard',
+          materialType: 'Breadboard',
+          quantity: 1,
+          unit: 'piece',
+        },
+      ],
+    };
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, payload);
+    const healed = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(healed.length, 1);
+    assert.equal(healed[0]?.concept.canonicalKey, 'component:breadboard');
+    const healedId = healed[0]!.id;
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, payload);
+    const retry = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+    });
+    assert.equal(retry.length, 1);
+    assert.equal(retry[0]?.id, healedId);
+  });
+
+  test('create rolls back when component concept persistence fails after component write', async () => {
+    const owner = await createLearnerUser('component-create-rollback');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const title = `${TEST_MARKER} component create rollback ${Date.now()}`;
+    let createAttempted = false;
+
+    const failingDeps = createComponentConceptLifecycleDeps({
+      deleteAssignments:
+        defaultComponentConceptAssignmentPersistenceDeps.deleteAssignments,
+      createAssignment: async (client, componentId, conceptId) => {
+        const rows = await client.projectRequiredComponent.findMany({
+          where: { project: { title } },
+          select: { id: true, componentName: true, materialType: true },
+        });
+        assert.ok(rows.length > 0);
+        assert.equal(rows[0]?.componentName, 'Breadboard');
+        assert.equal(rows[0]?.materialType, 'Breadboard');
+        assert.equal(rows[0]?.id, componentId);
+        createAttempted = true;
+        assert.ok(conceptId);
+        throw new Error(
+          'forced component concept persistence failure after entity write',
+        );
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        prisma.$transaction((tx) =>
+          learningProjectsRepository.createLearningProjectForReview({
+            createdBy: owner.id,
+            categoryId: projectCategory.id,
+            title,
+            shortDescription: `${TEST_MARKER} component create rollback short.`,
+            description: `${TEST_MARKER} component create rollback full.`,
+            difficulty: 'BEGINNER',
+            requiredComponents: [
+              {
+                name: 'Breadboard',
+                quantity: 1,
+                unit: 'piece',
+                isRequired: true,
+                componentRole: 'REQUIRED_MATERIAL',
+                materialType: 'Breadboard',
+                searchKeywords: ['Breadboard'],
+                canBeSubstituted: false,
+              },
+            ],
+            client: tx,
+            componentLifecycleDeps: failingDeps,
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof Error
+        && error.message
+          === 'forced component concept persistence failure after entity write',
+    );
+
+    assert.equal(createAttempted, true);
+    assert.equal(await prisma.learningProject.count({ where: { title } }), 0);
+    assert.equal(
+      await prisma.projectRequiredComponent.count({
+        where: { project: { title } },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.projectComponentConcept.count({
+        where: { component: { project: { title } } },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.learningProjectConcept.count({
+        where: { project: { title } },
+      }),
+      0,
+    );
+  });
+
+  test('update rolls back after stale assignment delete when create persistence fails', async () => {
+    const owner = await createLearnerUser('component-update-rollback');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component update rollback original`,
+    });
+    const topicJoin = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: projectCategory.topicConceptId,
+      },
+    });
+    const component = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Unknown part',
+        materialType: 'unknown-type',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const staleConcept = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:led', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    const staleJoin = await prisma.projectComponentConcept.create({
+      data: {
+        componentId: component.id,
+        conceptId: staleConcept.id,
+      },
+    });
+    let deletedStaleInTx = false;
+    let createAttempted = false;
+
+    const failingDeps = createComponentConceptLifecycleDeps({
+      deleteAssignments: async (client, componentId, conceptIds) => {
+        await defaultComponentConceptAssignmentPersistenceDeps.deleteAssignments(
+          client,
+          componentId,
+          conceptIds,
+        );
+        deletedStaleInTx = conceptIds.includes(staleConcept.id);
+        assert.equal(
+          await client.projectComponentConcept.count({
+            where: { id: staleJoin.id },
+          }),
+          0,
+        );
+      },
+      createAssignment: async (client, componentId, conceptId) => {
+        assert.equal(componentId, component.id);
+        assert.notEqual(conceptId, staleConcept.id);
+        const mutated = await client.projectRequiredComponent.findUniqueOrThrow({
+          where: { id: componentId },
+          select: { componentName: true, materialType: true, quantity: true },
+        });
+        assert.equal(mutated.componentName, 'Breadboard');
+        assert.equal(mutated.materialType, 'Breadboard');
+        assert.equal(Number(mutated.quantity), 2);
+        createAttempted = true;
+        throw new Error(
+          'forced component concept persistence failure after entity write',
+        );
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        learningProjectsRepository.updateMyLearningProjectSubmission({
+          id: project.id,
+          userId: owner.id,
+          categoryId: projectCategory.id,
+          title: `${TEST_MARKER} component update rollback changed`,
+          shortDescription: `${TEST_MARKER} component update rollback short.`,
+          description: `${TEST_MARKER} component update rollback full.`,
+          difficulty: 'BEGINNER',
+          requiredComponents: [
+            {
+              id: component.id,
+              component: {
+                name: 'Breadboard',
+                quantity: 2,
+                unit: 'piece',
+                isRequired: true,
+                componentRole: 'REQUIRED_MATERIAL',
+                materialType: 'Breadboard',
+                searchKeywords: ['Breadboard'],
+                canBeSubstituted: false,
+              },
+            },
+          ],
+          componentLifecycleDeps: failingDeps,
+        }),
+      (error: unknown) =>
+        error instanceof Error
+        && error.message
+          === 'forced component concept persistence failure after entity write',
+    );
+
+    assert.equal(deletedStaleInTx, true);
+    assert.equal(createAttempted, true);
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      select: { title: true, status: true, categoryId: true },
+    });
+    assert.equal(
+      stored.title,
+      `${TEST_MARKER} component update rollback original`,
+    );
+    assert.equal(stored.status, 'CHANGES_REQUESTED');
+    assert.equal(stored.categoryId, projectCategory.id);
+
+    const storedComponent = await prisma.projectRequiredComponent.findUniqueOrThrow({
+      where: { id: component.id },
+      select: { componentName: true, materialType: true, quantity: true },
+    });
+    assert.equal(storedComponent.componentName, 'Unknown part');
+    assert.equal(storedComponent.materialType, 'unknown-type');
+    assert.equal(Number(storedComponent.quantity), 1);
+
+    const restoredJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+    });
+    assert.equal(restoredJoins.length, 1);
+    assert.equal(restoredJoins[0]?.id, staleJoin.id);
+    assert.equal(restoredJoins[0]?.conceptId, staleConcept.id);
+
+    const topics = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(topics.length, 1);
+    assert.equal(topics[0]?.id, topicJoin.id);
+    assert.equal(topics[0]?.conceptId, projectCategory.topicConceptId);
   });
 });

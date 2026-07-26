@@ -1,6 +1,7 @@
 import type { LearningProjectStatus, Prisma } from '../../generated/prisma/client.js';
 import { AppError } from '../../utils/app-error.js';
 import { prisma } from '../../database/prisma.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import {
   ADMIN_ACTIVITY_ACTIONS,
@@ -369,7 +370,7 @@ export const approveAdminLearningProject = async (
   }
 
   const now = new Date();
-  const committed = await prisma.$transaction((tx) =>
+  const committed = await runSerializableTransaction((tx) =>
     repository.approveLearningProjectInTransaction(tx, {
       id,
       moderationData: {
