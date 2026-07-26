@@ -31,7 +31,11 @@ import {
 import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
-import { commitRecommendationToggleTransition } from '../recommendation-events/recommendation-events.service.js';
+import {
+  commitRecommendationMaterialView,
+  commitRecommendationToggleTransition,
+  resolveRecommendationSourceOperationId,
+} from '../recommendation-events/recommendation-events.service.js';
 
 import * as materialsRepository from './materials.repository.js';
 import type {
@@ -743,19 +747,60 @@ export const getMaterialById = async (
 
   await expireStalePendingReservationsForMaterials([material.id]);
 
-  const [incremented, heldByMaterialId, likesByMaterialId, likedMaterialIds] =
-    await Promise.all([
-      materialsRepository.recordMaterialView(
+  const isLearner = Boolean(
+    viewer?.sub &&
+      viewer.roles.some((role) => role.toUpperCase() === 'LEARNER'),
+  );
+  const sourceOperationId = isLearner
+    ? resolveRecommendationSourceOperationId()
+    : undefined;
+  let replayed = false;
+  let incremented: { viewsCount: number; recorded: boolean };
+
+  if (viewer?.sub && isLearner && sourceOperationId) {
+    const committed = await commitRecommendationMaterialView({
+      learnerId: viewer.sub,
+      materialId: material.id,
+      apply: async (tx) => {
+        const recorded = await materialsRepository.recordMaterialViewOperation(
+          material.id,
+          viewer.sub,
+          'material_detail',
+          tx,
+        );
+        if (!recorded) {
+          throw new AppError('Material not found', 404, 'NOT_FOUND');
+        }
+        return recorded;
+      },
+    });
+    incremented = committed.response;
+    replayed = committed.replayed;
+  } else if (viewer?.sub && isLearner) {
+    incremented = await prisma.$transaction((tx) =>
+      materialsRepository.appendMaterialView(
         material.id,
-        viewer?.sub,
+        viewer.sub,
         'material_detail',
+        tx,
       ),
+    );
+  } else {
+    incremented = await materialsRepository.recordMaterialView(
+      material.id,
+      viewer?.sub,
+      'material_detail',
+    );
+  }
+
+  const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
+    await Promise.all([
       getHeldQuantitiesByMaterialIds([material.id]),
       materialsRepository.countLikesByMaterialIds([material.id]),
       materialsRepository.findLikedMaterialIds(viewer?.sub, [material.id]),
     ]);
   const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
-  if (viewer?.sub && incremented.recorded) {
+  if (viewer?.sub && incremented.recorded && !replayed) {
     invalidateLearnerHomeCache(viewer.sub);
   }
   const mappedMaterial = mapMaterial(

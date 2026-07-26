@@ -7,6 +7,7 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { signAccessToken } from '../../utils/jwt.js';
 import { likeMaterialById, unlikeMaterialById } from '../materials/materials.service.js';
+import * as materialsRepository from '../materials/materials.repository.js';
 import {
   followLearningProjectById,
   likeLearningProjectById,
@@ -18,13 +19,17 @@ import {
 import { runWithRecommendationEventOrigin } from './recommendation-event-origin.js';
 import { reduceRecommendationToggleState } from './recommendation-action-state.js';
 import {
+  commitRecommendationMaterialView,
   commitRecommendationToggleTransition,
   enqueueRecommendationAction,
   enqueueRecommendationExposure,
   getRecommendationActionPlan,
   persistRecommendationExposure,
+  recommendationActionDeduplicationKey,
+  recommendationMaterialViewDeduplicationKey,
   recommendationToggleDeduplicationKey,
   RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+  RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
   runWithRecommendationToggleRequestContext,
   type RecommendationActionPlan,
 } from './recommendation-events.service.js';
@@ -146,12 +151,16 @@ const createLearner = async (label: string): Promise<string> => {
   return user.id;
 };
 
-const seedImpression = async (entityType: 'MATERIAL' | 'PROJECT', entityId: string) => {
+const seedImpression = async (
+  entityType: 'MATERIAL' | 'PROJECT',
+  entityId: string,
+  actorId = learnerId,
+) => {
   const result = await runWithRecommendationEventOrigin('TEST', () =>
     persistRecommendationExposure({
       generation: {
         generationKey: `${TEST_MARKER}-${Date.now()}-${Math.random()}`,
-        learnerId,
+        learnerId: actorId,
         surface: 'LEARNER_HOME',
         algorithmName: 'deterministic-hybrid',
         algorithmVersion: 'learner-home-v1',
@@ -408,8 +417,15 @@ describe('recommendation action outbox attribution', () => {
       getRecommendationActionPlan(
         request('GET', '/api/materials/material-1', { id: 'material-1' }) as never,
         { success: true, data: { id: 'material-1' } },
-      )?.actionType,
-      'MATERIAL_VIEW',
+      ),
+      null,
+    );
+    assert.equal(
+      getRecommendationActionPlan(
+        request('GET', '/api/learning-projects/project-1', { id: 'project-1' }) as never,
+        { success: true, data: { id: 'project-1' } },
+      ),
+      null,
     );
   });
 
@@ -549,9 +565,20 @@ describe('recommendation action outbox attribution', () => {
   let serverUrl = '';
   let closeServer: (() => Promise<void>) | undefined;
   const ownedToggleKeys: string[] = [];
+  const ownedViewOperations: Array<{
+    learnerId: string;
+    sourceOperationId: string;
+  }> = [];
 
   const trackToggleKey = (key: string): void => {
     ownedToggleKeys.push(key);
+  };
+
+  const trackViewKey = (key: string, actorId = learnerId): void => {
+    ownedViewOperations.push({
+      learnerId: actorId,
+      sourceOperationId: key,
+    });
   };
 
   const withOrigin = <T>(fn: () => Promise<T>): Promise<T> =>
@@ -658,6 +685,29 @@ describe('recommendation action outbox attribution', () => {
         },
       });
     }
+    if (ownedViewOperations.length > 0) {
+      await prisma.idempotencyRecord.deleteMany({
+        where: {
+          OR: ownedViewOperations.map(({ learnerId: actorId, sourceOperationId }) => ({
+            userId: actorId,
+            scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+            key: sourceOperationId,
+          })),
+        },
+      });
+      await prisma.recommendationEventOutbox.deleteMany({
+        where: {
+          deduplicationKey: {
+            in: ownedViewOperations.map(({ learnerId: actorId, sourceOperationId }) =>
+              recommendationMaterialViewDeduplicationKey(
+                actorId,
+                sourceOperationId,
+              ),
+            ),
+          },
+        },
+      });
+    }
     if (materialId) {
       await prisma.materialLike.deleteMany({ where: { materialId } });
       await prisma.material.deleteMany({ where: { id: materialId } });
@@ -686,6 +736,47 @@ describe('recommendation action outbox attribution', () => {
         deduplicationKey: recommendationToggleDeduplicationKey(learnerId, key),
       },
     });
+
+  const viewOutboxCountFor = async (key: string, actorId = learnerId) =>
+    prisma.recommendationEventOutbox.count({
+      where: {
+        deduplicationKey: recommendationMaterialViewDeduplicationKey(
+          actorId,
+          key,
+        ),
+      },
+    });
+
+  const fetchMaterialView = async (input: {
+    operationKey?: string;
+    requestId?: string;
+    impressionId?: string;
+    token?: string;
+    material?: string;
+    actorId?: string;
+  }) => {
+    const headers: Record<string, string> = {};
+    if (input.token !== '') {
+      headers.Authorization = `Bearer ${input.token ?? signAccessToken({ sub: learnerId, roles: ['LEARNER'] })}`;
+    }
+    if (input.operationKey) {
+      headers['Idempotency-Key'] = input.operationKey;
+      trackViewKey(input.operationKey, input.actorId);
+    }
+    if (input.requestId) {
+      headers['X-Request-Id'] = input.requestId;
+      if (!input.operationKey) {
+        trackViewKey(input.requestId, input.actorId);
+      }
+    }
+    if (input.impressionId) {
+      headers['X-Recommendation-Impression-Id'] = input.impressionId;
+    }
+    return fetch(
+      `${serverUrl}/api/materials/${input.material ?? materialId}`,
+      { headers },
+    );
+  };
 
   const commitMaterialLike = (key: string) => {
     trackToggleKey(key);
@@ -733,6 +824,443 @@ describe('recommendation action outbox attribution', () => {
       }),
     );
   };
+
+  test('material view identity permits distinct observations and suppresses keyed replay', async () => {
+    const firstKey = operation('view-http-first');
+    const secondKey = operation('view-http-second');
+    const impressionId = await seedImpression('MATERIAL', materialId);
+    const beforeMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    const beforeViews = await prisma.materialView.count({
+      where: { materialId, viewerUserId: learnerId },
+    });
+
+    const first = await fetchMaterialView({
+      operationKey: firstKey,
+      requestId: `view-first-${RUN_ID}`,
+      impressionId,
+    });
+    assert.equal(first.status, 200);
+    const replay = await fetchMaterialView({
+      operationKey: firstKey,
+      requestId: `view-replay-${RUN_ID}`,
+      impressionId,
+    });
+    assert.equal(replay.status, 200);
+    const second = await fetchMaterialView({
+      operationKey: secondKey,
+      requestId: `view-second-${RUN_ID}`,
+      impressionId,
+    });
+    assert.equal(second.status, 200);
+
+    const afterMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    assert.equal(afterMaterial.viewsCount, beforeMaterial.viewsCount + 2);
+    assert.equal(
+      await prisma.materialView.count({
+        where: { materialId, viewerUserId: learnerId },
+      }),
+      beforeViews + 2,
+    );
+    assert.equal(await viewOutboxCountFor(firstKey), 1);
+    assert.equal(await viewOutboxCountFor(secondKey), 1);
+
+    const keys = [firstKey, secondKey].map((key) =>
+      recommendationMaterialViewDeduplicationKey(learnerId, key),
+    );
+    assert.equal(await processOwnedKeys(keys), 2);
+    const actions = await prisma.recommendationAction.findMany({
+      where: { sourceOperationId: { in: [firstKey, secondKey] } },
+      orderBy: { actionAt: 'asc' },
+    });
+    assert.equal(actions.length, 2);
+    for (const action of actions) {
+      assert.equal(action.learnerId, learnerId);
+      assert.equal(action.entityType, 'MATERIAL');
+      assert.equal(action.entityId, materialId);
+      assert.equal(action.actionType, 'MATERIAL_VIEW');
+      assert.equal(action.eventSource, 'TEST');
+      assert.ok(action.actionAt instanceof Date);
+    }
+  });
+
+  test('material view outbox identity isolates learners sharing one operation key', async () => {
+    const sharedKey = operation('view-http-cross-actor');
+    const primaryImpressionId = await seedImpression('MATERIAL', materialId);
+    const otherImpressionId = await seedImpression(
+      'MATERIAL',
+      materialId,
+      otherLearnerId,
+    );
+    const otherToken = signAccessToken({
+      sub: otherLearnerId,
+      roles: ['LEARNER'],
+    });
+    const beforeMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    const beforePrimaryViews = await prisma.materialView.count({
+      where: { materialId, viewerUserId: learnerId },
+    });
+    const beforeOtherViews = await prisma.materialView.count({
+      where: { materialId, viewerUserId: otherLearnerId },
+    });
+
+    assert.equal(
+      (
+        await fetchMaterialView({
+          operationKey: sharedKey,
+          impressionId: primaryImpressionId,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await fetchMaterialView({
+          operationKey: sharedKey,
+          impressionId: otherImpressionId,
+          token: otherToken,
+          actorId: otherLearnerId,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await fetchMaterialView({
+          operationKey: sharedKey,
+          impressionId: primaryImpressionId,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await fetchMaterialView({
+          operationKey: sharedKey,
+          impressionId: otherImpressionId,
+          token: otherToken,
+          actorId: otherLearnerId,
+        })
+      ).status,
+      200,
+    );
+
+    const afterMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    assert.equal(afterMaterial.viewsCount, beforeMaterial.viewsCount + 2);
+    assert.equal(
+      await prisma.materialView.count({
+        where: { materialId, viewerUserId: learnerId },
+      }),
+      beforePrimaryViews + 1,
+    );
+    assert.equal(
+      await prisma.materialView.count({
+        where: { materialId, viewerUserId: otherLearnerId },
+      }),
+      beforeOtherViews + 1,
+    );
+    assert.equal(await viewOutboxCountFor(sharedKey, learnerId), 1);
+    assert.equal(await viewOutboxCountFor(sharedKey, otherLearnerId), 1);
+    assert.equal(
+      await prisma.idempotencyRecord.count({
+        where: {
+          userId: { in: [learnerId, otherLearnerId] },
+          scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+          key: sharedKey,
+          status: 'SUCCEEDED',
+        },
+      }),
+      2,
+    );
+
+    const deduplicationKeys = [learnerId, otherLearnerId].map((actorId) =>
+      recommendationMaterialViewDeduplicationKey(actorId, sharedKey),
+    );
+    const outboxRows = await prisma.recommendationEventOutbox.findMany({
+      where: { deduplicationKey: { in: deduplicationKeys } },
+    });
+    assert.equal(outboxRows.length, 2);
+    assert.deepEqual(
+      new Set(
+        outboxRows.map(
+          (row) => (row.payload as { learnerId: string }).learnerId,
+        ),
+      ),
+      new Set([learnerId, otherLearnerId]),
+    );
+
+    assert.equal(await processOwnedKeys(deduplicationKeys), 2);
+    const actions = await prisma.recommendationAction.findMany({
+      where: {
+        sourceOperationId: sharedKey,
+        actionType: 'MATERIAL_VIEW',
+        entityType: 'MATERIAL',
+        entityId: materialId,
+      },
+    });
+    assert.equal(actions.length, 2);
+    assert.deepEqual(
+      new Set(actions.map((action) => action.learnerId)),
+      new Set([learnerId, otherLearnerId]),
+    );
+  });
+
+  test('material view request-id fallback distinguishes requests and suppresses retry', async () => {
+    const firstRequestId = `view-request-a-${RUN_ID}`;
+    const secondRequestId = `view-request-b-${RUN_ID}`;
+    const before = await prisma.materialView.count({
+      where: { materialId, viewerUserId: learnerId },
+    });
+
+    assert.equal(
+      (await fetchMaterialView({ requestId: firstRequestId })).status,
+      200,
+    );
+    assert.equal(
+      (await fetchMaterialView({ requestId: firstRequestId })).status,
+      200,
+    );
+    assert.equal(
+      (await fetchMaterialView({ requestId: secondRequestId })).status,
+      200,
+    );
+
+    assert.equal(
+      await prisma.materialView.count({
+        where: { materialId, viewerUserId: learnerId },
+      }),
+      before + 2,
+    );
+    assert.equal(await viewOutboxCountFor(firstRequestId), 1);
+    assert.equal(await viewOutboxCountFor(secondRequestId), 1);
+  });
+
+  test('invalid bearer token cannot commit a material view operation', async () => {
+    const key = operation('view-invalid-token');
+    const beforeMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    const beforeViews = await prisma.materialView.count({
+      where: { materialId },
+    });
+
+    const response = await fetchMaterialView({
+      operationKey: key,
+      token: 'invalid-access-token',
+    });
+    assert.equal(response.status, 401);
+
+    const afterMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    assert.equal(afterMaterial.viewsCount, beforeMaterial.viewsCount);
+    assert.equal(
+      await prisma.materialView.count({ where: { materialId } }),
+      beforeViews,
+    );
+    assert.equal(
+      await prisma.idempotencyRecord.count({
+        where: {
+          scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+          key,
+        },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.recommendationEventOutbox.count({
+        where: {
+          eventKind: 'RECOMMENDATION_ACTION',
+          payload: { path: ['sourceOperationId'], equals: key },
+        },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.recommendationAction.count({
+        where: { sourceOperationId: key },
+      }),
+      0,
+    );
+  });
+
+  test('anonymous non-learner and missing material requests create no view evidence', async () => {
+    const anonymousKey = operation('view-anonymous');
+    const supplierKey = operation('view-supplier');
+    const missingKey = operation('view-missing');
+    const before = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+
+    assert.equal(
+      (await fetchMaterialView({ operationKey: anonymousKey, token: '' })).status,
+      200,
+    );
+    const supplierToken = signAccessToken({ sub: supplierId, roles: ['SUPPLIER'] });
+    assert.equal(
+      (await fetchMaterialView({ operationKey: supplierKey, token: supplierToken })).status,
+      200,
+    );
+    assert.equal(
+      (await fetchMaterialView({ operationKey: missingKey, material: randomUUID() })).status,
+      404,
+    );
+
+    const after = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    assert.equal(after.viewsCount, before.viewsCount + 2);
+    for (const key of [anonymousKey, supplierKey, missingKey]) {
+      assert.equal(await viewOutboxCountFor(key), 0);
+      assert.equal(
+        await prisma.recommendationAction.count({
+          where: { sourceOperationId: key },
+        }),
+        0,
+      );
+    }
+    assert.equal(
+      await prisma.idempotencyRecord.count({
+        where: {
+          scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+          key: { in: [anonymousKey, supplierKey, missingKey] },
+        },
+      }),
+      0,
+    );
+  });
+
+  test('material view persistence and outbox failures roll back all operation writes', async () => {
+    const persistenceKey = operation('view-persistence-rollback');
+    trackViewKey(persistenceKey);
+    const beforeMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    const beforeViews = await prisma.materialView.count({ where: { materialId } });
+
+    await assert.rejects(() =>
+      withOrigin(() =>
+        commitRecommendationMaterialView({
+          learnerId,
+          materialId,
+          sourceOperationId: persistenceKey,
+          apply: async (tx) => {
+            await materialsRepository.recordMaterialViewOperation(
+              materialId,
+              learnerId,
+              'material_detail',
+              tx,
+            );
+            throw new Error('forced material view persistence failure');
+          },
+        }),
+      ),
+    );
+
+    const conflictKey = operation('view-outbox-rollback');
+    trackViewKey(conflictKey);
+    const deduplicationKey = recommendationMaterialViewDeduplicationKey(
+      learnerId,
+      conflictKey,
+    );
+    const conflicting = await prisma.recommendationEventOutbox.create({
+      data: {
+        eventKind: 'RECOMMENDATION_ACTION',
+        schemaVersion: 'recommendation-action-outbox-v1',
+        deduplicationKey,
+        payload: {
+          schemaVersion: 'recommendation-action-outbox-v1',
+          actionId: randomUUID(),
+          learnerId: otherLearnerId,
+          actionType: 'MATERIAL_VIEW',
+          entityType: 'MATERIAL',
+          entityId: materialId,
+          impressionId: null,
+          sourceOperationId: conflictKey,
+          occurredAt: new Date().toISOString(),
+          eventSource: 'TEST',
+        },
+      },
+    });
+    trackOutboxId(conflicting.id);
+    assert.equal(
+      (await fetchMaterialView({ operationKey: conflictKey })).status,
+      500,
+    );
+
+    const afterMaterial = await prisma.material.findUniqueOrThrow({
+      where: { id: materialId },
+      select: { viewsCount: true },
+    });
+    assert.equal(afterMaterial.viewsCount, beforeMaterial.viewsCount);
+    assert.equal(
+      await prisma.materialView.count({ where: { materialId } }),
+      beforeViews,
+    );
+    assert.equal(
+      await prisma.idempotencyRecord.count({
+        where: {
+          userId: learnerId,
+          scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+          key: { in: [persistenceKey, conflictKey] },
+        },
+      }),
+      0,
+    );
+    assert.equal(await viewOutboxCountFor(persistenceKey), 0);
+    assert.equal(await viewOutboxCountFor(conflictKey), 1);
+  });
+
+  test('material view outbox retry preserves its frozen payload', async () => {
+    const key = operation('view-outbox-retry');
+    const impressionId = await seedImpression('MATERIAL', materialId);
+    assert.equal(
+      (await fetchMaterialView({ operationKey: key, impressionId })).status,
+      200,
+    );
+    const deduplicationKey = recommendationMaterialViewDeduplicationKey(
+      learnerId,
+      key,
+    );
+    const before = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+      where: { deduplicationKey },
+    });
+    const frozenPayload = JSON.stringify(before.payload);
+
+    assert.equal(await processOwnedKeys([deduplicationKey]), 1);
+    await prisma.recommendationEventOutbox.update({
+      where: { id: before.id },
+      data: { status: 'RETRY', availableAt: new Date() },
+    });
+    assert.equal(await processOwnedKeys([deduplicationKey]), 1);
+
+    const after = await prisma.recommendationEventOutbox.findUniqueOrThrow({
+      where: { id: before.id },
+    });
+    assert.equal(JSON.stringify(after.payload), frozenPayload);
+    assert.equal(
+      await prisma.recommendationAction.count({
+        where: { sourceOperationId: key },
+      }),
+      1,
+    );
+  });
 
   test('material like and unlike emit one transition each and reconstruct state', async () => {
     const likeKey = operation('toggle-material-like');
@@ -1001,7 +1529,17 @@ describe('recommendation action outbox attribution', () => {
   });
 
   test('project save like and follow families emit transitions and suppress no-ops', async () => {
-    const cases = [
+    const cases: Array<{
+      family: 'SAVE' | 'LIKE' | 'FOLLOW';
+      activate: 'PROJECT_SAVE' | 'PROJECT_LIKE' | 'PROJECT_FOLLOW';
+      deactivate: 'PROJECT_UNSAVE' | 'PROJECT_UNLIKE' | 'PROJECT_UNFOLLOW';
+      activateKey: string;
+      deactivateKey: string;
+      activateDupKey: string;
+      serviceActivate: () => Promise<unknown>;
+      serviceDeactivate: () => Promise<unknown>;
+      readActive: () => Promise<boolean>;
+    }> = [
       {
         family: 'SAVE' as const,
         activate: 'PROJECT_SAVE' as const,

@@ -41,6 +41,7 @@ export const RECOMMENDATION_EXPOSURE_OUTBOX_SCHEMA_VERSION =
 export const RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION =
   'recommendation-action-outbox-v1';
 export const RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE = 'RECOMMENDATION_TOGGLE';
+export const RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE = 'RECOMMENDATION_VIEW';
 
 export const RECOMMENDATION_ALGORITHM_NAME = 'deterministic-hybrid';
 export const RECOMMENDATION_ALGORITHM_VERSION =
@@ -838,16 +839,17 @@ const createOutboxRowIdempotent = async (
   }
 };
 
-const claimToggleIdempotencyRecord = async (
+const claimRecommendationIdempotencyRecord = async (
   tx: Prisma.TransactionClient,
   input: {
     userId: string;
+    scope: string;
     key: string;
     requestHash: string;
   },
 ): Promise<'claimed' | 'exists'> => {
   const savepoint = `sp_${createHash('sha256')
-    .update(`toggle-idem:${input.userId}:${input.key}`)
+    .update(`recommendation-idem:${input.userId}:${input.scope}:${input.key}`)
     .digest('hex')
     .slice(0, 24)}`;
   await tx.$executeRawUnsafe(`SAVEPOINT ${savepoint}`);
@@ -855,7 +857,7 @@ const claimToggleIdempotencyRecord = async (
     await tx.idempotencyRecord.create({
       data: {
         userId: input.userId,
-        scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
+        scope: input.scope,
         key: input.key,
         requestHash: input.requestHash,
         status: 'IN_PROGRESS',
@@ -872,11 +874,12 @@ const claimToggleIdempotencyRecord = async (
   }
 };
 
-const resolveToggleSourceOperationId = (
-  headers: IncomingHttpHeaders | undefined,
-  explicit?: string,
-): string | undefined =>
-  boundedString(explicit, 191) ??
+export const resolveRecommendationSourceOperationId = (input: {
+  headers?: IncomingHttpHeaders;
+  explicit?: string;
+} = {}): string | undefined => {
+  const headers = input.headers ?? getRecommendationToggleRequestHeaders();
+  return boundedString(input.explicit, 191) ??
   boundedString(
     headers
       ? (Array.isArray(headers['idempotency-key'])
@@ -886,6 +889,7 @@ const resolveToggleSourceOperationId = (
     191,
   ) ??
   boundedString(getRequestIdFromContext(), 191);
+};
 
 const throwToggleIdempotencyConflict = (): never => {
   throw new AppError(
@@ -967,10 +971,10 @@ export const commitRecommendationToggleTransition = async <
 
   const headers =
     input.headers ?? getRecommendationToggleRequestHeaders() ?? {};
-  const sourceOperationId = resolveToggleSourceOperationId(
+  const sourceOperationId = resolveRecommendationSourceOperationId({
     headers,
-    input.sourceOperationId,
-  );
+    explicit: input.sourceOperationId,
+  });
   if (!sourceOperationId) {
     throw new AppError(
       'Toggle operation id is required.',
@@ -1015,8 +1019,9 @@ export const commitRecommendationToggleTransition = async <
       });
     }
 
-    const claim = await claimToggleIdempotencyRecord(tx, {
+    const claim = await claimRecommendationIdempotencyRecord(tx, {
       userId: input.learnerId,
+      scope: RECOMMENDATION_TOGGLE_IDEMPOTENCY_SCOPE,
       key: sourceOperationId,
       requestHash,
     });
@@ -1100,6 +1105,188 @@ export const commitRecommendationToggleTransition = async <
     });
 
     return { response, replayed: false, transitioned };
+  });
+};
+
+const resolveExistingViewIdempotency = <TResponse extends object>(input: {
+  requestHash: string;
+  existing: {
+    requestHash: string;
+    status: string;
+    responseJson: Prisma.JsonValue | null;
+  };
+}): { response: TResponse; replayed: true } => {
+  if (input.existing.requestHash !== input.requestHash) {
+    throwToggleIdempotencyConflict();
+  }
+  if (input.existing.status === 'SUCCEEDED' && input.existing.responseJson) {
+    return {
+      response: input.existing.responseJson as TResponse,
+      replayed: true,
+    };
+  }
+  if (input.existing.status === 'IN_PROGRESS') {
+    throw new AppError(
+      'Request is already being processed.',
+      409,
+      'IDEMPOTENCY_IN_PROGRESS',
+      { reason: 'REQUEST_IN_PROGRESS' },
+    );
+  }
+  throw new AppError(
+    'Previous request with this idempotency key failed. Start a new request with a new key.',
+    409,
+    'IDEMPOTENCY_PREVIOUSLY_FAILED',
+    { reason: 'IDEMPOTENCY_PREVIOUSLY_FAILED' },
+  );
+};
+
+export const recommendationActionDeduplicationKey = (
+  actionType: RecommendationActionType,
+  sourceOperationId: string,
+): string => `action:${actionType}:${sourceOperationId}`;
+
+export const recommendationMaterialViewDeduplicationKey = (
+  learnerId: string,
+  sourceOperationId: string,
+): string =>
+  `action:MATERIAL_VIEW:${createHash('sha256')
+    .update(JSON.stringify([learnerId, sourceOperationId]))
+    .digest('hex')}`;
+
+export const commitRecommendationMaterialView = async <
+  TResponse extends object,
+>(input: {
+  learnerId: string;
+  materialId: string;
+  apply: (tx: Prisma.TransactionClient) => Promise<TResponse>;
+  sourceOperationId?: string;
+  headers?: IncomingHttpHeaders;
+  eventSource?: EventSource;
+}): Promise<{ response: TResponse; replayed: boolean }> => {
+  if (
+    !boundedString(input.learnerId, 191) ||
+    !boundedString(input.materialId, 191)
+  ) {
+    throw new AppError(
+      'Invalid recommendation material view',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const headers = input.headers ?? getRecommendationToggleRequestHeaders() ?? {};
+  const sourceOperationId = resolveRecommendationSourceOperationId({
+    headers,
+    explicit: input.sourceOperationId,
+  });
+  if (!sourceOperationId) {
+    throw new AppError(
+      'View operation id is required.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+
+  const eventSource = resolveRecommendationEventSource(input.eventSource);
+  const impressionId =
+    readRecommendationAttributionHeaders(headers).impressionId ?? null;
+  const requestHash = computeIdempotencyRequestHash({
+    learnerId: input.learnerId,
+    entityType: 'MATERIAL',
+    entityId: input.materialId,
+    actionType: 'MATERIAL_VIEW',
+    eventSource,
+    sourceOperationId,
+    impressionId,
+  });
+
+  return prisma.$transaction(async (tx) => {
+    const identity = {
+      userId: input.learnerId,
+      scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+      key: sourceOperationId,
+    };
+    const existing = await tx.idempotencyRecord.findUnique({
+      where: { userId_scope_key: identity },
+      select: {
+        requestHash: true,
+        status: true,
+        responseJson: true,
+      },
+    });
+    if (existing) {
+      return resolveExistingViewIdempotency<TResponse>({
+        requestHash,
+        existing,
+      });
+    }
+
+    const claim = await claimRecommendationIdempotencyRecord(tx, {
+      userId: input.learnerId,
+      scope: RECOMMENDATION_VIEW_IDEMPOTENCY_SCOPE,
+      key: sourceOperationId,
+      requestHash,
+    });
+    if (claim === 'exists') {
+      const raced = await tx.idempotencyRecord.findUnique({
+        where: { userId_scope_key: identity },
+        select: {
+          requestHash: true,
+          status: true,
+          responseJson: true,
+        },
+      });
+      if (!raced) {
+        return throwToggleIdempotencyConflict();
+      }
+      return resolveExistingViewIdempotency<TResponse>({
+        requestHash,
+        existing: raced,
+      });
+    }
+
+    const response = await input.apply(tx);
+    const payload: RecommendationActionOutboxPayload = {
+      schemaVersion: RECOMMENDATION_ACTION_OUTBOX_SCHEMA_VERSION,
+      actionId: randomUUID(),
+      learnerId: input.learnerId,
+      actionType: 'MATERIAL_VIEW',
+      entityType: 'MATERIAL',
+      entityId: input.materialId,
+      impressionId,
+      sourceOperationId,
+      occurredAt: new Date().toISOString(),
+      eventSource,
+    };
+    if (payloadByteLength(payload) > MAX_RECOMMENDATION_OUTBOX_PAYLOAD_BYTES) {
+      throw new AppError(
+        'Recommendation view outbox payload exceeds the bounded size',
+        500,
+        'RECOMMENDATION_OUTBOX_PAYLOAD_TOO_LARGE',
+      );
+    }
+    await createOutboxRowIdempotent(tx, {
+      eventKind: 'RECOMMENDATION_ACTION',
+      schemaVersion: payload.schemaVersion,
+      deduplicationKey: recommendationMaterialViewDeduplicationKey(
+        input.learnerId,
+        sourceOperationId,
+      ),
+      payload: payload as unknown as Prisma.InputJsonValue,
+    });
+
+    await tx.idempotencyRecord.update({
+      where: { userId_scope_key: identity },
+      data: {
+        status: 'SUCCEEDED',
+        resourceType: 'material-view',
+        resourceId: input.materialId,
+        responseJson: response,
+      },
+    });
+
+    return { response, replayed: false };
   });
 };
 
@@ -1215,16 +1402,14 @@ const responseItemId = (body: unknown): string | undefined => {
   return boundedString(data?.id as string | undefined, 191);
 };
 
-const requestHeader = (req: Request, name: string): string | undefined =>
-  boundedString(req.headers[name.toLowerCase()] as string | undefined, 191);
-
 const pathParam = (req: Request, name: string): string | undefined =>
   boundedString(req.params?.[name] as string | undefined, 191);
 
 const sourceOperationIdFor = (req: Request, durableId?: string): string | undefined =>
-  boundedString(durableId, 191) ??
-  requestHeader(req, 'idempotency-key') ??
-  boundedString(getRequestIdFromContext(), 191);
+  resolveRecommendationSourceOperationId({
+    headers: req.headers,
+    explicit: durableId,
+  });
 
 const getRequestIdFromContext = (): string | undefined => {
   try {
@@ -1251,7 +1436,6 @@ const actionPlanFor = (
     : `${req.baseUrl ?? ''}${req.path}`;
   const path = requestPath.replace(/\/$/, '');
   const projectId = pathParam(req, 'id');
-  const materialId = pathParam(req, 'id');
   const sourceOperationId = (durableId?: string) =>
     sourceOperationIdFor(req, durableId);
   const plan = (
@@ -1266,10 +1450,6 @@ const actionPlanFor = (
       ? { actionType, entityType, entityId: entity, sourceOperationId: source }
       : null;
   };
-
-  if (method === 'GET' && /^\/api\/materials\/[^/]+$/.test(path)) {
-    return plan('MATERIAL_VIEW', 'MATERIAL', materialId);
-  }
 
   if (
     method === 'POST' &&
@@ -1362,7 +1542,10 @@ export const enqueueRecommendationAction = async (input: {
       await createOutboxRowIdempotent(tx, {
         eventKind: 'RECOMMENDATION_ACTION',
         schemaVersion: payload.schemaVersion,
-        deduplicationKey: `action:${payload.actionType}:${payload.sourceOperationId}`,
+        deduplicationKey: recommendationActionDeduplicationKey(
+          payload.actionType,
+          input.plan.sourceOperationId,
+        ),
         payload: payload as unknown as Prisma.InputJsonValue,
       });
     });
