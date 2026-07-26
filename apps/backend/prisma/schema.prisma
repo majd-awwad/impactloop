@@ -295,6 +295,11 @@ enum TaxonomyConceptStatus {
   INACTIVE
 }
 
+enum TaxonomyConceptRelationType {
+  INTEREST_RELEVANT_TO
+  SATISFIED_BY
+}
+
 enum TaxonomyLanguage {
   EN
   AR
@@ -895,12 +900,32 @@ model TaxonomyConcept {
   materials         MaterialConcept[]
   projects          LearningProjectConcept[]
   projectComponents ProjectComponentConcept[]
+  outgoingRelations TaxonomyConceptRelation[]  @relation("TaxonomyConceptRelationSource")
+  incomingRelations TaxonomyConceptRelation[]  @relation("TaxonomyConceptRelationTarget")
   materialFamilyCategories Category[]                  @relation("CategoryMaterialFamilyConcept")
   projectTopicCategories   Category[]                  @relation("CategoryProjectTopicConcept")
 
+  @@unique([id, conceptType], map: "taxonomy_concepts_id_concept_type_key")
   @@index([conceptType, status])
   @@index([parentId])
   @@map("taxonomy_concepts")
+}
+
+model TaxonomyConceptRelation {
+  id                String                      @id @default(cuid())
+  relationType      TaxonomyConceptRelationType @map("relation_type")
+  sourceConceptId   String                      @map("source_concept_id")
+  sourceConceptType TaxonomyConceptType         @map("source_concept_type")
+  targetConceptId   String                      @map("target_concept_id")
+  targetConceptType TaxonomyConceptType         @map("target_concept_type")
+  createdAt         DateTime                    @default(now()) @map("created_at")
+  sourceConcept     TaxonomyConcept             @relation("TaxonomyConceptRelationSource", fields: [sourceConceptId, sourceConceptType], references: [id, conceptType], onDelete: Cascade, onUpdate: Cascade, map: "taxonomy_relations_source_concept_type_fkey")
+  targetConcept     TaxonomyConcept             @relation("TaxonomyConceptRelationTarget", fields: [targetConceptId, targetConceptType], references: [id, conceptType], onDelete: Cascade, onUpdate: Cascade, map: "taxonomy_relations_target_concept_type_fkey")
+
+  @@unique([relationType, sourceConceptId, targetConceptId], map: "taxonomy_relations_type_source_target_key")
+  @@index([sourceConceptId, relationType], map: "taxonomy_relations_source_type_idx")
+  @@index([targetConceptId, relationType], map: "taxonomy_relations_target_type_idx")
+  @@map("taxonomy_concept_relations")
 }
 
 model TaxonomyAlias {
