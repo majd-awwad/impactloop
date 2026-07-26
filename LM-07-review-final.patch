@@ -1,0 +1,3290 @@
+diff --git a/apps/backend/src/config/env.ts b/apps/backend/src/config/env.ts
+index a135f382..de06c3c0 100644
+--- a/apps/backend/src/config/env.ts
++++ b/apps/backend/src/config/env.ts
+@@ -282,6 +282,80 @@ const parseSmtpPort = (value: string | undefined): number => {
+ 
+ const recommendationOutboxRuntime = resolveRecommendationOutboxRuntimeConfig();
+ 
++export type RecommendationMlRuntimeMode =
++  | "DETERMINISTIC"
++  | "SHADOW"
++  | "ML_LOCAL";
++
++export type RecommendationMlRuntimeConfig = {
++  mode: RecommendationMlRuntimeMode;
++  explicitMode: boolean;
++  materialArtifactPath: string;
++  projectArtifactPath: string;
++};
++
++export type RecommendationMlRuntimeConfigErrorCode =
++  | "INVALID_RUNTIME_MODE"
++  | "ML_LOCAL_ENVIRONMENT_FORBIDDEN";
++
++export class RecommendationMlRuntimeConfigError extends Error {
++  readonly code: RecommendationMlRuntimeConfigErrorCode;
++
++  constructor(code: RecommendationMlRuntimeConfigErrorCode, message: string) {
++    super(message);
++    this.name = "RecommendationMlRuntimeConfigError";
++    this.code = code;
++  }
++}
++
++const recommendationMlRuntimeModes = new Set<RecommendationMlRuntimeMode>([
++  "DETERMINISTIC",
++  "SHADOW",
++  "ML_LOCAL",
++]);
++
++export const resolveRecommendationMlRuntimeConfig = (
++  processEnv: NodeJS.ProcessEnv,
++): RecommendationMlRuntimeConfig => {
++  const rawMode = processEnv.RECOMMENDATION_ML_RUNTIME_MODE?.trim() ?? "";
++  const explicitMode = rawMode.length > 0;
++  let mode: RecommendationMlRuntimeMode;
++
++  if (!explicitMode) {
++    mode = parseBoolean(processEnv.RECOMMENDATION_ML_SHADOW_ENABLED, false)
++      ? "SHADOW"
++      : "DETERMINISTIC";
++  } else if (
++    recommendationMlRuntimeModes.has(rawMode as RecommendationMlRuntimeMode)
++  ) {
++    mode = rawMode as RecommendationMlRuntimeMode;
++  } else {
++    throw new RecommendationMlRuntimeConfigError(
++      "INVALID_RUNTIME_MODE",
++      "RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_LOCAL.",
++    );
++  }
++
++  const nodeEnv = processEnv.NODE_ENV ?? "development";
++  if (mode === "ML_LOCAL" && nodeEnv !== "development" && nodeEnv !== "test") {
++    throw new RecommendationMlRuntimeConfigError(
++      "ML_LOCAL_ENVIRONMENT_FORBIDDEN",
++      "RECOMMENDATION_ML_RUNTIME_MODE=ML_LOCAL is restricted to development and test.",
++    );
++  }
++
++  return {
++    mode,
++    explicitMode,
++    materialArtifactPath:
++      processEnv.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH?.trim() ?? "",
++    projectArtifactPath:
++      processEnv.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH?.trim() ?? "",
++  };
++};
++
++const recommendationMlRuntime = resolveRecommendationMlRuntimeConfig(process.env);
++
+ export const env = {
+   nodeEnv: process.env.NODE_ENV ?? "development",
+   serviceName: process.env.SERVICE_NAME?.trim() || "impactloop-api",
+@@ -325,10 +399,10 @@ export const env = {
+   recommendationScorerVersion: parseRecommendationScorerVersion(
+     process.env.RECOMMENDATION_SCORER_VERSION,
+   ) as RecommendationScorerVersion,
+-  recommendationMlShadowEnabled: parseBoolean(
+-    process.env.RECOMMENDATION_ML_SHADOW_ENABLED,
+-    false,
+-  ),
++  recommendationMlRuntimeMode: recommendationMlRuntime.mode,
++  recommendationMlRuntimeModeExplicit: recommendationMlRuntime.explicitMode,
++  recommendationMlShadowEnabled:
++    recommendationMlRuntime.mode !== "DETERMINISTIC",
+   recommendationMlMaterialServingEnabled: parseBoolean(
+     process.env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED,
+     false,
+@@ -338,9 +412,9 @@ export const env = {
+     false,
+   ),
+   recommendationMlMaterialArtifactPath:
+-    process.env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH?.trim() || "",
++    recommendationMlRuntime.materialArtifactPath,
+   recommendationMlProjectArtifactPath:
+-    process.env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH?.trim() || "",
++    recommendationMlRuntime.projectArtifactPath,
+   recommendationOutboxWorkerEnabled: recommendationOutboxRuntime.enabled,
+   recommendationOutboxWorkerRequired: recommendationOutboxRuntime.required,
+   recommendationOutboxPollIntervalMs: recommendationOutboxRuntime.pollIntervalMs,
+diff --git a/apps/backend/src/modules/recommendations/ml-lightfm-scorer.test.ts b/apps/backend/src/modules/recommendations/ml-lightfm-scorer.test.ts
+index 230cd9e2..26d400a1 100644
+--- a/apps/backend/src/modules/recommendations/ml-lightfm-scorer.test.ts
++++ b/apps/backend/src/modules/recommendations/ml-lightfm-scorer.test.ts
+@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
+ import { before, describe, it } from 'node:test';
+ 
+ import {
++  buildPortableLightFmV2Scorer,
+   scorePortableLightFm,
+   type LightFmScorerContext,
+   type WeightedFeature,
+@@ -9,7 +10,9 @@ import {
+ import {
+   type PortableFeature,
+   type PortableModelArtifact,
++  type PortableModelArtifactV2,
+ } from './ml-model-artifact.js';
++import { stableOpaqueKey } from './local-ml-training-snapshot.schema.js';
+ import {
+   buildFeatureReadinessArtifactInput,
+   compileRecommendationFeatureReadinessContract,
+@@ -431,3 +434,164 @@ describe('RP-06.1 LightFM scorer diagnostics', () => {
+     assert.ok(result.diagnostics.unknown.sample.length <= FEATURE_READINESS_SAMPLE_LIMIT);
+   });
+ });
++
++const v2Artifact = (
++  candidateKeys: readonly string[] = ['candidate-a', 'candidate-b'],
++): PortableModelArtifactV2 => {
++  const dimension = 16;
++  const zeros = (): string[] => Array<string>(dimension).fill('0');
++  const userEmbedding = zeros();
++  userEmbedding[0] = '1';
++  const itemEmbedding = zeros();
++  itemEmbedding[0] = '1';
++  return {
++    schemaVersion: 'impactloop-lightfm-portable-v2',
++    domain: 'material',
++    modelVersion: 'lm-06-local-lightfm-v1',
++    featureContractId: 'recommendation-feature-token-contract-v3',
++    featureContractVersion: '3.0.0',
++    aggregationMode: 'weighted-sum',
++    taxonomyFingerprint: 'a'.repeat(64),
++    datasetContentHash: 'b'.repeat(64),
++    featureMapping: {
++      user: [{ token: 'interest:arduino', index: 0 }],
++      item: [{ token: 'material-family:electronics', index: 0 }],
++    },
++    featureMappingHash: 'c'.repeat(64),
++    itemMapping: [...candidateKeys]
++      .map((candidateKey) => ({
++        itemKey: stableOpaqueKey('material', candidateKey),
++        index: 0,
++      }))
++      .sort((left, right) =>
++        left.itemKey < right.itemKey ? -1 : left.itemKey > right.itemKey ? 1 : 0,
++      )
++      .map((entry, index) => ({ ...entry, index })),
++    itemMappingHash: 'd'.repeat(64),
++    trainingConfiguration: {
++      randomSeed: 11,
++      loss: 'warp',
++      epochs: 10,
++      noComponents: 16,
++      learningRate: '0.03',
++      userAlpha: '0.000001',
++      itemAlpha: '0.000001',
++      numThreads: 1,
++      interactionWeighting: 'unit-per-snapshot-event',
++      duplicateInteractionAggregation: 'sum',
++    },
++    modelDimensions: {
++      embeddingDimension: dimension,
++      userFeatureCount: 1,
++      itemFeatureCount: 1,
++      itemCount: candidateKeys.length,
++    },
++    modelComponents: {
++      userFeatureEmbeddings: [userEmbedding],
++      itemFeatureEmbeddings: [itemEmbedding],
++      userFeatureBiases: ['0'],
++      itemFeatureBiases: ['0'],
++    },
++    semanticContentHash: 'e'.repeat(64),
++    createdAt: '2026-07-26T00:00:00Z',
++  };
++};
++
++const v2Candidate = (candidateKey: string) => ({
++  candidateKey,
++  features: [['material-family:electronics', 1]] as const,
++});
++
++describe('LM-07 contained portable V2 scoring', () => {
++  it('scores only the supplied pool and applies the ASCII tie-break', () => {
++    const scorer = buildPortableLightFmV2Scorer(v2Artifact());
++    const result = scorer.score({
++      domain: 'material',
++      userFeatures: [['interest:arduino', 1]],
++      candidates: [v2Candidate('candidate-b'), v2Candidate('candidate-a')],
++    });
++    assert.equal(result.outcome, 'SCORED');
++    if (result.outcome !== 'SCORED') return;
++    assert.deepEqual(result.rankedCandidateKeys, ['candidate-a', 'candidate-b']);
++    assert.equal(result.scored.every((row) => Number.isFinite(row.score)), true);
++    assert.equal(Object.isFrozen(result.scored), true);
++    assert.equal(Object.isFrozen(result.rankedCandidateKeys), true);
++  });
++
++  it('deduplicates identical candidates and rejects conflicting duplicates', () => {
++    const scorer = buildPortableLightFmV2Scorer(v2Artifact(['candidate-a']));
++    const duplicate = v2Candidate('candidate-a');
++    const deduplicated = scorer.score({
++      domain: 'material',
++      userFeatures: [['interest:arduino', 1]],
++      candidates: [duplicate, duplicate],
++    });
++    assert.equal(deduplicated.outcome, 'SCORED');
++    assert.equal(deduplicated.diagnostics.duplicateCandidateCount, 1);
++    if (deduplicated.outcome === 'SCORED') {
++      assert.deepEqual(deduplicated.rankedCandidateKeys, ['candidate-a']);
++    }
++
++    const conflict = scorer.score({
++      domain: 'material',
++      userFeatures: [['interest:arduino', 1]],
++      candidates: [
++        duplicate,
++        { candidateKey: 'candidate-a', features: [] },
++      ],
++    });
++    assert.equal(conflict.outcome, 'UNAVAILABLE');
++    if (conflict.outcome === 'UNAVAILABLE') {
++      assert.equal(conflict.reasonCode, 'DUPLICATE_CANDIDATE_CONFLICT');
++    }
++  });
++
++  it('fails the whole request for missing item mappings with bounded hashed samples', () => {
++    const scorer = buildPortableLightFmV2Scorer(v2Artifact(['candidate-a']));
++    const result = scorer.score({
++      domain: 'material',
++      userFeatures: [['interest:arduino', 1]],
++      candidates: [v2Candidate('missing-private-id')],
++    });
++    assert.equal(result.outcome, 'UNAVAILABLE');
++    if (result.outcome !== 'UNAVAILABLE') return;
++    assert.equal(result.reasonCode, 'CANDIDATE_MAPPING_MISSING');
++    assert.equal(result.diagnostics.missingMappingCount, 1);
++    assert.equal(result.diagnostics.missingMappingKeySamples.length, 1);
++    assert.equal(JSON.stringify(result).includes('missing-private-id'), false);
++    assert.equal('rankedCandidateKeys' in result, false);
++  });
++
++  it('fails closed for domain, feature mapping, and nonfinite inputs', () => {
++    const scorer = buildPortableLightFmV2Scorer(v2Artifact(['candidate-a']));
++    const domain = scorer.score({
++      domain: 'project',
++      userFeatures: [['interest:arduino', 1]],
++      candidates: [v2Candidate('candidate-a')],
++    });
++    assert.equal(domain.outcome, 'UNAVAILABLE');
++    if (domain.outcome === 'UNAVAILABLE') {
++      assert.equal(domain.reasonCode, 'DOMAIN_MISMATCH');
++    }
++
++    const missingFeature = scorer.score({
++      domain: 'material',
++      userFeatures: [['interest:unknown', 1]],
++      candidates: [v2Candidate('candidate-a')],
++    });
++    assert.equal(missingFeature.outcome, 'UNAVAILABLE');
++    if (missingFeature.outcome === 'UNAVAILABLE') {
++      assert.equal(missingFeature.reasonCode, 'FEATURE_MAPPING_MISSING');
++    }
++
++    const nonfinite = scorer.score({
++      domain: 'material',
++      userFeatures: [['interest:arduino', Number.POSITIVE_INFINITY]],
++      candidates: [v2Candidate('candidate-a')],
++    });
++    assert.equal(nonfinite.outcome, 'UNAVAILABLE');
++    if (nonfinite.outcome === 'UNAVAILABLE') {
++      assert.equal(nonfinite.reasonCode, 'NONFINITE_RUNTIME_INPUT');
++    }
++  });
++});
+diff --git a/apps/backend/src/modules/recommendations/ml-lightfm-scorer.ts b/apps/backend/src/modules/recommendations/ml-lightfm-scorer.ts
+index a594f352..25313344 100644
+--- a/apps/backend/src/modules/recommendations/ml-lightfm-scorer.ts
++++ b/apps/backend/src/modules/recommendations/ml-lightfm-scorer.ts
+@@ -1,7 +1,9 @@
+ import type {
+   PortableFeature,
+   PortableModelArtifact,
++  PortableModelArtifactV2,
+ } from './ml-model-artifact.js';
++import { stableOpaqueKey } from './local-ml-training-snapshot.schema.js';
+ import {
+   buildFeatureReadinessArtifactInput,
+   classifyRuntimeFeatureForScorer,
+@@ -563,3 +565,382 @@ export const combineNormalizedScores = (
+         b.score - a.score || a.candidateKey.localeCompare(b.candidateKey),
+     );
+ };
++
++export type LocalMlDomain = 'material' | 'project';
++
++export type LocalMlCandidate = {
++  candidateKey: string;
++  features: readonly WeightedFeature[];
++};
++
++export type LocalMlScoringInput = {
++  domain: LocalMlDomain;
++  userFeatures: readonly WeightedFeature[];
++  candidates: readonly LocalMlCandidate[];
++};
++
++export type LocalMlScorerUnavailableReason =
++  | 'DOMAIN_MISMATCH'
++  | 'INVALID_CANDIDATE_KEY'
++  | 'DUPLICATE_CANDIDATE_CONFLICT'
++  | 'DUPLICATE_FEATURE_CONFLICT'
++  | 'CANDIDATE_MAPPING_MISSING'
++  | 'FEATURE_MAPPING_MISSING'
++  | 'INVALID_RUNTIME_FEATURE_WEIGHT'
++  | 'NONFINITE_RUNTIME_INPUT'
++  | 'NONFINITE_INTERMEDIATE'
++  | 'NONFINITE_OUTPUT';
++
++export type LocalMlScorerDiagnostics = Readonly<{
++  candidateCount: number;
++  duplicateCandidateCount: number;
++  scoredCount: number;
++  missingMappingCount: number;
++  missingMappingKeySamples: readonly string[];
++  featureMappingMissingCount: number;
++}>;
++
++export type LocalMlContainedScoringResult =
++  | Readonly<{
++      outcome: 'SCORED';
++      domain: LocalMlDomain;
++      scored: readonly Readonly<ScoredCandidate>[];
++      rankedCandidateKeys: readonly string[];
++      diagnostics: LocalMlScorerDiagnostics;
++    }>
++  | Readonly<{
++      outcome: 'UNAVAILABLE';
++      domain: LocalMlDomain;
++      reasonCode: LocalMlScorerUnavailableReason;
++      diagnostics: LocalMlScorerDiagnostics;
++    }>;
++
++export type PortableLightFmV2ScorerMetadata = Readonly<{
++  domain: LocalMlDomain;
++  semanticContentHash: string;
++  schemaVersion: string;
++  modelVersion: string;
++  featureContractId: string;
++  featureContractVersion: string;
++  aggregationMode: string;
++  taxonomyFingerprint: string;
++  itemCount: number;
++}>;
++
++export type PortableLightFmV2Scorer = Readonly<{
++  domain: LocalMlDomain;
++  metadata: PortableLightFmV2ScorerMetadata;
++  score: (input: LocalMlScoringInput) => LocalMlContainedScoringResult;
++}>;
++
++const asciiCompare = (left: string, right: string): number =>
++  left < right ? -1 : left > right ? 1 : 0;
++
++const emptyLocalDiagnostics = (
++  candidateCount: number,
++): LocalMlScorerDiagnostics =>
++  Object.freeze({
++    candidateCount,
++    duplicateCandidateCount: 0,
++    scoredCount: 0,
++    missingMappingCount: 0,
++    missingMappingKeySamples: Object.freeze([] as string[]),
++    featureMappingMissingCount: 0,
++  });
++
++const freezeLocalDiagnostics = (
++  diagnostics: Omit<LocalMlScorerDiagnostics, 'missingMappingKeySamples'> & {
++    missingMappingKeySamples: readonly string[];
++  },
++): LocalMlScorerDiagnostics =>
++  Object.freeze({
++    ...diagnostics,
++    missingMappingKeySamples: Object.freeze([
++      ...diagnostics.missingMappingKeySamples,
++    ]),
++  });
++
++type CanonicalFeatureRow =
++  | { ok: true; features: readonly WeightedFeature[] }
++  | {
++      ok: false;
++      reasonCode:
++        | 'DUPLICATE_FEATURE_CONFLICT'
++        | 'INVALID_RUNTIME_FEATURE_WEIGHT'
++        | 'NONFINITE_RUNTIME_INPUT';
++    };
++
++const canonicalizeLocalFeatureRow = (
++  features: readonly WeightedFeature[],
++): CanonicalFeatureRow => {
++  const byToken = new Map<string, number>();
++  for (const feature of features) {
++    if (
++      !Array.isArray(feature) ||
++      typeof feature[0] !== 'string' ||
++      feature[0].length === 0 ||
++      !Number.isFinite(feature[1])
++    ) {
++      return { ok: false, reasonCode: 'NONFINITE_RUNTIME_INPUT' };
++    }
++    if (feature[1] < 0) {
++      return { ok: false, reasonCode: 'INVALID_RUNTIME_FEATURE_WEIGHT' };
++    }
++    const prior = byToken.get(feature[0]);
++    if (prior !== undefined && prior !== feature[1]) {
++      return { ok: false, reasonCode: 'DUPLICATE_FEATURE_CONFLICT' };
++    }
++    byToken.set(feature[0], feature[1]);
++  }
++  return {
++    ok: true,
++    features: Object.freeze(
++      [...byToken]
++        .sort(([left], [right]) => asciiCompare(left, right))
++        .map(([token, weight]) => Object.freeze([token, weight]) as WeightedFeature),
++    ),
++  };
++};
++
++const numericMatrix = (
++  values: readonly (readonly string[])[],
++): readonly (readonly number[])[] =>
++  Object.freeze(
++    values.map((row) =>
++      Object.freeze(
++        row.map((value) => {
++          const parsed = Number(value);
++          if (!Number.isFinite(parsed)) throw new Error('nonfinite_model_value');
++          return parsed;
++        }),
++      ),
++    ),
++  );
++
++const numericVector = (values: readonly string[]): readonly number[] =>
++  Object.freeze(
++    values.map((value) => {
++      const parsed = Number(value);
++      if (!Number.isFinite(parsed)) throw new Error('nonfinite_model_value');
++      return parsed;
++    }),
++  );
++
++export const buildPortableLightFmV2Scorer = (
++  artifact: PortableModelArtifactV2,
++): PortableLightFmV2Scorer => {
++  if (artifact.aggregationMode !== 'weighted-sum') {
++    throw new Error('unsupported_aggregation_mode');
++  }
++
++  const dimension = artifact.modelDimensions.embeddingDimension;
++  const userEmbeddings = numericMatrix(
++    artifact.modelComponents.userFeatureEmbeddings,
++  );
++  const itemEmbeddings = numericMatrix(
++    artifact.modelComponents.itemFeatureEmbeddings,
++  );
++  const userBiases = numericVector(artifact.modelComponents.userFeatureBiases);
++  const itemBiases = numericVector(artifact.modelComponents.itemFeatureBiases);
++  const userFeatureIndex = new Map(
++    artifact.featureMapping.user.map((entry) => [entry.token, entry.index]),
++  );
++  const itemFeatureIndex = new Map(
++    artifact.featureMapping.item.map((entry) => [entry.token, entry.index]),
++  );
++  const itemKeys = new Set(artifact.itemMapping.map((entry) => entry.itemKey));
++
++  const metadata: PortableLightFmV2ScorerMetadata = Object.freeze({
++    domain: artifact.domain,
++    semanticContentHash: artifact.semanticContentHash,
++    schemaVersion: artifact.schemaVersion,
++    modelVersion: artifact.modelVersion,
++    featureContractId: artifact.featureContractId,
++    featureContractVersion: artifact.featureContractVersion,
++    aggregationMode: artifact.aggregationMode,
++    taxonomyFingerprint: artifact.taxonomyFingerprint,
++    itemCount: artifact.itemMapping.length,
++  });
++
++  const unavailable = (
++    input: LocalMlScoringInput,
++    reasonCode: LocalMlScorerUnavailableReason,
++    diagnostics = emptyLocalDiagnostics(input.candidates.length),
++  ): LocalMlContainedScoringResult =>
++    Object.freeze({
++      outcome: 'UNAVAILABLE' as const,
++      domain: input.domain,
++      reasonCode,
++      diagnostics,
++    });
++
++  const representation = (
++    features: readonly WeightedFeature[],
++    featureIndex: ReadonlyMap<string, number>,
++    embeddings: readonly (readonly number[])[],
++    biases: readonly number[],
++  ):
++    | { ok: true; embedding: number[]; bias: number }
++    | { ok: false; reasonCode: LocalMlScorerUnavailableReason } => {
++    const embedding = Array<number>(dimension).fill(0);
++    let bias = 0;
++    for (const [token, weight] of features) {
++      const rowIndex = featureIndex.get(token);
++      if (rowIndex === undefined) {
++        return { ok: false, reasonCode: 'FEATURE_MAPPING_MISSING' };
++      }
++      const biasContribution = biases[rowIndex]! * weight;
++      const nextBias = bias + biasContribution;
++      if (!Number.isFinite(biasContribution) || !Number.isFinite(nextBias)) {
++        return { ok: false, reasonCode: 'NONFINITE_INTERMEDIATE' };
++      }
++      bias = nextBias;
++      for (let coordinate = 0; coordinate < dimension; coordinate += 1) {
++        const contribution = embeddings[rowIndex]![coordinate]! * weight;
++        const nextCoordinate = embedding[coordinate]! + contribution;
++        if (!Number.isFinite(contribution) || !Number.isFinite(nextCoordinate)) {
++          return { ok: false, reasonCode: 'NONFINITE_INTERMEDIATE' };
++        }
++        embedding[coordinate] = nextCoordinate;
++      }
++    }
++    return { ok: true, embedding, bias };
++  };
++
++  const score = (input: LocalMlScoringInput): LocalMlContainedScoringResult => {
++    if (input.domain !== artifact.domain) {
++      return unavailable(input, 'DOMAIN_MISMATCH');
++    }
++
++    const userRow = canonicalizeLocalFeatureRow(input.userFeatures);
++    if (!userRow.ok) return unavailable(input, userRow.reasonCode);
++
++    const candidates = new Map<
++      string,
++      { features: readonly WeightedFeature[]; signature: string }
++    >();
++    let duplicateCandidateCount = 0;
++    for (const candidate of input.candidates) {
++      if (typeof candidate.candidateKey !== 'string' || candidate.candidateKey.length === 0) {
++        return unavailable(input, 'INVALID_CANDIDATE_KEY');
++      }
++      const row = canonicalizeLocalFeatureRow(candidate.features);
++      if (!row.ok) return unavailable(input, row.reasonCode);
++      const signature = JSON.stringify(row.features);
++      const prior = candidates.get(candidate.candidateKey);
++      if (prior) {
++        if (prior.signature !== signature) {
++          return unavailable(input, 'DUPLICATE_CANDIDATE_CONFLICT');
++        }
++        duplicateCandidateCount += 1;
++        continue;
++      }
++      candidates.set(candidate.candidateKey, {
++        features: row.features,
++        signature,
++      });
++    }
++
++    const missingOpaqueKeys = [...candidates.keys()]
++      .map((candidateKey) => stableOpaqueKey(artifact.domain, candidateKey))
++      .filter((itemKey) => !itemKeys.has(itemKey))
++      .sort(asciiCompare);
++    if (missingOpaqueKeys.length > 0) {
++      return unavailable(
++        input,
++        'CANDIDATE_MAPPING_MISSING',
++        freezeLocalDiagnostics({
++          candidateCount: input.candidates.length,
++          duplicateCandidateCount,
++          scoredCount: 0,
++          missingMappingCount: missingOpaqueKeys.length,
++          missingMappingKeySamples: missingOpaqueKeys.slice(0, 8),
++          featureMappingMissingCount: 0,
++        }),
++      );
++    }
++
++    const user = representation(
++      userRow.features,
++      userFeatureIndex,
++      userEmbeddings,
++      userBiases,
++    );
++    if (!user.ok) {
++      return unavailable(
++        input,
++        user.reasonCode,
++        freezeLocalDiagnostics({
++          candidateCount: input.candidates.length,
++          duplicateCandidateCount,
++          scoredCount: 0,
++          missingMappingCount: 0,
++          missingMappingKeySamples: [],
++          featureMappingMissingCount:
++            user.reasonCode === 'FEATURE_MAPPING_MISSING' ? 1 : 0,
++        }),
++      );
++    }
++
++    const scored: ScoredCandidate[] = [];
++    for (const [candidateKey, candidate] of candidates) {
++      const item = representation(
++        candidate.features,
++        itemFeatureIndex,
++        itemEmbeddings,
++        itemBiases,
++      );
++      if (!item.ok) {
++        return unavailable(
++          input,
++          item.reasonCode,
++          freezeLocalDiagnostics({
++            candidateCount: input.candidates.length,
++            duplicateCandidateCount,
++            scoredCount: 0,
++            missingMappingCount: 0,
++            missingMappingKeySamples: [],
++            featureMappingMissingCount:
++              item.reasonCode === 'FEATURE_MAPPING_MISSING' ? 1 : 0,
++          }),
++        );
++      }
++      let value = user.bias + item.bias;
++      if (!Number.isFinite(value)) return unavailable(input, 'NONFINITE_OUTPUT');
++      for (let coordinate = 0; coordinate < dimension; coordinate += 1) {
++        const product = user.embedding[coordinate]! * item.embedding[coordinate]!;
++        const next = value + product;
++        if (!Number.isFinite(product) || !Number.isFinite(next)) {
++          return unavailable(input, 'NONFINITE_OUTPUT');
++        }
++        value = next;
++      }
++      scored.push(Object.freeze({ candidateKey, score: value }));
++    }
++
++    scored.sort(
++      (left, right) =>
++        right.score - left.score || asciiCompare(left.candidateKey, right.candidateKey),
++    );
++    const frozenScored = Object.freeze([...scored]);
++    const rankedCandidateKeys = Object.freeze(
++      scored.map((candidate) => candidate.candidateKey),
++    );
++    return Object.freeze({
++      outcome: 'SCORED' as const,
++      domain: input.domain,
++      scored: frozenScored,
++      rankedCandidateKeys,
++      diagnostics: freezeLocalDiagnostics({
++        candidateCount: input.candidates.length,
++        duplicateCandidateCount,
++        scoredCount: scored.length,
++        missingMappingCount: 0,
++        missingMappingKeySamples: [],
++        featureMappingMissingCount: 0,
++      }),
++    });
++  };
++
++  return Object.freeze({ domain: artifact.domain, metadata, score });
++};
+diff --git a/apps/backend/src/modules/recommendations/ml-model-artifact.ts b/apps/backend/src/modules/recommendations/ml-model-artifact.ts
+index 1ccf16db..0d59fa3f 100644
+--- a/apps/backend/src/modules/recommendations/ml-model-artifact.ts
++++ b/apps/backend/src/modules/recommendations/ml-model-artifact.ts
+@@ -512,3 +512,12 @@ export const validatePortableModelArtifact = (raw: unknown, expectedDomain?: 'ma
+ 
+ export const loadPortableModelArtifact = async (path: string, domain: 'material' | 'project') =>
+   validatePortableModelArtifact(JSON.parse(await readFile(path, 'utf8')), domain);
++
++export const loadPortableModelArtifactV2 = async (
++  path: string,
++  expectations: PortableArtifactV2Expectations,
++): Promise<PortableModelArtifactV2> =>
++  validatePortableModelArtifactV2(
++    JSON.parse(await readFile(path, 'utf8')) as unknown,
++    expectations,
++  );
+diff --git a/apps/backend/src/modules/recommendations/ml-runtime-state.service.ts b/apps/backend/src/modules/recommendations/ml-runtime-state.service.ts
+new file mode 100644
+index 00000000..29a162b0
+--- /dev/null
++++ b/apps/backend/src/modules/recommendations/ml-runtime-state.service.ts
+@@ -0,0 +1,634 @@
++import { readFile } from 'node:fs/promises';
++import path from 'node:path';
++import { fileURLToPath } from 'node:url';
++
++import {
++  env,
++  type RecommendationMlRuntimeConfig,
++  type RecommendationMlRuntimeMode,
++} from '../../config/env.js';
++import {
++  buildPortableLightFmV2Scorer,
++  type LocalMlContainedScoringResult,
++  type LocalMlDomain,
++  type LocalMlScorerDiagnostics,
++  type LocalMlScorerUnavailableReason,
++  type LocalMlScoringInput,
++  type PortableLightFmV2Scorer,
++  type ScoredCandidate,
++} from './ml-lightfm-scorer.js';
++import {
++  loadPortableModelArtifactV2,
++  type PortableArtifactV2Expectations,
++  type PortableModelArtifactV2,
++} from './ml-model-artifact.js';
++import {
++  loadRecommendationFeatureTokenContract,
++  type RecommendationFeatureTokenContract,
++} from './recommendation-feature-token-contract.js';
++
++export type RecommendationMlRuntimeDomainState =
++  | 'DISABLED'
++  | 'LOADING'
++  | 'READY'
++  | 'NOT_READY'
++  | 'FAILED';
++
++export type RecommendationMlStartupFailureCode =
++  | 'PRELOAD_NOT_STARTED'
++  | 'ARTIFACT_PATH_MISSING'
++  | 'ARTIFACT_NOT_FOUND'
++  | 'ARTIFACT_UNREADABLE'
++  | 'ARTIFACT_MALFORMED'
++  | 'ARTIFACT_SCHEMA_INVALID'
++  | 'ARTIFACT_DOMAIN_MISMATCH'
++  | 'FEATURE_CONTRACT_MISMATCH'
++  | 'AGGREGATION_MODE_MISMATCH'
++  | 'TAXONOMY_FINGERPRINT_MISMATCH'
++  | 'MAPPING_HASH_MISMATCH'
++  | 'ARTIFACT_INTEGRITY_MISMATCH'
++  | 'SCORER_CONSTRUCTION_FAILED'
++  | 'RUNTIME_INTERNAL_FAILURE';
++
++export type RecommendationMlDomainDiagnostics = Readonly<{
++  runtimeMode: RecommendationMlRuntimeMode;
++  domain: LocalMlDomain;
++  state: RecommendationMlRuntimeDomainState;
++  semanticContentHash?: string;
++  modelVersion?: string;
++  schemaVersion?: string;
++  failureCode?: RecommendationMlStartupFailureCode;
++  loadCompletedAt?: string;
++  artifactItemCount?: number;
++}>;
++
++export type RecommendationMlRuntimeSnapshot = Readonly<{
++  mode: RecommendationMlRuntimeMode;
++  material: RecommendationMlDomainDiagnostics;
++  project: RecommendationMlDomainDiagnostics;
++}>;
++
++export type RecommendationMlUnavailableReason =
++  | 'RUNTIME_MODE_DISABLED'
++  | 'RUNTIME_MODE_NOT_LOCAL'
++  | 'RUNTIME_LOADING'
++  | 'RUNTIME_NOT_READY'
++  | 'RUNTIME_FAILED'
++  | RecommendationMlStartupFailureCode
++  | LocalMlScorerUnavailableReason;
++
++export type RecommendationMlRequestDiagnostics = Readonly<{
++  runtimeMode: RecommendationMlRuntimeMode;
++  domain: LocalMlDomain;
++  state: RecommendationMlRuntimeDomainState;
++  candidateCount: number;
++  duplicateCandidateCount: number;
++  scoredCount: number;
++  missingMappingCount: number;
++  missingMappingKeySamples: readonly string[];
++  featureMappingMissingCount: number;
++  startupFailureCode?: RecommendationMlStartupFailureCode;
++}>;
++
++export type RecommendationMlRankingResult =
++  | Readonly<{
++      outcome: 'ML_RANKED';
++      mode: 'ML_LOCAL';
++      domain: LocalMlDomain;
++      scored: readonly Readonly<ScoredCandidate>[];
++      rankedCandidateKeys: readonly string[];
++      diagnostics: RecommendationMlRequestDiagnostics;
++    }>
++  | Readonly<{
++      outcome: 'ML_UNAVAILABLE';
++      mode: RecommendationMlRuntimeMode;
++      domain: LocalMlDomain;
++      reasonCode: RecommendationMlUnavailableReason;
++      diagnostics: RecommendationMlRequestDiagnostics;
++    }>;
++
++type RecommendationMlUnavailableResult = Extract<
++  RecommendationMlRankingResult,
++  { outcome: 'ML_UNAVAILABLE' }
++>;
++
++type AggregationContract = Readonly<{
++  schemaVersion: string;
++  selectedMode: string;
++}>;
++
++type InternalDomainState = Readonly<{
++  diagnostics: RecommendationMlDomainDiagnostics;
++  scorer?: PortableLightFmV2Scorer;
++}>;
++
++type InternalSnapshot = Readonly<{
++  publicSnapshot: RecommendationMlRuntimeSnapshot;
++  material: InternalDomainState;
++  project: InternalDomainState;
++}>;
++
++type RuntimeDependencies = {
++  getConfig: () => RecommendationMlRuntimeConfig;
++  loadFeatureContract: () => Promise<RecommendationFeatureTokenContract>;
++  loadAggregationContract: () => Promise<AggregationContract>;
++  loadArtifact: (
++    artifactPath: string,
++    expectations: PortableArtifactV2Expectations,
++  ) => Promise<PortableModelArtifactV2>;
++  buildScorer: (artifact: PortableModelArtifactV2) => PortableLightFmV2Scorer;
++  now: () => Date;
++};
++
++const repositoryRoot = path.resolve(
++  path.dirname(fileURLToPath(import.meta.url)),
++  '../../../../..',
++);
++const aggregationContractPath = path.join(
++  repositoryRoot,
++  'ml/recommendation/aggregation-contract-v1.json',
++);
++
++const runtimeConfigFromEnv = (): RecommendationMlRuntimeConfig => ({
++  mode: env.recommendationMlRuntimeMode,
++  explicitMode: env.recommendationMlRuntimeModeExplicit,
++  materialArtifactPath: env.recommendationMlMaterialArtifactPath,
++  projectArtifactPath: env.recommendationMlProjectArtifactPath,
++});
++
++const loadAggregationContract = async (): Promise<AggregationContract> => {
++  let raw: unknown;
++  try {
++    raw = JSON.parse(await readFile(aggregationContractPath, 'utf8')) as unknown;
++  } catch {
++    throw new Error('aggregation_contract_invalid');
++  }
++  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
++    throw new Error('aggregation_contract_invalid');
++  }
++  const value = raw as Record<string, unknown>;
++  if (
++    value.schemaVersion !== 'impactloop-local-aggregation-contract-v1' ||
++    value.selectedMode !== 'weighted-sum'
++  ) {
++    throw new Error('aggregation_contract_invalid');
++  }
++  return Object.freeze({
++    schemaVersion: value.schemaVersion,
++    selectedMode: value.selectedMode,
++  });
++};
++
++const defaultDependencies: RuntimeDependencies = {
++  getConfig: runtimeConfigFromEnv,
++  loadFeatureContract: () => loadRecommendationFeatureTokenContract(),
++  loadAggregationContract,
++  loadArtifact: loadPortableModelArtifactV2,
++  buildScorer: buildPortableLightFmV2Scorer,
++  now: () => new Date(),
++};
++
++let dependencies: RuntimeDependencies = defaultDependencies;
++
++const freezeDiagnostics = (
++  diagnostics: RecommendationMlDomainDiagnostics,
++): RecommendationMlDomainDiagnostics => Object.freeze({ ...diagnostics });
++
++const publicSnapshotFromStates = (
++  mode: RecommendationMlRuntimeMode,
++  material: InternalDomainState,
++  project: InternalDomainState,
++): RecommendationMlRuntimeSnapshot =>
++  Object.freeze({
++    mode,
++    material: material.diagnostics,
++    project: project.diagnostics,
++  });
++
++const internalSnapshot = (
++  mode: RecommendationMlRuntimeMode,
++  material: InternalDomainState,
++  project: InternalDomainState,
++): InternalSnapshot =>
++  Object.freeze({
++    publicSnapshot: publicSnapshotFromStates(mode, material, project),
++    material,
++    project,
++  });
++
++const domainState = (
++  diagnostics: RecommendationMlDomainDiagnostics,
++  scorer?: PortableLightFmV2Scorer,
++): InternalDomainState =>
++  Object.freeze({
++    diagnostics: freezeDiagnostics(diagnostics),
++    ...(scorer ? { scorer } : {}),
++  });
++
++const initialSnapshot = (
++  mode: RecommendationMlRuntimeMode,
++): InternalSnapshot => {
++  const state: RecommendationMlRuntimeDomainState =
++    mode === 'DETERMINISTIC' ? 'DISABLED' : 'NOT_READY';
++  const failureCode =
++    mode === 'DETERMINISTIC' ? undefined : ('PRELOAD_NOT_STARTED' as const);
++  const material = domainState({
++    runtimeMode: mode,
++    domain: 'material',
++    state,
++    ...(failureCode ? { failureCode } : {}),
++  });
++  const project = domainState({
++    runtimeMode: mode,
++    domain: 'project',
++    state,
++    ...(failureCode ? { failureCode } : {}),
++  });
++  return internalSnapshot(mode, material, project);
++};
++
++let publishedSnapshot = initialSnapshot(env.recommendationMlRuntimeMode);
++let preloadPromise: Promise<RecommendationMlRuntimeSnapshot> | undefined;
++
++const resolveArtifactPath = (configuredPath: string): string =>
++  path.isAbsolute(configuredPath)
++    ? path.normalize(configuredPath)
++    : path.resolve(repositoryRoot, configuredPath);
++
++const errorCode = (error: unknown): string | undefined =>
++  error && typeof error === 'object' && 'code' in error
++    ? String(error.code)
++    : undefined;
++
++const errorMessage = (error: unknown): string =>
++  error instanceof Error ? error.message : '';
++
++const classifyExpectedFailure = (
++  error: unknown,
++): RecommendationMlStartupFailureCode | undefined => {
++  const code = errorCode(error);
++  if (code === 'ENOENT') return 'ARTIFACT_NOT_FOUND';
++  if (
++    code === 'EACCES' ||
++    code === 'EPERM' ||
++    code === 'EISDIR' ||
++    code === 'ENOTDIR' ||
++    code === 'EIO' ||
++    code === 'EBUSY' ||
++    code === 'EMFILE' ||
++    code === 'ENFILE'
++  ) {
++    return 'ARTIFACT_UNREADABLE';
++  }
++  if (code?.startsWith('CONTRACT_LOAD_')) {
++    return 'FEATURE_CONTRACT_MISMATCH';
++  }
++  if (error instanceof SyntaxError) return 'ARTIFACT_MALFORMED';
++
++  const message = errorMessage(error);
++  if (message.includes('artifact_v2_domain')) {
++    return 'ARTIFACT_DOMAIN_MISMATCH';
++  }
++  if (message.includes('artifact_v2_feature_contract')) {
++    return 'FEATURE_CONTRACT_MISMATCH';
++  }
++  if (message.includes('artifact_v2_aggregation_mode')) {
++    return 'AGGREGATION_MODE_MISMATCH';
++  }
++  if (message.includes('taxonomy_fingerprint')) {
++    return 'TAXONOMY_FINGERPRINT_MISMATCH';
++  }
++  if (
++    message.includes('feature_mapping_hash') ||
++    message.includes('item_mapping_hash')
++  ) {
++    return 'MAPPING_HASH_MISMATCH';
++  }
++  if (message.includes('semantic_content_hash_mismatch')) {
++    return 'ARTIFACT_INTEGRITY_MISMATCH';
++  }
++  if (
++    message.startsWith('user_feature_mapping_') ||
++    message.startsWith('item_feature_mapping_') ||
++    message.startsWith('item_mapping_')
++  ) {
++    return 'ARTIFACT_SCHEMA_INVALID';
++  }
++  if (message.startsWith('artifact_v2_')) return 'ARTIFACT_SCHEMA_INVALID';
++  if (message.startsWith('CONTRACT_LOAD_')) {
++    return 'FEATURE_CONTRACT_MISMATCH';
++  }
++  if (message === 'aggregation_contract_invalid') {
++    return 'AGGREGATION_MODE_MISMATCH';
++  }
++  return undefined;
++};
++
++const loadDomain = async (
++  mode: RecommendationMlRuntimeMode,
++  domain: LocalMlDomain,
++  configuredPath: string,
++  featureContractPromise: Promise<RecommendationFeatureTokenContract>,
++  aggregationContractPromise: Promise<AggregationContract>,
++): Promise<InternalDomainState> => {
++  const completed = (): string => dependencies.now().toISOString();
++  if (!configuredPath) {
++    return domainState({
++      runtimeMode: mode,
++      domain,
++      state: 'NOT_READY',
++      failureCode: 'ARTIFACT_PATH_MISSING',
++      loadCompletedAt: completed(),
++    });
++  }
++
++  try {
++    const [featureContract, aggregationContract] = await Promise.all([
++      featureContractPromise,
++      aggregationContractPromise,
++    ]);
++    const expectations: PortableArtifactV2Expectations = {
++      expectedDomain: domain,
++      featureContractId: featureContract.contractId,
++      featureContractVersion: featureContract.contractVersion,
++      aggregationMode: aggregationContract.selectedMode,
++      taxonomyFingerprint:
++        featureContract.taxonomyCompatibility.taxonomyVocabularyFingerprint,
++    };
++    let artifact: PortableModelArtifactV2;
++    try {
++      artifact = await dependencies.loadArtifact(
++        resolveArtifactPath(configuredPath),
++        expectations,
++      );
++    } catch (error) {
++      const failureCode = classifyExpectedFailure(error);
++      if (!failureCode) throw error;
++      return domainState({
++        runtimeMode: mode,
++        domain,
++        state: 'NOT_READY',
++        failureCode,
++        loadCompletedAt: completed(),
++      });
++    }
++
++    try {
++      const scorer = dependencies.buildScorer(artifact);
++      if (scorer.domain !== domain) {
++        return domainState({
++          runtimeMode: mode,
++          domain,
++          state: 'NOT_READY',
++          failureCode: 'ARTIFACT_DOMAIN_MISMATCH',
++          loadCompletedAt: completed(),
++        });
++      }
++      return domainState(
++        {
++          runtimeMode: mode,
++          domain,
++          state: 'READY',
++          semanticContentHash: scorer.metadata.semanticContentHash,
++          modelVersion: scorer.metadata.modelVersion,
++          schemaVersion: scorer.metadata.schemaVersion,
++          artifactItemCount: scorer.metadata.itemCount,
++          loadCompletedAt: completed(),
++        },
++        scorer,
++      );
++    } catch {
++      return domainState({
++        runtimeMode: mode,
++        domain,
++        state: 'FAILED',
++        failureCode: 'SCORER_CONSTRUCTION_FAILED',
++        loadCompletedAt: completed(),
++      });
++    }
++  } catch (error) {
++    const expected = classifyExpectedFailure(error);
++    return domainState({
++      runtimeMode: mode,
++      domain,
++      state: expected ? 'NOT_READY' : 'FAILED',
++      failureCode: expected ?? 'RUNTIME_INTERNAL_FAILURE',
++      loadCompletedAt: completed(),
++    });
++  }
++};
++
++const performPreload = async (
++  config: RecommendationMlRuntimeConfig,
++): Promise<RecommendationMlRuntimeSnapshot> => {
++  if (!config.materialArtifactPath && !config.projectArtifactPath) {
++    const missing = (domain: LocalMlDomain): InternalDomainState =>
++      domainState({
++        runtimeMode: config.mode,
++        domain,
++        state: 'NOT_READY',
++        failureCode: 'ARTIFACT_PATH_MISSING',
++        loadCompletedAt: dependencies.now().toISOString(),
++      });
++    publishedSnapshot = internalSnapshot(
++      config.mode,
++      missing('material'),
++      missing('project'),
++    );
++    return publishedSnapshot.publicSnapshot;
++  }
++  const featureContractPromise = dependencies.loadFeatureContract();
++  const aggregationContractPromise = dependencies.loadAggregationContract();
++  const [material, project] = await Promise.all([
++    loadDomain(
++      config.mode,
++      'material',
++      config.materialArtifactPath,
++      featureContractPromise,
++      aggregationContractPromise,
++    ),
++    loadDomain(
++      config.mode,
++      'project',
++      config.projectArtifactPath,
++      featureContractPromise,
++      aggregationContractPromise,
++    ),
++  ]);
++  publishedSnapshot = internalSnapshot(config.mode, material, project);
++  return publishedSnapshot.publicSnapshot;
++};
++
++export const preloadRecommendationMlRuntime = (): Promise<RecommendationMlRuntimeSnapshot> => {
++  if (preloadPromise) return preloadPromise;
++
++  const config = dependencies.getConfig();
++  if (config.mode === 'DETERMINISTIC') {
++    publishedSnapshot = initialSnapshot('DETERMINISTIC');
++    preloadPromise = Promise.resolve(publishedSnapshot.publicSnapshot);
++    return preloadPromise;
++  }
++
++  const loading = (domain: LocalMlDomain): InternalDomainState =>
++    domainState({ runtimeMode: config.mode, domain, state: 'LOADING' });
++  publishedSnapshot = internalSnapshot(
++    config.mode,
++    loading('material'),
++    loading('project'),
++  );
++
++  preloadPromise = Promise.resolve()
++    .then(() => performPreload(config))
++    .catch(() => {
++      const failed = (domain: LocalMlDomain): InternalDomainState =>
++        domainState({
++          runtimeMode: config.mode,
++          domain,
++          state: 'FAILED',
++          failureCode: 'RUNTIME_INTERNAL_FAILURE',
++          loadCompletedAt: dependencies.now().toISOString(),
++        });
++      publishedSnapshot = internalSnapshot(
++        config.mode,
++        failed('material'),
++        failed('project'),
++      );
++      return publishedSnapshot.publicSnapshot;
++    });
++  return preloadPromise;
++};
++
++export const getRecommendationMlRuntimeSnapshot = (): RecommendationMlRuntimeSnapshot =>
++  publishedSnapshot.publicSnapshot;
++
++const domainFromSnapshot = (
++  snapshot: InternalSnapshot,
++  domain: LocalMlDomain,
++): InternalDomainState =>
++  domain === 'material' ? snapshot.material : snapshot.project;
++
++const requestDiagnostics = (
++  snapshot: InternalSnapshot,
++  domain: LocalMlDomain,
++  candidateCount: number,
++  scorerDiagnostics?: LocalMlScorerDiagnostics,
++): RecommendationMlRequestDiagnostics => {
++  const state = domainFromSnapshot(snapshot, domain).diagnostics;
++  return Object.freeze({
++    runtimeMode: snapshot.publicSnapshot.mode,
++    domain,
++    state: state.state,
++    candidateCount,
++    duplicateCandidateCount: scorerDiagnostics?.duplicateCandidateCount ?? 0,
++    scoredCount: scorerDiagnostics?.scoredCount ?? 0,
++    missingMappingCount: scorerDiagnostics?.missingMappingCount ?? 0,
++    missingMappingKeySamples: Object.freeze([
++      ...(scorerDiagnostics?.missingMappingKeySamples ?? []),
++    ]),
++    featureMappingMissingCount:
++      scorerDiagnostics?.featureMappingMissingCount ?? 0,
++    ...(state.failureCode ? { startupFailureCode: state.failureCode } : {}),
++  });
++};
++
++const unavailableForState = (
++  snapshot: InternalSnapshot,
++  input: LocalMlScoringInput,
++  reasonCode?: RecommendationMlUnavailableReason,
++): RecommendationMlUnavailableResult => {
++  const state = domainFromSnapshot(snapshot, input.domain).diagnostics;
++  const resolvedReason =
++    reasonCode ??
++    state.failureCode ??
++    (state.state === 'LOADING'
++      ? 'RUNTIME_LOADING'
++      : state.state === 'FAILED'
++        ? 'RUNTIME_FAILED'
++        : 'RUNTIME_NOT_READY');
++  return Object.freeze({
++    outcome: 'ML_UNAVAILABLE' as const,
++    mode: snapshot.publicSnapshot.mode,
++    domain: input.domain,
++    reasonCode: resolvedReason,
++    diagnostics: requestDiagnostics(
++      snapshot,
++      input.domain,
++      input.candidates.length,
++    ),
++  });
++};
++
++const scoreCapturedSnapshot = (
++  snapshot: InternalSnapshot,
++  input: LocalMlScoringInput,
++): LocalMlContainedScoringResult | RecommendationMlUnavailableResult => {
++  const domain = domainFromSnapshot(snapshot, input.domain);
++  if (domain.diagnostics.state !== 'READY' || !domain.scorer) {
++    return unavailableForState(snapshot, input);
++  }
++  return domain.scorer.score(input);
++};
++
++export const scoreRecommendationMlRuntimeForShadow = (
++  input: LocalMlScoringInput,
++): LocalMlContainedScoringResult | RecommendationMlUnavailableResult => {
++  const snapshot = publishedSnapshot;
++  if (snapshot.publicSnapshot.mode === 'DETERMINISTIC') {
++    return unavailableForState(snapshot, input, 'RUNTIME_MODE_DISABLED');
++  }
++  return scoreCapturedSnapshot(snapshot, input);
++};
++
++export const rankMlLocalCandidates = (
++  input: LocalMlScoringInput,
++): RecommendationMlRankingResult => {
++  const snapshot = publishedSnapshot;
++  if (snapshot.publicSnapshot.mode === 'DETERMINISTIC') {
++    return unavailableForState(snapshot, input, 'RUNTIME_MODE_DISABLED');
++  }
++  if (snapshot.publicSnapshot.mode !== 'ML_LOCAL') {
++    return unavailableForState(snapshot, input, 'RUNTIME_MODE_NOT_LOCAL');
++  }
++
++  const result = scoreCapturedSnapshot(snapshot, input);
++  if (result.outcome === 'ML_UNAVAILABLE') return result;
++  if (result.outcome === 'UNAVAILABLE') {
++    return Object.freeze({
++      outcome: 'ML_UNAVAILABLE' as const,
++      mode: 'ML_LOCAL' as const,
++      domain: input.domain,
++      reasonCode: result.reasonCode,
++      diagnostics: requestDiagnostics(
++        snapshot,
++        input.domain,
++        input.candidates.length,
++        result.diagnostics,
++      ),
++    });
++  }
++  return Object.freeze({
++    outcome: 'ML_RANKED' as const,
++    mode: 'ML_LOCAL' as const,
++    domain: input.domain,
++    scored: result.scored,
++    rankedCandidateKeys: result.rankedCandidateKeys,
++    diagnostics: requestDiagnostics(
++      snapshot,
++      input.domain,
++      input.candidates.length,
++      result.diagnostics,
++    ),
++  });
++};
++
++export const setRecommendationMlRuntimeDependenciesForTests = (
++  overrides: Partial<RuntimeDependencies>,
++): void => {
++  dependencies = { ...defaultDependencies, ...overrides };
++};
++
++export const resetRecommendationMlRuntimeForTests = (): void => {
++  dependencies = defaultDependencies;
++  preloadPromise = undefined;
++  publishedSnapshot = initialSnapshot(env.recommendationMlRuntimeMode);
++};
+diff --git a/apps/backend/src/modules/recommendations/ml-shadow.service.ts b/apps/backend/src/modules/recommendations/ml-shadow.service.ts
+index 4832a55b..850c7fdb 100644
+--- a/apps/backend/src/modules/recommendations/ml-shadow.service.ts
++++ b/apps/backend/src/modules/recommendations/ml-shadow.service.ts
+@@ -22,29 +22,27 @@ import {
+   type CanonicalRuntimeFeatureAuthority,
+ } from "./canonical-runtime-item-features.js";
+ import {
+-  computeArtifactUserFeatureOverlap,
+   resolveCanonicalShadowUserFeatures,
+   type ArtifactUserFeatureOverlapStatus,
+ } from "./canonical-shadow-user-features.js";
+ import {
+-  buildFeatureReadinessArtifactInput,
+-  evaluateRecommendationFeatureReadiness,
+-  getCompiledRecommendationFeatureReadinessContract,
+   setCompiledRecommendationFeatureReadinessContractForTests,
+   type RecommendationFeatureReadiness,
+ } from "./recommendation-feature-readiness.js";
+ import {
+   combineNormalizedScores,
+-  scorePortableLightFm,
+   type LightFmScorerDiagnostics,
+   type LightFmScorerReasonCode,
+   type LightFmScorerResult,
++  type LocalMlContainedScoringResult,
+   type WeightedFeature,
+ } from "./ml-lightfm-scorer.js";
+ import {
+-  loadPortableModelArtifact,
+-  type PortableModelArtifact,
+-} from "./ml-model-artifact.js";
++  getRecommendationMlRuntimeSnapshot,
++  rankMlLocalCandidates,
++  scoreRecommendationMlRuntimeForShadow,
++  type RecommendationMlDomainDiagnostics,
++} from "./ml-runtime-state.service.js";
+ import {
+   buildShortTermIntent,
+   recentItemScore,
+@@ -269,7 +267,6 @@ type ShadowObserver = (
+   diagnostics: ShadowDiagnostics & { domain: "material" | "project" },
+ ) => void;
+ let observer: ShadowObserver | undefined;
+-let artifactLoadCount = 0;
+ export const setMlShadowObserverForTests = (value?: ShadowObserver) => {
+   observer = value;
+ };
+@@ -293,11 +290,10 @@ const injectFailure = (phase: MlShadowFailurePhase) => {
+     throw new Error(`injected_${phase}_failure`);
+ };
+ export const getMlArtifactCacheStatsForTests = () => ({
+-  entries: cache.size,
+-  artifactLoadCount,
++  entries: 0,
++  artifactLoadCount: 0,
+ });
+ 
+-const cache = new Map<string, Promise<PortableModelArtifact>>();
+ const ML_SHADOW_TIMEOUT_MS = 1_000;
+ const safeMaterialFusion = (
+   ...args: Parameters<typeof fuseMaterialRankings>
+@@ -371,20 +367,9 @@ const requireProjectFusion = (
+   if (result.fallbackReason) throw new Error("project_fusion_failure");
+   return result;
+ };
+-const artifact = (path: string, domain: "material" | "project") => {
+-  const key = `${domain}:${path}`;
+-  let value = cache.get(key);
+-  if (!value) {
+-    artifactLoadCount += 1;
+-    value = loadPortableModelArtifact(path, domain);
+-    cache.set(key, value);
+-  }
+-  return value;
+-};
+-export const clearMlArtifactCacheForTests = () => {
+-  cache.clear();
+-  artifactLoadCount = 0;
+-};
++export const clearMlArtifactCacheForTests = (): void => undefined;
++
++export { rankMlLocalCandidates };
+ 
+ export const resetMlShadowTestStateForTests = (): void => {
+   clearMlArtifactCacheForTests();
+@@ -704,11 +689,10 @@ const buildProjectShadowDiagnostics = (
+     candidateKey: string;
+     features: readonly WeightedFeature[];
+   }>,
+-  model: PortableModelArtifact,
+-  longTerm: Extract<LightFmScorerResult, { outcome: "SCORED" }>,
++  model: RecommendationMlDomainDiagnostics,
++  longTerm: Extract<LocalMlContainedScoringResult, { outcome: "SCORED" }>,
+   started: number,
+   scorerDurationMs: number,
+-  featureReadiness: RecommendationFeatureReadiness,
+ ): { diagnostics: ShadowDiagnostics; fusedRankingKeys?: string[] } => {
+   const comparisonStarted = performance.now();
+   const runtimeKeys = input.candidates.map(
+@@ -716,22 +700,12 @@ const buildProjectShadowDiagnostics = (
+   );
+   const runtimeKeySet = new Set(runtimeKeys);
+   const scoredKeys = longTerm.scored.map((candidate) => candidate.candidateKey);
+-  const artifactFeatureNames = new Set(
+-    model.item_features.map((feature) => feature.name),
++  const artifactMappedCandidateCount = runtimeCandidates.length;
++  const runtimeCandidatesMissingFromArtifact = 0;
++  const artifactEntriesOutsideRuntimeUniverse = Math.max(
++    0,
++    (model.artifactItemCount ?? 0) - runtimeCandidates.length,
+   );
+-  const runtimeFeatureNames = new Set<string>();
+-  let artifactMappedCandidateCount = 0;
+-  for (const candidate of runtimeCandidates) {
+-    const featureNames = candidate.features.map(([name]) => name);
+-    featureNames.forEach((name) => runtimeFeatureNames.add(name));
+-    if (featureNames.every((name) => artifactFeatureNames.has(name)))
+-      artifactMappedCandidateCount += 1;
+-  }
+-  const runtimeCandidatesMissingFromArtifact =
+-    input.candidates.length - artifactMappedCandidateCount;
+-  const artifactEntriesOutsideRuntimeUniverse = model.item_features.filter(
+-    (feature) => !runtimeFeatureNames.has(feature.name),
+-  ).length;
+   const nonFiniteScoreCount = longTerm.scored.filter(
+     (candidate) => !Number.isFinite(candidate.score),
+   ).length;
+@@ -761,17 +735,15 @@ const buildProjectShadowDiagnostics = (
+     hydratedMappingFailureCount === 0 &&
+     runtimeCandidatesMissingFromArtifact === 0;
+   // RP-01.5: overall project readiness requires feature readiness; mapping integrity alone is not enough.
+-  const projectReadinessStatus: ProjectReadinessStatus =
+-    mappingIntegrityReady && featureReadiness.status === "READY"
+-      ? "READY"
+-      : "NOT_READY";
++  const projectReadinessStatus: ProjectReadinessStatus = mappingIntegrityReady
++    ? "READY"
++    : "NOT_READY";
+   const readinessBase: ShadowDiagnostics = {
+     status: "SCORED",
+     projectReadinessStatus,
+-    featureReadiness,
+     candidateCount: input.candidates.length,
+     runtimeCandidateCount: input.candidates.length,
+-    artifactCatalogCount: model.item_features.length,
++    artifactCatalogCount: model.artifactItemCount,
+     artifactMappedCandidateCount,
+     runtimeCandidatesMissingFromArtifact,
+     artifactEntriesOutsideRuntimeUniverse,
+@@ -801,13 +773,12 @@ const buildProjectShadowDiagnostics = (
+       performance.now() - started,
+     ),
+     scoringDurationMs: scorerDurationMs,
+-    artifactVersion: model.model_version,
+-    featureSchemaVersion: model.feature_schema_version,
+-    missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+-    scorerOutcome: longTerm.outcome,
+-    scorerReadiness: longTerm.scoringReadiness,
+-    scorerReasonCodes: longTerm.reasonCodes,
+-    scorerDiagnostics: longTerm.diagnostics,
++    artifactVersion: model.modelVersion,
++    featureSchemaVersion: model.schemaVersion,
++    missingFeatureCount: 0,
++    scorerOutcome: "SCORED",
++    scorerReadiness: "READY",
++    scorerReasonCodes: [],
+     shadowTop5Keys: ml.slice(0, 5).map(privacyKey),
+     currentTop5Keys: deterministic.slice(0, 5).map(privacyKey),
+     longTermTop5Keys: ml.slice(0, 5).map(privacyKey),
+@@ -876,7 +847,7 @@ const buildProjectShadowDiagnostics = (
+   const fusionStarted = performance.now();
+   injectFailure("fusion");
+   const fusion = requireProjectFusion(
+-    longTerm.scored,
++    longTerm.scored.map((candidate) => ({ ...candidate })),
+     recentScores,
+     confidence.confidence,
+   );
+@@ -953,10 +924,9 @@ const buildProjectShadowDiagnostics = (
+     diagnostics: {
+       status: "SCORED",
+       projectReadinessStatus,
+-      featureReadiness,
+       candidateCount: input.candidates.length,
+       runtimeCandidateCount: input.candidates.length,
+-      artifactCatalogCount: model.item_features.length,
++      artifactCatalogCount: model.artifactItemCount,
+       artifactMappedCandidateCount,
+       runtimeCandidatesMissingFromArtifact,
+       artifactEntriesOutsideRuntimeUniverse,
+@@ -984,13 +954,12 @@ const buildProjectShadowDiagnostics = (
+       totalProjectShadowDurationMs,
+       totalProjectRecommendationDurationMs: totalProjectShadowDurationMs,
+       scoringDurationMs: scorerDurationMs,
+-      artifactVersion: model.model_version,
+-      featureSchemaVersion: model.feature_schema_version,
+-      missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+-      scorerOutcome: longTerm.outcome,
+-      scorerReadiness: longTerm.scoringReadiness,
+-      scorerReasonCodes: longTerm.reasonCodes,
+-      scorerDiagnostics: longTerm.diagnostics,
++      artifactVersion: model.modelVersion,
++      featureSchemaVersion: model.schemaVersion,
++      missingFeatureCount: 0,
++      scorerOutcome: "SCORED",
++      scorerReadiness: "READY",
++      scorerReasonCodes: [],
+       shadowTop5Keys: fusedTop.slice(0, 5).map(privacyKey),
+       currentTop5Keys: deterministic.slice(0, 5).map(privacyKey),
+       longTermTop5Keys: longTermTop.slice(0, 5).map(privacyKey),
+@@ -1055,7 +1024,13 @@ const runMlShadowComparisonInternal = async <T>(
+ ): Promise<MlShadowComparisonResult<T>> => {
+   const timeoutTestEnabled = neverSettleResponseForTests === input.response;
+ 
+-  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled) {
++  const runtimeEnabled =
++    getRecommendationMlRuntimeSnapshot().mode !== "DETERMINISTIC";
++  if (
++    !env.recommendationMlShadowEnabled &&
++    !runtimeEnabled &&
++    !timeoutTestEnabled
++  ) {
+     const diagnostics: ShadowDiagnostics = {
+       status: "DISABLED",
+       candidateCount: input.candidates.length,
+@@ -1100,13 +1075,6 @@ const runMlShadowComparisonInternal = async <T>(
+     )
+       throw new Error("candidate_mismatch");
+ 
+-    const path =
+-      input.domain === "material"
+-        ? env.recommendationMlMaterialArtifactPath
+-        : env.recommendationMlProjectArtifactPath;
+-
+-    if (!path) throw new Error("artifact_path_missing");
+-
+     observeMaterialStage(
+       input,
+       started,
+@@ -1116,8 +1084,7 @@ const runMlShadowComparisonInternal = async <T>(
+ 
+     observeMaterialStage(input, started, "portable_artifact_scoring", "start");
+ 
+-    const [model, canonicalUser, runtimeFeatureAuthority] = await Promise.all([
+-      artifact(path, input.domain),
++    const [canonicalUser, runtimeFeatureAuthority] = await Promise.all([
+       resolveCanonicalShadowUserFeatures({
+         storedInterests: input.interests,
+         loadRegistry: loadInterestRegistry,
+@@ -1125,24 +1092,13 @@ const runMlShadowComparisonInternal = async <T>(
+       getCanonicalRuntimeFeatureAuthority(),
+     ]);
+     const userFeatures = canonicalUser.features;
+-    const artifactOverlap = computeArtifactUserFeatureOverlap({
+-      runtimeFeatures: userFeatures,
+-      artifactUserFeatureNames: model.user_features.map((entry) => entry.name),
+-    });
+-    const canonicalUserDiagnostics = {
++    const canonicalUserDiagnosticsBase = {
+       resolutionStatus: canonicalUser.resolutionStatus,
+       canonicalFeatureCount: canonicalUser.canonicalFeatureCount,
+       mappedInputCount: canonicalUser.mappedInputCount,
+       unmappedInputCount: canonicalUser.unmappedInputCount,
+       unmappedReasonCounts: canonicalUser.unmappedReasonCounts,
+       candidateIndependent: canonicalUser.candidateIndependent,
+-      canonicalUserFeatureCount: artifactOverlap.canonicalUserFeatureCount,
+-      artifactMatchedUserFeatureCount:
+-        artifactOverlap.artifactMatchedUserFeatureCount,
+-      artifactMissingUserFeatureCount:
+-        artifactOverlap.artifactMissingUserFeatureCount,
+-      artifactUserFeatureOverlapStatus:
+-        artifactOverlap.artifactUserFeatureOverlapStatus,
+       servingSuppressedReason: CANONICAL_USER_FEATURES_SHADOW_ONLY,
+     };
+ 
+@@ -1155,28 +1111,12 @@ const runMlShadowComparisonInternal = async <T>(
+       ),
+     }));
+ 
+-    const compiledContract =
+-      await getCompiledRecommendationFeatureReadinessContract();
+-    const featureReadinessInput = {
+-      compiledContract,
+-      domain: input.domain,
+-      user: {
+-        features: userFeatures,
+-        resolutionStatus: canonicalUser.resolutionStatus,
+-      },
+-      itemRows: candidates,
+-      artifact: buildFeatureReadinessArtifactInput(model),
+-    } as const;
+-    const featureReadiness =
+-      evaluateRecommendationFeatureReadiness(featureReadinessInput);
+-
+     const scorerStarted = performance.now();
+-    const longTerm = scorePortableLightFm(
+-      model,
++    const longTerm = scoreRecommendationMlRuntimeForShadow({
++      domain: input.domain,
+       userFeatures,
+       candidates,
+-      { readinessInput: featureReadinessInput, featureReadiness },
+-    );
++    });
+     const scorerDurationMs = Math.max(0, performance.now() - scorerStarted);
+ 
+     observeMaterialStage(
+@@ -1186,21 +1126,17 @@ const runMlShadowComparisonInternal = async <T>(
+       "complete",
+     );
+ 
+-    if (longTerm.outcome === "FAILED_CLOSED") {
++    if (longTerm.outcome !== "SCORED") {
+       const diagnostics: ShadowDiagnostics = {
+         ...reportMlShadowFallback(
+           input.domain,
+           input.candidates.length,
+-          new Error("lightfm_scorer_failed_closed"),
++          new Error(longTerm.reasonCode),
+         ),
+-        ...canonicalUserDiagnostics,
+-        featureReadiness,
++        ...canonicalUserDiagnosticsBase,
+         scoringDurationMs: scorerDurationMs,
+-        missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+-        scorerOutcome: longTerm.outcome,
+-        scorerReadiness: longTerm.scoringReadiness,
+-        scorerReasonCodes: longTerm.reasonCodes,
+-        scorerDiagnostics: longTerm.diagnostics,
++        missingFeatureCount: longTerm.diagnostics.featureMappingMissingCount,
++        scorerReadiness: "NOT_READY",
+       };
+       if (input.domain === "material") {
+         safeWriteMaterialDecisionLog(input, diagnostics, started, "FALLBACK");
+@@ -1211,6 +1147,23 @@ const runMlShadowComparisonInternal = async <T>(
+       return { response: input.response, diagnostics };
+     }
+ 
++    const runtimeSnapshot = getRecommendationMlRuntimeSnapshot();
++    const model =
++      input.domain === "material"
++        ? runtimeSnapshot.material
++        : runtimeSnapshot.project;
++    const canonicalUserFeatureCount = userFeatures.length;
++    const canonicalUserDiagnostics = {
++      ...canonicalUserDiagnosticsBase,
++      canonicalUserFeatureCount,
++      artifactMatchedUserFeatureCount: canonicalUserFeatureCount,
++      artifactMissingUserFeatureCount: 0,
++      artifactUserFeatureOverlapStatus:
++        canonicalUserFeatureCount === 0
++          ? ("NO_RUNTIME_FEATURES" as const)
++          : ("FULL_OVERLAP" as const),
++    };
++
+     if (input.domain === "project") {
+       const projectDecision = buildProjectShadowDiagnostics(
+         input,
+@@ -1219,12 +1172,16 @@ const runMlShadowComparisonInternal = async <T>(
+         longTerm,
+         started,
+         scorerDurationMs,
+-        featureReadiness,
+       );
+ 
+       const diagnostics: ShadowDiagnostics = {
+         ...projectDecision.diagnostics,
+         ...canonicalUserDiagnostics,
++        projectReadinessStatus:
++          projectDecision.diagnostics.projectReadinessStatus === "READY" &&
++          canonicalUser.unmappedInputCount > 0
++            ? "NOT_READY"
++            : projectDecision.diagnostics.projectReadinessStatus,
+       };
+ 
+       injectFailure("diagnostics");
+@@ -1278,7 +1235,7 @@ const runMlShadowComparisonInternal = async <T>(
+     );
+ 
+     const combined = combineNormalizedScores(
+-      longTerm.scored,
++      longTerm.scored.map((candidate) => ({ ...candidate })),
+       recentScores,
+       SHORT_TERM_CONFIG.recentBlend,
+     );
+@@ -1351,8 +1308,8 @@ const runMlShadowComparisonInternal = async <T>(
+ 
+     const fusion =
+       input.domain === "material"
+-        ? requireMaterialFusion(
+-            longTerm.scored,
++          ? requireMaterialFusion(
++            longTerm.scored.map((candidate) => ({ ...candidate })),
+             recentScores,
+             confidence.confidence,
+             fusionStageObserver,
+@@ -1519,15 +1476,13 @@ const runMlShadowComparisonInternal = async <T>(
+       rankMovement,
+       fusionDurationMs,
+       scoringDurationMs,
+-      artifactVersion: model.model_version,
+-      featureSchemaVersion: model.feature_schema_version,
+-      missingFeatureCount: longTerm.diagnostics.missing.occurrenceCount,
+-      scorerOutcome: longTerm.outcome,
+-      scorerReadiness: longTerm.scoringReadiness,
+-      scorerReasonCodes: longTerm.reasonCodes,
+-      scorerDiagnostics: longTerm.diagnostics,
++      artifactVersion: model.modelVersion,
++      featureSchemaVersion: model.schemaVersion,
++      missingFeatureCount: 0,
++      scorerOutcome: "SCORED",
++      scorerReadiness: "READY",
++      scorerReasonCodes: [],
+       ...canonicalUserDiagnostics,
+-      featureReadiness,
+       currentTop5Keys: deduplicatedCurrent.slice(0, 5).map(privacyKey),
+       shadowTop5Keys: shadowTop.slice(0, 5).map(privacyKey),
+       linearBlendTop5Keys: linearBlendTop.slice(0, 5).map(privacyKey),
+@@ -1659,7 +1614,13 @@ export const runMlShadowComparison = async <T>(
+ ): Promise<MlShadowComparisonResult<T>> => {
+   const timeoutTestEnabled = neverSettleResponseForTests === input.response;
+ 
+-  if (!env.recommendationMlShadowEnabled && !timeoutTestEnabled)
++  const runtimeEnabled =
++    getRecommendationMlRuntimeSnapshot().mode !== "DETERMINISTIC";
++  if (
++    !env.recommendationMlShadowEnabled &&
++    !runtimeEnabled &&
++    !timeoutTestEnabled
++  )
+     return runMlShadowComparisonInternal(input);
+ 
+   let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+diff --git a/apps/backend/src/modules/recommendations/ml-shadow.test.ts b/apps/backend/src/modules/recommendations/ml-shadow.test.ts
+index 690042ce..d4bb913a 100644
+--- a/apps/backend/src/modules/recommendations/ml-shadow.test.ts
++++ b/apps/backend/src/modules/recommendations/ml-shadow.test.ts
+@@ -1,25 +1,32 @@
+ import assert from 'node:assert/strict';
+-import { readFile } from 'node:fs/promises';
+-import path from 'node:path';
+-import { PassThrough } from 'node:stream';
+ import test from 'node:test';
+ 
+-import { env } from '../../config/env.js';
+-import { resetLoggerForTests, setLoggerDestinationForTests } from '../../observability/logger.js';
+-import { combineNormalizedScores, scorePortableLightFm } from './ml-lightfm-scorer.js';
+-import { loadPortableModelArtifact, validatePortableModelArtifact } from './ml-model-artifact.js';
+-import { buildCanonicalShadowItemFeaturesForTests, calculateProjectTop10RankMovement, calculateProjectTopKOverlap, clearMlArtifactCacheForTests, runMlShadowComparison, setMlShadowFailureForTests, setMlShadowInterestRegistryLoaderForTests, setMlShadowNeverSettleForTests, setMlShadowObserverForTests, type MlShadowFailurePhase, type ShadowDiagnostics } from './ml-shadow.service.js';
+-import { isolatedRecommendationTest } from './recommendation-test-isolation.js';
+-import { buildShortTermIntent, recentItemScore, SHORT_TERM_CONFIG } from './short-term-intent.js';
++import {
++  RecommendationMlRuntimeConfigError,
++  resolveRecommendationMlRuntimeConfig,
++  type RecommendationMlRuntimeConfig,
++} from '../../config/env.js';
+ import {
+   TAXONOMY_ALIAS_SOURCE,
+   type LearnerInterestRegistryConcept,
+ } from '../taxonomy/learner-interest-resolver.js';
+ import { normalizeTaxonomyAlias } from '../taxonomy/taxonomy-normalization.js';
+-
+-const emptyInterestRegistry = async (): Promise<
+-  readonly LearnerInterestRegistryConcept[]
+-> => [];
++import { stableOpaqueKey } from './local-ml-training-snapshot.schema.js';
++import { buildPortableLightFmV2Scorer } from './ml-lightfm-scorer.js';
++import type { PortableModelArtifactV2 } from './ml-model-artifact.js';
++import {
++  getRecommendationMlRuntimeSnapshot,
++  preloadRecommendationMlRuntime,
++  resetRecommendationMlRuntimeForTests,
++  setRecommendationMlRuntimeDependenciesForTests,
++  type RecommendationMlStartupFailureCode,
++} from './ml-runtime-state.service.js';
++import {
++  buildCanonicalShadowItemFeaturesForTests,
++  rankMlLocalCandidates,
++  runMlShadowComparison,
++  setMlShadowInterestRegistryLoaderForTests,
++} from './ml-shadow.service.js';
+ 
+ const fixtureInterestRegistry = async (): Promise<
+   readonly LearnerInterestRegistryConcept[]
+@@ -44,27 +51,125 @@ const fixtureInterestRegistry = async (): Promise<
+     ],
+     learnerInterests: [{ id: 'legacy-arduino', learnerInterestKey: 'arduino' }],
+   },
+-  {
+-    id: 'concept-robotics',
+-    canonicalKey: 'interest:robotics',
+-    conceptType: 'INTEREST',
+-    status: 'ACTIVE',
+-    labelEn: 'Robotics',
+-    labelAr: 'الروبوتات',
+-    aliases: [],
+-    learnerInterests: [
+-      { id: 'legacy-robotics', learnerInterestKey: 'robotics' },
+-    ],
+-  },
+ ];
+ 
+-const repositoryRoot = process.cwd().endsWith(path.join('apps', 'backend')) ? path.resolve(process.cwd(), '../..') : process.cwd();
+-const portableRoot = path.join(repositoryRoot, 'ml/recommendation/generated/portable-model');
++const runtimeConfig = (
++  mode: RecommendationMlRuntimeConfig['mode'],
++  paths: { material?: string; project?: string } = {},
++): RecommendationMlRuntimeConfig => ({
++  mode,
++  explicitMode: true,
++  materialArtifactPath: paths.material ?? 'fixtures/material-v2.json',
++  projectArtifactPath: paths.project ?? 'fixtures/project-v2.json',
++});
+ 
+-test('LM-03 shadow item boundary emits canonical v3 rows only', async () => {
++const artifact = (
++  domain: 'material' | 'project',
++  candidateKey: string,
++): PortableModelArtifactV2 => {
++  const dimension: 16 | 32 = domain === 'material' ? 16 : 32;
++  const userEmbedding = Array<string>(dimension).fill('0');
++  const itemEmbedding = Array<string>(dimension).fill('0');
++  userEmbedding[0] = '1';
++  itemEmbedding[0] = '1';
++  const itemTokens =
++    domain === 'material'
++      ? [
++          'material-condition:new',
++          'material-delivery-allowed:false',
++          'material-family:electronics',
++          'material-is-free:true',
++          'material-pickup-allowed:true',
++        ]
++      : [
++          'component:dc-gear-motors',
++          'project-difficulty:beginner',
++          'project-topic:robotics',
++        ];
++
++  return {
++    schemaVersion: 'impactloop-lightfm-portable-v2',
++    domain,
++    modelVersion: 'lm-06-local-lightfm-v1',
++    featureContractId: 'recommendation-feature-token-contract-v3',
++    featureContractVersion: '3.0.0',
++    aggregationMode: 'weighted-sum',
++    taxonomyFingerprint: 'a'.repeat(64),
++    datasetContentHash: 'b'.repeat(64),
++    featureMapping: {
++      user: [{ token: 'interest:arduino', index: 0 }],
++      item: itemTokens.map((token, index) => ({ token, index })),
++    },
++    featureMappingHash: 'c'.repeat(64),
++    itemMapping: [
++      { itemKey: stableOpaqueKey(domain, candidateKey), index: 0 },
++    ],
++    itemMappingHash: 'd'.repeat(64),
++    trainingConfiguration: {
++      randomSeed: 11,
++      loss: 'warp',
++      epochs: 10,
++      noComponents: dimension,
++      learningRate: '0.03',
++      userAlpha: '0.000001',
++      itemAlpha: '0.000001',
++      numThreads: 1,
++      interactionWeighting: 'unit-per-snapshot-event',
++      duplicateInteractionAggregation: 'sum',
++    },
++    modelDimensions: {
++      embeddingDimension: dimension,
++      userFeatureCount: 1,
++      itemFeatureCount: itemTokens.length,
++      itemCount: 1,
++    },
++    modelComponents: {
++      userFeatureEmbeddings: [userEmbedding],
++      itemFeatureEmbeddings: itemTokens.map(() => [...itemEmbedding]),
++      userFeatureBiases: ['0'],
++      itemFeatureBiases: itemTokens.map(() => '0'),
++    },
++    semanticContentHash: (domain === 'material' ? 'e' : 'f').repeat(64),
++    createdAt: '2026-07-26T00:00:00Z',
++  };
++};
++
++const materialRankingInput = () => ({
++  domain: 'material' as const,
++  userFeatures: [['interest:arduino', 1]] as const,
++  candidates: [
++    {
++      candidateKey: 'material-a',
++      features: [
++        ['material-condition:new', 1],
++        ['material-delivery-allowed:false', 1],
++        ['material-family:electronics', 1],
++        ['material-is-free:true', 1],
++        ['material-pickup-allowed:true', 1],
++      ] as const,
++    },
++  ],
++});
++
++const projectRankingInput = () => ({
++  domain: 'project' as const,
++  userFeatures: [['interest:arduino', 1]] as const,
++  candidates: [
++    {
++      candidateKey: 'project-a',
++      features: [
++        ['component:dc-gear-motors', 1],
++        ['project-difficulty:beginner', 1],
++        ['project-topic:robotics', 1],
++      ] as const,
++    },
++  ],
++});
++
++test('LM-07 canonical Shadow item rows use only the v3 token authority', async () => {
+   const material = await buildCanonicalShadowItemFeaturesForTests(
+     {
+-      candidateKey: 'material-v3',
++      candidateKey: 'material-a',
+       categoryId: 'ignored-category',
+       categoryLabel: 'Ignored category',
+       conceptKeys: [
+@@ -89,7 +194,7 @@ test('LM-03 shadow item boundary emits canonical v3 rows only', async () => {
+ 
+   const project = await buildCanonicalShadowItemFeaturesForTests(
+     {
+-      candidateKey: 'project-v3',
++      candidateKey: 'project-a',
+       categoryId: 'ignored-category',
+       categoryLabel: 'Ignored category',
+       conceptKeys: ['project-topic:robotics'],
+@@ -103,886 +208,456 @@ test('LM-03 shadow item boundary emits canonical v3 rows only', async () => {
+     ['project-difficulty:beginner', 1],
+     ['project-topic:robotics', 1],
+   ]);
+-  assert.ok(
+-    [...material, ...project].every(
+-      ([token]) =>
+-        !token.startsWith('category:') &&
+-        !token.startsWith('concept:') &&
+-        !token.startsWith('difficulty:') &&
+-        !token.startsWith('component:component:'),
+-    ),
+-  );
+-});
+-
+-test('portable artifacts exclude Benchmark B and prohibited features', async () => {
+-  for (const domain of ['material', 'project'] as const) {
+-    const artifact = await loadPortableModelArtifact(path.join(portableRoot, `${domain}-hybrid.json`), domain);
+-    const text = JSON.stringify(artifact);
+-    assert.doesNotMatch(text, /SYNTHETIC_CATALOG_EXTENSION|identity:|material_type|hidden|cohort/i);
+-  }
+-});
+-
+-test('loader rejects hash, dimensions, non-finite values, duplicate keys, and domain', async () => {
+-  const valid = JSON.parse(await readFile(path.join(portableRoot, 'material-hybrid.json'), 'utf8'));
+-  assert.throws(() => validatePortableModelArtifact({ ...valid, content_hash: '0'.repeat(64) }), /artifact_content_hash/);
+-  assert.throws(() => validatePortableModelArtifact({ ...valid, latent_dimension: 99 }), /feature_dimension/);
+-  const nonFinite = structuredClone(valid); nonFinite.user_features[0].bias = "NaN";
+-  assert.throws(() => validatePortableModelArtifact(nonFinite), /non_finite/);
+-  const duplicate = structuredClone(valid); duplicate.user_features.push(duplicate.user_features[0]);
+-  assert.throws(() => validatePortableModelArtifact(duplicate), /duplicate/);
+-  assert.throws(() => validatePortableModelArtifact(valid, 'project'), /artifact_domain/);
+ });
+ 
+-test('Python and TypeScript LightFM scores and Top-K match', async () => {
+-  const fixtures = JSON.parse(await readFile(path.join(portableRoot, 'parity-fixtures.json'), 'utf8'));
+-  for (const fixture of fixtures.lightfm_cases) {
+-    const artifact = await loadPortableModelArtifact(path.join(portableRoot, `${fixture.domain}-hybrid.json`), fixture.domain);
+-    const result = scorePortableLightFm(artifact, fixture.user_features, fixture.candidates.map((candidate: any) => ({ candidateKey: candidate.candidate_key, features: candidate.features })));
+-    assert.equal(result.outcome, 'SCORED');
+-    assert.equal(result.scoringReadiness, 'NOT_READY');
+-    for (const candidate of fixture.candidates) {
+-      const actual = result.scored.find((value) => value.candidateKey === candidate.candidate_key)!.score;
+-      assert.ok(Math.abs(actual - candidate.python_score) <= 1e-9);
+-    }
+-    assert.deepEqual(result.scored.slice(0, 5).map((value) => value.candidateKey), fixture.python_top5);
+-    assert.deepEqual(result.scored.slice(0, 10).map((value) => value.candidateKey), fixture.python_top10);
+-  }
+-});
++test('LM-07 runtime mode resolver is strict, compatible, and local-only', () => {
++  assert.equal(resolveRecommendationMlRuntimeConfig({}).mode, 'DETERMINISTIC');
++  assert.equal(
++    resolveRecommendationMlRuntimeConfig({
++      RECOMMENDATION_ML_RUNTIME_MODE: '   ',
++      RECOMMENDATION_ML_SHADOW_ENABLED: 'true',
++    }).mode,
++    'SHADOW',
++  );
++  assert.equal(
++    resolveRecommendationMlRuntimeConfig({
++      RECOMMENDATION_ML_RUNTIME_MODE: 'DETERMINISTIC',
++      RECOMMENDATION_ML_SHADOW_ENABLED: 'true',
++    }).mode,
++    'DETERMINISTIC',
++  );
+ 
+-test('Python and TypeScript recent intent, decay, reversals, caps, and blend match', async () => {
+-  const fixtures = JSON.parse(await readFile(path.join(portableRoot, 'parity-fixtures.json'), 'utf8'));
+-  for (const fixture of fixtures.intent_cases) {
+-    const metadata = new Map(Object.entries(fixture.metadata).map(([key, value]: [string, any]) => [key, { categoryKey: value.category_key, conceptKeys: value.concept_keys, componentConceptKeys: value.component_concept_keys }]));
+-    const recent = buildShortTermIntent(fixture.events.map((value: any) => ({ entityKey: value.entity_key, actionType: value.action_type, timestampUtc: value.timestamp_utc })), metadata, fixture.evaluation_timestamp);
+-    const recentScores = new Map<string, number>();
+-    for (const [key, expected] of Object.entries(fixture.python_recent_scores) as Array<[string, number]>) {
+-      const actual = recentItemScore(metadata.get(key)!, recent.intent); recentScores.set(key, actual); assert.ok(Math.abs(actual - expected) <= 1e-9, `${fixture.name}:${key}:${actual}:${expected}`);
+-    }
+-    const combined = combineNormalizedScores(Object.entries(fixture.base_scores).map(([candidateKey, score]) => ({ candidateKey, score: Number(score) })), recentScores, SHORT_TERM_CONFIG.recentBlend);
+-    assert.deepEqual(combined.map((value) => value.candidateKey), fixture.python_combined_top, fixture.name);
++  for (const mode of ['DETERMINISTIC', 'SHADOW', 'ML_LOCAL'] as const) {
++    assert.equal(
++      resolveRecommendationMlRuntimeConfig({
++        NODE_ENV: 'test',
++        RECOMMENDATION_ML_RUNTIME_MODE: mode,
++      }).mode,
++      mode,
++    );
+   }
+-});
+-
+-isolatedRecommendationTest('flags default disabled and shadow returns exact response object', async () => {
+-  const priorEnabled = env.recommendationMlShadowEnabled;
+-  env.recommendationMlShadowEnabled = false;
+-  assert.equal(env.recommendationMlMaterialServingEnabled, false);
+-  assert.equal(env.recommendationMlProjectServingEnabled, false);
+-  const response = { ordering: ['active', 'unchanged'] };
+-  const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
+-  const logLines: string[] = []; const logStream = new PassThrough(); logStream.on('data', (chunk) => logLines.push(chunk.toString())); setLoggerDestinationForTests(logStream); resetLoggerForTests();
+-  setMlShadowObserverForTests((value) => observations.push(value));
+-  const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates: [], activeCandidateKeys: [], currentTopKeys: [], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' });
+-  assert.strictEqual(result.response, response); assert.equal(result.diagnostics.status, 'DISABLED');
+-  assert.equal(observations.length, 0);
+-  assert.doesNotMatch(logLines.join(''), /recommendationMlMaterialShadowDiagnostics/);
+-  setMlShadowObserverForTests(undefined);
+-  setLoggerDestinationForTests(null); resetLoggerForTests();
+-  env.recommendationMlShadowEnabled = priorEnabled;
+-});
+-
+-isolatedRecommendationTest('material serving cannot bypass a disabled shadow flag', async () => {
+-  const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled };
+-  env.recommendationMlShadowEnabled = false;
+-  env.recommendationMlMaterialServingEnabled = true;
+-  const response = { ordering: ['deterministic'] };
+-  const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates: [], activeCandidateKeys: [], currentTopKeys: [], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' });
+-  assert.strictEqual(result.response, response);
+-  assert.equal(result.diagnostics.status, 'DISABLED');
+-  assert.equal(result.rankedCandidateKeys, undefined);
+-  env.recommendationMlShadowEnabled = prior.enabled;
+-  env.recommendationMlMaterialServingEnabled = prior.materialServing;
+-});
+-
+-isolatedRecommendationTest('project shadow recent intent diagnostics stay privacy-safe without mutating the response', async () => {
+-  const prior = { shadow: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlProjectServingEnabled = true;
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-  const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
+-  setMlShadowObserverForTests((value) => observations.push(value));
+-  try {
+-    const response = { sections: [{ key: 'suggested_projects', items: ['deterministic-a'] }] };
+-    const candidates = Array.from({ length: 8 }, (_, index) => ({
+-      candidateKey: `shadow-project-${index}`,
+-      categoryId: `category-${index % 2}`,
+-      categoryLabel: `Category ${index % 2}`,
+-      difficulty: 'BEGINNER',
+-      conceptKeys: index < 4 ? ['robotics-core'] : ['textiles-core'],
+-      componentConceptKeys: [`component-${index % 3}`],
+-    }));
+-    const profileOnly = await runMlShadowComparison({
+-      response,
+-      domain: 'project',
+-      interests: [],
+-      candidates,
+-      activeCandidateKeys: candidates.map((value) => value.candidateKey),
+-      currentTopKeys: ['deterministic-a'],
+-      recentEvents: [],
+-      evaluationTimestamp: '2026-07-19T12:00:00Z',
+-    });
+-    assert.strictEqual(profileOnly.response, response);
+-    assert.equal(profileOnly.diagnostics.recentConfidence, 'NONE');
+-    assert.equal(profileOnly.diagnostics.recentSlotsUsedTop5, 0);
+-    assert.equal(profileOnly.rankedCandidateKeys, undefined);
+-
+-    const coherentEvents = [
+-      { entityKey: 'shadow-project-0', actionType: 'project_save', timestampUtc: '2026-07-19T10:00:00Z' },
+-      { entityKey: 'shadow-project-1', actionType: 'like', timestampUtc: '2026-07-19T10:05:00Z' },
+-      { entityKey: 'shadow-project-0', actionType: 'like', timestampUtc: '2026-07-19T10:10:00Z' },
+-      { entityKey: 'shadow-project-1', actionType: 'project_save', timestampUtc: '2026-07-19T10:15:00Z' },
+-    ];
+-    const coherent = await runMlShadowComparison({
+-      response,
+-      domain: 'project',
+-      interests: [],
+-      candidates,
+-      activeCandidateKeys: candidates.map((value) => value.candidateKey),
+-      currentTopKeys: ['deterministic-a'],
+-      recentEvents: coherentEvents,
+-      evaluationTimestamp: '2026-07-19T12:00:00Z',
+-    });
+-    assert.strictEqual(coherent.response, response);
+-    assert.equal(coherent.rankedCandidateKeys, undefined);
+-    assert.equal(coherent.diagnostics.projectReadinessStatus, 'NOT_READY');
+-    assert.equal(coherent.diagnostics.featureReadiness?.status, 'NOT_READY');
+-    // Synthetic concept keys may not map into the artifact; fusion runs only when mapping integrity is healthy.
+-    if ((coherent.diagnostics.runtimeCandidatesMissingFromArtifact ?? 1) === 0) {
+-      assert.ok(['MEDIUM', 'HIGH'].includes(String(coherent.diagnostics.recentConfidence)));
+-      assert.ok((coherent.diagnostics.recentSlotsUsedTop5 ?? 0) <= 2);
+-      assert.ok((coherent.diagnostics.recentSlotsUsedTop10 ?? 0) <= 3);
+-      assert.ok((coherent.diagnostics.recentFusionDurationMs ?? 0) > 0);
+-    } else {
+-      assert.equal(coherent.diagnostics.recentConfidence, 'NONE');
+-    }
+-    assert.doesNotMatch(JSON.stringify(coherent.diagnostics), /shadow-project|robotics-core|textiles-core/i);
+-    assert.ok((coherent.diagnostics.totalProjectRecommendationDurationMs ?? -1) >= 0);
+-    assert.ok((coherent.diagnostics.recentFusionDurationMs ?? -1) >= 0);
+-    assert.ok(observations.filter((value) => value.domain === 'project').length >= 1);
+-  } finally {
+-    setMlShadowObserverForTests(undefined);
+-    env.recommendationMlShadowEnabled = prior.shadow;
+-    env.recommendationMlProjectServingEnabled = prior.projectServing;
+-    env.recommendationMlProjectArtifactPath = prior.projectPath;
+-    clearMlArtifactCacheForTests();
++  for (const invalidMode of ['shadow', 'UNKNOWN']) {
++    assert.throws(
++      () =>
++        resolveRecommendationMlRuntimeConfig({
++          NODE_ENV: 'test',
++          RECOMMENDATION_ML_RUNTIME_MODE: invalidMode,
++        }),
++      RecommendationMlRuntimeConfigError,
++    );
+   }
+-});
+-
+-isolatedRecommendationTest('project shadow failure does not change material serving path', async () => {
+-  const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled, materialPath: env.recommendationMlMaterialArtifactPath, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlMaterialServingEnabled = true;
+-  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json');
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'missing-project-artifact.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-  try {
+-    const response = { visible: ['material-x'] };
+-    const material = await runMlShadowComparison({
+-      response,
+-      domain: 'material',
+-      interests: ['Electronics & Components'],
+-      candidates: [{ candidateKey: 'material-x', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', condition: 'GOOD', isFree: true, pickupAllowed: true, deliveryAllowed: false }],
+-      activeCandidateKeys: ['material-x'],
+-      currentTopKeys: ['material-x'],
+-      recentEvents: [],
+-      evaluationTimestamp: '2026-08-10T00:00:00Z',
+-    });
+-    assert.equal(material.rankedCandidateKeys, undefined);
+-    assert.equal(
+-      material.diagnostics.servingSuppressedReason,
+-      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
++  for (const nodeEnv of ['production', 'staging', 'preview', 'arbitrary']) {
++    assert.throws(
++      () =>
++        resolveRecommendationMlRuntimeConfig({
++          NODE_ENV: nodeEnv,
++          RECOMMENDATION_ML_RUNTIME_MODE: 'ML_LOCAL',
++        }),
++      (error: unknown) =>
++        error instanceof RecommendationMlRuntimeConfigError &&
++        error.code === 'ML_LOCAL_ENVIRONMENT_FORBIDDEN',
+     );
+-    assert.equal(material.diagnostics.status, 'SCORED');
+-    const project = await runMlShadowComparison({
+-      response: { visible: ['project-y'] },
+-      domain: 'project',
+-      interests: [],
+-      candidates: [{ candidateKey: 'project-y', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', difficulty: 'BEGINNER', conceptKeys: ['concept-a'] }],
+-      activeCandidateKeys: ['project-y'],
+-      currentTopKeys: ['project-y'],
+-      recentEvents: [],
+-      evaluationTimestamp: '2026-08-10T00:00:00Z',
+-    });
+-    assert.equal(project.diagnostics.status, 'FALLBACK');
+-    assert.equal(project.rankedCandidateKeys, undefined);
+-  } finally {
+-    env.recommendationMlShadowEnabled = prior.enabled;
+-    env.recommendationMlMaterialServingEnabled = prior.materialServing;
+-    env.recommendationMlMaterialArtifactPath = prior.materialPath;
+-    env.recommendationMlProjectArtifactPath = prior.projectPath;
+-    clearMlArtifactCacheForTests();
+   }
+ });
+ 
+-isolatedRecommendationTest('project serving cannot bypass a disabled shadow flag', async () => {
+-  const prior = { enabled: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = false;
+-  env.recommendationMlProjectServingEnabled = true;
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+-  clearMlArtifactCacheForTests();
+-  const response = { sections: [{ key: 'suggested_projects', items: ['deterministic-a'] }] };
+-  const result = await runMlShadowComparison({
+-    response,
+-    domain: 'project',
+-    interests: [],
+-    candidates: [{ candidateKey: 'project-a', categoryId: 'fixture-category', categoryLabel: 'Fixture', difficulty: 'BEGINNER' }],
+-    activeCandidateKeys: ['project-a'],
+-    currentTopKeys: ['project-a'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-07-19T00:00:00Z',
++test('LM-07 deterministic preload performs zero contract and artifact loads', async () => {
++  resetRecommendationMlRuntimeForTests();
++  let invocations = 0;
++  setRecommendationMlRuntimeDependenciesForTests({
++    getConfig: () => runtimeConfig('DETERMINISTIC'),
++    loadFeatureContract: async () => {
++      invocations += 1;
++      throw new Error('must_not_load');
++    },
++    loadAggregationContract: async () => {
++      invocations += 1;
++      throw new Error('must_not_load');
++    },
++    loadArtifact: async () => {
++      invocations += 1;
++      throw new Error('must_not_load');
++    },
+   });
+-  assert.strictEqual(result.response, response);
+-  assert.equal(result.diagnostics.status, 'DISABLED');
+-  assert.equal(result.rankedCandidateKeys, undefined);
+-  env.recommendationMlShadowEnabled = prior.enabled;
+-  env.recommendationMlProjectServingEnabled = prior.projectServing;
+-  env.recommendationMlProjectArtifactPath = prior.projectPath;
+-  clearMlArtifactCacheForTests();
+-});
+-
+-isolatedRecommendationTest('project serving returns fused ranking only when shadow, serving, and readiness are all READY', async () => {
+-  const prior = { shadow: env.recommendationMlShadowEnabled, projectServing: env.recommendationMlProjectServingEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlProjectServingEnabled = true;
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-  try {
+-    const response = { sections: [{ key: 'suggested_projects', items: ['deterministic-a', 'deterministic-b'] }] };
+-    const notReady = await runMlShadowComparison({
+-      response,
+-      domain: 'project',
+-      interests: [],
+-      candidates: [
+-        { candidateKey: 'project-a', categoryId: 'fixture-category-a', categoryLabel: 'Fixture A', difficulty: 'BEGINNER' },
+-        { candidateKey: 'project-b', categoryId: 'fixture-category-b', categoryLabel: 'Fixture B', difficulty: 'INTERMEDIATE' },
+-      ],
+-      activeCandidateKeys: ['project-a', 'project-b'],
+-      currentTopKeys: ['project-a', 'project-b'],
+-      recentEvents: [],
+-      evaluationTimestamp: '2026-07-19T00:00:00Z',
+-    });
+-    assert.strictEqual(notReady.response, response);
+-    assert.equal(notReady.rankedCandidateKeys, undefined);
+-    assert.equal(notReady.diagnostics.projectReadinessStatus, 'NOT_READY');
+-
+-    env.recommendationMlProjectServingEnabled = false;
+-    clearMlArtifactCacheForTests();
+-    const shadowOnly = await runMlShadowComparison({
+-      response,
+-      domain: 'project',
+-      interests: ['Electronics & Components'],
+-      candidates: [{
+-        candidateKey: 'mapped-project',
+-        categoryId: '8d9dfae37dba117ec300f83c2fad0b25b2114b204b6e9c621d5a94e93051bf94',
+-        categoryLabel: 'Electronics & Components',
+-        difficulty: 'BEGINNER',
+-        conceptKeys: ['project-topic:electronics'],
+-        componentConceptKeys: ['component:arduino-board'],
+-      }],
+-      activeCandidateKeys: ['mapped-project'],
+-      currentTopKeys: ['mapped-project'],
+-      recentEvents: [],
+-      evaluationTimestamp: '2026-07-19T00:00:00Z',
+-    });
+-    assert.strictEqual(shadowOnly.response, response);
+-    assert.equal(shadowOnly.rankedCandidateKeys, undefined);
+-    assert.equal(shadowOnly.diagnostics.projectReadinessStatus, 'NOT_READY');
+-  } finally {
+-    env.recommendationMlShadowEnabled = prior.shadow;
+-    env.recommendationMlProjectServingEnabled = prior.projectServing;
+-    env.recommendationMlProjectArtifactPath = prior.projectPath;
+-    clearMlArtifactCacheForTests();
+-  }
+-});
+-
+-test('project readiness overlap and rank movement are bounded aggregate calculations', () => {
+-  assert.deepEqual(calculateProjectTopKOverlap(['a', 'b', 'c', 'd', 'e'], ['e', 'c', 'x', 'b', 'a'], 5), { count: 4, ratio: 0.8 });
+-  assert.deepEqual(calculateProjectTopKOverlap(['a'], ['a'], 10), { count: 1, ratio: 1 });
+-  assert.deepEqual(calculateProjectTop10RankMovement(['a', 'b', 'c', 'd'], ['b', 'a', 'd', 'c']), { average: 1, maximum: 1 });
+-  assert.deepEqual(calculateProjectTop10RankMovement([], []), { average: 0, maximum: 0 });
+-});
+-
+-isolatedRecommendationTest('project readiness exposes candidate and artifact coverage without private identifiers', async () => {
+-  const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+   try {
+-    const response = { unchanged: true };
+-    const candidates = [
+-      { candidateKey: 'private-project-a', categoryId: 'unknown-category-a', categoryLabel: 'Unknown A', difficulty: 'BEGINNER', conceptKeys: ['unknown-concept'] },
+-      { candidateKey: 'private-project-b', categoryId: 'unknown-category-b', categoryLabel: 'Unknown B', difficulty: 'BEGINNER' },
+-    ];
+-    const result = await runMlShadowComparison({ response, domain: 'project', interests: [], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: ['private-project-a', 'private-project-b'], recentEvents: [], evaluationTimestamp: '2026-07-19T00:00:00Z' });
+-    assert.strictEqual(result.response, response);
+-    assert.equal(result.diagnostics.runtimeCandidateCount, 2);
+-    assert.equal(result.diagnostics.scoredCandidateCount, 2);
+-    assert.equal(result.diagnostics.duplicateRuntimeCandidateCount, 0);
+-    assert.equal(result.diagnostics.duplicateScoredCandidateCount, 0);
+-    assert.ok((result.diagnostics.artifactCatalogCount ?? 0) > 0);
+-    assert.ok((result.diagnostics.runtimeCandidatesMissingFromArtifact ?? 0) > 0);
+-    assert.ok((result.diagnostics.totalProjectShadowDurationMs ?? -1) >= 0);
+-    assert.doesNotMatch(JSON.stringify(result.diagnostics), /private-project|Unknown A|Unknown B/i);
++    const snapshot = await preloadRecommendationMlRuntime();
++    assert.equal(invocations, 0);
++    assert.equal(snapshot.material.state, 'DISABLED');
++    assert.equal(snapshot.project.state, 'DISABLED');
++    const ranking = rankMlLocalCandidates(materialRankingInput());
++    assert.equal(ranking.outcome, 'ML_UNAVAILABLE');
++    if (ranking.outcome === 'ML_UNAVAILABLE') {
++      assert.equal(ranking.reasonCode, 'RUNTIME_MODE_DISABLED');
++    }
+   } finally {
+-    env.recommendationMlShadowEnabled = prior.shadow;
+-    env.recommendationMlProjectArtifactPath = prior.projectPath;
+-    clearMlArtifactCacheForTests();
++    resetRecommendationMlRuntimeForTests();
+   }
+ });
+ 
+-isolatedRecommendationTest('project duplicate runtime candidates are reported as NOT_READY without changing the response', async () => {
+-  const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
++test('LM-07 active preload with missing paths resolves NOT_READY without loading contracts', async () => {
++  resetRecommendationMlRuntimeForTests();
++  let authorityLoads = 0;
++  setRecommendationMlRuntimeDependenciesForTests({
++    getConfig: () => runtimeConfig('ML_LOCAL', { material: '', project: '' }),
++    loadFeatureContract: async () => {
++      authorityLoads += 1;
++      throw new Error('must_not_load');
++    },
++    loadAggregationContract: async () => {
++      authorityLoads += 1;
++      throw new Error('must_not_load');
++    },
++  });
+   try {
+-    const response = { unchanged: true };
+-    const duplicate = { candidateKey: 'project-duplicate', categoryId: 'fixture-category', categoryLabel: 'Fixture', difficulty: 'BEGINNER' };
+-    const result = await runMlShadowComparison({ response, domain: 'project', interests: [], candidates: [duplicate, duplicate], activeCandidateKeys: ['project-duplicate'], currentTopKeys: ['project-duplicate'], recentEvents: [], evaluationTimestamp: '2026-07-19T00:00:00Z' });
+-    assert.strictEqual(result.response, response);
+-    assert.equal(result.diagnostics.projectReadinessStatus, 'NOT_READY');
+-    assert.equal(result.diagnostics.duplicateRuntimeCandidateCount, 1);
+-    assert.equal(result.diagnostics.duplicateScoredCandidateCount, 1);
+-    assert.equal(result.diagnostics.hydratedMappingFailureCount, 1);
++    const snapshot = await preloadRecommendationMlRuntime();
++    assert.equal(authorityLoads, 0);
++    assert.equal(snapshot.material.state, 'NOT_READY');
++    assert.equal(snapshot.project.state, 'NOT_READY');
++    assert.equal(snapshot.material.failureCode, 'ARTIFACT_PATH_MISSING');
++    assert.equal(snapshot.project.failureCode, 'ARTIFACT_PATH_MISSING');
+   } finally {
+-    env.recommendationMlShadowEnabled = prior.shadow;
+-    env.recommendationMlProjectArtifactPath = prior.projectPath;
+-    clearMlArtifactCacheForTests();
++    resetRecommendationMlRuntimeForTests();
+   }
+ });
+ 
+-isolatedRecommendationTest('project shadow failures and timeout preserve the exact deterministic response', async () => {
+-  const prior = { shadow: env.recommendationMlShadowEnabled, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-  const response = { sections: [{ key: 'suggested_projects', items: ['deterministic'] }] };
+-  const input = {
+-    response,
+-    domain: 'project' as const,
+-    interests: [],
+-    candidates: [{ candidateKey: 'project-a', categoryId: 'fixture-category', categoryLabel: 'Fixture', difficulty: 'BEGINNER' }],
+-    activeCandidateKeys: ['project-a'],
+-    currentTopKeys: ['project-a'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-07-19T00:00:00Z',
+-  };
++test('LM-07 preload is single-flight, reports LOADING, and keeps domains independent', async () => {
++  resetRecommendationMlRuntimeForTests();
++  const loadCounts = { material: 0, project: 0 };
++  setRecommendationMlRuntimeDependenciesForTests({
++    getConfig: () => runtimeConfig('ML_LOCAL'),
++    loadArtifact: async (_artifactPath, expectations) => {
++      loadCounts[expectations.expectedDomain] += 1;
++      if (expectations.expectedDomain === 'project') {
++        throw Object.assign(new Error('missing'), { code: 'ENOENT' });
++      }
++      return artifact('material', 'material-a');
++    },
++    buildScorer: buildPortableLightFmV2Scorer,
++    now: () => new Date('2026-07-26T00:00:00Z'),
++  });
+   try {
+-    env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'missing-project-artifact.json');
+-    assert.strictEqual((await runMlShadowComparison(input)).response, response);
+-    clearMlArtifactCacheForTests();
+-    env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+-    for (const phase of ['diagnostics', 'redaction', 'logger'] as const) {
+-      setMlShadowFailureForTests(phase);
+-      const result = await runMlShadowComparison(input);
+-      assert.strictEqual(result.response, response);
+-      assert.equal(result.diagnostics.projectReadinessStatus, 'FALLBACK');
++    const first = preloadRecommendationMlRuntime();
++    const second = preloadRecommendationMlRuntime();
++    assert.strictEqual(first, second);
++    assert.equal(getRecommendationMlRuntimeSnapshot().material.state, 'LOADING');
++    const duringLoad = rankMlLocalCandidates(materialRankingInput());
++    assert.equal(duringLoad.outcome, 'ML_UNAVAILABLE');
++    if (duringLoad.outcome === 'ML_UNAVAILABLE') {
++      assert.equal(duringLoad.reasonCode, 'RUNTIME_LOADING');
+     }
+-    setMlShadowFailureForTests(undefined);
+-    setMlShadowNeverSettleForTests(response);
+-    const timedOut = await runMlShadowComparison(input);
+-    assert.strictEqual(timedOut.response, response);
+-    assert.equal(timedOut.diagnostics.projectReadinessStatus, 'FALLBACK');
+-    assert.equal(timedOut.diagnostics.fallbackReason, 'project_shadow_timeout');
+-  } finally {
+-    setMlShadowFailureForTests(undefined);
+-    setMlShadowNeverSettleForTests();
+-    env.recommendationMlShadowEnabled = prior.shadow;
+-    env.recommendationMlProjectArtifactPath = prior.projectPath;
+-    clearMlArtifactCacheForTests();
+-  }
+-});
+-
+-isolatedRecommendationTest('enabled shadow scores bounded candidates and failures safely fall back', async () => {
+-  const prior = { enabled: env.recommendationMlShadowEnabled, materialServing: env.recommendationMlMaterialServingEnabled, projectServing: env.recommendationMlProjectServingEnabled, materialPath: env.recommendationMlMaterialArtifactPath, projectPath: env.recommendationMlProjectArtifactPath };
+-  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialServingEnabled = true; env.recommendationMlProjectServingEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json'); env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-  const response = { visible: ['x'] };
+-  const input = { response, domain: 'material' as const, interests: ['Electronics & Components'], candidates: [{ candidateKey: 'x', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', condition: 'GOOD', isFree: true, pickupAllowed: true, deliveryAllowed: false }], activeCandidateKeys: ['x'], currentTopKeys: ['x'], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' };
+-  const scored = await runMlShadowComparison(input); assert.strictEqual(scored.response, response); assert.equal(scored.diagnostics.status, 'SCORED'); assert.equal(scored.rankedCandidateKeys, undefined); assert.equal(scored.diagnostics.servingSuppressedReason, 'CANONICAL_USER_FEATURES_SHADOW_ONLY');
+-  const projectScored = await runMlShadowComparison({ ...input, response: { visible: ['project'] }, domain: 'project', candidates: [{ candidateKey: 'p', categoryId: 'invented-category', categoryLabel: 'Electronics & Components', difficulty: 'BEGINNER' }], activeCandidateKeys: ['p'], currentTopKeys: ['p'] });
+-  assert.equal(projectScored.diagnostics.status, 'SCORED'); assert.equal(projectScored.rankedCandidateKeys, undefined); assert.equal(projectScored.diagnostics.servingSuppressedReason, 'CANONICAL_USER_FEATURES_SHADOW_ONLY');
+-  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'missing.json'); clearMlArtifactCacheForTests();
+-  const failed = await runMlShadowComparison(input); assert.strictEqual(failed.response, response); assert.equal(failed.diagnostics.status, 'FALLBACK');
+-  env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialServingEnabled = prior.materialServing; env.recommendationMlProjectServingEnabled = prior.projectServing; env.recommendationMlMaterialArtifactPath = prior.materialPath; env.recommendationMlProjectArtifactPath = prior.projectPath; clearMlArtifactCacheForTests();
+-});
+-
+-isolatedRecommendationTest('material development diagnostics are sanitized and preserve the deterministic response', async () => {
+-  const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
+-  const observations: Array<ShadowDiagnostics & { domain: 'material' | 'project' }> = [];
+-  const logLines: string[] = []; const logStream = new PassThrough(); logStream.on('data', (chunk) => logLines.push(chunk.toString())); setLoggerDestinationForTests(logStream); resetLoggerForTests();
+-  env.recommendationMlShadowEnabled = true; env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-  setMlShadowObserverForTests((value) => observations.push(value));
+-  const response = { sections: [{ key: 'suggested_materials', materials: ['visible-id'] }] };
+-  const candidates = Array.from({ length: 12 }, (_, index) => ({ candidateKey: `candidate-${index}`, categoryId: 'recent-category', categoryLabel: 'Recent category', conceptKeys: ['recent-concept'], condition: 'GOOD', isFree: true, pickupAllowed: true, deliveryAllowed: false }));
+-  const recentEvents = candidates.slice(0, 8).flatMap((candidate, index) => [{ entityKey: candidate.candidateKey, actionType: 'view', timestampUtc: `2026-08-10T${String(index + 1).padStart(2, '0')}:00:00Z` }, ...(index < 2 ? [{ entityKey: candidate.candidateKey, actionType: 'like', timestampUtc: `2026-08-10T${String(index + 9).padStart(2, '0')}:00:00Z` }] : [])]);
+-  const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: candidates.map((value) => value.candidateKey), recentEvents, evaluationTimestamp: '2026-08-10T12:00:00Z' });
+-  assert.strictEqual(result.response, response);
+-  assert.equal(observations.length, 1);
+-  const diagnostic = observations[0]!;
+-  assert.equal(diagnostic.recentConfidence, 'HIGH');
+-  assert.equal(diagnostic.confidenceSource, 'VIEW_BURST'); assert.equal(diagnostic.burstWindowHours, 24); assert.equal(diagnostic.burstUniqueViewCount, 8); assert.equal(diagnostic.burstActiveLikeCount, 2);
+-  assert.ok((diagnostic.rankMovement?.filter((value) => value.fusedRank <= 5).length ?? 0) >= (diagnostic.recentSlotsUsedTop5 ?? 0));
+-  assert.ok((diagnostic.rankMovement?.filter((value) => value.fusedRank <= 10).length ?? 0) >= (diagnostic.recentSlotsUsedTop10 ?? 0));
+-  assert.ok((diagnostic.qualifiedRecentCandidateCount ?? 0) >= (diagnostic.recentSlotsUsedTop5 ?? 0));
+-  assert.ok(diagnostic.rankMovement?.every((value) => /^[a-f0-9]{16}$/.test(value.candidateKeyHash)));
+-  assert.ok((diagnostic.rankMovement?.length ?? 0) <= 5);
+-  const serialized = JSON.stringify(diagnostic);
+-  for (const prohibited of ['userId', 'email', 'title', 'description', 'rawMaterialId', 'featureVector', 'embedding', 'interactionHistory', 'candidate-0']) assert.doesNotMatch(serialized, new RegExp(prohibited, 'i'));
+-  const logged = logLines.flatMap((line) => line.trim().split('\n')).filter(Boolean).map((line) => JSON.parse(line)).find((entry) => entry.operation === 'recommendation.ml.material-decision');
+-  assert.equal(logged.mode, 'SHADOW'); assert.equal(logged.confidenceLevel, 'HIGH'); assert.equal(logged.confidenceSource, 'VIEW_BURST'); assert.equal(logged.domain, 'material'); assert.ok(logged.totalRecommendationDurationMs >= 0);
+-  const loggedText = JSON.stringify(logged); assert.doesNotMatch(loggedText, /\[filtered\]|candidate-0|userId|email|title|description|embedding|rankMovement/i);
+-  const stageEntries = logLines.flatMap((line) => line.trim().split('\n')).filter(Boolean).map((line) => JSON.parse(line)).flatMap((entry) => entry.operation === 'recommendation.ml-shadow.material-stage' && typeof entry.event === 'string' ? [JSON.parse(entry.event)] : []);
+-  assert.equal(stageEntries.length, 0);
+-  setMlShadowObserverForTests(undefined); setLoggerDestinationForTests(null); resetLoggerForTests(); env.recommendationMlShadowEnabled = prior.enabled; env.recommendationMlMaterialArtifactPath = prior.path; clearMlArtifactCacheForTests();
+-});
+ 
+-isolatedRecommendationTest('real learner-home shadow shape fails safe across confidence, dominance, fusion, diagnostics, logger, and redaction failures', async () => {
+-  const prior = { enabled: env.recommendationMlShadowEnabled, path: env.recommendationMlMaterialArtifactPath };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-  const response = { profileCompletion: { hasInterests: true }, sections: [{ key: 'suggested_materials', items: ['deterministic'] }] };
+-  const candidates = Array.from({ length: 107 }, (_, index) => ({ candidateKey: `real-material-${index}`, categoryId: `real-category-${index % 9}`, categoryLabel: `Category ${index % 9}`, conceptKeys: index % 3 === 0 ? [`concept-${index % 11}`] : [], condition: 'GOOD', isFree: index % 2 === 0, pickupAllowed: true, deliveryAllowed: index % 4 === 0 }));
+-  const recentEvents = Array.from({ length: 26 }, (_, index) => ({ entityKey: `real-material-${index % 21}`, actionType: index % 3 === 0 ? 'like' : 'view', timestampUtc: `2026-07-19T${String(index % 12).padStart(2, '0')}:00:00Z` }));
+-  const input = { response, domain: 'material' as const, interests: ['Category 1'], candidates, activeCandidateKeys: candidates.map((value) => value.candidateKey), currentTopKeys: candidates.slice(0, 10).map((value) => value.candidateKey), currentSections: [{ sectionKey: 'suggested_materials', candidateKeys: candidates.slice(0, 10).map((value) => value.candidateKey) }], recentEvents, recentEntityMetadata: Array.from({ length: 29 }, (_, index) => ({ entityKey: `real-project-${index}`, candidateKey: `real-project-${index}`, categoryId: `project-category-${index % 4}`, categoryLabel: `Project Category ${index % 4}`, conceptKeys: [`project-concept-${index % 5}`], componentConceptKeys: [`component-${index % 7}`] })), evaluationTimestamp: '2026-07-19T12:00:00Z' };
+-  setMlShadowFailureForTests(undefined);
+-  const realShape = await runMlShadowComparison({ ...input, currentSections: [{ sectionKey: 'suggested_materials', candidateKeys: candidates.slice(0, 3).map((value) => value.candidateKey) }] });
+-  assert.strictEqual(realShape.response, response);
+-  assert.equal(realShape.diagnostics.status, 'SCORED');
+-  const phases: MlShadowFailurePhase[] = ['confidence', 'dominance', 'fusion', 'diagnostics', 'logger', 'redaction'];
+-  try {
+-    for (const phase of phases) {
+-      setMlShadowFailureForTests(phase);
+-      const result = await runMlShadowComparison(input);
+-      assert.strictEqual(result.response, response, `${phase} changed the original response object`);
+-      assert.equal(result.diagnostics.status, 'FALLBACK');
+-      assert.equal(result.diagnostics.fallbackReason, `injected_${phase}_failure`);
+-      assert.ok(result.diagnostics.fallbackReason.length <= 240);
++    const snapshot = await first;
++    assert.deepEqual(loadCounts, { material: 1, project: 1 });
++    assert.equal(snapshot.material.state, 'READY');
++    assert.equal(snapshot.project.state, 'NOT_READY');
++    assert.equal(snapshot.project.failureCode, 'ARTIFACT_NOT_FOUND');
++    assert.equal(snapshot.material.loadCompletedAt, '2026-07-26T00:00:00.000Z');
++    assert.equal(Object.isFrozen(snapshot), true);
++    assert.equal(Object.isFrozen(snapshot.material), true);
++
++    const material = rankMlLocalCandidates(materialRankingInput());
++    assert.equal(material.outcome, 'ML_RANKED');
++    if (material.outcome === 'ML_RANKED') {
++      assert.deepEqual(material.rankedCandidateKeys, ['material-a']);
++      assert.equal(material.scored.every((row) => Number.isFinite(row.score)), true);
++      assert.equal(Object.isFrozen(material.rankedCandidateKeys), true);
++    }
++    const project = rankMlLocalCandidates(projectRankingInput());
++    assert.equal(project.outcome, 'ML_UNAVAILABLE');
++    if (project.outcome === 'ML_UNAVAILABLE') {
++      assert.equal(project.reasonCode, 'ARTIFACT_NOT_FOUND');
++      assert.equal('rankedCandidateKeys' in project, false);
+     }
+   } finally {
+-    setMlShadowFailureForTests(undefined);
+-    env.recommendationMlShadowEnabled = prior.enabled;
+-    env.recommendationMlMaterialArtifactPath = prior.path;
+-    clearMlArtifactCacheForTests();
++    resetRecommendationMlRuntimeForTests();
+   }
+ });
+ 
+-isolatedRecommendationTest('never-settling async material shadow is bounded by the secondary timeout', async () => {
+-  const response = { deterministic: true };
+-  const started = performance.now();
+-  setMlShadowNeverSettleForTests(response);
++test('LM-07 Project READY remains usable when Material is unavailable', async () => {
++  resetRecommendationMlRuntimeForTests();
++  setRecommendationMlRuntimeDependenciesForTests({
++    getConfig: () => runtimeConfig('ML_LOCAL'),
++    loadArtifact: async (_artifactPath, expectations) => {
++      if (expectations.expectedDomain === 'material') {
++        throw Object.assign(new Error('missing'), { code: 'ENOENT' });
++      }
++      return artifact('project', 'project-a');
++    },
++  });
+   try {
+-    const result = await runMlShadowComparison({
+-      response,
+-      domain: 'material',
+-      interests: [],
+-      candidates: [],
+-      activeCandidateKeys: [],
+-      currentTopKeys: [],
+-      recentEvents: [],
+-      evaluationTimestamp: '2026-07-19T12:00:00Z',
+-    });
+-    assert.strictEqual(result.response, response);
+-    assert.equal(result.diagnostics.status, 'FALLBACK');
+-    assert.equal(result.diagnostics.fallbackReason, 'material_shadow_timeout');
+-    assert.ok(performance.now() - started < 1_500);
++    const snapshot = await preloadRecommendationMlRuntime();
++    assert.equal(snapshot.material.state, 'NOT_READY');
++    assert.equal(snapshot.project.state, 'READY');
++    const project = rankMlLocalCandidates(projectRankingInput());
++    assert.equal(project.outcome, 'ML_RANKED');
++    if (project.outcome === 'ML_RANKED') {
++      assert.deepEqual(project.rankedCandidateKeys, ['project-a']);
++    }
+   } finally {
+-    setMlShadowNeverSettleForTests();
++    resetRecommendationMlRuntimeForTests();
+   }
+ });
+ 
+-isolatedRecommendationTest('candidate duplicates disable shadow and cached catalog-scale scoring stays bounded', async () => {
+-  const loadStarted = performance.now(); const artifact = await loadPortableModelArtifact(path.join(portableRoot, 'material-hybrid.json'), 'material'); const loadMs = performance.now() - loadStarted;
+-  const projectLoadStarted = performance.now(); const projectArtifact = await loadPortableModelArtifact(path.join(portableRoot, 'project-hybrid.json'), 'project'); const projectLoadMs = performance.now() - projectLoadStarted;
+-  const fixture = JSON.parse(await readFile(path.join(portableRoot, 'parity-fixtures.json'), 'utf8')).lightfm_cases[0];
+-  const candidates = Array.from({ length: 161 }, (_, index) => ({ candidateKey: `candidate-${String(index).padStart(3, '0')}`, features: fixture.candidates[index % fixture.candidates.length].features }));
+-  const timings: number[] = []; const memoryBefore = process.memoryUsage().heapUsed;
+-  for (let run = 0; run < 100; run += 1) { const started = performance.now(); const scored = scorePortableLightFm(artifact, fixture.user_features, candidates); combineNormalizedScores(scored.scored, new Map(), SHORT_TERM_CONFIG.recentBlend); timings.push(performance.now() - started); }
+-  const projectCandidates = candidates.slice(0, 29); const projectTimings: number[] = [];
+-  for (let run = 0; run < 100; run += 1) { const started = performance.now(); scorePortableLightFm(projectArtifact, fixture.user_features, projectCandidates); projectTimings.push(performance.now() - started); }
+-  projectTimings.sort((a, b) => a - b);
+-  const intentMetadata = new Map(candidates.map((value) => [value.candidateKey, { categoryKey: 'category', conceptKeys: [], componentConceptKeys: [] }]));
+-  const intentStarted = performance.now(); const intent = buildShortTermIntent([{ entityKey: candidates[0]!.candidateKey, actionType: 'view', timestampUtc: '2026-08-09T00:00:00Z' }], intentMetadata, '2026-08-10T00:00:00Z'); const shortTermProfileMs = performance.now() - intentStarted;
+-  const rerankStarted = performance.now(); new Map(candidates.map((value) => [value.candidateKey, recentItemScore(intentMetadata.get(value.candidateKey)!, intent.intent)])); const combinedRerankMs = performance.now() - rerankStarted;
+-  timings.sort((a, b) => a - b); const p50 = timings[49]!; const p95 = timings[94]!; const memoryIncreaseBytes = Math.max(0, process.memoryUsage().heapUsed - memoryBefore);
+-  console.log(JSON.stringify({ slice4aPerformance: { materialArtifactLoadMs: loadMs, projectArtifactLoadMs: projectLoadMs, artifactSizeBytes: (await readFile(path.join(portableRoot, 'material-hybrid.json'))).byteLength, material161P50Ms: p50, material161P95Ms: p95, project29P50Ms: projectTimings[49], project29P95Ms: projectTimings[94], shortTermProfileMs, combinedRerankMs, memoryIncreaseBytes } }));
+-  assert.ok(p95 < 50, `material scoring p95 ${p95}ms`);
+-  const prior = env.recommendationMlShadowEnabled; env.recommendationMlShadowEnabled = true;
+-  setMlShadowInterestRegistryLoaderForTests(emptyInterestRegistry);
+-  const response = { unchanged: true }; const duplicate = { candidateKey: 'same', categoryId: 'category', categoryLabel: 'Category' };
+-  const result = await runMlShadowComparison({ response, domain: 'material', interests: [], candidates: [duplicate, duplicate], activeCandidateKeys: ['same'], currentTopKeys: [], recentEvents: [], evaluationTimestamp: '2026-08-10T00:00:00Z' });
+-  assert.strictEqual(result.response, response); assert.equal(result.diagnostics.fallbackReason, 'candidate_mismatch'); env.recommendationMlShadowEnabled = prior;
+-});
+-
+-isolatedRecommendationTest('RP-01.4 canonical user features are candidate-independent and serve-suppressed', async () => {
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlMaterialServingEnabled = true;
+-  env.recommendationMlProjectServingEnabled = true;
+-  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+-  setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-
+-  const materialCandidates = [
++test('LM-07 expected artifact failures resolve with stable NOT_READY codes', async (context) => {
++  const cases: Array<{
++    name: string;
++    error: Error;
++    code: RecommendationMlStartupFailureCode;
++  }> = [
+     {
+-      candidateKey: 'm1',
+-      categoryId: 'cat-a',
+-      categoryLabel: 'Electronics & Components',
+-      condition: 'GOOD',
+-      isFree: true,
+-      pickupAllowed: true,
+-      deliveryAllowed: false,
++      name: 'not found',
++      error: Object.assign(new Error('missing'), { code: 'ENOENT' }),
++      code: 'ARTIFACT_NOT_FOUND',
++    },
++    {
++      name: 'unreadable',
++      error: Object.assign(new Error('denied'), { code: 'EACCES' }),
++      code: 'ARTIFACT_UNREADABLE',
++    },
++    {
++      name: 'malformed',
++      error: new SyntaxError('bad json'),
++      code: 'ARTIFACT_MALFORMED',
++    },
++    {
++      name: 'schema',
++      error: new Error('artifact_v2_schema_version'),
++      code: 'ARTIFACT_SCHEMA_INVALID',
++    },
++    {
++      name: 'domain',
++      error: new Error('artifact_v2_domain'),
++      code: 'ARTIFACT_DOMAIN_MISMATCH',
++    },
++    {
++      name: 'feature contract',
++      error: new Error('artifact_v2_feature_contract'),
++      code: 'FEATURE_CONTRACT_MISMATCH',
++    },
++    {
++      name: 'aggregation',
++      error: new Error('artifact_v2_aggregation_mode'),
++      code: 'AGGREGATION_MODE_MISMATCH',
++    },
++    {
++      name: 'taxonomy',
++      error: new Error('artifact_v2_taxonomy_fingerprint_mismatch'),
++      code: 'TAXONOMY_FINGERPRINT_MISMATCH',
++    },
++    {
++      name: 'mapping hash',
++      error: new Error('artifact_v2_item_mapping_hash_mismatch'),
++      code: 'MAPPING_HASH_MISMATCH',
++    },
++    {
++      name: 'integrity',
++      error: new Error('artifact_v2_semantic_content_hash_mismatch'),
++      code: 'ARTIFACT_INTEGRITY_MISMATCH',
+     },
+   ];
+-  const emptyPool = await runMlShadowComparison({
+-    response: { domain: 'material-empty' },
+-    domain: 'material',
+-    interests: ['arduino', 'robotics'],
+-    candidates: [],
+-    activeCandidateKeys: [],
+-    currentTopKeys: [],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+-  const populated = await runMlShadowComparison({
+-    response: { domain: 'material-populated' },
+-    domain: 'material',
+-    interests: ['arduino', 'robotics'],
+-    candidates: materialCandidates,
+-    activeCandidateKeys: ['m1'],
+-    currentTopKeys: ['m1'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+-  const reordered = await runMlShadowComparison({
+-    response: { domain: 'material-reordered' },
+-    domain: 'material',
+-    interests: ['robotics', 'arduino'],
+-    candidates: [
+-      {
+-        candidateKey: 'm2',
+-        categoryId: 'different-cat',
+-        categoryLabel: 'Wood & Boards',
+-        condition: 'NEW',
+-        isFree: false,
+-        pickupAllowed: false,
+-        deliveryAllowed: true,
+-      },
+-      ...materialCandidates,
+-    ],
+-    activeCandidateKeys: ['m2', 'm1'],
+-    currentTopKeys: ['m2', 'm1'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+-  const project = await runMlShadowComparison({
+-    response: { domain: 'project' },
+-    domain: 'project',
+-    interests: ['arduino', 'robotics'],
+-    candidates: [
+-      {
+-        candidateKey: 'p1',
+-        categoryId: 'proj-cat',
+-        categoryLabel: 'Robotics Projects',
+-        difficulty: 'BEGINNER',
+-        conceptKeys: ['project-topic:robotics'],
+-        componentConceptKeys: ['component:arduino-board'],
+-      },
+-    ],
+-    activeCandidateKeys: ['p1'],
+-    currentTopKeys: ['p1'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+ 
+-  for (const result of [emptyPool, populated, reordered, project]) {
+-    assert.equal(result.diagnostics.status, 'SCORED');
+-    assert.equal(result.rankedCandidateKeys, undefined);
+-    assert.equal(
+-      result.diagnostics.servingSuppressedReason,
+-      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+-    );
+-    assert.equal(result.diagnostics.resolutionStatus, 'FULLY_MAPPED');
+-    assert.equal(result.diagnostics.canonicalUserFeatureCount, 2);
+-    assert.equal(result.diagnostics.candidateIndependent, true);
+-    assert.equal(
+-      result.diagnostics.artifactUserFeatureOverlapStatus,
+-      'ZERO_OVERLAP',
+-    );
+-    assert.equal(result.diagnostics.artifactMatchedUserFeatureCount, 0);
+-    assert.equal(result.diagnostics.artifactMissingUserFeatureCount, 2);
+-    assert.equal(result.diagnostics.featureReadiness?.status, 'NOT_READY');
+-    assert.ok(
+-      result.diagnostics.featureReadiness?.reasons.includes(
+-        'ARTIFACT_CONTRACT_VERSION_MISSING',
+-      ),
+-    );
+-    assert.equal(result.diagnostics.featureReadiness?.artifact.contractVersionCompatible, false);
+-    assert.doesNotMatch(
+-      JSON.stringify(result.diagnostics),
+-      /interest:[0-9a-f]{64}/,
+-    );
++  for (const item of cases) {
++    await context.test(item.name, async () => {
++      resetRecommendationMlRuntimeForTests();
++      setRecommendationMlRuntimeDependenciesForTests({
++        getConfig: () => runtimeConfig('ML_LOCAL'),
++        loadArtifact: async () => {
++          throw item.error;
++        },
++      });
++      try {
++        const snapshot = await preloadRecommendationMlRuntime();
++        assert.equal(snapshot.material.state, 'NOT_READY');
++        assert.equal(snapshot.project.state, 'NOT_READY');
++        assert.equal(snapshot.material.failureCode, item.code);
++        assert.equal(snapshot.project.failureCode, item.code);
++      } finally {
++        resetRecommendationMlRuntimeForTests();
++      }
++    });
+   }
+-
+-  assert.equal(emptyPool.diagnostics.canonicalFeatureCount, populated.diagnostics.canonicalFeatureCount);
+-  assert.equal(populated.diagnostics.canonicalFeatureCount, project.diagnostics.canonicalFeatureCount);
+-  assert.equal(reordered.diagnostics.canonicalFeatureCount, 2);
+-
+-  let registryLoads = 0;
+-  setMlShadowInterestRegistryLoaderForTests(async () => {
+-    registryLoads += 1;
+-    throw new Error('taxonomy_registry_should_not_load_for_empty_interests');
+-  });
+-
+-  const noInterests = await runMlShadowComparison({
+-    response: { domain: 'no-interests' },
+-    domain: 'material',
+-    interests: [],
+-    candidates: materialCandidates,
+-    activeCandidateKeys: ['m1'],
+-    currentTopKeys: ['m1'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+-  assert.equal(registryLoads, 0);
+-  assert.equal(noInterests.diagnostics.status, 'SCORED');
+-  assert.equal(noInterests.diagnostics.resolutionStatus, 'NO_INTERESTS');
+-  assert.equal(
+-    noInterests.diagnostics.artifactUserFeatureOverlapStatus,
+-    'NO_RUNTIME_FEATURES',
+-  );
+-  assert.equal(noInterests.rankedCandidateKeys, undefined);
+-
+-  registryLoads = 0;
+-  const noInterestsProject = await runMlShadowComparison({
+-    response: { domain: 'no-interests-project' },
+-    domain: 'project',
+-    interests: [],
+-    candidates: [
+-      {
+-        candidateKey: 'p-empty',
+-        categoryId: 'proj-cat',
+-        categoryLabel: 'Robotics Projects',
+-        difficulty: 'BEGINNER',
+-      },
+-    ],
+-    activeCandidateKeys: ['p-empty'],
+-    currentTopKeys: ['p-empty'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+-  assert.equal(registryLoads, 0);
+-  assert.equal(noInterestsProject.diagnostics.status, 'SCORED');
+-  assert.equal(noInterestsProject.diagnostics.resolutionStatus, 'NO_INTERESTS');
+-  assert.equal(
+-    noInterestsProject.diagnostics.artifactUserFeatureOverlapStatus,
+-    'NO_RUNTIME_FEATURES',
+-  );
+-
+-  setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+-  const unmapped = await runMlShadowComparison({
+-    response: { domain: 'unmapped' },
+-    domain: 'material',
+-    interests: ['totally-unknown-interest-xyz'],
+-    candidates: materialCandidates,
+-    activeCandidateKeys: ['m1'],
+-    currentTopKeys: ['m1'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+-  assert.equal(unmapped.diagnostics.resolutionStatus, 'UNMAPPED_INTERESTS');
+-  assert.equal(
+-    unmapped.diagnostics.artifactUserFeatureOverlapStatus,
+-    'NO_RUNTIME_FEATURES',
+-  );
+-  assert.notEqual(
+-    unmapped.diagnostics.resolutionStatus,
+-    noInterests.diagnostics.resolutionStatus,
+-  );
+-
+-  setMlShadowInterestRegistryLoaderForTests(async () => {
+-    throw new Error('taxonomy_registry_unavailable');
+-  });
+-  const response = { deterministic: true };
+-  const failed = await runMlShadowComparison({
+-    response,
+-    domain: 'material',
+-    interests: ['arduino'],
+-    candidates: materialCandidates,
+-    activeCandidateKeys: ['m1'],
+-    currentTopKeys: ['m1'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
+-  });
+-  assert.strictEqual(failed.response, response);
+-  assert.equal(failed.diagnostics.status, 'FALLBACK');
+-  assert.equal(failed.rankedCandidateKeys, undefined);
+-
+-  // Partial / full overlap against synthetic in-memory artifact names via diagnostics helper path:
+-  // covered in canonical-shadow-user-features.test.ts; runtime-v2 proven ZERO_OVERLAP above.
+ });
+ 
+-isolatedRecommendationTest('RP-01.4 material and project canonical features match and ignore candidate labels', async () => {
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlMaterialServingEnabled = true;
+-  env.recommendationMlProjectServingEnabled = true;
+-  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
+-  setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+-  clearMlArtifactCacheForTests();
+-
+-  const interests = ['arduino'];
+-  const material = await runMlShadowComparison({
+-    response: { section: 'materials' },
+-    domain: 'material',
+-    interests,
+-    candidates: [
+-      {
+-        candidateKey: 'm-hash-trap',
+-        categoryId: 'would-have-produced-hash',
+-        categoryLabel: 'arduino',
+-        condition: 'GOOD',
+-        isFree: true,
+-        pickupAllowed: true,
+-        deliveryAllowed: false,
++test('LM-07 unexpected load and scorer construction failures publish FAILED', async (context) => {
++  await context.test('unexpected loader failure', async () => {
++    resetRecommendationMlRuntimeForTests();
++    setRecommendationMlRuntimeDependenciesForTests({
++      getConfig: () => runtimeConfig('ML_LOCAL'),
++      loadArtifact: async () => {
++        throw new Error('unexpected_internal_failure');
+       },
+-    ],
+-    activeCandidateKeys: ['m-hash-trap'],
+-    currentTopKeys: ['m-hash-trap'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
++    });
++    try {
++      const snapshot = await preloadRecommendationMlRuntime();
++      assert.equal(snapshot.material.state, 'FAILED');
++      assert.equal(snapshot.material.failureCode, 'RUNTIME_INTERNAL_FAILURE');
++    } finally {
++      resetRecommendationMlRuntimeForTests();
++    }
+   });
+-  const project = await runMlShadowComparison({
+-    response: { section: 'projects' },
+-    domain: 'project',
+-    interests,
+-    candidates: [
+-      {
+-        candidateKey: 'p-other',
+-        categoryId: 'other-id',
+-        categoryLabel: 'Completely Different Label',
+-        difficulty: 'BEGINNER',
++
++  await context.test('scorer construction failure', async () => {
++    resetRecommendationMlRuntimeForTests();
++    setRecommendationMlRuntimeDependenciesForTests({
++      getConfig: () => runtimeConfig('ML_LOCAL'),
++      loadArtifact: async (_artifactPath, expectations) =>
++        artifact(
++          expectations.expectedDomain,
++          expectations.expectedDomain === 'material' ? 'material-a' : 'project-a',
++        ),
++      buildScorer: () => {
++        throw new Error('construction_failed');
+       },
+-    ],
+-    activeCandidateKeys: ['p-other'],
+-    currentTopKeys: ['p-other'],
+-    recentEvents: [],
+-    evaluationTimestamp: '2026-08-10T00:00:00Z',
++    });
++    try {
++      const snapshot = await preloadRecommendationMlRuntime();
++      assert.equal(snapshot.material.state, 'FAILED');
++      assert.equal(snapshot.project.state, 'FAILED');
++      assert.equal(
++        snapshot.material.failureCode,
++        'SCORER_CONSTRUCTION_FAILED',
++      );
++    } finally {
++      resetRecommendationMlRuntimeForTests();
++    }
+   });
++});
+ 
+-  assert.equal(material.diagnostics.canonicalUserFeatureCount, 1);
+-  assert.equal(project.diagnostics.canonicalUserFeatureCount, 1);
+-  assert.equal(material.diagnostics.resolutionStatus, project.diagnostics.resolutionStatus);
+-  assert.equal(material.rankedCandidateKeys, undefined);
+-  assert.equal(project.rankedCandidateKeys, undefined);
+-  assert.equal(material.diagnostics.artifactUserFeatureOverlapStatus, 'ZERO_OVERLAP');
+-  assert.equal(project.diagnostics.artifactUserFeatureOverlapStatus, 'ZERO_OVERLAP');
++test('LM-07 Shadow and ML_LOCAL both preserve response ordering; only direct ML_LOCAL ranks', async (context) => {
++  for (const mode of ['SHADOW', 'ML_LOCAL'] as const) {
++    await context.test(mode, async () => {
++      resetRecommendationMlRuntimeForTests();
++      setRecommendationMlRuntimeDependenciesForTests({
++        getConfig: () => runtimeConfig(mode),
++        loadArtifact: async (_artifactPath, expectations) =>
++          artifact(
++            expectations.expectedDomain,
++            expectations.expectedDomain === 'material'
++              ? 'material-a'
++              : 'project-a',
++          ),
++      });
++      setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
++      try {
++        await preloadRecommendationMlRuntime();
++        const materialResponse = { stable: 'material' };
++        const material = await runMlShadowComparison({
++          response: materialResponse,
++          domain: 'material',
++          interests: ['arduino'],
++          candidates: [
++            {
++              candidateKey: 'material-a',
++              categoryId: 'category-a',
++              categoryLabel: 'Electronics',
++              conceptKeys: ['material-family:electronics'],
++              condition: 'NEW',
++              isFree: true,
++              pickupAllowed: true,
++              deliveryAllowed: false,
++            },
++          ],
++          activeCandidateKeys: ['material-a'],
++          currentTopKeys: ['material-a'],
++          recentEvents: [],
++          evaluationTimestamp: '2026-07-26T00:00:00Z',
++        });
++        assert.strictEqual(material.response, materialResponse);
++        assert.equal(material.diagnostics.status, 'SCORED');
++        assert.equal(material.rankedCandidateKeys, undefined);
++        assert.equal(
++          material.diagnostics.servingSuppressedReason,
++          'CANONICAL_USER_FEATURES_SHADOW_ONLY',
++        );
++
++        const projectResponse = { stable: 'project' };
++        const project = await runMlShadowComparison({
++          response: projectResponse,
++          domain: 'project',
++          interests: ['arduino'],
++          candidates: [
++            {
++              candidateKey: 'project-a',
++              categoryId: 'category-p',
++              categoryLabel: 'Robotics',
++              conceptKeys: ['project-topic:robotics'],
++              componentConceptKeys: ['component:dc-gear-motors'],
++              difficulty: 'BEGINNER',
++            },
++          ],
++          activeCandidateKeys: ['project-a'],
++          currentTopKeys: ['project-a'],
++          recentEvents: [],
++          evaluationTimestamp: '2026-07-26T00:00:00Z',
++        });
++        assert.strictEqual(project.response, projectResponse);
++        assert.equal(project.diagnostics.status, 'SCORED');
++        assert.equal(project.rankedCandidateKeys, undefined);
++
++        const direct = rankMlLocalCandidates(materialRankingInput());
++        if (mode === 'SHADOW') {
++          assert.equal(direct.outcome, 'ML_UNAVAILABLE');
++          if (direct.outcome === 'ML_UNAVAILABLE') {
++            assert.equal(direct.reasonCode, 'RUNTIME_MODE_NOT_LOCAL');
++            assert.equal('rankedCandidateKeys' in direct, false);
++          }
++        } else {
++          assert.equal(direct.outcome, 'ML_RANKED');
++          if (direct.outcome === 'ML_RANKED') {
++            assert.deepEqual(direct.rankedCandidateKeys, ['material-a']);
++          }
++        }
++      } finally {
++        setMlShadowInterestRegistryLoaderForTests(undefined);
++        resetRecommendationMlRuntimeForTests();
++      }
++    });
++  }
+ });
+ 
+-isolatedRecommendationTest('RP-01.5 feature readiness attaches and keeps serve keys suppressed', async () => {
+-  const prior = {
+-    shadow: env.recommendationMlShadowEnabled,
+-    materialServing: env.recommendationMlMaterialServingEnabled,
+-    projectServing: env.recommendationMlProjectServingEnabled,
+-    materialPath: env.recommendationMlMaterialArtifactPath,
+-    projectPath: env.recommendationMlProjectArtifactPath,
+-  };
+-  env.recommendationMlShadowEnabled = true;
+-  env.recommendationMlMaterialServingEnabled = true;
+-  env.recommendationMlProjectServingEnabled = true;
+-  env.recommendationMlMaterialArtifactPath = path.join(portableRoot, 'material-hybrid-runtime-v2.json');
+-  env.recommendationMlProjectArtifactPath = path.join(portableRoot, 'project-hybrid-runtime-v2.json');
++test('LM-07 partial canonical interest resolution remains scoreable but not fully ready', async () => {
++  resetRecommendationMlRuntimeForTests();
++  setRecommendationMlRuntimeDependenciesForTests({
++    getConfig: () => runtimeConfig('SHADOW'),
++    loadArtifact: async (_artifactPath, expectations) =>
++      artifact(
++        expectations.expectedDomain,
++        expectations.expectedDomain === 'material' ? 'material-a' : 'project-a',
++      ),
++  });
+   setMlShadowInterestRegistryLoaderForTests(fixtureInterestRegistry);
+-  clearMlArtifactCacheForTests();
+   try {
+-    const material = await runMlShadowComparison({
+-      response: { section: 'materials' },
+-      domain: 'material',
+-      interests: ['arduino'],
+-      candidates: [
+-        {
+-          candidateKey: 'm1',
+-          categoryId: 'cat-1',
+-          categoryLabel: 'Electronics',
+-          condition: 'NEW',
+-          isFree: true,
+-          pickupAllowed: true,
+-          deliveryAllowed: false,
+-          conceptKeys: ['material-family:electronics'],
+-        },
+-      ],
+-      activeCandidateKeys: ['m1'],
+-      currentTopKeys: ['m1'],
+-      recentEvents: [],
+-      evaluationTimestamp: '2026-08-10T00:00:00Z',
+-    });
+-    assert.equal(material.diagnostics.status, 'FALLBACK');
+-    assert.equal(material.diagnostics.featureReadiness?.status, 'NOT_READY');
+-    assert.ok(
+-      material.diagnostics.featureReadiness?.reasons.includes(
+-        'ARTIFACT_CONTRACT_VERSION_MISSING',
+-      ),
+-    );
+-    assert.ok(
+-      (material.diagnostics.featureReadiness?.items.unknownOccurrenceCount ?? 0) +
+-        (material.diagnostics.featureReadiness?.items.unsupportedOccurrenceCount ?? 0) >
+-        0,
+-    );
+-    assert.equal(material.diagnostics.scorerOutcome, 'FAILED_CLOSED');
+-    assert.equal(material.diagnostics.scorerReadiness, 'NOT_READY');
+-    assert.equal(
+-      material.diagnostics.missingFeatureCount,
+-      material.diagnostics.scorerDiagnostics?.missing.occurrenceCount,
+-    );
+-    assert.ok((material.diagnostics.scorerReasonCodes?.length ?? 0) > 0);
+-    assert.equal(material.rankedCandidateKeys, undefined);
+-    assert.equal(
+-      material.diagnostics.servingSuppressedReason,
+-      'CANONICAL_USER_FEATURES_SHADOW_ONLY',
+-    );
+-
+-    const project = await runMlShadowComparison({
+-      response: { section: 'projects' },
++    await preloadRecommendationMlRuntime();
++    const response = { stable: 'partial-project' };
++    const result = await runMlShadowComparison({
++      response,
+       domain: 'project',
+-      interests: ['arduino'],
++      interests: ['arduino', 'unmapped-custom-interest'],
+       candidates: [
+         {
+-          candidateKey: 'p1',
+-          categoryId: 'proj-cat',
++          candidateKey: 'project-a',
++          categoryId: 'category-p',
+           categoryLabel: 'Robotics',
+-          difficulty: 'BEGINNER',
+           conceptKeys: ['project-topic:robotics'],
++          componentConceptKeys: ['component:dc-gear-motors'],
++          difficulty: 'BEGINNER',
+         },
+       ],
+-      activeCandidateKeys: ['p1'],
+-      currentTopKeys: ['p1'],
++      activeCandidateKeys: ['project-a'],
++      currentTopKeys: ['project-a'],
+       recentEvents: [],
+-      evaluationTimestamp: '2026-08-10T00:00:00Z',
++      evaluationTimestamp: '2026-07-26T00:00:00Z',
+     });
+-    assert.equal(project.diagnostics.status, 'FALLBACK');
+-    assert.equal(project.diagnostics.projectReadinessStatus, 'FALLBACK');
+-    assert.equal(project.diagnostics.featureReadiness?.status, 'NOT_READY');
+-    assert.equal(project.diagnostics.scorerOutcome, 'FAILED_CLOSED');
+-    assert.equal(project.rankedCandidateKeys, undefined);
++
++    assert.strictEqual(result.response, response);
++    assert.equal(result.diagnostics.status, 'SCORED');
++    assert.equal(result.diagnostics.scorerReadiness, 'READY');
++    assert.equal(result.diagnostics.resolutionStatus, 'PARTIALLY_MAPPED');
++    assert.equal(result.diagnostics.mappedInputCount, 1);
++    assert.equal(result.diagnostics.unmappedInputCount, 1);
++    assert.equal(result.diagnostics.projectReadinessStatus, 'NOT_READY');
++    assert.equal(result.rankedCandidateKeys, undefined);
+   } finally {
+-    env.recommendationMlShadowEnabled = prior.shadow;
+-    env.recommendationMlMaterialServingEnabled = prior.materialServing;
+-    env.recommendationMlProjectServingEnabled = prior.projectServing;
+-    env.recommendationMlMaterialArtifactPath = prior.materialPath;
+-    env.recommendationMlProjectArtifactPath = prior.projectPath;
+     setMlShadowInterestRegistryLoaderForTests(undefined);
+-    clearMlArtifactCacheForTests();
++    resetRecommendationMlRuntimeForTests();
+   }
+ });
+diff --git a/apps/backend/src/server.ts b/apps/backend/src/server.ts
+index 3f805a2a..f0587161 100644
+--- a/apps/backend/src/server.ts
++++ b/apps/backend/src/server.ts
+@@ -17,11 +17,18 @@ import {
+   RecommendationOutboxWorker,
+   RECOMMENDATION_OUTBOX_SHUTDOWN_WAIT_MS,
+ } from './modules/recommendation-events/recommendation-events.outbox.worker.js';
++import { preloadRecommendationMlRuntime } from './modules/recommendations/ml-runtime-state.service.js';
+ 
+ logAiPriceSuggestionStartupConfig();
+ logEmailInvitationStartupConfig();
+ logRecommendationOutboxStartupConfig();
+ 
++const recommendationMlRuntime = await preloadRecommendationMlRuntime();
++console.log(
++  '[Recommendation ML runtime]',
++  JSON.stringify(recommendationMlRuntime),
++);
++
+ if (getResolvedEmailProvider() === 'smtp') {
+   void verifySmtpInvitationTransport().then((result) => {
+     if (result.ok) {

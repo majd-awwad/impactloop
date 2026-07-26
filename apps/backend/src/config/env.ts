@@ -282,6 +282,80 @@ const parseSmtpPort = (value: string | undefined): number => {
 
 const recommendationOutboxRuntime = resolveRecommendationOutboxRuntimeConfig();
 
+export type RecommendationMlRuntimeMode =
+  | "DETERMINISTIC"
+  | "SHADOW"
+  | "ML_LOCAL";
+
+export type RecommendationMlRuntimeConfig = {
+  mode: RecommendationMlRuntimeMode;
+  explicitMode: boolean;
+  materialArtifactPath: string;
+  projectArtifactPath: string;
+};
+
+export type RecommendationMlRuntimeConfigErrorCode =
+  | "INVALID_RUNTIME_MODE"
+  | "ML_LOCAL_ENVIRONMENT_FORBIDDEN";
+
+export class RecommendationMlRuntimeConfigError extends Error {
+  readonly code: RecommendationMlRuntimeConfigErrorCode;
+
+  constructor(code: RecommendationMlRuntimeConfigErrorCode, message: string) {
+    super(message);
+    this.name = "RecommendationMlRuntimeConfigError";
+    this.code = code;
+  }
+}
+
+const recommendationMlRuntimeModes = new Set<RecommendationMlRuntimeMode>([
+  "DETERMINISTIC",
+  "SHADOW",
+  "ML_LOCAL",
+]);
+
+export const resolveRecommendationMlRuntimeConfig = (
+  processEnv: NodeJS.ProcessEnv,
+): RecommendationMlRuntimeConfig => {
+  const rawMode = processEnv.RECOMMENDATION_ML_RUNTIME_MODE?.trim() ?? "";
+  const explicitMode = rawMode.length > 0;
+  let mode: RecommendationMlRuntimeMode;
+
+  if (!explicitMode) {
+    mode = parseBoolean(processEnv.RECOMMENDATION_ML_SHADOW_ENABLED, false)
+      ? "SHADOW"
+      : "DETERMINISTIC";
+  } else if (
+    recommendationMlRuntimeModes.has(rawMode as RecommendationMlRuntimeMode)
+  ) {
+    mode = rawMode as RecommendationMlRuntimeMode;
+  } else {
+    throw new RecommendationMlRuntimeConfigError(
+      "INVALID_RUNTIME_MODE",
+      "RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_LOCAL.",
+    );
+  }
+
+  const nodeEnv = processEnv.NODE_ENV ?? "development";
+  if (mode === "ML_LOCAL" && nodeEnv !== "development" && nodeEnv !== "test") {
+    throw new RecommendationMlRuntimeConfigError(
+      "ML_LOCAL_ENVIRONMENT_FORBIDDEN",
+      "RECOMMENDATION_ML_RUNTIME_MODE=ML_LOCAL is restricted to development and test.",
+    );
+  }
+
+  return {
+    mode,
+    explicitMode,
+    materialArtifactPath:
+      processEnv.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH?.trim() ?? "",
+    projectArtifactPath:
+      processEnv.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH?.trim() ?? "",
+  };
+};
+
+const recommendationMlRuntime = resolveRecommendationMlRuntimeConfig(process.env);
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   serviceName: process.env.SERVICE_NAME?.trim() || "impactloop-api",
@@ -325,10 +399,10 @@ export const env = {
   recommendationScorerVersion: parseRecommendationScorerVersion(
     process.env.RECOMMENDATION_SCORER_VERSION,
   ) as RecommendationScorerVersion,
-  recommendationMlShadowEnabled: parseBoolean(
-    process.env.RECOMMENDATION_ML_SHADOW_ENABLED,
-    false,
-  ),
+  recommendationMlRuntimeMode: recommendationMlRuntime.mode,
+  recommendationMlRuntimeModeExplicit: recommendationMlRuntime.explicitMode,
+  recommendationMlShadowEnabled:
+    recommendationMlRuntime.mode !== "DETERMINISTIC",
   recommendationMlMaterialServingEnabled: parseBoolean(
     process.env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED,
     false,
@@ -338,9 +412,9 @@ export const env = {
     false,
   ),
   recommendationMlMaterialArtifactPath:
-    process.env.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH?.trim() || "",
+    recommendationMlRuntime.materialArtifactPath,
   recommendationMlProjectArtifactPath:
-    process.env.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH?.trim() || "",
+    recommendationMlRuntime.projectArtifactPath,
   recommendationOutboxWorkerEnabled: recommendationOutboxRuntime.enabled,
   recommendationOutboxWorkerRequired: recommendationOutboxRuntime.required,
   recommendationOutboxPollIntervalMs: recommendationOutboxRuntime.pollIntervalMs,
