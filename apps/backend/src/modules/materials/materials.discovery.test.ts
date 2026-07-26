@@ -15,6 +15,11 @@ import {
   invalidateLearnerHomeForReservationTransition,
 } from '../learner-home/learner-home.service.js';
 import type { LearnerHomeMaterialCandidate } from '../learner-home/learner-home.types.js';
+import { runWithRecommendationEventOrigin } from '../recommendation-events/recommendation-event-origin.js';
+import {
+  recommendationToggleDeduplicationKey,
+  runWithRecommendationToggleRequestContext,
+} from '../recommendation-events/recommendation-events.service.js';
 
 import {
   getMaterialById,
@@ -35,7 +40,28 @@ type TestContext = {
   createdUserIds: string[];
   createdMaterialIds: string[];
   createdLocationIds: string[];
+  createdOutboxDeduplicationKeys: string[];
 };
+
+let toggleOperationSequence = 0;
+
+async function runMaterialToggleOperation<T>(
+  ctx: TestContext,
+  learnerId: string,
+  operation: () => Promise<T>,
+) {
+  const key = `${TEST_MARKER}-toggle-${Date.now()}-${++toggleOperationSequence}`;
+  ctx.createdOutboxDeduplicationKeys.push(
+    recommendationToggleDeduplicationKey(learnerId, key),
+  );
+
+  return runWithRecommendationEventOrigin('TEST', () =>
+    runWithRecommendationToggleRequestContext(
+      { headers: { 'idempotency-key': key } },
+      operation,
+    ),
+  );
+}
 
 async function createSupplierUser(suffix: string) {
   const passwordHash = await hashPassword('TestPassword123!');
@@ -129,6 +155,14 @@ async function createMaterial(
 }
 
 async function cleanup(ctx: TestContext) {
+  if (ctx.createdOutboxDeduplicationKeys.length) {
+    await prisma.recommendationEventOutbox.deleteMany({
+      where: {
+        deduplicationKey: { in: ctx.createdOutboxDeduplicationKeys },
+      },
+    });
+  }
+
   if (ctx.createdMaterialIds.length) {
     await prisma.material.deleteMany({
       where: { id: { in: ctx.createdMaterialIds } },
@@ -158,6 +192,7 @@ describe('public material discovery', () => {
     createdUserIds: [],
     createdMaterialIds: [],
     createdLocationIds: [],
+    createdOutboxDeduplicationKeys: [],
   };
 
   before(async () => {
@@ -463,7 +498,9 @@ describe('public material discovery', () => {
     const learner = await createLearnerUser(`viewer-${Date.now()}`);
     ctx.createdUserIds.push(learner.id);
 
-    await likeMaterialById(material.id, learner.id);
+    await runMaterialToggleOperation(ctx, learner.id, () =>
+      likeMaterialById(material.id, learner.id),
+    );
 
     const detail = await getMaterialById(material.id, {
       sub: learner.id,
@@ -474,17 +511,28 @@ describe('public material discovery', () => {
     assert.equal(detail.isLiked, true);
     assert.equal(detail.viewsCount, 1);
 
+    const historicalView = await prisma.materialView.findFirstOrThrow({
+      where: { materialId: material.id, viewerUserId: learner.id },
+      select: { id: true, createdAt: true },
+    });
+
     const repeatDetail = await getMaterialById(material.id, {
       sub: learner.id,
       roles: ['LEARNER'],
     });
 
-    assert.equal(repeatDetail.viewsCount, 1);
+    assert.equal(repeatDetail.viewsCount, 2);
 
     const trackedViews = await prisma.materialView.findMany({
       where: { materialId: material.id, viewerUserId: learner.id },
+      orderBy: { createdAt: 'asc' },
     });
-    assert.equal(trackedViews.length, 1);
+    assert.equal(trackedViews.length, 2);
+    assert.equal(trackedViews[0]?.id, historicalView.id);
+    assert.equal(
+      trackedViews[0]?.createdAt.toISOString(),
+      historicalView.createdAt.toISOString(),
+    );
   });
 
   test('material likes are idempotent and exposed on list/detail', async () => {
@@ -495,8 +543,12 @@ describe('public material discovery', () => {
     const learner = await createLearnerUser(`likes-${Date.now()}`);
     ctx.createdUserIds.push(learner.id);
 
-    const liked = await likeMaterialById(material.id, learner.id);
-    const likedAgain = await likeMaterialById(material.id, learner.id);
+    const liked = await runMaterialToggleOperation(ctx, learner.id, () =>
+      likeMaterialById(material.id, learner.id),
+    );
+    const likedAgain = await runMaterialToggleOperation(ctx, learner.id, () =>
+      likeMaterialById(material.id, learner.id),
+    );
     assert.equal(liked.likesCount, 1);
     assert.equal(likedAgain.likesCount, 1);
     assert.equal(likedAgain.isLiked, true);
@@ -532,8 +584,12 @@ describe('public material discovery', () => {
     assert.equal(publicItem?.likesCount, 1);
     assert.equal(publicItem?.isLiked, false);
 
-    const unliked = await unlikeMaterialById(material.id, learner.id);
-    const unlikedAgain = await unlikeMaterialById(material.id, learner.id);
+    const unliked = await runMaterialToggleOperation(ctx, learner.id, () =>
+      unlikeMaterialById(material.id, learner.id),
+    );
+    const unlikedAgain = await runMaterialToggleOperation(ctx, learner.id, () =>
+      unlikeMaterialById(material.id, learner.id),
+    );
     assert.equal(unliked.likesCount, 0);
     assert.equal(unliked.isLiked, false);
     assert.equal(unlikedAgain.likesCount, 0);
@@ -579,7 +635,9 @@ describe('public material discovery', () => {
       featureCandidate,
     ]);
 
-    await likeMaterialById(material.id, learnerA.id);
+    await runMaterialToggleOperation(ctx, learnerA.id, () =>
+      likeMaterialById(material.id, learnerA.id),
+    );
 
     const sharedFeaturesAfterLike = getOrBuildMaterialFeaturePool([
       featureCandidate,
@@ -599,7 +657,9 @@ describe('public material discovery', () => {
     const sharedFeaturesBeforeUnlike = getOrBuildMaterialFeaturePool([
       featureCandidate,
     ]);
-    await unlikeMaterialById(material.id, learnerA.id);
+    await runMaterialToggleOperation(ctx, learnerA.id, () =>
+      unlikeMaterialById(material.id, learnerA.id),
+    );
     const sharedFeaturesAfterUnlike = getOrBuildMaterialFeaturePool([
       featureCandidate,
     ]);
@@ -623,10 +683,18 @@ describe('public material discovery', () => {
     const cachedHome = await getLearnerHome(learner.id);
     const missingMaterialId = `${TEST_MARKER}-missing-like-${Date.now()}`;
 
-    await assert.rejects(() => likeMaterialById(missingMaterialId, learner.id));
+    await assert.rejects(() =>
+      runMaterialToggleOperation(ctx, learner.id, () =>
+        likeMaterialById(missingMaterialId, learner.id),
+      ),
+    );
     assert.strictEqual(await getLearnerHome(learner.id), cachedHome);
 
-    await assert.rejects(() => unlikeMaterialById(missingMaterialId, learner.id));
+    await assert.rejects(() =>
+      runMaterialToggleOperation(ctx, learner.id, () =>
+        unlikeMaterialById(missingMaterialId, learner.id),
+      ),
+    );
     assert.strictEqual(await getLearnerHome(learner.id), cachedHome);
   });
 

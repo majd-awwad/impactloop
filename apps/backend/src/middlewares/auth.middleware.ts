@@ -88,3 +88,16 @@ export const optionalAuthMiddleware = (
 
   next();
 };
+
+export const strictOptionalAuthMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  if (!req.headers.authorization) {
+    next();
+    return;
+  }
+
+  await authMiddleware(req, res, next);
+};

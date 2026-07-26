@@ -146,6 +146,19 @@ describe('recommendation-action-state reducer', () => {
     assert.equal(result.state, 'unknown');
   });
 
+  test('repeated views remain observations before and between toggle transitions', () => {
+    const result = reduceRecommendationToggleState(identity, [
+      transition({ actionType: 'MATERIAL_VIEW', sourceOperationId: 'view-1' }),
+      transition({ actionType: 'MATERIAL_VIEW', sourceOperationId: 'view-2' }),
+      transition({ actionType: 'MATERIAL_LIKE', sourceOperationId: 'like-1' }),
+      transition({ actionType: 'MATERIAL_VIEW', sourceOperationId: 'view-3' }),
+      transition({ actionType: 'MATERIAL_UNLIKE', sourceOperationId: 'unlike-1' }),
+      transition({ actionType: 'MATERIAL_VIEW', sourceOperationId: 'view-4' }),
+    ]);
+
+    assert.equal(result.state, 'inactive');
+  });
+
   test('empty sequence is inactive', () => {
     assert.equal(reduceRecommendationToggleState(identity, []).state, 'inactive');
   });
