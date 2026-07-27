@@ -98,6 +98,10 @@ const evidenceFromUser = (user?: {
 const utcDay = (date: Date) => date.toISOString().slice(0, 10);
 const reversal = (signal: SignalKind) =>
   ["UNLIKE", "UNSAVE", "UNFOLLOW"].includes(signal);
+const hasMarker = (value: unknown, markers: readonly string[]) =>
+  markers.some((marker) =>
+    String(value ?? "").toLowerCase().includes(marker),
+  );
 const positive = (signal: SignalKind) =>
   ![
     "UNLIKE",

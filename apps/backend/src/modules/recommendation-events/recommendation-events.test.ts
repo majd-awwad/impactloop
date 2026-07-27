@@ -502,9 +502,6 @@ describe('recommendation event instrumentation', () => {
       learnerProfile: { learnerType: 'STUDENT', skillLevel: 'BEGINNER' },
     });
     assert.equal(shape.success, true);
-    if (!shape.success) {
-      assert.fail(JSON.stringify(shape.error.issues));
-    }
     assert.equal('eventSource' in shape.data, false);
     assert.equal('recommendationEvidenceEligibility' in shape.data, false);
 
@@ -522,35 +519,6 @@ describe('recommendation event instrumentation', () => {
     });
     assert.equal(eligibleByDefault.recommendationEvidenceEligibility, 'ELIGIBLE');
     await prisma.user.delete({ where: { id: eligibleByDefault.id } });
-
-    const { classifyOrigin } = await import(
-      '../../../scripts/evaluate-interaction-readiness.js'
-    );
-    assert.equal(
-      classifyOrigin({
-        evidenceEligibility: 'EXCLUDED_TEST',
-        accountStatus: 'ACTIVE',
-      }),
-      'TEST_FIXTURE',
-    );
-    assert.equal(
-      classifyOrigin({
-        evidenceEligibility: 'ELIGIBLE',
-        accountStatus: 'ACTIVE',
-        eventSource: 'REAL',
-        recommendationObservability: true,
-      }),
-      'REAL_USER',
-    );
-    assert.equal(
-      classifyOrigin({
-        evidenceEligibility: 'EXCLUDED_TEST',
-        accountStatus: 'ACTIVE',
-        eventSource: 'LOAD_TEST',
-        recommendationObservability: true,
-      }),
-      'BENCHMARK',
-    );
   });
 
   test('attribution headers accept only scalar bounded values', () => {

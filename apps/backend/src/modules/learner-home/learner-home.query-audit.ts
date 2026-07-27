@@ -1,4 +1,5 @@
 import { prisma } from '../../database/prisma.js';
+import { LEARNER_HOME_CACHE_TTL_MS } from './learner-home.service.js';
 
 export type LearnerHomeQueryEvent = {
   query: string;
@@ -275,12 +276,13 @@ export const withFrozenEvaluationTime = async <T>(
   const OriginalDate = Date;
 
   class FrozenDate extends OriginalDate {
-    constructor(...args: ConstructorParameters<typeof Date>) {
+    constructor(...args: unknown[]) {
       if (args.length === 0) {
         super(fixedMs);
         return;
       }
-      super(...(args as [string | number | Date]));
+      // @ts-expect-error variadic passthrough to the real Date constructor
+      super(...args);
     }
 
     static now() {
@@ -342,6 +344,200 @@ export const parseAuditProfile = (value: string | undefined): AuditProfile => {
   throw new Error(
     `--profile must be one of: ${AUDIT_PROFILES.join(', ')}`,
   );
+};
+
+export type AuditCallerRow = {
+  mutation: string;
+  classification: 'VERIFIED_POSITIVE' | 'TTL_ONLY_GAP' | 'UNVERIFIED_CALLER';
+  scope: string;
+  maxStaleWindowMs: number | null;
+  evidenceTestFile: string;
+  validationCommand: string;
+  required: boolean;
+};
+
+/**
+ * Evidence-bound required callers. VERIFIED_POSITIVE only when both an exact
+ * test file and a scoped validation command are listed (not a free-form claim).
+ */
+export const REQUIRED_INVALIDATION_EVIDENCE: AuditCallerRow[] = [
+  {
+    mutation: 'profile.updateLearnerProfileForUser (interests)',
+    classification: 'VERIFIED_POSITIVE',
+    scope: 'per-user',
+    maxStaleWindowMs: null,
+    evidenceTestFile: 'src/modules/profile/profile.test.ts',
+    validationCommand:
+      'node --import tsx --test src/modules/profile/profile.test.ts',
+    required: true,
+  },
+  {
+    mutation: 'locations saved location create/update/delete',
+    classification: 'VERIFIED_POSITIVE',
+    scope: 'per-user',
+    maxStaleWindowMs: null,
+    evidenceTestFile: 'src/modules/locations/locations.test.ts',
+    validationCommand:
+      'node --import tsx --test src/modules/locations/locations.test.ts',
+    required: true,
+  },
+  {
+    mutation: 'materials.likeMaterialById / unlikeMaterialById',
+    classification: 'VERIFIED_POSITIVE',
+    scope: 'per-user',
+    maxStaleWindowMs: null,
+    evidenceTestFile: 'src/modules/materials/materials.discovery.test.ts',
+    validationCommand:
+      'node --import tsx --test src/modules/materials/materials.discovery.test.ts',
+    required: true,
+  },
+  {
+    mutation: 'materials authenticated view (getMaterialById records view)',
+    classification: 'VERIFIED_POSITIVE',
+    scope: 'per-user',
+    maxStaleWindowMs: null,
+    evidenceTestFile:
+      'src/modules/learner-home/learner-home.performance-cache-audit.test.ts',
+    validationCommand:
+      'node --import tsx --test src/modules/learner-home/learner-home.performance-cache-audit.test.ts',
+    required: true,
+  },
+  {
+    mutation: 'reservations create / cancel / availability transitions',
+    classification: 'VERIFIED_POSITIVE',
+    scope: 'global',
+    maxStaleWindowMs: null,
+    evidenceTestFile: 'src/modules/reservations/reservations.create.test.ts',
+    validationCommand:
+      'node --import tsx --test src/modules/reservations/reservations.create.test.ts src/modules/materials/materials.discovery.test.ts',
+    required: true,
+  },
+  {
+    mutation: 'learning-projects save/follow/like ±',
+    classification: 'VERIFIED_POSITIVE',
+    scope: 'per-user',
+    maxStaleWindowMs: null,
+    evidenceTestFile:
+      'src/modules/learning-projects/learning-projects.mine.test.ts',
+    validationCommand:
+      'node --import tsx --test src/modules/learning-projects/learning-projects.mine.test.ts',
+    required: true,
+  },
+  {
+    mutation: 'learning-projects builds / material linking',
+    classification: 'VERIFIED_POSITIVE',
+    scope: 'per-user',
+    maxStaleWindowMs: null,
+    evidenceTestFile:
+      'src/modules/learning-projects/learning-projects.mine.test.ts',
+    validationCommand:
+      'node --import tsx --test src/modules/learning-projects/learning-projects.mine.test.ts src/modules/learning-projects/learning-projects.material-linking.test.ts',
+    required: true,
+  },
+];
+
+export const TTL_ONLY_GAP_ROWS: AuditCallerRow[] = [
+  {
+    mutation: 'supplier material create/update/status/delete',
+    classification: 'TTL_ONLY_GAP',
+    scope: 'all-learners (Full Home response cache)',
+    maxStaleWindowMs: LEARNER_HOME_CACHE_TTL_MS,
+    evidenceTestFile: 'apps/backend/src/modules/supplier/supplier.service.ts',
+    validationCommand: 'report-only',
+    required: false,
+  },
+  {
+    mutation: 'material concept refresh on supplier persist',
+    classification: 'TTL_ONLY_GAP',
+    scope: 'all-learners (Canonical scorers)',
+    maxStaleWindowMs: LEARNER_HOME_CACHE_TTL_MS,
+    evidenceTestFile: 'apps/backend/src/modules/supplier/supplier.service.ts',
+    validationCommand: 'report-only',
+    required: false,
+  },
+  {
+    mutation: 'admin / project catalog publish-moderation',
+    classification: 'TTL_ONLY_GAP',
+    scope: 'all-learners',
+    maxStaleWindowMs: LEARNER_HOME_CACHE_TTL_MS,
+    evidenceTestFile:
+      'apps/backend/src/modules/admin-learning-projects/admin-learning-projects.service.ts',
+    validationCommand: 'report-only',
+    required: false,
+  },
+];
+
+export const buildCallerMatrix = (): AuditCallerRow[] => [
+  ...REQUIRED_INVALIDATION_EVIDENCE,
+  ...TTL_ONLY_GAP_ROWS,
+];
+
+export type AuditCliOptions = {
+  profile: AuditProfile;
+  email: string;
+  evaluationTimeUtc: string;
+  reportDir: string;
+  coldSamples: number;
+  warmSamples: number;
+};
+
+const parsePositiveInt = (raw: string, flag: string): number => {
+  if (!/^\d+$/.test(raw)) {
+    throw new Error(`${flag} must be a positive integer`);
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`${flag} must be a positive integer`);
+  }
+  return value;
+};
+
+export const parseAuditCliArgs = (argv: string[]): AuditCliOptions => {
+  let profile: AuditProfile | undefined;
+  let email = '';
+  let evaluationTimeUtc = '';
+  let reportDir = '';
+  let coldSamples = 5;
+  let warmSamples = 10;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index]!;
+    const next = argv[index + 1];
+    if (arg === '--profile' && next) {
+      profile = parseAuditProfile(next);
+      index += 1;
+    } else if (arg === '--email' && next) {
+      email = next;
+      index += 1;
+    } else if (arg === '--evaluation-time' && next) {
+      evaluationTimeUtc = next;
+      index += 1;
+    } else if (arg === '--report-dir' && next) {
+      reportDir = next;
+      index += 1;
+    } else if (arg === '--cold-samples' && next) {
+      coldSamples = parsePositiveInt(next, '--cold-samples');
+      index += 1;
+    } else if (arg === '--warm-samples' && next) {
+      warmSamples = parsePositiveInt(next, '--warm-samples');
+      index += 1;
+    }
+  }
+
+  if (!profile || !email || !evaluationTimeUtc || !reportDir) {
+    throw new Error(
+      'Usage: audit-learner-home-performance.ts --profile <configured-runtime|canonical-isolated> --email <email> --evaluation-time <ISO-Z> --report-dir <dir>',
+    );
+  }
+
+  return {
+    profile,
+    email,
+    evaluationTimeUtc: canonicalizeEvaluationTimeUtc(evaluationTimeUtc),
+    reportDir,
+    coldSamples,
+    warmSamples,
+  };
 };
 
 export type MlRuntimeFlagSnapshot = {

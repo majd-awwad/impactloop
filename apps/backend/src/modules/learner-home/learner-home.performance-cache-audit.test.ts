@@ -41,6 +41,7 @@ import type {
 } from './learner-home.types.js';
 import {
   attributeProjectOnlyMaterialConceptSql,
+  buildCallerMatrix,
   canonicalizeEvaluationTimeUtc,
   classifyAuditStatus,
   classifyLearnerHomeQueryEvent,
@@ -50,6 +51,7 @@ import {
   evaluateWarmCandidateSqlSamples,
   medianSample,
   normalizeLearnerHomeQueryShape,
+  parseAuditCliArgs,
   parseAuditProfile,
   percentileNearestRank,
   readMlRuntimeFlagSnapshot,
@@ -58,10 +60,6 @@ import {
   withCanonicalIsolatedMlFlags,
   withFrozenEvaluationTime,
 } from './learner-home.query-audit.js';
-import {
-  buildCallerMatrix,
-  parseAuditCliArgs,
-} from '../../../scripts/audit-learner-home-performance.js';
 import { env } from '../../config/env.js';
 import { getMaterialById } from '../materials/materials.service.js';
 import { hashPassword } from '../../utils/password.js';
