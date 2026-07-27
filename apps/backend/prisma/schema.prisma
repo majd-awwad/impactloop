@@ -473,6 +473,12 @@ enum RecommendationOutboxStatus {
   DEAD
 }
 
+enum CommentStatus {
+  VISIBLE
+  DELETED
+  MODERATED
+}
+
 model User {
   id                            String                     @id @default(cuid())
   displayName                   String                     @map("display_name")
@@ -544,10 +550,12 @@ model User {
   projectAuthoringSessions               ProjectAuthoringSession[]
   aiPendingActions                       AiPendingAction[]
   generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviewGeneratedBy")
-recommendationGenerations    RecommendationGeneration[]
+  recommendationGenerations    RecommendationGeneration[]
   recommendationRequests       RecommendationRequest[]
   recommendationImpressions    RecommendationImpression[]
   recommendationActions        RecommendationAction[]
+  comments                     Comment[]                   @relation("CommentAuthor")
+  commentsDeleted              Comment[]                   @relation("CommentDeletedBy")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -852,7 +860,8 @@ model LearningProject {
   authoringConversation    AiConversation?            @relation("ProjectAuthoringConversation")
   projectAuthoringSession  ProjectAuthoringSession?
   adminAiReviews           LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviews")
-taxonomyConcepts         LearningProjectConcept[]
+  taxonomyConcepts         LearningProjectConcept[]
+  comments                 Comment[]
 
   @@index([categoryId])
   @@index([createdBy])
@@ -1270,6 +1279,7 @@ model Material {
   views                         MaterialView[]
   linkedFromProjectBuildItems   ProjectBuildItem[] @relation("ProjectBuildLinkedMaterial")
   taxonomyConcepts              MaterialConcept[]
+  comments                      Comment[]
 
   @@index([ownerId])
   @@index([moderatedById])
@@ -1280,6 +1290,42 @@ model Material {
   @@index([status])
   @@index([locationId])
   @@map("materials")
+}
+
+model Comment {
+  id                String        @id @default(cuid())
+  authorId          String        @map("author_id")
+  materialId        String?       @map("material_id")
+  learningProjectId String?       @map("learning_project_id")
+  parentCommentId   String?       @map("parent_comment_id")
+  rootCommentId     String?       @map("root_comment_id")
+  replyToCommentId  String?       @map("reply_to_comment_id")
+  body              String
+  status            CommentStatus @default(VISIBLE)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  editedAt          DateTime?     @map("edited_at")
+  deletedAt         DateTime?     @map("deleted_at")
+  deletedById       String?       @map("deleted_by_id")
+
+  author          User             @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  deletedBy       User?            @relation("CommentDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  material        Material?        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  learningProject LearningProject? @relation(fields: [learningProjectId], references: [id], onDelete: Cascade)
+  parent          Comment?         @relation("CommentParent", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  children        Comment[]        @relation("CommentParent")
+  root            Comment?         @relation("CommentRoot", fields: [rootCommentId], references: [id], onDelete: Cascade)
+  rootReplies     Comment[]        @relation("CommentRoot")
+  replyTo         Comment?         @relation("CommentReplyTo", fields: [replyToCommentId], references: [id], onDelete: SetNull)
+  replyMentions   Comment[]        @relation("CommentReplyTo")
+
+  @@index([materialId, createdAt])
+  @@index([learningProjectId, createdAt])
+  @@index([rootCommentId, createdAt])
+  @@index([parentCommentId])
+  @@index([authorId])
+  @@index([status])
+  @@map("comments")
 }
 
 model MaterialLike {
