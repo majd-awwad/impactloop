@@ -1,6 +1,7 @@
 import type { Prisma } from '../../generated/prisma/index.js';
 
 import { prisma } from '../../database/prisma.js';
+import { createNotification } from '../notifications/notifications.repository.js';
 
 import {
   mapAdminVerificationStatusToDb,
@@ -185,15 +186,20 @@ export const createSupplierVerificationNotification = async (input: {
   title: string;
   body: string;
   supplierProfileId: string;
+  eventKey?: string;
+  actorId?: string | null;
 }) => {
-  return prisma.notification.create({
-    data: {
+  return createNotification({
       userId: input.userId,
       notificationType: 'SUPPLIER_VERIFICATION_UPDATE',
       title: input.title,
       body: input.body,
       relatedEntityType: 'SUPPLIER_PROFILE',
       relatedEntityId: input.supplierProfileId,
-    },
+      eventKey: input.eventKey ?? `supplier-verification:${input.supplierProfileId}:${input.title.trim()}`,
+      entityType: 'SUPPLIER_PROFILE',
+      entityId: input.supplierProfileId,
+      actionType: 'OPEN_PROFILE',
+      actorId: input.actorId ?? null,
   });
 };

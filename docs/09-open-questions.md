@@ -60,6 +60,9 @@ Status key: items marked **Needs verification** lack a single confirmed answer i
 | Is `visibility` / `ORDER_ONLY` enforced beyond storage? | **Needs verification** | [locations](features/locations.md), `supplier.validation.ts` |
 | Are authenticated saved locations implemented? | **Resolved** — backend `GET/POST/PATCH/DELETE /api/locations/saved`; Flutter `/profile/locations` manages saved locations and Materials Discovery reads them for nearest sort selection | [locations](features/locations.md), [material-discovery](features/material-discovery.md) |
 | When should precise location reveal to learner after accepted reservation? | **Resolved for reservations** — learner-owned `GET /api/reservations/my` and detail return `pickupLocationFull` only for `ACCEPTED`/`COMPLETED`; public material APIs still omit exact pickup location | [locations](features/locations.md), [reservations](features/reservations.md) |
+| What is the canonical private Supplier Profile read? | **Resolved** — `GET /api/supplier/profile/manage` is owner-only, exact-location permitted, server-derived essentials completion; old mixed profile response remains temporary compatibility | [supplier-portal](features/supplier-portal.md), [api-catalog](backend/api-catalog.md) |
+| Should a public Supplier Profile endpoint be added now? | **Open/deferred** — requires a redacted DTO, approximate-location behavior, public material visibility rules, and a follower product decision | [supplier-portal](features/supplier-portal.md), [locations](features/locations.md) |
+| Should Supplier followers be a Profile tab and what identities may be exposed? | **Open** — current follower endpoint remains unchanged temporarily; canonical management excludes identities and emails | [supplier-portal](features/supplier-portal.md) |
 
 ---
 

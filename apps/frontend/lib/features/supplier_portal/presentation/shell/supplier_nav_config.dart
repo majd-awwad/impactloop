@@ -98,7 +98,12 @@ final supplierMobileNavItems = [
   supplierNavItems[1],
   supplierNavItems[2],
   supplierNavItems[3],
+];
+
+final supplierMobileMoreNavItems = [
+  supplierNavItems[4],
   supplierNavItems[5],
+  supplierNavItems[6],
 ];
 
 String supplierPageTitle(BuildContext context, String location) =>
@@ -123,4 +128,19 @@ bool isSupplierNavActive(String currentLocation, String route) {
   }
 
   return currentLocation == route || currentLocation.startsWith('$route/');
+}
+
+bool isSupplierMoreNavActive(String currentLocation) {
+  return supplierMobileMoreNavItems.any(
+    (item) => isSupplierNavActive(currentLocation, item.route),
+  );
+}
+
+bool isSupplierMobileNavActive(String currentLocation, SupplierNavItem item) {
+  if (item.route == '/supplier') {
+    return isSupplierNavActive(currentLocation, item.route) ||
+        currentLocation == '/supplier/overview';
+  }
+
+  return isSupplierNavActive(currentLocation, item.route);
 }

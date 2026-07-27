@@ -25,6 +25,7 @@ class AppDialogShell extends StatelessWidget {
       AppSpacing.lg,
       AppSpacing.lg,
     ),
+    this.borderRadius,
   });
 
   final Widget title;
@@ -35,6 +36,10 @@ class AppDialogShell extends StatelessWidget {
   final double maxWidth;
   final double maxHeightFactor;
   final EdgeInsetsGeometry contentPadding;
+
+  /// Overrides the default corner radius for dialogs that need a softer,
+  /// more spacious shape (e.g. wide status-aware detail dialogs).
+  final BorderRadius? borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +55,7 @@ class AppDialogShell extends StatelessWidget {
         vertical: AppSpacing.lg,
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: AppRadius.lgAll,
+        borderRadius: borderRadius ?? AppRadius.lgAll,
         side: BorderSide(color: colors.borderSubtle),
       ),
       child: ConstrainedBox(

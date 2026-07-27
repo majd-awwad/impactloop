@@ -22,14 +22,8 @@ void main() {
       preview.earliestDeliveryStart,
       DateTime.parse('2026-07-10T17:00:00.000Z'),
     );
-    expect(
-      preview.confirmedStart,
-      DateTime.parse('2026-07-10T17:00:00.000Z'),
-    );
-    expect(
-      preview.confirmedEnd,
-      DateTime.parse('2026-07-10T20:00:00.000Z'),
-    );
+    expect(preview.confirmedStart, DateTime.parse('2026-07-10T17:00:00.000Z'));
+    expect(preview.confirmedEnd, DateTime.parse('2026-07-10T20:00:00.000Z'));
   });
 
   test('previewSupplierDeliveryScheduling returns infeasible preview', () {

@@ -922,7 +922,11 @@ class _AccountMenu extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      _UtilityPills(settings: settings, ref: ref, compact: true),
+                      _UtilityPills(
+                        settings: settings,
+                        ref: ref,
+                        compact: true,
+                      ),
                     ],
                   ),
                 ),

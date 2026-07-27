@@ -42,8 +42,9 @@ class _SupplierShellState extends ConsumerState<SupplierShell> {
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final languageCode = ref.watch(appSettingsProvider).languageCode;
-    final direction =
-        languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
+    final direction = languageCode == 'ar'
+        ? TextDirection.rtl
+        : TextDirection.ltr;
 
     return SupplierLocaleScope(
       languageCode: languageCode,

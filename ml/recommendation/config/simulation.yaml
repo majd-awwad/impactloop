@@ -1,0 +1,56 @@
+schema_version: impactloop-simulation-config-v1
+simulator_version: slice-1b-simulator-v1
+namespace: impactloop-synthetic-simulation-v1
+fixed_utc_anchor: "2026-08-18T00:00:00Z"
+simulation_days: 30
+persona_count: 300
+seeds: [11, 29, 47]
+splits: {train_end_day: 21, validation_end_day: 25, test_end_day: 30}
+session_count_bounds: [5, 12]
+exposure_count_bounds: [6, 10]
+repeat_view_cap_per_item_day: 3
+time_decay_half_life_days: 14
+default_random_exploration_rate: 0.15
+variants:
+  11:
+    name: BALANCED
+    marker: STANDARD
+    exploration_rate: 0.15
+    loyalty: 0.62
+    action_scale: 1.0
+    project_tendency: 0.35
+  29:
+    name: NOISY_EXPLORATORY
+    marker: STANDARD
+    exploration_rate: 0.20
+    loyalty: 0.35
+    action_scale: 0.72
+    project_tendency: 0.40
+  47:
+    name: PROJECT_DRIVEN_OOD
+    marker: OOD_ROBUSTNESS_ONLY
+    exploration_rate: 0.15
+    loyalty: 0.48
+    action_scale: 0.92
+    project_tendency: 0.72
+activity_distribution: {low: 0.30, medium: 0.50, high: 0.20}
+session_adjustment: {low: [5, 7], medium: [7, 9], high: [10, 12]}
+cohort_distribution:
+  stable: 0.30
+  gradual_shift: 0.22
+  abrupt_task: 0.18
+  exploratory: 0.18
+  noisy: 0.12
+event_probabilities:
+  view: 0.48
+  material_like: 0.18
+  reservation: 0.035
+  project_like: 0.14
+  save: 0.12
+  follow: 0.08
+  build_started: 0.035
+reversal_probabilities: {like: 0.10, save: 0.08, follow: 0.07}
+reservation_outcomes: {completed: 0.24, accepted: 0.20, cancelled: 0.22, rejected: 0.17, expired: 0.17}
+build_outcomes: {completed: 0.20, meaningful_progress: 0.30, abandoned: 0.50}
+artifact_root: ml/recommendation/generated
+catalog_snapshot_dir: ml/recommendation/generated/catalog-snapshot

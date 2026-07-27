@@ -33,9 +33,9 @@ class HomeContinueProjectCard extends StatelessWidget {
             children: [
               Text(
                 item.projectTitle,
-                style: AppTextStyles.title(context).copyWith(
-                  color: palette.textPrimary,
-                ),
+                style: AppTextStyles.title(
+                  context,
+                ).copyWith(color: palette.textPrimary),
               ),
               if (item.shortDescription.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xs),
@@ -43,9 +43,9 @@ class HomeContinueProjectCard extends StatelessWidget {
                   item.shortDescription,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary),
                 ),
               ],
               const SizedBox(height: AppSpacing.sm),
@@ -61,9 +61,9 @@ class HomeContinueProjectCard extends StatelessWidget {
                 item.reasons.isNotEmpty
                     ? item.reasons.first
                     : '${item.readyCount} of ${item.totalCount} components ready',
-                style: AppTextStyles.label(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
             ],
           ),

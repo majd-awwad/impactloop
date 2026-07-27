@@ -5,11 +5,7 @@ import '../../../../app/theme/app_spacing.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class SupplierFormLabel extends StatelessWidget {
-  const SupplierFormLabel({
-    super.key,
-    required this.label,
-    this.subtitle,
-  });
+  const SupplierFormLabel({super.key, required this.label, this.subtitle});
 
   final String label;
   final String? subtitle;
@@ -79,7 +75,9 @@ class SupplierDarkTextField extends StatelessWidget {
           onChanged: onChanged,
           forceErrorText: errorText,
           style: TextStyle(color: colors.textPrimary),
-          decoration: context.supplierDecorations.formFieldDecoration(hint: hint),
+          decoration: context.supplierDecorations.formFieldDecoration(
+            hint: hint,
+          ),
         ),
       ],
     );
@@ -127,7 +125,9 @@ class SupplierDarkTextArea extends StatelessWidget {
           onChanged: onChanged,
           forceErrorText: errorText,
           style: TextStyle(color: colors.textPrimary),
-          decoration: context.supplierDecorations.formFieldDecoration(hint: hint),
+          decoration: context.supplierDecorations.formFieldDecoration(
+            hint: hint,
+          ),
         ),
       ],
     );
@@ -174,7 +174,9 @@ class SupplierDarkDropdownField<T> extends StatelessWidget {
           dropdownColor: colors.surfaceSolid,
           style: TextStyle(color: colors.textPrimary),
           iconEnabledColor: colors.textSecondary,
-          decoration: context.supplierDecorations.formFieldDecoration(hint: hint),
+          decoration: context.supplierDecorations.formFieldDecoration(
+            hint: hint,
+          ),
         ),
       ],
     );
@@ -236,7 +238,7 @@ class SupplierDarkSwitchTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -340,15 +342,19 @@ class _SupplierDarkPasswordFieldState extends State<SupplierDarkPasswordField> {
           onChanged: widget.onChanged,
           forceErrorText: widget.errorText,
           style: TextStyle(color: colors.textPrimary),
-          decoration: context.supplierDecorations.formFieldDecoration().copyWith(
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                color: colors.textMuted,
+          decoration: context.supplierDecorations
+              .formFieldDecoration()
+              .copyWith(
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: colors.textMuted,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
               ),
-              onPressed: () => setState(() => _obscure = !_obscure),
-            ),
-          ),
         ),
       ],
     );

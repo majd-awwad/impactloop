@@ -16,6 +16,7 @@ class AdminCo2ProgressRing extends StatefulWidget {
   });
 
   final bool shouldAnimate;
+
   /// 0–1 visual progress from API (`impact.co2ReuseProgress`).
   final double progress;
   final double co2Kg;
@@ -40,7 +41,10 @@ class _AdminCo2ProgressRingState extends State<AdminCo2ProgressRing>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
     if (widget.shouldAnimate) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _startAnimation());
     }
@@ -123,17 +127,17 @@ class _AdminCo2ProgressRingState extends State<AdminCo2ProgressRing>
                         Text(
                           _formatCo2(animatedKg),
                           textAlign: TextAlign.center,
-                          style: AdminTypography.kpiValue(palette).copyWith(
-                            fontSize: 16,
-                          ),
+                          style: AdminTypography.kpiValue(
+                            palette,
+                          ).copyWith(fontSize: 16),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           widget.centerLabel,
                           textAlign: TextAlign.center,
-                          style: AdminTypography.kpiHelper(palette).copyWith(
-                            fontSize: 10,
-                          ),
+                          style: AdminTypography.kpiHelper(
+                            palette,
+                          ).copyWith(fontSize: 10),
                         ),
                       ],
                     ),
@@ -149,10 +153,9 @@ class _AdminCo2ProgressRingState extends State<AdminCo2ProgressRing>
                   const SizedBox(height: 8),
                   Text(
                     '${(animatedProgress * 100).round()}%',
-                    style: AdminTypography.kpiValue(palette).copyWith(
-                      fontSize: 28,
-                      color: palette.primaryTeal,
-                    ),
+                    style: AdminTypography.kpiValue(
+                      palette,
+                    ).copyWith(fontSize: 28, color: palette.primaryTeal),
                   ),
                   Text(
                     widget.centerLabel,

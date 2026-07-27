@@ -14,6 +14,7 @@ import '../../domain/material_discovery_result.dart';
 import '../material_discovery_content.dart';
 import '../widgets/discovery_location_privacy_panel.dart';
 import '../widgets/discovery_material_map.dart';
+import '../widgets/materials_discovery_results_grid.dart';
 import '../widgets/material_search_filters.dart';
 import '../widgets/materials_hero_section.dart';
 
@@ -209,7 +210,7 @@ class MaterialsDiscoveryView extends StatelessWidget {
               ),
               if (materials.any((material) => material.hasApproximatePin))
                 SizedBox(height: isMobile ? AppSpacing.sm : AppSpacing.md),
-              _MaterialsResultsGrid(
+              MaterialsDiscoveryResultsGrid(
                 materials: materials,
                 cardVariant: cardVariant,
                 onMaterialTap: onMaterialTap,
@@ -250,124 +251,6 @@ class MaterialsDiscoveryView extends StatelessWidget {
               const DiscoveryLocationPrivacyPanel(),
             ],
           ],
-        );
-      },
-    );
-  }
-}
-
-class _MaterialsResultsGrid extends StatelessWidget {
-  const _MaterialsResultsGrid({
-    required this.materials,
-    required this.cardVariant,
-    required this.onMaterialTap,
-  });
-
-  final List<DiscoveryMaterial> materials;
-  final AppMaterialCardVariant cardVariant;
-  final ValueChanged<DiscoveryMaterial>? onMaterialTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        if (width < 600) {
-          return ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: materials.length,
-            separatorBuilder: (context, index) =>
-                const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) {
-              final material = materials[index];
-
-              return ImpactMaterialCompactCard(
-                title: material.title.resolve(context),
-                description: material.description.resolve(context),
-                category: material.category.resolve(context),
-                conditionLabel: material.conditionLabel.resolve(context),
-                conditionTone: material.conditionTone,
-                statusLabel: material.statusLabel.resolve(context),
-                statusTone: material.statusTone,
-                quantityLabel: material.quantityLabel.resolve(context),
-                priceLabel: material.priceLabel.resolve(context),
-                locationLabel: material.locationLabel.resolve(context),
-                availabilityLabel: material.availabilityLabel.resolve(context),
-                deliveryAvailable: material.deliveryAvailable,
-                isFree: material.isFree,
-                gradientColors: materialGradient(material),
-                imageUrl: material.imageUrl,
-                ratingLabel: material.isPopular
-                    ? null
-                    : material.ratingLabel?.resolve(context),
-                viewsCount: material.viewsCount,
-                likesCount: material.likesCount,
-                isLiked: material.isLiked,
-                showPopularBadge: material.isPopular,
-                fallbackIcon: material.heroIconData,
-                onTap: onMaterialTap == null
-                    ? null
-                    : () => onMaterialTap!(material),
-              );
-            },
-          );
-        }
-
-        final columns = _materialGridColumnCount(width);
-        final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
-        final effectiveCardVariant = itemWidth < 400
-            ? AppMaterialCardVariant.compact
-            : cardVariant;
-        final cardHeight = ImpactMaterialGridCard.heightForWidth(
-          itemWidth,
-          variant: effectiveCardVariant,
-        );
-
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: materials.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            crossAxisSpacing: AppSpacing.md,
-            mainAxisSpacing: AppSpacing.md,
-            mainAxisExtent: cardHeight,
-          ),
-          itemBuilder: (context, index) {
-            final material = materials[index];
-            return SizedBox(
-              child: ImpactMaterialGridCard(
-                title: material.title.resolve(context),
-                description: material.description.resolve(context),
-                category: material.category.resolve(context),
-                conditionLabel: material.conditionLabel.resolve(context),
-                conditionTone: material.conditionTone,
-                statusLabel: material.statusLabel.resolve(context),
-                statusTone: material.statusTone,
-                quantityLabel: material.quantityLabel.resolve(context),
-                priceLabel: material.priceLabel.resolve(context),
-                locationLabel: material.locationLabel.resolve(context),
-                availabilityLabel: material.availabilityLabel.resolve(context),
-                deliveryAvailable: material.deliveryAvailable,
-                isFree: material.isFree,
-                gradientColors: materialGradient(material),
-                imageUrl: material.imageUrl,
-                ratingLabel: material.isPopular
-                    ? null
-                    : material.ratingLabel?.resolve(context),
-                viewsCount: material.viewsCount,
-                likesCount: material.likesCount,
-                isLiked: material.isLiked,
-                showPopularBadge: material.isPopular,
-                fallbackIcon: material.heroIconData,
-                variant: effectiveCardVariant,
-                onTap: onMaterialTap == null
-                    ? null
-                    : () => onMaterialTap!(material),
-              ),
-            );
-          },
         );
       },
     );
@@ -424,19 +307,6 @@ class _CompactDiscoveryHeader extends StatelessWidget {
       ],
     );
   }
-}
-
-int _materialGridColumnCount(double width) {
-  if (width >= 1320) {
-    return 4;
-  }
-  if (width >= 900) {
-    return 3;
-  }
-  if (width >= 600) {
-    return 2;
-  }
-  return 1;
 }
 
 class _ResultsHeader extends StatelessWidget {
@@ -615,10 +485,7 @@ class _RefetchErrorBanner extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             TextButton(
               onPressed: onRetry,
-              style: AppStatusButtonStyle.text(
-                context,
-                AppStatusTone.primary,
-              ),
+              style: AppStatusButtonStyle.text(context, AppStatusTone.primary),
               child: Text(
                 const LocalizedText(
                   en: 'Retry',

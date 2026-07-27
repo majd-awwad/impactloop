@@ -1293,10 +1293,7 @@ class _CalloutActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: compact ? double.infinity : maxWidth,
-      child: child,
-    );
+    return SizedBox(width: compact ? double.infinity : maxWidth, child: child);
   }
 }
 

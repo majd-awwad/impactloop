@@ -13,84 +13,85 @@ import 'package:frontend/features/profile/presentation/pages/learner_profile_edi
 import 'package:frontend/features/profile/presentation/pages/profile_edit_page.dart';
 
 void main() {
-  testWidgets('profile edit saves without phone validation error when phone is empty', (
-    tester,
-  ) async {
-    final repository = _RecordingProfileRepository();
+  testWidgets(
+    'profile edit saves without phone validation error when phone is empty',
+    (tester) async {
+      final repository = _RecordingProfileRepository();
 
-    await tester.binding.setSurfaceSize(const Size(400, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _TestAuthController(_testUser()),
-          ),
-          profileRepositoryProvider.overrideWithValue(repository),
-        ],
-        child: const MaterialApp(home: ProfileEditPage()),
-      ),
-    );
-
-    await tester.pump();
-
-    await tester.enterText(find.byType(TextFormField).at(0), 'Updated Name');
-    await tester.tap(find.text('Save changes'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-
-    expect(repository.lastUpdatePhone, isFalse);
-    expect(repository.lastPhone, isNull);
-    expect(find.textContaining('Too small'), findsNothing);
-    expect(find.textContaining('>=5 characters'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('learner profile edit navigates to profile after successful save', (
-    tester,
-  ) async {
-    final repository = _RecordingProfileRepository();
-    final router = GoRouter(
-      initialLocation: '/profile/learner/edit',
-      routes: [
-        GoRoute(
-          path: '/profile',
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('Profile hub')),
-          ),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _TestAuthController(_testUser()),
+            ),
+            profileRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const MaterialApp(home: ProfileEditPage()),
         ),
-        GoRoute(
-          path: '/profile/learner/edit',
-          builder: (context, state) => const LearnerProfileEditPage(),
-        ),
-      ],
-    );
+      );
 
-    await tester.binding.setSurfaceSize(const Size(900, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pump();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _TestAuthController(_testUser()),
+      await tester.enterText(find.byType(TextFormField).at(0), 'Updated Name');
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(repository.lastUpdatePhone, isFalse);
+      expect(repository.lastPhone, isNull);
+      expect(find.textContaining('Too small'), findsNothing);
+      expect(find.textContaining('>=5 characters'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'learner profile edit navigates to profile after successful save',
+    (tester) async {
+      final repository = _RecordingProfileRepository();
+      final router = GoRouter(
+        initialLocation: '/profile/learner/edit',
+        routes: [
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) =>
+                const Scaffold(body: Center(child: Text('Profile hub'))),
           ),
-          profileRepositoryProvider.overrideWithValue(repository),
+          GoRoute(
+            path: '/profile/learner/edit',
+            builder: (context, state) => const LearnerProfileEditPage(),
+          ),
         ],
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.binding.setSurfaceSize(const Size(900, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.tap(find.text('Save changes'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _TestAuthController(_testUser()),
+            ),
+            profileRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
 
-    expect(find.text('Profile hub'), findsOneWidget);
-  });
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Profile hub'), findsOneWidget);
+    },
+  );
 }
 
 class _RecordingProfileRepository extends ProfileRepository {

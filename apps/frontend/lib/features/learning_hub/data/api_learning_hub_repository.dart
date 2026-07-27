@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
+import '../../../core/network/api_client.dart';
 import '../../materials/data/categories_api.dart';
 import '../../materials/data/models/category.dart';
 import '../domain/learning_project_repository.dart';
@@ -177,9 +178,17 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectBuild> startBuild(String projectId) {
+  Future<ProjectBuild> startBuild(
+    String projectId, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.post<Map<String, dynamic>>('$_basePath/$projectId/builds/start'),
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/start',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       LearningHubApiMapper.fromBuildJson,
     );
   }
@@ -190,11 +199,15 @@ class ApiLearningHubRepository implements LearningProjectRepository {
     String itemId, {
     required ProjectBuildItemStatus status,
     String? learnerNote,
+    String? recommendationImpressionId,
   }) {
     return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(
         '$_basePath/$projectId/builds/me/items/$itemId',
         data: {'status': status.apiValue, 'learnerNote': learnerNote?.trim()},
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
       ),
       LearningHubApiMapper.fromBuildJson,
     );
@@ -272,49 +285,97 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectEngagement> likeProject(String id) {
+  Future<ProjectEngagement> likeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.post<Map<String, dynamic>>('$_basePath/$id/like'),
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$id/like',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       ProjectEngagement.fromJson,
     );
   }
 
   @override
-  Future<ProjectEngagement> unlikeProject(String id) {
+  Future<ProjectEngagement> unlikeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.delete<Map<String, dynamic>>('$_basePath/$id/like'),
+      _client.delete<Map<String, dynamic>>(
+        '$_basePath/$id/like',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       ProjectEngagement.fromJson,
     );
   }
 
   @override
-  Future<ProjectSaveStatus> saveProject(String id) {
+  Future<ProjectSaveStatus> saveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.post<Map<String, dynamic>>('$_basePath/$id/save'),
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$id/save',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       ProjectSaveStatus.fromJson,
     );
   }
 
   @override
-  Future<ProjectSaveStatus> unsaveProject(String id) {
+  Future<ProjectSaveStatus> unsaveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.delete<Map<String, dynamic>>('$_basePath/$id/save'),
+      _client.delete<Map<String, dynamic>>(
+        '$_basePath/$id/save',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       ProjectSaveStatus.fromJson,
     );
   }
 
   @override
-  Future<ProjectFollowStatus> followProject(String id) {
+  Future<ProjectFollowStatus> followProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.post<Map<String, dynamic>>('$_basePath/$id/follow'),
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$id/follow',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       ProjectFollowStatus.fromJson,
     );
   }
 
   @override
-  Future<ProjectFollowStatus> unfollowProject(String id) {
+  Future<ProjectFollowStatus> unfollowProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.delete<Map<String, dynamic>>('$_basePath/$id/follow'),
+      _client.delete<Map<String, dynamic>>(
+        '$_basePath/$id/follow',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       ProjectFollowStatus.fromJson,
     );
   }

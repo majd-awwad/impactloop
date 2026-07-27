@@ -3,6 +3,8 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import type { MaterialsQuery } from './materials.validation.js';
 
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
+
 const buildSearchClauses = (q: string): Prisma.MaterialWhereInput[] => [
   {
     title: {
@@ -146,10 +148,31 @@ const materialInclude = {
   },
   supplierProfile: {
     select: {
+      id: true,
       publicName: true,
+      avatarImageUrl: true,
+      supplierType: true,
+      verificationStatus: true,
       user: {
         select: {
           displayName: true,
+          profileImageUrl: true,
+        },
+      },
+      defaultPickupLocation: {
+        select: {
+          city: true,
+          area: true,
+        },
+      },
+      organizationProfile: {
+        select: {
+          businessLocation: {
+            select: {
+              city: true,
+              area: true,
+            },
+          },
         },
       },
     },
@@ -175,12 +198,31 @@ const materialDetailInclude = {
   },
   supplierProfile: {
     select: {
+      id: true,
       publicName: true,
+      avatarImageUrl: true,
       supplierType: true,
       verificationStatus: true,
       user: {
         select: {
           displayName: true,
+          profileImageUrl: true,
+        },
+      },
+      defaultPickupLocation: {
+        select: {
+          city: true,
+          area: true,
+        },
+      },
+      organizationProfile: {
+        select: {
+          businessLocation: {
+            select: {
+              city: true,
+              area: true,
+            },
+          },
         },
       },
     },
@@ -202,12 +244,19 @@ export type ViewerCoordinates = {
   longitude: number;
 };
 
-const buildNearestWhereClauses = (query: MaterialsQuery): Prisma.Sql[] => {
+const buildNearestWhereClauses = (
+  query: MaterialsQuery,
+  supplierProfileId?: string,
+): Prisma.Sql[] => {
   const clauses: Prisma.Sql[] = [
     Prisma.sql`m."status" = ${query.status}::"MaterialStatus"`,
     Prisma.sql`c."is_active" = true`,
     Prisma.sql`c."category_type" IN ('MATERIAL'::"CategoryType", 'BOTH'::"CategoryType")`,
   ];
+
+  if (supplierProfileId) {
+    clauses.push(Prisma.sql`m."supplier_profile_id" = ${supplierProfileId}`);
+  }
 
   if (query.categoryId) {
     clauses.push(Prisma.sql`m."category_id" = ${query.categoryId}`);
@@ -282,9 +331,13 @@ const buildDistanceSql = (coordinates: ViewerCoordinates) => {
 const findNearestMaterialIds = async (
   query: MaterialsQuery,
   coordinates: ViewerCoordinates,
+  supplierProfileId?: string,
 ) => {
   const skip = (query.page - 1) * query.limit;
-  const whereSql = Prisma.join(buildNearestWhereClauses(query), ' AND ');
+  const whereSql = Prisma.join(
+    buildNearestWhereClauses(query, supplierProfileId),
+    ' AND ',
+  );
   const distanceSql = buildDistanceSql(coordinates);
 
   const [rows, totalRows] = await Promise.all([
@@ -316,12 +369,22 @@ const findNearestMaterialIds = async (
 export const findMaterials = async (
   query: MaterialsQuery,
   coordinates?: ViewerCoordinates,
+  supplierProfileId?: string,
 ) => {
   const where = buildMaterialsWhere(query);
+
+  if (supplierProfileId) {
+    where.supplierProfileId = supplierProfileId;
+  }
+
   const skip = (query.page - 1) * query.limit;
 
   if (query.sort === 'nearest' && coordinates) {
-    const nearest = await findNearestMaterialIds(query, coordinates);
+    const nearest = await findNearestMaterialIds(
+      query,
+      coordinates,
+      supplierProfileId,
+    );
     const ids = nearest.rows.map((row) => row.id);
 
     if (ids.length === 0) {
@@ -385,35 +448,46 @@ export const recordMaterialView = async (
       });
 
       if (existingView) {
-        return tx.material.findUniqueOrThrow({
+        const material = await tx.material.findUniqueOrThrow({
           where: { id },
           select: {
             viewsCount: true,
           },
         });
+        return { ...material, recorded: false };
       }
     }
 
-    await tx.materialView.create({
-      data: {
-        materialId: id,
-        viewerUserId: viewerUserId ?? null,
-        viewSource,
-      },
-    });
-
-    return tx.material.update({
-      where: { id },
-      data: {
-        viewsCount: {
-          increment: 1,
-        },
-      },
-      select: {
-        viewsCount: true,
-      },
-    });
+    return appendMaterialView(id, viewerUserId, viewSource, tx);
   });
+};
+
+export const appendMaterialView = async (
+  id: string,
+  viewerUserId: string | undefined,
+  viewSource = 'detail',
+  client: PrismaClientLike = prisma,
+) => {
+  await client.materialView.create({
+    data: {
+      materialId: id,
+      viewerUserId: viewerUserId ?? null,
+      viewSource,
+    },
+  });
+
+  const material = await client.material.update({
+    where: { id },
+    data: {
+      viewsCount: {
+        increment: 1,
+      },
+    },
+    select: {
+      viewsCount: true,
+    },
+  });
+  return { ...material, recorded: true };
 };
 
 export const findMaterialById = async (id: string) => {
@@ -434,8 +508,11 @@ export const findMaterialById = async (id: string) => {
   });
 };
 
-export const findPublicMaterialById = async (id: string) => {
-  return prisma.material.findFirst({
+export const findPublicMaterialById = async (
+  id: string,
+  client: PrismaClientLike = prisma,
+) => {
+  return client.material.findFirst({
     where: {
       id,
       status: {
@@ -452,6 +529,19 @@ export const findPublicMaterialById = async (id: string) => {
       id: true,
     },
   });
+};
+
+export const recordMaterialViewOperation = async (
+  id: string,
+  viewerUserId: string,
+  viewSource: string,
+  client: Prisma.TransactionClient,
+) => {
+  const material = await findPublicMaterialById(id, client);
+  if (!material) {
+    return null;
+  }
+  return appendMaterialView(id, viewerUserId, viewSource, client);
 };
 
 export const countLikesByMaterialIds = async (materialIds: string[]) => {
@@ -489,29 +579,30 @@ export const findLikedMaterialIds = async (
   return new Set(likes.map((like) => like.materialId));
 };
 
-export const setMaterialLiked = async (materialId: string, userId: string) => {
-  await prisma.materialLike.upsert({
-    where: {
-      materialId_userId: {
-        materialId,
-        userId,
-      },
-    },
-    create: {
-      materialId,
-      userId,
-    },
-    update: {},
+export const setMaterialLiked = async (
+  materialId: string,
+  userId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<boolean> => {
+  const result = await client.materialLike.createMany({
+    data: [{ materialId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetMaterialLiked = async (materialId: string, userId: string) => {
-  await prisma.materialLike.deleteMany({
+export const unsetMaterialLiked = async (
+  materialId: string,
+  userId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<boolean> => {
+  const result = await client.materialLike.deleteMany({
     where: {
       materialId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countLikesForMaterial = async (materialId: string) => {

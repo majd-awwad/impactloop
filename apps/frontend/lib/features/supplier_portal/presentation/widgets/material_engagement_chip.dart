@@ -24,17 +24,17 @@ class MaterialEngagementChip extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final palette = switch (tone) {
       MaterialEngagementChipTone.views => (
-          background: colors.cardSurface.withValues(alpha: 0.90),
-          foreground: colors.primary,
-        ),
+        background: colors.cardSurface.withValues(alpha: 0.90),
+        foreground: colors.primary,
+      ),
       MaterialEngagementChipTone.likes => (
-          background: colors.cardSurface.withValues(alpha: 0.90),
-          foreground: colors.primary,
-        ),
+        background: colors.cardSurface.withValues(alpha: 0.90),
+        foreground: colors.primary,
+      ),
       MaterialEngagementChipTone.neutral => (
-          background: colors.cardSurface.withValues(alpha: 0.90),
-          foreground: colors.textSecondary,
-        ),
+        background: colors.cardSurface.withValues(alpha: 0.90),
+        foreground: colors.textSecondary,
+      ),
     };
 
     return Container(

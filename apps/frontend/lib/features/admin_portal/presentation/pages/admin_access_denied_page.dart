@@ -23,25 +23,21 @@ class AdminAccessDeniedPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.lock_outline,
-                    size: 46,
-                    color: scheme.error,
-                  ),
+                  Icon(Icons.lock_outline, size: 46, color: scheme.error),
                   const SizedBox(height: 14),
                   Text(
                     l.accessDeniedTitle,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
                     l.accessDeniedBody,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
+                      color: scheme.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 18),
@@ -59,4 +55,3 @@ class AdminAccessDeniedPage extends StatelessWidget {
     );
   }
 }
-

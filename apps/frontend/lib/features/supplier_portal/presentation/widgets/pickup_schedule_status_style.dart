@@ -38,9 +38,7 @@ class PickupScheduleStatusStyle {
   }
 
   /// Card badges represent reservation lifecycle, not calendar placement.
-  static PickupScheduleStatusStyle forItem(
-    SupplierPickupScheduleItem item,
-  ) {
+  static PickupScheduleStatusStyle forItem(SupplierPickupScheduleItem item) {
     return item.isCompleted ? _completed : _accepted;
   }
 

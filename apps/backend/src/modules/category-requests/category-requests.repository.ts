@@ -60,8 +60,9 @@ export const listCategoryRequestsWithDrafts = async (userId: string) => {
 export const findCategoryRequestByIdForOwner = async (
   id: string,
   userId: string,
+  client?: PrismaClientLike,
 ) => {
-  return prisma.categoryRequest.findFirst({
+  return (client ?? prisma).categoryRequest.findFirst({
     where: {
       id,
       requestedByUserId: userId,
@@ -72,13 +73,30 @@ export const findCategoryRequestByIdForOwner = async (
   });
 };
 
+/**
+ * Atomically consumes an unpublished approved owner-scoped category request.
+ * Binds to the exact authorized snapshot via expectedUpdatedAt and
+ * expectedApprovedCategoryId.
+ * Returns the number of rows updated; callers must treat 0 as conflict and
+ * roll back the surrounding transaction.
+ */
 export const markCategoryRequestPublished = async (input: {
   id: string;
   materialId: string;
+  requestedByUserId: string;
+  expectedUpdatedAt: Date;
+  expectedApprovedCategoryId: string;
   client?: PrismaClientLike;
-}) => {
-  return (input.client ?? prisma).categoryRequest.update({
-    where: { id: input.id },
+}): Promise<{ count: number }> => {
+  return (input.client ?? prisma).categoryRequest.updateMany({
+    where: {
+      id: input.id,
+      requestedByUserId: input.requestedByUserId,
+      status: "APPROVED",
+      approvedCategoryId: input.expectedApprovedCategoryId,
+      publishedMaterialId: null,
+      updatedAt: input.expectedUpdatedAt,
+    },
     data: {
       publishedMaterialId: input.materialId,
       publishedAt: new Date(),

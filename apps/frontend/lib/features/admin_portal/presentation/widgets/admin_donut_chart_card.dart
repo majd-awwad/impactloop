@@ -87,9 +87,7 @@ class AdminDonutChartCard extends StatelessWidget {
                             children: [
                               Text(
                                 centerValue!,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
+                                style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(
                                       fontWeight: FontWeight.w800,
                                       color: palette.textPrimary,
@@ -98,12 +96,8 @@ class AdminDonutChartCard extends StatelessWidget {
                               if (centerLabel != null)
                                 Text(
                                   centerLabel!,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelSmall
-                                      ?.copyWith(
-                                        color: palette.textSecondary,
-                                      ),
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(color: palette.textSecondary),
                                 ),
                             ],
                           ),
@@ -173,9 +167,9 @@ class _LegendRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: palette.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: palette.textSecondary),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -183,9 +177,9 @@ class _LegendRow extends StatelessWidget {
         Text(
           value.toString(),
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: palette.textPrimary,
-              ),
+            fontWeight: FontWeight.w800,
+            color: palette.textPrimary,
+          ),
         ),
       ],
     );

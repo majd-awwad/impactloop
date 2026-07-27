@@ -37,7 +37,7 @@ Reservation is the booking layer. Learning Hub build checklist items can link re
 | Material discovery/detail `availableQuantity` | **Implemented** | Public browse/detail DTO field |
 | Learner reserve UI | **Implemented** | Material detail quantity + explicit pickup/delivery fulfillment dialog |
 | Learner “My Reservations” UI | **Partial** | Rich list cards + `/learner/reservations/:id` detail route with 10-second polling; list cards link to detail |
-| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup + delivery scheduling), `needs_learner` tab, handover-code complete, overdue close/report/reschedule, learner-reschedule accept, delivery handover code, incident reports including **`mark-delivery-pickup-expired` UI** |
+| Supplier list/accept/decline/complete | **Partial** | Fulfillment-aware accept (pickup + delivery scheduling), paginated/filterable supplier list contract with canonical attention/action state, owner-scoped reservation detail read, `needs_learner` tab, handover-code complete, overdue close/report/reschedule, learner-reschedule accept, delivery handover code, incident reports including **`mark-delivery-pickup-expired` UI** |
 | Delivery learner UI | **Partial** | Request/status/tracking summary + polling map marker on delivery detail; not on self-pickup reservation cards |
 | Admin incident queue | **Implemented** | `/admin/no-show-reports` verify/reject/resolve |
 
@@ -107,7 +107,7 @@ Backend re-reservation after terminal states is allowed by the active-hold guard
 Verified against code (2026-07-10):
 
 - Reservation create has duplicate active-reservation protection, but no idempotency key or retry-safe "same request returns same reservation" behavior.
-- Notification coverage is partial. Persisted notifications exist for create, supplier accept/proposal, decline, learner cancel, expiry, and admin reschedule requests. No notification call was found for learner accepting a supplier proposal, learner submitting a delivery window, supplier accepting learner reschedule, supplier cancellation, supplier completion, or driver delivery completion.
+- Supplier notification coverage now persists canonical event rows for reservation request/cancel/expiry and delivery recovery reschedule requests. Supplier inbox reads revalidate the current reservation state and fail closed when the target is missing. Other learner/driver lifecycle gaps remain outside the Supplier Notifications contract.
 - Reservation-related reviews after completion are not implemented beyond the `Review` table and dashboard aggregation hooks.
 - Live delivery tracking stream, ETA, delivery cancellation/retry, and payment remain delivery-domain gaps.
 - Automated cleanup/backfill for stale legacy reservation quantities is not implemented; use the manual cleanup guidance below for shared dev databases.

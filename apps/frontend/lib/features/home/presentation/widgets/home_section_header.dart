@@ -119,19 +119,20 @@ class HomeSectionActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return FilledButton.icon(
       onPressed: onPressed,
-      style: AppStatusButtonStyle.filled(
-        context,
-        AppStatusTone.primary,
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
-        ),
-      ).copyWith(
-        minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
-        ),
-      ),
+      style:
+          AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.primary,
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+          ).copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            ),
+          ),
       icon: icon,
       label: Text(label),
     );

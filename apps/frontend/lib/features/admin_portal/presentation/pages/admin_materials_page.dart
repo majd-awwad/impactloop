@@ -134,9 +134,6 @@ String _formatReportReason(String reason) {
   }
 }
 
-String _formatStatusLabel(String status) =>
-    status.replaceAll('_', ' ').toLowerCase();
-
 Color _toneColor(AdminPalette palette, _BadgeTone tone) {
   switch (tone) {
     case _BadgeTone.success:
@@ -157,12 +154,6 @@ Color _toneColor(AdminPalette palette, _BadgeTone tone) {
       return palette.textSecondary;
   }
 }
-
-Color _cardAccent(BuildContext context, AdminMaterialListItem item) =>
-    AppStatusStyle.of(
-      context,
-      materialLifecycleStatusTone(item.status).appStatusTone,
-    ).foreground;
 
 class AdminMaterialsPage extends ConsumerStatefulWidget {
   const AdminMaterialsPage({super.key, this.initialStatus});
@@ -249,7 +240,6 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     final palette = context.adminPalette;
     final filters = ref.watch(_materialsFiltersProvider);
     final summaryAsync = ref.watch(adminMaterialsSummaryProvider);
-    final compact = MediaQuery.sizeOf(context).width < 900;
     final pageTint = palette.isDark
         ? palette.pageBackground
         : palette.primaryTeal.withValues(alpha: 0.04);
@@ -257,7 +247,7 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     return ColoredBox(
       color: pageTint,
       child: SingleChildScrollView(
-        padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 28),
+        padding: const EdgeInsetsDirectional.fromSTEB(28, 20, 28, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -271,79 +261,16 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
             summaryAsync.when(
               loading: () => const LinearProgressIndicator(),
               error: (_, _) => const SizedBox.shrink(),
-              data: (summary) => LayoutBuilder(
-                builder: (context, constraints) {
-                  final cardWidth = compact
-                      ? constraints.maxWidth
-                      : (constraints.maxWidth - 48) / 5;
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _SummaryMetricCard(
-                        width: cardWidth.clamp(140, 220),
-                        label: 'Total materials',
-                        value: summary.total,
-                        icon: Icons.inventory_2_outlined,
-                        accent: palette.primaryTeal,
-                      ),
-                      _SummaryMetricCard(
-                        width: cardWidth.clamp(140, 220),
-                        label: 'Available',
-                        value: summary.available,
-                        icon: Icons.check_circle_outline,
-                        accent: palette.green,
-                      ),
-                      _SummaryMetricCard(
-                        width: cardWidth.clamp(140, 220),
-                        label: 'Paid',
-                        value: summary.paid,
-                        icon: Icons.payments_outlined,
-                        accent: palette.purple,
-                      ),
-                      _SummaryMetricCard(
-                        width: cardWidth.clamp(140, 220),
-                        label: 'Unavailable',
-                        value: summary.unavailable,
-                        icon: Icons.visibility_off_outlined,
-                        accent: palette.textMuted,
-                      ),
-                      _SummaryMetricCard(
-                        width: cardWidth.clamp(140, 220),
-                        label: 'Reported',
-                        value: summary.reported,
-                        icon: Icons.flag_outlined,
-                        accent: palette.amber,
-                        highlight: summary.reported > 0,
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'MATERIALS',
-                  label: Text('Materials'),
-                  icon: Icon(Icons.inventory_2_outlined, size: 18),
-                ),
-                ButtonSegment(
-                  value: 'REPORTS',
-                  label: Text('Reported'),
-                  icon: Icon(Icons.flag_outlined, size: 18),
-                ),
-              ],
-              selected: {filters.tab},
-              onSelectionChanged: (value) {
-                ref
-                    .read(_materialsFiltersProvider.notifier)
-                    .setTab(value.first);
-              },
+              data: (summary) => _MaterialsKpiRow(summary: summary),
             ),
             const SizedBox(height: 16),
-            _FiltersBar(
+            _MaterialsTabSwitch(
+              value: filters.tab,
+              onChanged: (value) =>
+                  ref.read(_materialsFiltersProvider.notifier).setTab(value),
+            ),
+            const SizedBox(height: 16),
+            _FiltersPanel(
               searchController: _searchController,
               filters: filters,
               onSearch: (value) =>
@@ -367,8 +294,6 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
             const SizedBox(height: 16),
             if (filters.tab == 'MATERIALS')
               _MaterialsTab(
-                compact: compact,
-                onAction: _runAction,
                 onViewDetails: (id) => _showMaterialDetails(id),
                 onHide: (item) => _showHideDialog(item),
                 onUnavailable: (item) => _showUnavailableDialog(item),
@@ -376,7 +301,6 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
               )
             else
               _ReportsTab(
-                compact: compact,
                 onAction: _runAction,
                 onViewMaterial: (id) => _showMaterialDetails(id),
                 onReject: (report) => _showRejectReportDialog(report),
@@ -785,64 +709,173 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
   }
 }
 
-class _SummaryMetricCard extends StatelessWidget {
-  const _SummaryMetricCard({
-    required this.width,
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.accent,
-    this.highlight = false,
-  });
+/// Balanced 5-up KPI row on wide desktop; wraps to fewer columns on
+/// medium/narrow widths without leaving an oversized trailing card.
+class _MaterialsKpiRow extends StatelessWidget {
+  const _MaterialsKpiRow({required this.summary});
 
-  final double width;
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color accent;
-  final bool highlight;
+  final AdminMaterialsSummary summary;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+
+    final cards = <_KpiCard>[
+      _KpiCard(
+        icon: Icons.inventory_2_outlined,
+        label: 'Total materials',
+        value: summary.total,
+        hint: 'All materials in system',
+        accent: palette.primaryTeal,
+      ),
+      _KpiCard(
+        icon: Icons.check_circle_outline,
+        label: 'Available',
+        value: summary.available,
+        hint: 'Ready to reserve',
+        accent: palette.green,
+      ),
+      _KpiCard(
+        icon: Icons.payments_outlined,
+        label: 'Paid',
+        value: summary.paid,
+        hint: 'Paid materials',
+        accent: palette.purple,
+      ),
+      _KpiCard(
+        icon: Icons.visibility_off_outlined,
+        label: 'Unavailable',
+        value: summary.unavailable,
+        hint: 'Not available',
+        accent: palette.textMuted,
+      ),
+      _KpiCard(
+        icon: Icons.flag_outlined,
+        label: 'Reported',
+        value: summary.reported,
+        hint: 'Flagged by users',
+        accent: palette.amber,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = width >= 1000
+            ? 5
+            : width >= 720
+            ? 3
+            : width >= 480
+            ? 2
+            : 1;
+        const spacing = 14.0;
+
+        final rows = <Widget>[];
+        for (var i = 0; i < cards.length; i += columns) {
+          final chunk = cards.skip(i).take(columns).toList();
+          rows.add(
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: i + columns < cards.length ? spacing : 0,
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var j = 0; j < columns; j++) ...[
+                      if (j > 0) const SizedBox(width: spacing),
+                      Expanded(
+                        child: j < chunk.length
+                            ? chunk[j]
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows,
+        );
+      },
+    );
+  }
+}
+
+class _KpiCard extends StatelessWidget {
+  const _KpiCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.hint,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final String hint;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
     return Container(
-      width: width,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
         color: palette.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: highlight
-              ? accent.withValues(alpha: 0.55)
-              : palette.cardBorder,
-          width: highlight ? 1.5 : 1,
-        ),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: palette.cardBorder),
         boxShadow: [
           BoxShadow(
             color: palette.cardShadow,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 40,
             height: 40,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(icon, color: accent, size: 22),
+            child: Icon(icon, color: accent, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label, style: AdminTypography.kpiHelper(palette)),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AdminTypography.kpiHelper(palette).copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: palette.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Text('$value', style: AdminTypography.kpiValue(palette)),
+                const SizedBox(height: 3),
+                Text(
+                  hint,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AdminTypography.kpiHelper(palette),
+                ),
               ],
             ),
           ),
@@ -852,8 +885,123 @@ class _SummaryMetricCard extends StatelessWidget {
   }
 }
 
-class _FiltersBar extends StatelessWidget {
-  const _FiltersBar({
+/// Compact left-aligned Materials/Reported switch matching the reference —
+/// a bordered pill container with a solid green fill on the active segment.
+class _MaterialsTabSwitch extends StatelessWidget {
+  const _MaterialsTabSwitch({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  static const _preferredWidth = 410.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth < _preferredWidth
+            ? constraints.maxWidth
+            : _preferredWidth;
+        return Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Container(
+            width: width,
+            height: 42,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: palette.cardBackground,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: palette.cardBorder),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _TabSegment(
+                    label: 'Materials',
+                    icon: Icons.grid_view_rounded,
+                    selected: value == 'MATERIALS',
+                    onTap: () => onChanged('MATERIALS'),
+                  ),
+                ),
+                Expanded(
+                  child: _TabSegment(
+                    label: 'Reported',
+                    icon: Icons.flag_outlined,
+                    selected: value == 'REPORTS',
+                    onTap: () => onChanged('REPORTS'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _TabSegment extends StatelessWidget {
+  const _TabSegment({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? palette.primaryTeal : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: selected ? Colors.white : palette.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? Colors.white : palette.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Dense rounded filter panel: search + supported dropdowns on one row,
+/// Reset/Refresh on a second row. Category/Location controls are omitted —
+/// they are not wired to the current materials API/filters state.
+class _FiltersPanel extends StatelessWidget {
+  const _FiltersPanel({
     required this.searchController,
     required this.filters,
     required this.onSearch,
@@ -878,8 +1026,88 @@ class _FiltersBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final compact = MediaQuery.sizeOf(context).width < 900;
+
+    final searchField = TextField(
+      controller: searchController,
+      decoration: InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: palette.cardBackground,
+        hintText: 'Search materials, suppliers, categories...',
+        prefixIcon: Icon(Icons.search, size: 19, color: palette.textSecondary),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 13,
+          horizontal: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: palette.cardBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: palette.primaryTeal, width: 1.4),
+        ),
+      ),
+      onSubmitted: onSearch,
+      onChanged: onSearch,
+    );
+
+    final statusField = _FilterField(
+      label: 'Status',
+      value: filters.status,
+      options: const {
+        'ALL': 'All statuses',
+        'AVAILABLE': 'Available',
+        'UNAVAILABLE': 'Unavailable',
+        'RESERVED': 'Reserved',
+        'REUSED': 'Reused',
+      },
+      onChanged: onStatusChanged,
+    );
+    final priceField = _FilterField(
+      label: 'Price',
+      value: filters.priceFilter,
+      options: const {'ALL': 'All', 'FREE': 'Free', 'PAID': 'Paid'},
+      onChanged: onPriceFilterChanged,
+    );
+    final reportsField = _FilterField(
+      label: 'Reports',
+      value: filters.reportStatus,
+      options: const {
+        'ALL': 'All',
+        'PENDING': 'Has pending reports',
+        'HAS_REPORTS': 'Reported',
+        'NONE': 'No reports',
+      },
+      onChanged: onReportStatusChanged,
+    );
+
+    final resetButton = OutlinedButton.icon(
+      onPressed: onReset,
+      icon: const Icon(Icons.filter_alt_off_outlined, size: 17),
+      label: const Text('Reset'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: palette.textSecondary,
+        side: BorderSide(color: palette.cardBorder),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+    final refreshButton = FilledButton.icon(
+      onPressed: onRefresh,
+      icon: const Icon(Icons.refresh, size: 17),
+      label: const Text('Refresh'),
+      style: FilledButton.styleFrom(
+        backgroundColor: palette.primaryTeal,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -895,85 +1123,39 @@ class _FiltersBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: searchController,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: palette.bannerBackground,
-              hintText: 'Search materials, suppliers, categories...',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  searchController.clear();
-                  onSearch('');
-                },
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: palette.cardBorder),
-              ),
-            ),
-            onSubmitted: onSearch,
-            onChanged: onSearch,
-          ),
-          if (showMaterialFilters) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+          if (!showMaterialFilters)
+            searchField
+          else if (compact)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _FilterDropdown(
-                  key: ValueKey('status-${filters.status}'),
-                  label: 'Status',
-                  value: filters.status,
-                  options: const {
-                    'ALL': 'All statuses',
-                    'AVAILABLE': 'Available',
-                    'UNAVAILABLE': 'Unavailable',
-                    'RESERVED': 'Reserved',
-                    'REUSED': 'Reused',
-                  },
-                  onChanged: onStatusChanged,
-                ),
-                _FilterDropdown(
-                  key: ValueKey('price-${filters.priceFilter}'),
-                  label: 'Price',
-                  value: filters.priceFilter,
-                  options: const {'ALL': 'All', 'FREE': 'Free', 'PAID': 'Paid'},
-                  onChanged: onPriceFilterChanged,
-                ),
-                _FilterDropdown(
-                  key: ValueKey('reports-${filters.reportStatus}'),
-                  label: 'Reports',
-                  value: filters.reportStatus,
-                  options: const {
-                    'ALL': 'All',
-                    'PENDING': 'Has pending reports',
-                    'HAS_REPORTS': 'Reported',
-                    'NONE': 'No reports',
-                  },
-                  onChanged: onReportStatusChanged,
-                ),
+                searchField,
+                const SizedBox(height: 10),
+                statusField,
+                const SizedBox(height: 10),
+                priceField,
+                const SizedBox(height: 10),
+                reportsField,
+              ],
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: searchField),
+                const SizedBox(width: 12),
+                SizedBox(width: 168, child: statusField),
+                const SizedBox(width: 12),
+                SizedBox(width: 130, child: priceField),
+                const SizedBox(width: 12),
+                SizedBox(width: 190, child: reportsField),
               ],
             ),
-          ],
           const SizedBox(height: 12),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: onReset,
-                icon: const Icon(Icons.filter_alt_off, size: 18),
-                label: const Text('Reset'),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: onRefresh,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Refresh'),
-              ),
-            ],
+            spacing: 10,
+            runSpacing: 10,
+            children: [resetButton, refreshButton],
           ),
         ],
       ),
@@ -981,9 +1163,8 @@ class _FiltersBar extends StatelessWidget {
   }
 }
 
-class _FilterDropdown extends StatelessWidget {
-  const _FilterDropdown({
-    super.key,
+class _FilterField extends StatelessWidget {
+  const _FilterField({
     required this.label,
     required this.value,
     required this.options,
@@ -997,37 +1178,75 @@ class _FilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownMenu<String>(
-      label: Text(label),
-      initialSelection: value,
-      dropdownMenuEntries: options.entries
-          .map(
-            (entry) => DropdownMenuEntry(value: entry.key, label: entry.value),
-          )
-          .toList(),
-      onSelected: (selected) {
-        if (selected != null) onChanged(selected);
-      },
+    final palette = context.adminPalette;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: AdminTypography.kpiHelper(
+            palette,
+          ).copyWith(fontWeight: FontWeight.w700, color: palette.textSecondary),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          key: ValueKey('$label-$value'),
+          initialValue: value,
+          isExpanded: true,
+          icon: Icon(
+            Icons.keyboard_arrow_down,
+            size: 18,
+            color: palette.textSecondary,
+          ),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: palette.textPrimary,
+          ),
+          decoration: InputDecoration(
+            isDense: true,
+            filled: true,
+            fillColor: palette.cardBackground,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: palette.cardBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: palette.primaryTeal, width: 1.4),
+            ),
+          ),
+          items: options.entries
+              .map(
+                (entry) => DropdownMenuItem(
+                  value: entry.key,
+                  child: Text(entry.value, overflow: TextOverflow.ellipsis),
+                ),
+              )
+              .toList(),
+          onChanged: (selected) {
+            if (selected != null) onChanged(selected);
+          },
+        ),
+      ],
     );
   }
 }
 
 class _MaterialsTab extends ConsumerWidget {
   const _MaterialsTab({
-    required this.compact,
-    required this.onAction,
     required this.onViewDetails,
     required this.onHide,
     required this.onUnavailable,
     required this.onRestore,
   });
 
-  final bool compact;
-  final Future<void> Function(
-    Future<void> Function() action, {
-    String successMessage,
-  })
-  onAction;
   final void Function(String id) onViewDetails;
   final void Function(AdminMaterialListItem item) onHide;
   final void Function(AdminMaterialListItem item) onUnavailable;
@@ -1051,21 +1270,24 @@ class _MaterialsTab extends ConsumerWidget {
             subtitle: 'Try adjusting your filters or refresh the list.',
           );
         }
-        return Column(
-          children: items
-              .map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _MaterialCard(
-                    item: item,
-                    onDetails: () => onViewDetails(item.materialId),
-                    onHide: () => onHide(item),
-                    onUnavailable: () => onUnavailable(item),
-                    onRestore: () => onRestore(item),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 900;
+            return _ListShell(
+              rows: [
+                for (var i = 0; i < items.length; i++)
+                  _MaterialRow(
+                    item: items[i],
+                    compact: compact,
+                    showDivider: i < items.length - 1,
+                    onDetails: () => onViewDetails(items[i].materialId),
+                    onHide: () => onHide(items[i]),
+                    onUnavailable: () => onUnavailable(items[i]),
+                    onRestore: () => onRestore(items[i]),
                   ),
-                ),
-              )
-              .toList(),
+              ],
+            );
+          },
         );
       },
     );
@@ -1074,14 +1296,12 @@ class _MaterialsTab extends ConsumerWidget {
 
 class _ReportsTab extends ConsumerWidget {
   const _ReportsTab({
-    required this.compact,
     required this.onAction,
     required this.onViewMaterial,
     required this.onReject,
     required this.onHideFromReport,
   });
 
-  final bool compact;
   final Future<void> Function(
     Future<void> Function() action, {
     String successMessage,
@@ -1109,164 +1329,45 @@ class _ReportsTab extends ConsumerWidget {
             subtitle: 'Reported materials will appear here for admin review.',
           );
         }
-        return Column(
-          children: items
-              .map(
-                (report) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _ReportCard(
-                    report: report,
-                    onViewMaterial: () => onViewMaterial(report.materialId),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 900;
+            return _ListShell(
+              rows: [
+                for (var i = 0; i < items.length; i++)
+                  _ReportRow(
+                    report: items[i],
+                    compact: compact,
+                    showDivider: i < items.length - 1,
+                    onViewMaterial: () => onViewMaterial(items[i].materialId),
                     onResolve: () => onAction(
                       () => ref
                           .read(adminMaterialsApiProvider)
-                          .resolveReport(id: report.reportId),
+                          .resolveReport(id: items[i].reportId),
                       successMessage: 'Report resolved.',
                     ),
-                    onReject: () => onReject(report),
-                    onHideMaterial: () => onHideFromReport(report),
+                    onReject: () => onReject(items[i]),
+                    onHideMaterial: () => onHideFromReport(items[i]),
                   ),
-                ),
-              )
-              .toList(),
+              ],
+            );
+          },
         );
       },
     );
   }
 }
 
-enum _CardActionVariant { neutral, hide, unavailable, restore }
+/// Single rounded white container that wraps every row — replaces the old
+/// stack of separately-shadowed cards with subtle in-list dividers.
+class _ListShell extends StatelessWidget {
+  const _ListShell({required this.rows});
 
-class _CardActionButton extends StatelessWidget {
-  const _CardActionButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-    required this.variant,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-  final _CardActionVariant variant;
-
-  static const _height = 36.0;
-  static const _radius = 8.0;
-  static const _iconSize = 16.0;
+  final List<Widget> rows;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final labelStyle = AdminTypography.kpiHelper(
-      palette,
-    ).copyWith(fontSize: 13, fontWeight: FontWeight.w600);
-
-    switch (variant) {
-      case _CardActionVariant.restore:
-        return FilledButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, size: _iconSize),
-          label: Text(label, style: labelStyle.copyWith(color: Colors.white)),
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, _height),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            backgroundColor: palette.green,
-            foregroundColor: Colors.white,
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_radius),
-            ),
-          ),
-        );
-      case _CardActionVariant.neutral:
-        return OutlinedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, size: _iconSize, color: palette.textSecondary),
-          label: Text(
-            label,
-            style: labelStyle.copyWith(color: palette.textSecondary),
-          ),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, _height),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            foregroundColor: palette.textSecondary,
-            side: BorderSide(color: palette.cardBorder),
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_radius),
-            ),
-          ),
-        );
-      case _CardActionVariant.hide:
-        return OutlinedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, size: _iconSize, color: palette.amber),
-          label: Text(label, style: labelStyle.copyWith(color: palette.amber)),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, _height),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            foregroundColor: palette.amber,
-            backgroundColor: palette.amber.withValues(alpha: 0.1),
-            side: BorderSide(color: palette.amber.withValues(alpha: 0.45)),
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_radius),
-            ),
-          ),
-        );
-      case _CardActionVariant.unavailable:
-        return OutlinedButton.icon(
-          onPressed: onPressed,
-          icon: Icon(icon, size: _iconSize, color: palette.textPrimary),
-          label: Text(
-            label,
-            style: labelStyle.copyWith(color: palette.textPrimary),
-          ),
-          style: OutlinedButton.styleFrom(
-            minimumSize: const Size(0, _height),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            foregroundColor: palette.textPrimary,
-            backgroundColor: palette.textMuted.withValues(alpha: 0.12),
-            side: BorderSide(color: palette.textMuted.withValues(alpha: 0.55)),
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_radius),
-            ),
-          ),
-        );
-    }
-  }
-}
-
-class _MaterialCard extends StatelessWidget {
-  const _MaterialCard({
-    required this.item,
-    required this.onDetails,
-    required this.onHide,
-    required this.onUnavailable,
-    required this.onRestore,
-  });
-
-  final AdminMaterialListItem item;
-  final VoidCallback onDetails;
-  final VoidCallback onHide;
-  final VoidCallback onUnavailable;
-  final VoidCallback onRestore;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final accent = _cardAccent(context, item);
-    final date = DateFormat.yMMMd().format(item.createdAt);
-    final priceLabel = item.isFree
-        ? 'Free'
-        : '${item.price?.toStringAsFixed(0) ?? '—'} ${item.currency}';
-    final moderation = AdminMaterialModerationPolicy.actionsFor(item.status);
-
     return Container(
       decoration: BoxDecoration(
         color: palette.cardBackground,
@@ -1280,132 +1381,355 @@ class _MaterialCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border(left: BorderSide(color: accent, width: 4)),
-        ),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: rows,
+      ),
+    );
+  }
+}
+
+/// One compact horizontal row on desktop (image | identity | metrics+actions);
+/// stacks into a compact card on narrow widths.
+class _MaterialRow extends StatefulWidget {
+  const _MaterialRow({
+    required this.item,
+    required this.compact,
+    required this.showDivider,
+    required this.onDetails,
+    required this.onHide,
+    required this.onUnavailable,
+    required this.onRestore,
+  });
+
+  final AdminMaterialListItem item;
+  final bool compact;
+  final bool showDivider;
+  final VoidCallback onDetails;
+  final VoidCallback onHide;
+  final VoidCallback onUnavailable;
+  final VoidCallback onRestore;
+
+  @override
+  State<_MaterialRow> createState() => _MaterialRowState();
+}
+
+class _MaterialRowState extends State<_MaterialRow> {
+  var _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final item = widget.item;
+    final moderation = AdminMaterialModerationPolicy.actionsFor(item.status);
+
+    final image = _RowImage(imageUrl: item.imageUrl);
+    final identity = _MaterialIdentityBlock(item: item, moderation: moderation);
+    final summary = _MaterialManagementSummary(item: item);
+    final actions = _MaterialActionArea(
+      moderation: moderation,
+      onDetails: widget.onDetails,
+      onHide: widget.onHide,
+      onUnavailable: widget.onUnavailable,
+      onRestore: widget.onRestore,
+    );
+
+    final content = widget.compact
+        ? Padding(
+            padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _MaterialThumb(imageUrl: item.imageUrl),
-                const SizedBox(width: 12),
-                Expanded(
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    image,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(child: identity),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                summary,
+                const SizedBox(height: AppSpacing.sm),
+                actions,
+              ],
+            ),
+          )
+        : Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                image,
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: identity),
+                const SizedBox(width: AppSpacing.md),
+                Container(
+                  width: 1,
+                  height: 88,
+                  color: colors.borderSubtle.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: 280,
+                    maxWidth: 340,
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(
-                        item.title,
-                        style: AdminTypography.sectionTitle(palette),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.supplierName,
-                        style: AdminTypography.pageSubtitle(palette),
-                      ),
-                      Text(
-                        item.categoryName,
-                        style: AdminTypography.kpiHelper(palette),
-                      ),
+                      summary,
+                      const SizedBox(height: AppSpacing.sm + 4),
+                      actions,
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                MaterialStatusBadge(
-                  label: _formatStatusLabel(item.status),
-                  tone: materialLifecycleStatusTone(item.status),
-                ),
-                _SemanticBadge(
-                  label: item.isFree ? 'Free' : 'Paid',
-                  tone: item.isFree ? _BadgeTone.teal : _BadgeTone.paid,
-                ),
-                _SemanticBadge(
-                  label: priceLabel,
-                  tone: item.isFree ? _BadgeTone.teal : _BadgeTone.paid,
-                ),
-                _SemanticBadge(
-                  label: item.condition.replaceAll('_', ' '),
-                  tone: _BadgeTone.neutral,
-                ),
-                AppStatusBadge(
-                  label: _formatStatusLabel(item.supplierVerificationStatus),
-                  tone: supplierVerificationStatusTone(
-                    item.supplierVerificationStatus,
-                  ),
-                ),
-                if (item.pendingReportCount > 0)
-                  _SemanticBadge(
-                    label:
-                        '${item.pendingReportCount} pending report${item.pendingReportCount == 1 ? '' : 's'}',
-                    tone: _BadgeTone.warning,
-                  )
-                else if (item.reportCount > 0)
-                  _SemanticBadge(
-                    label: '${item.reportCount} report(s)',
-                    tone: _BadgeTone.warning,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${item.city}${item.area == null ? '' : ', ${item.area}'} • ${item.quantity} ${item.unit} • $date',
-              style: AdminTypography.kpiHelper(palette),
-            ),
-            const SizedBox(height: 12),
-            if (moderation.listLockNote != null) ...[
-              Text(
-                moderation.listLockNote!,
-                style: AdminTypography.kpiHelper(palette).copyWith(
-                  color: palette.textMuted,
-                  fontStyle: FontStyle.italic,
+          );
+
+    final row = Container(
+      decoration: BoxDecoration(
+        color: _hovered
+            ? colors.surfaceMuted.withValues(alpha: 0.5)
+            : Colors.transparent,
+        border: widget.showDivider
+            ? Border(bottom: BorderSide(color: colors.borderSubtle))
+            : null,
+      ),
+      child: content,
+    );
+
+    if (widget.compact) return row;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: row,
+    );
+  }
+}
+
+/// Fixed-size image tile shared by both tabs so rows stay visually aligned.
+class _RowImage extends StatelessWidget {
+  const _RowImage({this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final resolved = imageUrl == null || imageUrl!.isEmpty
+        ? null
+        : ApiConfig.resolveMediaUrl(imageUrl!);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(11),
+      child: Container(
+        width: 140,
+        height: 96,
+        color: colors.surfaceMuted,
+        alignment: Alignment.center,
+        child: resolved == null
+            ? Icon(Icons.image_outlined, color: colors.textMuted, size: 26)
+            : Image.network(
+                resolved,
+                width: 140,
+                height: 96,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Icon(
+                  Icons.broken_image_outlined,
+                  color: colors.textMuted,
+                  size: 26,
                 ),
               ),
-              const SizedBox(height: 8),
-            ],
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _CardActionButton(
-                  label: 'Details',
-                  icon: Icons.visibility_outlined,
-                  onPressed: onDetails,
-                  variant: _CardActionVariant.neutral,
-                ),
-                if (moderation.canHide)
-                  _CardActionButton(
-                    label: 'Hide',
-                    icon: Icons.visibility_off_outlined,
-                    onPressed: onHide,
-                    variant: _CardActionVariant.hide,
-                  ),
-                if (moderation.canMarkUnavailable)
-                  _CardActionButton(
-                    label: 'Mark unavailable',
-                    icon: Icons.block_outlined,
-                    onPressed: onUnavailable,
-                    variant: _CardActionVariant.unavailable,
-                  ),
-                if (moderation.canRestore)
-                  _CardActionButton(
-                    label: 'Restore',
-                    icon: Icons.restore,
-                    onPressed: onRestore,
-                    variant: _CardActionVariant.restore,
-                  ),
-              ],
+      ),
+    );
+  }
+}
+
+class _MaterialIdentityBlock extends StatelessWidget {
+  const _MaterialIdentityBlock({required this.item, required this.moderation});
+
+  final AdminMaterialListItem item;
+  final AdminMaterialModerationActions moderation;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final date = DateFormat.yMMMd().format(item.createdAt);
+    final location = [
+      item.city,
+      if (item.area != null && item.area!.trim().isNotEmpty) item.area,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          item.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${item.supplierName}  •  ${item.categoryName}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _MaterialBadgeRow(item: item),
+        const SizedBox(height: 8),
+        _MetadataLine(
+          location: location,
+          quantity: '${_formatQuantity(item.quantity)} ${item.unit}'.trim(),
+          condition: item.condition,
+          date: date,
+        ),
+        if (moderation.listLockNote != null) ...[
+          const SizedBox(height: 6),
+          const _LockIndicator(),
+        ],
+      ],
+    );
+  }
+}
+
+String _formatQuantity(double value) {
+  return value == value.roundToDouble()
+      ? value.toStringAsFixed(0)
+      : value.toString();
+}
+
+/// One compact muted metadata row: location · quantity · condition · date.
+/// Condition is intentionally plain text (no chip/border) so it reads as
+/// metadata rather than another status pill.
+class _MetadataLine extends StatelessWidget {
+  const _MetadataLine({
+    required this.location,
+    required this.quantity,
+    required this.condition,
+    required this.date,
+  });
+
+  final String location;
+  final String quantity;
+  final String condition;
+  final String date;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final style = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: colors.textMuted, height: 1.3);
+
+    Widget chip(IconData icon, String text) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: colors.textMuted),
+        const SizedBox(width: 4),
+        Text(text, style: style),
+      ],
+    );
+
+    Widget dot() => Text('·', style: style);
+
+    final parts = <Widget>[
+      if (location.isNotEmpty) chip(Icons.location_on_outlined, location),
+      if (quantity.trim().isNotEmpty)
+        chip(Icons.inventory_2_outlined, quantity),
+      if (condition.trim().isNotEmpty)
+        Text(_displayEnum(condition), style: style),
+      chip(Icons.calendar_today_outlined, date),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (var i = 0; i < parts.length; i++) ...[if (i > 0) dot(), parts[i]],
+      ],
+    );
+  }
+}
+
+/// Strict 3-badge cap: workflow status, Free/Paid, price when paid.
+/// Condition moved to the metadata line; supplier verification (moderation)
+/// status is shown once, in the right-hand management summary only —
+/// duplicating it here would repeat the same fact twice on one row.
+class _MaterialBadgeRow extends StatelessWidget {
+  const _MaterialBadgeRow({required this.item});
+
+  final AdminMaterialListItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final priceLabel = item.isFree
+        ? null
+        : '${item.price?.toStringAsFixed(0) ?? '—'} ${item.currency}';
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        MaterialStatusBadge(
+          label: _displayEnum(item.status),
+          tone: materialLifecycleStatusTone(item.status),
+        ),
+        _SemanticBadge(
+          label: item.isFree ? 'Free' : 'Paid',
+          tone: item.isFree ? _BadgeTone.teal : _BadgeTone.paid,
+        ),
+        if (priceLabel != null)
+          _SemanticBadge(label: priceLabel, tone: _BadgeTone.paid),
+      ],
+    );
+  }
+}
+
+/// Compact moderation-lock indicator: just an icon and short text, no
+/// box/border, so it never meaningfully increases row height. The full
+/// explanation is available via tooltip/semantics on hover or long-press.
+class _LockIndicator extends StatelessWidget {
+  const _LockIndicator();
+
+  static const _fullReason =
+      'Moderation actions are locked due to the current reservation or reuse status.';
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Tooltip(
+      message: _fullReason,
+      child: Semantics(
+        label: _fullReason,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 13, color: colors.warningText),
+            const SizedBox(width: 4),
+            Text(
+              'Moderation locked',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.warningText,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -1414,42 +1738,232 @@ class _MaterialCard extends StatelessWidget {
   }
 }
 
-class _MaterialThumb extends StatelessWidget {
-  const _MaterialThumb({this.imageUrl});
+/// Top level of the management cluster: an optional reports metric on the
+/// left (only rendered when there is something real to report) and the
+/// moderation status pinned to the right — shown once, not repeated in the
+/// left badge row. Views are not exposed by the current admin materials
+/// list API.
+class _MaterialManagementSummary extends StatelessWidget {
+  const _MaterialManagementSummary({required this.item});
 
-  final String? imageUrl;
+  final AdminMaterialListItem item;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final resolved = imageUrl == null || imageUrl!.isEmpty
-        ? null
-        : ApiConfig.resolveMediaUrl(imageUrl!);
+    final verificationTone = supplierVerificationStatusTone(
+      item.supplierVerificationStatus,
+    );
+    final verificationStyle = AppStatusStyle.of(context, verificationTone);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 72,
-        height: 72,
-        color: palette.bannerBackground,
-        child: resolved == null
-            ? Icon(Icons.image_outlined, color: palette.textMuted)
-            : Image.network(
-                resolved,
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) =>
-                    Icon(Icons.broken_image_outlined, color: palette.textMuted),
-              ),
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (item.reportCount > 0) _ReportsMetric(item: item),
+        const Spacer(),
+        Icon(
+          Icons.verified_outlined,
+          size: 14,
+          color: verificationStyle.foreground,
+        ),
+        const SizedBox(width: 6),
+        AppStatusBadge(
+          label: _displayEnum(item.supplierVerificationStatus),
+          tone: verificationTone,
+        ),
+      ],
     );
   }
 }
 
-class _ReportCard extends StatelessWidget {
-  const _ReportCard({
+/// Compact reports metric — only ever rendered when `reportCount > 0`, so
+/// a row with no reports never reserves a metric column. Prioritizes the
+/// pending (unresolved) count, since that is the actionable figure; the
+/// warning tone is reserved for rows that actually have pending reports.
+class _ReportsMetric extends StatelessWidget {
+  const _ReportsMetric({required this.item});
+
+  final AdminMaterialListItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final hasPending = item.pendingReportCount > 0;
+    final count = hasPending ? item.pendingReportCount : item.reportCount;
+    final tone = hasPending ? colors.warningText : colors.textSecondary;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.flag_outlined, size: 15, color: tone),
+        const SizedBox(width: 6),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$count',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: tone,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+            Text(
+              'Reports',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.textMuted,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// View details + overflow menu with the direct Hide/Mark
+/// unavailable/Restore shortcuts. The overflow already surfaces every real,
+/// currently-valid moderation action, so a separate "Review" button (which
+/// only reopened the same details dialog) is intentionally not shown.
+class _MaterialActionArea extends StatelessWidget {
+  const _MaterialActionArea({
+    required this.moderation,
+    required this.onDetails,
+    required this.onHide,
+    required this.onUnavailable,
+    required this.onRestore,
+  });
+
+  final AdminMaterialModerationActions moderation;
+  final VoidCallback onDetails;
+  final VoidCallback onHide;
+  final VoidCallback onUnavailable;
+  final VoidCallback onRestore;
+
+  static ButtonStyle _compactStyle(BuildContext context, AppStatusTone tone) {
+    return AppStatusButtonStyle.outlined(context, tone).merge(
+      OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 42),
+        textStyle: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm + 4,
+          vertical: AppSpacing.sm,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detailsButton = OutlinedButton.icon(
+      onPressed: onDetails,
+      icon: const Icon(Icons.visibility_outlined, size: 16),
+      label: const Text('View details'),
+      style: _compactStyle(context, AppStatusTone.neutral),
+    );
+
+    final overflowItems = <PopupMenuEntry<VoidCallback>>[
+      if (moderation.canHide)
+        PopupMenuItem<VoidCallback>(
+          value: onHide,
+          child: const _OverflowMenuLabel(
+            icon: Icons.visibility_off_outlined,
+            label: 'Hide material',
+            tone: AppStatusTone.danger,
+          ),
+        ),
+      if (moderation.canMarkUnavailable)
+        PopupMenuItem<VoidCallback>(
+          value: onUnavailable,
+          child: const _OverflowMenuLabel(
+            icon: Icons.block_outlined,
+            label: 'Mark unavailable',
+            tone: AppStatusTone.warning,
+          ),
+        ),
+      if (moderation.canRestore)
+        PopupMenuItem<VoidCallback>(
+          value: onRestore,
+          child: const _OverflowMenuLabel(
+            icon: Icons.restore,
+            label: 'Restore',
+            tone: AppStatusTone.primary,
+          ),
+        ),
+    ];
+
+    final overflowButton = overflowItems.isEmpty
+        ? null
+        : SizedBox(
+            width: 42,
+            height: 42,
+            child: PopupMenuButton<VoidCallback>(
+              tooltip: 'More actions',
+              icon: Icon(
+                Icons.more_vert,
+                size: 18,
+                color: AppThemeColors.of(context).textMuted,
+              ),
+              padding: EdgeInsets.zero,
+              onSelected: (action) => action(),
+              itemBuilder: (menuContext) => overflowItems,
+            ),
+          );
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        detailsButton,
+        if (overflowButton != null) const SizedBox(width: AppSpacing.sm),
+        ?overflowButton,
+      ],
+    );
+  }
+}
+
+class _OverflowMenuLabel extends StatelessWidget {
+  const _OverflowMenuLabel({
+    required this.icon,
+    required this.label,
+    required this.tone,
+  });
+
+  final IconData icon;
+  final String label;
+  final AppStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppStatusStyle.of(context, tone);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: style.foreground),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: style.foreground,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// One compact horizontal row for a reported material; reuses the same
+/// image/identity/metrics/actions structure as [_MaterialRow].
+class _ReportRow extends StatefulWidget {
+  const _ReportRow({
     required this.report,
+    required this.compact,
+    required this.showDivider,
     required this.onViewMaterial,
     required this.onResolve,
     required this.onReject,
@@ -1457,146 +1971,378 @@ class _ReportCard extends StatelessWidget {
   });
 
   final AdminMaterialReportListItem report;
+  final bool compact;
+  final bool showDivider;
   final VoidCallback onViewMaterial;
   final VoidCallback onResolve;
   final VoidCallback onReject;
   final VoidCallback onHideMaterial;
 
   @override
+  State<_ReportRow> createState() => _ReportRowState();
+}
+
+class _ReportRowState extends State<_ReportRow> {
+  var _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final created = DateFormat.yMMMd().add_jm().format(report.createdAt);
+    final colors = AppThemeColors.of(context);
+    final report = widget.report;
     final canHideMaterial = AdminMaterialModerationPolicy.canHide(
       report.materialStatus,
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.amber.withValues(alpha: 0.35)),
-        boxShadow: [
-          BoxShadow(
-            color: palette.cardShadow,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ColoredBox(color: palette.amber, child: const SizedBox(width: 4)),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
+    const image = _ReportThumb();
+    final identity = _ReportIdentityBlock(report: report);
+    final metrics = _ReportMetricsBlock(report: report);
+    final actions = _ReportActionArea(
+      canHideMaterial: canHideMaterial,
+      onViewMaterial: widget.onViewMaterial,
+      onResolve: widget.onResolve,
+      onReject: widget.onReject,
+      onHideMaterial: widget.onHideMaterial,
+    );
+
+    final content = widget.compact
+        ? Padding(
+            padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    image,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(child: identity),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm + 2),
+                metrics,
+                const SizedBox(height: AppSpacing.sm + 2),
+                actions,
+              ],
+            ),
+          )
+        : Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 6,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                image,
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: identity),
+                const SizedBox(width: AppSpacing.lg - 4),
+                Container(
+                  width: 1,
+                  height: 92,
+                  color: colors.borderSubtle.withValues(alpha: 0.55),
+                ),
+                const SizedBox(width: AppSpacing.lg - 4),
+                SizedBox(
+                  width: 310,
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        report.materialTitle,
-                        style: AdminTypography.sectionTitle(palette),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${report.supplierName} • reported by ${report.reporterName}',
-                        style: AdminTypography.pageSubtitle(palette),
-                      ),
-                      Text(
-                        report.reporterEmail,
-                        style: AdminTypography.kpiHelper(palette),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          _SemanticBadge(
-                            label: _formatReportReason(report.reason),
-                            tone: _BadgeTone.warning,
-                          ),
-                          AppStatusBadge(
-                            label: _formatStatusLabel(report.status),
-                            tone: reviewStatusTone(report.status),
-                          ),
-                        ],
-                      ),
-                      if (report.note != null &&
-                          report.note!.trim().isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          report.note!,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: AdminTypography.pageSubtitle(palette),
-                        ),
-                      ],
-                      const SizedBox(height: 6),
-                      Text(
-                        'Submitted $created',
-                        style: AdminTypography.kpiHelper(palette),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: onViewMaterial,
-                            style: AppStatusButtonStyle.outlined(
-                              context,
-                              AppStatusTone.neutral,
-                            ),
-                            icon: const Icon(Icons.open_in_new, size: 18),
-                            label: const Text('View material'),
-                          ),
-                          FilledButton.icon(
-                            onPressed: onResolve,
-                            style: AppStatusButtonStyle.filled(
-                              context,
-                              AppStatusTone.success,
-                            ),
-                            icon: const Icon(
-                              Icons.check_circle_outline,
-                              size: 18,
-                            ),
-                            label: const Text('Resolve'),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: onReject,
-                            style: AppStatusButtonStyle.outlined(
-                              context,
-                              AppStatusTone.danger,
-                            ),
-                            icon: const Icon(Icons.cancel_outlined, size: 18),
-                            label: const Text('Reject'),
-                          ),
-                          if (canHideMaterial)
-                            OutlinedButton.icon(
-                              onPressed: onHideMaterial,
-                              style: AppStatusButtonStyle.outlined(
-                                context,
-                                AppStatusTone.danger,
-                              ),
-                              icon: const Icon(
-                                Icons.visibility_off_outlined,
-                                size: 18,
-                              ),
-                              label: const Text('Hide material'),
-                            ),
-                        ],
-                      ),
+                      metrics,
+                      const SizedBox(height: AppSpacing.sm + 6),
+                      actions,
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+          );
+
+    final row = Container(
+      decoration: BoxDecoration(
+        color: _hovered
+            ? colors.surfaceMuted.withValues(alpha: 0.5)
+            : Colors.transparent,
+        border: widget.showDivider
+            ? Border(bottom: BorderSide(color: colors.borderSubtle))
+            : null,
+      ),
+      child: content,
+    );
+
+    if (widget.compact) return row;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: row,
+    );
+  }
+}
+
+/// Small report indicator tile — intentionally light, so it supports the
+/// row instead of dominating it. Report list items don't carry a material
+/// image, so this stays an icon tile rather than a photo.
+class _ReportThumb extends StatelessWidget {
+  const _ReportThumb();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 90,
+        height: 90,
+        color: colors.warningSoft,
+        alignment: Alignment.center,
+        child: Icon(Icons.flag_outlined, color: colors.warningText, size: 24),
+      ),
+    );
+  }
+}
+
+/// Report-content hierarchy: title, supplier/reporter, reason + submitted
+/// date, then the report note. Report/material *state* is deliberately
+/// excluded here — it belongs only to the right management cluster, so it
+/// is never shown twice on the same row.
+class _ReportIdentityBlock extends StatelessWidget {
+  const _ReportIdentityBlock({required this.report});
+
+  final AdminMaterialReportListItem report;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final created = DateFormat.yMMMd().format(report.createdAt);
+    final dateStyle = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: colors.textMuted);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          report.materialTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w700,
           ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          '${report.supplierName} • Reported by ${report.reporterName}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _SemanticBadge(
+              label: _formatReportReason(report.reason),
+              tone: _BadgeTone.warning,
+            ),
+            Text('·', style: dateStyle),
+            Text('Submitted $created', style: dateStyle),
+          ],
+        ),
+        if (report.note != null && report.note!.trim().isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            report.note!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colors.textPrimary.withValues(alpha: 0.82),
+              height: 1.3,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// The one and only place report/material state is shown on this row —
+/// the left content area intentionally omits both, so nothing is
+/// duplicated. Two single-line semantic badges, right-aligned and wrapped
+/// tightly together.
+class _ReportMetricsBlock extends StatelessWidget {
+  const _ReportMetricsBlock({required this.report});
+
+  final AdminMaterialReportListItem report;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _CompactStatusChip(
+          icon: Icons.flag_outlined,
+          label: _reportStatusLabel(report.status),
+          tone: reviewStatusTone(report.status),
+        ),
+        _CompactStatusChip(
+          icon: Icons.inventory_2_outlined,
+          label: _displayEnum(report.materialStatus),
+          tone: materialLifecycleStatusTone(
+            report.materialStatus,
+          ).appStatusTone,
+        ),
+      ],
+    );
+  }
+}
+
+/// Report-context label so "Pending" reads unambiguously against the
+/// material status badge next to it, without inventing a new status value.
+String _reportStatusLabel(String status) {
+  switch (status.trim().toUpperCase()) {
+    case 'PENDING':
+      return 'Pending report';
+    case 'APPROVED':
+      return 'Resolved';
+    default:
+      return _displayEnum(status);
+  }
+}
+
+/// One-line semantic status badge with a leading icon of the same tone —
+/// reuses [AppStatusBadge]'s color system directly rather than inventing a
+/// second status palette.
+class _CompactStatusChip extends StatelessWidget {
+  const _CompactStatusChip({
+    required this.icon,
+    required this.label,
+    required this.tone,
+  });
+
+  final IconData icon;
+  final String label;
+  final AppStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppStatusStyle.of(context, tone);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: style.foreground),
+        const SizedBox(width: 4),
+        AppStatusBadge(label: label, tone: tone),
+      ],
+    );
+  }
+}
+
+class _ReportActionArea extends StatelessWidget {
+  const _ReportActionArea({
+    required this.canHideMaterial,
+    required this.onViewMaterial,
+    required this.onResolve,
+    required this.onReject,
+    required this.onHideMaterial,
+  });
+
+  final bool canHideMaterial;
+  final VoidCallback onViewMaterial;
+  final VoidCallback onResolve;
+  final VoidCallback onReject;
+  final VoidCallback onHideMaterial;
+
+  static ButtonStyle _compactStyle(BuildContext context, AppStatusTone tone) {
+    return AppStatusButtonStyle.outlined(context, tone).merge(
+      OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 42),
+        textStyle: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm + 4,
+          vertical: AppSpacing.sm,
+        ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final detailsButton = OutlinedButton.icon(
+      onPressed: onViewMaterial,
+      icon: const Icon(Icons.visibility_outlined, size: 16),
+      label: const Text('View material'),
+      style: _compactStyle(context, AppStatusTone.neutral),
+    );
+
+    final resolveButton = OutlinedButton.icon(
+      onPressed: onResolve,
+      icon: const Icon(Icons.check_circle_outline, size: 16),
+      label: const Text('Resolve'),
+      style: _compactStyle(context, AppStatusTone.success),
+    );
+
+    final overflowItems = <PopupMenuEntry<VoidCallback>>[
+      PopupMenuItem<VoidCallback>(
+        value: onReject,
+        child: const _OverflowMenuLabel(
+          icon: Icons.cancel_outlined,
+          label: 'Reject report',
+          tone: AppStatusTone.danger,
+        ),
+      ),
+      if (canHideMaterial)
+        PopupMenuItem<VoidCallback>(
+          value: onHideMaterial,
+          child: const _OverflowMenuLabel(
+            icon: Icons.visibility_off_outlined,
+            label: 'Hide material',
+            tone: AppStatusTone.danger,
+          ),
+        ),
+    ];
+
+    final overflowButton = overflowItems.isEmpty
+        ? null
+        : SizedBox(
+            width: 42,
+            height: 42,
+            child: PopupMenuButton<VoidCallback>(
+              tooltip: 'More actions',
+              icon: Icon(
+                Icons.more_vert,
+                size: 18,
+                color: AppThemeColors.of(context).textMuted,
+              ),
+              padding: EdgeInsets.zero,
+              onSelected: (action) => action(),
+              itemBuilder: (menuContext) => overflowItems,
+            ),
+          );
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        detailsButton,
+        const SizedBox(width: AppSpacing.sm),
+        resolveButton,
+        if (overflowButton != null) const SizedBox(width: AppSpacing.sm),
+        ?overflowButton,
+      ],
     );
   }
 }

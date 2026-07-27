@@ -164,11 +164,13 @@ class SupplierVerificationApi {
   }
 }
 
-final supplierVerificationApiProvider = Provider<SupplierVerificationApi>((ref) {
+final supplierVerificationApiProvider = Provider<SupplierVerificationApi>((
+  ref,
+) {
   return SupplierVerificationApi(ref.watch(apiClientProvider));
 });
 
 final supplierVerificationStatusProvider =
     FutureProvider.autoDispose<SupplierVerificationStatus>((ref) {
-  return ref.watch(supplierVerificationApiProvider).fetchStatus();
-});
+      return ref.watch(supplierVerificationApiProvider).fetchStatus();
+    });

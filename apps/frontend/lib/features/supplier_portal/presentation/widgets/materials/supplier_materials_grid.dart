@@ -30,9 +30,9 @@ class SupplierMaterialsGrid extends StatelessWidget {
             : MediaQuery.sizeOf(context).width;
         var columns = 1;
 
-        if (width >= 1100) {
+        if (width >= 1180) {
           columns = 3;
-        } else if (width >= AppSpacing.supplierLayoutBreakpoint) {
+        } else if (width >= 760) {
           columns = 2;
         }
 
@@ -86,29 +86,43 @@ Widget buildSupplierMaterialCard({
   List<Widget>? actions,
   String? createdAtLabel,
 }) {
-  final condition = SupplierMaterialLabelHelper.conditionMeta(material.condition);
+  final condition = SupplierMaterialLabelHelper.conditionMeta(
+    material.condition,
+  );
   final status = SupplierMaterialLabelHelper.statusMeta(material.status);
-  final category =
-      isArabic ? material.category.nameAr : material.category.nameEn;
+  final category = isArabic
+      ? material.category.nameAr
+      : material.category.nameEn;
   final imageUrl = material.coverImageUrl == null
       ? null
       : ApiConfig.resolveMediaUrl(material.coverImageUrl!);
   final compactBadges = <String>[];
+  if (material.totalActiveRequests > 0) {
+    compactBadges.add(
+      context.s.materialRequestsBadge(material.totalActiveRequests),
+    );
+  }
   if (material.demandScorePercent > 0) {
-    if (material.totalActiveRequests > 0) {
-      compactBadges.add(context.s.materialRequestsBadge(material.totalActiveRequests));
-    }
     compactBadges.add(context.s.highDemandBadge);
   }
 
+  final engagementParts = <String>[
+    if (material.viewsCount > 0) '${material.viewsCount} views',
+    if (material.likesCount > 0) '${material.likesCount} likes',
+  ];
+
   return SupplierMaterialCard(
     title: material.title,
-    description: material.description,
     categoryLabel: category,
-    conditionLabel:
-        SupplierMaterialLabelHelper.resolveText(condition.label, isArabic),
+    conditionLabel: SupplierMaterialLabelHelper.resolveText(
+      condition.label,
+      isArabic,
+    ),
     conditionTone: condition.tone,
-    statusLabel: SupplierMaterialLabelHelper.resolveText(status.label, isArabic),
+    statusLabel: SupplierMaterialLabelHelper.resolveText(
+      status.label,
+      isArabic,
+    ),
     statusTone: status.tone,
     quantityLabel: SupplierMaterialLabelHelper.resolveText(
       SupplierMaterialLabelHelper.stockLabel(
@@ -140,11 +154,11 @@ Widget buildSupplierMaterialCard({
       ),
       isArabic,
     ),
-    deliveryAvailable: material.deliveryAllowed,
     isFree: material.isFree,
     imageUrl: imageUrl,
-    viewsCount: material.viewsCount,
-    likesCount: material.likesCount,
+    engagementLabel: engagementParts.isEmpty
+        ? null
+        : engagementParts.join(' · '),
     compactBadgeLabels: compactBadges,
     createdAtLabel: createdAtLabel,
     onTap: onTap,
@@ -165,21 +179,46 @@ List<Widget> buildSupplierMaterialCardActions({
   bool canEdit = true,
   String? editBlockedMessage,
 }) {
+  const actionSize = 44.0;
+  ButtonStyle squareActionStyle(ButtonStyle base) => base.copyWith(
+    fixedSize: const WidgetStatePropertyAll(Size.square(actionSize)),
+    minimumSize: const WidgetStatePropertyAll(Size.square(actionSize)),
+    maximumSize: const WidgetStatePropertyAll(Size.square(actionSize)),
+    padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+    alignment: Alignment.center,
+    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  );
+
   final actions = <Widget>[
-    FilledButton(
-      onPressed: onManage,
-      style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
-      child: Text(manageLabel),
+    Tooltip(
+      message: manageLabel,
+      child: SizedBox(
+        height: actionSize,
+        child: FilledButton(
+          onPressed: onManage,
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
+          child: Text(manageLabel),
+        ),
+      ),
     ),
     Tooltip(
-      message: canEdit ? '' : (editBlockedMessage ?? ''),
-      child: OutlinedButton(
-        onPressed: canEdit ? onEdit : null,
-        style: SupplierMyMaterialsColors.editButtonStyle(
-          context,
-          enabled: canEdit,
+      message: canEdit ? editLabel : (editBlockedMessage ?? editLabel),
+      child: Semantics(
+        label: editLabel,
+        button: true,
+        child: SizedBox.square(
+          dimension: actionSize,
+          child: OutlinedButton(
+            onPressed: canEdit ? onEdit : null,
+            style: squareActionStyle(
+              SupplierMyMaterialsColors.editButtonStyle(
+                context,
+                enabled: canEdit,
+              ),
+            ),
+            child: const Icon(Icons.edit_outlined, size: 20),
+          ),
         ),
-        child: Text(editLabel),
       ),
     ),
   ];
@@ -187,14 +226,25 @@ List<Widget> buildSupplierMaterialCardActions({
   if (deleteLabel != null) {
     actions.add(
       Tooltip(
-        message: canDelete ? '' : (deleteBlockedMessage ?? ''),
-        child: OutlinedButton(
-          onPressed: canDelete ? onDelete : null,
-          style: SupplierMyMaterialsColors.deleteButtonStyle(
-            context,
-            enabled: canDelete,
+        message: canDelete
+            ? deleteLabel
+            : (deleteBlockedMessage ?? deleteLabel),
+        child: Semantics(
+          label: deleteLabel,
+          button: true,
+          child: SizedBox.square(
+            dimension: actionSize,
+            child: OutlinedButton(
+              onPressed: canDelete ? onDelete : null,
+              style: squareActionStyle(
+                SupplierMyMaterialsColors.deleteButtonStyle(
+                  context,
+                  enabled: canDelete,
+                ),
+              ),
+              child: const Icon(Icons.delete_outline, size: 20),
+            ),
           ),
-          child: Text(deleteLabel),
         ),
       ),
     );

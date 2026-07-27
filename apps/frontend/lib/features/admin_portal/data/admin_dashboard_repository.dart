@@ -8,4 +8,3 @@ class AdminDashboardRepository {
 
   Future<AdminDashboardResponse> fetchDashboard() => _api.fetchDashboard();
 }
-

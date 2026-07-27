@@ -41,9 +41,7 @@ class AdminSettingsControls extends ConsumerWidget {
         ),
         NavPillMenu<ThemeMode>(
           icon: themeModeIcon(settings.themeMode),
-          label: compact
-              ? 'Theme'
-              : localizedThemeLabel(settings.themeMode),
+          label: compact ? 'Theme' : localizedThemeLabel(settings.themeMode),
           items: ThemeMode.values,
           selectedValue: settings.themeMode,
           itemLabel: localizedThemeLabel,

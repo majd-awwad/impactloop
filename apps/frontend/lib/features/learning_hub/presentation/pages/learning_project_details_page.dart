@@ -21,9 +21,14 @@ import '../widgets/project_reviews_section.dart';
 import '../widgets/project_steps_timeline.dart';
 
 class LearningProjectDetailsPage extends ConsumerWidget {
-  const LearningProjectDetailsPage({super.key, required this.projectId});
+  const LearningProjectDetailsPage({
+    super.key,
+    required this.projectId,
+    this.recommendationImpressionId,
+  });
 
   final String projectId;
+  final String? recommendationImpressionId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -80,7 +85,10 @@ class LearningProjectDetailsPage extends ConsumerWidget {
                     );
                   }
 
-                  return _ProjectDetailsBody(project: project);
+                  return _ProjectDetailsBody(
+                    project: project,
+                    recommendationImpressionId: recommendationImpressionId,
+                  );
                 },
               ),
             ),
@@ -92,9 +100,13 @@ class LearningProjectDetailsPage extends ConsumerWidget {
 }
 
 class _ProjectDetailsBody extends StatelessWidget {
-  const _ProjectDetailsBody({required this.project});
+  const _ProjectDetailsBody({
+    required this.project,
+    this.recommendationImpressionId,
+  });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +128,10 @@ class _ProjectDetailsBody extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _DetailsSummaryCard(project: project),
+                      _DetailsSummaryCard(
+                        project: project,
+                        recommendationImpressionId: recommendationImpressionId,
+                      ),
                       const SizedBox(height: AppSpacing.lg),
                       ProjectReviewsSection(project: project),
                       const SizedBox(height: AppSpacing.lg),
@@ -126,7 +141,10 @@ class _ProjectDetailsBody extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],
-                      ProjectBuildActionsPanel(project: project),
+                      ProjectBuildActionsPanel(
+                        project: project,
+                        recommendationImpressionId: recommendationImpressionId,
+                      ),
                       if (project.steps.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.lg),
                         ProjectStepsTimeline(steps: project.steps),
@@ -270,9 +288,13 @@ class _DetailsHero extends StatelessWidget {
 }
 
 class _DetailsSummaryCard extends StatelessWidget {
-  const _DetailsSummaryCard({required this.project});
+  const _DetailsSummaryCard({
+    required this.project,
+    this.recommendationImpressionId,
+  });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
 
   @override
   Widget build(BuildContext context) {
@@ -338,9 +360,18 @@ class _DetailsSummaryCard extends StatelessWidget {
                 dark: true,
               ),
               _DetailsChip(label: project.duration.resolve(context)),
-              _ProjectLikeButton(project: project),
-              _ProjectFollowButton(project: project),
-              _ProjectSaveButton(project: project),
+              _ProjectLikeButton(
+                project: project,
+                recommendationImpressionId: recommendationImpressionId,
+              ),
+              _ProjectFollowButton(
+                project: project,
+                recommendationImpressionId: recommendationImpressionId,
+              ),
+              _ProjectSaveButton(
+                project: project,
+                recommendationImpressionId: recommendationImpressionId,
+              ),
               if (project.componentCountLabel.en.trim().isNotEmpty)
                 _DetailsChip(
                   label: project.componentCountLabel.resolve(context),
@@ -421,9 +452,13 @@ class _DetailsChip extends StatelessWidget {
 }
 
 class _ProjectLikeButton extends ConsumerStatefulWidget {
-  const _ProjectLikeButton({required this.project});
+  const _ProjectLikeButton({
+    required this.project,
+    this.recommendationImpressionId,
+  });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<_ProjectLikeButton> createState() => _ProjectLikeButtonState();
@@ -488,10 +523,16 @@ class _ProjectLikeButtonState extends ConsumerState<_ProjectLikeButton> {
       final engagement = shouldLike
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .likeProject(widget.project.id)
+                .likeProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unlikeProject(widget.project.id);
+                .unlikeProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -584,9 +625,13 @@ class _ProjectLikeButtonState extends ConsumerState<_ProjectLikeButton> {
 }
 
 class _ProjectSaveButton extends ConsumerStatefulWidget {
-  const _ProjectSaveButton({required this.project});
+  const _ProjectSaveButton({
+    required this.project,
+    this.recommendationImpressionId,
+  });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<_ProjectSaveButton> createState() => _ProjectSaveButtonState();
@@ -644,10 +689,16 @@ class _ProjectSaveButtonState extends ConsumerState<_ProjectSaveButton> {
       final saveStatus = shouldSave
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .saveProject(widget.project.id)
+                .saveProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unsaveProject(widget.project.id);
+                .unsaveProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -738,9 +789,13 @@ class _ProjectSaveButtonState extends ConsumerState<_ProjectSaveButton> {
 }
 
 class _ProjectFollowButton extends ConsumerStatefulWidget {
-  const _ProjectFollowButton({required this.project});
+  const _ProjectFollowButton({
+    required this.project,
+    this.recommendationImpressionId,
+  });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<_ProjectFollowButton> createState() =>
@@ -806,10 +861,16 @@ class _ProjectFollowButtonState extends ConsumerState<_ProjectFollowButton> {
       final followStatus = shouldFollow
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .followProject(widget.project.id)
+                .followProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unfollowProject(widget.project.id);
+                .unfollowProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;

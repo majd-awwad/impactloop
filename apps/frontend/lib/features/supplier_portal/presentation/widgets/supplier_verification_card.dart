@@ -32,10 +32,14 @@ class SupplierVerificationCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: context.supplierColors.accentSoft.withValues(alpha: 0.16),
+                  color: context.supplierColors.accentSoft.withValues(
+                    alpha: 0.16,
+                  ),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: context.supplierColors.border.withValues(alpha: 0.35),
+                    color: context.supplierColors.border.withValues(
+                      alpha: 0.35,
+                    ),
                   ),
                 ),
                 child: Icon(
@@ -60,10 +64,7 @@ class SupplierVerificationCard extends StatelessWidget {
               style: context.supplierSectionTitle().copyWith(fontSize: 14),
             ),
             const SizedBox(height: 4),
-            Text(
-              adminNote!.trim(),
-              style: context.supplierBody(),
-            ),
+            Text(adminNote!.trim(), style: context.supplierBody()),
             const SizedBox(height: AppSpacing.sm),
           ],
           Text(

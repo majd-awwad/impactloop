@@ -114,7 +114,9 @@ class _DashboardBodyState extends State<_DashboardBody> {
   void initState() {
     super.initState();
     _scrollController.addListener(_checkImpactVisibility);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkImpactVisibility());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _checkImpactVisibility(),
+    );
   }
 
   @override
@@ -174,8 +176,9 @@ class _DashboardBodyState extends State<_DashboardBody> {
           (entry) => AdminBarChartItem(
             label: l.isArabic ? entry.value.nameAr : entry.value.nameEn,
             value: entry.value.count,
-            color: palette.categoryBarColors[
-                entry.key % palette.categoryBarColors.length],
+            color:
+                palette.categoryBarColors[entry.key %
+                    palette.categoryBarColors.length],
           ),
         )
         .toList();
@@ -208,8 +211,10 @@ class _DashboardBodyState extends State<_DashboardBody> {
         )
         .toList();
 
-    final reservationTotal =
-        reservationSegments.fold<int>(0, (sum, s) => sum + s.value);
+    final reservationTotal = reservationSegments.fold<int>(
+      0,
+      (sum, s) => sum + s.value,
+    );
 
     return ListView(
       controller: _scrollController,
@@ -217,11 +222,17 @@ class _DashboardBodyState extends State<_DashboardBody> {
       children: [
         const AdminWelcomeBanner(),
         const SizedBox(height: 14),
-        Text(l.platformMetricsTitle, style: AdminTypography.sectionTitle(palette)),
+        Text(
+          l.platformMetricsTitle,
+          style: AdminTypography.sectionTitle(palette),
+        ),
         const SizedBox(height: 10),
         AdminKpiGrid(dashboard: dashboard),
         const SizedBox(height: 18),
-        Text(l.chartsAnalyticsTitle, style: AdminTypography.sectionTitle(palette)),
+        Text(
+          l.chartsAnalyticsTitle,
+          style: AdminTypography.sectionTitle(palette),
+        ),
         const SizedBox(height: 10),
         if (chartColumns) ...[
           IntrinsicHeight(

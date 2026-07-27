@@ -104,6 +104,9 @@ String adminPageTitle(AdminL10n l, String location) {
   if (location.startsWith('/admin/approvals')) return l.navApprovals;
   if (location.startsWith('/admin/invitations')) return l.navInvitations;
   if (location.startsWith('/admin/reservations')) return l.navReservations;
+  if (location.startsWith('/admin/no-show-reports')) {
+    return 'Incident Reports';
+  }
   if (location.startsWith('/admin/deliveries')) return l.navDeliveries;
   if (location.startsWith('/admin/learning-projects')) {
     return l.navLearningProjects;

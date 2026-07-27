@@ -40,7 +40,11 @@ class _AdminImpactPageState extends ConsumerState<AdminImpactPage> {
     final palette = context.adminPalette;
     final asyncDashboard = ref.watch(adminDashboardProvider);
     final width = MediaQuery.sizeOf(context).width;
-    final columns = width >= 900 ? 4 : width >= 560 ? 2 : 1;
+    final columns = width >= 900
+        ? 4
+        : width >= 560
+        ? 2
+        : 1;
     const spacing = 10.0;
 
     return ColoredBox(
@@ -52,7 +56,10 @@ class _AdminImpactPageState extends ConsumerState<AdminImpactPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                l.t('Failed to load impact analytics', 'فشل تحميل تحليلات الأثر'),
+                l.t(
+                  'Failed to load impact analytics',
+                  'فشل تحميل تحليلات الأثر',
+                ),
                 style: AdminTypography.pageSubtitle(palette),
               ),
               const SizedBox(height: 12),
@@ -87,8 +94,9 @@ class _AdminImpactPageState extends ConsumerState<AdminImpactPage> {
                 (entry) => AdminBarChartItem(
                   label: l.isArabic ? entry.value.nameAr : entry.value.nameEn,
                   value: entry.value.count,
-                  color: palette.categoryBarColors[
-                      entry.key % palette.categoryBarColors.length],
+                  color:
+                      palette.categoryBarColors[entry.key %
+                          palette.categoryBarColors.length],
                 ),
               )
               .toList();
@@ -186,15 +194,18 @@ class _AdminImpactPageState extends ConsumerState<AdminImpactPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, color: palette.primaryTeal, size: 18),
+                    Icon(
+                      Icons.info_outline,
+                      color: palette.primaryTeal,
+                      size: 18,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         l.impactEnvironmentalNote,
-                        style: AdminTypography.kpiHelper(palette).copyWith(
-                          color: palette.textPrimary,
-                          height: 1.4,
-                        ),
+                        style: AdminTypography.kpiHelper(
+                          palette,
+                        ).copyWith(color: palette.textPrimary, height: 1.4),
                       ),
                     ),
                   ],

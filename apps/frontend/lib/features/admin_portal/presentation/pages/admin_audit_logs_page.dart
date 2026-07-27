@@ -1182,9 +1182,7 @@ class _PaginationRow extends StatelessWidget {
     final buttonStyle = AppStatusButtonStyle.outlined(
       context,
       AppStatusTone.neutral,
-    ).copyWith(
-      minimumSize: const WidgetStatePropertyAll(Size(0, 42)),
-    );
+    ).copyWith(minimumSize: const WidgetStatePropertyAll(Size(0, 42)));
 
     return Wrap(
       spacing: 8,

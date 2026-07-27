@@ -202,6 +202,8 @@ export const hideAdminMaterial = async (
     title: 'Material hidden by admin',
     body: `Your material '${material.title}' was hidden by admin. Reason: ${input.reason.trim()}.`,
     materialId,
+    eventKey: `material-moderation:${materialId}:${updated.status}:${updated.updatedAt.toISOString()}`,
+    actorId: adminUserId,
   });
 
   await logAdminActivity({
@@ -248,6 +250,8 @@ export const markAdminMaterialUnavailable = async (
       title: 'Material marked unavailable',
       body: `Your material '${material.title}' was marked unavailable. Reason: ${input.reason.trim()}.`,
       materialId,
+      eventKey: `material-moderation:${materialId}:${updated.status}:${updated.updatedAt.toISOString()}`,
+      actorId: adminUserId,
     });
   }
 
@@ -289,6 +293,8 @@ export const restoreAdminMaterial = async (
     title: 'Material restored',
     body: `Your material '${material.title}' was restored and is visible again.`,
     materialId,
+    eventKey: `material-moderation:${materialId}:${updated.status}:${updated.updatedAt.toISOString()}`,
+    actorId: adminUserId,
   });
 
   await logAdminActivity({
@@ -464,6 +470,8 @@ export const rejectAdminMaterialReport = async (
     title: 'Report reviewed',
     body: `Your report for '${report.material.title}' was reviewed.`,
     materialId: report.materialId,
+    eventKey: `material-report:${reportId}:REJECTED`,
+    actorId: adminUserId,
   });
 
   await logAdminActivity({
@@ -513,6 +521,8 @@ export const hideMaterialFromAdminReport = async (
     title: 'Material hidden after report review',
     body: `Your material '${material.title}' was hidden after admin review. Reason: ${input.adminNote.trim()}.`,
     materialId: report.materialId,
+    eventKey: `material-moderation:${report.materialId}:${material.status}:${material.updatedAt.toISOString()}`,
+    actorId: adminUserId,
   });
 
   await logAdminActivity({

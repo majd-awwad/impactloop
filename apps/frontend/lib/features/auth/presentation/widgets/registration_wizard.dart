@@ -627,10 +627,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         return;
       }
 
-      showInfoSnackBar(
-        context,
-        'Learner access added to your account.',
-      );
+      showInfoSnackBar(context, 'Learner access added to your account.');
 
       final user = ref.read(authControllerProvider).user;
       context.go(user == null ? homeRoute : postAuthRouteForUser(user));

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
 import '../domain/learner_home_models.dart';
 import 'learner_home_item_mapper.dart';
@@ -10,10 +11,12 @@ class LearnerHomeApi {
   final Dio _client;
 
   Future<LearnerHomeFeed> fetchHomeFeed() async {
-    return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>('/api/learner/home'),
-      _mapFeed,
-    );
+    return _guarded(() {
+      return unwrapApiResponse(
+        _client.get<Map<String, dynamic>>('/api/learner/home'),
+        _mapFeed,
+      );
+    });
   }
 
   Future<LearnerHomeSectionDetails> fetchSectionDetails(
@@ -21,16 +24,23 @@ class LearnerHomeApi {
     int limit = 20,
     int offset = 0,
   }) async {
-    return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>(
-        '/api/learner/home/sections/${sectionKey.apiValue}',
-        queryParameters: {
-          'limit': limit,
-          if (offset > 0) 'offset': offset,
-        },
-      ),
-      _mapSectionDetails,
-    );
+    return _guarded(() {
+      return unwrapApiResponse(
+        _client.get<Map<String, dynamic>>(
+          '/api/learner/home/sections/${sectionKey.apiValue}',
+          queryParameters: {'limit': limit, if (offset > 0) 'offset': offset},
+        ),
+        _mapSectionDetails,
+      );
+    });
+  }
+
+  Future<T> _guarded<T>(Future<T> Function() request) async {
+    try {
+      return await request();
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(classifyLearnerHomeError(error), stackTrace);
+    }
   }
 
   LearnerHomeFeed _mapFeed(Map<String, dynamic> json) {
@@ -109,4 +119,94 @@ class LearnerHomeApi {
   LearnerHomeItem? _mapItem(Map<String, dynamic> json) {
     return LearnerHomeItemMapper.fromJson(json);
   }
+}
+
+enum LearnerHomeErrorKind {
+  sessionExpired,
+  networkUnavailable,
+  server,
+  parsing,
+}
+
+class LearnerHomeFailure implements Exception {
+  const LearnerHomeFailure({
+    required this.kind,
+    required this.message,
+    this.cause,
+  });
+
+  final LearnerHomeErrorKind kind;
+  final String message;
+  final Object? cause;
+
+  String get title {
+    switch (kind) {
+      case LearnerHomeErrorKind.sessionExpired:
+        return 'Session expired';
+      case LearnerHomeErrorKind.networkUnavailable:
+        return 'Backend unavailable';
+      case LearnerHomeErrorKind.server:
+        return 'Something went wrong';
+      case LearnerHomeErrorKind.parsing:
+        return 'Unexpected recommendations response';
+    }
+  }
+
+  String get description {
+    switch (kind) {
+      case LearnerHomeErrorKind.sessionExpired:
+        return 'Please sign in again to continue.';
+      case LearnerHomeErrorKind.networkUnavailable:
+        return 'We could not reach the backend. Check your connection and try again.';
+      case LearnerHomeErrorKind.server:
+        return 'The server could not load your home feed. Please try again.';
+      case LearnerHomeErrorKind.parsing:
+        return 'The server returned an unexpected home-feed response.';
+    }
+  }
+
+  @override
+  String toString() => 'LearnerHomeFailure(${kind.name})';
+}
+
+LearnerHomeFailure classifyLearnerHomeError(Object error) {
+  if (error is LearnerHomeFailure) {
+    return error;
+  }
+
+  if (error is ApiException) {
+    if (error.statusCode == 401 ||
+        error.statusCode == 403 ||
+        error.code == 'SESSION_EXPIRED' ||
+        error.code == 'UNAUTHENTICATED' ||
+        error.code == 'FORBIDDEN') {
+      return LearnerHomeFailure(
+        kind: LearnerHomeErrorKind.sessionExpired,
+        message: 'Your session has expired.',
+        cause: error,
+      );
+    }
+
+    if (error.code == 'NETWORK_ERROR' || error.code == 'TIMEOUT') {
+      return LearnerHomeFailure(
+        kind: LearnerHomeErrorKind.networkUnavailable,
+        message: 'The backend is unavailable.',
+        cause: error,
+      );
+    }
+
+    if (error.statusCode != null && error.statusCode! >= 500) {
+      return LearnerHomeFailure(
+        kind: LearnerHomeErrorKind.server,
+        message: 'The server could not load the home feed.',
+        cause: error,
+      );
+    }
+  }
+
+  return LearnerHomeFailure(
+    kind: LearnerHomeErrorKind.parsing,
+    message: 'The home-feed response could not be read.',
+    cause: error,
+  );
 }

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
+import '../../../core/network/api_client.dart';
 import '../domain/discovery_material.dart';
 import '../domain/material_engagement.dart';
 import '../domain/material_discovery_query.dart';
@@ -16,6 +17,7 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   final Dio _client;
 
   static const _basePath = '/api/materials';
+  static const _suppliersBasePath = '/api/suppliers';
 
   @override
   Future<MaterialDiscoveryResult> fetchMaterials(MaterialDiscoveryQuery query) {
@@ -117,10 +119,18 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   }
 
   @override
-  Future<DiscoveryMaterial?> getMaterialById(String id) async {
+  Future<DiscoveryMaterial?> getMaterialById(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     try {
       return await unwrapApiResponse(
-        _client.get<Map<String, dynamic>>('$_basePath/$id'),
+        _client.get<Map<String, dynamic>>(
+          '$_basePath/$id',
+          options: Options(
+            headers: recommendationHeaders(recommendationImpressionId),
+          ),
+        ),
         MaterialDiscoveryApiMapper.fromJson,
       );
     } on ApiException catch (error) {
@@ -133,18 +143,86 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   }
 
   @override
-  Future<MaterialEngagement> likeMaterial(String id) {
+  Future<MaterialEngagement> likeMaterial(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.post<Map<String, dynamic>>('$_basePath/$id/like'),
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$id/like',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       MaterialEngagement.fromJson,
     );
   }
 
   @override
-  Future<MaterialEngagement> unlikeMaterial(String id) {
+  Future<MaterialEngagement> unlikeMaterial(
+    String id, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
-      _client.delete<Map<String, dynamic>>('$_basePath/$id/like'),
+      _client.delete<Map<String, dynamic>>(
+        '$_basePath/$id/like',
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
+      ),
       MaterialEngagement.fromJson,
+    );
+  }
+
+  @override
+  Future<PublicSupplier?> fetchPublicSupplier(String supplierProfileId) async {
+    try {
+      return await unwrapApiResponse(
+        _client.get<Map<String, dynamic>>(
+          '$_suppliersBasePath/$supplierProfileId',
+        ),
+        PublicSupplier.fromJson,
+      );
+    } on ApiException catch (error) {
+      if (error.statusCode == 404 || error.code == 'NOT_FOUND') {
+        return null;
+      }
+
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MaterialDiscoveryResult> fetchSupplierMaterials(
+    String supplierProfileId,
+    MaterialDiscoveryQuery query,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/materials',
+        queryParameters: buildQueryParameters(query),
+      ),
+      _parseResult,
+    );
+  }
+
+  @override
+  Future<SupplierFollowStatus> followSupplier(String supplierProfileId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/follow',
+      ),
+      SupplierFollowStatus.fromJson,
+    );
+  }
+
+  @override
+  Future<SupplierFollowStatus> unfollowSupplier(String supplierProfileId) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/follow',
+      ),
+      SupplierFollowStatus.fromJson,
     );
   }
 }

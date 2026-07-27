@@ -17,12 +17,12 @@ extension MaterialStatusBadgeToneX on MaterialStatusBadgeTone {
   AppStatusTone get appStatusTone => switch (this) {
     MaterialStatusBadgeTone.available => AppStatusTone.primary,
     MaterialStatusBadgeTone.reserved => AppStatusTone.warning,
-    MaterialStatusBadgeTone.reused || MaterialStatusBadgeTone.success =>
-      AppStatusTone.success,
+    MaterialStatusBadgeTone.reused ||
+    MaterialStatusBadgeTone.success => AppStatusTone.success,
     MaterialStatusBadgeTone.danger => AppStatusTone.danger,
     MaterialStatusBadgeTone.info => AppStatusTone.info,
-    MaterialStatusBadgeTone.draft || MaterialStatusBadgeTone.neutral =>
-      AppStatusTone.neutral,
+    MaterialStatusBadgeTone.draft ||
+    MaterialStatusBadgeTone.neutral => AppStatusTone.neutral,
   };
 }
 

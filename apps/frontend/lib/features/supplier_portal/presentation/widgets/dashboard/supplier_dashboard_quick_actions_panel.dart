@@ -62,6 +62,7 @@ class SupplierDashboardQuickActionsPanel extends StatelessWidget {
     final colors = context.supplierColors;
 
     return AppSectionCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -74,12 +75,12 @@ class SupplierDashboardQuickActionsPanel extends StatelessWidget {
               fontSize: 13,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           LayoutBuilder(
             builder: (context, constraints) {
               final columns = constraints.maxWidth >= 420 ? 2 : 1;
-              const tileHeight = 92.0;
-              const spacing = AppSpacing.sm;
+              const tileHeight = 108.0;
+              const spacing = AppSpacing.md;
               final tileWidth = columns == 2
                   ? (constraints.maxWidth - spacing) / 2
                   : constraints.maxWidth;
@@ -122,7 +123,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
         hoverColor: action.accent.withValues(alpha: 0.08),
         splashColor: action.accent.withValues(alpha: 0.12),
         child: Ink(
-          padding: const EdgeInsets.all(AppSpacing.sm),
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: AppRadius.lgAll,
             gradient: LinearGradient(
@@ -141,14 +142,14 @@ class _DashboardQuickActionTile extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 30,
-                    height: 30,
+                    width: 34,
+                    height: 34,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: action.accent.withValues(alpha: 0.16),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(action.icon, color: action.accent, size: 17),
+                    child: Icon(action.icon, color: action.accent, size: 18),
                   ),
                   const Spacer(),
                   Icon(
@@ -166,7 +167,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
                 style: context.supplierLabel().copyWith(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
-                  fontSize: 13,
+                  fontSize: 14,
                 ),
               ),
               const SizedBox(height: 2),
@@ -175,7 +176,7 @@ class _DashboardQuickActionTile extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.supplierBody().copyWith(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: colors.textSecondary,
                 ),
               ),

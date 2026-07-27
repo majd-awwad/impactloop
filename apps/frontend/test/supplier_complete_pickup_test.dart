@@ -87,10 +87,11 @@ void main() {
       );
 
       expect(find.text('Mark completed'), findsNothing);
-      expect(find.text('Waiting for driver delivery'), findsOneWidget);
+      expect(find.text('Delivery'), findsOneWidget);
+      expect(find.text('Waiting for driver'), findsOneWidget);
       expect(
         find.text('The driver will complete this reservation after delivery.'),
-        findsOneWidget,
+        findsNothing,
       );
     },
   );

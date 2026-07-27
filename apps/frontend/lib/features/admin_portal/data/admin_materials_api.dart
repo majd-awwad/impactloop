@@ -98,7 +98,8 @@ class AdminMaterialListItem {
       status: json['status'] as String? ?? 'AVAILABLE',
       reportCount: (json['reportCount'] as num?)?.toInt() ?? 0,
       pendingReportCount: (json['pendingReportCount'] as num?)?.toInt() ?? 0,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
@@ -151,7 +152,8 @@ class AdminMaterialReportListItem {
       supplierName: json['supplierName'] as String? ?? '',
       supplierVerificationStatus:
           json['supplierVerificationStatus'] as String? ?? 'NOT_REQUIRED',
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       reviewedAt: json['reviewedAt'] == null
           ? null
@@ -182,10 +184,7 @@ class AdminMaterialsApi {
     int limit = 50,
   }) async {
     final normalizedSearch = search?.trim();
-    final queryParameters = <String, dynamic>{
-      'page': page,
-      'limit': limit,
-    };
+    final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
     if (normalizedSearch != null && normalizedSearch.isNotEmpty) {
       queryParameters['search'] = normalizedSearch;
     }
@@ -209,9 +208,11 @@ class AdminMaterialsApi {
         if (items is! List) return const <AdminMaterialListItem>[];
         return items
             .whereType<Map>()
-            .map((item) => AdminMaterialListItem.fromJson(
-                  Map<String, dynamic>.from(item),
-                ))
+            .map(
+              (item) => AdminMaterialListItem.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
             .toList();
       },
     );
@@ -237,7 +238,8 @@ class AdminMaterialsApi {
           'page': page,
           'limit': limit,
           if (status != null && status != 'ALL') 'status': status,
-          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          if (search != null && search.trim().isNotEmpty)
+            'search': search.trim(),
         },
       ),
       (json) {
@@ -245,9 +247,11 @@ class AdminMaterialsApi {
         if (items is! List) return const <AdminMaterialReportListItem>[];
         return items
             .whereType<Map>()
-            .map((item) => AdminMaterialReportListItem.fromJson(
-                  Map<String, dynamic>.from(item),
-                ))
+            .map(
+              (item) => AdminMaterialReportListItem.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
             .toList();
       },
     );
@@ -274,10 +278,7 @@ class AdminMaterialsApi {
     });
   }
 
-  Future<void> rejectReport({
-    required String id,
-    required String adminNote,
-  }) {
+  Future<void> rejectReport({required String id, required String adminNote}) {
     return _patch('/api/admin/material-reports/$id/reject', {
       'adminNote': adminNote.trim(),
     });
@@ -294,10 +295,15 @@ class AdminMaterialsApi {
 
   Future<void> _patch(String path, Map<String, dynamic> data) async {
     try {
-      final response = await _client.patch<Map<String, dynamic>>(path, data: data);
+      final response = await _client.patch<Map<String, dynamic>>(
+        path,
+        data: data,
+      );
       final body = response.data;
       if (body == null || body['success'] != true) {
-        throw ApiException(message: body?['message'] as String? ?? 'Request failed');
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Request failed',
+        );
       }
     } on DioException catch (error) {
       throw mapDioException(error);

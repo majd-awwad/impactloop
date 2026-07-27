@@ -29,9 +29,9 @@ class AdminPlaceholderPage extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                   textAlign: TextAlign.start,
                 ),
                 const SizedBox(height: 8),
@@ -41,8 +41,8 @@ class AdminPlaceholderPage extends StatelessWidget {
                     'سيتم تنفيذ هذه الصفحة في مرحلة لاحقة.',
                   ),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    color: scheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.start,
                 ),
               ],
@@ -53,4 +53,3 @@ class AdminPlaceholderPage extends StatelessWidget {
     );
   }
 }
-

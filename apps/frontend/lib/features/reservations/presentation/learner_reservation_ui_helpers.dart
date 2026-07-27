@@ -81,7 +81,8 @@ bool reservationMatchesStatusFilter(
     case LearnerReservationStatusFilter.needsAction:
       return learnerReservationNeedsAction(reservation);
     case LearnerReservationStatusFilter.pending:
-      return reservation.isPending || reservation.isAwaitingSupplierConfirmation;
+      return reservation.isPending ||
+          reservation.isAwaitingSupplierConfirmation;
     case LearnerReservationStatusFilter.accepted:
       return reservation.isAccepted;
     case LearnerReservationStatusFilter.completed:
@@ -252,8 +253,7 @@ String reservationStatusLabel(
 String? resolveLearnerChipDeliveryStatus({
   required LearnerReservation reservation,
   String? linkedDeliveryStatus,
-}) =>
-    linkedDeliveryStatus ?? reservation.activeDelivery?.status;
+}) => linkedDeliveryStatus ?? reservation.activeDelivery?.status;
 
 bool learnerNoDriverIncidentAwaitingResolution({
   required String reservationStatus,
@@ -269,8 +269,7 @@ bool learnerNoDriverIncidentAwaitingResolution({
     return false;
   }
 
-  final effectiveStatus =
-      deliveryStatus ?? activeDeliveryStatus;
+  final effectiveStatus = deliveryStatus ?? activeDeliveryStatus;
   return effectiveStatus?.toUpperCase() == 'AWAITING_RESOLUTION';
 }
 
@@ -359,8 +358,8 @@ String? learnerDeliverySecondaryStatusLabel({
     return null;
   }
 
-  final normalizedDeliveryStatus =
-      (deliveryStatus ?? activeDeliveryStatus)?.toUpperCase();
+  final normalizedDeliveryStatus = (deliveryStatus ?? activeDeliveryStatus)
+      ?.toUpperCase();
 
   if (reservationStatus == 'COMPLETED' ||
       normalizedDeliveryStatus == 'DELIVERED') {
@@ -465,15 +464,17 @@ String? formatPreferredWindowsSummary(LearnerReservation reservation) {
     return null;
   }
 
-  final prefix =
-      reservation.isDeliveryFulfillment ? 'Preferred delivery' : 'Requested pickup';
+  final prefix = reservation.isDeliveryFulfillment
+      ? 'Preferred delivery'
+      : 'Requested pickup';
   final dateFormat = DateFormat('MMM d');
   final timeFormat = DateFormat('h:mm a');
 
   String formatWindow(ReservationPreferredWindow window) {
     final start = window.start.toLocal();
     final end = window.end.toLocal();
-    final sameDay = start.year == end.year &&
+    final sameDay =
+        start.year == end.year &&
         start.month == end.month &&
         start.day == end.day;
 
@@ -508,7 +509,8 @@ String? formatDeliveryAddressSummary(LearnerReservation reservation) {
 }
 
 String? formatSafeDropoffSummary(LearnerReservation reservation) {
-  if (!reservation.isDeliveryFulfillment || reservation.safeDropoffAllowed == null) {
+  if (!reservation.isDeliveryFulfillment ||
+      reservation.safeDropoffAllowed == null) {
     return null;
   }
 
@@ -529,15 +531,16 @@ String formatPreferredWindowRange(
   final timeFormat = DateFormat('h:mm a');
   final start = window.start.toLocal();
   final end = window.end.toLocal();
-  final sameDay = start.year == end.year &&
+  final sameDay =
+      start.year == end.year &&
       start.month == end.month &&
       start.day == end.day;
 
   final range = sameDay
       ? '${dateFormat.format(start)}, '
-          '${timeFormat.format(start)} – ${timeFormat.format(end)}'
+            '${timeFormat.format(start)} – ${timeFormat.format(end)}'
       : '${dateFormat.format(start)}, ${timeFormat.format(start)} – '
-          '${dateFormat.format(end)}, ${timeFormat.format(end)}';
+            '${dateFormat.format(end)}, ${timeFormat.format(end)}';
 
   if (prefix.isEmpty) {
     return range;
@@ -685,7 +688,8 @@ String? formatPickupWindow(LearnerReservation reservation) {
     return 'Confirmed pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)}';
   }
 
-  final sameDay = start.year == end.year &&
+  final sameDay =
+      start.year == end.year &&
       start.month == end.month &&
       start.day == end.day;
 
@@ -800,7 +804,8 @@ String formatDeliveryAvailability(
         : 'Delivery reservation';
   }
 
-  if (reservation.activeDelivery != null && !reservation.isDeliveryFulfillment) {
+  if (reservation.activeDelivery != null &&
+      !reservation.isDeliveryFulfillment) {
     return 'Delivery requested';
   }
 
@@ -821,8 +826,7 @@ String combinedDeliverySummary(LearnerReservation reservation) {
       '${reservation.groupItemCount} items in this group',
     if (reservation.groupTotal != null)
       'Group total ${reservation.currency ?? 'NIS'} ${reservation.groupTotal!.toStringAsFixed(2)}',
-    if (reservation.deliveryFee == 0)
-      'Delivery fee charged once for the group',
+    if (reservation.deliveryFee == 0) 'Delivery fee charged once for the group',
   ];
 
   return parts.join(' · ');

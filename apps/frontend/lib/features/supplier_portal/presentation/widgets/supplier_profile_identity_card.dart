@@ -117,10 +117,7 @@ class SupplierProfileIdentityCard extends StatelessWidget {
 }
 
 class _AvatarBlock extends StatelessWidget {
-  const _AvatarBlock({
-    required this.displayName,
-    this.profileImageUrl,
-  });
+  const _AvatarBlock({required this.displayName, this.profileImageUrl});
 
   final String displayName;
   final String? profileImageUrl;
@@ -253,7 +250,9 @@ class _IdentityDetails extends StatelessWidget {
             child: Text(
               details!.description!,
               style: context.supplierBody().copyWith(
-                color: context.supplierColors.textPrimary.withValues(alpha: 0.88),
+                color: context.supplierColors.textPrimary.withValues(
+                  alpha: 0.88,
+                ),
               ),
             ),
           ),
@@ -305,8 +304,12 @@ class _EditButton extends StatelessWidget {
       label: Text(context.s.editProfileTitle),
       style: OutlinedButton.styleFrom(
         foregroundColor: context.supplierColors.textPrimary,
-        backgroundColor: context.supplierColors.surfaceSolid.withValues(alpha: 0.45),
-        side: BorderSide(color: context.supplierColors.border.withValues(alpha: 0.55)),
+        backgroundColor: context.supplierColors.surfaceSolid.withValues(
+          alpha: 0.45,
+        ),
+        side: BorderSide(
+          color: context.supplierColors.border.withValues(alpha: 0.55),
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,

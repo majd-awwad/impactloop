@@ -44,7 +44,11 @@ type LocationParts = {
 const pickCityArea = (
   location: { city: string; area: string | null } | null | undefined,
 ): LocationParts | null => {
-  const city = location?.city?.trim();
+  if (!location) {
+    return null;
+  }
+
+  const city = location.city.trim();
   if (!city) {
     return null;
   }

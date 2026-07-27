@@ -9,23 +9,14 @@ class SupplierPickupScheduleApi {
 
   final Dio _client;
 
-  Future<List<SupplierPickupScheduleItem>> fetchAcceptedReservations() {
-    return _fetchReservations('accepted');
-  }
-
-  Future<List<SupplierPickupScheduleItem>> fetchCompletedReservations() {
-    return _fetchReservations('completed');
-  }
-
-  Future<List<SupplierPickupScheduleItem>> _fetchReservations(
-    String status,
+  Future<SupplierSchedulePage> fetchSchedule(
+    SupplierScheduleQuery query,
   ) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
-        '/api/supplier/reservations',
-        queryParameters: {'status': status},
+        '/api/supplier/reservations/schedule',
+        queryParameters: query.toQueryParameters(),
       );
-
       final body = response.data;
       if (body == null || body['success'] != true) {
         throw ApiException(
@@ -37,22 +28,11 @@ class SupplierPickupScheduleApi {
 
       final data = body['data'];
       if (data is! Map) {
-        throw const ApiException(message: 'Unexpected reservations response');
+        throw const ApiException(
+          message: 'Unexpected pickup schedule response',
+        );
       }
-
-      final reservations = data['reservations'];
-      if (reservations is! List) {
-        throw const ApiException(message: 'Unexpected reservations response');
-      }
-
-      return reservations
-          .whereType<Map>()
-          .map(
-            (item) => SupplierPickupScheduleItem.fromReservationJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
-          .toList();
+      return SupplierSchedulePage.fromJson(Map<String, dynamic>.from(data));
     } on ApiException {
       rethrow;
     } on DioException catch (error) {

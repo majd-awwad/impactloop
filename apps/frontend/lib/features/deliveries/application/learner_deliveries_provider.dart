@@ -27,11 +27,8 @@ final learnerDeliveriesProvider =
       return ref.watch(deliveriesRepositoryProvider).fetchMyDeliveries();
     });
 
-final learnerDeliveryProvider =
-    FutureProvider.autoDispose.family<LearnerDelivery, String>((
-      ref,
-      deliveryId,
-    ) async {
+final learnerDeliveryProvider = FutureProvider.autoDispose
+    .family<LearnerDelivery, String>((ref, deliveryId) async {
       final delivery = await ref
           .watch(deliveriesRepositoryProvider)
           .fetchDelivery(deliveryId);

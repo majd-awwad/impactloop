@@ -36,6 +36,7 @@ import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -53,6 +54,7 @@ import '../../features/supplier_portal/presentation/pages/supplier_edit_material
 import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_owned_material_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_reservation_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_notifications_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedule_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
@@ -64,7 +66,9 @@ import '../../features/admin_portal/presentation/pages/admin_overview_page.dart'
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_delivery_detail_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_no_show_report_detail_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_no_show_reports_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_reservations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
@@ -132,6 +136,15 @@ bool _isAdminPortalPath(String path) {
 }
 
 bool _isCheckingPath(String path) => path == authCheckingRoute;
+
+String? _recommendationImpressionIdFromExtra(Object? extra) {
+  if (extra is! String) {
+    return null;
+  }
+
+  final normalized = extra.trim();
+  return normalized.isEmpty ? null : normalized;
+}
 
 bool _isAuthPage(String path) =>
     path == loginRoute ||
@@ -673,7 +686,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final projectId = state.pathParameters['id']!;
 
-          return LearningProjectBuildPage(projectId: projectId);
+          return LearningProjectBuildPage(
+            projectId: projectId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
+          );
         },
       ),
       GoRoute(
@@ -681,7 +699,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final projectId = state.pathParameters['id']!;
 
-          return LearningProjectDetailsPage(projectId: projectId);
+          return LearningProjectDetailsPage(
+            projectId: projectId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
+          );
         },
       ),
       GoRoute(
@@ -692,10 +715,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return MaterialDetailsPage(
             materialId: materialId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
             projectId: query['projectId'],
             buildItemId: query['buildItemId'],
             returnTo: query['returnTo'],
             componentName: query['componentName'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/suppliers/:supplierProfileId',
+        builder: (context, state) {
+          final supplierProfileId = state.pathParameters['supplierProfileId']!;
+
+          return PublicSupplierPage(
+            supplierProfileId: supplierProfileId,
           );
         },
       ),
@@ -849,6 +885,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/supplier/reservations/:reservationId',
+            builder: (context, state) => SupplierReservationDetailPage(
+              reservationId: state.pathParameters['reservationId']!,
+            ),
+          ),
+          GoRoute(
             path: '/supplier/pickup-schedule',
             builder: (context, state) => const SupplierPickupSchedulePage(),
           ),
@@ -921,9 +963,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/admin/no-show-reports/:reportId',
+            builder: (context, state) => AdminNoShowReportDetailPage(
+              reportId: state.pathParameters['reportId']!,
+            ),
+          ),
+          GoRoute(
             path: '/admin/deliveries',
             builder: (context, state) => AdminDeliveriesPage(
               initialOpenDeliveryId: state.uri.queryParameters['open'],
+            ),
+          ),
+          GoRoute(
+            path: '/admin/deliveries/:deliveryId',
+            builder: (context, state) => AdminDeliveryDetailPage(
+              deliveryId: state.pathParameters['deliveryId']!,
             ),
           ),
           GoRoute(

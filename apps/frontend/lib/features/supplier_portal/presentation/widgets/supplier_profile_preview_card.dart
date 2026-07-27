@@ -66,10 +66,7 @@ class SupplierProfilePreviewCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            context.s.learnerPreviewSubtitle,
-            style: context.supplierBody(),
-          ),
+          Text(context.s.learnerPreviewSubtitle, style: context.supplierBody()),
           const SizedBox(height: AppSpacing.lg),
           AppSectionCard(
             child: Column(
@@ -169,7 +166,9 @@ class _PreviewIdentityRow extends StatelessWidget {
           alignment: Alignment.center,
           decoration: context.supplierDecorations.avatarCircle,
           child: Text(
-            publicName.isNotEmpty ? publicName.characters.first.toUpperCase() : '?',
+            publicName.isNotEmpty
+                ? publicName.characters.first.toUpperCase()
+                : '?',
             style: context.supplierTitle().copyWith(
               color: context.supplierColors.accent,
             ),
@@ -257,17 +256,26 @@ class _PreviewIllustration extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.supplierColors.accentSoft.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.supplierColors.border.withValues(alpha: 0.35)),
+        border: Border.all(
+          color: context.supplierColors.border.withValues(alpha: 0.35),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           Icon(Icons.recycling, color: context.supplierColors.accent, size: 18),
-          Icon(Icons.handyman_outlined, color: context.supplierColors.accentMuted, size: 16),
-          Icon(Icons.inventory_2_outlined, color: context.supplierColors.textSecondary, size: 16),
+          Icon(
+            Icons.handyman_outlined,
+            color: context.supplierColors.accentMuted,
+            size: 16,
+          ),
+          Icon(
+            Icons.inventory_2_outlined,
+            color: context.supplierColors.textSecondary,
+            size: 16,
+          ),
         ],
       ),
     );
   }
 }
-

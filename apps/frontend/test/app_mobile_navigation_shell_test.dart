@@ -19,9 +19,7 @@ void main() {
       const ProviderScope(
         child: MaterialApp(
           home: AppMobileNavigationShell(
-            child: Scaffold(
-              body: Center(child: Text('Home page body')),
-            ),
+            child: Scaffold(body: Center(child: Text('Home page body'))),
           ),
         ),
       ),

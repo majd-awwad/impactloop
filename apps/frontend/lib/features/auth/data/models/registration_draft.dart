@@ -117,10 +117,12 @@ class RegistrationDraft {
       intent: intent ?? this.intent,
       onboardingInterests: onboardingInterests ?? this.onboardingInterests,
       onboardingGoals: onboardingGoals ?? this.onboardingGoals,
-      onboardingCity:
-          clearOnboardingCity ? null : onboardingCity ?? this.onboardingCity,
-      onboardingArea:
-          clearOnboardingArea ? null : onboardingArea ?? this.onboardingArea,
+      onboardingCity: clearOnboardingCity
+          ? null
+          : onboardingCity ?? this.onboardingCity,
+      onboardingArea: clearOnboardingArea
+          ? null
+          : onboardingArea ?? this.onboardingArea,
       learnerProfile: clearLearnerProfile
           ? null
           : learnerProfile ?? this.learnerProfile,

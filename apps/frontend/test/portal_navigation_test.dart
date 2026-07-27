@@ -109,10 +109,7 @@ void main() {
     });
 
     test('become supplier is shown for learner-only accounts', () {
-      final user = _user(
-        roles: const ['LEARNER'],
-        activeRole: 'LEARNER',
-      );
+      final user = _user(roles: const ['LEARNER'], activeRole: 'LEARNER');
 
       expect(shouldShowBecomeSupplier(user), isTrue);
     });
@@ -130,19 +127,22 @@ void main() {
       expect(shouldShowBecomeLearner(user), isFalse);
     });
 
-    test('become learner is shown for personal supplier without learner access', () {
-      final user = _user(
-        roles: const ['SUPPLIER'],
-        activeRole: 'SUPPLIER',
-        canBecomeLearner: true,
-        supplierProfile: const SupplierProfile(
-          supplierType: 'INDIVIDUAL_SUPPLIER',
-          publicName: 'Test Supplier',
-        ),
-      );
+    test(
+      'become learner is shown for personal supplier without learner access',
+      () {
+        final user = _user(
+          roles: const ['SUPPLIER'],
+          activeRole: 'SUPPLIER',
+          canBecomeLearner: true,
+          supplierProfile: const SupplierProfile(
+            supplierType: 'INDIVIDUAL_SUPPLIER',
+            publicName: 'Test Supplier',
+          ),
+        );
 
-      expect(shouldShowBecomeLearner(user), isTrue);
-      expect(shouldShowSwitchToLearner(user), isFalse);
-    });
+        expect(shouldShowBecomeLearner(user), isTrue);
+        expect(shouldShowSwitchToLearner(user), isFalse);
+      },
+    );
   });
 }

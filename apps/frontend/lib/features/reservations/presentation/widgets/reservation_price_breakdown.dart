@@ -71,9 +71,7 @@ class ReservationPriceBreakdown extends StatelessWidget {
         ),
         child: Text(
           errorMessage!,
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(color: materialDanger),
+          style: AppTextStyles.label(context).copyWith(color: materialDanger),
         ),
       );
     }
@@ -118,7 +116,8 @@ class ReservationPriceBreakdown extends StatelessWidget {
           ),
           _PriceRow(
             label: 'Quantity',
-            value: currentQuote.quantity == currentQuote.quantity.roundToDouble()
+            value:
+                currentQuote.quantity == currentQuote.quantity.roundToDouble()
                 ? currentQuote.quantity.toStringAsFixed(0)
                 : currentQuote.quantity.toString(),
           ),
@@ -178,7 +177,10 @@ class ReservationPriceBreakdown extends StatelessWidget {
           const Divider(height: AppSpacing.lg),
           _PriceRow(
             label: 'Total to pay',
-            value: _formatAmount(currentQuote.totalAmount, currentQuote.currency),
+            value: _formatAmount(
+              currentQuote.totalAmount,
+              currentQuote.currency,
+            ),
             emphasized: true,
           ),
         ],

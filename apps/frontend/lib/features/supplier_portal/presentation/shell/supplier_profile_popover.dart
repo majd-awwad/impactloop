@@ -163,94 +163,94 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          Row(
-            children: [
-              SupplierPortalAvatar(
-                displayName: displayName,
-                size: 48,
-                fontSize: 20,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      displayName,
-                      style: context.supplierLabel().copyWith(
-                        color: colors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (email != null)
-                      Text(email!, style: context.supplierBody()),
-                    if (supplierType != null && supplierType!.isNotEmpty)
+            Row(
+              children: [
+                SupplierPortalAvatar(
+                  displayName: displayName,
+                  size: 48,
+                  fontSize: 20,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        context.s.supplierTypeLabel(supplierType!),
-                        style: context.supplierBody(),
-                      ),
-                    if (user != null)
-                      Text(
-                        activePortalModeLabel(user),
-                        style: context.supplierBody().copyWith(
-                          color: colors.accent,
+                        displayName,
+                        style: context.supplierLabel().copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                  ],
+                      if (email != null)
+                        Text(email!, style: context.supplierBody()),
+                      if (supplierType != null && supplierType!.isNotEmpty)
+                        Text(
+                          context.s.supplierTypeLabel(supplierType!),
+                          style: context.supplierBody(),
+                        ),
+                      if (user != null)
+                        Text(
+                          activePortalModeLabel(user),
+                          style: context.supplierBody().copyWith(
+                            color: colors.accent,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SupplierVerificationBadge(status: verificationStatus),
+            if (showSettingsControls) ...[
+              const SizedBox(height: AppSpacing.md),
+              const SupplierSettingsControls(compact: true),
+            ],
+            Divider(color: colors.border, height: 24),
+            _PopoverAction(
+              label: context.s.viewSupplierProfile,
+              icon: Icons.person_outline,
+              onTap: () => onNavigate('/supplier/profile'),
+            ),
+            _PopoverAction(
+              label: context.s.navMyMaterials,
+              icon: Icons.inventory_2_outlined,
+              onTap: () => onNavigate('/supplier/materials'),
+            ),
+            _PopoverAction(
+              label: context.s.navIncomingRequests,
+              icon: Icons.inbox_outlined,
+              onTap: () => onNavigate('/supplier/reservations'),
+            ),
+            _PopoverAction(
+              label: context.s.navNotifications,
+              icon: Icons.notifications_none_rounded,
+              onTap: () => onNavigate('/supplier/notifications'),
+            ),
+            if (user != null) ...[
+              Divider(color: colors.border, height: 24),
+              ...PortalSwitchMenuItems.build(
+                context: context,
+                ref: ref,
+                user: user,
+                labelStyle: context.supplierLabel().copyWith(
+                  color: colors.textPrimary,
+                ),
+                noteStyle: context.supplierBody(),
+                onBeforeSwitch: onBeforePortalSwitch,
+                iconColor: colors.textPrimary,
+                useListTileStyle: true,
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SupplierVerificationBadge(status: verificationStatus),
-          if (showSettingsControls) ...[
-            const SizedBox(height: AppSpacing.md),
-            const SupplierSettingsControls(compact: true),
-          ],
-          Divider(color: colors.border, height: 24),
-          _PopoverAction(
-            label: context.s.viewSupplierProfile,
-            icon: Icons.person_outline,
-            onTap: () => onNavigate('/supplier/profile'),
-          ),
-          _PopoverAction(
-            label: context.s.navMyMaterials,
-            icon: Icons.inventory_2_outlined,
-            onTap: () => onNavigate('/supplier/materials'),
-          ),
-          _PopoverAction(
-            label: context.s.navIncomingRequests,
-            icon: Icons.inbox_outlined,
-            onTap: () => onNavigate('/supplier/reservations'),
-          ),
-          _PopoverAction(
-            label: context.s.navNotifications,
-            icon: Icons.notifications_none_rounded,
-            onTap: () => onNavigate('/supplier/notifications'),
-          ),
-          if (user != null) ...[
             Divider(color: colors.border, height: 24),
-            ...PortalSwitchMenuItems.build(
-              context: context,
-              ref: ref,
-              user: user,
-              labelStyle: context.supplierLabel().copyWith(
-                color: colors.textPrimary,
-              ),
-              noteStyle: context.supplierBody(),
-              onBeforeSwitch: onBeforePortalSwitch,
-              iconColor: colors.textPrimary,
-              useListTileStyle: true,
+            _PopoverAction(
+              label: context.s.logout,
+              icon: Icons.logout_rounded,
+              onTap: onLogout,
+              destructive: true,
             ),
           ],
-          Divider(color: colors.border, height: 24),
-          _PopoverAction(
-            label: context.s.logout,
-            icon: Icons.logout_rounded,
-            onTap: onLogout,
-            destructive: true,
-          ),
-        ],
         ),
       ),
     );

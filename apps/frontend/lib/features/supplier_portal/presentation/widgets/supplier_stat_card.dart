@@ -60,10 +60,7 @@ class SupplierStatCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            value,
-            style: context.supplierTitle().copyWith(fontSize: 20),
-          ),
+          Text(value, style: context.supplierTitle().copyWith(fontSize: 20)),
           Text(label, style: context.supplierBody()),
           if (subtitle != null) ...[
             Text(
@@ -81,9 +78,7 @@ class SupplierStatCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 minHeight: 6,
                 value: progress!.clamp(0, 1),
-                backgroundColor: colors.chipUnselected.withValues(
-                  alpha: 0.8,
-                ),
+                backgroundColor: colors.chipUnselected.withValues(alpha: 0.8),
                 color: colors.accent,
               ),
             ),
@@ -134,11 +129,7 @@ class SupplierImpactCard extends StatelessWidget {
                   backgroundColor: colors.chipUnselected,
                   color: colors.accent,
                 ),
-                Icon(
-                  Icons.recycling_rounded,
-                  color: colors.accent,
-                  size: 22,
-                ),
+                Icon(Icons.recycling_rounded, color: colors.accent, size: 22),
               ],
             ),
           ),

@@ -16,6 +16,8 @@ class AdminDeliveriesApi {
     String? search,
     String? status,
     String? assignment,
+    String? scope,
+    String? incidentState,
     String? dateFrom,
     String? dateTo,
   }) {
@@ -23,9 +25,15 @@ class AdminDeliveriesApi {
       'page': page,
       'limit': limit,
       if (search != null && search.isNotEmpty) 'search': search,
-      if (status != null && status.isNotEmpty && status != 'ALL') 'status': status,
+      if (status != null && status.isNotEmpty && status != 'ALL')
+        'status': status,
       if (assignment != null && assignment.isNotEmpty && assignment != 'ALL')
         'assignment': assignment,
+      if (scope != null && scope.isNotEmpty && scope != 'ALL') 'scope': scope,
+      if (incidentState != null &&
+          incidentState.isNotEmpty &&
+          incidentState != 'ALL')
+        'incidentState': incidentState,
       if (dateFrom != null && dateFrom.isNotEmpty) 'dateFrom': dateFrom,
       if (dateTo != null && dateTo.isNotEmpty) 'dateTo': dateTo,
     };

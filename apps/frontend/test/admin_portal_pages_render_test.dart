@@ -68,8 +68,9 @@ AdminDeliveriesListResponse _sampleDeliveriesList() {
   return AdminDeliveriesListResponse.fromJson({
     'summary': {
       'total': 1,
-      'pendingUnassigned': 0,
-      'assignedInProgress': 1,
+      'waitingForDriver': 0,
+      'activeInProgress': 1,
+      'needsAdminReview': 0,
       'delivered': 0,
       'failedCancelled': 0,
     },
@@ -96,6 +97,19 @@ AdminDeliveriesListResponse _sampleDeliveriesList() {
           'displayName': 'Driver One',
           'email': 'driver@example.test',
         },
+        'currentDriver': {
+          'id': 'driver-1',
+          'displayName': 'Current Driver',
+          'email': 'current@example.test',
+        },
+        'scope': 'SINGLE',
+        'lifecyclePhase': 'PRE_PICKUP',
+        'adminAttentionState': 'NONE',
+        'assignmentState': 'ACTIVE',
+        'kpiBucket': 'ACTIVE_IN_PROGRESS',
+        'availableMutations': [],
+        'availableLinks': [],
+        'itemCount': 1,
         'pickupArea': 'Ramallah',
         'dropoffArea': 'Ramallah',
       },
@@ -126,6 +140,8 @@ class _FakeAdminDeliveriesApi implements AdminDeliveriesApi {
     String? search,
     String? status,
     String? assignment,
+    String? scope,
+    String? incidentState,
     String? dateFrom,
     String? dateTo,
   }) async {
@@ -204,11 +220,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          adminDashboardProvider.overrideWith((ref) async => _sampleDashboard()),
+          adminDashboardProvider.overrideWith(
+            (ref) async => _sampleDashboard(),
+          ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: AdminOverviewPage()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AdminOverviewPage())),
       ),
     );
 
@@ -224,11 +240,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          adminDashboardProvider.overrideWith((ref) async => _sampleDashboard()),
+          adminDashboardProvider.overrideWith(
+            (ref) async => _sampleDashboard(),
+          ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: AdminImpactPage()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AdminImpactPage())),
       ),
     );
 
@@ -267,9 +283,7 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: AdminAuditLogsPage()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AdminAuditLogsPage())),
       ),
     );
 
@@ -305,9 +319,7 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: AdminReservationsPage()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AdminReservationsPage())),
       ),
     );
 
@@ -327,8 +339,9 @@ void main() {
             (ref) async => const AdminDeliveriesListResponse(
               summary: AdminDeliveriesSummary(
                 total: 0,
-                pendingUnassigned: 0,
-                assignedInProgress: 0,
+                waitingForDriver: 0,
+                activeInProgress: 0,
+                needsAdminReview: 0,
                 delivered: 0,
                 failedCancelled: 0,
               ),
@@ -343,15 +356,46 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: AdminDeliveriesPage()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
       ),
     );
 
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('No deliveries recorded yet.'), findsOneWidget);
+    expect(find.text('No deliveries found'), findsOneWidget);
+  });
+
+  testWidgets('AdminDeliveriesPage renders its six-column desktop monitor', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1600, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final api = _FakeAdminDeliveriesApi(
+      detail: AdminDeliveryDetail.fromJson(_sampleDeliveryDetailJson()),
+      reopenResult: AdminDeliveryDetail.fromJson(_sampleDeliveryDetailJson()),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [adminDeliveriesApiProvider.overrideWithValue(api)],
+        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    for (final label in const [
+      'Delivery',
+      'Journey',
+      'Progress',
+      'Attention',
+      'Updated',
+      'Action',
+    ]) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Current Driver'), findsOneWidget);
+    expect(find.byTooltip('View delivery'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('AdminDeliveriesPage confirms and reopens a driver assignment', (
@@ -373,17 +417,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          adminDeliveriesApiProvider.overrideWithValue(api),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(body: AdminDeliveriesPage()),
-        ),
+        overrides: [adminDeliveriesApiProvider.overrideWithValue(api)],
+        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
       ),
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Details'));
+    await tester.tap(find.byTooltip('View delivery'));
     await tester.pumpAndSettle();
     expect(find.text('Reopen to drivers'), findsOneWidget);
 
@@ -409,7 +449,8 @@ void main() {
       detail: AdminDeliveryDetail.fromJson(_sampleDeliveryDetailJson()),
       reopenResult: AdminDeliveryDetail.fromJson(_sampleDeliveryDetailJson()),
       reopenError: const ApiException(
-        message: 'Pickup has already started; this delivery cannot be reopened.',
+        message:
+            'Pickup has already started; this delivery cannot be reopened.',
         code: 'CONFLICT',
         statusCode: 409,
       ),
@@ -417,17 +458,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          adminDeliveriesApiProvider.overrideWithValue(api),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(body: AdminDeliveriesPage()),
-        ),
+        overrides: [adminDeliveriesApiProvider.overrideWithValue(api)],
+        child: const MaterialApp(home: Scaffold(body: AdminDeliveriesPage())),
       ),
     );
 
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Details'));
+    await tester.tap(find.byTooltip('View delivery'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Reopen to drivers'));
     await tester.pumpAndSettle();
@@ -436,7 +473,9 @@ void main() {
 
     expect(api.reopenCalled, isTrue);
     expect(
-      find.text('Pickup has already started; this delivery cannot be reopened.'),
+      find.text(
+        'Pickup has already started; this delivery cannot be reopened.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Reopen to drivers'), findsOneWidget);

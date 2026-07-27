@@ -31,6 +31,10 @@ class SupplierProfileRepository {
   final SupplierProfileApi _profileApi;
   final LocationsApi _locationsApi;
 
+  Future<SupplierProfileManagement> fetchManagementProfile() {
+    return _profileApi.fetchManagementProfile();
+  }
+
   Future<SupplierProfileResponse> fetchProfile() => _profileApi.fetchProfile();
 
   Future<SupplierProfileResponse> updateProfile(

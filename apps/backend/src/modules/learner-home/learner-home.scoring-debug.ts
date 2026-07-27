@@ -18,6 +18,8 @@ export type LearnerHomeProfiler = {
   time: <T>(step: string, fn: () => Promise<T> | T) => Promise<T>;
   mark: (step: string, fn: () => void) => void;
   record: (step: string, durationMs: number) => void;
+  /** RP-03.5: read accumulated step timings without logger scraping. */
+  getTimings: () => ReadonlyMap<string, number>;
   report: (context?: { userId?: string; scope?: string }) => void;
 };
 
@@ -59,6 +61,9 @@ export const createLearnerHomeProfiler = (
     },
     record(step, durationMs) {
       record(step, durationMs);
+    },
+    getTimings() {
+      return new Map(timings);
     },
     report(context = {}) {
       if (!isLearnerHomeProfilingEnabled() || timings.size === 0) {

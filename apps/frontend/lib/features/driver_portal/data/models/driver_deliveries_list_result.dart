@@ -70,8 +70,9 @@ class DriverAvailableJobsFilter {
     return DriverAvailableJobsFilter(
       city: clearCity ? null : (city ?? this.city),
       area: clearArea ? null : (area ?? this.area),
-      maxDistanceKm:
-          clearMaxDistanceKm ? null : (maxDistanceKm ?? this.maxDistanceKm),
+      maxDistanceKm: clearMaxDistanceKm
+          ? null
+          : (maxDistanceKm ?? this.maxDistanceKm),
       sortBy: sortBy ?? this.sortBy,
     );
   }

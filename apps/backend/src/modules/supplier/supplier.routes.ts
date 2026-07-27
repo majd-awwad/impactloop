@@ -11,6 +11,7 @@ import {
   getMaterial,
   getMaterials,
   getProfile,
+  getProfileManagement,
   getProfileFollowers,
   markMaterialUnavailable,
   patchMaterial,
@@ -42,6 +43,13 @@ supplierRouter.get(
   authMiddleware,
   requireRoles('SUPPLIER'),
   asyncHandler(getDashboard),
+);
+
+supplierRouter.get(
+  '/profile/manage',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  asyncHandler(getProfileManagement),
 );
 
 supplierRouter.get(

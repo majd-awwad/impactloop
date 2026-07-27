@@ -12,6 +12,13 @@ class SupplierProfileApi {
 
   static const _basePath = '/api/supplier/profile';
 
+  Future<SupplierProfileManagement> fetchManagementProfile() {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('$_basePath/manage'),
+      SupplierProfileManagement.fromJson,
+    );
+  }
+
   Future<SupplierProfileResponse> fetchProfile() {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(_basePath),

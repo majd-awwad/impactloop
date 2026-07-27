@@ -50,10 +50,8 @@ class DiscoveryLocationPrivacyPanel extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   const LocalizedText(
-                    en:
-                        'For privacy, public results show city, area, and approximate map pins only.',
-                    ar:
-                        'لحماية الخصوصية، تعرض النتائج العامة المدينة والمنطقة ونقاطاً تقريبية فقط.',
+                    en: 'For privacy, public results show city, area, and approximate map pins only.',
+                    ar: 'لحماية الخصوصية، تعرض النتائج العامة المدينة والمنطقة ونقاطاً تقريبية فقط.',
                   ).resolve(context),
                   style: AppTextStyles.subtitle(
                     context,

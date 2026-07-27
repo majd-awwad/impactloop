@@ -344,6 +344,37 @@ enum ProjectComponentRole {
   ALTERNATIVE
 }
 
+enum TaxonomyConceptType {
+  INTEREST
+  MATERIAL_FAMILY
+  MATERIAL_FORM
+  PROJECT_TOPIC
+  COMPONENT
+}
+
+enum TaxonomyConceptStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TaxonomyConceptRelationType {
+  INTEREST_RELEVANT_TO
+  SATISFIED_BY
+}
+
+enum TaxonomyLanguage {
+  EN
+  AR
+}
+
+enum TaxonomyAliasType {
+  CANONICAL
+  EXPLICIT
+  LEGACY
+  ABBREVIATION
+  TRANSLATION
+}
+
 enum ProjectReviewStatus {
   PENDING_REVIEW
   ACCEPTED
@@ -372,6 +403,76 @@ enum ProjectBuildItemStatus {
   ALTERNATIVE
 }
 
+enum RecommendationEntityType {
+  MATERIAL
+  PROJECT
+}
+
+enum RecommendationCacheState {
+  MISS
+  HIT
+  SINGLE_FLIGHT
+  UNCACHED
+}
+
+enum RecommendationActionType {
+  MATERIAL_VIEW
+  MATERIAL_LIKE
+  MATERIAL_UNLIKE
+  RESERVATION_CREATED
+  RESERVATION_SUBMITTED
+  PROJECT_LIKE
+  PROJECT_UNLIKE
+  PROJECT_SAVE
+  PROJECT_UNSAVE
+  PROJECT_FOLLOW
+  PROJECT_UNFOLLOW
+  PROJECT_BUILD_STARTED
+  PROJECT_BUILD_PROGRESS_UPDATED
+  PROJECT_BUILD_PROGRESSED
+}
+
+enum RecommendationAttributionType {
+  DIRECT
+  ASSISTED
+}
+
+enum RecommendationEventSource {
+  REAL
+  DEMO_SEED
+  TEST
+  LOAD_TEST
+  SYNTHETIC
+  LEGACY_UNCLASSIFIED
+}
+
+enum RecommendationEvidenceEligibility {
+  UNCLASSIFIED
+  ELIGIBLE
+  EXCLUDED_DEMO
+  EXCLUDED_TEST
+  EXCLUDED_INTERNAL
+}
+
+enum RecommendationEligibilityResult {
+  ELIGIBLE
+  EXCLUDED
+}
+
+enum RecommendationOutboxEventKind {
+  RECOMMENDATION_GENERATION
+  RECOMMENDATION_EXPOSURE
+  RECOMMENDATION_ACTION
+}
+
+enum RecommendationOutboxStatus {
+  PENDING
+  PROCESSING
+  RETRY
+  PROCESSED
+  DEAD
+}
+
 model User {
   id                            String                     @id @default(cuid())
   displayName                   String                     @map("display_name")
@@ -379,6 +480,7 @@ model User {
   phone                         String?                    @unique
   passwordHash                  String                     @map("password_hash")
   accountStatus                 AccountStatus              @default(PENDING_VERIFICATION) @map("account_status")
+  recommendationEvidenceEligibility RecommendationEvidenceEligibility @default(ELIGIBLE) @map("recommendation_evidence_eligibility")
   profileImageUrl               String?                    @map("profile_image_url")
   emailVerifiedAt               DateTime?                  @map("email_verified_at")
   phoneVerifiedAt               DateTime?                  @map("phone_verified_at")
@@ -442,6 +544,10 @@ model User {
   projectAuthoringSessions               ProjectAuthoringSession[]
   aiPendingActions                       AiPendingAction[]
   generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviewGeneratedBy")
+recommendationGenerations    RecommendationGeneration[]
+  recommendationRequests       RecommendationRequest[]
+  recommendationImpressions    RecommendationImpression[]
+  recommendationActions        RecommendationAction[]
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -679,12 +785,16 @@ model Category {
   nameEn                    String                     @map("name_en")
   nameAr                    String                     @map("name_ar")
   parentId                  String?                    @map("parent_id")
+  materialFamilyConceptId   String?                    @map("material_family_concept_id")
+  projectTopicConceptId     String?                    @map("project_topic_concept_id")
   categoryType              CategoryType               @map("category_type")
   iconUrl                   String?                    @map("icon_url")
   isActive                  Boolean                    @default(true) @map("is_active")
   createdAt                 DateTime                   @default(now()) @map("created_at")
   parent                    Category?                  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children                  Category[]                 @relation("CategoryHierarchy")
+  materialFamilyConcept     TaxonomyConcept?           @relation("CategoryMaterialFamilyConcept", fields: [materialFamilyConceptId], references: [id], onDelete: Restrict)
+  projectTopicConcept       TaxonomyConcept?           @relation("CategoryProjectTopicConcept", fields: [projectTopicConceptId], references: [id], onDelete: Restrict)
   materials                 Material[]
   learningProjects          LearningProject[]
   projectRequiredComponents ProjectRequiredComponent[]
@@ -694,6 +804,8 @@ model Category {
 
   @@index([parentId])
   @@index([categoryType, isActive])
+  @@index([materialFamilyConceptId])
+  @@index([projectTopicConceptId])
   @@map("categories")
 }
 
@@ -740,6 +852,7 @@ model LearningProject {
   authoringConversation    AiConversation?            @relation("ProjectAuthoringConversation")
   projectAuthoringSession  ProjectAuthoringSession?
   adminAiReviews           LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviews")
+taxonomyConcepts         LearningProjectConcept[]
 
   @@index([categoryId])
   @@index([createdBy])
@@ -805,6 +918,7 @@ model ProjectRequiredComponent {
   project                  LearningProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category                 Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   buildItems               ProjectBuildItem[]
+  taxonomyConcepts         ProjectComponentConcept[]
 
   @@index([projectId])
   @@index([categoryId])
@@ -860,6 +974,124 @@ model ProjectTag {
   @@index([projectId])
   @@index([tag])
   @@map("project_tags")
+}
+
+model TaxonomyConcept {
+  id                String                    @id @default(cuid())
+  canonicalKey      String                    @unique @map("canonical_key")
+  conceptType       TaxonomyConceptType       @map("concept_type")
+  labelEn           String                    @map("label_en")
+  labelAr           String                    @map("label_ar")
+  status            TaxonomyConceptStatus     @default(ACTIVE)
+  parentId          String?                   @map("parent_id")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  parent            TaxonomyConcept?          @relation("TaxonomyConceptHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children          TaxonomyConcept[]         @relation("TaxonomyConceptHierarchy")
+  aliases           TaxonomyAlias[]
+  learnerInterests  LearnerInterestConcept[]
+  materials         MaterialConcept[]
+  projects          LearningProjectConcept[]
+  projectComponents ProjectComponentConcept[]
+  outgoingRelations TaxonomyConceptRelation[]  @relation("TaxonomyConceptRelationSource")
+  incomingRelations TaxonomyConceptRelation[]  @relation("TaxonomyConceptRelationTarget")
+  materialFamilyCategories Category[]                  @relation("CategoryMaterialFamilyConcept")
+  projectTopicCategories   Category[]                  @relation("CategoryProjectTopicConcept")
+
+  @@unique([id, conceptType], map: "taxonomy_concepts_id_concept_type_key")
+  @@index([conceptType, status])
+  @@index([parentId])
+  @@map("taxonomy_concepts")
+}
+
+model TaxonomyConceptRelation {
+  id                String                      @id @default(cuid())
+  relationType      TaxonomyConceptRelationType @map("relation_type")
+  sourceConceptId   String                      @map("source_concept_id")
+  sourceConceptType TaxonomyConceptType         @map("source_concept_type")
+  targetConceptId   String                      @map("target_concept_id")
+  targetConceptType TaxonomyConceptType         @map("target_concept_type")
+  createdAt         DateTime                    @default(now()) @map("created_at")
+  sourceConcept     TaxonomyConcept             @relation("TaxonomyConceptRelationSource", fields: [sourceConceptId, sourceConceptType], references: [id, conceptType], onDelete: Cascade, onUpdate: Cascade, map: "taxonomy_relations_source_concept_type_fkey")
+  targetConcept     TaxonomyConcept             @relation("TaxonomyConceptRelationTarget", fields: [targetConceptId, targetConceptType], references: [id, conceptType], onDelete: Cascade, onUpdate: Cascade, map: "taxonomy_relations_target_concept_type_fkey")
+
+  @@unique([relationType, sourceConceptId, targetConceptId], map: "taxonomy_relations_type_source_target_key")
+  @@index([sourceConceptId, relationType], map: "taxonomy_relations_source_type_idx")
+  @@index([targetConceptId, relationType], map: "taxonomy_relations_target_type_idx")
+  @@map("taxonomy_concept_relations")
+}
+
+model TaxonomyAlias {
+  id              String            @id @default(cuid())
+  conceptId       String            @map("concept_id")
+  alias           String
+  normalizedAlias String            @map("normalized_alias")
+  language        TaxonomyLanguage
+  aliasType       TaxonomyAliasType @map("alias_type")
+  source          String
+  isActive        Boolean           @default(true) @map("is_active")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+  concept         TaxonomyConcept   @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([conceptId, language, normalizedAlias])
+  @@index([normalizedAlias, language, isActive])
+  @@index([conceptId, isActive])
+  @@map("taxonomy_aliases")
+}
+
+model LearnerInterestConcept {
+  id                 String          @id @default(cuid())
+  learnerInterestKey String          @unique @map("learner_interest_key")
+  conceptId          String          @map("concept_id")
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+  concept            TaxonomyConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@index([conceptId])
+  @@map("learner_interest_concepts")
+}
+
+model MaterialConcept {
+  id         String          @id @default(cuid())
+  materialId String          @map("material_id")
+  conceptId  String          @map("concept_id")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  material   Material        @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  concept    TaxonomyConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([materialId, conceptId])
+  @@index([materialId])
+  @@index([conceptId])
+  @@map("material_concepts")
+}
+
+model LearningProjectConcept {
+  id        String          @id @default(cuid())
+  projectId String          @map("project_id")
+  conceptId String          @map("concept_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  project   LearningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  concept   TaxonomyConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, conceptId])
+  @@index([projectId])
+  @@index([conceptId])
+  @@map("learning_project_concepts")
+}
+
+model ProjectComponentConcept {
+  id          String                   @id @default(cuid())
+  componentId String                   @map("component_id")
+  conceptId   String                   @map("concept_id")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  component   ProjectRequiredComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  concept     TaxonomyConcept          @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([componentId, conceptId])
+  @@index([componentId])
+  @@index([conceptId])
+  @@map("project_component_concepts")
 }
 
 model ProjectLike {
@@ -1037,6 +1269,7 @@ model Material {
   likes                         MaterialLike[]
   views                         MaterialView[]
   linkedFromProjectBuildItems   ProjectBuildItem[] @relation("ProjectBuildLinkedMaterial")
+  taxonomyConcepts              MaterialConcept[]
 
   @@index([ownerId])
   @@index([moderatedById])
@@ -1413,11 +1646,21 @@ model Notification {
   body              String
   relatedEntityType String?  @map("related_entity_type")
   relatedEntityId   String?  @map("related_entity_id")
+  readAt            DateTime? @map("read_at")
+  eventKey          String?  @unique @map("event_key")
+  entityType        String?  @map("entity_type")
+  entityId          String?  @map("entity_id")
+  actionType        String?  @map("action_type")
+  metadata          Json?
+  resolvedAt        DateTime? @map("resolved_at")
+  actorId           String?  @map("actor_id")
   isRead            Boolean  @default(false) @map("is_read")
   createdAt         DateTime @default(now()) @map("created_at")
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([userId, entityType, entityId])
   @@map("notifications")
 }
 
@@ -1759,4 +2002,148 @@ model ProjectAuthoringTurn {
   @@index([sessionId, createdAt])
   @@index([sessionId, status])
   @@map("project_authoring_turns")
+}
+model RecommendationGeneration {
+  id                   String                         @id @default(cuid())
+  generationKey        String                         @unique @map("generation_key")
+  learnerId            String                         @map("learner_id")
+  surface              String
+  algorithmName        String                         @map("algorithm_name")
+  algorithmVersion     String                         @map("algorithm_version")
+  policyVersion        String                         @map("policy_version")
+  generatedAt          DateTime                       @default(now()) @map("generated_at")
+  cacheState           RecommendationCacheState       @map("cache_state")
+  candidateCount       Int                            @map("candidate_count")
+  shownItemCount       Int                            @map("shown_item_count")
+  generationDurationMs Int                            @map("generation_duration_ms")
+  eventSource          RecommendationEventSource      @map("event_source")
+  createdAt            DateTime                       @default(now()) @map("created_at")
+  learner              User                           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  requests             RecommendationRequest[]
+  candidateTraces      RecommendationCandidateTrace[]
+
+  @@index([learnerId, generatedAt(sort: Desc)])
+  @@index([surface, generatedAt(sort: Desc)])
+  @@index([algorithmName, algorithmVersion])
+  @@map("recommendation_generations")
+}
+
+model RecommendationRequest {
+  id                   String                    @id @default(cuid())
+  learnerId            String                    @map("learner_id")
+  generationId         String                    @map("generation_id")
+  surface              String
+  algorithmName        String                    @map("algorithm_name")
+  algorithmVersion     String                    @map("algorithm_version")
+  policyVersion        String                    @map("policy_version")
+  cacheState           RecommendationCacheState  @map("cache_state")
+  correlationId        String?                   @map("correlation_id")
+  candidateCount       Int                       @map("candidate_count")
+  shownItemCount       Int                       @map("shown_item_count")
+  generationDurationMs Int                       @map("generation_duration_ms")
+  eventSource          RecommendationEventSource @map("event_source")
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  learner              User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  generation           RecommendationGeneration  @relation(fields: [generationId], references: [id], onDelete: Cascade)
+  impressions          RecommendationImpression[]
+
+  @@index([learnerId, createdAt(sort: Desc)])
+  @@index([surface, createdAt(sort: Desc)])
+  @@index([generationId])
+  @@map("recommendation_requests")
+}
+
+model RecommendationCandidateTrace {
+  id                  String                           @id @default(cuid())
+  generationId        String                           @map("generation_id")
+  entityType          RecommendationEntityType        @map("entity_type")
+  entityId            String                           @map("entity_id")
+  surface             String
+  sectionKey          String?                          @map("section_key")
+  candidateSource     String                           @map("candidate_source")
+  eligibilityResult   RecommendationEligibilityResult @map("eligibility_result")
+  rankBeforeSelection Int?                            @map("rank_before_selection")
+  finalScore          Float?                          @map("final_score")
+  scoreComponents     Json?                           @map("score_components")
+  exclusionReason     String?                          @map("exclusion_reason")
+  selected            Boolean                         @default(false)
+  eventSource         RecommendationEventSource       @map("event_source")
+  createdAt           DateTime                        @default(now()) @map("created_at")
+  generation          RecommendationGeneration       @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@index([generationId, sectionKey])
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@map("recommendation_candidate_traces")
+}
+
+model RecommendationImpression {
+  id                String                    @id @default(cuid())
+  requestId         String                    @map("request_id")
+  learnerId         String                    @map("learner_id")
+  entityType        RecommendationEntityType @map("entity_type")
+  entityId          String                    @map("entity_id")
+  surface           String
+  sectionKey        String                    @map("section_key")
+  position          Int
+  score             Float
+  reasonCode        String                    @map("reason_code")
+  algorithmName     String                    @map("algorithm_name")
+  algorithmVersion  String                    @map("algorithm_version")
+  shownAt           DateTime                  @default(now()) @map("shown_at")
+  eventSource       RecommendationEventSource @map("event_source")
+  request           RecommendationRequest     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  learner           User                      @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  actions           RecommendationAction[]
+
+  @@unique([requestId, entityType, entityId, sectionKey, position])
+  @@index([learnerId, surface, shownAt(sort: Desc)])
+  @@index([learnerId, entityType, entityId, surface, shownAt(sort: Desc)])
+  @@index([requestId])
+  @@map("recommendation_impressions")
+}
+
+model RecommendationAction {
+  id                String                         @id @default(cuid())
+  impressionId      String                         @map("impression_id")
+  learnerId         String                         @map("learner_id")
+  entityType        RecommendationEntityType      @map("entity_type")
+  entityId          String                         @map("entity_id")
+  actionType        RecommendationActionType      @map("action_type")
+  attributionType   RecommendationAttributionType @map("attribution_type")
+  actionAt          DateTime                       @default(now()) @map("action_at")
+  sourceOperationId String?                        @map("source_operation_id")
+  eventSource       RecommendationEventSource      @map("event_source")
+  createdAt         DateTime                       @default(now()) @map("created_at")
+  impression        RecommendationImpression       @relation(fields: [impressionId], references: [id], onDelete: Cascade)
+  learner           User                           @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+
+  @@index([impressionId])
+  @@index([learnerId, actionAt(sort: Desc)])
+  @@index([entityType, entityId, actionType, actionAt(sort: Desc)])
+  @@index([sourceOperationId])
+  @@map("recommendation_actions")
+}
+
+model RecommendationEventOutbox {
+  id                String                       @id @default(cuid())
+  eventKind         RecommendationOutboxEventKind @map("event_kind")
+  schemaVersion     String                       @map("schema_version")
+  deduplicationKey  String                       @unique @map("deduplication_key")
+  payload           Json
+  status            RecommendationOutboxStatus   @default(PENDING)
+  attemptCount      Int                          @default(0) @map("attempt_count")
+  availableAt       DateTime                     @default(now()) @map("available_at")
+  lockedAt          DateTime?                    @map("locked_at")
+  lockToken         String?                      @map("lock_token")
+  processedAt       DateTime?                    @map("processed_at")
+  lastErrorCode     String?                      @map("last_error_code")
+  lastErrorSummary  String?                      @map("last_error_summary")
+  createdAt         DateTime                     @default(now()) @map("created_at")
+  updatedAt         DateTime                     @updatedAt @map("updated_at")
+
+  @@index([status, availableAt, createdAt])
+  @@index([lockedAt])
+  @@index([processedAt])
+  @@index([createdAt])
+  @@map("recommendation_event_outbox")
 }

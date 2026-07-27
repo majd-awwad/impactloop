@@ -59,6 +59,20 @@ export const reservationInclude = {
       id: true,
       status: true,
       assignedDriverProfileId: true,
+      requestedAt: true,
+      assignedAt: true,
+      pickedUpAt: true,
+      deliveredAt: true,
+      failedAt: true,
+      failureReason: true,
+      deliveryGroupId: true,
+      assignedDriverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { id: true, displayName: true, profileImageUrl: true } },
+        },
+      },
     },
     orderBy: { requestedAt: 'desc' as const },
     take: 1,
@@ -69,28 +83,43 @@ export const reservationInclude = {
       deliveryFee: true,
       currency: true,
       status: true,
+      assignedDriverProfileId: true,
+      assignedDriverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { id: true, displayName: true, profileImageUrl: true } },
+        },
+      },
       delivery: {
         select: {
           id: true,
           status: true,
           assignedDriverProfileId: true,
+          requestedAt: true,
+          assignedAt: true,
+          pickedUpAt: true,
+          deliveredAt: true,
+          failedAt: true,
+          failureReason: true,
+          assignedDriverProfile: {
+            select: {
+              id: true,
+              displayName: true,
+              user: { select: { id: true, displayName: true, profileImageUrl: true } },
+            },
+          },
         },
       },
-      reservations: {
-        where: {
-          status: 'ACCEPTED',
-          fulfillmentMethod: 'DELIVERY',
-        },
-        select: {
-          id: true,
-          materialSubtotal: true,
-        },
+      _count: {
+        select: { reservations: true },
       },
     },
   },
   _count: {
     select: {
       deliveries: true,
+      messages: true,
     },
   },
   noShowReports: {
@@ -100,13 +129,17 @@ export const reservationInclude = {
       targetRole: true,
       status: true,
       reasonCode: true,
+      note: true,
       createdAt: true,
+      reviewedAt: true,
+      reviewNote: true,
     },
   },
 } satisfies Prisma.ReservationInclude;
 
 const supplierReservationListScalarSelect = {
   id: true,
+  ownerId: true,
   status: true,
   quantityRequested: true,
   message: true,
@@ -118,6 +151,9 @@ const supplierReservationListScalarSelect = {
   deliveryNote: true,
   createdAt: true,
   updatedAt: true,
+  acceptedAt: true,
+  rejectedAt: true,
+  cancelledAt: true,
   pickupWindowStart: true,
   pickupWindowEnd: true,
   supplierProposedPickupWindowStart: true,
@@ -161,13 +197,63 @@ const supplierReservationListSelect = {
       id: true,
       status: true,
       assignedDriverProfileId: true,
+      requestedAt: true,
+      assignedAt: true,
+      pickedUpAt: true,
+      deliveredAt: true,
+      failedAt: true,
+      failureReason: true,
+      deliveryGroupId: true,
+      assignedDriverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { id: true, displayName: true, profileImageUrl: true } },
+        },
+      },
     },
     orderBy: { requestedAt: 'desc' as const },
     take: 1,
   },
+  deliveryGroup: {
+    select: {
+      id: true,
+      status: true,
+      assignedDriverProfileId: true,
+      assignedDriverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { id: true, displayName: true, profileImageUrl: true } },
+        },
+      },
+      delivery: {
+        select: {
+          id: true,
+          status: true,
+          assignedDriverProfileId: true,
+          requestedAt: true,
+          assignedAt: true,
+          pickedUpAt: true,
+          deliveredAt: true,
+          failedAt: true,
+          failureReason: true,
+          assignedDriverProfile: {
+            select: {
+              id: true,
+              displayName: true,
+              user: { select: { id: true, displayName: true, profileImageUrl: true } },
+            },
+          },
+        },
+      },
+      _count: { select: { reservations: true } },
+    },
+  },
   _count: {
     select: {
       deliveries: true,
+      messages: true,
     },
   },
   noShowReports: {
@@ -177,7 +263,10 @@ const supplierReservationListSelect = {
       targetRole: true,
       status: true,
       reasonCode: true,
+      note: true,
       createdAt: true,
+      reviewedAt: true,
+      reviewNote: true,
     },
   },
 } satisfies Prisma.ReservationSelect;
@@ -188,6 +277,30 @@ export type SupplierReservationRecord = Prisma.ReservationGetPayload<{
 
 export type SupplierReservationListRecord = Prisma.ReservationGetPayload<{
   select: typeof supplierReservationListSelect;
+}>;
+
+const supplierReservationDetailInclude = {
+  ...reservationInclude,
+  messages: {
+    take: 5,
+    orderBy: { createdAt: 'desc' as const },
+    include: {
+      sender: {
+        select: { id: true, displayName: true, profileImageUrl: true },
+      },
+    },
+  },
+  statusHistory: {
+    take: 50,
+    orderBy: { createdAt: 'desc' as const },
+    include: {
+      changedByUser: { select: { id: true, displayName: true } },
+    },
+  },
+} satisfies Prisma.ReservationInclude;
+
+export type SupplierReservationDetailRecord = Prisma.ReservationGetPayload<{
+  include: typeof supplierReservationDetailInclude;
 }>;
 
 const reservationMutationSelect = {
@@ -270,9 +383,117 @@ export const findSupplierReservations = async (
       ...(statuses?.length ? { status: { in: statuses } } : {}),
     },
     select: supplierReservationListSelect,
-    orderBy: { createdAt: 'desc' },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
   });
 };
+
+export const findSupplierReservationsByIds = async (
+  ownerId: string,
+  reservationIds: string[],
+) => {
+  if (reservationIds.length === 0) return [];
+
+  return prisma.reservation.findMany({
+    where: { ownerId, id: { in: reservationIds } },
+    select: supplierReservationListSelect,
+  });
+};
+
+const ACTIVE_RESERVATION_STATUSES: ReservationStatus[] = [
+  'PENDING',
+  'AWAITING_LEARNER_CONFIRMATION',
+  'AWAITING_SUPPLIER_CONFIRMATION',
+  'ACCEPTED',
+  'AWAITING_RESOLUTION',
+];
+
+export type SupplierReservationReadFilter = {
+  statuses?: ReservationStatus[];
+  fulfillmentMethod?: 'PICKUP' | 'DELIVERY';
+  historyScope: 'ACTIVE' | 'TERMINAL' | 'ALL';
+  materialId?: string;
+  search?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+};
+
+const buildSupplierReservationWhere = (
+  ownerId: string,
+  filter: SupplierReservationReadFilter,
+): Prisma.ReservationWhereInput => {
+  const and: Prisma.ReservationWhereInput[] = [{ ownerId }];
+
+  if (filter.statuses?.length) {
+    and.push({ status: { in: filter.statuses } });
+  }
+  if (filter.fulfillmentMethod) {
+    and.push({ fulfillmentMethod: filter.fulfillmentMethod });
+  }
+  if (filter.materialId) and.push({ materialId: filter.materialId });
+  if (filter.historyScope === 'ACTIVE') {
+    and.push({ status: { in: ACTIVE_RESERVATION_STATUSES } });
+  }
+  if (filter.historyScope === 'TERMINAL') {
+    and.push({ status: { notIn: ACTIVE_RESERVATION_STATUSES } });
+  }
+  if (filter.dateFrom || filter.dateTo) {
+    and.push({
+      createdAt: {
+        ...(filter.dateFrom ? { gte: filter.dateFrom } : {}),
+        ...(filter.dateTo ? { lte: filter.dateTo } : {}),
+      },
+    });
+  }
+  if (filter.search) {
+    and.push({
+      OR: [
+        { id: { contains: filter.search, mode: 'insensitive' } },
+        { material: { title: { contains: filter.search, mode: 'insensitive' } } },
+        {
+          requester: {
+            displayName: { contains: filter.search, mode: 'insensitive' },
+          },
+        },
+      ],
+    });
+  }
+
+  return { AND: and };
+};
+
+/** Bounded batches keep contract summaries exact without loading every row at once. */
+export const forEachSupplierReservationBatch = async (input: {
+  ownerId: string;
+  filter: SupplierReservationReadFilter;
+  batchSize: number;
+  onBatch: (items: SupplierReservationListRecord[]) => void;
+}) => {
+  const where = buildSupplierReservationWhere(input.ownerId, input.filter);
+  let skip = 0;
+
+  while (true) {
+    const items = await prisma.reservation.findMany({
+      where,
+      select: supplierReservationListSelect,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip,
+      take: input.batchSize,
+    });
+    if (!items.length) return;
+    input.onBatch(items);
+    if (items.length < input.batchSize) return;
+    skip += items.length;
+  }
+};
+
+export const findSupplierReservationDetailForOwner = async (
+  ownerId: string,
+  reservationId: string,
+): Promise<SupplierReservationDetailRecord | null> =>
+  prisma.reservation.findFirst({
+    where: { id: reservationId, ownerId },
+    include: supplierReservationDetailInclude,
+  });
 
 const acceptPickupReservation = async (
   tx: Prisma.TransactionClient,

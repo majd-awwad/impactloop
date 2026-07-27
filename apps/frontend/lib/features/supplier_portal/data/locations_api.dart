@@ -15,10 +15,7 @@ class LocationsApi {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/locations/reverse-geocode',
-        data: {
-          'latitude': latitude,
-          'longitude': longitude,
-        },
+        data: {'latitude': latitude, 'longitude': longitude},
       ),
       ReverseGeocodeResult.fromJson,
     );

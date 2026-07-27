@@ -126,6 +126,10 @@ Used by: `OrganizationProfile.organizationType`
 
 Used by: `OrganizationProfile.verificationDocumentStatus`
 
+## Supplier verification status contract
+
+`SupplierProfile.verificationStatus` is a string for legacy compatibility. The canonical private management response normalizes values to `NOT_REQUIRED`, `UNVERIFIED`, `PENDING`, `CHANGES_REQUESTED`, `REJECTED`, `APPROVED`, or fail-closed `UNKNOWN`; legacy `VERIFIED` maps to `APPROVED`. `APPROVED` is verified, `UNVERIFIED` can submit only when organization verification is required, `CHANGES_REQUESTED`/`REJECTED` can resubmit when the existing endpoint permits it, and `UNKNOWN` exposes no action. Admin notes are exposed only for `CHANGES_REQUESTED` and `REJECTED`.
+
 ---
 
 ## `ReservationStatus`

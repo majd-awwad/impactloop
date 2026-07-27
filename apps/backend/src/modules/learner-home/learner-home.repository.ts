@@ -22,6 +22,7 @@ import {
   normalizeInterestToken,
   resolveInterestKey,
 } from './learner-interest-taxonomy.js';
+import { selectRequiredComponentConceptKeys } from '../recommendations/project-runtime-candidate-mapping.js';
 
 import type {
   LearnerHomeMaterialCandidate,
@@ -130,7 +131,14 @@ const materialPoolSelect = {
   },
 } satisfies Prisma.MaterialSelect;
 
-const projectPoolInclude = {
+const projectCardSelect = {
+  id: true,
+  title: true,
+  shortDescription: true,
+  difficulty: true,
+  estimatedDurationMinutes: true,
+  coverImageUrl: true,
+  createdAt: true,
   category: {
     select: {
       id: true,
@@ -143,6 +151,10 @@ const projectPoolInclude = {
       tag: true,
     },
   },
+} satisfies Prisma.LearningProjectSelect;
+
+const projectCandidateSelect = {
+  ...projectCardSelect,
   requiredComponents: {
     select: {
       id: true,
@@ -159,36 +171,67 @@ const projectPoolInclude = {
       userReviews: true,
     },
   },
-} satisfies Prisma.LearningProjectInclude;
+} satisfies Prisma.LearningProjectSelect;
 
-const projectBuildInclude = {
+const savedProjectSelect = {
+  ...projectCardSelect,
+  _count: {
+    select: {
+      likes: true,
+    },
+  },
+} satisfies Prisma.LearningProjectSelect;
+
+const projectBuildSelect = {
+  id: true,
+  projectId: true,
+  status: true,
+  startedAt: true,
+  completedAt: true,
+  updatedAt: true,
   project: {
     select: {
       id: true,
       title: true,
       shortDescription: true,
       coverImageUrl: true,
+      category: {
+        select: {
+          nameEn: true,
+          nameAr: true,
+        },
+      },
+      tags: {
+        select: {
+          tag: true,
+        },
+      },
+      requiredComponents: {
+        select: {
+          componentName: true,
+          materialType: true,
+          category: {
+            select: {
+              nameEn: true,
+            },
+          },
+        },
+      },
     },
   },
   items: {
-    include: {
-      linkedMaterial: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-        },
-      },
+    select: {
+      id: true,
+      requiredComponentId: true,
+      status: true,
       linkedReservation: {
         select: {
-          id: true,
           status: true,
         },
       },
       requiredComponent: {
         select: {
           id: true,
-          categoryId: true,
           componentName: true,
           materialType: true,
           quantity: true,
@@ -202,7 +245,7 @@ const projectBuildInclude = {
       },
     },
   },
-} satisfies Prisma.ProjectBuildInclude;
+} satisfies Prisma.ProjectBuildSelect;
 
 const parseSearchKeywords = (value: Prisma.JsonValue | null | undefined) => {
   if (!Array.isArray(value)) {
@@ -448,7 +491,7 @@ export const collectMaterialCandidateCategoryIds = (
     ),
   ].slice(0, MAX_CATEGORY_FILTER_IDS);
 
-const buildMaterialRelevanceWhere = (
+export const buildMaterialRelevanceWhere = (
   input: Pick<
     MaterialCandidateLoadInput,
     'interests' | 'savedComponents' | 'behavior' | 'savedLocation'
@@ -466,67 +509,91 @@ const buildMaterialRelevanceWhere = (
     });
   }
 
-  for (const term of terms) {
-    orFilters.push({
+  const scalarTermFilters = terms.flatMap((term) => [
+    {
       title: {
         contains: term,
-        mode: 'insensitive',
+        mode: 'insensitive' as const,
       },
-    });
-    orFilters.push({
+    },
+    {
       materialType: {
         contains: term,
-        mode: 'insensitive',
+        mode: 'insensitive' as const,
       },
+    },
+  ] satisfies Prisma.MaterialWhereInput[]);
+
+  if (scalarTermFilters.length > 0) {
+    orFilters.push({
+      OR: scalarTermFilters,
     });
+  }
+
+  const tagTermFilters = terms.map((term) => ({
+    tag: {
+      contains: term,
+      mode: 'insensitive' as const,
+    },
+  }));
+
+  if (tagTermFilters.length > 0) {
     orFilters.push({
       tags: {
         some: {
-          tag: {
-            contains: term,
-            mode: 'insensitive',
-          },
+          OR: tagTermFilters,
         },
-      },
-    });
-    orFilters.push({
-      category: {
-        OR: [
-          {
-            nameEn: {
-              contains: term,
-              mode: 'insensitive',
-            },
-          },
-          {
-            nameAr: {
-              contains: term,
-              mode: 'insensitive',
-            },
-          },
-        ],
       },
     });
   }
 
-  if (input.savedLocation.city?.trim()) {
+  const categoryTermFilters = terms.flatMap((term) => [
+    {
+      nameEn: {
+        contains: term,
+        mode: 'insensitive' as const,
+      },
+    },
+    {
+      nameAr: {
+        contains: term,
+        mode: 'insensitive' as const,
+      },
+    },
+  ]);
+
+  if (categoryTermFilters.length > 0) {
     orFilters.push({
-      location: {
-        city: {
-          equals: input.savedLocation.city.trim(),
-          mode: 'insensitive',
-        },
+      category: {
+        OR: categoryTermFilters,
+      },
+    });
+  }
+
+  const locationFilters: Prisma.LocationWhereInput[] = [];
+
+  if (input.savedLocation.city?.trim()) {
+    locationFilters.push({
+      city: {
+        equals: input.savedLocation.city.trim(),
+        mode: 'insensitive',
       },
     });
   }
 
   if (input.savedLocation.area?.trim()) {
+    locationFilters.push({
+      area: {
+        equals: input.savedLocation.area.trim(),
+        mode: 'insensitive',
+      },
+    });
+  }
+
+  if (locationFilters.length > 0) {
     orFilters.push({
       location: {
-        area: {
-          equals: input.savedLocation.area.trim(),
-          mode: 'insensitive',
-        },
+        OR: locationFilters,
       },
     });
   }
@@ -569,6 +636,7 @@ const loadMaterialPoolIds = async (
   orderBy: Prisma.MaterialOrderByWithRelationInput[] = [
     { viewsCount: 'desc' },
     { createdAt: 'desc' },
+    { id: 'asc' },
   ],
 ) =>
   prisma.material.findMany({
@@ -693,25 +761,19 @@ export const loadMaterialCandidates = async () =>
 export const loadProjectPool = async (take = 120) =>
   prisma.learningProject.findMany({
     where: publicProjectWhere,
-    include: projectPoolInclude,
+    select: projectCandidateSelect,
     orderBy: [{ createdAt: 'desc' }],
     take,
   });
 
-export const loadProjectCandidates = async (
-  userId: string,
-): Promise<LearnerHomeProjectCandidate[]> => {
-  const projects = await loadProjectPool();
-  const projectIds = projects.map((project) => project.id);
-  const [reviewSummaries, likedProjectIds, savedProjectIds, followedProjectIds] =
-    await Promise.all([
-      loadReviewSummaries(projectIds),
-      findLikedProjectIds(userId, projectIds),
-      findSavedProjectIds(userId, projectIds),
-      findFollowedProjectIds(userId, projectIds),
-    ]);
-
-  return projects.map((project) => {
+const mapProjectCandidates = (
+  projects: Awaited<ReturnType<typeof loadProjectPool>>,
+  reviewSummaries: Map<string, { average: number; count: number }>,
+  likedProjectIds: Set<string>,
+  savedProjectIds: Set<string>,
+  followedProjectIds: Set<string>,
+): LearnerHomeProjectCandidate[] =>
+  projects.map((project) => {
     const reviewSummary = reviewSummaries.get(project.id);
     const mapped = {
       id: project.id,
@@ -768,6 +830,27 @@ export const loadProjectCandidates = async (
       mapped,
     };
   });
+
+export const loadProjectCandidates = async (
+  userId: string,
+): Promise<LearnerHomeProjectCandidate[]> => {
+  const projects = await loadProjectPool();
+  const projectIds = projects.map((project) => project.id);
+  const [reviewSummaries, likedProjectIds, savedProjectIds, followedProjectIds] =
+    await Promise.all([
+      loadReviewSummaries(projectIds),
+      findLikedProjectIds(userId, projectIds),
+      findSavedProjectIds(userId, projectIds),
+      findFollowedProjectIds(userId, projectIds),
+    ]);
+
+  return mapProjectCandidates(
+    projects,
+    reviewSummaries,
+    likedProjectIds,
+    savedProjectIds,
+    followedProjectIds,
+  );
 };
 
 const loadReviewSummaries = async (projectIds: string[]) => {
@@ -815,7 +898,7 @@ export const loadSavedProjectsForLearner = async (
     select: {
       createdAt: true,
       project: {
-        include: projectPoolInclude,
+        select: savedProjectSelect,
       },
     },
   });
@@ -875,7 +958,7 @@ export const loadInProgressBuilds = async (userId: string, limit = 6) =>
       status: 'IN_PROGRESS',
       project: publicProjectWhere,
     },
-    include: projectBuildInclude,
+    select: projectBuildSelect,
     orderBy: {
       updatedAt: 'desc',
     },
@@ -911,7 +994,7 @@ const materialBehaviorSelect = {
   },
 } satisfies Prisma.MaterialSelect;
 
-const projectBehaviorSelect = {
+const projectBehaviorSignalSelect = {
   id: true,
   title: true,
   shortDescription: true,
@@ -928,6 +1011,32 @@ const projectBehaviorSelect = {
   },
   requiredComponents: {
     select: {
+      componentName: true,
+      materialType: true,
+      category: {
+        select: {
+          nameEn: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.LearningProjectSelect;
+
+const savedProjectBehaviorSelect = {
+  ...projectBehaviorSignalSelect,
+  category: {
+    select: {
+      id: true,
+      nameEn: true,
+      nameAr: true,
+    },
+  },
+  difficulty: true,
+  estimatedDurationMinutes: true,
+  coverImageUrl: true,
+  createdAt: true,
+  requiredComponents: {
+    select: {
       id: true,
       categoryId: true,
       componentName: true,
@@ -938,6 +1047,11 @@ const projectBehaviorSelect = {
           nameEn: true,
         },
       },
+    },
+  },
+  _count: {
+    select: {
+      likes: true,
     },
   },
 } satisfies Prisma.LearningProjectSelect;
@@ -1010,9 +1124,9 @@ const ACTIVE_RESERVATION_STATUSES = [
   'COMPLETED',
 ] as const;
 
-export const loadLearnerBehaviorContext = async (
+const loadLearnerBehaviorRows = async (
   userId: string,
-): Promise<LearnerBehaviorContext> => {
+) => {
   const [
     likedMaterialRows,
     viewedMaterialRows,
@@ -1027,6 +1141,7 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 30,
       select: {
+        createdAt: true,
         material: {
           select: materialBehaviorSelect,
         },
@@ -1038,6 +1153,7 @@ export const loadLearnerBehaviorContext = async (
       take: 50,
       select: {
         materialId: true,
+        createdAt: true,
         material: {
           select: materialBehaviorSelect,
         },
@@ -1051,6 +1167,8 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 30,
       select: {
+        createdAt: true,
+        status: true,
         material: {
           select: materialBehaviorSelect,
         },
@@ -1064,9 +1182,8 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
+        createdAt: true,
+        project: { select: savedProjectBehaviorSelect },
       },
     }),
     prisma.projectLike.findMany({
@@ -1077,9 +1194,8 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
+        createdAt: true,
+        project: { select: projectBehaviorSignalSelect },
       },
     }),
     prisma.projectFollow.findMany({
@@ -1090,9 +1206,8 @@ export const loadLearnerBehaviorContext = async (
       orderBy: { createdAt: 'desc' },
       take: 20,
       select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
+        createdAt: true,
+        project: { select: projectBehaviorSignalSelect },
       },
     }),
     prisma.projectBuild.findMany({
@@ -1103,41 +1218,271 @@ export const loadLearnerBehaviorContext = async (
       },
       orderBy: { updatedAt: 'desc' },
       take: 10,
-      select: {
-        project: {
-          select: projectBehaviorSelect,
-        },
-      },
+      select: projectBuildSelect,
     }),
   ]);
 
+  return {
+    likedMaterialRows,
+    viewedMaterialRows,
+    reservedMaterialRows,
+    savedProjectRows,
+    likedProjectRows,
+    followedProjectRows,
+    inProgressBuildRows,
+  };
+};
+
+const mapLearnerBehaviorContext = (
+  rows: Awaited<ReturnType<typeof loadLearnerBehaviorRows>>,
+): LearnerBehaviorContext => {
   const viewedMaterials: LearnerBehaviorMaterialSignal[] = [];
-  for (const row of viewedMaterialRows) {
+  for (const row of rows.viewedMaterialRows) {
     viewedMaterials.push(mapMaterialBehaviorSignal(row.material));
   }
 
   return {
-    likedMaterials: likedMaterialRows.map((row) =>
+    likedMaterials: rows.likedMaterialRows.map((row) =>
       mapMaterialBehaviorSignal(row.material),
     ),
     viewedMaterials,
     savedProjectComponents: mapSavedProjectComponentsFromBehaviorRows(
-      savedProjectRows.slice(0, 12),
+      rows.savedProjectRows.slice(0, 12),
     ),
     reservedMaterials: dedupeMaterialSignals(
-      reservedMaterialRows.map((row) => mapMaterialBehaviorSignal(row.material)),
+      rows.reservedMaterialRows.map((row) => mapMaterialBehaviorSignal(row.material)),
     ),
-    savedProjects: savedProjectRows.map((row) =>
+    savedProjects: rows.savedProjectRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
-    likedProjects: likedProjectRows.map((row) =>
+    likedProjects: rows.likedProjectRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
-    followedProjects: followedProjectRows.map((row) =>
+    followedProjects: rows.followedProjectRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
-    inProgressBuildProjects: inProgressBuildRows.map((row) =>
+    inProgressBuildProjects: rows.inProgressBuildRows.map((row) =>
       mapProjectBehaviorSignal(row.project),
     ),
+    recentRecommendationEvents: [
+      ...rows.likedMaterialRows.map((row) => ({ entityKey: row.material.id, actionType: 'like', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.viewedMaterialRows.map((row) => ({ entityKey: row.material.id, actionType: 'view', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.reservedMaterialRows.map((row) => ({ entityKey: row.material.id, actionType: row.status === 'COMPLETED' ? 'reservation' : 'reservation_pending', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.savedProjectRows.map((row) => ({ entityKey: row.project.id, actionType: 'project_save', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.likedProjectRows.map((row) => ({ entityKey: row.project.id, actionType: 'like', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.followedProjectRows.map((row) => ({ entityKey: row.project.id, actionType: 'project_follow', timestampUtc: row.createdAt.toISOString() })),
+      ...rows.inProgressBuildRows.map((row) => ({ entityKey: row.project.id, actionType: 'build_started', timestampUtc: row.startedAt.toISOString() })),
+    ].sort((left, right) => left.timestampUtc.localeCompare(right.timestampUtc)),
+  };
+};
+
+export const loadLearnerBehaviorContext = async (
+  userId: string,
+): Promise<LearnerBehaviorContext> =>
+  mapLearnerBehaviorContext(await loadLearnerBehaviorRows(userId));
+
+export const loadMlShadowConcepts = async (
+  materialIds: string[],
+  projectIds: string[],
+) => {
+  if (materialIds.length > 200 || projectIds.length > 200) throw new Error('ml_concept_candidate_bound');
+  const [materials, projects] = await Promise.all([
+    prisma.materialConcept.findMany({
+      where: { materialId: { in: materialIds }, concept: { status: 'ACTIVE' } },
+      select: { materialId: true, concept: { select: { canonicalKey: true } } },
+    }),
+    prisma.learningProject.findMany({
+      where: { id: { in: projectIds } },
+      select: {
+        id: true,
+        taxonomyConcepts: { where: { concept: { status: 'ACTIVE' } }, select: { concept: { select: { canonicalKey: true } } } },
+        requiredComponents: {
+          where: { isRequired: true },
+          select: { isRequired: true, taxonomyConcepts: { where: { concept: { status: 'ACTIVE' } }, select: { concept: { select: { canonicalKey: true } } } } },
+        },
+      },
+    }),
+  ]);
+  const materialConcepts = new Map<string, string[]>();
+  for (const row of materials) materialConcepts.set(row.materialId, [...(materialConcepts.get(row.materialId) ?? []), row.concept.canonicalKey]);
+  return {
+    materialConcepts: new Map([...materialConcepts].map(([key, values]) => [key, [...new Set(values)].sort()])),
+    projectConcepts: new Map(projects.map((project) => [project.id, project.taxonomyConcepts.map((entry) => entry.concept.canonicalKey).sort()])),
+    projectComponentConcepts: new Map(projects.map((project) => [
+      project.id,
+      selectRequiredComponentConceptKeys(project.requiredComponents),
+    ])),
+  };
+};
+
+/** Chunk size for deterministic canonical concept hydration only — not a candidate pool cap. */
+export const MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE = 200;
+
+export type MaterialConceptScoringRow = {
+  materialId: string;
+  canonicalKey: string;
+  conceptType: string;
+  status: string;
+};
+
+export type MaterialConceptChunkRow = {
+  materialId: string;
+  concept: { canonicalKey: string; conceptType: string; status: string };
+};
+
+export type MaterialConceptChunkQuery = (
+  materialIds: readonly string[],
+) => Promise<MaterialConceptChunkRow[]>;
+
+const defaultMaterialConceptChunkQuery: MaterialConceptChunkQuery = (materialIds) =>
+  prisma.materialConcept.findMany({
+    where: { materialId: { in: [...materialIds] } },
+    select: {
+      materialId: true,
+      concept: {
+        select: {
+          canonicalKey: true,
+          conceptType: true,
+          status: true,
+        },
+      },
+    },
+  });
+
+/**
+ * Loads MaterialConcept rows for every requested material ID.
+ * Does not truncate the ID list; chunks DB queries only.
+ * Returns a map with an entry for every unique input ID (empty array when none).
+ *
+ * The optional `queryChunk` parameter is a test-only seam: production callers
+ * never pass it, so the real Prisma query remains the default. Tests can
+ * inject a fake chunk query to prove chunk sizing/coverage/order-independence
+ * without a database.
+ */
+export const loadMaterialConceptsForScoring = async (
+  materialIds: readonly string[],
+  queryChunk: MaterialConceptChunkQuery = defaultMaterialConceptChunkQuery,
+): Promise<Map<string, MaterialConceptScoringRow[]>> => {
+  const uniqueIds = [...new Set(materialIds.filter((id) => id.length > 0))];
+  const rowsByMaterialId = new Map<string, MaterialConceptScoringRow[]>();
+  for (const materialId of uniqueIds) {
+    rowsByMaterialId.set(materialId, []);
+  }
+
+  for (let offset = 0; offset < uniqueIds.length; offset += MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE) {
+    const chunk = uniqueIds.slice(offset, offset + MATERIAL_CONCEPT_HYDRATION_CHUNK_SIZE);
+    const rows = await queryChunk(chunk);
+
+    for (const row of rows) {
+      const list = rowsByMaterialId.get(row.materialId);
+      if (!list) {
+        continue;
+      }
+      list.push({
+        materialId: row.materialId,
+        canonicalKey: row.concept.canonicalKey,
+        conceptType: row.concept.conceptType,
+        status: row.concept.status,
+      });
+    }
+  }
+
+  return rowsByMaterialId;
+};
+
+type SavedProjectBehaviorRow = Awaited<
+  ReturnType<typeof loadLearnerBehaviorRows>
+>['savedProjectRows'][number];
+
+const mapSavedProjectItemFromBehaviorRow = (
+  row: SavedProjectBehaviorRow,
+  reviewSummaries: Map<string, { average: number; count: number }>,
+  likedProjectIds: Set<string>,
+  followedProjectIds: Set<string>,
+) => {
+  const project = row.project;
+  const reviewSummary = reviewSummaries.get(project.id);
+
+  return {
+    score: 0,
+    reasons: ['Saved by you'],
+    type: 'project' as const,
+    project: {
+      id: project.id,
+      title: project.title,
+      shortDescription: project.shortDescription,
+      category: {
+        id: project.category.id,
+        nameEn: project.category.nameEn,
+        nameAr: project.category.nameAr,
+      },
+      difficulty: project.difficulty,
+      estimatedDurationMinutes: project.estimatedDurationMinutes,
+      coverImageUrl: project.coverImageUrl,
+      authorName: '',
+      tags: project.tags.map((tag) => tag.tag),
+      ratingSummary:
+        reviewSummary && reviewSummary.count > 0
+          ? {
+              average: Math.round(reviewSummary.average * 10) / 10,
+              count: reviewSummary.count,
+            }
+          : null,
+      likesCount: project._count.likes,
+      isLiked: likedProjectIds.has(project.id),
+      isSaved: true,
+      followersCount: 0,
+      isFollowing: followedProjectIds.has(project.id),
+      createdAt: project.createdAt.toISOString(),
+    },
+  };
+};
+
+export const loadLearnerHomeProjectContext = async (
+  userId: string,
+  savedProjectLimit = 8,
+) => {
+  const [behaviorRows, projectRows] = await Promise.all([
+    loadLearnerBehaviorRows(userId),
+    loadProjectPool(),
+  ]);
+
+  const candidateProjectIds = projectRows.map((project) => project.id);
+  const savedProjectIds = behaviorRows.savedProjectRows.map(
+    (row) => row.project.id,
+  );
+  const annotationProjectIds = [
+    ...new Set([...candidateProjectIds, ...savedProjectIds]),
+  ];
+
+  const [reviewSummaries, likedProjectIds, followedProjectIds, candidateSavedIds] =
+    await Promise.all([
+      loadReviewSummaries(annotationProjectIds),
+      findLikedProjectIds(userId, annotationProjectIds),
+      findFollowedProjectIds(userId, annotationProjectIds),
+      findSavedProjectIds(userId, candidateProjectIds),
+    ]);
+
+  return {
+    behavior: mapLearnerBehaviorContext(behaviorRows),
+    projects: mapProjectCandidates(
+      projectRows,
+      reviewSummaries,
+      likedProjectIds,
+      candidateSavedIds,
+      followedProjectIds,
+    ),
+    savedProjects: behaviorRows.savedProjectRows
+      .slice(0, savedProjectLimit)
+      .map((row) =>
+        mapSavedProjectItemFromBehaviorRow(
+          row,
+          reviewSummaries,
+          likedProjectIds,
+          followedProjectIds,
+        ),
+      ),
+    inProgressBuilds: behaviorRows.inProgressBuildRows,
+    hasSavedProjects: behaviorRows.savedProjectRows.length > 0,
   };
 };

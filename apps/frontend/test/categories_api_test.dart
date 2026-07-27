@@ -21,20 +21,23 @@ void main() {
       });
     });
 
-    test('fetchMaterialCategories passes discoveryOnly when requested', () async {
-      final dio = Dio();
-      final adapter = _RecordingAdapter();
-      dio.httpClientAdapter = adapter;
+    test(
+      'fetchMaterialCategories passes discoveryOnly when requested',
+      () async {
+        final dio = Dio();
+        final adapter = _RecordingAdapter();
+        dio.httpClientAdapter = adapter;
 
-      final api = CategoriesApi(dio);
-      await api.fetchMaterialCategories(discoveryOnly: true);
+        final api = CategoriesApi(dio);
+        await api.fetchMaterialCategories(discoveryOnly: true);
 
-      expect(adapter.lastQueryParameters, {
-        'type': 'MATERIAL',
-        'rootOnly': true,
-        'discoveryOnly': true,
-      });
-    });
+        expect(adapter.lastQueryParameters, {
+          'type': 'MATERIAL',
+          'rootOnly': true,
+          'discoveryOnly': true,
+        });
+      },
+    );
   });
 }
 
@@ -50,9 +53,7 @@ class _RecordingAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
-    lastQueryParameters = Map<String, dynamic>.from(
-      options.queryParameters,
-    );
+    lastQueryParameters = Map<String, dynamic>.from(options.queryParameters);
 
     return ResponseBody.fromString(
       '''

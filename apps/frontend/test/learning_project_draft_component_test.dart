@@ -62,10 +62,9 @@ void main() {
       );
     });
     test('fromLegacyCommaSeparated migrates comma-separated names', () {
-      final components =
-          LearningProjectDraftComponent.fromLegacyCommaSeparated(
-            'Arduino Uno, LED, jumper wires',
-          );
+      final components = LearningProjectDraftComponent.fromLegacyCommaSeparated(
+        'Arduino Uno, LED, jumper wires',
+      );
 
       expect(components, hasLength(3));
       expect(components.first.name, 'Arduino Uno');

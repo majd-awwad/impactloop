@@ -27,9 +27,7 @@ class ForgotPasswordView extends StatelessWidget {
                 'Enter your account email and we will send reset instructions if an account exists.',
           ),
           const SizedBox(height: AppSpacing.lg),
-          AuthFormCard(
-            child: ForgotPasswordForm(initialEmail: initialEmail),
-          ),
+          AuthFormCard(child: ForgotPasswordForm(initialEmail: initialEmail)),
         ],
       ),
     );

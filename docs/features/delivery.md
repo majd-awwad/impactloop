@@ -18,7 +18,7 @@ Role-scope boundary: driver is an operational support role for basic internal de
 | Driver location pings | **Partial** | Assigned active drivers can share foreground location manually or automatically every 45 seconds while the active delivery detail page is open; no background tracking |
 | Flutter learner delivery UI | **Partial** | My Reservations request dialog (saved or new dropoff with optional current-location coordinates + optional save), `/learner/deliveries/:id` status page, `/learner/deliveries/:id/track` polling map after `PICKED_UP`; no realtime stream |
 | Flutter driver portal | **Partial** | `/driver/jobs` job board, `/driver/deliveries/:id` status updates, code prompts, incident reports, foreground auto-location sharing on the active delivery detail page, and manual location ping; no live route map or background pings |
-| Flutter admin operations | **Partial** | Delivery monitor, pre-pickup **Reopen to drivers** action, and no-show/incident queue recovery actions; no selected-driver reassignment or general delivery cancel screen |
+| Flutter admin operations | **Partial** | Responsive delivery monitoring overview with server-backed summary/filter/pagination data, a concise Delivery/Journey/Progress/Attention/Updated list, and `/admin/deliveries/:deliveryId`: a conditional overview/timeline/assignment/group/incident/tracking workspace. It renders only returned contract fields and exposes pre-pickup **Reopen to drivers** only when authorized; no selected-driver reassignment or general delivery cancel screen |
 | External partners/payment/AI | **Out of scope** | Not implemented |
 
 ## Data Model
@@ -90,7 +90,7 @@ Driver assignment:
 
 Admin driver assignment reopen:
 
-- Admins can call `POST /api/admin/deliveries/:id/reopen-driver-assignment` from the admin delivery detail dialog.
+- Admins can call `POST /api/admin/deliveries/:id/reopen-driver-assignment` from the dedicated admin delivery detail workspace, only when `availableMutations` returns `REOPEN_DRIVER_ASSIGNMENT`.
 - Eligible delivery state is exactly `DRIVER_ASSIGNED` with an active assigned driver and active `DeliveryAssignment`; `WAITING_FOR_DRIVER`, pickup-started states (`ARRIVED_PICKUP` or later), terminal/failed/admin-review states, missing active assignment rows, and incompatible grouped delivery state are rejected with `409`.
 - The operation runs transactionally, guards the delivery row by current status and driver, releases the active `DeliveryAssignment`, clears `assignedDriverProfileId` and `assignedAt`, writes `DRIVER_ASSIGNED -> WAITING_FOR_DRIVER` history, and returns the updated admin delivery detail.
 - For grouped deliveries, the delivery group must still be `ASSIGNED` to the same driver and all delivery reservations in the group must still be `ACCEPTED`; the group is reopened to `OPEN` with no assigned driver.
@@ -113,12 +113,14 @@ Failure and recovery:
 - Admin can verify/reject/resolve incident reports. For pickup-recovery reports (`NO_DRIVER_AVAILABLE`, `NO_RESPONSE_AFTER_PICKUP_WINDOW`, `DRIVER_DID_NOT_ARRIVE`, `PICKUP_FAILED`), generic resolve is blocked until admin chooses an operational action.
 - Admin **Ask supplier for new pickup window** moves the reservation to `AWAITING_SUPPLIER_CONFIRMATION`, releases active delivery assignments, and notifies the supplier. Supplier `submit-no-driver-pickup-window` then sets the reservation back to `ACCEPTED`, reopens the delivery as `WAITING_FOR_DRIVER`, and notifies eligible drivers.
 - Admin **Cancel and release hold** is implemented only for pickup-recovery incident reports. It sets the reservation to `EXPIRED`, cancels the delivery, releases the assignment, and recomputes material availability without decrementing stock.
+- Admin delivery monitor reads use one shared contract for lifecycle, exclusive KPI bucket, attention state, scope, assignment state, mutations, and links. `OPEN_INCIDENT`, `OPEN_RESERVATION`, and `OPEN_GROUP` are navigation links, not admin attention actions.
+- Grouped-delivery pickup recovery is fail-closed: until group-level recovery transitions are explicitly supported, reschedule and cancel/release-hold are omitted from the canonical incident action contract and direct calls return a conflict.
 - General learner/supplier/admin delivery cancellation and selected-driver reassignment are not implemented. Incident recovery and admin pre-pickup unassignment reopen jobs to the driver pool instead of assigning a specific replacement driver.
 
 Notifications:
 
 - Driver notifications are intentionally limited to `DRIVER_NEW_JOB`, `DRIVER_PICKUP_TIME`, `DRIVER_DROPOFF_TIME`, and `DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN`.
-- Supplier notifications exist for admin no-driver/stale-pickup reschedule requests.
+- Supplier notifications persist deterministic `NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED` and `STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED` events. The supplier inbox classifies these as delivery recovery and exposes `CHOOSE_PICKUP_WINDOW` only after revalidating the reservation's current available action.
 - Existing reservation notifications still cover only part of the lifecycle. No delivery-completed, delivery-failed, learner tracking, admin-review, or replacement-driver notification event was found.
 
 ## Routes

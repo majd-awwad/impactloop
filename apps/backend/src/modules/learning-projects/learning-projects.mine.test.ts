@@ -10,7 +10,12 @@ import {
 } from '../learner-home/learner-home.material-features.js';
 import { getLearnerHome } from '../learner-home/learner-home.service.js';
 import type { LearnerHomeMaterialCandidate } from '../learner-home/learner-home.types.js';
+import {
+  resolveProjectConceptAssignments,
+  toProjectTopicConceptIds,
+} from '../taxonomy/project-concept-assignment.js';
 
+import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
   followLearningProjectById,
   getLearningProjectById,
@@ -21,12 +26,20 @@ import {
   saveLearningProjectById,
   startProjectBuildById,
   submitMyLearningProjectDraftById,
+  submitLearningProjectForReview,
   unfollowLearningProjectById,
   unlikeLearningProjectById,
   unsaveLearningProjectById,
   updateProjectBuildItemById,
   updateMyLearningProjectSubmissionById,
 } from './learning-projects.service.js';
+import type { ProjectTopicLifecycleDeps } from '../taxonomy/project-concept-assignment.repository.js';
+import {
+  createComponentConceptLifecycleDeps,
+  defaultComponentConceptAssignmentPersistenceDeps,
+  defaultComponentConceptLifecycleDeps,
+  type ComponentConceptLifecycleDeps,
+} from '../taxonomy/component-concept-assignment.repository.js';
 
 const TEST_MARKER = '[test-learning-projects-mine]';
 
@@ -61,17 +74,34 @@ async function createLearnerUser(label: string) {
   return user;
 }
 
-async function createCategory(categoryType: 'PROJECT' | 'BOTH') {
+async function createCategory(
+  categoryType: 'PROJECT' | 'BOTH',
+  topicCanonicalKey?: string,
+) {
+  const topic = await prisma.taxonomyConcept.findFirst({
+    where: {
+      conceptType: 'PROJECT_TOPIC',
+      status: 'ACTIVE',
+      ...(topicCanonicalKey ? { canonicalKey: topicCanonicalKey } : {}),
+    },
+    select: { id: true, canonicalKey: true },
+    orderBy: { canonicalKey: 'asc' },
+  });
+  assert.ok(topic, 'Expected an ACTIVE PROJECT_TOPIC concept in the database');
+
   const category = await prisma.category.create({
     data: {
-      nameEn: `${TEST_MARKER} ${categoryType}`,
+      nameEn: `${TEST_MARKER} ${categoryType} ${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 7)}`,
       nameAr: `${TEST_MARKER} فئة`,
       categoryType,
       isActive: true,
+      projectTopicConceptId: topic.id,
     },
   });
   ids.categories.push(category.id);
-  return category;
+  return { ...category, topicConceptId: topic.id, topicCanonicalKey: topic.canonicalKey };
 }
 
 async function createProject(input: {
@@ -171,9 +201,10 @@ before(async () => {
 });
 
 after(async () => {
-  if (ids.projects.length > 0) {
+  const projectIds = ids.projects.filter((id): id is string => Boolean(id));
+  if (projectIds.length > 0) {
     await prisma.learningProject.deleteMany({
-      where: { id: { in: ids.projects } },
+      where: { id: { in: projectIds } },
     });
   }
 
@@ -856,5 +887,1029 @@ describe('learner learning project submissions', () => {
         return true;
       },
     );
+  });
+});
+
+describe('project topic assignment engine', () => {
+  test('READY ownership yields exactly one project-topic assignment', () => {
+    const result = resolveProjectConceptAssignments({
+      category: {
+        id: 'cat-1',
+        categoryType: 'PROJECT',
+        isActive: true,
+        projectTopicConceptId: 'concept-1',
+        projectTopicConcept: {
+          id: 'concept-1',
+          canonicalKey: 'project-topic:robotics',
+          conceptType: 'PROJECT_TOPIC',
+          status: 'ACTIVE',
+        },
+      },
+    });
+
+    assert.equal(result.status, 'READY');
+    assert.deepEqual(toProjectTopicConceptIds(result), ['concept-1']);
+    assert.equal(result.assignments[0]?.canonicalKey, 'project-topic:robotics');
+  });
+
+  test('missing ownership blocks assignment', () => {
+    const result = resolveProjectConceptAssignments({
+      category: {
+        id: 'cat-1',
+        categoryType: 'PROJECT',
+        isActive: true,
+        projectTopicConceptId: null,
+        projectTopicConcept: null,
+      },
+    });
+    assert.equal(result.status, 'BLOCKED_INVALID_CATEGORY_OWNERSHIP');
+    assert.equal(result.unmatched[0]?.reason, 'CATEGORY_OWNERSHIP_MISSING');
+  });
+
+  test('MATERIAL category type blocks assignment', () => {
+    const result = resolveProjectConceptAssignments({
+      category: {
+        id: 'cat-1',
+        categoryType: 'MATERIAL',
+        isActive: true,
+        projectTopicConceptId: 'concept-1',
+        projectTopicConcept: {
+          id: 'concept-1',
+          canonicalKey: 'project-topic:robotics',
+          conceptType: 'PROJECT_TOPIC',
+          status: 'ACTIVE',
+        },
+      },
+    });
+    assert.equal(result.status, 'BLOCKED_INVALID_CATEGORY_OWNERSHIP');
+    assert.ok(
+      result.unmatched.some((item) => item.reason === 'CATEGORY_TYPE_MISMATCH'),
+    );
+  });
+
+  test('inactive concept blocks assignment', () => {
+    const result = resolveProjectConceptAssignments({
+      category: {
+        id: 'cat-1',
+        categoryType: 'PROJECT',
+        isActive: true,
+        projectTopicConceptId: 'concept-1',
+        projectTopicConcept: {
+          id: 'concept-1',
+          canonicalKey: 'project-topic:robotics',
+          conceptType: 'PROJECT_TOPIC',
+          status: 'INACTIVE',
+        },
+      },
+    });
+    assert.equal(result.status, 'BLOCKED_INVALID_CATEGORY_OWNERSHIP');
+    assert.ok(result.unmatched.some((item) => item.reason === 'INACTIVE_TARGET'));
+  });
+
+  test('wrong concept type blocks assignment', () => {
+    const result = resolveProjectConceptAssignments({
+      category: {
+        id: 'cat-1',
+        categoryType: 'PROJECT',
+        isActive: true,
+        projectTopicConceptId: 'concept-1',
+        projectTopicConcept: {
+          id: 'concept-1',
+          canonicalKey: 'interest:robotics',
+          conceptType: 'INTEREST',
+          status: 'ACTIVE',
+        },
+      },
+    });
+    assert.equal(result.status, 'BLOCKED_INVALID_CATEGORY_OWNERSHIP');
+    assert.ok(
+      result.unmatched.some((item) => item.reason === 'WRONG_CONCEPT_TYPE'),
+    );
+  });
+
+  test('malformed canonical key blocks assignment', () => {
+    const result = resolveProjectConceptAssignments({
+      category: {
+        id: 'cat-1',
+        categoryType: 'PROJECT',
+        isActive: true,
+        projectTopicConceptId: 'concept-1',
+        projectTopicConcept: {
+          id: 'concept-1',
+          canonicalKey: 'not-a-valid-key',
+          conceptType: 'PROJECT_TOPIC',
+          status: 'ACTIVE',
+        },
+      },
+    });
+    assert.equal(result.status, 'BLOCKED_INVALID_CATEGORY_OWNERSHIP');
+    assert.ok(
+      result.unmatched.some(
+        (item) => item.reason === 'CATEGORY_OWNERSHIP_INVALID_TARGET',
+      ),
+    );
+  });
+});
+
+describe('project topic lifecycle', () => {
+  test('submit creates exactly the owned canonical topic', async () => {
+    const owner = await createLearnerUser('topic-submit');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+
+    const { response } = await submitLearningProjectForReview(
+      owner.id,
+      {
+        title: `${TEST_MARKER} topic submit`,
+        shortDescription: `${TEST_MARKER} topic submit short description.`,
+        description: `${TEST_MARKER} topic submit full description.`,
+        categoryId: projectCategory.id,
+        difficulty: 'BEGINNER',
+      },
+      `idem-topic-submit-${Date.now()}`,
+    );
+    ids.projects.push(response.id);
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: response.id },
+      include: { concept: { select: { canonicalKey: true, conceptType: true } } },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.conceptId, projectCategory.topicConceptId);
+    assert.equal(concepts[0]?.concept.conceptType, 'PROJECT_TOPIC');
+    assert.equal(concepts[0]?.concept.canonicalKey, 'project-topic:robotics');
+  });
+
+  test('semantic category change replaces stale topic', async () => {
+    const owner = await createLearnerUser('topic-category-change');
+    const originalCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const nextCategory = await createCategory(
+      'PROJECT',
+      'project-topic:electronics',
+    );
+    assert.notEqual(
+      originalCategory.topicConceptId,
+      nextCategory.topicConceptId,
+    );
+
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: originalCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} topic replace`,
+    });
+    await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: originalCategory.topicConceptId,
+      },
+    });
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} topic replace`,
+      shortDescription: `${TEST_MARKER} topic replace short.`,
+      description: `${TEST_MARKER} topic replace full.`,
+      categoryId: nextCategory.id,
+      difficulty: 'BEGINNER',
+    });
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+      select: { conceptId: true },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.conceptId, nextCategory.topicConceptId);
+  });
+
+  test('same-category non-semantic update preserves join row identity', async () => {
+    const owner = await createLearnerUser('topic-preserve-row');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'PENDING_REVIEW',
+      title: `${TEST_MARKER} topic preserve`,
+    });
+    const existing = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: projectCategory.topicConceptId,
+      },
+    });
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} topic preserve updated`,
+      shortDescription: `${TEST_MARKER} topic preserve short.`,
+      description: `${TEST_MARKER} topic preserve full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+    });
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.id, existing.id);
+    assert.equal(concepts[0]?.conceptId, projectCategory.topicConceptId);
+  });
+
+  test('legacy editable row missing topics self-heals on update', async () => {
+    const owner = await createLearnerUser('topic-self-heal');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:woodworking',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} topic self heal`,
+    });
+
+    assert.equal(
+      await prisma.learningProjectConcept.count({
+        where: { projectId: project.id },
+      }),
+      0,
+    );
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} topic self heal`,
+      shortDescription: `${TEST_MARKER} topic self heal short.`,
+      description: `${TEST_MARKER} topic self heal full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+    });
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+      select: { conceptId: true },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.conceptId, projectCategory.topicConceptId);
+  });
+
+  test('unowned category rejects update', async () => {
+    const owner = await createLearnerUser('topic-unowned');
+    const owned = await createCategory('PROJECT', 'project-topic:robotics');
+    const unowned = await prisma.category.create({
+      data: {
+        nameEn: `${TEST_MARKER} unowned ${Date.now()}`,
+        nameAr: `${TEST_MARKER} unowned`,
+        categoryType: 'PROJECT',
+        isActive: true,
+        projectTopicConceptId: null,
+      },
+    });
+    ids.categories.push(unowned.id);
+
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: owned.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} topic unowned`,
+    });
+
+    await assert.rejects(
+      () =>
+        updateMyLearningProjectSubmissionById(project.id, owner.id, {
+          title: `${TEST_MARKER} topic unowned`,
+          shortDescription: `${TEST_MARKER} topic unowned short.`,
+          description: `${TEST_MARKER} topic unowned full.`,
+          categoryId: unowned.id,
+          difficulty: 'BEGINNER',
+        }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'CATEGORY_TAXONOMY_NOT_READY',
+    );
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      select: { categoryId: true },
+    });
+    assert.equal(stored.categoryId, owned.id);
+  });
+
+  test('create rolls back Project when topic persistence fails after entity write', async () => {
+    const owner = await createLearnerUser('topic-create-rollback');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const title = `${TEST_MARKER} create rollback ${Date.now()}`;
+
+    const failingDeps: ProjectTopicLifecycleDeps = {
+      reconcileLearningProjectTopics: async (client, projectId) => {
+        const row = await client.learningProject.findUnique({
+          where: { id: projectId },
+          select: { id: true, title: true },
+        });
+        assert.ok(row);
+        assert.equal(row.title, title);
+        throw new Error('forced topic persistence failure after entity write');
+      },
+    };
+
+    await assert.rejects(
+      () =>
+        prisma.$transaction((tx) =>
+          learningProjectsRepository.createLearningProjectForReview({
+            createdBy: owner.id,
+            categoryId: projectCategory.id,
+            title,
+            shortDescription: `${TEST_MARKER} create rollback short.`,
+            description: `${TEST_MARKER} create rollback full.`,
+            difficulty: 'BEGINNER',
+            steps: [{ title: 'Step 1', description: 'Do the thing' }],
+            client: tx,
+            topicLifecycleDeps: failingDeps,
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof Error
+        && error.message === 'forced topic persistence failure after entity write',
+    );
+
+    assert.equal(await prisma.learningProject.count({ where: { title } }), 0);
+    assert.equal(
+      await prisma.projectStep.count({
+        where: { project: { title } },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.learningProjectConcept.count({
+        where: { project: { title } },
+      }),
+      0,
+    );
+  });
+
+  test('update rolls back Project fields when topic persistence fails after entity write', async () => {
+    const owner = await createLearnerUser('topic-update-rollback');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const nextCategory = await createCategory(
+      'PROJECT',
+      'project-topic:electronics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} update rollback original`,
+    });
+    const existingConcept = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: projectCategory.topicConceptId,
+      },
+    });
+
+    const failingDeps: ProjectTopicLifecycleDeps = {
+      reconcileLearningProjectTopics: async (client, projectId, categoryId) => {
+        const row = await client.learningProject.findUnique({
+          where: { id: projectId },
+          select: { title: true, categoryId: true },
+        });
+        assert.ok(row);
+        assert.equal(row.categoryId, categoryId);
+        assert.equal(row.title, `${TEST_MARKER} update rollback mutated`);
+        throw new Error('forced topic persistence failure after entity write');
+      },
+    };
+
+    await assert.rejects(
+      () =>
+        learningProjectsRepository.updateMyLearningProjectSubmission({
+          id: project.id,
+          userId: owner.id,
+          categoryId: nextCategory.id,
+          title: `${TEST_MARKER} update rollback mutated`,
+          shortDescription: `${TEST_MARKER} update rollback short.`,
+          description: `${TEST_MARKER} update rollback full.`,
+          difficulty: 'BEGINNER',
+          topicLifecycleDeps: failingDeps,
+        }),
+      (error: unknown) =>
+        error instanceof Error
+        && error.message === 'forced topic persistence failure after entity write',
+    );
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      select: { title: true, categoryId: true },
+    });
+    assert.equal(stored.title, `${TEST_MARKER} update rollback original`);
+    assert.equal(stored.categoryId, projectCategory.id);
+
+    const concepts = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(concepts.length, 1);
+    assert.equal(concepts[0]?.id, existingConcept.id);
+    assert.equal(concepts[0]?.conceptId, projectCategory.topicConceptId);
+  });
+});
+
+describe('required component concept lifecycle', () => {
+  test('submit create maps reviewed component evidence to one assignment', async () => {
+    const owner = await createLearnerUser('component-submit');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+
+    const { response } = await submitLearningProjectForReview(
+      owner.id,
+      {
+        title: `${TEST_MARKER} component submit`,
+        shortDescription: `${TEST_MARKER} component submit short description.`,
+        description: `${TEST_MARKER} component submit full description.`,
+        categoryId: projectCategory.id,
+        difficulty: 'BEGINNER',
+        requiredComponents: [
+          {
+            name: 'Breadboard',
+            materialType: 'Breadboard',
+            quantity: 1,
+            unit: 'piece',
+          },
+        ],
+      },
+      `idem-component-submit-${Date.now()}`,
+    );
+    ids.projects.push(response.id);
+
+    const components = await prisma.projectRequiredComponent.findMany({
+      where: { projectId: response.id },
+      select: { id: true },
+    });
+    assert.equal(components.length, 1);
+
+    const joins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: components[0]!.id },
+      include: { concept: { select: { canonicalKey: true, conceptType: true } } },
+    });
+    assert.equal(joins.length, 1);
+    assert.equal(joins[0]?.concept.conceptType, 'COMPONENT');
+    assert.equal(joins[0]?.concept.canonicalKey, 'component:breadboard');
+
+    const topics = await prisma.learningProjectConcept.findMany({
+      where: { projectId: response.id },
+    });
+    assert.equal(topics.length, 1);
+    assert.equal(topics[0]?.conceptId, projectCategory.topicConceptId);
+  });
+
+  test('semantic update replaces assignment; non-semantic preserves join row id', async () => {
+    const owner = await createLearnerUser('component-semantic');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:electronics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component semantic`,
+    });
+    const topicJoin = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: projectCategory.topicConceptId,
+      },
+    });
+    const breadboard = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:breadboard', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    const component = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Breadboard',
+        materialType: 'Breadboard',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const existingJoin = await prisma.projectComponentConcept.create({
+      data: {
+        componentId: component.id,
+        conceptId: breadboard.id,
+      },
+    });
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} component semantic`,
+      shortDescription: `${TEST_MARKER} component semantic short.`,
+      description: `${TEST_MARKER} component semantic full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+      requiredComponents: [
+        {
+          id: component.id,
+          name: 'Breadboard',
+          materialType: 'Breadboard',
+          quantity: 3,
+          unit: 'piece',
+          notes: 'quantity-only change',
+        },
+      ],
+    });
+
+    const afterNonSemantic = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+    });
+    assert.equal(afterNonSemantic.length, 1);
+    assert.equal(afterNonSemantic[0]?.id, existingJoin.id);
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} component semantic`,
+      shortDescription: `${TEST_MARKER} component semantic short.`,
+      description: `${TEST_MARKER} component semantic full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+      requiredComponents: [
+        {
+          id: component.id,
+          name: 'Arduino board',
+          materialType: 'Arduino Uno',
+          quantity: 3,
+          unit: 'piece',
+        },
+      ],
+    });
+
+    const afterSemantic = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(afterSemantic.length, 1);
+    assert.equal(afterSemantic[0]?.concept.canonicalKey, 'component:arduino-board');
+    assert.notEqual(afterSemantic[0]?.id, existingJoin.id);
+
+    const topics = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(topics.length, 1);
+    assert.equal(topics[0]?.id, topicJoin.id);
+    assert.equal(topics[0]?.conceptId, projectCategory.topicConceptId);
+  });
+
+  test('replacement and deletion cascade; sibling and other project intact', async () => {
+    const owner = await createLearnerUser('component-replace');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const otherCategory = await createCategory(
+      'PROJECT',
+      'project-topic:woodworking',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component replace`,
+    });
+    const otherProject = await createProject({
+      createdBy: owner.id,
+      categoryId: otherCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component other project`,
+    });
+
+    const keep = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Breadboard',
+        materialType: 'Breadboard',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const remove = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'LED',
+        materialType: 'LED Pack',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const otherComponent = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: otherProject.id,
+        componentName: 'Wood glue',
+        materialType: 'Wood Glue',
+        quantity: 1,
+        unit: 'bottle',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+
+    const breadboard = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:breadboard' },
+      select: { id: true },
+    });
+    const led = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:led' },
+      select: { id: true },
+    });
+    const woodGlue = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:wood-glue' },
+      select: { id: true },
+    });
+
+    await prisma.projectComponentConcept.createMany({
+      data: [
+        { componentId: keep.id, conceptId: breadboard.id },
+        { componentId: remove.id, conceptId: led.id },
+        { componentId: otherComponent.id, conceptId: woodGlue.id },
+      ],
+    });
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, {
+      title: `${TEST_MARKER} component replace`,
+      shortDescription: `${TEST_MARKER} component replace short.`,
+      description: `${TEST_MARKER} component replace full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER',
+      requiredComponents: [
+        {
+          id: keep.id,
+          name: 'Breadboard',
+          materialType: 'Breadboard',
+          quantity: 1,
+          unit: 'piece',
+        },
+        {
+          name: 'Jumper wires',
+          materialType: 'Jumper Wires',
+          quantity: 1,
+          unit: 'pack',
+        },
+      ],
+    });
+
+    assert.equal(
+      await prisma.projectRequiredComponent.count({ where: { id: remove.id } }),
+      0,
+    );
+    assert.equal(
+      await prisma.projectComponentConcept.count({
+        where: { componentId: remove.id },
+      }),
+      0,
+    );
+
+    const keepJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: keep.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(keepJoins.length, 1);
+    assert.equal(keepJoins[0]?.concept.canonicalKey, 'component:breadboard');
+
+    const created = await prisma.projectRequiredComponent.findFirstOrThrow({
+      where: {
+        projectId: project.id,
+        componentName: 'Jumper wires',
+      },
+      select: { id: true },
+    });
+    const createdJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: created.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(createdJoins.length, 1);
+    assert.equal(createdJoins[0]?.concept.canonicalKey, 'component:jumper-wires');
+
+    const otherJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: otherComponent.id },
+    });
+    assert.equal(otherJoins.length, 1);
+    assert.equal(otherJoins[0]?.conceptId, woodGlue.id);
+  });
+
+  test('missing and stale assignments self-heal on update; retry stays idempotent', async () => {
+    const owner = await createLearnerUser('component-heal');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component heal`,
+    });
+    const component = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Breadboard',
+        materialType: 'Breadboard',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const wrong = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:led' },
+      select: { id: true },
+    });
+    await prisma.projectComponentConcept.create({
+      data: { componentId: component.id, conceptId: wrong.id },
+    });
+
+    const payload = {
+      title: `${TEST_MARKER} component heal`,
+      shortDescription: `${TEST_MARKER} component heal short.`,
+      description: `${TEST_MARKER} component heal full.`,
+      categoryId: projectCategory.id,
+      difficulty: 'BEGINNER' as const,
+      requiredComponents: [
+        {
+          id: component.id,
+          name: 'Breadboard',
+          materialType: 'Breadboard',
+          quantity: 1,
+          unit: 'piece',
+        },
+      ],
+    };
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, payload);
+    const healed = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+      include: { concept: { select: { canonicalKey: true } } },
+    });
+    assert.equal(healed.length, 1);
+    assert.equal(healed[0]?.concept.canonicalKey, 'component:breadboard');
+    const healedId = healed[0]!.id;
+
+    await updateMyLearningProjectSubmissionById(project.id, owner.id, payload);
+    const retry = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+    });
+    assert.equal(retry.length, 1);
+    assert.equal(retry[0]?.id, healedId);
+  });
+
+  test('create rolls back when component concept persistence fails after component write', async () => {
+    const owner = await createLearnerUser('component-create-rollback');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const title = `${TEST_MARKER} component create rollback ${Date.now()}`;
+    let createAttempted = false;
+
+    const failingDeps = createComponentConceptLifecycleDeps({
+      deleteAssignments:
+        defaultComponentConceptAssignmentPersistenceDeps.deleteAssignments,
+      createAssignment: async (client, componentId, conceptId) => {
+        const rows = await client.projectRequiredComponent.findMany({
+          where: { project: { title } },
+          select: { id: true, componentName: true, materialType: true },
+        });
+        assert.ok(rows.length > 0);
+        assert.equal(rows[0]?.componentName, 'Breadboard');
+        assert.equal(rows[0]?.materialType, 'Breadboard');
+        assert.equal(rows[0]?.id, componentId);
+        createAttempted = true;
+        assert.ok(conceptId);
+        throw new Error(
+          'forced component concept persistence failure after entity write',
+        );
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        prisma.$transaction((tx) =>
+          learningProjectsRepository.createLearningProjectForReview({
+            createdBy: owner.id,
+            categoryId: projectCategory.id,
+            title,
+            shortDescription: `${TEST_MARKER} component create rollback short.`,
+            description: `${TEST_MARKER} component create rollback full.`,
+            difficulty: 'BEGINNER',
+            requiredComponents: [
+              {
+                name: 'Breadboard',
+                quantity: 1,
+                unit: 'piece',
+                isRequired: true,
+                componentRole: 'REQUIRED_MATERIAL',
+                materialType: 'Breadboard',
+                searchKeywords: ['Breadboard'],
+                canBeSubstituted: false,
+              },
+            ],
+            client: tx,
+            componentLifecycleDeps: failingDeps,
+          }),
+        ),
+      (error: unknown) =>
+        error instanceof Error
+        && error.message
+          === 'forced component concept persistence failure after entity write',
+    );
+
+    assert.equal(createAttempted, true);
+    assert.equal(await prisma.learningProject.count({ where: { title } }), 0);
+    assert.equal(
+      await prisma.projectRequiredComponent.count({
+        where: { project: { title } },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.projectComponentConcept.count({
+        where: { component: { project: { title } } },
+      }),
+      0,
+    );
+    assert.equal(
+      await prisma.learningProjectConcept.count({
+        where: { project: { title } },
+      }),
+      0,
+    );
+  });
+
+  test('update rolls back after stale assignment delete when create persistence fails', async () => {
+    const owner = await createLearnerUser('component-update-rollback');
+    const projectCategory = await createCategory(
+      'PROJECT',
+      'project-topic:robotics',
+    );
+    const project = await createProject({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      status: 'CHANGES_REQUESTED',
+      title: `${TEST_MARKER} component update rollback original`,
+    });
+    const topicJoin = await prisma.learningProjectConcept.create({
+      data: {
+        projectId: project.id,
+        conceptId: projectCategory.topicConceptId,
+      },
+    });
+    const component = await prisma.projectRequiredComponent.create({
+      data: {
+        projectId: project.id,
+        componentName: 'Unknown part',
+        materialType: 'unknown-type',
+        quantity: 1,
+        unit: 'piece',
+        componentRole: 'REQUIRED_MATERIAL',
+        isRequired: true,
+        providedByUser: true,
+        reviewStatus: 'PENDING_REVIEW',
+      },
+    });
+    const staleConcept = await prisma.taxonomyConcept.findFirstOrThrow({
+      where: { canonicalKey: 'component:led', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    const staleJoin = await prisma.projectComponentConcept.create({
+      data: {
+        componentId: component.id,
+        conceptId: staleConcept.id,
+      },
+    });
+    let deletedStaleInTx = false;
+    let createAttempted = false;
+
+    const failingDeps = createComponentConceptLifecycleDeps({
+      deleteAssignments: async (client, componentId, conceptIds) => {
+        await defaultComponentConceptAssignmentPersistenceDeps.deleteAssignments(
+          client,
+          componentId,
+          conceptIds,
+        );
+        deletedStaleInTx = conceptIds.includes(staleConcept.id);
+        assert.equal(
+          await client.projectComponentConcept.count({
+            where: { id: staleJoin.id },
+          }),
+          0,
+        );
+      },
+      createAssignment: async (client, componentId, conceptId) => {
+        assert.equal(componentId, component.id);
+        assert.notEqual(conceptId, staleConcept.id);
+        const mutated = await client.projectRequiredComponent.findUniqueOrThrow({
+          where: { id: componentId },
+          select: { componentName: true, materialType: true, quantity: true },
+        });
+        assert.equal(mutated.componentName, 'Breadboard');
+        assert.equal(mutated.materialType, 'Breadboard');
+        assert.equal(Number(mutated.quantity), 2);
+        createAttempted = true;
+        throw new Error(
+          'forced component concept persistence failure after entity write',
+        );
+      },
+    });
+
+    await assert.rejects(
+      () =>
+        learningProjectsRepository.updateMyLearningProjectSubmission({
+          id: project.id,
+          userId: owner.id,
+          categoryId: projectCategory.id,
+          title: `${TEST_MARKER} component update rollback changed`,
+          shortDescription: `${TEST_MARKER} component update rollback short.`,
+          description: `${TEST_MARKER} component update rollback full.`,
+          difficulty: 'BEGINNER',
+          requiredComponents: [
+            {
+              id: component.id,
+              component: {
+                name: 'Breadboard',
+                quantity: 2,
+                unit: 'piece',
+                isRequired: true,
+                componentRole: 'REQUIRED_MATERIAL',
+                materialType: 'Breadboard',
+                searchKeywords: ['Breadboard'],
+                canBeSubstituted: false,
+              },
+            },
+          ],
+          componentLifecycleDeps: failingDeps,
+        }),
+      (error: unknown) =>
+        error instanceof Error
+        && error.message
+          === 'forced component concept persistence failure after entity write',
+    );
+
+    assert.equal(deletedStaleInTx, true);
+    assert.equal(createAttempted, true);
+
+    const stored = await prisma.learningProject.findUniqueOrThrow({
+      where: { id: project.id },
+      select: { title: true, status: true, categoryId: true },
+    });
+    assert.equal(
+      stored.title,
+      `${TEST_MARKER} component update rollback original`,
+    );
+    assert.equal(stored.status, 'CHANGES_REQUESTED');
+    assert.equal(stored.categoryId, projectCategory.id);
+
+    const storedComponent = await prisma.projectRequiredComponent.findUniqueOrThrow({
+      where: { id: component.id },
+      select: { componentName: true, materialType: true, quantity: true },
+    });
+    assert.equal(storedComponent.componentName, 'Unknown part');
+    assert.equal(storedComponent.materialType, 'unknown-type');
+    assert.equal(Number(storedComponent.quantity), 1);
+
+    const restoredJoins = await prisma.projectComponentConcept.findMany({
+      where: { componentId: component.id },
+    });
+    assert.equal(restoredJoins.length, 1);
+    assert.equal(restoredJoins[0]?.id, staleJoin.id);
+    assert.equal(restoredJoins[0]?.conceptId, staleConcept.id);
+
+    const topics = await prisma.learningProjectConcept.findMany({
+      where: { projectId: project.id },
+    });
+    assert.equal(topics.length, 1);
+    assert.equal(topics[0]?.id, topicJoin.id);
+    assert.equal(topics[0]?.conceptId, projectCategory.topicConceptId);
   });
 });

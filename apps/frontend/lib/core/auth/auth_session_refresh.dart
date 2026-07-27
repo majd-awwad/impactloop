@@ -39,8 +39,8 @@ final authSessionRefresherProvider = Provider<AuthSessionRefresher>((ref) {
 
 final authSessionExpiryProvider =
     NotifierProvider<AuthSessionExpiryNotifier, AuthSessionExpiryState?>(
-  AuthSessionExpiryNotifier.new,
-);
+      AuthSessionExpiryNotifier.new,
+    );
 
 class AuthSessionExpiryState {
   const AuthSessionExpiryState({required this.generation, required this.error});
@@ -59,6 +59,12 @@ class AuthSessionExpiryNotifier extends Notifier<AuthSessionExpiryState?> {
     _generation += 1;
     state = AuthSessionExpiryState(generation: _generation, error: error);
   }
+
+  void clear() {
+    if (state != null) {
+      state = null;
+    }
+  }
 }
 
 class AuthSessionRefresher {
@@ -66,9 +72,9 @@ class AuthSessionRefresher {
     required Dio refreshClient,
     required TokenStorage tokenStorage,
     required AccessTokenHolder accessTokenHolder,
-  })  : _refreshClient = refreshClient,
-        _tokenStorage = tokenStorage,
-        _accessTokenHolder = accessTokenHolder;
+  }) : _refreshClient = refreshClient,
+       _tokenStorage = tokenStorage,
+       _accessTokenHolder = accessTokenHolder;
 
   final Dio _refreshClient;
   final TokenStorage _tokenStorage;

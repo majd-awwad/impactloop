@@ -12,7 +12,7 @@ Supplier chooses **Add material** (`/supplier/materials/new`) or resumes from ap
 
 ### User path
 
-1. Open add material form in supplier shell.
+1. Open the guided four-section add material form in the supplier shell. The page shows a live presentation preview and a state-derived checklist; it does not persist drafts or autosave.
 2. Choose a category, then select or type material type/name, listing title, condition, quantity, price/free, pickup options, and whether internal delivery is allowed.
 3. Run price check (paid listings).
 4. Upload at least one image.

@@ -11,9 +11,7 @@ class AdminSupplierVerificationSummary {
   final int rejected;
   final int changesRequested;
 
-  factory AdminSupplierVerificationSummary.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory AdminSupplierVerificationSummary.fromJson(Map<String, dynamic> json) {
     return AdminSupplierVerificationSummary(
       pending: json['pending'] as int? ?? 0,
       approved: json['approved'] as int? ?? 0,
@@ -62,13 +60,13 @@ class AdminSupplierVerificationListItem {
       verificationStatus: json['verificationStatus'] as String? ?? 'PENDING',
       submittedAt: json['verificationSubmittedAt'] == null
           ? (json['submittedAt'] == null
-              ? null
-              : DateTime.parse(json['submittedAt'] as String))
+                ? null
+                : DateTime.parse(json['submittedAt'] as String))
           : DateTime.parse(json['verificationSubmittedAt'] as String),
       reviewedAt: json['verificationReviewedAt'] == null
           ? (json['reviewedAt'] == null
-              ? null
-              : DateTime.parse(json['reviewedAt'] as String))
+                ? null
+                : DateTime.parse(json['reviewedAt'] as String))
           : DateTime.parse(json['verificationReviewedAt'] as String),
     );
   }
@@ -114,9 +112,9 @@ class AdminSupplierVerificationListResponse {
     return AdminSupplierVerificationListResponse(
       items: itemsJson is List
           ? itemsJson
-              .whereType<Map<String, dynamic>>()
-              .map(AdminSupplierVerificationListItem.fromJson)
-              .toList(growable: false)
+                .whereType<Map<String, dynamic>>()
+                .map(AdminSupplierVerificationListItem.fromJson)
+                .toList(growable: false)
           : const [],
       summary: AdminSupplierVerificationSummary.fromJson(
         json['summary'] as Map<String, dynamic>? ?? const {},
@@ -236,9 +234,11 @@ class AdminSupplierVerificationDetail {
             organization?['businessLocation'] as Map<String, dynamic>?,
       ),
       description: supplier?['description'] as String?,
-      verificationDocumentUrl: json['verificationDocumentUrl'] as String? ??
+      verificationDocumentUrl:
+          json['verificationDocumentUrl'] as String? ??
           organization?['verificationDocumentUrl'] as String?,
-      verificationDocumentName: json['verificationDocumentName'] as String? ??
+      verificationDocumentName:
+          json['verificationDocumentName'] as String? ??
           organization?['verificationDocumentName'] as String?,
       verificationStatus: json['verificationStatus'] as String? ?? 'PENDING',
       adminNote: json['adminNote'] as String?,

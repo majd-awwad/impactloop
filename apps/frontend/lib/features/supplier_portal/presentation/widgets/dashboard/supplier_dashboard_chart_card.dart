@@ -10,11 +10,13 @@ class SupplierDashboardChartCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.compact = false,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +25,7 @@ class SupplierDashboardChartCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg),
       decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,11 +40,9 @@ class SupplierDashboardChartCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             subtitle,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.textSecondary,
-            ),
+            style: textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          SizedBox(height: compact ? AppSpacing.md : AppSpacing.lg),
           child,
         ],
       ),
@@ -83,9 +83,7 @@ class SupplierDashboardChartEmptyState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.textSecondary,
-            ),
+            style: textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
           ),
         ],
       ),

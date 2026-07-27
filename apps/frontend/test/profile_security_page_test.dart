@@ -7,52 +7,53 @@ import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/profile/presentation/pages/profile_security_page.dart';
 
 void main() {
-  testWidgets('profile security page toggles new and confirm passwords together', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(400, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'profile security page toggles new and confirm passwords together',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _TestAuthController(_testUser()),
-          ),
-        ],
-        child: const MaterialApp(home: ProfileSecurityPage()),
-      ),
-    );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authControllerProvider.overrideWith(
+              () => _TestAuthController(_testUser()),
+            ),
+          ],
+          child: const MaterialApp(home: ProfileSecurityPage()),
+        ),
+      );
 
-    await tester.pump();
+      await tester.pump();
 
-    final toggleButtons = find.byTooltip('Show password');
-    expect(toggleButtons, findsNWidgets(3));
+      final toggleButtons = find.byTooltip('Show password');
+      expect(toggleButtons, findsNWidgets(3));
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'Current123!');
-    await tester.enterText(find.byType(TextFormField).at(1), 'NewPassword1!');
-    await tester.enterText(find.byType(TextFormField).at(2), 'NewPassword1!');
+      await tester.enterText(find.byType(TextFormField).at(0), 'Current123!');
+      await tester.enterText(find.byType(TextFormField).at(1), 'NewPassword1!');
+      await tester.enterText(find.byType(TextFormField).at(2), 'NewPassword1!');
 
-    await tester.tap(toggleButtons.at(1));
-    await tester.pump();
+      await tester.tap(toggleButtons.at(1));
+      await tester.pump();
 
-    expect(find.byTooltip('Hide password'), findsNWidgets(2));
-    expect(find.byTooltip('Show password'), findsOneWidget);
+      expect(find.byTooltip('Hide password'), findsNWidgets(2));
+      expect(find.byTooltip('Show password'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Show password'));
-    await tester.pump();
+      await tester.tap(find.byTooltip('Show password'));
+      await tester.pump();
 
-    expect(find.byTooltip('Hide password'), findsNWidgets(3));
-    expect(find.byTooltip('Show password'), findsNothing);
+      expect(find.byTooltip('Hide password'), findsNWidgets(3));
+      expect(find.byTooltip('Show password'), findsNothing);
 
-    await tester.tap(find.byTooltip('Hide password').at(1));
-    await tester.pump();
+      await tester.tap(find.byTooltip('Hide password').at(1));
+      await tester.pump();
 
-    expect(find.byTooltip('Hide password'), findsOneWidget);
-    expect(find.byTooltip('Show password'), findsNWidgets(2));
+      expect(find.byTooltip('Hide password'), findsOneWidget);
+      expect(find.byTooltip('Show password'), findsNWidgets(2));
 
-    expect(tester.takeException(), isNull);
-  });
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 class _TestAuthController extends AuthController {

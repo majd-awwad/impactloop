@@ -162,3 +162,23 @@ Do not silently skip documentation when behavior, API, DB, architecture, or reus
 - [03-database.md](03-database.md)
 
 Always verify against code and [08-implementation-status.md](08-implementation-status.md).
+
+## Recommendation System
+
+Start with:
+
+* `docs/recommendation/README.md`
+
+Read the full evaluation specification only for recommendation experiments, datasets, model evaluation, or model promotion:
+
+* `docs/recommendation/recommendation-evaluation-experiment-spec.ar.md`
+
+Architecture decisions:
+
+* `docs/recommendation/decisions.md`
+
+Verified implementation state:
+
+* `docs/recommendation/implementation-status.md`
+
+Do not load the full recommendation specification for unrelated tasks.

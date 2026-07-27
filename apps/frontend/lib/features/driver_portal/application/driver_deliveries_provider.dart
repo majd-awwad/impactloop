@@ -58,7 +58,9 @@ class DriverAvailableJobsFilterNotifier
 
   /// Seeds profile-based defaults once after the first successful jobs response.
   void seedDefaultsFromMeta(DriverDeliveriesListMeta meta) {
-    if (_defaultsSeeded || _userModified || !isPristineDriverJobsFilter(state)) {
+    if (_defaultsSeeded ||
+        _userModified ||
+        !isPristineDriverJobsFilter(state)) {
       _defaultsSeeded = true;
       return;
     }
@@ -113,29 +115,20 @@ class DriverAvailableJobsFilterNotifier
 
   void setCity(String? city) {
     final normalized = normalizeProfileField(city);
-    _apply(
-      state.copyWith(
-        city: normalized,
-        clearCity: normalized == null,
-      ),
-    );
+    _apply(state.copyWith(city: normalized, clearCity: normalized == null));
   }
 
   void setArea(String? area) {
     final normalized = normalizeProfileField(area);
-    _apply(
-      state.copyWith(
-        area: normalized,
-        clearArea: normalized == null,
-      ),
-    );
+    _apply(state.copyWith(area: normalized, clearArea: normalized == null));
   }
 }
 
 final driverAvailableJobsFilterProvider =
-    NotifierProvider<DriverAvailableJobsFilterNotifier, DriverAvailableJobsFilter>(
-      DriverAvailableJobsFilterNotifier.new,
-    );
+    NotifierProvider<
+      DriverAvailableJobsFilterNotifier,
+      DriverAvailableJobsFilter
+    >(DriverAvailableJobsFilterNotifier.new);
 
 final availableDriverDeliveriesProvider =
     FutureProvider<DriverDeliveriesListResult>((ref) {
@@ -147,11 +140,16 @@ final availableDriverDeliveriesProvider =
 
 final activeDriverDeliveriesProvider =
     FutureProvider<DriverDeliveriesListResult>((ref) {
-      return ref.read(driverDeliveriesRepositoryProvider).fetchActiveDeliveries();
+      return ref
+          .read(driverDeliveriesRepositoryProvider)
+          .fetchActiveDeliveries();
     });
 
 final driverDeliveryDetailProvider =
-    FutureProvider.family<DriverDeliveryDetailState, String>((ref, deliveryId) async {
+    FutureProvider.family<DriverDeliveryDetailState, String>((
+      ref,
+      deliveryId,
+    ) async {
       final result = await ref.watch(activeDriverDeliveriesProvider.future);
 
       for (final delivery in result.deliveries) {
@@ -185,19 +183,18 @@ final driverDeliveryDetailProvider =
       }
     });
 
-final activeDriverDeliveryProvider = FutureProvider.family<DriverDelivery?, String>(
-  (ref, deliveryId) async {
-    final result = await ref.watch(activeDriverDeliveriesProvider.future);
+final activeDriverDeliveryProvider =
+    FutureProvider.family<DriverDelivery?, String>((ref, deliveryId) async {
+      final result = await ref.watch(activeDriverDeliveriesProvider.future);
 
-    for (final delivery in result.deliveries) {
-      if (delivery.id == deliveryId) {
-        return delivery;
+      for (final delivery in result.deliveries) {
+        if (delivery.id == deliveryId) {
+          return delivery;
+        }
       }
-    }
 
-    return null;
-  },
-);
+      return null;
+    });
 
 void refreshDriverJobs(WidgetRef ref) {
   ref.invalidate(activeDriverDeliveriesProvider);

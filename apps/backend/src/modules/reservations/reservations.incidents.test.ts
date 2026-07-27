@@ -313,7 +313,7 @@ describe('reservation incidents (phase 6+7)', () => {
     assert.equal(mapped.incidentReviewStatus, 'VERIFIED');
   });
 
-  test('no driver available -> system report without strike target', async () => {
+  test('no driver available -> system recovery report has no verify action', async () => {
     const { reservation } = await createAcceptedDeliveryReservation(ctx);
 
     const mapped = await reportNoDriverAvailable(ctx.learnerId, reservation.id, {
@@ -334,13 +334,13 @@ describe('reservation incidents (phase 6+7)', () => {
     assert.equal(item.reasonCode, 'NO_DRIVER_AVAILABLE');
     ctx.createdReportIds.push(item.id);
 
-    const verified = await verifyAdminNoShowReport(
-      ctx.adminId,
-      item.id,
-      'No driver pool issue',
+    await assert.rejects(
+      () => verifyAdminNoShowReport(ctx.adminId, item.id, 'No driver pool issue'),
+      (error: Error & { code?: string }) => {
+        assert.equal(error.code, 'REPORT_ACTION_NOT_AVAILABLE');
+        return true;
+      },
     );
-    assert.equal(verified.targetVerifiedNoShowCount, 0);
-    assert.equal(verified.targetSuspended, false);
   });
 
   test('admin resolve without strike does not increment strikes', async () => {

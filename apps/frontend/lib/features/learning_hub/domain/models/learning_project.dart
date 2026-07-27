@@ -105,6 +105,7 @@ class LearningProject {
     this.requiredComponents = const <ProjectRequiredComponentItem>[],
     this.longDescription,
     this.hasRatings = false,
+    this.recommendationImpressionId,
   });
 
   final String id;
@@ -135,6 +136,7 @@ class LearningProject {
   final ProjectReviewItem? viewerReview;
   final List<String> tags;
   final bool hasRatings;
+  final String? recommendationImpressionId;
 
   LearningProject copyWith({
     int? likesCount,
@@ -144,6 +146,7 @@ class LearningProject {
     bool? isFollowing,
     List<ProjectReviewItem>? recentReviews,
     ProjectReviewItem? viewerReview,
+    String? recommendationImpressionId,
   }) {
     return LearningProject(
       id: id,
@@ -157,6 +160,8 @@ class LearningProject {
       ratingValue: ratingValue,
       ratingCount: ratingCount,
       hasRatings: hasRatings,
+      recommendationImpressionId:
+          recommendationImpressionId ?? this.recommendationImpressionId,
       componentCountLabel: componentCountLabel,
       components: components,
       requiredComponents: requiredComponents,

@@ -83,8 +83,9 @@ abstract final class SupplierMaterialLabelHelper {
   }
 
   static LocalizedText quantityLabel(double quantity, String unit) {
-    final qty =
-        quantity % 1 == 0 ? quantity.toInt().toString() : quantity.toString();
+    final qty = quantity % 1 == 0
+        ? quantity.toInt().toString()
+        : quantity.toString();
     return LocalizedText(en: '$qty $unit', ar: '$qty $unit');
   }
 
@@ -93,8 +94,9 @@ abstract final class SupplierMaterialLabelHelper {
     required double availableQuantity,
     required String unit,
   }) {
-    final totalQty =
-        quantity % 1 == 0 ? quantity.toInt().toString() : quantity.toString();
+    final totalQty = quantity % 1 == 0
+        ? quantity.toInt().toString()
+        : quantity.toString();
     final availableQty = availableQuantity % 1 == 0
         ? availableQuantity.toInt().toString()
         : availableQuantity.toString();
@@ -118,15 +120,13 @@ abstract final class SupplierMaterialLabelHelper {
       return const LocalizedText(en: 'Free', ar: 'مجاني');
     }
 
-    final amount =
-        price?.toStringAsFixed(price.truncateToDouble() == price ? 0 : 2);
+    final amount = price?.toStringAsFixed(
+      price.truncateToDouble() == price ? 0 : 2,
+    );
     return LocalizedText(en: '$amount $currency', ar: '$amount $currency');
   }
 
-  static LocalizedText locationLabel({
-    required String city,
-    String? area,
-  }) {
+  static LocalizedText locationLabel({required String city, String? area}) {
     if (area != null && area.isNotEmpty) {
       return LocalizedText(en: '$city · $area', ar: '$city · $area');
     }
@@ -139,10 +139,7 @@ abstract final class SupplierMaterialLabelHelper {
     required bool deliveryAvailable,
   }) {
     if (pickupAllowed && deliveryAvailable) {
-      return const LocalizedText(
-        en: 'Pickup & delivery',
-        ar: 'استلام وتوصيل',
-      );
+      return const LocalizedText(en: 'Pickup & delivery', ar: 'استلام وتوصيل');
     }
 
     if (deliveryAvailable) {

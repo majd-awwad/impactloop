@@ -31,6 +31,15 @@ import {
 import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
+<<<<<<< Updated upstream
+import {
+  commitRecommendationMaterialView,
+  commitRecommendationToggleTransition,
+  resolveRecommendationSourceOperationId,
+} from '../recommendation-events/recommendation-events.service.js';
+=======
+import * as publicSuppliersRepository from '../public-suppliers/public-suppliers.repository.js';
+>>>>>>> Stashed changes
 
 import * as materialsRepository from './materials.repository.js';
 import type {
@@ -415,6 +424,148 @@ const resolveSupplierName = (material: {
   );
 };
 
+type MaterialSupplierProfileForSummary = {
+  id: string;
+  publicName: string | null;
+  avatarImageUrl: string | null;
+  user: {
+    displayName: string;
+    profileImageUrl: string | null;
+  };
+  defaultPickupLocation: {
+    city: string;
+    area: string | null;
+  } | null;
+  organizationProfile: {
+    businessLocation: {
+      city: string;
+      area: string | null;
+    } | null;
+  } | null;
+};
+
+const resolveMaterialSupplierDisplayName = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return (
+    supplierProfile.publicName?.trim() ||
+    supplierProfile.user.displayName?.trim() ||
+    'ImpactLoop supplier'
+  );
+};
+
+const resolveMaterialSupplierAvatarUrl = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return supplierProfile.avatarImageUrl ?? supplierProfile.user.profileImageUrl ?? null;
+};
+
+const resolveMaterialSupplierCity = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return (
+    supplierProfile.defaultPickupLocation?.city ??
+    supplierProfile.organizationProfile?.businessLocation?.city ??
+    null
+  );
+};
+
+const resolveMaterialSupplierArea = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return (
+    supplierProfile.defaultPickupLocation?.area ??
+    supplierProfile.organizationProfile?.businessLocation?.area ??
+    null
+  );
+};
+
+const mapMaterialSupplierSummary = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+  followedSupplierIds: Set<string>,
+  options: { followersCount?: number } = {},
+) => {
+  const summary = {
+    id: supplierProfile.id,
+    displayName: resolveMaterialSupplierDisplayName(supplierProfile),
+    avatarUrl: resolveMaterialSupplierAvatarUrl(supplierProfile),
+    city: resolveMaterialSupplierCity(supplierProfile),
+    area: resolveMaterialSupplierArea(supplierProfile),
+    isFollowedByViewer: followedSupplierIds.has(supplierProfile.id),
+  };
+
+  if (options.followersCount !== undefined) {
+    return {
+      ...summary,
+      followersCount: options.followersCount,
+    };
+  }
+
+  return summary;
+};
+
+const collectSupplierProfileIds = (
+  materials: Array<{ supplierProfile: { id: string } | null }>,
+) => {
+  const ids = new Set<string>();
+
+  for (const material of materials) {
+    if (material.supplierProfile?.id) {
+      ids.add(material.supplierProfile.id);
+    }
+  }
+
+  return [...ids];
+};
+
+const attachSupplierSummariesToMappedMaterials = async <
+  TMaterial extends { supplierProfile: MaterialSupplierProfileForSummary | null },
+  TMapped extends Record<string, unknown>,
+>(
+  rawMaterials: TMaterial[],
+  mappedMaterials: TMapped[],
+  viewer?: AccessTokenPayload,
+  options: { includeFollowersCountForSingle?: boolean } = {},
+) => {
+  const supplierProfileIds = collectSupplierProfileIds(rawMaterials);
+  const followedSupplierIds =
+    await publicSuppliersRepository.findFollowedSupplierIds(
+      viewer?.sub,
+      supplierProfileIds,
+    );
+
+  let followersCountBySupplierId = new Map<string, number>();
+
+  if (
+    options.includeFollowersCountForSingle &&
+    supplierProfileIds.length === 1
+  ) {
+    const supplierProfileId = supplierProfileIds[0]!;
+    const followersCount =
+      await publicSuppliersRepository.countSupplierFollowers(supplierProfileId);
+    followersCountBySupplierId = new Map([[supplierProfileId, followersCount]]);
+  }
+
+  return mappedMaterials.map((mapped, index) => {
+    const supplierProfile = rawMaterials[index]?.supplierProfile;
+
+    if (!supplierProfile?.id) {
+      return mapped;
+    }
+
+    return {
+      ...mapped,
+      supplier: mapMaterialSupplierSummary(
+        supplierProfile,
+        followedSupplierIds,
+        {
+          followersCount: followersCountBySupplierId.get(supplierProfile.id),
+        },
+      ),
+    };
+  });
+};
+
 const resolvePrimaryImageUrl = (material: {
   images: { imageUrl: string; isCover?: boolean }[];
 }) => {
@@ -660,6 +811,7 @@ const buildMaterialReserveEnrichment = async (
 export const getMaterials = async (
   query: MaterialsQuery,
   viewer?: AccessTokenPayload,
+  options: { supplierProfileId?: string } = {},
 ) => {
   let viewerCoordinates: materialsRepository.ViewerCoordinates | undefined;
 
@@ -694,6 +846,7 @@ export const getMaterials = async (
   const result = await materialsRepository.findMaterials(
     query,
     viewerCoordinates,
+    options.supplierProfileId,
   );
   const materialIds = result.items.map((item) => item.id);
 
@@ -706,21 +859,29 @@ export const getMaterials = async (
       materialsRepository.findLikedMaterialIds(viewer?.sub, materialIds),
     ]);
 
-  return {
-    items: result.items.map((item) =>
-      mapMaterial(
-        item,
-        heldByMaterialId.get(item.id) ?? toDecimal(0),
-        {
-          likesCount: likesByMaterialId.get(item.id) ?? 0,
-          isLiked: likedMaterialIds.has(item.id),
-        },
-        {
-          includeApproximateLocation: true,
-          distanceKm: result.distanceByMaterialId.get(item.id),
-        },
-      ),
+  const mappedItems = result.items.map((item) =>
+    mapMaterial(
+      item,
+      heldByMaterialId.get(item.id) ?? toDecimal(0),
+      {
+        likesCount: likesByMaterialId.get(item.id) ?? 0,
+        isLiked: likedMaterialIds.has(item.id),
+      },
+      {
+        includeApproximateLocation: true,
+        distanceKm: result.distanceByMaterialId.get(item.id),
+      },
     ),
+  );
+
+  const items = await attachSupplierSummariesToMappedMaterials(
+    result.items,
+    mappedItems,
+    viewer,
+  );
+
+  return {
+    items,
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -742,18 +903,62 @@ export const getMaterialById = async (
 
   await expireStalePendingReservationsForMaterials([material.id]);
 
-  const [incremented, heldByMaterialId, likesByMaterialId, likedMaterialIds] =
-    await Promise.all([
-      materialsRepository.recordMaterialView(
+  const isLearner = Boolean(
+    viewer?.sub &&
+      viewer.roles.some((role) => role.toUpperCase() === 'LEARNER'),
+  );
+  const sourceOperationId = isLearner
+    ? resolveRecommendationSourceOperationId()
+    : undefined;
+  let replayed = false;
+  let incremented: { viewsCount: number; recorded: boolean };
+
+  if (viewer?.sub && isLearner && sourceOperationId) {
+    const committed = await commitRecommendationMaterialView({
+      learnerId: viewer.sub,
+      materialId: material.id,
+      apply: async (tx) => {
+        const recorded = await materialsRepository.recordMaterialViewOperation(
+          material.id,
+          viewer.sub,
+          'material_detail',
+          tx,
+        );
+        if (!recorded) {
+          throw new AppError('Material not found', 404, 'NOT_FOUND');
+        }
+        return recorded;
+      },
+    });
+    incremented = committed.response;
+    replayed = committed.replayed;
+  } else if (viewer?.sub && isLearner) {
+    incremented = await prisma.$transaction((tx) =>
+      materialsRepository.appendMaterialView(
         material.id,
-        viewer?.sub,
+        viewer.sub,
         'material_detail',
+        tx,
       ),
+    );
+  } else {
+    incremented = await materialsRepository.recordMaterialView(
+      material.id,
+      viewer?.sub,
+      'material_detail',
+    );
+  }
+
+  const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
+    await Promise.all([
       getHeldQuantitiesByMaterialIds([material.id]),
       materialsRepository.countLikesByMaterialIds([material.id]),
       materialsRepository.findLikedMaterialIds(viewer?.sub, [material.id]),
     ]);
   const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
+  if (viewer?.sub && incremented.recorded && !replayed) {
+    invalidateLearnerHomeCache(viewer.sub);
+  }
   const mappedMaterial = mapMaterial(
     { ...material, viewsCount: incremented.viewsCount },
     heldQuantity,
@@ -763,10 +968,16 @@ export const getMaterialById = async (
     },
   );
   const detailFields = mapMaterialDetailFields(material);
+  const [materialWithSupplier] = await attachSupplierSummariesToMappedMaterials(
+    [material],
+    [mappedMaterial],
+    viewer,
+    { includeFollowersCountForSingle: true },
+  );
 
   if (!viewer) {
     return {
-      ...mappedMaterial,
+      ...materialWithSupplier,
       ...detailFields,
     };
   }
@@ -778,7 +989,7 @@ export const getMaterialById = async (
   );
 
   return {
-    ...mappedMaterial,
+    ...materialWithSupplier,
     ...detailFields,
     ...reserveEnrichment,
   };
@@ -791,15 +1002,25 @@ export const likeMaterialById = async (id: string, userId: string) => {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  await materialsRepository.setMaterialLiked(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const likesCount = await materialsRepository.countLikesForMaterial(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'MATERIAL_LIKE',
+    entityType: 'MATERIAL',
+    entityId: id,
+    resourceType: 'material-like',
+    apply: (tx) => materialsRepository.setMaterialLiked(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      materialId: id,
+      likesCount: await tx.materialLike.count({ where: { materialId: id } }),
+      isLiked: active,
+    }),
+  });
 
-  return {
-    materialId: id,
-    likesCount,
-    isLiked: true,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const unlikeMaterialById = async (id: string, userId: string) => {
@@ -809,15 +1030,25 @@ export const unlikeMaterialById = async (id: string, userId: string) => {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
 
-  await materialsRepository.unsetMaterialLiked(id, userId);
-  invalidateLearnerHomeCache(userId);
-  const likesCount = await materialsRepository.countLikesForMaterial(id);
+  const { response, replayed } = await commitRecommendationToggleTransition({
+    learnerId: userId,
+    actionType: 'MATERIAL_UNLIKE',
+    entityType: 'MATERIAL',
+    entityId: id,
+    resourceType: 'material-unlike',
+    apply: (tx) => materialsRepository.unsetMaterialLiked(id, userId, tx),
+    buildResponse: async (tx, active) => ({
+      materialId: id,
+      likesCount: await tx.materialLike.count({ where: { materialId: id } }),
+      isLiked: active,
+    }),
+  });
 
-  return {
-    materialId: id,
-    likesCount,
-    isLiked: false,
-  };
+  if (!replayed) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return response;
 };
 
 export const checkMaterialPrice = async (

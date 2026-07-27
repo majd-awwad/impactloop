@@ -1,5 +1,5 @@
-import type { PrismaClient } from '../../src/generated/prisma/client.js';
-import { hashPassword } from '../../src/utils/password.js';
+import type { PrismaClient } from "../../src/generated/prisma/client.js";
+import { hashPassword } from "../../src/utils/password.js";
 
 import {
   buildPickupWindow,
@@ -13,10 +13,10 @@ import {
   SEED_RESERVATION_PREFIX,
   SEED_SUPPLIER_EMAIL,
   type SeedContext,
-} from './supplier-reservations.data.js';
+} from "./supplier-reservations.data.js";
 
 const shouldForceReseed = (): boolean =>
-  process.env.SEED_FORCE_RESERVATIONS === 'true';
+  process.env.SEED_FORCE_RESERVATIONS === "true";
 
 async function ensureSeedSupplier(prisma: PrismaClient) {
   const passwordHash = await hashPassword(SEED_PASSWORD);
@@ -29,20 +29,21 @@ async function ensureSeedSupplier(prisma: PrismaClient) {
   if (!user) {
     user = await prisma.user.create({
       data: {
-        displayName: 'Seed Supplier',
+        displayName: "Seed Supplier",
         email: SEED_SUPPLIER_EMAIL,
         passwordHash,
-        accountStatus: 'ACTIVE',
+        accountStatus: "ACTIVE",
         emailVerifiedAt: new Date(),
         roles: {
-          create: [{ role: 'SUPPLIER', isPrimary: true }],
+          create: [{ role: "SUPPLIER", isPrimary: true }],
         },
         supplierProfile: {
           create: {
-            supplierType: 'INDIVIDUAL_SUPPLIER',
-            publicName: 'Seed Supplier Workshop',
-            description: 'Seed account for supplier portal reservation testing.',
-            verificationStatus: 'VERIFIED',
+            supplierType: "INDIVIDUAL_SUPPLIER",
+            publicName: "Seed Supplier Workshop",
+            description:
+              "Seed account for supplier portal reservation testing.",
+            verificationStatus: "VERIFIED",
           },
         },
       },
@@ -54,10 +55,10 @@ async function ensureSeedSupplier(prisma: PrismaClient) {
     const profile = await prisma.supplierProfile.create({
       data: {
         userId: user.id,
-        supplierType: 'INDIVIDUAL_SUPPLIER',
-        publicName: 'Seed Supplier Workshop',
-        description: 'Seed account for supplier portal reservation testing.',
-        verificationStatus: 'VERIFIED',
+        supplierType: "INDIVIDUAL_SUPPLIER",
+        publicName: "Seed Supplier Workshop",
+        description: "Seed account for supplier portal reservation testing.",
+        verificationStatus: "VERIFIED",
       },
     });
     user = { ...user, supplierProfile: profile };
@@ -82,15 +83,15 @@ async function ensureSeedLearners(prisma: PrismaClient) {
           displayName: learner.displayName,
           email: learner.email,
           passwordHash,
-          accountStatus: 'ACTIVE',
+          accountStatus: "ACTIVE",
           emailVerifiedAt: new Date(),
           roles: {
-            create: [{ role: 'LEARNER', isPrimary: true }],
+            create: [{ role: "LEARNER", isPrimary: true }],
           },
           learnerProfile: {
             create: {
-              learnerType: 'STUDENT',
-              bio: 'Seed learner account for reservation testing.',
+              learnerType: "STUDENT",
+              bio: "Seed learner account for reservation testing.",
             },
           },
         },
@@ -120,14 +121,14 @@ async function ensureSeedLocation(
 
   const location = await prisma.location.create({
     data: {
-      country: 'Palestine',
-      city: 'Ramallah',
-      area: 'Al-Bireh',
-      addressLine: 'Seed pickup location',
+      country: "Palestine",
+      city: "Ramallah",
+      area: "Al-Bireh",
+      addressLine: "Seed pickup location",
       latitude: 31.9038,
       longitude: 35.2034,
-      locationType: 'PICKUP',
-      visibility: 'PRIVATE',
+      locationType: "PICKUP",
+      visibility: "PRIVATE",
       isApproximate: true,
     },
     select: { id: true },
@@ -148,7 +149,7 @@ async function resolveMaterialCategoryId(
   const category = await prisma.category.findFirst({
     where: { nameEn: categoryNameEn },
     select: { id: true },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
   });
 
   if (!category) {
@@ -183,7 +184,7 @@ async function ensureSeedMaterials(
   prisma: PrismaClient,
   context: Pick<
     SeedContext,
-    'supplierUserId' | 'supplierProfileId' | 'locationId'
+    "supplierUserId" | "supplierProfileId" | "locationId"
   >,
 ) {
   const materialIds = new Map<string, string>();
@@ -228,12 +229,12 @@ async function ensureSeedMaterials(
         unit: material.unit,
         condition: material.condition,
         sourceType: material.sourceType,
-        status: 'AVAILABLE',
+        status: "AVAILABLE",
         isFree: true,
         locationId: context.locationId,
         pickupAllowed: true,
         deliveryAllowed: false,
-        pickupNotes: 'Seed material for reservation testing.',
+        pickupNotes: "Seed material for reservation testing.",
       },
       select: { id: true },
     });
@@ -264,7 +265,9 @@ async function createSeedReservations(
     const requesterId = context.learnerIds.get(spec.learnerEmail);
 
     if (!materialId || !requesterId) {
-      console.warn(`Skipping reservation ${spec.key}: missing material or learner.`);
+      console.warn(
+        `Skipping reservation ${spec.key}: missing material or learner.`,
+      );
       continue;
     }
 
@@ -274,10 +277,10 @@ async function createSeedReservations(
 
     const now = new Date();
     const acceptedAt =
-      spec.status === 'ACCEPTED' || spec.status === 'COMPLETED' ? now : null;
-    const rejectedAt = spec.status === 'REJECTED' ? now : null;
+      spec.status === "ACCEPTED" || spec.status === "COMPLETED" ? now : null;
+    const rejectedAt = spec.status === "REJECTED" ? now : null;
     const completedAt =
-      spec.status === 'COMPLETED'
+      spec.status === "COMPLETED"
         ? (() => {
             const date = new Date();
             date.setHours(0, 0, 0, 0);
@@ -352,12 +355,14 @@ export async function seedSupplierReservations(prisma: PrismaClient) {
 
   const createdCount = await countSeedReservations(prisma);
 
-  console.log('Supplier reservation seed complete.');
+  console.log("Supplier reservation seed complete.");
   console.log(`  Supplier login: ${SEED_SUPPLIER_EMAIL} / ${SEED_PASSWORD}`);
   console.log(`  Seed reservations: ${createdCount}`);
-  console.log('  Tabs to verify:');
-  console.log('    Incoming Requests → Pending / Accepted / Declined / Completed');
-  console.log('    Pickup Schedule → Today / Upcoming / Completed / All');
+  console.log("  Tabs to verify:");
+  console.log(
+    "    Incoming Requests → Pending / Accepted / Declined / Completed",
+  );
+  console.log("    Pickup Schedule → Today / Upcoming / Completed / All");
 
   return {
     skipped: false,
