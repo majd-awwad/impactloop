@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
+import { profileImageUrlSchema } from '../../utils/profile-image-url.js';
 import { paginationQuerySchema } from '../../utils/zod-helpers.js';
+
+import {
+  AUTHORING_IDEA_MAX_LENGTH,
+  AUTHORING_IDEA_MIN_LENGTH,
+} from './learning-projects.authoring-draft-fields.js';
 
 const PROJECT_DIFFICULTIES = [
   'BEGINNER',
@@ -46,6 +52,27 @@ export const learningProjectIdParamSchema = z.object({
 
 export const projectBuildItemParamSchema = learningProjectIdParamSchema.extend({
   itemId: z.string().trim().min(1),
+});
+
+export const projectBuildStepParamSchema = learningProjectIdParamSchema.extend({
+  stepId: z.string().trim().uuid(),
+});
+
+export const buildGuideConversationSchema = z.object({
+  locale: z.enum(['en', 'ar']).optional(),
+});
+
+export const createAiAuthoringDraftSchema = z
+  .object({
+    ideaText: z.string().trim().min(AUTHORING_IDEA_MIN_LENGTH).max(AUTHORING_IDEA_MAX_LENGTH),
+    categoryId: z.string().trim().min(1),
+    difficulty: z.enum(PROJECT_DIFFICULTIES),
+    locale: z.enum(['en', 'ar']).optional(),
+  })
+  .strict();
+
+export const authoringConversationSchema = z.object({
+  locale: z.enum(['en', 'ar']).optional(),
 });
 
 export const projectReviewSchema = z.object({
@@ -122,63 +149,54 @@ const submitLinkSchema = z.object({
   title: z.string().trim().max(200).optional(),
 });
 
-export const submitLearningProjectSchema = z
-  .object({
-    title: z.string().trim().min(3).max(200),
-    shortDescription: z.string().trim().min(10).max(500),
-    description: z.string().trim().min(10).max(10000),
-    categoryId: z.string().trim().min(1),
-    difficulty: z.enum(PROJECT_DIFFICULTIES),
-    estimatedDurationMinutes: z.number().int().positive().max(10000).optional(),
-    coverImageUrl: z.string().trim().url().optional().nullable(),
-    requiredComponents: z.array(submitComponentSchema).max(50).optional(),
-    steps: z.array(submitStepSchema).max(100).optional(),
-    links: z.array(submitLinkSchema).max(20).optional(),
-  })
-  .superRefine((value, context) => {
-    const components = value.requiredComponents ?? [];
-    const seen = new Set<string>();
+const submitLearningProjectObjectSchema = z.object({
+  title: z.string().trim().min(3).max(200),
+  shortDescription: z.string().trim().min(10).max(500),
+  description: z.string().trim().min(10).max(10000),
+  categoryId: z.string().trim().min(1),
+  difficulty: z.enum(PROJECT_DIFFICULTIES),
+  estimatedDurationMinutes: z.number().int().positive().max(10000).optional(),
+  coverImageUrl: profileImageUrlSchema.optional().nullable(),
+  requiredComponents: z.array(submitComponentSchema).max(50).optional(),
+  steps: z.array(submitStepSchema).max(100).optional(),
+  links: z.array(submitLinkSchema).max(20).optional(),
+});
 
-    for (const [index, component] of components.entries()) {
-      const key = component.name.trim().toLowerCase();
-      if (seen.has(key)) {
-        context.addIssue({
-          code: 'custom',
-          message: 'Each required component must have a unique name.',
-          path: ['requiredComponents', index, 'name'],
-        });
-        continue;
-      }
+function refineUniqueComponentNames(
+  value: { requiredComponents?: Array<{ name: string }> },
+  context: z.RefinementCtx,
+) {
+  const components = value.requiredComponents ?? [];
+  const seen = new Set<string>();
 
-      seen.add(key);
+  for (const [index, component] of components.entries()) {
+    const key = component.name.trim().toLowerCase();
+    if (seen.has(key)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Each required component must have a unique name.',
+        path: ['requiredComponents', index, 'name'],
+      });
+      continue;
     }
-  });
 
-export const updateMyLearningProjectSubmissionSchema = submitLearningProjectSchema
-  .safeExtend({
+    seen.add(key);
+  }
+}
+
+export const submitLearningProjectSchema = submitLearningProjectObjectSchema.superRefine(
+  refineUniqueComponentNames,
+);
+
+export const updateMyLearningProjectSubmissionSchema = submitLearningProjectObjectSchema
+  .partial()
+  .extend({
     requiredComponents: z
       .array(updateSubmissionComponentSchema)
       .max(50)
       .optional(),
   })
-  .superRefine((value, context) => {
-    const components = value.requiredComponents ?? [];
-    const seen = new Set<string>();
-
-    for (const [index, component] of components.entries()) {
-      const key = component.name.trim().toLowerCase();
-      if (seen.has(key)) {
-        context.addIssue({
-          code: 'custom',
-          message: 'Each required component must have a unique name.',
-          path: ['requiredComponents', index, 'name'],
-        });
-        continue;
-      }
-
-      seen.add(key);
-    }
-  });
+  .superRefine(refineUniqueComponentNames);
 
 export const updateProjectBuildItemSchema = z.object({
   status: z.enum(PROJECT_BUILD_ITEM_STATUSES, {
@@ -216,6 +234,9 @@ export type SubmitLearningProjectInput = z.infer<
 >;
 export type UpdateMyLearningProjectSubmissionInput = z.infer<
   typeof updateMyLearningProjectSubmissionSchema
+>;
+export type CreateAiAuthoringDraftInput = z.infer<
+  typeof createAiAuthoringDraftSchema
 >;
 export type UpdateProjectBuildItemInput = z.infer<
   typeof updateProjectBuildItemSchema

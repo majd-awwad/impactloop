@@ -31,6 +31,10 @@ export const moderationReasonSchema = z.object({
   reason: z.string().trim().min(3, 'Reason is required.').max(2000),
 });
 
+export const adminAiReviewBodySchema = z.object({
+  locale: z.enum(['ar', 'en']).default('en'),
+});
+
 const nullableCategoryIdSchema = z.preprocess((value) => {
   if (value === '' || value === null || value === undefined) {
     return null;
@@ -139,3 +143,4 @@ export type AdminLearningProjectIdParams = z.infer<
   typeof adminLearningProjectIdParamSchema
 >;
 export type ModerationReasonInput = z.infer<typeof moderationReasonSchema>;
+export type AdminAiReviewBodyInput = z.infer<typeof adminAiReviewBodySchema>;

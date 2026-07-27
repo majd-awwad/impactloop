@@ -23,8 +23,11 @@ import '../../features/deliveries/presentation/pages/learner_delivery_tracking_p
 import '../../features/driver_portal/presentation/pages/driver_delivery_detail_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_authoring_pages.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
+import '../../features/learning_hub/domain/models/project_build.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_build_guide_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_build_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
@@ -69,6 +72,7 @@ import '../../features/admin_portal/presentation/pages/admin_materials_page.dart
 import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
+import '../../features/ai/presentation/pages/general_learning_chat_page.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
@@ -162,13 +166,17 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   }
 
   if (path == '/learning/add-draft' ||
+      path == '/learning/create-project' ||
+      path.startsWith('/learning/authoring/') ||
       path == '/learning/submissions' ||
       path.startsWith('/learning/submissions/') ||
       (path.startsWith('/learning/') && path.endsWith('/build')) ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/') ||
-      path.startsWith('/home/recommendations/')) {
+      path.startsWith('/home/recommendations/') ||
+      path == '/ai/assistant' ||
+      path == '/ai/general-learning') {
     return _RouteAccessLevel.learner;
   }
 
@@ -534,6 +542,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: ProfilePage()),
           ),
+          GoRoute(
+            path: '/ai/assistant',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: AiAssistantRoutePage(
+                conversationId: state.uri.queryParameters['conversationId'],
+              ),
+            ),
+          ),
         ],
       ),
       GoRoute(
@@ -582,8 +598,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/ai/general-learning',
+        redirect: (context, state) {
+          final conversationId = state.uri.queryParameters['conversationId'];
+          if (conversationId == null || conversationId.isEmpty) {
+            return '/ai/assistant';
+          }
+          return '/ai/assistant?conversationId=$conversationId';
+        },
+      ),
+      GoRoute(
         path: authCheckingRoute,
         builder: (context, state) => const AuthCheckingPage(),
+      ),
+      GoRoute(
+        path: '/learning/create-project',
+        builder: (context, state) => const LearningProjectCreateChoicePage(),
+      ),
+      GoRoute(
+        path: '/learning/authoring/new',
+        builder: (context, state) => const LearningProjectAiStarterPage(),
       ),
       GoRoute(
         path: '/learning/add-draft',
@@ -592,6 +626,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/learning/submissions',
         builder: (context, state) => const LearningProjectSubmissionsPage(),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id/author/assistant',
+        builder: (context, state) => LearningProjectAuthoringAssistantPage(
+          projectId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id/author',
+        builder: (context, state) => LearningProjectAuthoringWorkspacePage(
+          projectId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/learning/submissions/:id/edit',
@@ -604,6 +650,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => LearningProjectSubmissionDetailPage(
           submissionId: state.pathParameters['id']!,
         ),
+      ),
+      GoRoute(
+        path: '/learning/:id/build/guide',
+        builder: (context, state) {
+          final projectId = state.pathParameters['id']!;
+          final conversationId =
+              state.uri.queryParameters['conversationId']?.trim() ?? '';
+          final buildContext = state.extra is BuildGuideContext
+              ? state.extra! as BuildGuideContext
+              : null;
+
+          return LearningProjectBuildGuidePage(
+            projectId: projectId,
+            conversationId: conversationId,
+            buildContext: buildContext,
+          );
+        },
       ),
       GoRoute(
         path: '/learning/:id/build',

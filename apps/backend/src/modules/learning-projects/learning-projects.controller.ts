@@ -16,6 +16,10 @@ import {
   getLearningProjects,
   getMyLearningProjectSubmissionById,
   getMyLearningProjectSubmissions,
+  completeProjectBuildStepById,
+  getOrCreateBuildGuideConversationByProjectId,
+  createAiAuthoringDraftForLearner,
+  getOrCreateAuthoringConversationForDraft,
   getMyProjectBuildById,
   getSavedLearningProjects,
   likeLearningProjectById,
@@ -26,6 +30,7 @@ import {
   saveLearningProjectById,
   startProjectBuildById,
   submitLearningProjectForReview,
+  submitMyLearningProjectDraftById,
   unlikeLearningProjectById,
   unfollowLearningProjectById,
   unlinkBuildItemMaterialById,
@@ -34,12 +39,18 @@ import {
   updateProjectBuildItemById,
 } from './learning-projects.service.js';
 import type {
+  CreateAiAuthoringDraftInput,
   LearningProjectsQuery,
   MyLearningProjectsQuery,
   ProjectReviewInput,
   SubmitLearningProjectInput,
   UpdateMyLearningProjectSubmissionInput,
   UpdateProjectBuildItemInput,
+} from './learning-projects.validation.js';
+import {
+  authoringConversationSchema,
+  buildGuideConversationSchema,
+  createAiAuthoringDraftSchema,
 } from './learning-projects.validation.js';
 
 export const listLearningProjects = async (
@@ -139,6 +150,23 @@ export const resubmitMyLearningProjectSubmission = async (
   );
 };
 
+export const submitMyLearningProjectDraft = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const idempotencyKey = validateIdempotencyKey(req.get('Idempotency-Key'));
+  const result = await submitMyLearningProjectDraftById(
+    id,
+    req.auth!.sub,
+    idempotencyKey,
+  );
+
+  res.json(
+    successResponse('Project submitted for review.', result.response),
+  );
+};
+
 export const getLearningProject = async (
   req: Request,
   res: Response,
@@ -157,6 +185,33 @@ export const getMyProjectBuild = async (
   const build = await getMyProjectBuildById(id, req.auth!.sub);
 
   res.json(successResponse('Project build fetched successfully', build));
+};
+
+export const completeProjectBuildStep = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id, stepId } = readValidatedParams<{ id: string; stepId: string }>(
+    req,
+  );
+  const build = await completeProjectBuildStepById(id, req.auth!.sub, stepId);
+
+  res.json(successResponse('Build step completed successfully', build));
+};
+
+export const getOrCreateBuildGuideConversation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const body = buildGuideConversationSchema.parse(req.body ?? {});
+  const payload = await getOrCreateBuildGuideConversationByProjectId(
+    id,
+    req.auth!.sub,
+    body.locale ?? 'en',
+  );
+
+  res.json(successResponse('Build guide conversation ready', payload));
 };
 
 export const startProjectBuild = async (
@@ -351,4 +406,38 @@ export const submitLearningProject = async (
   res
     .status(result.replayed ? 200 : 201)
     .json(successResponse(result.response.message, result.response));
+};
+
+export const createAiAuthoringDraft = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const body = req.body as CreateAiAuthoringDraftInput;
+  const idempotencyKey = validateIdempotencyKey(req.get('Idempotency-Key'));
+  const result = await createAiAuthoringDraftForLearner(
+    req.auth!.sub,
+    body,
+    idempotencyKey,
+  );
+
+  res
+    .status(result.replayed ? 200 : 201)
+    .json(
+      successResponse('AI authoring draft created successfully.', result.response),
+    );
+};
+
+export const getOrCreateAuthoringConversation = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const body = req.body as { locale?: 'en' | 'ar' };
+  const data = await getOrCreateAuthoringConversationForDraft(
+    id,
+    req.auth!.sub,
+    body.locale ?? 'en',
+  );
+
+  res.json(successResponse('Authoring conversation ready.', data));
 };

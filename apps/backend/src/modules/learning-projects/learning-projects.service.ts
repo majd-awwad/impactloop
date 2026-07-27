@@ -1,10 +1,20 @@
 import { AppError } from '../../utils/app-error.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 import {
+  LEARNING_PROJECT_AI_AUTHORING_DRAFT_SCOPE,
   LEARNING_PROJECT_SUBMIT_SCOPE,
   runIdempotentOperation,
 } from '../../services/idempotency.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
+
+import {
+  findAuthoringConversationForProject,
+  getOrCreateBuildGuideConversation,
+  insertAuthoringConversation,
+  insertAuthoringIdeaUserMessage,
+} from '../ai/ai.repository.js';
+
+import { deriveAuthoringDraftFields } from './learning-projects.authoring-draft-fields.js';
 
 import * as learningProjectsRepository from './learning-projects.repository.js';
 import {
@@ -13,9 +23,11 @@ import {
   mapLinkedMaterialSummary,
   mapLinkedReservationSummary,
   resolveBuildItemReadiness,
+  resolveBuildItemStepUnlockReadiness,
   unlinkBuildItemMaterial,
 } from './learning-projects.build-material-linking.js';
 import type {
+  CreateAiAuthoringDraftInput,
   LearningProjectsQuery,
   MyLearningProjectsQuery,
   ProjectReviewInput,
@@ -26,6 +38,7 @@ import type {
 import {
   assertUniqueSubmitComponentNames,
   normalizeSubmitComponent,
+  type NormalizedSubmitComponent,
 } from './learning-projects.submit-components.js';
 
 type SubmitLearningProjectResponse = {
@@ -142,6 +155,7 @@ const mapLearningProjectListItem = (
 const mapSubmissionActions = (status: string) => ({
   canView: true,
   canEdit: EDITABLE_SUBMISSION_STATUSES.has(status),
+  canSubmit: status === 'DRAFT',
   canResubmit: status === 'CHANGES_REQUESTED',
   canViewPublic: status === 'PUBLISHED',
 });
@@ -196,6 +210,11 @@ const mapMyLearningProjectSubmissionDetail = (
   ...mapMyLearningProjectSubmissionCard(project),
   description: project.description,
   coverImageUrl: project.coverImageUrl,
+  images: project.images.map((image) => ({
+    id: image.id,
+    imageUrl: image.imageUrl,
+    sortOrder: image.sortOrder,
+  })),
   reviewNote: project.reviewNote,
   changesRequestedReason: project.changesRequestedReason,
   rejectionReason: project.rejectionReason,
@@ -309,6 +328,141 @@ const mapLearningProjectDetail = (
   createdAt: project.createdAt.toISOString(),
 });
 
+const summarizeMaterialReadiness = (
+  items: Array<{
+    isReadyForBuild: boolean;
+    status: string;
+    linkedMaterial: unknown;
+    linkedReservation: unknown;
+  }>,
+) => {
+  let ready = 0;
+  let linked = 0;
+  let reserved = 0;
+  let missing = 0;
+
+  for (const item of items) {
+    if (item.isReadyForBuild) {
+      ready += 1;
+      continue;
+    }
+
+    if (item.linkedReservation != null || item.status === 'RESERVED') {
+      reserved += 1;
+      continue;
+    }
+
+    if (item.linkedMaterial != null) {
+      linked += 1;
+      continue;
+    }
+
+    missing += 1;
+  }
+
+  return {
+    ready,
+    linked,
+    reserved,
+    missing,
+    total: items.length,
+  };
+};
+
+type DerivedBuildStepState = 'LOCKED' | 'CURRENT' | 'COMPLETED';
+
+const deriveBuildStepViews = (input: {
+  projectSteps: ProjectBuildRecord['project']['steps'];
+  stepProgress: ProjectBuildRecord['stepProgress'];
+  allMaterialsReady: boolean;
+  buildStatus: ProjectBuildRecord['status'];
+}) => {
+  const completedAtByStepId = new Map(
+    input.stepProgress
+      .filter((row) => row.completedAt != null)
+      .map((row) => [row.projectStepId, row.completedAt!.toISOString()]),
+  );
+  const total = input.projectSteps.length;
+  const completed = input.projectSteps.filter((step) =>
+    completedAtByStepId.has(step.id),
+  ).length;
+  const firstIncomplete = input.projectSteps.find(
+    (step) => !completedAtByStepId.has(step.id),
+  );
+
+  if (!input.allMaterialsReady || total === 0) {
+    return {
+      steps: input.projectSteps.map((step) => ({
+        stepId: step.id,
+        stepNumber: step.stepNumber,
+        title: step.title,
+        description: step.description,
+        imageUrl: step.imageUrl,
+        state: (completedAtByStepId.has(step.id)
+          ? 'COMPLETED'
+          : 'LOCKED') as DerivedBuildStepState,
+        completedAt: completedAtByStepId.get(step.id) ?? null,
+      })),
+      currentStep: null,
+      completed,
+      total,
+      percent: 0,
+      nextAction: total === 0 ? null : ('PREPARE_MATERIALS' as const),
+    };
+  }
+
+  if (input.buildStatus === 'COMPLETED' || !firstIncomplete) {
+    return {
+      steps: input.projectSteps.map((step) => ({
+        stepId: step.id,
+        stepNumber: step.stepNumber,
+        title: step.title,
+        description: step.description,
+        imageUrl: step.imageUrl,
+        state: 'COMPLETED' as DerivedBuildStepState,
+        completedAt: completedAtByStepId.get(step.id) ?? null,
+      })),
+      currentStep: null,
+      completed: total,
+      total,
+      percent: 100,
+      nextAction: 'BUILD_COMPLETED' as const,
+    };
+  }
+
+  return {
+    steps: input.projectSteps.map((step) => {
+      const completedAt = completedAtByStepId.get(step.id) ?? null;
+      let state: DerivedBuildStepState = 'LOCKED';
+
+      if (completedAt) {
+        state = 'COMPLETED';
+      } else if (step.id === firstIncomplete.id) {
+        state = 'CURRENT';
+      }
+
+      return {
+        stepId: step.id,
+        stepNumber: step.stepNumber,
+        title: step.title,
+        description: step.description,
+        imageUrl: step.imageUrl,
+        state,
+        completedAt,
+      };
+    }),
+    currentStep: {
+      stepId: firstIncomplete.id,
+      stepNumber: firstIncomplete.stepNumber,
+      title: firstIncomplete.title,
+    },
+    completed,
+    total,
+    percent: Math.round((completed / total) * 100),
+    nextAction: 'COMPLETE_CURRENT_STEP' as const,
+  };
+};
+
 const mapProjectBuildItem = (
   item: ProjectBuildRecord['items'][number],
 ) => {
@@ -351,6 +505,22 @@ const mapProjectBuild = (build: ProjectBuildRecord) => {
   const mappedItems = build.items.map((item) => mapProjectBuildItem(item));
   const readyItems = mappedItems.filter((item) => item.isReadyForBuild);
   const totalItems = mappedItems.length;
+  const allMaterialsReadyForSteps =
+    totalItems > 0 &&
+    build.items.every((item) =>
+      resolveBuildItemStepUnlockReadiness({
+        status: item.status,
+        linkedReservation: item.linkedReservation,
+        linkedMaterial: item.linkedMaterial,
+      }).isReadyForStepUnlock,
+    );
+  const materialReadiness = summarizeMaterialReadiness(mappedItems);
+  const stepViews = deriveBuildStepViews({
+    projectSteps: build.project.steps,
+    stepProgress: build.stepProgress,
+    allMaterialsReady: allMaterialsReadyForSteps,
+    buildStatus: build.status,
+  });
 
   return {
     id: build.id,
@@ -373,7 +543,32 @@ const mapProjectBuild = (build: ProjectBuildRecord) => {
       percent:
         totalItems === 0 ? 0 : Math.round((readyItems.length / totalItems) * 100),
     },
+    materialReadiness,
+    stepProgress: {
+      completed: stepViews.completed,
+      total: stepViews.total,
+      percent: stepViews.percent,
+      currentStep: stepViews.currentStep,
+      nextAction: stepViews.nextAction,
+      steps: stepViews.steps,
+    },
     items: mappedItems,
+  };
+};
+
+const hydrateLearnerProjectBuild = async (
+  build: ProjectBuildRecord,
+  learnerId: string,
+) => {
+  const guideConversation =
+    await learningProjectsRepository.findGuideConversationIdForBuild(
+      learnerId,
+      build.id,
+    );
+
+  return {
+    ...mapProjectBuild(build),
+    guideConversationId: guideConversation?.id ?? null,
   };
 };
 
@@ -451,16 +646,18 @@ export const getMyLearningProjectSubmissionById = async (
 const validateLearningProjectSubmissionInput = async (
   input: SubmitLearningProjectInput | UpdateMyLearningProjectSubmissionInput,
 ) => {
-  const category = await learningProjectsRepository.findProjectCategoryForSubmit(
-    input.categoryId,
-  );
-
-  if (!category) {
-    throw new AppError(
-      'Project category not found or inactive.',
-      400,
-      'INVALID_CATEGORY',
+  if (input.categoryId) {
+    const category = await learningProjectsRepository.findProjectCategoryForSubmit(
+      input.categoryId,
     );
+
+    if (!category) {
+      throw new AppError(
+        'Project category not found or inactive.',
+        400,
+        'INVALID_CATEGORY',
+      );
+    }
   }
 
   if (input.requiredComponents?.length) {
@@ -504,6 +701,131 @@ const validateLearningProjectSubmissionInput = async (
   }
 
   return normalizedComponents;
+};
+
+const LEARNING_PROJECT_DRAFT_SUBMIT_SCOPE = 'LEARNING_PROJECT_DRAFT_SUBMIT';
+
+type DraftProjectForReview = NonNullable<
+  Awaited<ReturnType<typeof learningProjectsRepository.findMyLearningProjectSubmissionById>>
+>;
+
+const assertDraftReadyForReviewSubmission = (project: DraftProjectForReview) => {
+  const issues: Array<{ field: string; message: string }> = [];
+
+  if (!project.title?.trim() || project.title.trim().length < 3) {
+    issues.push({ field: 'title', message: 'Title is required.' });
+  }
+  if (!project.shortDescription?.trim() || project.shortDescription.trim().length < 10) {
+    issues.push({
+      field: 'shortDescription',
+      message: 'Short description is required.',
+    });
+  }
+  if (!project.description?.trim() || project.description.trim().length < 10) {
+    issues.push({ field: 'description', message: 'Full description is required.' });
+  }
+  if (!project.categoryId) {
+    issues.push({ field: 'categoryId', message: 'Project category is required.' });
+  }
+  if (!project.difficulty) {
+    issues.push({ field: 'difficulty', message: 'Difficulty is required.' });
+  }
+  if (project.estimatedDurationMinutes == null || project.estimatedDurationMinutes < 1) {
+    issues.push({
+      field: 'estimatedDurationMinutes',
+      message: 'Estimated duration is required.',
+    });
+  }
+  if (project.requiredComponents.length < 1) {
+    issues.push({
+      field: 'requiredComponents',
+      message: 'At least one component is required.',
+    });
+  }
+  if (project.steps.length < 1) {
+    issues.push({ field: 'steps', message: 'At least one step is required.' });
+  }
+  const hasPersistedImage =
+    Boolean(project.coverImageUrl?.trim()) ||
+    project.images.some((image) => Boolean(image.imageUrl?.trim()));
+  if (!hasPersistedImage) {
+    issues.push({
+      field: 'coverImageUrl',
+      message: 'At least one project image is required before submitting for review.',
+    });
+  }
+
+  if (issues.length > 0) {
+    throw new AppError(
+      'Project is not ready for review submission.',
+      400,
+      'PROJECT_SUBMISSION_INCOMPLETE',
+      { issues },
+    );
+  }
+};
+
+export const submitMyLearningProjectDraftById = async (
+  id: string,
+  userId: string,
+  idempotencyKey: string,
+) => {
+  const project =
+    await learningProjectsRepository.findMyLearningProjectSubmissionById(id, userId);
+
+  if (!project) {
+    throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+  }
+
+  if (project.status === 'PENDING_REVIEW') {
+    return {
+      response: mapMyLearningProjectSubmissionDetail(project),
+      replayed: true,
+    };
+  }
+
+  if (project.status !== 'DRAFT') {
+    throw new AppError(
+      'Only draft projects can be submitted for review.',
+      409,
+      'PROJECT_NOT_SUBMITTABLE',
+      { status: project.status },
+    );
+  }
+
+  assertDraftReadyForReviewSubmission(project);
+
+  return runIdempotentOperation({
+    userId,
+    scope: LEARNING_PROJECT_DRAFT_SUBMIT_SCOPE,
+    key: idempotencyKey,
+    payload: { projectId: id },
+    resourceType: 'LEARNING_PROJECT',
+    getResourceId: (response) => response.id,
+    handler: async (tx) => {
+      const updated = await learningProjectsRepository.submitMyLearningProjectDraft({
+        id,
+        userId,
+        client: tx,
+      });
+
+      if (!updated) {
+        const latest =
+          await learningProjectsRepository.findMyLearningProjectSubmissionById(id, userId);
+        if (latest?.status === 'PENDING_REVIEW') {
+          return mapMyLearningProjectSubmissionDetail(latest);
+        }
+        throw new AppError(
+          'Only draft projects can be submitted for review.',
+          409,
+          'PROJECT_NOT_SUBMITTABLE',
+          { status: latest?.status ?? 'UNKNOWN' },
+        );
+      }
+
+      return mapMyLearningProjectSubmissionDetail(updated);
+    },
+  });
 };
 
 export const updateMyLearningProjectSubmissionById = async (
@@ -602,6 +924,8 @@ export const resubmitMyLearningProjectSubmissionById = async (
       { status: project.status },
     );
   }
+
+  assertDraftReadyForReviewSubmission(project);
 
   await validateLearningProjectSubmissionInput({
     title: project.title,
@@ -758,7 +1082,26 @@ export const getMyProjectBuildById = async (
 
   const build = await learningProjectsRepository.findProjectBuild(id, userId);
 
+  return build ? hydrateLearnerProjectBuild(build, userId) : null;
+};
+
+export const getOwnedProjectBuildByBuildId = async (
+  buildId: string,
+  userId: string,
+) => {
+  const build = await learningProjectsRepository.findOwnedProjectBuildByBuildId(
+    buildId,
+    userId,
+  );
+
   return build ? mapProjectBuild(build) : null;
+};
+
+export const listActiveProjectBuildsForLearner = async (userId: string) => {
+  const builds =
+    await learningProjectsRepository.findActiveProjectBuildsForLearner(userId);
+
+  return builds.map((build) => mapProjectBuild(build));
 };
 
 export const startProjectBuildById = async (
@@ -779,7 +1122,7 @@ export const startProjectBuildById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const updateProjectBuildItemById = async (
@@ -808,7 +1151,7 @@ export const updateProjectBuildItemById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const getBuildItemMaterialCandidatesById = async (
@@ -864,7 +1207,7 @@ export const linkBuildItemMaterialById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const unlinkBuildItemMaterialById = async (
@@ -899,7 +1242,7 @@ export const unlinkBuildItemMaterialById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const linkBuildItemReservationById = async (
@@ -939,7 +1282,7 @@ export const linkBuildItemReservationById = async (
     invalidateLearnerHomeCache(userId);
   }
 
-  return mapProjectBuild(build);
+  return hydrateLearnerProjectBuild(build, userId);
 };
 
 export const likeLearningProjectById = async (id: string, userId: string) => {
@@ -1204,4 +1547,496 @@ export const submitLearningProjectForReview = async (
       };
     },
   });
+};
+
+export const completeProjectBuildStepById = async (
+  projectId: string,
+  userId: string,
+  stepId: string,
+) => {
+  const result = await learningProjectsRepository.completeProjectBuildStep({
+    projectId,
+    learnerId: userId,
+    stepId,
+  });
+
+  const build = await learningProjectsRepository.findProjectBuild(
+    projectId,
+    userId,
+  );
+
+  if (!build) {
+    throw new AppError('Project build not found', 404, 'BUILD_NOT_FOUND');
+  }
+
+  if (!result.noOp) {
+    invalidateLearnerHomeCache(userId);
+  }
+
+  return hydrateLearnerProjectBuild(build, userId);
+};
+
+export const getOrCreateBuildGuideConversationByProjectId = async (
+  projectId: string,
+  userId: string,
+  locale = 'en',
+) => {
+  const build = await learningProjectsRepository.findProjectBuild(
+    projectId,
+    userId,
+  );
+
+  if (!build) {
+    throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+  }
+
+  const mappedBuild = mapProjectBuild(build);
+  const conversation = await getOrCreateBuildGuideConversation({
+    userId,
+    projectBuildId: build.id,
+    locale,
+    projectTitle: build.project.title,
+  });
+
+  return {
+    conversation: {
+      id: conversation.id,
+      kind: 'BUILD_GUIDE' as const,
+      locale: conversation.locale,
+      title: conversation.title,
+      status: conversation.status,
+      lastMessageAt: conversation.lastMessageAt?.toISOString() ?? null,
+      createdAt: conversation.createdAt.toISOString(),
+      updatedAt: conversation.updatedAt.toISOString(),
+    },
+    buildContext: {
+      buildId: build.id,
+      projectId: build.projectId,
+      projectTitle: build.project.title,
+      buildStatus: build.status,
+      materialReadiness: mappedBuild.materialReadiness,
+      currentStep: mappedBuild.stepProgress.currentStep,
+      stepProgress: {
+        completed: mappedBuild.stepProgress.completed,
+        total: mappedBuild.stepProgress.total,
+        percent: mappedBuild.stepProgress.percent,
+      },
+    },
+  };
+};
+
+type AiAuthoringDraftResponse = {
+  learningProjectId: string;
+  conversationId: string;
+  status: 'DRAFT';
+  mode: 'PROJECT_AUTHORING';
+  title: string;
+  updatedAt: string;
+};
+
+const mapAiAuthoringDraftResponse = (input: {
+  learningProjectId: string;
+  conversationId: string;
+  title: string;
+  updatedAt: Date;
+}): AiAuthoringDraftResponse => ({
+  learningProjectId: input.learningProjectId,
+  conversationId: input.conversationId,
+  status: 'DRAFT',
+  mode: 'PROJECT_AUTHORING',
+  title: input.title,
+  updatedAt: input.updatedAt.toISOString(),
+});
+
+const assertAuthoringProjectCategory = async (categoryId: string) => {
+  const category =
+    await learningProjectsRepository.findProjectCategoryForSubmit(categoryId);
+
+  if (!category) {
+    throw new AppError(
+      'Project category not found or inactive.',
+      400,
+      'INVALID_CATEGORY',
+    );
+  }
+};
+
+export const createAiAuthoringDraftForLearner = async (
+  userId: string,
+  input: CreateAiAuthoringDraftInput,
+  idempotencyKey: string,
+) => {
+  await assertAuthoringProjectCategory(input.categoryId);
+  const locale = input.locale ?? 'en';
+  const derivedFields = deriveAuthoringDraftFields(input.ideaText);
+  const trimmedIdea = input.ideaText.trim();
+
+  return runIdempotentOperation<AiAuthoringDraftResponse>({
+    userId,
+    scope: LEARNING_PROJECT_AI_AUTHORING_DRAFT_SCOPE,
+    key: idempotencyKey,
+    payload: {
+      ideaText: trimmedIdea,
+      categoryId: input.categoryId,
+      difficulty: input.difficulty,
+      locale,
+    },
+    resourceType: 'LEARNING_PROJECT',
+    getResourceId: (response) => response.learningProjectId,
+    handler: async (tx) => {
+      const project = await learningProjectsRepository.insertLearnerAuthoringDraft(
+        tx,
+        {
+          createdBy: userId,
+          categoryId: input.categoryId,
+          difficulty: input.difficulty,
+          title: derivedFields.title,
+          shortDescription: derivedFields.shortDescription,
+          description: derivedFields.description,
+        },
+      );
+
+      const conversation = await insertAuthoringConversation(tx, {
+        userId,
+        learningProjectId: project.id,
+        locale,
+        title: `Authoring: ${project.title}`,
+      });
+
+      await insertAuthoringIdeaUserMessage(tx, {
+        conversationId: conversation.id,
+        contentText: trimmedIdea,
+        locale,
+        clientMessageId: `authoring-initial:${project.id}`,
+      });
+
+      return mapAiAuthoringDraftResponse({
+        learningProjectId: project.id,
+        conversationId: conversation.id,
+        title: project.title,
+        updatedAt: project.updatedAt,
+      });
+    },
+  });
+};
+
+const isUniqueConstraintError = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  (error as { code?: string }).code === 'P2002';
+
+export const getOrCreateAuthoringConversationForDraft = async (
+  projectId: string,
+  userId: string,
+  locale = 'en',
+) => {
+  const project = await learningProjectsRepository.findOwnedDraftProjectForAuthoring(
+    projectId,
+    userId,
+  );
+
+  if (!project) {
+    throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+  }
+
+  const existing = await findAuthoringConversationForProject(project.id);
+  if (existing) {
+    if (existing.userId !== userId) {
+      throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+    }
+
+    return mapAiAuthoringDraftResponse({
+      learningProjectId: project.id,
+      conversationId: existing.id,
+      title: project.title,
+      updatedAt: project.updatedAt,
+    });
+  }
+
+  try {
+    const created = await learningProjectsRepository.createAuthoringConversationForDraft(
+      {
+        userId,
+        learningProjectId: project.id,
+        locale,
+        title: `Authoring: ${project.title}`,
+      },
+    );
+
+    return mapAiAuthoringDraftResponse({
+      learningProjectId: project.id,
+      conversationId: created.id,
+      title: project.title,
+      updatedAt: project.updatedAt,
+    });
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) {
+      throw error;
+    }
+
+    const raced = await findAuthoringConversationForProject(project.id);
+    if (!raced || raced.userId !== userId) {
+      throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+    }
+
+    return mapAiAuthoringDraftResponse({
+      learningProjectId: project.id,
+      conversationId: raced.id,
+      title: project.title,
+      updatedAt: project.updatedAt,
+    });
+  }
+};
+
+export const applyReviewedAuthoringProposalToMyDraft = async (input: {
+  userId: string;
+  projectId: string;
+  expectedUpdatedAt: string;
+  finalProject: {
+    title: string;
+    shortDescription: string;
+    description: string;
+    difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    estimatedDurationMinutes?: number;
+    requiredComponents: Array<{
+      componentName: string;
+      materialType: string;
+      quantity: number;
+      unit: string;
+      componentRole: string;
+      isRequired: boolean;
+      canBeSubstituted: boolean;
+      searchKeywords: string[];
+      notes: string | null;
+    }>;
+    steps: Array<{ title: string; description: string }>;
+  };
+}) => {
+  const project =
+    await learningProjectsRepository.findMyLearningProjectSubmissionById(
+      input.projectId,
+      input.userId,
+    );
+
+  if (!project) {
+    throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+  }
+
+  if (project.status !== 'DRAFT') {
+    throw new AppError(
+      'Only draft projects can receive reviewed proposal updates.',
+      409,
+      'PROJECT_NOT_EDITABLE',
+    );
+  }
+
+  if (project.updatedAt.toISOString() !== input.expectedUpdatedAt) {
+    throw new AppError(
+      'The project changed after this proposal was prepared.',
+      409,
+      'AI_AUTHORING_PROPOSAL_STALE',
+    );
+  }
+
+  const normalizedComponents = input.finalProject.requiredComponents.map(
+    (component) =>
+      normalizeSubmitComponent({
+        name: component.componentName,
+        quantity: component.quantity,
+        unit: component.unit,
+        componentRole:
+          component.componentRole as NormalizedSubmitComponent['componentRole'],
+        isRequired: component.isRequired,
+        canBeSubstituted: component.canBeSubstituted,
+        notes: component.notes ?? undefined,
+        materialType: component.materialType,
+        searchKeywords: component.searchKeywords,
+      }),
+  );
+
+  assertUniqueSubmitComponentNames(
+    normalizedComponents.map((component) => ({
+      name: component.name,
+      quantity: component.quantity,
+      unit: component.unit,
+      componentRole: component.componentRole,
+      isRequired: component.isRequired,
+      canBeSubstituted: component.canBeSubstituted,
+      notes: component.notes,
+      materialType: component.materialType,
+      searchKeywords: component.searchKeywords,
+    })),
+  );
+
+  const updated =
+    await learningProjectsRepository.applyReviewedAuthoringProposalToMyDraft({
+      id: input.projectId,
+      userId: input.userId,
+      expectedUpdatedAt: new Date(input.expectedUpdatedAt),
+      categoryId: project.categoryId,
+      title: input.finalProject.title,
+      shortDescription: input.finalProject.shortDescription,
+      description: input.finalProject.description,
+      difficulty: input.finalProject.difficulty,
+      estimatedDurationMinutes: input.finalProject.estimatedDurationMinutes,
+      coverImageUrl: project.coverImageUrl,
+      requiredComponents: normalizedComponents.map((component) => ({
+        component,
+      })),
+      steps: input.finalProject.steps,
+      links: project.links?.map((link) => ({
+        url: link.url,
+        title: link.title ?? undefined,
+      })),
+    });
+
+  if (!updated) {
+    throw new AppError(
+      'The project changed after this proposal was prepared.',
+      409,
+      'AI_AUTHORING_PROPOSAL_STALE',
+    );
+  }
+
+  return mapMyLearningProjectSubmissionDetail(updated);
+};
+
+export type AuthoringSequentialStagePatch = {
+  title?: string;
+  shortDescription?: string;
+  description?: string;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  estimatedDurationMinutes?: number;
+  requiredComponents?: Array<{
+    componentName: string;
+    materialType: string;
+    quantity: number;
+    unit: string;
+    componentRole: string;
+    isRequired: boolean;
+    canBeSubstituted: boolean;
+    searchKeywords?: string[];
+    notes?: string | null;
+  }>;
+  steps?: Array<{ title: string; description: string }>;
+};
+
+export const applyAuthoringStageToMyDraft = async (input: {
+  userId: string;
+  projectId: string;
+  expectedUpdatedAt: string;
+  patch: AuthoringSequentialStagePatch;
+}) => {
+  const project =
+    await learningProjectsRepository.findMyLearningProjectSubmissionById(
+      input.projectId,
+      input.userId,
+    );
+
+  if (!project) {
+    throw new AppError('Learning project submission not found', 404, 'NOT_FOUND');
+  }
+
+  if (project.status !== 'DRAFT') {
+    throw new AppError(
+      'Only draft projects can be updated during guided authoring.',
+      409,
+      'PROJECT_NOT_EDITABLE',
+    );
+  }
+
+  if (project.updatedAt.toISOString() !== input.expectedUpdatedAt) {
+    throw new AppError(
+      'The draft changed after this suggestion.',
+      409,
+      'AI_AUTHORING_PROPOSAL_STALE',
+    );
+  }
+
+  const normalizedComponents =
+    input.patch.requiredComponents === undefined
+      ? undefined
+      : input.patch.requiredComponents.map((component) =>
+          normalizeSubmitComponent({
+            name: component.componentName,
+            quantity: component.quantity,
+            unit: component.unit,
+            componentRole:
+              component.componentRole as NormalizedSubmitComponent['componentRole'],
+            isRequired: component.isRequired,
+            canBeSubstituted: component.canBeSubstituted,
+            notes: component.notes ?? undefined,
+            materialType: component.materialType,
+            searchKeywords: component.searchKeywords ?? [],
+          }),
+        );
+
+  if (normalizedComponents) {
+    assertUniqueSubmitComponentNames(
+      normalizedComponents.map((component) => ({
+        name: component.name,
+        quantity: component.quantity,
+        unit: component.unit,
+        componentRole: component.componentRole,
+        isRequired: component.isRequired,
+        canBeSubstituted: component.canBeSubstituted,
+        notes: component.notes,
+        materialType: component.materialType,
+        searchKeywords: component.searchKeywords,
+      })),
+    );
+  }
+
+  const updated = await learningProjectsRepository.applyReviewedAuthoringProposalToMyDraft({
+    id: input.projectId,
+    userId: input.userId,
+    expectedUpdatedAt: new Date(input.expectedUpdatedAt),
+    categoryId: project.categoryId,
+    title: input.patch.title ?? project.title,
+    shortDescription: input.patch.shortDescription ?? project.shortDescription,
+    description: input.patch.description ?? project.description,
+    difficulty: input.patch.difficulty ?? project.difficulty,
+    estimatedDurationMinutes:
+      input.patch.estimatedDurationMinutes ?? project.estimatedDurationMinutes ?? undefined,
+    coverImageUrl: project.coverImageUrl,
+    requiredComponents:
+      normalizedComponents?.map((component) => ({ component })) ??
+      project.requiredComponents.map((entry) => ({
+        component: normalizeSubmitComponent({
+          name: entry.componentName,
+          quantity: decimalToSerializable(entry.quantity),
+          unit: entry.unit,
+          componentRole:
+            entry.componentRole === 'TOOL' || entry.componentRole === 'CONSUMABLE'
+              ? entry.componentRole
+              : 'REQUIRED_MATERIAL',
+          isRequired: entry.isRequired,
+          canBeSubstituted: entry.canBeSubstituted,
+          notes: entry.notes ?? undefined,
+          materialType: entry.materialType,
+          searchKeywords: jsonStringList(entry.searchKeywords),
+        }),
+      })),
+    steps:
+      input.patch.steps ??
+      project.steps.map((step) => ({
+        title: step.title,
+        description: step.description,
+      })),
+    links: project.links?.map((link) => ({
+      url: link.url,
+      title: link.title ?? undefined,
+    })),
+  });
+
+  if (!updated) {
+    throw new AppError(
+      'The draft changed after this suggestion.',
+      409,
+      'AI_AUTHORING_PROPOSAL_STALE',
+    );
+  }
+
+  return mapMyLearningProjectSubmissionDetail(updated);
 };

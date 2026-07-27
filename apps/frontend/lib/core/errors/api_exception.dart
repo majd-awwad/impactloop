@@ -26,8 +26,10 @@ class ApiException implements Exception {
     }
 
     return rawIssues.whereType<Map>().map((issue) {
+      final field =
+          issue['field']?.toString() ?? issue['path']?.toString() ?? '';
       return ApiFieldIssue(
-        path: issue['path']?.toString() ?? '',
+        path: field,
         message: issue['message']?.toString() ?? 'Invalid value',
       );
     }).toList();
@@ -54,6 +56,8 @@ class ApiException implements Exception {
           return firstIssue;
         }
         return message;
+      case 'PROJECT_SUBMISSION_INCOMPLETE':
+        return formatProjectSubmissionIncompleteMessage(this);
       case 'UNAUTHENTICATED':
         return 'Your session has expired. Please sign in again.';
       case 'FORBIDDEN':
@@ -106,4 +110,56 @@ String? firstFieldError(ApiException error, List<String> fieldPaths) {
   }
 
   return null;
+}
+
+String projectSubmissionFieldMessage(ApiFieldIssue issue) {
+  return switch (issue.path) {
+    'coverImageUrl' =>
+      'Add at least one project image before submitting for review.',
+    'requiredComponents' =>
+      'Add at least one required component before submitting.',
+    'steps' => 'Add at least one project step before submitting.',
+    'categoryId' => 'Choose a project category before submitting.',
+    'title' => 'Add a project title before submitting.',
+    'shortDescription' => 'Add a short description before submitting.',
+    'description' => 'Add a full project description before submitting.',
+    'difficulty' => 'Choose a difficulty level before submitting.',
+    'estimatedDurationMinutes' =>
+      'Add an estimated project duration before submitting.',
+    _ => issue.message.trim().isNotEmpty
+        ? issue.message
+        : 'Complete this required project detail before submitting.',
+  };
+}
+
+bool projectSubmissionIncompleteRequiresImage(ApiException error) {
+  if (error.code != 'PROJECT_SUBMISSION_INCOMPLETE') {
+    return false;
+  }
+
+  return error.fieldIssues.any((issue) => issue.path == 'coverImageUrl');
+}
+
+String formatProjectSubmissionIncompleteMessage(ApiException error) {
+  if (error.code != 'PROJECT_SUBMISSION_INCOMPLETE') {
+    return error.displayMessage;
+  }
+
+  final messages = error.fieldIssues
+      .map(projectSubmissionFieldMessage)
+      .where((message) => message.trim().isNotEmpty)
+      .toSet()
+      .toList(growable: false);
+
+  if (messages.isEmpty) {
+    return error.message.trim().isNotEmpty
+        ? error.message
+        : 'Complete the required project details before submitting.';
+  }
+
+  if (messages.length == 1) {
+    return messages.first;
+  }
+
+  return messages.map((message) => '• $message').join('\n');
 }

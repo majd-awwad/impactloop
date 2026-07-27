@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/learning_project_authoring_repository_stubs.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
@@ -150,6 +151,19 @@ class _BuildPanelRepository implements LearningProjectRepository {
         shortDescription: 'Build a station',
       ),
       progress: const ProjectBuildProgress(total: 2, ready: 1, percent: 50),
+      materialReadiness: const ProjectBuildMaterialReadiness(
+        ready: 1,
+        linked: 0,
+        reserved: 0,
+        missing: 1,
+        total: 2,
+      ),
+      stepProgress: const ProjectBuildStepProgress(
+        completed: 0,
+        total: 0,
+        percent: 0,
+        steps: [],
+      ),
       items: const [],
     );
   }
@@ -188,6 +202,18 @@ class _BuildPanelRepository implements LearningProjectRepository {
 
   @override
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  ) {
     throw UnimplementedError();
   }
 
@@ -241,6 +267,14 @@ class _BuildPanelRepository implements LearningProjectRepository {
   Future<LearningProjectSubmission> resubmitMyLearningProjectSubmission(
     String id,
   ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) {
     throw UnimplementedError();
   }
 
@@ -313,4 +347,30 @@ class _BuildPanelRepository implements LearningProjectRepository {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) =>
+      unimplementedCreateAiAuthoringDraft(
+        ideaText: ideaText,
+        categoryId: categoryId,
+        difficulty: difficulty,
+        idempotencyKey: idempotencyKey,
+        locale: locale,
+      );
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) =>
+      unimplementedGetOrCreateAuthoringConversation(
+        projectId: projectId,
+        locale: locale,
+      );
 }

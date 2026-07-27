@@ -258,6 +258,68 @@ enum IdempotencyStatus {
   FAILED
 }
 
+enum AiConversationMode {
+  GENERAL_LEARNING
+  LEARNER_AGENT
+  PROJECT_AUTHORING
+}
+
+enum AiConversationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AiConversationProcessingState {
+  IDLE
+  PROCESSING
+}
+
+enum AiMessageRole {
+  USER
+  ASSISTANT
+}
+
+enum AiMessageStatus {
+  COMPLETED
+  REFUSED
+  FAILED
+  PROCESSING
+}
+
+enum AiScopeClassification {
+  DOMAIN_KNOWLEDGE
+  OUT_OF_SCOPE
+  DANGEROUS_REQUEST
+  UNCLEAR
+  MIXED
+}
+
+enum AiPendingActionStatus {
+  PENDING
+  CONFIRMED
+  EXECUTING
+  EXECUTED
+  CANCELLED
+  EXPIRED
+  FAILED
+}
+
+enum AiPendingActionType {
+  SAVE_MATERIAL
+  UNSAVE_MATERIAL
+  SAVE_PROJECT
+  UNSAVE_PROJECT
+  START_PROJECT_BUILD
+  LINK_MATERIAL_TO_BUILD_COMPONENT
+  UNLINK_MATERIAL_FROM_BUILD_COMPONENT
+  PREPARE_MATERIAL_RESERVATION
+  CONFIRM_MATERIAL_RESERVATION
+  UPDATE_BUILD_COMPONENT_STATUSES
+  COMPLETE_CURRENT_BUILD_STEP
+  CANCEL_PENDING_AI_ACTION
+  APPLY_PROJECT_AUTHORING_PROPOSAL
+}
+
 enum ProjectDifficulty {
   BEGINNER
   INTERMEDIATE
@@ -376,6 +438,10 @@ model User {
   reactivatedBy                 User?                      @relation("UserReactivatedBy", fields: [reactivatedById], references: [id], onDelete: SetNull)
   accountsReactivated           User[]                     @relation("UserReactivatedBy")
   adminActivityLogs             AdminActivityLog[]
+  aiConversations               AiConversation[]
+  projectAuthoringSessions               ProjectAuthoringSession[]
+  aiPendingActions                       AiPendingAction[]
+  generatedAdminLearningProjectAiReviews LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviewGeneratedBy")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -518,28 +584,28 @@ model SupplierFollower {
 }
 
 model DriverProfile {
-  id                 String                   @id @default(cuid())
-  userId             String                   @unique @map("user_id")
-  displayName        String                   @map("display_name")
-  phone              String
-  city               String
-  area               String
-  addressLine        String?                  @map("address_line")
-  transportationType TransportationType       @map("transportation_type")
-  availabilityNote   String?                  @map("availability_note")
-  status             DriverProfileStatus      @default(ACTIVE)
-  availability       DriverAvailabilityStatus @default(OFFLINE)
-  vehicleType        String                   @default("UNSPECIFIED") @map("vehicle_type")
-  vehicleLabel       String?                  @map("vehicle_label")
-  vehiclePlate       String?                  @map("vehicle_plate")
-  capacityNotes      String?                  @map("capacity_notes")
-  createdAt          DateTime                 @default(now()) @map("created_at")
-  updatedAt          DateTime                 @updatedAt @map("updated_at")
-  user               User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deliveries         Delivery[]               @relation("AssignedDriverDeliveries")
-  assignedDeliveryGroups DeliveryGroup[]      @relation("AssignedDriverDeliveryGroups")
-  assignments        DeliveryAssignment[]
-  locationPings      DeliveryLocationPing[]
+  id                     String                   @id @default(cuid())
+  userId                 String                   @unique @map("user_id")
+  displayName            String                   @map("display_name")
+  phone                  String
+  city                   String
+  area                   String
+  addressLine            String?                  @map("address_line")
+  transportationType     TransportationType       @map("transportation_type")
+  availabilityNote       String?                  @map("availability_note")
+  status                 DriverProfileStatus      @default(ACTIVE)
+  availability           DriverAvailabilityStatus @default(OFFLINE)
+  vehicleType            String                   @default("UNSPECIFIED") @map("vehicle_type")
+  vehicleLabel           String?                  @map("vehicle_label")
+  vehiclePlate           String?                  @map("vehicle_plate")
+  capacityNotes          String?                  @map("capacity_notes")
+  createdAt              DateTime                 @default(now()) @map("created_at")
+  updatedAt              DateTime                 @updatedAt @map("updated_at")
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries             Delivery[]               @relation("AssignedDriverDeliveries")
+  assignedDeliveryGroups DeliveryGroup[]          @relation("AssignedDriverDeliveryGroups")
+  assignments            DeliveryAssignment[]
+  locationPings          DeliveryLocationPing[]
 
   @@index([status, availability])
   @@map("driver_profiles")
@@ -671,12 +737,38 @@ model LearningProject {
   follows                  ProjectFollow[]
   userReviews              ProjectUserReview[]
   builds                   ProjectBuild[]
+  authoringConversation    AiConversation?            @relation("ProjectAuthoringConversation")
+  projectAuthoringSession  ProjectAuthoringSession?
+  adminAiReviews           LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviews")
 
   @@index([categoryId])
   @@index([createdBy])
   @@index([reviewedBy])
   @@index([status, createdAt])
   @@map("learning_projects")
+}
+
+model LearningProjectAdminAiReview {
+  id                     String   @id @default(cuid())
+  projectId              String   @map("project_id")
+  locale                 String
+  reviewSchemaVersion    Int      @default(1) @map("review_schema_version")
+  contentFingerprint     String   @map("content_fingerprint")
+  provider               String
+  model                  String?
+  coverage               Json
+  review                 Json
+  generatedByAdminUserId String   @map("generated_by_admin_user_id")
+  generatedAt            DateTime @map("generated_at")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  project          LearningProject @relation("LearningProjectAdminAiReviews", fields: [projectId], references: [id], onDelete: Cascade)
+  generatedByAdmin User            @relation("LearningProjectAdminAiReviewGeneratedBy", fields: [generatedByAdminUserId], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, locale])
+  @@index([projectId])
+  @@map("learning_project_admin_ai_reviews")
 }
 
 model ProjectImage {
@@ -721,19 +813,20 @@ model ProjectRequiredComponent {
 }
 
 model ProjectStep {
-  id             String              @id @default(uuid())
-  projectId      String              @map("project_id")
-  stepNumber     Int                 @map("step_number")
+  id             String                     @id @default(uuid())
+  projectId      String                     @map("project_id")
+  stepNumber     Int                        @map("step_number")
   title          String
   description    String
-  imageUrl       String?             @map("image_url")
-  generatedByAi  Boolean             @default(false) @map("generated_by_ai")
-  approvedBy     String?             @map("approved_by")
-  reviewStatus   ProjectReviewStatus @default(PENDING_REVIEW) @map("review_status")
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
-  project        LearningProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  approvedByUser User?               @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+  imageUrl       String?                    @map("image_url")
+  generatedByAi  Boolean                    @default(false) @map("generated_by_ai")
+  approvedBy     String?                    @map("approved_by")
+  reviewStatus   ProjectReviewStatus        @default(PENDING_REVIEW) @map("review_status")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+  project        LearningProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvedByUser User?                      @relation("ProjectStepApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
+  buildProgress  ProjectBuildStepProgress[]
 
   @@unique([projectId, stepNumber])
   @@index([projectId])
@@ -830,23 +923,42 @@ model ProjectUserReview {
 }
 
 model ProjectBuild {
-  id          String             @id @default(cuid())
-  projectId   String             @map("project_id")
-  learnerId   String             @map("learner_id")
-  status      ProjectBuildStatus @default(IN_PROGRESS)
-  startedAt   DateTime           @default(now()) @map("started_at")
-  completedAt DateTime?          @map("completed_at")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
-  project     LearningProject    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  learner     User               @relation("ProjectBuildLearner", fields: [learnerId], references: [id], onDelete: Cascade)
-  items       ProjectBuildItem[]
+  id                 String                     @id @default(cuid())
+  projectId          String                     @map("project_id")
+  learnerId          String                     @map("learner_id")
+  status             ProjectBuildStatus         @default(IN_PROGRESS)
+  startedAt          DateTime                   @default(now()) @map("started_at")
+  completedAt        DateTime?                  @map("completed_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  project            LearningProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  learner            User                       @relation("ProjectBuildLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  items              ProjectBuildItem[]
+  stepProgress       ProjectBuildStepProgress[]
+  guideConversations AiConversation[]           @relation("BuildGuideConversation")
 
   @@unique([projectId, learnerId])
   @@index([learnerId])
   @@index([projectId])
   @@index([status])
   @@map("project_builds")
+}
+
+model ProjectBuildStepProgress {
+  id            String       @id @default(cuid())
+  buildId       String       @map("build_id")
+  projectStepId String       @map("project_step_id")
+  startedAt     DateTime     @default(now()) @map("started_at")
+  completedAt   DateTime?    @map("completed_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+  build         ProjectBuild @relation(fields: [buildId], references: [id], onDelete: Cascade)
+  projectStep   ProjectStep  @relation(fields: [projectStepId], references: [id], onDelete: Cascade)
+
+  @@unique([buildId, projectStepId])
+  @@index([buildId])
+  @@index([projectStepId])
+  @@map("project_build_step_progress")
 }
 
 model ProjectBuildItem {
@@ -1467,4 +1579,184 @@ model IdempotencyRecord {
   @@index([status])
   @@index([expiresAt])
   @@map("idempotency_records")
+}
+
+model AiConversation {
+  id                      String                        @id @default(cuid())
+  userId                  String                        @map("user_id")
+  mode                    AiConversationMode
+  locale                  String                        @default("en")
+  title                   String?
+  projectBuildId          String?                       @map("project_build_id")
+  learningProjectId       String?                       @unique @map("learning_project_id")
+  status                  AiConversationStatus          @default(ACTIVE)
+  processingState         AiConversationProcessingState @default(IDLE) @map("processing_state")
+  processingStartedAt     DateTime?                     @map("processing_started_at")
+  lastMessageAt           DateTime?                     @map("last_message_at")
+  createdAt               DateTime                      @default(now()) @map("created_at")
+  updatedAt               DateTime                      @updatedAt @map("updated_at")
+  user                    User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectBuild            ProjectBuild?                 @relation("BuildGuideConversation", fields: [projectBuildId], references: [id], onDelete: Cascade)
+  learningProject         LearningProject?              @relation("ProjectAuthoringConversation", fields: [learningProjectId], references: [id], onDelete: Cascade)
+  messages                AiMessage[]
+  pendingActions          AiPendingAction[]
+  projectAuthoringSession ProjectAuthoringSession?
+
+  @@unique([userId, projectBuildId])
+  @@index([userId, status, lastMessageAt(sort: Desc)])
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([projectBuildId])
+  @@index([learningProjectId])
+  @@index([userId, mode])
+  @@map("ai_conversations")
+}
+
+model AiMessage {
+  id                  String                 @id @default(cuid())
+  conversationId      String                 @map("conversation_id")
+  role                AiMessageRole
+  status              AiMessageStatus        @default(COMPLETED)
+  contentText         String?                @map("content_text")
+  contentBlocks       Json?                  @map("content_blocks")
+  clientMessageId     String?                @map("client_message_id")
+  inReplyToMessageId  String?                @map("in_reply_to_message_id")
+  scopeClassification AiScopeClassification? @map("scope_classification")
+  locale              String                 @default("en")
+  provider            String?
+  model               String?
+  policyVersion       String?                @map("policy_version")
+  latencyMs           Int?                   @map("latency_ms")
+  inputTokens         Int?                   @map("input_tokens")
+  outputTokens        Int?                   @map("output_tokens")
+  errorCode           String?                @map("error_code")
+  createdAt           DateTime               @default(now()) @map("created_at")
+  conversation        AiConversation         @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  inReplyToMessage    AiMessage?             @relation("AiMessageReply", fields: [inReplyToMessageId], references: [id], onDelete: SetNull)
+  replies             AiMessage[]            @relation("AiMessageReply")
+
+  @@unique([conversationId, clientMessageId])
+  @@index([conversationId, createdAt])
+  @@index([inReplyToMessageId])
+  @@map("ai_messages")
+}
+
+model AiPendingAction {
+  id              String                @id @default(cuid())
+  userId          String                @map("user_id")
+  conversationId  String                @map("conversation_id")
+  sourceMessageId String?               @map("source_message_id")
+  actionType      AiPendingActionType   @map("action_type")
+  status          AiPendingActionStatus @default(PENDING)
+  payload         Json
+  displaySnapshot Json                  @map("display_snapshot")
+  idempotencyKey  String                @map("idempotency_key")
+  expiresAt       DateTime              @map("expires_at")
+  confirmedAt     DateTime?             @map("confirmed_at")
+  executedAt      DateTime?             @map("executed_at")
+  result          Json?
+  errorCode       String?               @map("error_code")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation    AiConversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([conversationId, status])
+  @@index([expiresAt])
+  @@map("ai_pending_actions")
+}
+
+enum ProjectAuthoringSessionStage {
+  OVERVIEW
+  TITLE
+  SHORT_DESCRIPTION
+  FULL_DESCRIPTION
+  DIFFICULTY
+  ESTIMATED_DURATION
+  COMPONENTS
+  STEPS_OVERVIEW
+  STEP_REVIEW
+  FINAL_REVIEW
+  COMPLETE
+}
+
+enum ProjectAuthoringSessionStatus {
+  WAITING_FOR_ASSISTANT
+  WAITING_FOR_USER
+  SAVING
+  GENERATION_FAILED
+  STALE
+  COMPLETE
+}
+
+enum ProjectAuthoringTurnStatus {
+  PROPOSED
+  ACCEPTED
+  SUPERSEDED
+  REJECTED
+}
+
+enum ProjectAuthoringTurnKind {
+  STAGE_PROPOSAL
+  COMPONENT_LIST
+  COMPONENT_ITEM
+  STEP_PLAN
+  STEP_ITEM
+  FOLLOW_UP_QUESTION
+  EXPLANATION
+  MANUAL_VALUE_PREVIEW
+}
+
+model ProjectAuthoringSession {
+  id                    String                         @id @default(uuid())
+  conversationId        String                         @unique @map("conversation_id")
+  learningProjectId     String                         @map("learning_project_id")
+  ownerId               String                         @map("owner_id")
+  stage                 ProjectAuthoringSessionStage
+  status                ProjectAuthoringSessionStatus
+  currentTurnId         String?                        @unique @map("current_turn_id")
+  baseProjectUpdatedAt  DateTime                       @map("base_project_updated_at")
+  version               Int                            @default(1)
+  completedStages       ProjectAuthoringSessionStage[] @default([]) @map("completed_stages")
+  componentReviewMode   String?                        @map("component_review_mode")
+  componentWorkingState Json?                          @map("component_working_state")
+  stepReviewMode        String?                        @map("step_review_mode")
+  stepWorkingState      Json?                          @map("step_working_state")
+  generationErrorCode   String?                        @map("generation_error_code")
+  createdAt             DateTime                       @default(now()) @map("created_at")
+  updatedAt             DateTime                       @updatedAt @map("updated_at")
+  conversation          AiConversation                 @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  learningProject       LearningProject                @relation(fields: [learningProjectId], references: [id], onDelete: Cascade)
+  owner                 User                           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  turns                 ProjectAuthoringTurn[]         @relation("SessionTurns")
+  currentTurn           ProjectAuthoringTurn?          @relation("CurrentAuthoringTurn", fields: [currentTurnId], references: [id], onDelete: SetNull)
+
+  @@unique([learningProjectId])
+  @@index([learningProjectId])
+  @@index([ownerId])
+  @@map("project_authoring_sessions")
+}
+
+model ProjectAuthoringTurn {
+  id                   String                       @id @default(uuid())
+  sessionId            String                       @map("session_id")
+  parentTurnId         String?                      @map("parent_turn_id")
+  triggerUserMessageId String?                      @map("trigger_user_message_id")
+  stage                ProjectAuthoringSessionStage
+  kind                 ProjectAuthoringTurnKind
+  status               ProjectAuthoringTurnStatus
+  payload              Json
+  explanation          String?
+  baseProjectUpdatedAt DateTime                     @map("base_project_updated_at")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  acceptedAt           DateTime?                    @map("accepted_at")
+  supersededAt         DateTime?                    @map("superseded_at")
+  session              ProjectAuthoringSession      @relation("SessionTurns", fields: [sessionId], references: [id], onDelete: Cascade)
+  parentTurn           ProjectAuthoringTurn?        @relation("TurnParent", fields: [parentTurnId], references: [id], onDelete: SetNull)
+  childTurns           ProjectAuthoringTurn[]       @relation("TurnParent")
+  currentForSession    ProjectAuthoringSession?     @relation("CurrentAuthoringTurn")
+
+  @@index([sessionId, createdAt])
+  @@index([sessionId, status])
+  @@map("project_authoring_turns")
 }

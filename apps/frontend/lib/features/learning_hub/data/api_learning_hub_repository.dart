@@ -126,6 +126,20 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/mine/$id/submit',
+        options: Options(headers: {'Idempotency-Key': idempotencyKey}),
+      ),
+      LearningHubApiMapper.submissionFromJson,
+    );
+  }
+
+  @override
   Future<ProjectBuild?> fetchMyBuild(String projectId) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(
@@ -221,6 +235,29 @@ class ApiLearningHubRepository implements LearningProjectRepository {
         '$_basePath/$projectId/builds/me/items/$itemId/link-material',
       ),
       LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/steps/$stepId/complete',
+      ),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  ) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/$projectId/builds/me/guide-conversation',
+        data: const {},
+      ),
+      (json) => LearningHubApiMapper.fromBuildGuideConversationJson(json),
     );
   }
 
@@ -344,6 +381,43 @@ class ApiLearningHubRepository implements LearningProjectRepository {
         options: Options(headers: {'Idempotency-Key': idempotencyKey}),
       ),
       (json) => json,
+    );
+  }
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/mine/ai-authoring-drafts',
+        data: {
+          'ideaText': ideaText,
+          'categoryId': categoryId,
+          'difficulty': difficulty,
+          if (locale != null) 'locale': locale,
+        },
+        options: Options(headers: {'Idempotency-Key': idempotencyKey}),
+      ),
+      LearningHubApiMapper.authoringSessionFromJson,
+    );
+  }
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_basePath/mine/$projectId/authoring-conversation',
+        data: {if (locale != null) 'locale': locale},
+      ),
+      LearningHubApiMapper.authoringSessionFromJson,
     );
   }
 

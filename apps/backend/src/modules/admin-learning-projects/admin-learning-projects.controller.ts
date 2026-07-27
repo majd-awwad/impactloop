@@ -10,14 +10,17 @@ import {
   approveAdminLearningProject,
   archiveAdminLearningProject,
   getAdminLearningProjectById,
+  getSavedAdminLearningProjectAiReview,
   hideAdminLearningProject,
   listAdminLearningProjects,
   rejectAdminLearningProject,
   requestChangesAdminLearningProject,
   restoreAdminLearningProject,
+  reviewAdminLearningProjectWithAi,
   updateAdminLearningProjectComponent,
 } from './admin-learning-projects.service.js';
 import type {
+  AdminAiReviewBodyInput,
   AdminLearningProjectComponentParams,
   AdminLearningProjectIdParams,
   AdminLearningProjectsListQuery,
@@ -122,4 +125,29 @@ export const updateAdminLearningProjectComponentHandler = async (
     body,
   );
   res.json(successResponse('Learning project component updated', result));
+};
+
+export const reviewAdminLearningProjectWithAiHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminLearningProjectIdParams>(req);
+  const body = req.body as AdminAiReviewBodyInput;
+  const generatedByAdminUserId = req.auth!.sub;
+  const result = await reviewAdminLearningProjectWithAi(
+    id,
+    body,
+    generatedByAdminUserId,
+  );
+  res.json(successResponse('AI project review generated', result));
+};
+
+export const getSavedAdminLearningProjectAiReviewHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<AdminLearningProjectIdParams>(req);
+  const query = readValidatedQuery<AdminAiReviewBodyInput>(req);
+  const result = await getSavedAdminLearningProjectAiReview(id, query);
+  res.json(successResponse('Saved AI project review loaded', result));
 };

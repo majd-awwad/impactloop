@@ -18,7 +18,17 @@ import {
   type ComponentQualityIssue,
 } from './admin-learning-projects.component-quality.js';
 import * as repository from './admin-learning-projects.repository.js';
+import {
+  appendVisualCoverageManualNote,
+  buildAdminReviewContentFingerprint,
+  buildAdminReviewImageCandidates,
+  buildMinimizedAdminReviewSnapshot,
+  executeAdminLearningProjectAiProviderReview,
+  loadAdminReviewImageInputs,
+  parsePersistedAdminAiReviewJson,
+} from './admin-learning-projects.ai-review.js';
 import type {
+  AdminAiReviewBodyInput,
   AdminLearningProjectsListQuery,
   ModerationReasonInput,
   UpdateAdminLearningProjectComponentInput,
@@ -345,6 +355,131 @@ export const listAdminLearningProjects = async (
 export const getAdminLearningProjectById = async (id: string) => {
   const project = await loadProjectOrThrow(id);
   return mapDetail(project);
+};
+
+const AI_REVIEW_ELIGIBLE_STATUSES: LearningProjectStatus[] = [
+  'PENDING_REVIEW',
+  'CHANGES_REQUESTED',
+];
+
+export const reviewAdminLearningProjectWithAi = async (
+  id: string,
+  input: AdminAiReviewBodyInput,
+  generatedByAdminUserId: string,
+) => {
+  const project = await loadProjectOrThrow(id);
+
+  if (!AI_REVIEW_ELIGIBLE_STATUSES.includes(project.status)) {
+    throw new AppError(
+      `AI review is not available while project status is ${project.status}.`,
+      400,
+      'AI_REVIEW_INELIGIBLE_STATUS',
+      { status: project.status },
+    );
+  }
+
+  const preProviderFingerprint = buildAdminReviewContentFingerprint(project);
+  const { snapshot, coverage } = buildMinimizedAdminReviewSnapshot(project);
+
+  let imageInputs: Awaited<ReturnType<typeof loadAdminReviewImageInputs>>['imageInputs'] =
+    [];
+  let visualCoverage: Awaited<ReturnType<typeof loadAdminReviewImageInputs>>['visualCoverage'];
+  let release = () => {};
+
+  try {
+    const loaded = await loadAdminReviewImageInputs(project);
+    imageInputs = loaded.imageInputs;
+    visualCoverage = loaded.visualCoverage;
+    release = loaded.release;
+  } catch {
+    const totalProjectImages = buildAdminReviewImageCandidates(project).length;
+    visualCoverage = {
+      totalProjectImages,
+      includedImages: 0,
+      noProjectImages: totalProjectImages === 0,
+      visualCoverageUnavailable: totalProjectImages > 0,
+      visualCoverageComplete: false,
+    };
+  }
+
+  try {
+    const providerResult = await executeAdminLearningProjectAiProviderReview(
+      snapshot,
+      coverage,
+      input.locale,
+      { imageInputs, visualCoverage },
+    );
+    const generatedAt = new Date();
+    const review = appendVisualCoverageManualNote(
+      providerResult.review,
+      input.locale,
+      visualCoverage,
+    );
+
+    await repository.persistAdminLearningProjectAiReviewGuarded({
+      projectId: id,
+      locale: input.locale,
+      preProviderFingerprint,
+      generatedByAdminUserId,
+      generatedAt,
+      provider: providerResult.provider,
+      model: providerResult.model,
+      coverage,
+      review,
+    });
+
+    return {
+      projectId: id,
+      generatedAt: generatedAt.toISOString(),
+      provider: providerResult.provider,
+      model: providerResult.model,
+      coverage,
+      review,
+    };
+  } finally {
+    release();
+  }
+};
+
+export const getSavedAdminLearningProjectAiReview = async (
+  id: string,
+  input: AdminAiReviewBodyInput,
+) => {
+  const project = await loadProjectOrThrow(id);
+  const currentFingerprint = buildAdminReviewContentFingerprint(project);
+  const persisted = await repository.findPersistedAdminLearningProjectAiReview(
+    id,
+    input.locale,
+  );
+
+  if (!persisted) {
+    return {
+      projectId: id,
+      locale: input.locale,
+      savedReview: null,
+    };
+  }
+
+  const { coverage, review, schemaVersion } = parsePersistedAdminAiReviewJson({
+    reviewSchemaVersion: persisted.reviewSchemaVersion,
+    coverage: persisted.coverage,
+    review: persisted.review,
+  });
+
+  return {
+    projectId: id,
+    locale: input.locale,
+    savedReview: {
+      generatedAt: persisted.generatedAt.toISOString(),
+      generatedByAdminUserId: persisted.generatedByAdminUserId,
+      provider: persisted.provider,
+      model: persisted.model,
+      schemaVersion,
+      coverage,
+      review,
+      isStale: persisted.contentFingerprint !== currentFingerprint,
+    },
+  };
 };
 
 export const approveAdminLearningProject = async (

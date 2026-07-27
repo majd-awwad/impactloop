@@ -7,12 +7,11 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
-import '../widgets/coming_soon_card.dart';
 import '../widgets/empty_activity_card.dart';
 import '../widgets/home_action_card.dart';
 import '../widgets/home_section_header.dart';
@@ -428,50 +427,14 @@ class _FutureToolsSection extends StatelessWidget {
       children: [
         const HomeSectionHeader(
           title: 'Coming later',
-          subtitle:
-              'Impact and AI helper features are planned but not available yet.',
+          subtitle: 'Impact insights are planned but not available yet.',
         ),
         const SizedBox(height: AppSpacing.md),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 820;
-            const impact = EmptyActivityCard(
-              icon: Icons.eco_outlined,
-              title: 'Impact snapshot',
-              description:
-                  'Your reuse impact will appear here after you complete reservations and projects.',
-            );
-            final assistant = ComingSoonCard(
-              icon: Icons.auto_awesome_outlined,
-              title: 'AI material helper',
-              description:
-                  'Later, ImpactLoop can suggest materials for your project based on cost, availability, and location.',
-              onTap: () => showInfoSnackBar(
-                context,
-                'This feature will be connected later.',
-              ),
-            );
-
-            if (!wide) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  impact,
-                  const SizedBox(height: AppSpacing.md),
-                  assistant,
-                ],
-              );
-            }
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Expanded(child: impact),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(child: assistant),
-              ],
-            );
-          },
+        const EmptyActivityCard(
+          icon: Icons.eco_outlined,
+          title: 'Impact snapshot',
+          description:
+              'Your reuse impact will appear here after you complete reservations and projects.',
         ),
       ],
     );

@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "seed": "tsx prisma/seed.ts",
+    "seed:project-budget-demo": "tsx prisma/seed.ts --project-budget-demo",
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -34,6 +35,7 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "nodemailer": "^9.0.1",
+    "openai": "^6.46.0",
     "pg": "^8.21.0",
     "pino": "^10.3.1",
     "zod": "^4.1.11"

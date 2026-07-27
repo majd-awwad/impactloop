@@ -585,6 +585,121 @@ const CORE_MATERIALS: MaterialSeed[] = [
     viewsCount: 73,
   },
   {
+    key: 'majd-arduino-student-salvage',
+    supplierEmail: 'majd@supplier.com',
+    title: 'Salvaged Arduino Uno Boards',
+    description:
+      'Working Arduino Uno boards recovered from a classroom cabinet refresh. Tested for USB power and blink sketches.',
+    categoryKey: 'electronics-components',
+    materialType: 'Arduino Uno',
+    aliases: ['Arduino Uno', 'Microcontroller board', 'Student Arduino'],
+    quantity: 6,
+    unit: 'pieces',
+    condition: 'GOOD',
+    sourceType: 'EDUCATIONAL_INSTITUTION',
+    isFree: false,
+    price: 32,
+    maxAllowedUnitPriceNis: 70,
+    pickupAllowed: true,
+    deliveryAllowed: true,
+    imageUrls: [IMAGES.arduino, IMAGES.electronics],
+    tags: ['arduino', 'microcontroller', 'salvage'],
+    suggestedUses: 'Obstacle avoidance robots, sensor labs, beginner control projects.',
+    viewsCount: 28,
+  },
+  {
+    key: 'majd-ultrasonic-lab-surplus',
+    supplierEmail: 'majd@supplier.com',
+    title: 'Lab Surplus HC-SR04 Sensors',
+    description:
+      'Lightly used HC-SR04 ultrasonic sensors sorted after a robotics lab cleanup. Each unit passed a quick trigger test.',
+    categoryKey: 'electronics-components',
+    materialType: 'Ultrasonic Sensor',
+    aliases: ['HC-SR04', 'Distance sensor', 'Ultrasonic distance sensor'],
+    quantity: 9,
+    unit: 'pieces',
+    condition: 'GOOD',
+    sourceType: 'EDUCATIONAL_INSTITUTION',
+    isFree: false,
+    price: 8,
+    maxAllowedUnitPriceNis: 18,
+    pickupAllowed: true,
+    deliveryAllowed: true,
+    imageUrls: [IMAGES.workshop],
+    tags: ['sensor', 'ultrasonic', 'distance'],
+    suggestedUses: 'Obstacle avoidance robots, distance demos, smart bins.',
+    viewsCount: 19,
+  },
+  {
+    key: 'majd-ultrasonic-free-lab',
+    supplierEmail: 'majd@supplier.com',
+    title: 'Free Workshop Ultrasonic Sensors',
+    description:
+      'Surplus HC-SR04 sensors offered free to learners after a university workshop. Cosmetic wear only.',
+    categoryKey: 'electronics-components',
+    materialType: 'Ultrasonic Sensor',
+    aliases: ['HC-SR04', 'Ultrasonic sensor', 'Distance sensor'],
+    quantity: 5,
+    unit: 'pieces',
+    condition: 'GOOD',
+    sourceType: 'EDUCATIONAL_INSTITUTION',
+    isFree: true,
+    price: null,
+    maxAllowedUnitPriceNis: 18,
+    pickupAllowed: true,
+    deliveryAllowed: false,
+    imageUrls: [IMAGES.workshop],
+    tags: ['sensor', 'ultrasonic', 'free'],
+    suggestedUses: 'Obstacle avoidance robots, classroom demos.',
+    viewsCount: 11,
+  },
+  {
+    key: 'majd-jumper-wires-free-pieces',
+    supplierEmail: 'majd@supplier.com',
+    title: 'Community Jumper Wire Pieces',
+    description:
+      'Individual jumper wire pieces donated for beginner robotics builds. Enough loose wires for Arduino and sensor wiring across a full obstacle-avoidance robot.',
+    categoryKey: 'electronics-components',
+    materialType: 'Jumper Wires',
+    aliases: ['Dupont wires', 'Jumper wires', 'Wire pieces'],
+    quantity: 24,
+    unit: 'pieces',
+    condition: 'GOOD',
+    sourceType: 'EDUCATIONAL_INSTITUTION',
+    isFree: true,
+    price: null,
+    maxAllowedUnitPriceNis: 15,
+    pickupAllowed: true,
+    deliveryAllowed: false,
+    imageUrls: [IMAGES.cables, IMAGES.electronics],
+    tags: ['jumper wires', 'dupont', 'free'],
+    suggestedUses: 'Arduino labs, sensor wiring, robot prototypes.',
+    viewsCount: 17,
+  },
+  {
+    key: 'majd-dc-motors-surplus',
+    supplierEmail: 'majd@supplier.com',
+    title: 'Surplus DC Gear Motors',
+    description:
+      'Small DC gear motors removed from retired classroom kits. Tested for smooth rotation before listing.',
+    categoryKey: 'motors-mechanical',
+    materialType: 'DC Motor',
+    aliases: ['DC gear motor', 'Robot motor', 'Gear motor'],
+    quantity: 14,
+    unit: 'pieces',
+    condition: 'GOOD',
+    sourceType: 'EDUCATIONAL_INSTITUTION',
+    isFree: false,
+    price: 12,
+    maxAllowedUnitPriceNis: 25,
+    pickupAllowed: true,
+    deliveryAllowed: true,
+    imageUrls: [IMAGES.motors],
+    tags: ['dc motor', 'robotics', 'surplus'],
+    suggestedUses: 'Robot cars, obstacle avoidance builds, motion prototypes.',
+    viewsCount: 36,
+  },
+  {
     key: 'majd-servo-sg90',
     supplierEmail: 'majd@supplier.com',
     title: 'SG90 Micro Servo Motors',
@@ -3762,6 +3877,260 @@ const ADDITIONAL_MATERIALS: MaterialSeed[] = [
 ];
 
 const MATERIALS: MaterialSeed[] = [...CORE_MATERIALS, ...ADDITIONAL_MATERIALS];
+
+const PROJECT_BUDGET_DEMO_MATERIAL_KEYS = [
+  'majd-arduino-student-salvage',
+  'majd-arduino-uno-r3',
+  'majd-ultrasonic-free-lab',
+  'majd-ultrasonic-hcsr04',
+  'majd-dc-motors-surplus',
+  'majd-dc-gear-motors',
+  'majd-jumper-wires-free-pieces',
+  'majd-jumper-wires',
+] as const;
+
+const LOCAL_DATABASE_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+
+const assertLocalDatabaseHost = () => {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required for project budget demo seeding.');
+  }
+
+  let hostname: string;
+  try {
+    hostname = new URL(databaseUrl).hostname.toLowerCase();
+  } catch {
+    throw new Error('DATABASE_URL must be a valid URL for project budget demo seeding.');
+  }
+
+  if (!LOCAL_DATABASE_HOSTS.has(hostname)) {
+    throw new Error(
+      `Refusing project budget demo seed on non-local database host "${hostname}".`,
+    );
+  }
+};
+
+const findCategoryIdBySeedKey = async (categoryKey: string): Promise<string> => {
+  const categorySeed = MATERIAL_CATEGORIES.find((category) => category.key === categoryKey);
+  if (!categorySeed) {
+    throw new Error(`Missing material category seed definition for ${categoryKey}.`);
+  }
+
+  const category = await prisma.category.findFirst({
+    where: {
+      nameEn: categorySeed.nameEn,
+      categoryType: { in: ['MATERIAL', 'BOTH'] },
+      isActive: true,
+    },
+    select: { id: true },
+  });
+
+  if (!category) {
+    throw new Error(
+      `Missing active material category "${categorySeed.nameEn}" required for project budget demo seeding.`,
+    );
+  }
+
+  return category.id;
+};
+
+const findExistingMaterialTypeInfo = async (input: {
+  categoryId: string;
+  material: MaterialSeed;
+}) => {
+  const normalizedName = normalizeSearchText(input.material.materialType);
+  const existing = await prisma.materialType.findFirst({
+    where: {
+      categoryId: input.categoryId,
+      normalizedName,
+      isActive: true,
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    return { materialTypeId: existing.id, priceRuleId: null as string | null };
+  }
+
+  const fallbackContext: SeedContext = {
+    users: new Map(),
+    suppliers: new Map(),
+    drivers: new Map(),
+    categories: new Map([[input.material.categoryKey, input.categoryId]]),
+    materials: new Map(),
+    materialTypes: new Map(),
+    projects: new Map(),
+    reservations: new Map(),
+    learnerDropoffs: new Map(),
+  };
+
+  return ensureMaterialTypeWithPriceRule(fallbackContext, input.material);
+};
+
+const upsertProjectBudgetDemoMaterial = async (input: {
+  supplier: { userId: string; profileId: string; pickupLocationId: string };
+  categoryId: string;
+  material: MaterialSeed;
+}) => {
+  input.material.imageUrls.forEach((url, index) =>
+    assertImage(`${input.material.title} image ${index + 1}`, url),
+  );
+
+  const typeInfo = await findExistingMaterialTypeInfo({
+    categoryId: input.categoryId,
+    material: input.material,
+  });
+
+  const existing = await prisma.material.findFirst({
+    where: {
+      ownerId: input.supplier.userId,
+      title: input.material.title,
+    },
+    select: { id: true },
+  });
+
+  const materialData = {
+    ownerId: input.supplier.userId,
+    supplierProfileId: input.supplier.profileId,
+    categoryId: input.categoryId,
+    materialTypeId: typeInfo.materialTypeId,
+    priceRuleId: typeInfo.priceRuleId,
+    title: input.material.title,
+    description: input.material.description,
+    materialType: input.material.materialType,
+    quantity: input.material.quantity,
+    unit: input.material.unit,
+    condition: input.material.condition,
+    sourceType: input.material.sourceType,
+    status: 'AVAILABLE' as const,
+    isFree: input.material.isFree,
+    price: input.material.price,
+    currency: CURRENCY,
+    locationId: input.supplier.pickupLocationId,
+    pickupAllowed: input.material.pickupAllowed,
+    deliveryAllowed: input.material.deliveryAllowed,
+    pickupNotes: 'Pickup details are confirmed after reservation acceptance.',
+    suggestedUses: input.material.suggestedUses,
+    viewsCount: input.material.viewsCount,
+  };
+
+  if (existing) {
+    await prisma.material.update({
+      where: { id: existing.id },
+      data: materialData,
+    });
+    return { id: existing.id, created: false, key: input.material.key };
+  }
+
+  const created = await prisma.material.create({
+    data: {
+      ...materialData,
+      images: {
+        create: input.material.imageUrls.map((imageUrl, index) => ({
+          imageUrl,
+          sortOrder: index,
+          isCover: index === 0,
+        })),
+      },
+      tags: {
+        create: input.material.tags.map((tag) => ({ tag })),
+      },
+    },
+    select: { id: true },
+  });
+
+  return { id: created.id, created: true, key: input.material.key };
+};
+
+const seedProjectBudgetDemo = async () => {
+  assertLocalDatabaseHost();
+
+  const supplierUser = await prisma.user.findUnique({
+    where: { email: 'majd@supplier.com' },
+    select: {
+      id: true,
+      supplierProfile: {
+        select: {
+          id: true,
+          defaultPickupLocationId: true,
+        },
+      },
+    },
+  });
+
+  if (!supplierUser?.supplierProfile?.defaultPickupLocationId) {
+    throw new Error(
+      'Missing majd@supplier.com supplier profile or pickup location required for project budget demo seeding.',
+    );
+  }
+
+  const project = await prisma.learningProject.findFirst({
+    where: {
+      title: 'Obstacle Avoidance Robot',
+      status: 'PUBLISHED',
+      hiddenAt: null,
+      archivedAt: null,
+    },
+    select: { id: true, title: true },
+  });
+
+  if (!project) {
+    throw new Error(
+      'Missing published project "Obstacle Avoidance Robot" required for project budget demo seeding.',
+    );
+  }
+
+  const supplier = {
+    userId: supplierUser.id,
+    profileId: supplierUser.supplierProfile.id,
+    pickupLocationId: supplierUser.supplierProfile.defaultPickupLocationId,
+  };
+
+  const categoryIds = new Map<string, string>();
+  for (const categoryKey of new Set(
+    PROJECT_BUDGET_DEMO_MATERIAL_KEYS.map(
+      (key) => MATERIALS.find((material) => material.key === key)?.categoryKey,
+    ).filter((value): value is string => Boolean(value)),
+  )) {
+    categoryIds.set(categoryKey, await findCategoryIdBySeedKey(categoryKey));
+  }
+
+  const results = [];
+  for (const materialKey of PROJECT_BUDGET_DEMO_MATERIAL_KEYS) {
+    const material = MATERIALS.find((entry) => entry.key === materialKey);
+    if (!material) {
+      throw new Error(`Missing demo material seed definition for ${materialKey}.`);
+    }
+
+    const categoryId = categoryIds.get(material.categoryKey);
+    if (!categoryId) {
+      throw new Error(`Missing category mapping for demo material ${materialKey}.`);
+    }
+
+    results.push(
+      await upsertProjectBudgetDemoMaterial({
+        supplier,
+        categoryId,
+        material,
+      }),
+    );
+  }
+
+  const materialIds = results.map((result) => result.id);
+  const uniqueMaterialIds = new Set(materialIds);
+
+  return {
+    mode: 'project-budget-demo',
+    projectId: project.id,
+    projectTitle: project.title,
+    demoMaterialCount: uniqueMaterialIds.size,
+    createdCount: results.filter((result) => result.created).length,
+    updatedCount: results.filter((result) => !result.created).length,
+    materialKeys: results.map((result) => result.key),
+    materialIds: [...uniqueMaterialIds],
+  };
+};
 
 type ProjectSeed = {
   key: string;
@@ -7438,8 +7807,8 @@ const main = async () => {
   if (EXTRA_LEARNERS.length !== 288) {
     throw new Error(`Expected 288 additional learners, found ${EXTRA_LEARNERS.length}.`);
   }
-  if (MATERIALS.length !== 150) {
-    throw new Error(`Expected 150 primary materials, found ${MATERIALS.length}.`);
+  if (MATERIALS.length !== 155) {
+    throw new Error(`Expected 155 primary materials, found ${MATERIALS.length}.`);
   }
   if (PROJECTS.length !== 30) {
     throw new Error(`Expected 30 learning projects, found ${PROJECTS.length}.`);
@@ -7533,7 +7902,12 @@ const main = async () => {
 };
 
 try {
-  await main();
+  if (process.argv.includes('--project-budget-demo')) {
+    const summary = await seedProjectBudgetDemo();
+    console.log(JSON.stringify(summary, null, 2));
+  } else {
+    await main();
+  }
 } catch (error) {
   console.error(error);
   process.exitCode = 1;

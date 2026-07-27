@@ -86,7 +86,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learning/submissions` | `LearningProjectSubmissionsPage` | learner | Learner-owned submission dashboard backed by `/api/learning-projects/mine`; shows review status, admin feedback preview, and status CTAs |
 | `/learning/submissions/:id` | `LearningProjectSubmissionDetailPage` | learner | Owner-only unpublished/published submission detail; shows moderation feedback and status-specific actions |
 | `/learning/submissions/:id/edit` | `LearningProjectSubmissionEditPage` | learner | Edit `DRAFT` / `CHANGES_REQUESTED` owner submissions; save changes or save and resubmit |
-| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, and linked-material panel; no AI matching or auto-reservation |
+| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, linked-material panel, and embedded Build Guide assistant on wide layouts (`?guide=1&conversationId=...`); narrow layouts use full-screen guide route |
+| `/learning/:id/build/guide` | `LearningProjectBuildGuidePage` | learner | Full-screen Build Guide chat for narrow/mobile layouts; reuses the same trusted guide conversation and `AiEmbeddedAssistantChat` |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default; optional query `projectId`, `buildItemId`, `returnTo`, `componentName` for Learning Hub build-context reserve flow |

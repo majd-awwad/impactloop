@@ -4,13 +4,22 @@ import 'package:frontend/features/learning_hub/domain/models/learning_project_st
 
 void main() {
   group('LearningProjectStepText', () {
-    test('formatStepsForEditing shows plain descriptions only', () {
+    test('formatStepsForEditing shows numbered descriptions', () {
       final text = LearningProjectStepText.formatStepsForEditing([
         (title: 'Step 1', description: 'Prepare the board'),
         (title: 'Step 2', description: 'Wire the sensor'),
       ]);
 
-      expect(text, 'Prepare the board\nWire the sensor');
+      expect(text, '1. Prepare the board\n2. Wire the sensor');
+    });
+
+    test('formatStepsForEditing strips duplicate prefixes before numbering', () {
+      final text = LearningProjectStepText.formatStepsForEditing([
+        (title: 'Step 1', description: '1. Prepare the board'),
+        (title: 'Step 2', description: '2) Wire the sensor'),
+      ]);
+
+      expect(text, '1. Prepare the board\n2. Wire the sensor');
     });
 
     test('stripStepPrefix removes common step labels', () {

@@ -20,6 +20,7 @@ import {
   resubmitMyLearningProjectSubmissionById,
   saveLearningProjectById,
   startProjectBuildById,
+  submitMyLearningProjectDraftById,
   unfollowLearningProjectById,
   unlikeLearningProjectById,
   unsaveLearningProjectById,
@@ -101,6 +102,41 @@ async function createProject(input: {
     },
   });
   ids.projects.push(project.id);
+  return project;
+}
+
+async function createStep(projectId: string, stepNumber = 1) {
+  return prisma.projectStep.create({
+    data: {
+      projectId,
+      stepNumber,
+      title: `${TEST_MARKER} Step ${stepNumber}`,
+      description: `${TEST_MARKER} Step ${stepNumber} description.`,
+    },
+  });
+}
+
+async function createCompleteDraft(input: {
+  createdBy: string;
+  categoryId: string;
+  withImage?: boolean;
+}) {
+  const project = await createProject({
+    createdBy: input.createdBy,
+    categoryId: input.categoryId,
+    status: 'DRAFT',
+    title: `${TEST_MARKER} Draft submit`,
+  });
+  await createComponent({ projectId: project.id, categoryId: input.categoryId });
+  await createStep(project.id);
+  if (input.withImage) {
+    await prisma.learningProject.update({
+      where: { id: project.id },
+      data: {
+        coverImageUrl: 'https://cdn.example.com/project-cover.jpg',
+      },
+    });
+  }
   return project;
 }
 
@@ -475,6 +511,11 @@ describe('learner learning project submissions', () => {
       categoryId: projectCategory.id,
     });
     await createComponent({ projectId: project.id, categoryId: materialCategory.id });
+    await createStep(project.id);
+    await prisma.learningProject.update({
+      where: { id: project.id },
+      data: { coverImageUrl: 'https://cdn.example.com/resubmit-cover.jpg' },
+    });
 
     await assert.rejects(
       () => getLearningProjectById(project.id),
@@ -707,5 +748,113 @@ describe('learner learning project submissions', () => {
     assert.equal(updated.reviewNote, null);
     assert.equal(updated.changesRequestedReason, null);
     assert.equal(updated.rejectionReason, null);
+  });
+
+  test('draft without image cannot submit for review', async () => {
+    const owner = await createLearnerUser('draft-no-image');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createCompleteDraft({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      withImage: false,
+    });
+
+    await assert.rejects(
+      () =>
+        submitMyLearningProjectDraftById(
+          project.id,
+          owner.id,
+          `${TEST_MARKER}-draft-submit-no-image`,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.code, 'PROJECT_SUBMISSION_INCOMPLETE');
+        return true;
+      },
+    );
+  });
+
+  test('complete draft with image submits to pending review', async () => {
+    const owner = await createLearnerUser('draft-submit');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createCompleteDraft({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      withImage: true,
+    });
+
+    const submitted = await submitMyLearningProjectDraftById(
+      project.id,
+      owner.id,
+      `${TEST_MARKER}-draft-submit-ok`,
+    );
+
+    assert.equal(submitted.response.status, 'PENDING_REVIEW');
+    assert.equal(submitted.response.availableActions.canSubmit, false);
+    assert.equal(submitted.response.availableActions.canResubmit, false);
+    assert.ok(submitted.response.submittedAt);
+  });
+
+  test('draft submit is idempotent for the same key', async () => {
+    const owner = await createLearnerUser('draft-idempotent');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createCompleteDraft({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      withImage: true,
+    });
+    const key = `${TEST_MARKER}-draft-submit-idempotent`;
+
+    const first = await submitMyLearningProjectDraftById(project.id, owner.id, key);
+    const second = await submitMyLearningProjectDraftById(project.id, owner.id, key);
+
+    assert.equal(first.response.id, second.response.id);
+    assert.equal(second.response.status, 'PENDING_REVIEW');
+    assert.equal(second.replayed, true);
+  });
+
+  test('pending review draft cannot be submitted again', async () => {
+    const owner = await createLearnerUser('draft-pending');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createCompleteDraft({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      withImage: true,
+    });
+    const key = `${TEST_MARKER}-draft-submit-pending`;
+
+    await submitMyLearningProjectDraftById(project.id, owner.id, key);
+    const pending = await submitMyLearningProjectDraftById(
+      project.id,
+      owner.id,
+      `${TEST_MARKER}-draft-submit-pending-2`,
+    );
+
+    assert.equal(pending.response.status, 'PENDING_REVIEW');
+  });
+
+  test('non-owner cannot submit draft', async () => {
+    const owner = await createLearnerUser('draft-owner');
+    const other = await createLearnerUser('draft-other');
+    const projectCategory = await createCategory('PROJECT');
+    const project = await createCompleteDraft({
+      createdBy: owner.id,
+      categoryId: projectCategory.id,
+      withImage: true,
+    });
+
+    await assert.rejects(
+      () =>
+        submitMyLearningProjectDraftById(
+          project.id,
+          other.id,
+          `${TEST_MARKER}-draft-submit-other`,
+        ),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 404);
+        return true;
+      },
+    );
   });
 });

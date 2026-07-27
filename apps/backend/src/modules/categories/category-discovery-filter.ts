@@ -1,5 +1,5 @@
 const INTERNAL_CATEGORY_NAME_PATTERN =
-  /\[|\]|test-admin|admin-approvals|\btest\b|\badmin\b|\bapprovals\b/i;
+  /\[|\]|test-admin|admin-approvals|\blive-conv\b|\blive-debug\b|\btemp-|\btest\b|\badmin\b|\bapprovals\b/i;
 
 export const isPublicDiscoveryCategoryName = (name: string): boolean => {
   const normalized = name.trim();

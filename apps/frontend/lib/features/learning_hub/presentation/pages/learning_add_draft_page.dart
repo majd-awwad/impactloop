@@ -1,7 +1,8 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,18 +10,23 @@ import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/utils/content_text_direction.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
-import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../ai/data/ai_repository.dart';
+import '../../../ai/domain/ai_helpers.dart';
 import '../../../materials/data/models/category.dart';
 import '../../application/learning_hub_providers.dart';
-import '../../data/learning_project_draft_storage.dart';
 import '../../domain/models/learning_project.dart';
+import '../../domain/models/learning_project_submission.dart';
 import '../../domain/models/learning_project_draft_component.dart';
 import '../../domain/models/learning_project_step_text.dart';
 import '../theme/learning_ui_palette.dart';
@@ -51,9 +57,18 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   String? _selectedCategoryId;
   String _selectedDifficulty = 'medium';
   String _selectedDuration = 'medium';
-  bool _isSubmitting = false;
   bool _isSavingDraft = false;
-  late String _submitIdempotencyKey;
+  late String _saveIdempotencyKey;
+  String? _savedProjectId;
+  bool _savedHasProjectImage = false;
+
+  bool _copilotOpen = false;
+  bool _copilotSending = false;
+  String? _copilotError;
+  final List<_ManualDraftCopilotTurn> _copilotMessages = [];
+  final TextEditingController _copilotComposer = TextEditingController();
+  final ScrollController _copilotScrollController = ScrollController();
+  final FocusNode _copilotComposerFocus = FocusNode();
 
   @override
   void initState() {
@@ -63,7 +78,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     _descriptionController = TextEditingController();
     _stepsController = TextEditingController();
     _linksController = TextEditingController();
-    _submitIdempotencyKey = _newIdempotencyKey();
+    _saveIdempotencyKey = _newIdempotencyKey();
     unawaited(_restoreLocalDraft());
   }
 
@@ -74,6 +89,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     _descriptionController.dispose();
     _stepsController.dispose();
     _linksController.dispose();
+    _copilotComposer.dispose();
+    _copilotScrollController.dispose();
+    _copilotComposerFocus.dispose();
     super.dispose();
   }
 
@@ -99,124 +117,165 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     });
   }
 
-  Future<void> _saveLocalDraft() async {
+  Future<void> _saveCanonicalDraft() async {
     FocusScope.of(context).unfocus();
+    if (_isSavingDraft) {
+      return;
+    }
+
+    final minimumError = _validateMinimumDraftSave();
+    if (minimumError != null) {
+      showInfoSnackBar(context, minimumError);
+      return;
+    }
+
+    final categories =
+        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
+    final category = _selectedProjectCategory(categories)!;
+    final repository = ref.read(learningHubRepositoryProvider);
+    final locale = resolveAiLocale(context);
+
     setState(() => _isSavingDraft = true);
-    await ref
-        .read(learningProjectDraftStorageProvider)
-        .saveDraft(_currentDraftData());
-    if (!mounted) return;
-
-    setState(() => _isSavingDraft = false);
-    showInfoSnackBar(
-      context,
-      const LocalizedText(
-        en: 'Draft saved on this device.',
-        ar: '╪ز┘à ╪ص┘╪╕ ╪د┘┘à╪│┘ê╪»╪ر ╪╣┘┘ë ┘ç╪░╪د ╪د┘╪ش┘ç╪د╪▓.',
-      ).resolve(context),
-    );
-  }
-
-  LearningProjectDraftData _currentDraftData() {
-    final categories =
-        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
-
-    return LearningProjectDraftData(
-      title: _titleController.text,
-      summary: _summaryController.text,
-      fullDescription: _descriptionController.text,
-      components: _componentEntries,
-      steps: _stepsController.text,
-      links: _linksController.text,
-      categoryId: _selectedProjectCategory(categories)?.id,
-      difficulty: _selectedDifficulty,
-      duration: _selectedDuration,
-    );
-  }
-
-  Future<void> _submitForReview() async {
-    FocusScope.of(context).unfocus();
-    if (_isSubmitting) {
-      return;
-    }
-
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      return;
-    }
-
-    final componentError = _validateComponentEntries(
-      requireNamedComponents: true,
-      materialCategories: materialSelectableCategories(
-        ref.read(materialCategoriesProvider).value ?? const <MaterialCategory>[],
-      ),
-    );
-    if (componentError != null) {
-      setState(() => _componentValidationMessage = componentError);
-      return;
-    }
-
-    final categories =
-        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
-    final category = _selectedProjectCategory(categories);
-    if (category == null) {
-      showInfoSnackBar(
-        context,
-        const LocalizedText(
-          en: 'Select an available project category before submitting.',
-          ar: '╪د╪«╪ز╪▒ ┘╪خ╪ر ┘à╪┤╪▒┘ê╪╣ ┘à╪ز╪د╪ص╪ر ┘é╪ذ┘ ╪د┘╪ح╪▒╪│╪د┘.',
-        ).resolve(context),
-      );
-      return;
-    }
-
-    setState(() => _isSubmitting = true);
     try {
-      final repository = ref.read(learningHubRepositoryProvider);
-      await repository.submitProjectForReview(
-        idempotencyKey: _submitIdempotencyKey,
-        title: _titleController.text.trim(),
-        shortDescription: _summaryController.text.trim(),
-        description: _resolvedFullDescription(),
-        categoryId: category.id,
-        difficulty: _mapDifficulty(_selectedDifficulty),
-        estimatedDurationMinutes: _mapDurationMinutes(_selectedDuration),
-        requiredComponents: _buildSubmitComponents(),
-        steps: LearningProjectStepText.parseStepsFromText(_stepsController.text),
-        links: _parseLinks(_linksController.text),
-      );
-      await ref.read(learningProjectDraftStorageProvider).clearDraft();
-      if (!mounted) return;
+      var projectId = _savedProjectId;
+      if (projectId == null) {
+        final session = await repository.createAiAuthoringDraft(
+          ideaText: _deriveIdeaText(),
+          categoryId: category.id,
+          difficulty: _mapDifficulty(_selectedDifficulty),
+          idempotencyKey: _saveIdempotencyKey,
+          locale: locale,
+        );
+        projectId = session.learningProjectId;
+      }
 
-      _resetFormForNextDraft();
+      final updated = await repository.updateMyLearningProjectSubmission(
+        projectId,
+        _buildSavePayload(category.id),
+      );
+
+      await ref.read(learningProjectDraftStorageProvider).clearDraft();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _savedProjectId = projectId;
+        _savedHasProjectImage = _submissionHasPersistedImage(updated);
+        _isSavingDraft = false;
+      });
+
       showInfoSnackBar(
         context,
         const LocalizedText(
-          en: 'Your project was submitted for admin review.',
-          ar: '╪ز┘à ╪ح╪▒╪│╪د┘ ┘à╪┤╪▒┘ê╪╣┘â ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر.',
+          en:
+              'Draft saved. You can add images and submit it for review when it is ready.',
+          ar:
+              'تم حفظ المسودة. يمكنك إضافة الصور وإرسالها للمراجعة عندما تصبح جاهزة.',
         ).resolve(context),
       );
-      context.go('/learning');
+      context.go('/learning/submissions/$projectId');
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+      setState(() => _isSavingDraft = false);
       showErrorSnackBar(context, error);
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
-  void _resetFormForNextDraft() {
-    _formKey.currentState?.reset();
-    _titleController.clear();
-    _summaryController.clear();
-    _descriptionController.clear();
-    _componentEntries = [LearningProjectDraftComponent.empty()];
-    _componentValidationMessage = null;
-    _stepsController.clear();
-    _linksController.clear();
-    _selectedCategoryId = null;
-    _selectedDifficulty = 'medium';
-    _selectedDuration = 'medium';
-    _submitIdempotencyKey = _newIdempotencyKey();
+  String _deriveIdeaText() {
+    final parts = <String>[
+      _titleController.text.trim(),
+      _summaryController.text.trim(),
+      _descriptionController.text.trim(),
+    ].where((part) => part.isNotEmpty);
+    return parts.join('. ');
+  }
+
+  String? _validateMinimumDraftSave() {
+    final categories =
+        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
+    if (_selectedProjectCategory(categories) == null) {
+      return const LocalizedText(
+        en: 'Select an available project category before saving.',
+        ar: 'اختر فئة مشروع متاحة قبل الحفظ.',
+      ).resolve(context);
+    }
+
+    if (_deriveIdeaText().length < 10) {
+      return const LocalizedText(
+        en: 'Add at least 10 characters of project content before saving.',
+        ar: 'أضف 10 أحرف على الأقل من محتوى المشروع قبل الحفظ.',
+      ).resolve(context);
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic> _buildSavePayload(String categoryId) {
+    final shortDescription = _summaryController.text.trim();
+    final fullDescription = _descriptionController.text.trim();
+    final title = _titleController.text.trim();
+    final fallbackDescription = _deriveIdeaText();
+
+    return {
+      if (title.isNotEmpty) 'title': title,
+      if (shortDescription.isNotEmpty) 'shortDescription': shortDescription,
+      'description': fullDescription.isNotEmpty
+          ? fullDescription
+          : shortDescription.isNotEmpty
+          ? shortDescription
+          : fallbackDescription,
+      'categoryId': categoryId,
+      'difficulty': _mapDifficulty(_selectedDifficulty),
+      'estimatedDurationMinutes': _mapDurationMinutes(_selectedDuration),
+      'requiredComponents': _buildSubmitComponents(),
+      'steps': LearningProjectStepText.parseStepsFromText(_stepsController.text),
+      'links': _parseLinks(_linksController.text),
+    };
+  }
+
+  bool _submissionHasPersistedImage(LearningProjectSubmission submission) {
+    return submission.coverImageUrl?.trim().isNotEmpty == true;
+  }
+
+  double _pageContentGutter(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    const maxContentWidth = 1180.0;
+    final centeredInset = width > maxContentWidth
+        ? (width - maxContentWidth) / 2
+        : 0.0;
+    return centeredInset + AppSpacing.lg;
+  }
+
+  double _copilotPanelInset(BuildContext context) {
+    return AppSpacing.lg;
+  }
+
+  double _copilotPanelWidth(BuildContext context) {
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    if (viewportWidth < 900) {
+      return viewportWidth;
+    }
+
+    final maxPanelWidth = viewportWidth * 0.34;
+    final target = switch (viewportWidth) {
+      >= 1400 => 480.0,
+      >= 1200 => 460.0,
+      >= 1000 => 420.0,
+      _ => 400.0,
+    };
+    final cappedTarget = min(target, maxPanelWidth);
+    final lowerBound = min(390.0, maxPanelWidth);
+    return cappedTarget.clamp(lowerBound, maxPanelWidth);
+  }
+
+  double _copilotFormEndPadding(BuildContext context) {
+    if (!_copilotOpen || MediaQuery.sizeOf(context).width < 900) {
+      return 0;
+    }
+    return _copilotPanelWidth(context) + (_copilotPanelInset(context) * 2);
   }
 
   String _newIdempotencyKey() {
@@ -227,7 +286,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       32,
       (_) => alphabet[random.nextInt(alphabet.length)],
     ).join();
-    return 'learning-submit-$suffix';
+    return 'learning-draft-save-$suffix';
   }
 
   MaterialCategory? _selectedProjectCategory(
@@ -421,6 +480,133 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         (uri.scheme == 'http' || uri.scheme == 'https');
   }
 
+  Map<String, dynamic> _buildCopilotDraftContext(
+    List<MaterialCategory> categories,
+  ) {
+    final category = _selectedProjectCategory(categories);
+    final categoryLabel = category == null
+        ? null
+        : LocalizedText(
+            en: category.nameEn,
+            ar: category.nameAr.isEmpty ? category.nameEn : category.nameAr,
+          ).resolve(context);
+
+    return {
+      'title': _titleController.text.trim(),
+      'categoryLabel': categoryLabel,
+      'difficulty': _selectedDifficulty,
+      'durationLabel': _selectedDuration,
+      'shortDescription': _summaryController.text.trim(),
+      'fullDescription': _resolvedFullDescription(),
+      'components': _componentEntries
+          .where((component) => component.name.trim().isNotEmpty)
+          .map(
+            (component) => {
+              'name': component.name.trim(),
+              'quantity': component.quantity.toString(),
+              'unit': component.unit,
+              'role': component.role.apiValue,
+            },
+          )
+          .toList(growable: false),
+      'steps': _nonEmptyLines(_stepsController.text),
+      'links': _nonEmptyLines(_linksController.text),
+      'draftSaved': _savedProjectId != null,
+      'projectId': _savedProjectId,
+      'hasPersistedProjectImage': _savedHasProjectImage,
+    };
+  }
+
+  Future<void> _sendCopilotMessage(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || _copilotSending) {
+      return;
+    }
+
+    final categories = ref.read(projectCategoriesProvider).value ??
+        const <MaterialCategory>[];
+    final locale = resolveAiLocale(context);
+    final userTurn = _ManualDraftCopilotTurn(role: 'user', text: trimmed);
+
+    setState(() {
+      _copilotSending = true;
+      _copilotError = null;
+      _copilotMessages.add(userTurn);
+    });
+    _copilotComposer.clear();
+    _scheduleCopilotScroll();
+
+    try {
+      final response = await ref.read(aiApiProvider).sendManualDraftCopilotMessage(
+            text: trimmed,
+            locale: locale,
+            clientMessageId: createClientMessageId(),
+            draftContext: _buildCopilotDraftContext(categories),
+            history: _copilotMessages
+                .take(_copilotMessages.length - 1)
+                .map(
+                  (message) => {
+                    'role': message.role,
+                    'text': message.text,
+                  },
+                )
+                .toList(growable: false),
+          );
+
+      if (!mounted) return;
+      setState(() {
+        _copilotMessages.add(
+          _ManualDraftCopilotTurn(
+            role: 'assistant',
+            text: response.assistantText,
+          ),
+        );
+        _copilotSending = false;
+      });
+      _scheduleCopilotScroll();
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _copilotSending = false;
+        _copilotError = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _copilotSending = false;
+        _copilotError = _ManualDraftCopilotL10n.errorGeneric.resolve(context);
+      });
+    }
+  }
+
+  void _scheduleCopilotScroll() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_copilotScrollController.hasClients) return;
+      _copilotScrollController.animateTo(
+        _copilotScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  void _openCopilotPanel() {
+    setState(() => _copilotOpen = true);
+  }
+
+  void _closeCopilotPanel() {
+    setState(() => _copilotOpen = false);
+  }
+
+  Future<void> _copyCopilotText(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    showInfoSnackBar(
+      context,
+      _ManualDraftCopilotL10n.copied.resolve(context),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
@@ -431,6 +617,26 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       materialCategoriesAsync.value ?? const <MaterialCategory>[],
     );
     final selectedCategoryId = _selectedProjectCategory(categories)?.id;
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final fabBottom = bottomInset + 24.0;
+    final pageGutter = _pageContentGutter(context);
+    final copilotPanelWidth = _copilotPanelWidth(context);
+    final copilotPanelInset = _copilotPanelInset(context);
+    final copilotPanel = _ManualDraftCopilotPanel(
+      messages: _copilotMessages,
+      sending: _copilotSending,
+      error: _copilotError,
+      composer: _copilotComposer,
+      composerFocus: _copilotComposerFocus,
+      scrollController: _copilotScrollController,
+      draftSaved: _savedProjectId != null,
+      hasPersistedProjectImage: _savedHasProjectImage,
+      onClose: _closeCopilotPanel,
+      onSend: _sendCopilotMessage,
+      onQuickAction: _sendCopilotMessage,
+      onCopy: _copyCopilotText,
+    );
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -440,64 +646,130 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           children: [
             const EntryNavBar(homeRoute: '/home', phoneTitle: 'Add project'),
             Expanded(
-              child: SingleChildScrollView(
-                padding: appMobileAwareScrollPadding(
-                  context,
-                  top: AppSpacing.md,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1180),
-                    child: Form(
-                      key: _formKey,
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final twoColumn = constraints.maxWidth >= 940;
-                          final form = _buildFormCard(
-                            context,
-                            categoriesAsync: categoriesAsync,
-                            categories: categories,
-                            materialCategories: materialCategories,
-                            selectedCategoryId: selectedCategoryId,
-                          );
-                          final side = _SupportColumn(
-                            onBack: () {
-                              if (context.canPop()) {
-                                context.pop();
-                              } else {
-                                context.go('/learning');
-                              }
-                            },
-                          );
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  SingleChildScrollView(
+                    padding: appMobileAwareScrollPadding(
+                      context,
+                      top: AppSpacing.md,
+                      end: _copilotFormEndPadding(context),
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1180),
+                        child: Form(
+                          key: _formKey,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final twoColumn = constraints.maxWidth >= 940;
+                              final form = _buildFormCard(
+                                context,
+                                categoriesAsync: categoriesAsync,
+                                categories: categories,
+                                materialCategories: materialCategories,
+                                selectedCategoryId: selectedCategoryId,
+                              );
+                              final side = _SupportColumn(
+                                onBack: () {
+                                  if (context.canPop()) {
+                                    context.pop();
+                                  } else {
+                                    context.go('/learning');
+                                  }
+                                },
+                              );
 
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _AddDraftHeader(
-                                onBack: () => context.go('/learning'),
-                              ),
-                              const SizedBox(height: AppSpacing.lg),
-                              if (twoColumn)
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(flex: 7, child: form),
-                                    const SizedBox(width: AppSpacing.lg),
-                                    Expanded(flex: 3, child: side),
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _AddDraftHeader(
+                                    onBack: () => context.go('/learning'),
+                                  ),
+                                  const SizedBox(height: AppSpacing.lg),
+                                  if (twoColumn)
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(flex: 7, child: form),
+                                        const SizedBox(width: AppSpacing.lg),
+                                        Expanded(flex: 3, child: side),
+                                      ],
+                                    )
+                                  else ...[
+                                    form,
+                                    const SizedBox(height: AppSpacing.lg),
+                                    side,
                                   ],
-                                )
-                              else ...[
-                                form,
-                                const SizedBox(height: AppSpacing.lg),
-                                side,
-                              ],
-                            ],
-                          );
-                        },
+                                ],
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  if (_copilotOpen && isWide)
+                    PositionedDirectional(
+                      top: AppSpacing.md,
+                      bottom: copilotPanelInset,
+                      end: copilotPanelInset,
+                      width: copilotPanelWidth,
+                      child: Material(
+                        elevation: 8,
+                        borderRadius: AppRadius.xlAll,
+                        clipBehavior: Clip.antiAlias,
+                        child: copilotPanel,
+                      ),
+                    ),
+                  if (_copilotOpen && !isWide)
+                    Positioned.fill(
+                      child: Material(
+                        color: palette.pageBackground.withValues(alpha: 0.98),
+                        child: copilotPanel,
+                      ),
+                    ),
+                  if (!_copilotOpen)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: fabBottom,
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.only(end: pageGutter),
+                        child: Align(
+                          alignment: AlignmentDirectional.bottomEnd,
+                          child: Semantics(
+                            button: true,
+                            label: _ManualDraftCopilotL10n.launcherTooltip
+                                .resolve(context),
+                            child: Tooltip(
+                              message: _ManualDraftCopilotL10n.launcherTooltip
+                                  .resolve(context),
+                              child: Material(
+                                elevation: 6,
+                                color: AppThemeColors.of(context).primary,
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: _openCopilotPanel,
+                                  child: const SizedBox(
+                                    width: 56,
+                                    height: 56,
+                                    child: Icon(
+                                      Icons.auto_awesome_rounded,
+                                      color: Colors.white,
+                                      size: 26,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
@@ -696,6 +968,18 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
+          Text(
+            const LocalizedText(
+              en:
+                  'Images are required before submitting for review. You can add them after saving the draft.',
+              ar:
+                  'الصور مطلوبة قبل الإرسال للمراجعة. يمكنك إضافتها بعد حفظ المسودة.',
+            ).resolve(context),
+            style: AppTextStyles.body(context).copyWith(
+              color: palette.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           AppTextArea(
             controller: _stepsController,
             label: 'Implementation steps',
@@ -726,59 +1010,18 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 560;
-              final saveButton = OutlinedButton.icon(
-                onPressed: _isSavingDraft || _isSubmitting
-                    ? null
-                    : _saveLocalDraft,
-                style: AppStatusButtonStyle.outlined(
-                  context,
-                  AppStatusTone.neutral,
-                ),
-                icon: _isSavingDraft
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.save_outlined),
-                label: Text(
-                  _isSavingDraft ? 'Saving draft...' : 'Save draft locally',
-                ),
-              );
-              final submitButton = AppPrimaryButton(
-                label: _isSubmitting ? 'Submitting...' : 'Submit for review',
-                isLoading: _isSubmitting,
-                onPressed: _isSavingDraft ? null : _submitForReview,
-              );
-
-              if (compact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    saveButton,
-                    const SizedBox(height: AppSpacing.md),
-                    submitButton,
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Expanded(child: saveButton),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(child: submitButton),
-                ],
-              );
-            },
+          AppPrimaryButton(
+            label: _isSavingDraft ? 'Saving draft...' : 'Save draft',
+            isLoading: _isSavingDraft,
+            onPressed: _isSavingDraft ? null : _saveCanonicalDraft,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             const LocalizedText(
-              en: 'Submitting sends the project to admin review. Local drafts stay on this device only.',
-              ar: '╪د┘╪ح╪▒╪│╪د┘ ┘è┘ê╪ش┘ّ┘ç ╪د┘┘à╪┤╪▒┘ê╪╣ ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر. ╪د┘┘à╪│┘ê╪»╪د╪ز ╪د┘┘à╪ص┘┘è╪ر ╪ز╪ذ┘é┘ë ╪╣┘┘ë ┘ç╪░╪د ╪د┘╪ش┘ç╪د╪▓ ┘┘é╪╖.',
+              en:
+                  'Saving creates a private draft. You can add images and submit it for admin review afterward.',
+              ar:
+                  'الحفظ ينشئ مسودة خاصة. يمكنك إضافة الصور وإرسالها لمراجعة الإدارة لاحقاً.',
             ).resolve(context),
             style: AppTextStyles.body(
               context,
@@ -789,7 +1032,6 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     );
   }
 }
-
 class _AddDraftHeader extends StatelessWidget {
   const _AddDraftHeader({required this.onBack});
 
@@ -849,8 +1091,10 @@ class _AddDraftHeader extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   const LocalizedText(
-                    en: 'Save your work locally, then submit a complete project for admin review.',
-                    ar: '╪د╪ص┘╪╕ ╪╣┘à┘┘â ┘à╪ص┘┘è╪د┘ï╪î ╪س┘à ╪ث╪▒╪│┘ ┘à╪┤╪▒┘ê╪╣╪د┘ï ┘à┘â╪ز┘à┘╪د┘ï ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر.',
+                    en:
+                        'Document your project, save it as a private draft, then add images and submit for review.',
+                    ar:
+                        'وثّق مشروعك، واحفظه كمسودة خاصة، ثم أضف الصور وأرسله للمراجعة.',
                   ).resolve(context),
                   style: AppTextStyles.brandingSubtitle(
                     context,
@@ -956,12 +1200,14 @@ class _DraftReviewScopePanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           _SectionHeading(
             title: const LocalizedText(
-              en: 'What happens after submit?',
-              ar: 'ماذا يحدث بعد الإرسال؟',
+              en: 'What happens after you save?',
+              ar: 'ماذا يحدث بعد الحفظ؟',
             ),
             subtitle: const LocalizedText(
-              en: 'Your draft enters the project review queue. Once approved, it becomes visible in Learning Hub for browsing, ratings, likes, saves, and future build workflows.',
-              ar: 'تدخل مسودتك في قائمة مراجعة المشاريع. بعد الموافقة، تظهر في مركز التعلم للتصفح والتقييمات والإعجابات والحفظ ومسارات البناء القادمة.',
+              en:
+                  'Your draft is saved privately. Add project images on the draft details page, then submit for admin review when ready.',
+              ar:
+                  'تُحفظ مسودتك بشكل خاص. أضف صور المشروع في صفحة التفاصيل، ثم أرسلها لمراجعة الإدارة عندما تصبح جاهزة.',
             ),
           ),
         ],
@@ -1118,6 +1364,615 @@ class _ChecklistItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ManualDraftCopilotTurn {
+  const _ManualDraftCopilotTurn({required this.role, required this.text});
+
+  final String role;
+  final String text;
+}
+
+class _ManualDraftCopilotL10n {
+  static const launcherTooltip = LocalizedText(
+    en: 'AI writing assistant',
+    ar: 'مساعد الكتابة بالذكاء الاصطناعي',
+  );
+  static const panelTitle = LocalizedText(
+    en: 'Project writing assistant',
+    ar: 'مساعد كتابة المشروع',
+  );
+  static const intro = LocalizedText(
+    en:
+        'Tell me what you built, even in simple words. I can help you turn it into a clear project title, description, component list, and steps.',
+    ar:
+        'أخبرني ماذا بنيت، حتى بكلمات بسيطة. أستطيع مساعدتك في تحويل ذلك إلى عنوان مشروع ووصف وقائمة مكوّنات وخطوات واضحة.',
+  );
+  static const composerHint = LocalizedText(
+    en: 'Ask about your project draft...',
+    ar: 'اسأل عن مسودة مشروعك...',
+  );
+  static const copied = LocalizedText(en: 'Copied', ar: 'تم النسخ');
+  static const copy = LocalizedText(en: 'Copy', ar: 'نسخ');
+  static const send = LocalizedText(en: 'Send', ar: 'إرسال');
+  static const errorGeneric = LocalizedText(
+    en: 'The writing assistant is temporarily unavailable. Try again.',
+    ar: 'مساعد الكتابة غير متاح مؤقتاً. حاول مرة أخرى.',
+  );
+}
+
+class _CopilotImageReminderCard extends StatelessWidget {
+  const _CopilotImageReminderCard({
+    required this.draftSaved,
+    required this.hasPersistedProjectImage,
+  });
+
+  final bool draftSaved;
+  final bool hasPersistedProjectImage;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
+
+    if (draftSaved && hasPersistedProjectImage) {
+      return Container(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: colors.primarySoft,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: colors.primary, size: 18),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                const LocalizedText(
+                  en: 'Project image added.',
+                  ar: 'تمت إضافة صورة المشروع.',
+                ).resolve(context),
+                style: AppTextStyles.label(context),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final message = draftSaved
+        ? const LocalizedText(
+            en: 'Add at least one project image before submitting for review.',
+            ar: 'أضف صورة مشروع واحدة على الأقل قبل الإرسال للمراجعة.',
+          )
+        : const LocalizedText(
+            en:
+                'Save the draft first. You can then add a project image before submitting it for review.',
+            ar:
+                'احفظ المسودة أولاً. يمكنك بعدها إضافة صورة مشروع قبل الإرسال للمراجعة.',
+          );
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.photo_library_outlined, color: colors.primary, size: 18),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  message.resolve(context),
+                  style: AppTextStyles.label(context),
+                ),
+              ),
+            ],
+          ),
+          if (!draftSaved) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              const LocalizedText(
+                en: 'You can add it after saving the draft.',
+                ar: 'يمكنك إضافتها بعد حفظ المسودة.',
+              ).resolve(context),
+              style: AppTextStyles.body(context).copyWith(
+                color: palette.textSecondary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ManualDraftCopilotPanel extends StatelessWidget {
+  const _ManualDraftCopilotPanel({
+    required this.messages,
+    required this.sending,
+    required this.error,
+    required this.composer,
+    required this.composerFocus,
+    required this.scrollController,
+    required this.draftSaved,
+    required this.hasPersistedProjectImage,
+    required this.onClose,
+    required this.onSend,
+    required this.onQuickAction,
+    required this.onCopy,
+  });
+
+  final List<_ManualDraftCopilotTurn> messages;
+  final bool sending;
+  final String? error;
+  final TextEditingController composer;
+  final FocusNode composerFocus;
+  final ScrollController scrollController;
+  final bool draftSaved;
+  final bool hasPersistedProjectImage;
+  final VoidCallback onClose;
+  final Future<void> Function(String text) onSend;
+  final Future<void> Function(String text) onQuickAction;
+  final Future<void> Function(String text) onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
+
+    return Shortcuts(
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.escape): const _CloseCopilotIntent(),
+      },
+      child: Actions(
+        actions: {
+          _CloseCopilotIntent: CallbackAction<_CloseCopilotIntent>(
+            onInvoke: (_) {
+              onClose();
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          autofocus: true,
+          child: ColoredBox(
+            color: palette.pageBackground,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.sm,
+                    AppSpacing.sm,
+                    AppSpacing.sm,
+                    AppSpacing.xs,
+                  ),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        tooltip: MaterialLocalizations.of(context)
+                            .closeButtonTooltip,
+                        onPressed: onClose,
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                      Icon(Icons.auto_awesome_rounded, color: colors.primary),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          _ManualDraftCopilotL10n.panelTitle.resolve(context),
+                          style: AppTextStyles.title(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: CustomScrollView(
+                    controller: scrollController,
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          AppSpacing.md,
+                          0,
+                          AppSpacing.md,
+                          AppSpacing.sm,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: Text(
+                            _ManualDraftCopilotL10n.intro.resolve(context),
+                            style: AppTextStyles.body(context).copyWith(
+                              color: palette.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          AppSpacing.md,
+                          0,
+                          AppSpacing.md,
+                          AppSpacing.sm,
+                        ),
+                        sliver: SliverToBoxAdapter(
+                          child: Wrap(
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            children: _quickActions()
+                                .map(
+                                  (action) => ActionChip(
+                                    label: Text(action.resolve(context)),
+                                    onPressed: sending
+                                        ? null
+                                        : () => onQuickAction(
+                                            action.resolve(context),
+                                          ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          AppSpacing.md,
+                          0,
+                          AppSpacing.md,
+                          AppSpacing.sm,
+                        ),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              if (index >= messages.length) {
+                                return const Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final message = messages[index];
+                              return Padding(
+                                padding: const EdgeInsetsDirectional.only(
+                                  bottom: AppSpacing.sm,
+                                ),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return _ManualDraftCopilotMessageBubble(
+                                      message: message,
+                                      onCopy: onCopy,
+                                      maxBubbleWidth:
+                                          constraints.maxWidth * 0.96,
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                            childCount: messages.length + (sending ? 1 : 0),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      AppSpacing.md,
+                      0,
+                      AppSpacing.md,
+                      AppSpacing.xs,
+                    ),
+                    child: Text(
+                      error!,
+                      style: AppTextStyles.label(context).copyWith(
+                        color: colors.danger,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpacing.md,
+                    0,
+                    AppSpacing.md,
+                    AppSpacing.xs,
+                  ),
+                  child: _CopilotImageReminderCard(
+                    draftSaved: draftSaved,
+                    hasPersistedProjectImage: hasPersistedProjectImage,
+                  ),
+                ),
+                _ManualDraftCopilotComposer(
+                  controller: composer,
+                  focusNode: composerFocus,
+                  sending: sending,
+                  onSend: () => onSend(composer.text),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<LocalizedText> _quickActions() {
+    return const [
+      LocalizedText(
+        en: 'Help me describe my project',
+        ar: 'ساعدني في وصف مشروعي',
+      ),
+      LocalizedText(
+        en: 'Suggest a project title',
+        ar: 'اقترح عنواناً للمشروع',
+      ),
+      LocalizedText(
+        en: 'Write a short description',
+        ar: 'اكتب وصفاً قصيراً',
+      ),
+      LocalizedText(
+        en: 'Improve my full description',
+        ar: 'حسّن الوصف الكامل',
+      ),
+      LocalizedText(
+        en: 'Organize my components',
+        ar: 'نظّم المكوّنات',
+      ),
+      LocalizedText(
+        en: 'Turn my notes into steps',
+        ar: 'حوّل ملاحظاتي إلى خطوات',
+      ),
+      LocalizedText(
+        en: 'Review my current draft',
+        ar: 'راجع مسودتي الحالية',
+      ),
+      LocalizedText(
+        en: 'What information is missing?',
+        ar: 'ما المعلومات الناقصة؟',
+      ),
+    ];
+  }
+}
+
+class _CloseCopilotIntent extends Intent {
+  const _CloseCopilotIntent();
+}
+
+class _ManualDraftCopilotMessageBubble extends StatelessWidget {
+  const _ManualDraftCopilotMessageBubble({
+    required this.message,
+    required this.onCopy,
+    this.maxBubbleWidth,
+  });
+
+  final _ManualDraftCopilotTurn message;
+  final Future<void> Function(String text) onCopy;
+  final double? maxBubbleWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.role == 'user';
+    final palette = LearningUiPalette.of(context);
+    final colors = AppThemeColors.of(context);
+    final alignment = isUser
+        ? AlignmentDirectional.centerEnd
+        : AlignmentDirectional.centerStart;
+    final background = isUser ? colors.primarySoft : palette.cardSurfaceAlt;
+
+    return Align(
+      alignment: alignment,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: maxBubbleWidth ?? min(MediaQuery.sizeOf(context).width * 0.82, 420),
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: palette.borderSubtle),
+          ),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+            child: isUser
+                ? Text(
+                    message.text,
+                    textDirection: resolveContentTextDirection(message.text),
+                    style: AppTextStyles.body(context),
+                  )
+                : _ManualDraftCopilotAssistantBody(
+                    text: message.text,
+                    onCopy: onCopy,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ManualDraftCopilotAssistantBody extends StatelessWidget {
+  const _ManualDraftCopilotAssistantBody({
+    required this.text,
+    required this.onCopy,
+  });
+
+  final String text;
+  final Future<void> Function(String text) onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final sections = _parseCopilotSections(text);
+    if (sections.length <= 1 && !text.contains('### ')) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            text,
+            textDirection: resolveContentTextDirection(text),
+            style: AppTextStyles.body(context),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              onPressed: () => onCopy(text),
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: Text(_ManualDraftCopilotL10n.copy.resolve(context)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final section in sections) ...[
+          if (section.title != null)
+            Text(
+              section.title!,
+              style: AppTextStyles.label(context),
+            ),
+          if (section.body.isNotEmpty) ...[
+            if (section.title != null) const SizedBox(height: AppSpacing.xs),
+            Text(
+              section.body,
+              textDirection: resolveContentTextDirection(section.body),
+              style: AppTextStyles.body(context),
+            ),
+          ],
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton.icon(
+              onPressed: () => onCopy(section.copyText),
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: Text(_ManualDraftCopilotL10n.copy.resolve(context)),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      ],
+    );
+  }
+}
+
+class _CopilotSection {
+  const _CopilotSection({this.title, required this.body});
+
+  final String? title;
+  final String body;
+
+  String get copyText =>
+      title == null ? body : '$title\n$body'.trim();
+}
+
+List<_CopilotSection> _parseCopilotSections(String text) {
+  final lines = text.split('\n');
+  final sections = <_CopilotSection>[];
+  String? currentTitle;
+  final buffer = StringBuffer();
+
+  void flush() {
+    final body = buffer.toString().trim();
+    if (currentTitle != null || body.isNotEmpty) {
+      sections.add(_CopilotSection(title: currentTitle, body: body));
+    }
+    buffer.clear();
+    currentTitle = null;
+  }
+
+  for (final line in lines) {
+    if (line.startsWith('### ')) {
+      flush();
+      currentTitle = line.substring(4).trim();
+    } else {
+      if (buffer.isNotEmpty) {
+        buffer.writeln();
+      }
+      buffer.write(line);
+    }
+  }
+  flush();
+  return sections;
+}
+
+class _ManualDraftCopilotComposer extends StatelessWidget {
+  const _ManualDraftCopilotComposer({
+    required this.controller,
+    required this.focusNode,
+    required this.sending,
+    required this.onSend,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool sending;
+  final VoidCallback onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
+    return Material(
+      elevation: 6,
+      child: Padding(
+        padding: EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.md + MediaQuery.paddingOf(context).bottom,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                minLines: 1,
+                maxLines: 5,
+                textInputAction: TextInputAction.newline,
+                onSubmitted: (_) => onSend(),
+                decoration: InputDecoration(
+                  hintText: _ManualDraftCopilotL10n.composerHint.resolve(context),
+                  filled: true,
+                  fillColor: palette.cardSurfaceAlt,
+                  border: OutlineInputBorder(
+                    borderRadius: AppRadius.lgAll,
+                    borderSide: BorderSide(color: palette.borderSubtle),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            IconButton.filled(
+              tooltip: _ManualDraftCopilotL10n.send.resolve(context),
+              onPressed: sending ? null : onSend,
+              icon: sending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded),
+            ),
+          ],
+        ),
       ),
     );
   }

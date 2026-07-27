@@ -1,6 +1,11 @@
 import 'learning_projects_result.dart';
 import 'models/learning_project.dart';
-import 'models/learning_project_submission.dart';
+import 'models/learning_project_submission.dart'
+    show
+        LearningProjectAuthoringSession,
+        LearningProjectSubmission,
+        LearningProjectSubmissionsQuery,
+        LearningProjectSubmissionsResult;
 import 'models/project_build.dart';
 import 'project_engagement.dart';
 import 'project_follow_status.dart';
@@ -35,6 +40,11 @@ abstract class LearningProjectRepository {
     String id,
   );
 
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  });
+
   Future<ProjectBuild?> fetchMyBuild(String projectId);
 
   Future<ProjectBuild> startBuild(String projectId);
@@ -58,6 +68,12 @@ abstract class LearningProjectRepository {
   });
 
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId);
+
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId);
+
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  );
 
   Future<List<MaterialCategory>> fetchProjectCategories();
 
@@ -90,5 +106,18 @@ abstract class LearningProjectRepository {
     List<Map<String, dynamic>>? requiredComponents,
     List<Map<String, dynamic>>? steps,
     List<Map<String, dynamic>>? links,
+  });
+
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  });
+
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
   });
 }
