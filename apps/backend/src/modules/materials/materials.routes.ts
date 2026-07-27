@@ -24,6 +24,7 @@ import {
   priceCheckSchema,
 } from './materials.validation.js';
 import { submitMaterialReportSchema } from '../admin-materials/admin-materials.validation.js';
+import { attachCommentRoutes } from '../comments/comments.routes.js';
 
 export const materialsRouter = Router();
 
@@ -66,6 +67,8 @@ materialsRouter.post(
   validate(submitMaterialReportSchema),
   asyncHandler(submitMaterialReport),
 );
+
+attachCommentRoutes(materialsRouter);
 
 materialsRouter.get(
   '/:id',
