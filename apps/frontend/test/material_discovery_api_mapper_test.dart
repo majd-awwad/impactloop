@@ -320,4 +320,88 @@ void main() {
     expect(material.imageUrl, endsWith('/uploads/materials/legacy.jpg'));
     expect(material.resolvedGalleryImages.length, 1);
   });
+
+  test('maps the optional recommendation impression id', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-recommended',
+      'title': 'Recommended material',
+      'description': 'Recommendation payload',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'recommendationImpressionId': 'imp-material-1',
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(material.recommendationImpressionId, 'imp-material-1');
+  });
+
+  test('does not invent a recommendation impression id', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-plain',
+      'title': 'Plain material',
+      'description': 'Normal discovery payload',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'recommendationImpressionId': '   ',
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(material.recommendationImpressionId, isNull);
+  });
+
+  test('rejects malformed recommendation impression values', () {
+    for (final value in <Object?>[
+      null,
+      '',
+      '   ',
+      42,
+      {'id': 'not-an-id'},
+      ['not-an-id'],
+    ]) {
+      final material = MaterialDiscoveryApiMapper.fromJson({
+        'id': 'mat-malformed',
+        'title': 'Malformed recommendation value',
+        'description': 'Still a valid material response',
+        'status': 'AVAILABLE',
+        'quantity': 1,
+        'unit': 'piece',
+        'condition': 'GOOD',
+        'isFree': true,
+        'deliveryAvailable': false,
+        'recommendationImpressionId': value,
+        'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      });
+
+      expect(material.recommendationImpressionId, isNull);
+    }
+  });
+
+  test('preserves recommendation context across engagement copy updates', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-copy',
+      'title': 'Copyable material',
+      'description': 'Recommendation payload',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'recommendationImpressionId': 'imp-copy-material',
+      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+    });
+
+    expect(
+      material.copyWith(likesCount: 1).recommendationImpressionId,
+      'imp-copy-material',
+    );
+  });
 }

@@ -163,6 +163,11 @@ export type LearnerBehaviorContext = {
   likedProjects: LearnerBehaviorProjectSignal[];
   followedProjects: LearnerBehaviorProjectSignal[];
   inProgressBuildProjects: LearnerBehaviorProjectSignal[];
+  recentRecommendationEvents?: Array<{
+    entityKey: string;
+    actionType: string;
+    timestampUtc: string;
+  }>;
 };
 
 export type LearnerAffinityProfile = Map<string, number>;

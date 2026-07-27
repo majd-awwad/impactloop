@@ -297,9 +297,9 @@ Mount order: `apps/backend/src/app.ts`
 
 ## `supplier-reservations`
 
-**Purpose:** Supplier-side reservation workflow: list, accept, decline, complete pickup.
+**Purpose:** Supplier-side reservation workflow: list, additive entry-based Pickup Schedule read, accept, decline, and complete pickup.
 
-**Key files:** `supplier-reservations.routes.ts`, `supplier-reservations.controller.ts`, `supplier-reservations.service.ts`, `supplier-reservations.repository.ts`, `supplier-reservations.validation.ts`, `supplier-reservations.complete.test.ts`
+**Key files:** `supplier-reservations.routes.ts`, `supplier-reservations.controller.ts`, `supplier-reservations.service.ts`, `supplier-reservations.repository.ts`, `supplier-reservations.validation.ts`, `supplier-reservations-schedule.classifier.ts`, `supplier-reservations-schedule.service.ts`, `supplier-reservations.schedule.test.ts`
 
 **Prisma:** `Reservation`, `ReservationStatusHistory`
 

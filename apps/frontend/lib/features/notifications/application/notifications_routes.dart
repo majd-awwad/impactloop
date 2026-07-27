@@ -4,9 +4,7 @@ const driverNotificationsRoute = '/driver/notifications';
 const sharedNotificationsRoute = '/notifications';
 
 String notificationsRouteForUser(User? user) {
-  if (user != null &&
-      user.isDriverMode &&
-      user.hasRole('DRIVER')) {
+  if (user != null && user.isDriverMode && user.hasRole('DRIVER')) {
     return driverNotificationsRoute;
   }
 

@@ -63,7 +63,8 @@ class AdminInvitationItem {
       recipientEmail: json['recipientEmail'] as String? ?? '',
       role: json['role'] as String? ?? '',
       status: json['status'] as String? ?? 'PENDING',
-      expiresAt: DateTime.tryParse(json['expiresAt'] as String? ?? '') ??
+      expiresAt:
+          DateTime.tryParse(json['expiresAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       sentAt: json['sentAt'] == null
           ? null
@@ -78,7 +79,8 @@ class AdminInvitationItem {
           ? null
           : DateTime.tryParse(json['revokedAt'] as String),
       sendError: json['sendError'] as String?,
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       createdBy: json['createdBy'] is Map<String, dynamic>
           ? AdminInvitationCreator.fromJson(
@@ -151,11 +153,11 @@ class AdminInvitationCreateRequest {
   final String? note;
 
   Map<String, dynamic> toJson() => {
-        'role': role,
-        'recipientEmail': recipientEmail,
-        'expiresInMinutes': expiresInMinutes,
-        if (note != null && note!.trim().isNotEmpty) 'note': note,
-      };
+    'role': role,
+    'recipientEmail': recipientEmail,
+    'expiresInMinutes': expiresInMinutes,
+    if (note != null && note!.trim().isNotEmpty) 'note': note,
+  };
 }
 
 class AdminInvitationLinkResult {

@@ -139,6 +139,69 @@ void main() {
       expect(project.ratingCount, 12);
     });
 
+    test('maps the optional recommendation impression id', () {
+      final project = LearningHubApiMapper.fromListItemJson({
+        'id': 'project-recommended',
+        'title': 'Recommended project',
+        'shortDescription': 'Recommendation payload',
+        'category': {'nameEn': 'Energy', 'nameAr': 'طاقة'},
+        'difficulty': 'BEGINNER',
+        'recommendationImpressionId': 'imp-project-1',
+      });
+
+      expect(project.recommendationImpressionId, 'imp-project-1');
+    });
+
+    test('does not invent a recommendation impression id', () {
+      final project = LearningHubApiMapper.fromListItemJson({
+        'id': 'project-plain',
+        'title': 'Plain project',
+        'shortDescription': 'Normal discovery payload',
+        'category': {'nameEn': 'Energy', 'nameAr': 'طاقة'},
+        'difficulty': 'BEGINNER',
+        'recommendationImpressionId': null,
+      });
+
+      expect(project.recommendationImpressionId, isNull);
+    });
+
+    test('rejects malformed project recommendation impression values', () {
+      for (final value in <Object?>[
+        '',
+        '   ',
+        42,
+        {'id': 'not-an-id'},
+        ['not-an-id'],
+      ]) {
+        final project = LearningHubApiMapper.fromListItemJson({
+          'id': 'project-malformed',
+          'title': 'Malformed recommendation value',
+          'shortDescription': 'Still a valid project response',
+          'category': {'nameEn': 'Energy', 'nameAr': 'طاقة'},
+          'difficulty': 'BEGINNER',
+          'recommendationImpressionId': value,
+        });
+
+        expect(project.recommendationImpressionId, isNull);
+      }
+    });
+
+    test('preserves recommendation context across engagement copy updates', () {
+      final project = LearningHubApiMapper.fromListItemJson({
+        'id': 'project-copy',
+        'title': 'Copyable project',
+        'shortDescription': 'Recommendation payload',
+        'category': {'nameEn': 'Energy', 'nameAr': 'طاقة'},
+        'difficulty': 'BEGINNER',
+        'recommendationImpressionId': 'imp-copy-project',
+      });
+
+      expect(
+        project.copyWith(isLiked: true).recommendationImpressionId,
+        'imp-copy-project',
+      );
+    });
+
     test('formatDurationMinutes handles flexible and hour labels', () {
       expect(
         LearningHubApiMapper.formatDurationMinutes(null),

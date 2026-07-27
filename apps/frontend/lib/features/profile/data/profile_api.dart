@@ -50,7 +50,9 @@ class ProfileApi {
 
   Future<LearnerInterestOptionsResponse> getLearnerInterestOptions() {
     return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>('$_profileBasePath/learner/interests/options'),
+      _client.get<Map<String, dynamic>>(
+        '$_profileBasePath/learner/interests/options',
+      ),
       (json) => LearnerInterestOptionsResponse.fromJson(json),
     );
   }

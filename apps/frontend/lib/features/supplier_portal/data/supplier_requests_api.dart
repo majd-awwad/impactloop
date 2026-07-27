@@ -9,13 +9,41 @@ class SupplierRequestsApi {
 
   final Dio _client;
 
-  Future<List<SupplierIncomingRequest>> fetchIncomingRequests(
-    SupplierIncomingRequestTab status,
-  ) async {
+  Future<SupplierReservationListResponse> fetchIncomingRequestsResponse({
+    String? status,
+    String? search,
+    String? attentionState,
+    String? fulfillmentMethod,
+    String? historyScope,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    required int page,
+    required int limit,
+  }) async {
     try {
+      final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
+      if (status != null) queryParameters['status'] = status;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParameters['search'] = search.trim();
+      }
+      if (attentionState != null) {
+        queryParameters['attentionState'] = attentionState;
+      }
+      if (fulfillmentMethod != null) {
+        queryParameters['fulfillmentMethod'] = fulfillmentMethod;
+      }
+      if (historyScope != null) {
+        queryParameters['historyScope'] = historyScope;
+      }
+      if (dateFrom != null) {
+        queryParameters['dateFrom'] = dateFrom.toUtc().toIso8601String();
+      }
+      if (dateTo != null) {
+        queryParameters['dateTo'] = dateTo.toUtc().toIso8601String();
+      }
       final response = await _client.get<Map<String, dynamic>>(
         '/api/supplier/reservations',
-        queryParameters: {'status': status.apiQueryValue},
+        queryParameters: queryParameters,
       );
 
       final body = response.data;
@@ -31,19 +59,39 @@ class SupplierRequestsApi {
         throw const ApiException(message: 'Unexpected reservations response');
       }
 
-      final reservations = data['reservations'];
-      if (reservations is! List) {
-        throw const ApiException(message: 'Unexpected reservations response');
-      }
+      return SupplierReservationListResponse.fromData(
+        Map<String, dynamic>.from(data),
+      );
+    } on ApiException {
+      rethrow;
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
 
-      return reservations
-          .whereType<Map>()
-          .map(
-            (item) => SupplierIncomingRequest.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
-          .toList();
+  Future<SupplierReservationDetail> fetchReservationDetail(
+    String reservationId,
+  ) async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/api/supplier/reservations/$reservationId',
+      );
+      final body = response.data;
+      if (body == null || body['success'] != true) {
+        throw ApiException(
+          message: body?['message'] as String? ?? 'Could not load reservation',
+          statusCode: response.statusCode,
+        );
+      }
+      final data = body['data'];
+      if (data is! Map) {
+        throw const ApiException(
+          message: 'Unexpected reservation detail response',
+        );
+      }
+      return SupplierReservationDetail.fromJson(
+        Map<String, dynamic>.from(data),
+      );
     } on ApiException {
       rethrow;
     } on DioException catch (error) {
@@ -177,7 +225,8 @@ class SupplierRequestsApi {
       final response = await _client.patch<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/cancel',
         data: {
-          if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
         },
       );
 
@@ -197,10 +246,7 @@ class SupplierRequestsApi {
     try {
       final response = await _client.post<Map<String, dynamic>>(
         '/api/supplier/reservations/$requestId/no-show-report',
-        data: {
-          'reasonCode': reasonCode,
-          'note': note?.trim() ?? '',
-        },
+        data: {'reasonCode': reasonCode, 'note': note?.trim() ?? ''},
       );
 
       final body = response.data;

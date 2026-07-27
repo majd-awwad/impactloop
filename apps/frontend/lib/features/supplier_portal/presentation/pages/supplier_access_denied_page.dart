@@ -61,8 +61,9 @@ class SupplierAccessDeniedPage extends StatelessWidget {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: colors.textPrimary,
                                 side: BorderSide(
-                                  color: colors.borderFocused
-                                      .withValues(alpha: 0.5),
+                                  color: colors.borderFocused.withValues(
+                                    alpha: 0.5,
+                                  ),
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: AppRadius.pillAll,

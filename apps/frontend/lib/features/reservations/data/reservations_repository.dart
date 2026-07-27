@@ -22,9 +22,13 @@ class ReservationsRepository {
   final ReservationsApi _api;
 
   Future<CreatedReservation> createReservation(
-    CreateReservationRequest request,
-  ) {
-    return _api.createReservation(request);
+    CreateReservationRequest request, {
+    String? recommendationImpressionId,
+  }) {
+    return _api.createReservation(
+      request,
+      recommendationImpressionId: recommendationImpressionId,
+    );
   }
 
   Future<ReservationQuote> fetchReservationQuote(

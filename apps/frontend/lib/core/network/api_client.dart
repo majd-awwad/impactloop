@@ -7,6 +7,15 @@ import '../auth/auth_session_refresh.dart';
 import '../config/api_config.dart';
 import 'dio_platform_adapter.dart';
 
+Map<String, String>? recommendationHeaders(String? impressionId) {
+  final normalized = impressionId?.trim();
+  if (normalized == null || normalized.isEmpty) {
+    return null;
+  }
+
+  return {'X-Recommendation-Impression-Id': normalized};
+}
+
 final apiClientProvider = Provider<Dio>((ref) {
   final accessTokenHolder = ref.watch(accessTokenHolderProvider);
   final sessionRefresher = ref.watch(authSessionRefresherProvider);

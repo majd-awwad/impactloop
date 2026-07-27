@@ -2,6 +2,15 @@ import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  defaultComponentConceptLifecycleDeps,
+  type ComponentConceptLifecycleDeps,
+} from '../taxonomy/component-concept-assignment.repository.js';
+import {
+  defaultProjectTopicLifecycleDeps,
+  type ProjectTopicLifecycleDeps,
+} from '../taxonomy/project-concept-assignment.repository.js';
 import type {
   LearningProjectsQuery,
   MyLearningProjectsQuery,
@@ -1012,29 +1021,30 @@ export const findFollowedProjectIds = async (
   return new Set(follows.map((follow) => follow.projectId));
 };
 
-export const setProjectLiked = async (projectId: string, userId: string) => {
-  await prisma.projectLike.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectLiked = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectLike.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetProjectLiked = async (projectId: string, userId: string) => {
-  await prisma.projectLike.deleteMany({
+export const unsetProjectLiked = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectLike.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countLikesForProject = async (projectId: string) => {
@@ -1043,57 +1053,56 @@ export const countLikesForProject = async (projectId: string) => {
   });
 };
 
-export const setProjectSaved = async (projectId: string, userId: string) => {
-  await prisma.projectSave.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectSaved = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectSave.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetProjectSaved = async (projectId: string, userId: string) => {
-  await prisma.projectSave.deleteMany({
+export const unsetProjectSaved = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectSave.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
-export const setProjectFollowed = async (projectId: string, userId: string) => {
-  await prisma.projectFollow.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectFollowed = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectFollow.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
 export const unsetProjectFollowed = async (
   projectId: string,
   userId: string,
-) => {
-  await prisma.projectFollow.deleteMany({
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectFollow.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countFollowsForProject = async (projectId: string) => {
@@ -1252,11 +1261,17 @@ export const createLearningProjectForReview = async (input: {
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
   client?: Prisma.TransactionClient;
+  topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
   const now = new Date();
   const client = clientOrPrisma(input.client);
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
 
-  return client.learningProject.create({
+  const project = await client.learningProject.create({
     data: {
       categoryId: input.categoryId,
       createdBy: input.createdBy,
@@ -1296,11 +1311,30 @@ export const createLearningProjectForReview = async (input: {
     },
     select: {
       id: true,
+      categoryId: true,
       title: true,
       status: true,
       submittedAt: true,
     },
   });
+
+  await topicLifecycleDeps.reconcileLearningProjectTopics(
+    client,
+    project.id,
+    project.categoryId,
+  );
+
+  await componentLifecycleDeps.reconcileLearningProjectComponents(
+    client,
+    project.id,
+  );
+
+  return {
+    id: project.id,
+    title: project.title,
+    status: project.status,
+    submittedAt: project.submittedAt,
+  };
 };
 
 export const updateMyLearningProjectSubmission = async (input: {
@@ -1319,8 +1353,15 @@ export const updateMyLearningProjectSubmission = async (input: {
   }>;
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
+  topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
-  const updated = await prisma.$transaction(async (tx) => {
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
+
+  const updated = await runSerializableTransaction(async (tx) => {
     const existing = await tx.learningProject.findFirst({
       where: {
         id: input.id,
@@ -1396,6 +1437,17 @@ export const updateMyLearningProjectSubmission = async (input: {
       });
     }
 
+    const committed = await tx.learningProject.findUniqueOrThrow({
+      where: { id: input.id },
+      select: { categoryId: true },
+    });
+
+    await topicLifecycleDeps.reconcileLearningProjectTopics(
+      tx,
+      input.id,
+      committed.categoryId,
+    );
+
     if (input.requiredComponents !== undefined) {
       const existingIds = new Set(
         existing.requiredComponents.map((component) => component.id),
@@ -1457,6 +1509,11 @@ export const updateMyLearningProjectSubmission = async (input: {
           },
         });
       }
+
+      await componentLifecycleDeps.reconcileLearningProjectComponents(
+        tx,
+        input.id,
+      );
     }
 
     if (input.steps !== undefined) {

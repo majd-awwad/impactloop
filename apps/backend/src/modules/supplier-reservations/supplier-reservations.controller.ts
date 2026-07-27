@@ -10,8 +10,9 @@ import {
   completeSupplierReservation,
   createSupplierReservationMessage,
   declineSupplierReservation,
+  getSupplierReservationDetail,
   listSupplierReservationMessages,
-  listSupplierReservations,
+  listSupplierReservationsPage,
   rescheduleSupplierReservation,
   reportSupplierNoDriverAvailable,
   submitNoDriverPickupWindow,
@@ -35,12 +36,26 @@ export const listSupplierReservationsHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const reservations = await listSupplierReservations(
+  const result = await listSupplierReservationsPage(
     req.auth!.sub,
     readValidatedQuery<ListSupplierReservationsQuery>(req),
   );
 
-  res.json(successResponse('Supplier reservations loaded.', { reservations }));
+  res.json(successResponse('Supplier reservations loaded.', {
+    // Kept until the Flutter data migration reads `items`.
+    reservations: result.items,
+    ...result,
+  }));
+};
+
+export const getSupplierReservationHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<ReservationIdParams>(req);
+  const reservation = await getSupplierReservationDetail(req.auth!.sub, id);
+
+  res.json(successResponse('Supplier reservation loaded.', reservation));
 };
 
 export const acceptSupplierReservationHandler = async (

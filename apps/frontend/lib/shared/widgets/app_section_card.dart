@@ -27,9 +27,7 @@ class AppSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    final statusStyle = tone == null
-        ? null
-        : AppStatusStyle.of(context, tone!);
+    final statusStyle = tone == null ? null : AppStatusStyle.of(context, tone!);
 
     return Container(
       width: double.infinity,
@@ -38,9 +36,7 @@ class AppSectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.cardSurface,
         borderRadius: borderRadius ?? AppRadius.lgAll,
-        border: Border.all(
-          color: statusStyle?.border ?? colors.borderSubtle,
-        ),
+        border: Border.all(color: statusStyle?.border ?? colors.borderSubtle),
         boxShadow: [
           BoxShadow(
             color: colors.shadow.withValues(alpha: emphasized ? 0.12 : 0.08),

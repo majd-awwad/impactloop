@@ -1,25 +1,26 @@
-import type { PrismaClient } from '../../src/generated/prisma/client.js';
+import type { PrismaClient } from "../../src/generated/prisma/client.js";
 
-import { SEED_SUPPLIER_EMAIL } from './supplier-reservations.data.js';
+import { SEED_SUPPLIER_EMAIL } from "./supplier-reservations.data.js";
 import {
   myMaterialsSeedMarker,
   MY_MATERIALS_SEED_PREFIX,
   SUPPLIER_MY_MATERIALS_SEED,
   type SupplierMyMaterialSeedSpec,
-} from './supplier-my-materials.data.js';
+} from "./supplier-my-materials.data.js";
 
 const DEFAULT_ELECTRONICS_IMAGE =
-  'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&w=1200&q=80';
+  "https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&w=1200&q=80";
 
 const shouldForceReseed = (): boolean =>
-  process.env.SEED_FORCE_SUPPLIER_MATERIALS === 'true';
+  process.env.SEED_FORCE_SUPPLIER_MATERIALS === "true";
 
-const locationKey = (location: SupplierMyMaterialSeedSpec['location']): string =>
-  `${location.country}|${location.city}|${location.area}`;
+const locationKey = (
+  location: SupplierMyMaterialSeedSpec["location"],
+): string => `${location.country}|${location.city}|${location.area}`;
 
 async function ensureLocation(
   prisma: PrismaClient,
-  location: SupplierMyMaterialSeedSpec['location'],
+  location: SupplierMyMaterialSeedSpec["location"],
 ) {
   const existing = await prisma.location.findFirst({
     where: {
@@ -39,7 +40,7 @@ async function ensureLocation(
       country: location.country,
       city: location.city,
       area: location.area,
-      visibility: 'PUBLIC_APPROXIMATE',
+      visibility: "PUBLIC_APPROXIMATE",
       isApproximate: true,
     },
     select: { id: true },
@@ -96,7 +97,7 @@ async function resolveCategoryIdByName(
   const category = await prisma.category.findFirst({
     where: { nameEn: categoryNameEn },
     select: { id: true },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { createdAt: "asc" },
   });
 
   if (!category) {
@@ -138,15 +139,15 @@ async function upsertMyMaterial(
     quantity: spec.quantity,
     unit: spec.unit,
     condition: spec.condition,
-    sourceType: 'WORKSHOP_SURPLUS' as const,
+    sourceType: "WORKSHOP_SURPLUS" as const,
     status: spec.status,
     isFree: spec.isFree,
     price: spec.price,
-    currency: 'NIS',
+    currency: "NIS",
     pickupAllowed: spec.pickupAllowed,
     deliveryAllowed: spec.deliveryAllowed,
     viewsCount: spec.viewsCount,
-    reusedAt: spec.status === 'REUSED' ? new Date() : null,
+    reusedAt: spec.status === "REUSED" ? new Date() : null,
   };
 
   const material = existing
@@ -204,11 +205,11 @@ export async function seedSupplierMaterials(prisma: PrismaClient) {
 
   if (!supplier?.supplierProfile) {
     console.log(
-      'Supplier materials seed skipped: seed supplier account not found.',
+      "Supplier materials seed skipped: seed supplier account not found.",
     );
     return {
       skipped: true,
-      reason: 'missing_seed_supplier',
+      reason: "missing_seed_supplier",
       materialsSeeded: [] as string[],
       supplierEmail: SEED_SUPPLIER_EMAIL,
     };
@@ -256,10 +257,10 @@ export async function seedSupplierMaterials(prisma: PrismaClient) {
     console.log(`Added default images to ${imagesAdded} materials.`);
   }
 
-  console.log('Supplier materials seed complete.');
+  console.log("Supplier materials seed complete.");
   console.log(`  Supplier login: ${SEED_SUPPLIER_EMAIL}`);
   console.log(`  My materials seeded: ${materialsSeeded.length}`);
-  console.log('  Materials per category:');
+  console.log("  Materials per category:");
   for (const [categoryName, count] of [...categoryCounts.entries()].sort()) {
     console.log(`    - ${categoryName}: ${count}`);
   }

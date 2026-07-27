@@ -1,4 +1,1 @@
-enum SupplierLocationInputMode {
-  currentLocation,
-  manual,
-}
+enum SupplierLocationInputMode { currentLocation, manual }

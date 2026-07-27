@@ -35,10 +35,7 @@ class SupplierUpcomingPickupsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.s.upcomingPickups,
-          style: context.supplierSectionTitle(),
-        ),
+        Text(context.s.upcomingPickups, style: context.supplierSectionTitle()),
         const SizedBox(height: AppSpacing.md),
         if (pickups.isEmpty)
           Container(
@@ -47,10 +44,7 @@ class SupplierUpcomingPickupsSection extends StatelessWidget {
             decoration: context.supplierDecorations.dashboardCard,
             child: Row(
               children: [
-                Icon(
-                  Icons.local_shipping_outlined,
-                  color: colors.accent,
-                ),
+                Icon(Icons.local_shipping_outlined, color: colors.accent),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(

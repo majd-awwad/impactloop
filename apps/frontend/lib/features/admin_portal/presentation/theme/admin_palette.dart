@@ -61,15 +61,15 @@ class AdminPalette {
   final Color chartGrid;
 
   List<Color> get categoryBarColors => [
-        primaryTeal,
-        green,
-        blue,
-        amber,
-        purple,
-        brightTeal,
-        const Color(0xFFEC4899),
-        red,
-      ];
+    primaryTeal,
+    green,
+    blue,
+    amber,
+    purple,
+    brightTeal,
+    const Color(0xFFEC4899),
+    red,
+  ];
 
   // Compatibility aliases for shared admin shell widgets.
   Color get border => cardBorder;
@@ -110,8 +110,9 @@ class AdminPalette {
         sidebarBorder: AppColorTokens.darkBorderCard.withValues(alpha: 0.5),
         sidebarTextPrimary: AppColorTokens.darkTextPrimary,
         sidebarTextSecondary: AppColorTokens.darkTextSecondary,
-        sidebarActiveBackground:
-            AppColorTokens.legacyAuthAccentSoft.withValues(alpha: 0.16),
+        sidebarActiveBackground: AppColorTokens.legacyAuthAccentSoft.withValues(
+          alpha: 0.16,
+        ),
         sidebarActiveAccent: AppColorTokens.mintBright,
         sidebarAccentSoft: AppColorTokens.legacyAuthAccentSoft,
         topBarBackground: AppColorTokens.darkSurface,
@@ -141,8 +142,9 @@ class AdminPalette {
       sidebarBorder: AppColorTokens.darkBorderCard.withValues(alpha: 0.45),
       sidebarTextPrimary: AppColorTokens.darkTextPrimary,
       sidebarTextSecondary: AppColorTokens.darkTextSecondary,
-      sidebarActiveBackground:
-          AppColorTokens.legacyAuthAccentSoft.withValues(alpha: 0.22),
+      sidebarActiveBackground: AppColorTokens.legacyAuthAccentSoft.withValues(
+        alpha: 0.22,
+      ),
       sidebarActiveAccent: AppColorTokens.mintBright,
       sidebarAccentSoft: AppColorTokens.legacyAuthAccentSoft,
       topBarBackground: const Color(0xFFFFFFFF),

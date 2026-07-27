@@ -23,7 +23,8 @@ class AdminReservationsApi {
       'page': page,
       'limit': limit,
       if (search != null && search.isNotEmpty) 'search': search,
-      if (status != null && status.isNotEmpty && status != 'ALL') 'status': status,
+      if (status != null && status.isNotEmpty && status != 'ALL')
+        'status': status,
       if (hasDelivery != null && hasDelivery.isNotEmpty && hasDelivery != 'ALL')
         'hasDelivery': hasDelivery,
       if (dateFrom != null && dateFrom.isNotEmpty) 'dateFrom': dateFrom,

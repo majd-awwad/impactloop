@@ -52,6 +52,7 @@ class DiscoveryMaterial {
     this.isOwnMaterial,
     this.canReserve,
     this.reserveBlockReason,
+    this.recommendationImpressionId,
   });
 
   final String id;
@@ -97,6 +98,7 @@ class DiscoveryMaterial {
   final bool? isOwnMaterial;
   final bool? canReserve;
   final String? reserveBlockReason;
+  final String? recommendationImpressionId;
 
   bool get isPopular => viewsCount >= materialPopularViewsThreshold;
 
@@ -118,6 +120,7 @@ class DiscoveryMaterial {
     int? viewsCount,
     int? likesCount,
     bool? isLiked,
+    String? recommendationImpressionId,
   }) {
     return DiscoveryMaterial(
       id: id,
@@ -163,6 +166,8 @@ class DiscoveryMaterial {
       isOwnMaterial: isOwnMaterial,
       canReserve: canReserve,
       reserveBlockReason: reserveBlockReason,
+      recommendationImpressionId:
+          recommendationImpressionId ?? this.recommendationImpressionId,
     );
   }
 

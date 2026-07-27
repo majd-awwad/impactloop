@@ -78,7 +78,10 @@ abstract final class SupplierMyMaterialsColors {
     );
   }
 
-  static ButtonStyle editButtonStyle(BuildContext context, {bool enabled = true}) {
+  static ButtonStyle editButtonStyle(
+    BuildContext context, {
+    bool enabled = true,
+  }) {
     final colors = _colors(context);
     final textTheme = Theme.of(context).textTheme;
     final accent = colors.primary;
@@ -95,7 +98,10 @@ abstract final class SupplierMyMaterialsColors {
     );
   }
 
-  static ButtonStyle deleteButtonStyle(BuildContext context, {bool enabled = true}) {
+  static ButtonStyle deleteButtonStyle(
+    BuildContext context, {
+    bool enabled = true,
+  }) {
     final colors = _colors(context);
     final textTheme = Theme.of(context).textTheme;
     final accent = colors.danger;

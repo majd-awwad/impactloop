@@ -71,9 +71,9 @@ class AdminAuditStatCard extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               value,
-                              style: AdminTypography.kpiValue(palette).copyWith(
-                                fontSize: 17,
-                              ),
+                              style: AdminTypography.kpiValue(
+                                palette,
+                              ).copyWith(fontSize: 17),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),

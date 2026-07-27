@@ -25,26 +25,11 @@ void main() {
             'cancelled': 0,
             'expired': 0,
           },
-          'impact': {
-            'reusedMaterials': 0,
-            'reusedQuantity': 0,
-          },
-          'reviews': {
-            'averageRating': 0,
-            'totalReviews': 0,
-          },
-          'notifications': {
-            'unread': 0,
-          },
-          'engagement': {
-            'totalViews': 0,
-            'totalLikes': 0,
-            'followersCount': 0,
-          },
-          'operational': {
-            'scheduledPickups': 0,
-            'activeMaterials': 0,
-          },
+          'impact': {'reusedMaterials': 0, 'reusedQuantity': 0},
+          'reviews': {'averageRating': 0, 'totalReviews': 0},
+          'notifications': {'unread': 0},
+          'engagement': {'totalViews': 0, 'totalLikes': 0, 'followersCount': 0},
+          'operational': {'scheduledPickups': 0, 'activeMaterials': 0},
         },
         'recentMaterials': [],
         'upcomingPickups': [],
@@ -105,26 +90,15 @@ void main() {
             'cancelled': 0,
             'expired': 0,
           },
-          'impact': {
-            'reusedMaterials': 0,
-            'reusedQuantity': 0,
-          },
-          'reviews': {
-            'averageRating': 4.5,
-            'totalReviews': 2,
-          },
-          'notifications': {
-            'unread': 3,
-          },
+          'impact': {'reusedMaterials': 0, 'reusedQuantity': 0},
+          'reviews': {'averageRating': 4.5, 'totalReviews': 2},
+          'notifications': {'unread': 3},
           'engagement': {
             'totalViews': 20,
             'totalLikes': 4,
             'followersCount': 2,
           },
-          'operational': {
-            'scheduledPickups': 1,
-            'activeMaterials': 1,
-          },
+          'operational': {'scheduledPickups': 1, 'activeMaterials': 1},
         },
         'recentMaterials': [
           {

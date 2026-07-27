@@ -55,9 +55,9 @@ class AppEmptyStateCard extends StatelessWidget {
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colors.textSecondary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: colors.textSecondary),
               ),
               if (actions.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.lg),

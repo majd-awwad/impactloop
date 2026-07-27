@@ -75,6 +75,7 @@ Start here for agents and contributors:
 | Doc | Purpose |
 |-----|---------|
 | [AGENTS.md](AGENTS.md) | Coding rules and MVP decisions |
+| [docs/local-development-and-ml.md](docs/local-development-and-ml.md) | Fresh local setup and local ML demo runbook |
 | [docs/00-ai-docs-router.md](docs/00-ai-docs-router.md) | Which docs to read/update when changing code |
 | [docs/01-project-map.md](docs/01-project-map.md) | Repo map and feature inventory |
 | [docs/02-architecture.md](docs/02-architecture.md) | Architecture (code-derived) |

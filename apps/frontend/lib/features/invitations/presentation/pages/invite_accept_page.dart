@@ -50,7 +50,9 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
     setState(() => _submitting = true);
 
     try {
-      final result = await ref.read(inviteAcceptRepositoryProvider).acceptInvitation(
+      final result = await ref
+          .read(inviteAcceptRepositoryProvider)
+          .acceptInvitation(
             InviteAcceptRequest(
               token: widget.token,
               fullName: _fullNameController.text.trim(),
@@ -69,8 +71,9 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
               addressLine: _addressController.text.trim().isEmpty
                   ? null
                   : _addressController.text.trim(),
-              transportationType:
-                  validation.role == 'DRIVER' ? _transportationType : null,
+              transportationType: validation.role == 'DRIVER'
+                  ? _transportationType
+                  : null,
               availabilityNote: _availabilityController.text.trim().isEmpty
                   ? null
                   : _availabilityController.text.trim(),
@@ -86,18 +89,16 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.token.trim().isEmpty) {
-      return _InviteScaffold(
-        child: const Text('Invalid invitation link.'),
-      );
+      return _InviteScaffold(child: const Text('Invalid invitation link.'));
     }
 
     if (_completed) {
@@ -297,10 +298,15 @@ class _InviteForm extends StatelessWidget {
             DropdownButtonFormField<String>(
               key: ValueKey('transport-$transportationType'),
               initialValue: transportationType,
-              decoration: const InputDecoration(labelText: 'Transportation type'),
+              decoration: const InputDecoration(
+                labelText: 'Transportation type',
+              ),
               items: const [
                 DropdownMenuItem(value: 'CAR', child: Text('Car')),
-                DropdownMenuItem(value: 'MOTORCYCLE', child: Text('Motorcycle')),
+                DropdownMenuItem(
+                  value: 'MOTORCYCLE',
+                  child: Text('Motorcycle'),
+                ),
                 DropdownMenuItem(value: 'BICYCLE', child: Text('Bicycle')),
                 DropdownMenuItem(value: 'WALKING', child: Text('Walking')),
               ],
@@ -313,23 +319,23 @@ class _InviteForm extends StatelessWidget {
             const SizedBox(height: 12),
             TextFormField(
               controller: addressController,
-              decoration: const InputDecoration(labelText: 'Address line (optional)'),
+              decoration: const InputDecoration(
+                labelText: 'Address line (optional)',
+              ),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: availabilityController,
-              decoration:
-                  const InputDecoration(labelText: 'Availability note (optional)'),
+              decoration: const InputDecoration(
+                labelText: 'Availability note (optional)',
+              ),
               maxLines: 2,
             ),
           ],
           const SizedBox(height: 20),
           FilledButton(
             onPressed: submitting ? null : onSubmit,
-            style: AppStatusButtonStyle.filled(
-              context,
-              AppStatusTone.primary,
-            ),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
             child: submitting
                 ? const SizedBox(
                     width: 18,

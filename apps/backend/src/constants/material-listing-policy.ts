@@ -1,7 +1,7 @@
 import {
   DEFAULT_CURRENCY,
   DEFAULT_CURRENCY_SYMBOL,
-} from './material-condition-factors.js';
+} from "./material-condition-factors.js";
 
 export const MATERIAL_LISTING_POLICY = {
   currency: DEFAULT_CURRENCY,
@@ -13,5 +13,5 @@ export const MATERIAL_LISTING_POLICY = {
   paidRequiresApprovedMaterialType: true,
   paidRequiresActivePriceRule: true,
   message:
-    'Free listings may use Other. Paid listings are verified internally against reviewed price references.',
+    "Free listings may use Other. Paid listings are verified internally against reviewed price references.",
 } as const;

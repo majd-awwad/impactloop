@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
+import { PROFILE_UPLOAD_PUBLIC_PREFIX } from '../../constants/profile-upload.js';
 import { materialImageUrlSchema } from '../../utils/material-image-url.js';
+import { isProfileImageUrl } from '../../utils/profile-image-url.js';
 import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 
 const supplierTypes = [
@@ -32,6 +34,17 @@ const materialSourceTypes = [
   'EDUCATIONAL_INSTITUTION',
 ] as const;
 
+const supplierProfileImageUrlSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      value.startsWith(`${PROFILE_UPLOAD_PUBLIC_PREFIX}/`)
+        ? /^\/uploads\/profiles\/[a-z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(value)
+        : isProfileImageUrl(value),
+    { message: 'Invalid Supplier profile image URL' },
+  );
+
 const locationSchema = z
   .object({
     country: z.string().trim().max(100),
@@ -44,6 +57,7 @@ const locationSchema = z
     isApproximate: z.boolean(),
     locationType: z.string().trim().min(1).max(80).optional().nullable(),
   })
+  .strict()
   .superRefine((location, ctx) => {
     const hasCoordinates =
       location.latitude != null && location.longitude != null;
@@ -61,20 +75,22 @@ const locationSchema = z
     }
   });
 
-const organizationProfileSchema = z.object({
-  organizationName: z.string().trim().min(2).max(120),
-  organizationType: z.enum(organizationTypes),
-  contactPersonName: z.string().trim().max(100).optional().nullable(),
-  workingDays: z.array(z.string().trim().min(1).max(30)).optional().nullable(),
-  workingHours: z
-    .object({
-      from: z.string().trim().max(20).optional(),
-      to: z.string().trim().max(20).optional(),
-    })
-    .optional()
-    .nullable(),
-  businessLocation: locationSchema.optional().nullable(),
-});
+const organizationProfileSchema = z
+  .object({
+    organizationName: z.string().trim().min(2).max(120),
+    organizationType: z.enum(organizationTypes),
+    contactPersonName: z.string().trim().max(100).optional().nullable(),
+    workingDays: z.array(z.string().trim().min(1).max(30)).optional().nullable(),
+    workingHours: z
+      .object({
+        from: z.string().trim().max(20).optional(),
+        to: z.string().trim().max(20).optional(),
+      })
+      .optional()
+      .nullable(),
+    businessLocation: locationSchema.optional().nullable(),
+  })
+  .strict();
 
 export const updateSupplierProfileSchema = z
   .object({
@@ -84,6 +100,7 @@ export const updateSupplierProfileSchema = z
     defaultPickupLocation: locationSchema,
     organizationProfile: organizationProfileSchema.optional().nullable(),
   })
+  .strict()
   .superRefine((data, ctx) => {
     const isOrganizationLike = organizationTypes.includes(
       data.supplierType as (typeof organizationTypes)[number],
@@ -113,9 +130,10 @@ export const updateSupplierProfileSchema = z
 
 export const updateSupplierProfileImagesSchema = z
   .object({
-    avatarImageUrl: materialImageUrlSchema.optional().nullable(),
-    coverImageUrl: materialImageUrlSchema.optional().nullable(),
+    avatarImageUrl: supplierProfileImageUrlSchema.optional().nullable(),
+    coverImageUrl: supplierProfileImageUrlSchema.optional().nullable(),
   })
+  .strict()
   .refine(
     (data) =>
       data.avatarImageUrl !== undefined || data.coverImageUrl !== undefined,

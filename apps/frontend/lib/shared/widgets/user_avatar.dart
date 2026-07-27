@@ -86,11 +86,12 @@ class _InitialsAvatar extends StatelessWidget {
       color: backgroundColor,
       child: Text(
         initial,
-        style: textStyle ??
+        style:
+            textStyle ??
             Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: foregroundColor,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: foregroundColor,
+              fontWeight: FontWeight.w800,
+            ),
       ),
     );
   }

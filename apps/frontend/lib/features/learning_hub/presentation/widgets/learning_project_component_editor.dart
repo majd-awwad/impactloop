@@ -69,9 +69,9 @@ class LearningProjectComponentEditor extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Text(
             validationMessage,
-            style: AppTextStyles.body(context).copyWith(
-              color: Theme.of(context).colorScheme.error,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: Theme.of(context).colorScheme.error),
           ),
         ],
       ],
@@ -114,7 +114,8 @@ class _ComponentCardState extends State<_ComponentCard> {
       text: _formatQuantity(widget.component.quantity),
     );
     _customUnitController = TextEditingController(
-      text: LearningProjectDraftComponent.unitOptions.contains(
+      text:
+          LearningProjectDraftComponent.unitOptions.contains(
             widget.component.unit,
           )
           ? ''
@@ -186,12 +187,7 @@ class _ComponentCardState extends State<_ComponentCard> {
     }
 
     _keywordController.clear();
-    _emit(
-      component.copyWith(
-        keywords: merged,
-        keywordDraft: '',
-      ),
-    );
+    _emit(component.copyWith(keywords: merged, keywordDraft: ''));
   }
 
   String _resolvedUnit(LearningProjectDraftComponent component) {
@@ -208,9 +204,8 @@ class _ComponentCardState extends State<_ComponentCard> {
     final colors = AppThemeColors.of(context);
     final textTheme = Theme.of(context).textTheme;
     final component = widget.component;
-    final unitValue = LearningProjectDraftComponent.unitOptions.contains(
-      component.unit,
-    )
+    final unitValue =
+        LearningProjectDraftComponent.unitOptions.contains(component.unit)
         ? component.unit
         : 'other';
 
@@ -322,9 +317,8 @@ class _ComponentCardState extends State<_ComponentCard> {
               controller: _customUnitController,
               label: 'Custom unit',
               hint: 'sheet',
-              onChanged: (_) => _emit(
-                component.copyWith(unit: _resolvedUnit(component)),
-              ),
+              onChanged: (_) =>
+                  _emit(component.copyWith(unit: _resolvedUnit(component))),
             ),
           ],
           const SizedBox(height: AppSpacing.md),
@@ -384,8 +378,7 @@ class _ComponentCardState extends State<_ComponentCard> {
               ),
               subtitle: Text(
                 const LocalizedText(
-                  en:
-                      'Skip this if you are not sure — we can still use the component name.',
+                  en: 'Skip this if you are not sure — we can still use the component name.',
                   ar: 'يمكنك تخطي هذا إن لم تكن متأكداً — سنستخدم اسم المكوّن.',
                 ).resolve(context),
                 style: AppTextStyles.body(
@@ -558,10 +551,8 @@ class _ComponentCardState extends State<_ComponentCard> {
                   ),
                   subtitle: Text(
                     const LocalizedText(
-                      en:
-                          'Use this when builders can use similar materials instead of the exact component.',
-                      ar:
-                          'استخدم هذا عندما يمكن للبنّاءين استخدام مواد مشابهة بدلاً من المكوّن نفسه.',
+                      en: 'Use this when builders can use similar materials instead of the exact component.',
+                      ar: 'استخدم هذا عندما يمكن للبنّاءين استخدام مواد مشابهة بدلاً من المكوّن نفسه.',
                     ).resolve(context),
                     style: AppTextStyles.body(
                       context,

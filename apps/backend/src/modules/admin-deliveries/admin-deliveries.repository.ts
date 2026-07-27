@@ -58,6 +58,10 @@ export const adminDeliveryListInclude = {
   reservation: {
     select: {
       id: true,
+      status: true,
+      fulfillmentMethod: true,
+      pendingRescheduleRequestedBy: true,
+      pendingRescheduleReason: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
       supplierNote: true,
@@ -98,6 +102,36 @@ export const adminDeliveryListInclude = {
       },
     },
   },
+  deliveryGroup: {
+    select: {
+      id: true,
+      status: true,
+      reservations: {
+        orderBy: { createdAt: 'desc' as const },
+        take: 3,
+        select: { id: true, status: true },
+      },
+      _count: { select: { reservations: true } },
+    },
+  },
+  assignments: {
+    orderBy: [{ acceptedAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 2,
+    select: {
+      id: true,
+      status: true,
+      acceptedAt: true,
+      releasedAt: true,
+      driverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+    },
+  },
+  _count: { select: { incidentReports: true } },
 } satisfies Prisma.DeliveryInclude;
 
 export const adminDeliveryDetailInclude = {
@@ -105,6 +139,9 @@ export const adminDeliveryDetailInclude = {
     select: {
       id: true,
       status: true,
+      fulfillmentMethod: true,
+      pendingRescheduleRequestedBy: true,
+      pendingRescheduleReason: true,
       pickupWindowStart: true,
       pickupWindowEnd: true,
       supplierNote: true,
@@ -146,14 +183,19 @@ export const adminDeliveryDetailInclude = {
   },
   deliveryGroup: {
     select: {
+      id: true,
       status: true,
       assignedDriverProfileId: true,
       reservations: {
+        orderBy: { createdAt: 'desc' as const },
+        take: 50,
         select: {
+          id: true,
           status: true,
           fulfillmentMethod: true,
         },
       },
+      _count: { select: { reservations: true } },
     },
   },
   statusHistory: {
@@ -184,13 +226,40 @@ export const adminDeliveryDetailInclude = {
     },
   },
   assignments: {
-    orderBy: { acceptedAt: 'desc' as const },
-    take: 1,
+    orderBy: [{ acceptedAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 20,
     select: {
+      id: true,
       acceptedAt: true,
+      releasedAt: true,
       status: true,
+      releaseReason: true,
+      driverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
     },
   },
+  incidentReports: {
+    orderBy: [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 20,
+    select: {
+      id: true,
+      status: true,
+      reasonCode: true,
+      targetRole: true,
+      targetUserId: true,
+      deliveryId: true,
+      createdAt: true,
+      note: true,
+      reviewNote: true,
+      reviewedAt: true,
+    },
+  },
+  _count: { select: { incidentReports: true } },
 } satisfies Prisma.DeliveryInclude;
 
 export type AdminDeliveryListRecord = Prisma.DeliveryGetPayload<{
@@ -199,6 +268,23 @@ export type AdminDeliveryListRecord = Prisma.DeliveryGetPayload<{
 
 export type AdminDeliveryDetailRecord = Prisma.DeliveryGetPayload<{
   include: typeof adminDeliveryDetailInclude;
+}>;
+
+const primaryIncidentSelect = {
+  id: true,
+  status: true,
+  reasonCode: true,
+  targetRole: true,
+  targetUserId: true,
+  deliveryId: true,
+  createdAt: true,
+  note: true,
+  reviewNote: true,
+  reviewedAt: true,
+} satisfies Prisma.NoShowReportSelect;
+
+export type AdminDeliveryPrimaryIncident = Prisma.NoShowReportGetPayload<{
+  select: typeof primaryIncidentSelect;
 }>;
 
 type ReopenDeliveryGroupRecord = {
@@ -363,6 +449,8 @@ const buildSearchWhere = (search?: string): Prisma.DeliveryWhereInput | undefine
 
   return {
     OR: [
+      { id: normalized },
+      { reservationId: normalized },
       {
         reservation: {
           material: { title: { contains: normalized, mode: 'insensitive' } },
@@ -420,6 +508,33 @@ export const buildAdminDeliveriesWhere = (
     and.push({ assignedDriverProfileId: { not: null } });
   } else if (query.assignment === 'UNASSIGNED') {
     and.push({ assignedDriverProfileId: null });
+  } else if (query.assignment === 'ACTIVE') {
+    and.push({
+      assignments: {
+        some: { status: 'ACTIVE' },
+      },
+      assignedDriverProfileId: { not: null },
+    });
+  } else if (query.assignment === 'RELEASED') {
+    and.push({
+      assignedDriverProfileId: null,
+      assignments: { some: { status: 'RELEASED' } },
+    });
+  } else if (query.assignment === 'HISTORICAL') {
+    and.push({
+      assignments: { some: {} },
+      status: { in: ['DELIVERED', 'CANCELLED', 'FAILED_PICKUP', 'FAILED_DELIVERY', 'DRIVER_NO_SHOW', 'LEARNER_NO_SHOW'] },
+    });
+  }
+
+  if (query.scope === 'GROUPED') {
+    and.push({ deliveryGroupId: { not: null } });
+  } else if (query.scope === 'SINGLE') {
+    and.push({ deliveryGroupId: null });
+  }
+
+  if (query.incidentState) {
+    and.push({ incidentReports: { some: { status: query.incidentState } } });
   }
 
   const requestedAt = buildDateRange(query.dateFrom, query.dateTo);
@@ -442,28 +557,92 @@ const failedCancelledStatuses: DeliveryStatus[] = [
   'FAILED_DELIVERY',
 ];
 
-export const countAdminDeliveriesSummary = async () => {
-  const [total, pendingUnassigned, assignedInProgress, delivered, failedCancelled] =
-    await Promise.all([
-      prisma.delivery.count(),
-      prisma.delivery.count({ where: { status: 'WAITING_FOR_DRIVER' } }),
-      prisma.delivery.count({
-        where: { status: { in: inProgressStatuses } },
-      }),
-      prisma.delivery.count({ where: { status: 'DELIVERED' } }),
-      prisma.delivery.count({
-        where: { status: { in: failedCancelledStatuses } },
-      }),
-    ]);
+/**
+ * Select one incident per delivery without relying on an arbitrary relation
+ * limit.  Each query is batched and `distinct` is ordered by the requested
+ * class priority before its timestamp tie-breaker.
+ */
+export const findPrimaryIncidentsForDeliveryIds = async (deliveryIds: string[]) => {
+  if (deliveryIds.length === 0) return new Map<string, AdminDeliveryPrimaryIncident>();
 
-  return {
-    total,
-    pendingUnassigned,
-    assignedInProgress,
-    delivered,
-    failedCancelled,
-  };
+  const ordered = [{ createdAt: 'desc' as const }, { id: 'desc' as const }];
+  const base = {
+    deliveryId: { in: deliveryIds },
+  } satisfies Prisma.NoShowReportWhereInput;
+
+  const [operational, pendingAccountability, terminal] = await Promise.all([
+    prisma.noShowReport.findMany({
+      where: {
+        ...base,
+        reasonCode: {
+          in: [
+            'NO_DRIVER_AVAILABLE',
+            'NO_RESPONSE_AFTER_PICKUP_WINDOW',
+            'DRIVER_DID_NOT_ARRIVE',
+            'PICKUP_FAILED',
+          ],
+        },
+        reservation: {
+          is: {
+            fulfillmentMethod: 'DELIVERY',
+            status: 'AWAITING_RESOLUTION',
+          },
+        },
+        delivery: {
+          is: {
+            status: { in: ['AWAITING_RESOLUTION', 'DRIVER_NO_SHOW', 'FAILED_PICKUP'] },
+          },
+        },
+      },
+      distinct: ['deliveryId'],
+      orderBy: ordered,
+      select: primaryIncidentSelect,
+    }),
+    prisma.noShowReport.findMany({
+      where: {
+        ...base,
+        status: 'PENDING_REVIEW',
+        targetRole: { not: 'SYSTEM' },
+      },
+      distinct: ['deliveryId'],
+      orderBy: ordered,
+      select: primaryIncidentSelect,
+    }),
+    prisma.noShowReport.findMany({
+      where: {
+        ...base,
+        status: { in: ['VERIFIED', 'REJECTED', 'RESOLVED_NO_STRIKE'] },
+      },
+      distinct: ['deliveryId'],
+      orderBy: ordered,
+      select: primaryIncidentSelect,
+    }),
+  ]);
+
+  const selected = new Map<string, AdminDeliveryPrimaryIncident>();
+  for (const candidates of [operational, pendingAccountability, terminal]) {
+    for (const report of candidates) {
+      if (report.deliveryId && !selected.has(report.deliveryId)) {
+        selected.set(report.deliveryId, report);
+      }
+    }
+  }
+  return selected;
 };
+
+export const listAdminDeliveriesSummaryBatch = async (input: {
+  query: AdminDeliveriesListQuery;
+  cursor?: string;
+  take: number;
+}) =>
+  prisma.delivery.findMany({
+    where: buildAdminDeliveriesWhere(input.query),
+    include: adminDeliveryListInclude,
+    orderBy: { id: 'asc' },
+    cursor: input.cursor ? { id: input.cursor } : undefined,
+    skip: input.cursor ? 1 : undefined,
+    take: input.take,
+  });
 
 export const listAdminDeliveries = async (query: AdminDeliveriesListQuery) => {
   const where = buildAdminDeliveriesWhere(query);

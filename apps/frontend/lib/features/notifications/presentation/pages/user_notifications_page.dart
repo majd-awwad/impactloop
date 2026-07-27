@@ -428,10 +428,7 @@ class _NotificationsHeaderCard extends StatelessWidget {
           if (unreadCount > 0)
             FilledButton(
               onPressed: onMarkAllRead,
-              style: AppStatusButtonStyle.filled(
-                context,
-                AppStatusTone.info,
-              ),
+              style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
               child: const Text('Mark all read'),
             ),
         ],
@@ -562,10 +559,7 @@ class _NotificationTile extends StatelessWidget {
                       runSpacing: AppSpacing.xs,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        AppStatusBadge(
-                          label: chipLabel,
-                          tone: tone,
-                        ),
+                        AppStatusBadge(label: chipLabel, tone: tone),
                         if (!notification.isRead)
                           Container(
                             width: 8,

@@ -46,9 +46,7 @@ ResolvedDateRange resolveDateRange({
       final from = customDateFrom?.trim();
       final to = customDateTo?.trim();
       if (from == null || from.isEmpty || to == null || to.isEmpty) {
-        return const ResolvedDateRange(
-          error: 'Select both From and To dates.',
-        );
+        return const ResolvedDateRange(error: 'Select both From and To dates.');
       }
       if (from.compareTo(to) > 0) {
         return const ResolvedDateRange(

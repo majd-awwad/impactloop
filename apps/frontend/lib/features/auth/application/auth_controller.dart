@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_session_refresh.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../supplier_portal/application/supplier_portal_refresh.dart';
+import '../../home/application/home_suggested_materials_provider.dart';
+import '../../home/application/learner_home_provider.dart';
+import '../../locations/application/saved_locations_providers.dart';
 import '../data/auth_repository.dart';
 import '../data/models/auth_tokens.dart';
 import '../data/models/become_learner_request.dart';
@@ -94,6 +97,18 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  void _resetAuthenticatedProvidersSafely() {
+    try {
+      ref.read(authSessionExpiryProvider.notifier).clear();
+      invalidateLearnerHomeProviders(ref);
+      ref.invalidate(savedLocationsProvider);
+      ref.invalidate(homeSuggestedMaterialsProvider);
+      invalidateSupplierPortalProviders(ref);
+    } catch (_) {
+      // A provider reset must never turn a successful login into a failure.
+    }
+  }
+
   Future<void> bootstrapSession() {
     return _bootstrapOperation ??= _bootstrapSessionInternal();
   }
@@ -167,7 +182,7 @@ class AuthController extends Notifier<AuthState> {
         isLoading: false,
         hasBootstrapped: true,
       );
-      _invalidateSupplierPortalProvidersSafely();
+      _resetAuthenticatedProvidersSafely();
 
       return freshUser;
     } on ApiException catch (error) {

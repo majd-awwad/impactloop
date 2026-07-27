@@ -68,7 +68,9 @@ class AdminSupplierVerificationsApi {
 
       final data = body['data'];
       if (data is! Map<String, dynamic>) {
-        throw const ApiException(message: 'Invalid verification detail response');
+        throw const ApiException(
+          message: 'Invalid verification detail response',
+        );
       }
 
       return AdminSupplierVerificationDetail.fromJson(data);
@@ -138,7 +140,9 @@ class AdminSupplierVerificationsApi {
 
       final data = responseBody['data'];
       if (data is! Map<String, dynamic>) {
-        throw const ApiException(message: 'Invalid verification action response');
+        throw const ApiException(
+          message: 'Invalid verification action response',
+        );
       }
 
       return AdminSupplierVerificationDetail.fromJson(data);
@@ -150,8 +154,8 @@ class AdminSupplierVerificationsApi {
 
 final adminSupplierVerificationsApiProvider =
     Provider<AdminSupplierVerificationsApi>((ref) {
-  return AdminSupplierVerificationsApi(ref.watch(apiClientProvider));
-});
+      return AdminSupplierVerificationsApi(ref.watch(apiClientProvider));
+    });
 
 class AdminSupplierVerificationFiltersNotifier
     extends Notifier<AdminSupplierVerificationFilters> {
@@ -165,16 +169,16 @@ class AdminSupplierVerificationFiltersNotifier
   }
 }
 
-final adminSupplierVerificationFiltersProvider = NotifierProvider<
-    AdminSupplierVerificationFiltersNotifier,
-    AdminSupplierVerificationFilters>(
-  AdminSupplierVerificationFiltersNotifier.new,
-);
+final adminSupplierVerificationFiltersProvider =
+    NotifierProvider<
+      AdminSupplierVerificationFiltersNotifier,
+      AdminSupplierVerificationFilters
+    >(AdminSupplierVerificationFiltersNotifier.new);
 
-final adminSupplierVerificationsProvider = FutureProvider.autoDispose<
-    AdminSupplierVerificationListResponse>((ref) {
-  final filters = ref.watch(adminSupplierVerificationFiltersProvider);
-  return ref.watch(adminSupplierVerificationsApiProvider).fetchVerifications(
-        filters,
-      );
-});
+final adminSupplierVerificationsProvider =
+    FutureProvider.autoDispose<AdminSupplierVerificationListResponse>((ref) {
+      final filters = ref.watch(adminSupplierVerificationFiltersProvider);
+      return ref
+          .watch(adminSupplierVerificationsApiProvider)
+          .fetchVerifications(filters);
+    });

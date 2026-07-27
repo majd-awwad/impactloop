@@ -7,11 +7,7 @@ void main() {
     testWidgets('before allowed start shows only request reschedule', (
       tester,
     ) async {
-      await _pump(
-        tester,
-        phase: 'BEFORE_ALLOWED',
-        canRequestReschedule: true,
-      );
+      await _pump(tester, phase: 'BEFORE_ALLOWED', canRequestReschedule: true);
 
       expect(find.text('Request reschedule'), findsOneWidget);
       expect(find.text('Mark completed'), findsNothing);

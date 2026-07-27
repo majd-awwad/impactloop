@@ -24,7 +24,8 @@ class AdminAuditLogsApi {
       'page': page,
       'limit': limit,
       if (search != null && search.isNotEmpty) 'search': search,
-      if (action != null && action.isNotEmpty && action != 'ALL') 'action': action,
+      if (action != null && action.isNotEmpty && action != 'ALL')
+        'action': action,
       if (targetType != null && targetType.isNotEmpty && targetType != 'ALL')
         'targetType': targetType,
       if (actorId != null && actorId.isNotEmpty && actorId != 'ALL')

@@ -14,98 +14,107 @@ import 'package:frontend/features/auth/data/models/register_request.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 
 void main() {
-  test('successful change-password replaces access token and mobile refresh storage', () async {
-    final tokenStorage = _MemoryTokenStorage('old-refresh');
-    final accessTokenHolder = AccessTokenHolder()..accessToken = 'old-access';
-    final api = _RecordingAuthApi(
-      changePasswordResult: (
-        tokens: const AuthTokens(
-          accessToken: 'new-access',
-          refreshToken: 'new-refresh',
+  test(
+    'successful change-password replaces access token and mobile refresh storage',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('old-refresh');
+      final accessTokenHolder = AccessTokenHolder()..accessToken = 'old-access';
+      final api = _RecordingAuthApi(
+        changePasswordResult: (
+          tokens: const AuthTokens(
+            accessToken: 'new-access',
+            refreshToken: 'new-refresh',
+          ),
+          user: _testUser(),
         ),
-        user: _testUser(),
-      ),
-    );
-    final repository = AuthRepository(
-      api: api,
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
-    );
+      );
+      final repository = AuthRepository(
+        api: api,
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+      );
 
-    final user = await repository.changePassword(
-      currentPassword: 'OldPassword123!',
-      newPassword: 'NewPassword123!',
-      confirmNewPassword: 'NewPassword123!',
-    );
+      final user = await repository.changePassword(
+        currentPassword: 'OldPassword123!',
+        newPassword: 'NewPassword123!',
+        confirmNewPassword: 'NewPassword123!',
+      );
 
-    expect(user.email, 'learner@example.com');
-    expect(accessTokenHolder.accessToken, 'new-access');
-    expect(await tokenStorage.readRefreshToken(), 'new-refresh');
-    expect(api.changePasswordCalls, 1);
-  });
+      expect(user.email, 'learner@example.com');
+      expect(accessTokenHolder.accessToken, 'new-access');
+      expect(await tokenStorage.readRefreshToken(), 'new-refresh');
+      expect(api.changePasswordCalls, 1);
+    },
+  );
 
-  test('web change-password response without refresh token leaves mobile storage unchanged when absent', () async {
-    final tokenStorage = _MemoryTokenStorage('old-refresh');
-    final accessTokenHolder = AccessTokenHolder()..accessToken = 'old-access';
-    final api = _RecordingAuthApi(
-      changePasswordResult: (
-        tokens: const AuthTokens(accessToken: 'new-access'),
-        user: _testUser(),
-      ),
-    );
-    final repository = AuthRepository(
-      api: api,
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
-    );
-
-    await repository.changePassword(
-      currentPassword: 'OldPassword123!',
-      newPassword: 'NewPassword123!',
-      confirmNewPassword: 'NewPassword123!',
-    );
-
-    expect(accessTokenHolder.accessToken, 'new-access');
-    expect(await tokenStorage.readRefreshToken(), 'old-refresh');
-  });
-
-  test('auth controller keeps user authenticated after successful change-password', () async {
-    final tokenStorage = _MemoryTokenStorage('old-refresh');
-    final accessTokenHolder = AccessTokenHolder()..accessToken = 'old-access';
-    final api = _RecordingAuthApi(
-      changePasswordResult: (
-        tokens: const AuthTokens(
-          accessToken: 'new-access',
-          refreshToken: 'new-refresh',
+  test(
+    'web change-password response without refresh token leaves mobile storage unchanged when absent',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('old-refresh');
+      final accessTokenHolder = AccessTokenHolder()..accessToken = 'old-access';
+      final api = _RecordingAuthApi(
+        changePasswordResult: (
+          tokens: const AuthTokens(accessToken: 'new-access'),
+          user: _testUser(),
         ),
-        user: _testUser(),
-      ),
-    );
-    final repository = AuthRepository(
-      api: api,
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
-    );
+      );
+      final repository = AuthRepository(
+        api: api,
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+      );
 
-    final container = ProviderContainer(
-      overrides: [authRepositoryProvider.overrideWithValue(repository)],
-    );
-    addTearDown(container.dispose);
+      await repository.changePassword(
+        currentPassword: 'OldPassword123!',
+        newPassword: 'NewPassword123!',
+        confirmNewPassword: 'NewPassword123!',
+      );
 
-    final user = await container
-        .read(authControllerProvider.notifier)
-        .changePassword(
-          currentPassword: 'OldPassword123!',
-          newPassword: 'NewPassword123!',
-          confirmNewPassword: 'NewPassword123!',
-        );
+      expect(accessTokenHolder.accessToken, 'new-access');
+      expect(await tokenStorage.readRefreshToken(), 'old-refresh');
+    },
+  );
 
-    final state = container.read(authControllerProvider);
-    expect(user.email, 'learner@example.com');
-    expect(state.isAuthenticated, isTrue);
-    expect(state.accessToken, 'new-access');
-    expect(state.user?.email, 'learner@example.com');
-  });
+  test(
+    'auth controller keeps user authenticated after successful change-password',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('old-refresh');
+      final accessTokenHolder = AccessTokenHolder()..accessToken = 'old-access';
+      final api = _RecordingAuthApi(
+        changePasswordResult: (
+          tokens: const AuthTokens(
+            accessToken: 'new-access',
+            refreshToken: 'new-refresh',
+          ),
+          user: _testUser(),
+        ),
+      );
+      final repository = AuthRepository(
+        api: api,
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+      );
+
+      final container = ProviderContainer(
+        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+
+      final user = await container
+          .read(authControllerProvider.notifier)
+          .changePassword(
+            currentPassword: 'OldPassword123!',
+            newPassword: 'NewPassword123!',
+            confirmNewPassword: 'NewPassword123!',
+          );
+
+      final state = container.read(authControllerProvider);
+      expect(user.email, 'learner@example.com');
+      expect(state.isAuthenticated, isTrue);
+      expect(state.accessToken, 'new-access');
+      expect(state.user?.email, 'learner@example.com');
+    },
+  );
 
   test('failed change-password leaves existing session unchanged', () async {
     final tokenStorage = _MemoryTokenStorage('old-refresh');
@@ -137,44 +146,48 @@ void main() {
     expect(api.changePasswordCalls, 1);
   });
 
-  test('profile and supplier flows share repository session replacement', () async {
-    final tokenStorage = _MemoryTokenStorage('shared-refresh');
-    final accessTokenHolder = AccessTokenHolder()..accessToken = 'shared-access';
-    final api = _RecordingAuthApi(
-      changePasswordResult: (
-        tokens: const AuthTokens(
-          accessToken: 'shared-new-access',
-          refreshToken: 'shared-new-refresh',
+  test(
+    'profile and supplier flows share repository session replacement',
+    () async {
+      final tokenStorage = _MemoryTokenStorage('shared-refresh');
+      final accessTokenHolder = AccessTokenHolder()
+        ..accessToken = 'shared-access';
+      final api = _RecordingAuthApi(
+        changePasswordResult: (
+          tokens: const AuthTokens(
+            accessToken: 'shared-new-access',
+            refreshToken: 'shared-new-refresh',
+          ),
+          user: _testUser(),
         ),
-        user: _testUser(),
-      ),
-    );
-    final repository = AuthRepository(
-      api: api,
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
-    );
+      );
+      final repository = AuthRepository(
+        api: api,
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+      );
 
-    await repository.changePassword(
-      currentPassword: 'OldPassword123!',
-      newPassword: 'NewPassword123!',
-      confirmNewPassword: 'NewPassword123!',
-    );
-    expect(accessTokenHolder.accessToken, 'shared-new-access');
+      await repository.changePassword(
+        currentPassword: 'OldPassword123!',
+        newPassword: 'NewPassword123!',
+        confirmNewPassword: 'NewPassword123!',
+      );
+      expect(accessTokenHolder.accessToken, 'shared-new-access');
 
-    accessTokenHolder.accessToken = 'shared-access';
-    await tokenStorage.saveRefreshToken('shared-refresh');
+      accessTokenHolder.accessToken = 'shared-access';
+      await tokenStorage.saveRefreshToken('shared-refresh');
 
-    await repository.changePassword(
-      currentPassword: 'OldPassword123!',
-      newPassword: 'AnotherPassword123!',
-      confirmNewPassword: 'AnotherPassword123!',
-    );
+      await repository.changePassword(
+        currentPassword: 'OldPassword123!',
+        newPassword: 'AnotherPassword123!',
+        confirmNewPassword: 'AnotherPassword123!',
+      );
 
-    expect(api.changePasswordCalls, 2);
-    expect(accessTokenHolder.accessToken, 'shared-new-access');
-    expect(await tokenStorage.readRefreshToken(), 'shared-new-refresh');
-  });
+      expect(api.changePasswordCalls, 2);
+      expect(accessTokenHolder.accessToken, 'shared-new-access');
+      expect(await tokenStorage.readRefreshToken(), 'shared-new-refresh');
+    },
+  );
 }
 
 User _testUser() {
@@ -208,10 +221,8 @@ class _MemoryTokenStorage implements TokenStorage {
 }
 
 class _RecordingAuthApi extends AuthApi {
-  _RecordingAuthApi({
-    this.changePasswordResult,
-    this.changePasswordError,
-  }) : super(Dio());
+  _RecordingAuthApi({this.changePasswordResult, this.changePasswordError})
+    : super(Dio());
 
   final ({AuthTokens tokens, User user})? changePasswordResult;
   final ApiException? changePasswordError;

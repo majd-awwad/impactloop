@@ -18,4 +18,3 @@ final adminDashboardRepositoryProvider = Provider<AdminDashboardRepository>((
 final adminDashboardProvider = FutureProvider<AdminDashboardResponse>((ref) {
   return ref.watch(adminDashboardRepositoryProvider).fetchDashboard();
 });
-

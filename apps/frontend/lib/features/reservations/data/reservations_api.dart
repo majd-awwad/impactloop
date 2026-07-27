@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
 import 'models/create_reservation_request.dart';
 import 'models/created_reservation.dart';
@@ -13,12 +14,16 @@ class ReservationsApi {
   final Dio _client;
 
   Future<CreatedReservation> createReservation(
-    CreateReservationRequest request,
-  ) {
+    CreateReservationRequest request, {
+    String? recommendationImpressionId,
+  }) {
     return unwrapApiResponse(
       _client.post<Map<String, dynamic>>(
         '/api/reservations',
         data: request.toJson(),
+        options: Options(
+          headers: recommendationHeaders(recommendationImpressionId),
+        ),
       ),
       CreatedReservation.fromJson,
     );
@@ -48,9 +53,8 @@ class ReservationsApi {
         return reservations
             .whereType<Map>()
             .map(
-              (item) => LearnerReservation.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  LearnerReservation.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList(growable: false);
       },
@@ -113,9 +117,8 @@ class ReservationsApi {
         return messages
             .whereType<Map>()
             .map(
-              (item) => ReservationMessage.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  ReservationMessage.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList(growable: false);
       },

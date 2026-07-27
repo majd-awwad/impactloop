@@ -8,13 +8,19 @@ class ReservationCreateController extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncData(null);
 
-  Future<CreatedReservation> create(CreateReservationRequest request) async {
+  Future<CreatedReservation> create(
+    CreateReservationRequest request, {
+    String? recommendationImpressionId,
+  }) async {
     state = const AsyncLoading();
 
     try {
       final reservation = await ref
           .read(reservationsRepositoryProvider)
-          .createReservation(request);
+          .createReservation(
+            request,
+            recommendationImpressionId: recommendationImpressionId,
+          );
       state = const AsyncData(null);
       return reservation;
     } catch (error, stackTrace) {

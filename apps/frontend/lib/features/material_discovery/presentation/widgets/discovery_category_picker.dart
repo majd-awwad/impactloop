@@ -33,7 +33,9 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final visible = widget.categories.take(discoveryVisibleCategoryCount).toList();
+    final visible = widget.categories
+        .take(discoveryVisibleCategoryCount)
+        .toList();
     final hiddenCount = widget.categories.length - visible.length;
     final hasHidden = hiddenCount > 0;
     final selectedHidden = widget.selectedCategoryIndex > visible.length;
@@ -43,9 +45,7 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
       children: [
         Text(
           const LocalizedText(en: 'Categories', ar: 'الفئات').resolve(context),
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(
+          style: AppTextStyles.label(context).copyWith(
             color: palette.textPrimary,
             fontSize: widget.compact ? 12 : null,
           ),
@@ -57,9 +57,10 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
           child: Row(
             children: [
               _CategoryChip(
-                label: const LocalizedText(en: 'All', ar: 'الكل').resolve(
-                  context,
-                ),
+                label: const LocalizedText(
+                  en: 'All',
+                  ar: 'الكل',
+                ).resolve(context),
                 selected: widget.selectedCategoryIndex == 0,
                 onPressed: () => widget.onCategorySelected(0),
               ),
@@ -68,9 +69,7 @@ class _DiscoveryCategoryPickerState extends State<DiscoveryCategoryPicker> {
                 final index = entry.key + 1;
                 final category = entry.value;
                 return Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    end: AppSpacing.sm,
-                  ),
+                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
                   child: _CategoryChip(
                     label: _categoryLabel(category).resolve(context),
                     selected: widget.selectedCategoryIndex == index,

@@ -74,7 +74,10 @@ class AppMaterialCard extends StatelessWidget {
             : 320.0;
 
         return SizedBox(
-          height: ImpactMaterialGridCard.heightForWidth(width, variant: variant),
+          height: ImpactMaterialGridCard.heightForWidth(
+            width,
+            variant: variant,
+          ),
           child: ImpactMaterialGridCard(
             title: title,
             description: description,
@@ -241,7 +244,8 @@ class ImpactMaterialCompactCard extends StatelessWidget {
 
     return Semantics(
       button: onTap != null,
-      label: '$title, $category, $conditionLabel, $locationLabel, '
+      label:
+          '$title, $category, $conditionLabel, $locationLabel, '
           '$priceLabel, $statusLabel',
       child: SizedBox(
         height: height,
@@ -325,8 +329,7 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                             children: [
                               Flexible(
                                 child: Align(
-                                  alignment:
-                                      AlignmentDirectional.centerStart,
+                                  alignment: AlignmentDirectional.centerStart,
                                   child: _CompactPriceBadge(
                                     label: priceLabel,
                                     isFree: isFree,
@@ -716,7 +719,11 @@ class _GridCardMediaState extends State<_GridCardMedia> {
                     borderRadius: AppRadius.lgAll,
                     border: Border.all(color: palette.borderSubtle),
                   ),
-                  child: Icon(widget.fallbackIcon, color: palette.mint, size: 30),
+                  child: Icon(
+                    widget.fallbackIcon,
+                    color: palette.mint,
+                    size: 30,
+                  ),
                 ),
               ),
             DecoratedBox(
@@ -993,7 +1000,11 @@ class _EngagementCountBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (viewsCount > 0) ...[
-              Icon(Icons.visibility_outlined, color: palette.textMuted, size: 16),
+              Icon(
+                Icons.visibility_outlined,
+                color: palette.textMuted,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Text(
                 '$viewsCount',

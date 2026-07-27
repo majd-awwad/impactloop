@@ -1,0 +1,245 @@
+{
+  "schemaVersion": "impactloop-lm05-feature-parity-v1",
+  "canonicalVocabulary": {
+    "user": {
+      "interest": ["interest:robotics", "interest:arduino", "interest:electronics"]
+    },
+    "material": {
+      "material-family": ["material-family:electronics"],
+      "material-form": ["material-form:arduino-uno"]
+    },
+    "project": {
+      "project-topic": ["project-topic:robotics", "project-topic:electronics"],
+      "component": ["component:jumper-wires", "component:dc-gear-motors"]
+    }
+  },
+  "users": [
+    {
+      "userId": "u-01",
+      "interestKeys": ["interest:robotics", "interest:arduino", "interest:robotics"],
+      "expected": {
+        "tokens": ["interest:arduino", "interest:robotics"],
+        "occurrenceCount": 3,
+        "uniqueTokenCount": 2,
+        "readiness": "READY",
+        "missingRequiredGroupIds": []
+      }
+    },
+    {
+      "userId": "u-02",
+      "interestKeys": ["interest:electronics"],
+      "expected": {
+        "tokens": ["interest:electronics"],
+        "occurrenceCount": 1,
+        "uniqueTokenCount": 1,
+        "readiness": "READY",
+        "missingRequiredGroupIds": []
+      }
+    }
+  ],
+  "materials": [
+    {
+      "materialId": "m-01",
+      "concepts": [
+        {"canonicalKey": "material-family:electronics", "conceptType": "MATERIAL_FAMILY", "status": "ACTIVE"}
+      ],
+      "condition": "GOOD",
+      "isFree": false,
+      "pickupAllowed": true,
+      "deliveryAllowed": false,
+      "expected": {
+        "tokens": [
+          "material-condition:good",
+          "material-delivery-allowed:false",
+          "material-family:electronics",
+          "material-is-free:false",
+          "material-pickup-allowed:true"
+        ],
+        "occurrenceCount": 5,
+        "uniqueTokenCount": 5,
+        "readiness": "READY",
+        "missingRequiredGroupIds": []
+      }
+    },
+    {
+      "materialId": "m-02",
+      "concepts": [
+        {"canonicalKey": "material-form:arduino-uno", "conceptType": "MATERIAL_FORM", "status": "ACTIVE"},
+        {"canonicalKey": "material-family:electronics", "conceptType": "MATERIAL_FAMILY", "status": "ACTIVE"}
+      ],
+      "condition": "LIKE_NEW",
+      "isFree": true,
+      "pickupAllowed": false,
+      "deliveryAllowed": true,
+      "expected": {
+        "tokens": [
+          "material-condition:like-new",
+          "material-delivery-allowed:true",
+          "material-family:electronics",
+          "material-form:arduino-uno",
+          "material-is-free:true",
+          "material-pickup-allowed:false"
+        ],
+        "occurrenceCount": 6,
+        "uniqueTokenCount": 6,
+        "readiness": "READY",
+        "missingRequiredGroupIds": []
+      }
+    }
+  ],
+  "projects": [
+    {
+      "projectId": "p-01",
+      "topicConcepts": [
+        {"canonicalKey": "project-topic:robotics", "conceptType": "PROJECT_TOPIC", "status": "ACTIVE"}
+      ],
+      "componentConcepts": [
+        {"canonicalKey": "component:jumper-wires", "conceptType": "COMPONENT", "status": "ACTIVE", "isRequired": true},
+        {"canonicalKey": "component:dc-gear-motors", "conceptType": "COMPONENT", "status": "ACTIVE", "isRequired": true}
+      ],
+      "difficulty": "BEGINNER",
+      "expected": {
+        "tokens": [
+          "component:dc-gear-motors",
+          "component:jumper-wires",
+          "project-difficulty:beginner",
+          "project-topic:robotics"
+        ],
+        "occurrenceCount": 4,
+        "uniqueTokenCount": 4,
+        "readiness": "READY",
+        "missingRequiredGroupIds": []
+      }
+    },
+    {
+      "projectId": "p-02",
+      "topicConcepts": [
+        {"canonicalKey": "project-topic:electronics", "conceptType": "PROJECT_TOPIC", "status": "ACTIVE"}
+      ],
+      "componentConcepts": [],
+      "difficulty": "ADVANCED",
+      "expected": {
+        "tokens": ["project-difficulty:advanced", "project-topic:electronics"],
+        "occurrenceCount": 2,
+        "uniqueTokenCount": 2,
+        "readiness": "READY",
+        "missingRequiredGroupIds": []
+      }
+    }
+  ],
+  "materialInteractions": [
+    {"userId": "u-01", "itemId": "m-01", "weight": 2.0},
+    {"userId": "u-02", "itemId": "m-02", "weight": 1.0}
+  ],
+  "projectInteractions": [
+    {"userId": "u-01", "itemId": "p-01", "weight": 1.5},
+    {"userId": "u-02", "itemId": "p-02", "weight": 1.0}
+  ],
+  "validationCases": [
+    {
+      "name": "optional-missing",
+      "side": "item",
+      "domain": "material",
+      "features": [
+        ["material-family:electronics", "material.family", 1.0],
+        ["material-condition:good", "material.condition", 1.0],
+        ["material-is-free:false", "material.is-free", 1.0],
+        ["material-pickup-allowed:true", "material.pickup-allowed", 1.0],
+        ["material-delivery-allowed:false", "material.delivery-allowed", 1.0]
+      ],
+      "expected": {"readiness": "READY", "occurrenceCount": 5, "uniqueTokenCount": 5, "missingRequiredGroupIds": []}
+    },
+    {
+      "name": "critical-missing",
+      "side": "item",
+      "domain": "material",
+      "features": [
+        ["material-condition:good", "material.condition", 1.0],
+        ["material-is-free:false", "material.is-free", 1.0],
+        ["material-pickup-allowed:true", "material.pickup-allowed", 1.0],
+        ["material-delivery-allowed:false", "material.delivery-allowed", 1.0]
+      ],
+      "expected": {"readiness": "NOT_READY", "occurrenceCount": 4, "uniqueTokenCount": 4, "missingRequiredGroupIds": ["material.family"]}
+    },
+    {
+      "name": "unknown-namespace",
+      "side": "item",
+      "domain": "material",
+      "features": [
+        ["material-family:electronics", "material.family", 1.0],
+        ["material-condition:good", "material.condition", 1.0],
+        ["material-is-free:false", "material.is-free", 1.0],
+        ["material-pickup-allowed:true", "material.pickup-allowed", 1.0],
+        ["material-delivery-allowed:false", "material.delivery-allowed", 1.0],
+        ["mystery:value", "material.family", 1.0]
+      ],
+      "expected": {"readiness": "REJECTED", "occurrenceCount": 6, "uniqueTokenCount": 6, "errorCode": "UNKNOWN_NAMESPACE"}
+    },
+    {
+      "name": "unknown-canonical-identity",
+      "side": "item",
+      "domain": "material",
+      "features": [
+        ["material-family:electronics", "material.family", 1.0],
+        ["material-condition:good", "material.condition", 1.0],
+        ["material-is-free:false", "material.is-free", 1.0],
+        ["material-pickup-allowed:true", "material.pickup-allowed", 1.0],
+        ["material-delivery-allowed:false", "material.delivery-allowed", 1.0],
+        ["material-family:unlisted-fixture-family", "material.family", 1.0]
+      ],
+      "expected": {"readiness": "REJECTED", "occurrenceCount": 6, "uniqueTokenCount": 6, "errorCode": "UNKNOWN_CANONICAL_IDENTITY"}
+    },
+    {
+      "name": "identical-duplicate",
+      "side": "item",
+      "domain": "material",
+      "features": [
+        ["material-family:electronics", "material.family", 1.0],
+        ["material-family:electronics", "material.family", 1.0],
+        ["material-condition:good", "material.condition", 1.0],
+        ["material-is-free:false", "material.is-free", 1.0],
+        ["material-pickup-allowed:true", "material.pickup-allowed", 1.0],
+        ["material-delivery-allowed:false", "material.delivery-allowed", 1.0]
+      ],
+      "expected": {"readiness": "READY", "occurrenceCount": 6, "uniqueTokenCount": 5, "missingRequiredGroupIds": []}
+    },
+    {
+      "name": "conflicting-duplicate",
+      "side": "item",
+      "domain": "material",
+      "features": [
+        ["material-family:electronics", "material.family", 1.0],
+        ["material-family:electronics", "material.family", 2.0],
+        ["material-condition:good", "material.condition", 1.0],
+        ["material-is-free:false", "material.is-free", 1.0],
+        ["material-pickup-allowed:true", "material.pickup-allowed", 1.0],
+        ["material-delivery-allowed:false", "material.delivery-allowed", 1.0]
+      ],
+      "expected": {"readiness": "REJECTED", "occurrenceCount": 6, "uniqueTokenCount": 5, "errorCode": "DUPLICATE_WEIGHT_CONFLICT"}
+    },
+    {
+      "name": "malformed-component",
+      "side": "item",
+      "domain": "project",
+      "features": [
+        ["project-topic:robotics", "project.topic", 1.0],
+        ["project-difficulty:beginner", "project.difficulty", 1.0],
+        ["component:component:dc-gear-motors", "project.required-component", 1.0]
+      ],
+      "expected": {"readiness": "REJECTED", "occurrenceCount": 3, "uniqueTokenCount": 3, "errorCode": "MALFORMED_CANONICAL_TOKEN"}
+    }
+  ],
+  "aggregationProbe": {
+    "userFeatures": [
+      {"name": "interest:arduino", "weight": 1.0, "bias": 0.25, "embedding": [1.0, -0.5, 0.25]},
+      {"name": "interest:robotics", "weight": 1.0, "bias": -0.1, "embedding": [0.5, 0.25, -0.25]}
+    ],
+    "itemFeatures": [
+      {"name": "project-topic:robotics", "weight": 1.0, "bias": 0.2, "embedding": [0.25, 1.0, 0.5]},
+      {"name": "project-difficulty:beginner", "weight": 1.0, "bias": 0.05, "embedding": [-0.5, 0.25, 0.75]}
+    ],
+    "expectedUserRepresentation": [0.15, 1.5, -0.25, 0.0],
+    "expectedItemRepresentation": [0.25, -0.25, 1.25, 1.25],
+    "expectedScore": -0.2875
+  }
+}

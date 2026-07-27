@@ -344,7 +344,10 @@ class _ReviewForm extends StatelessWidget {
               children: [
                 FilledButton.icon(
                   onPressed: isSubmitting ? null : onSubmit,
-                  style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.primary,
+                  ),
                   icon: isSubmitting
                       ? const SizedBox(
                           width: 16,
@@ -359,7 +362,10 @@ class _ReviewForm extends StatelessWidget {
                 if (onDelete != null)
                   OutlinedButton.icon(
                     onPressed: isDeleting ? null : onDelete,
-                    style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.danger,
+                    ),
                     icon: isDeleting
                         ? const SizedBox(
                             width: 16,
@@ -522,8 +528,8 @@ class _ReadOnlyStars extends StatelessWidget {
       children: List.generate(5, (index) {
         final selected = index < rating;
         return Icon(
-            selected ? Icons.star_rounded : Icons.star_border_rounded,
-            size: 18,
+          selected ? Icons.star_rounded : Icons.star_border_rounded,
+          size: 18,
           color: selected ? palette.lime : palette.textSecondary,
         );
       }),

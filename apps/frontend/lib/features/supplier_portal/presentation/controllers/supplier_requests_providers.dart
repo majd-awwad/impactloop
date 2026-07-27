@@ -8,27 +8,120 @@ import '../../application/reservation_sync.dart';
 export '../../data/supplier_requests_api_repository.dart'
     show supplierRequestsRepositoryProvider;
 
-class IncomingRequestTabNotifier extends Notifier<SupplierIncomingRequestTab> {
-  @override
-  SupplierIncomingRequestTab build() => SupplierIncomingRequestTab.pending;
+class SupplierRequestInboxQuery {
+  const SupplierRequestInboxQuery({
+    this.status,
+    this.search,
+    this.attentionState,
+    this.fulfillmentMethod,
+    this.historyScope = 'ALL',
+    this.dateFrom,
+    this.dateTo,
+    this.page = 1,
+    this.limit = 10,
+  });
 
-  void selectTab(SupplierIncomingRequestTab tab) {
-    state = tab;
+  final String? status;
+  final String? search;
+  final String? attentionState;
+  final String? fulfillmentMethod;
+  final String historyScope;
+  final DateTime? dateFrom;
+  final DateTime? dateTo;
+  final int page;
+  final int limit;
+
+  bool get hasActiveFilters =>
+      status != null ||
+      (search?.trim().isNotEmpty ?? false) ||
+      attentionState != null ||
+      fulfillmentMethod != null ||
+      historyScope != 'ALL' ||
+      dateFrom != null ||
+      dateTo != null;
+
+  int get activeFilterCount => [
+    status,
+    search?.trim().isNotEmpty == true ? search : null,
+    attentionState,
+    fulfillmentMethod,
+    historyScope != 'ALL' ? historyScope : null,
+    dateFrom != null || dateTo != null ? 'date' : null,
+  ].whereType<String>().length;
+
+  SupplierRequestInboxQuery copyWith({
+    String? status,
+    bool clearStatus = false,
+    String? search,
+    bool clearSearch = false,
+    String? attentionState,
+    bool clearAttentionState = false,
+    String? fulfillmentMethod,
+    bool clearFulfillmentMethod = false,
+    String? historyScope,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    bool clearDates = false,
+    int? page,
+    int? limit,
+  }) => SupplierRequestInboxQuery(
+    status: clearStatus ? null : status ?? this.status,
+    search: clearSearch ? null : search ?? this.search,
+    attentionState: clearAttentionState
+        ? null
+        : attentionState ?? this.attentionState,
+    fulfillmentMethod: clearFulfillmentMethod
+        ? null
+        : fulfillmentMethod ?? this.fulfillmentMethod,
+    historyScope: historyScope ?? this.historyScope,
+    dateFrom: clearDates ? null : dateFrom ?? this.dateFrom,
+    dateTo: clearDates ? null : dateTo ?? this.dateTo,
+    page: page ?? this.page,
+    limit: limit ?? this.limit,
+  );
+}
+
+class IncomingRequestTabNotifier extends Notifier<SupplierRequestInboxQuery> {
+  @override
+  SupplierRequestInboxQuery build() => const SupplierRequestInboxQuery();
+
+  void update(SupplierRequestInboxQuery query) {
+    state = query;
   }
+
+  void reset() => state = const SupplierRequestInboxQuery();
 }
 
 final incomingRequestTabProvider =
-    NotifierProvider<IncomingRequestTabNotifier, SupplierIncomingRequestTab>(
+    NotifierProvider<IncomingRequestTabNotifier, SupplierRequestInboxQuery>(
       IncomingRequestTabNotifier.new,
     );
 
 final incomingRequestsProvider =
-    FutureProvider.autoDispose<List<SupplierIncomingRequest>>((ref) async {
+    FutureProvider.autoDispose<SupplierReservationListResponse>((ref) async {
       watchSupplierPortalSessionFromRef(ref);
-      final tab = ref.watch(incomingRequestTabProvider);
+      final query = ref.watch(incomingRequestTabProvider);
       return ref
           .read(supplierRequestsRepositoryProvider)
-          .fetchIncomingRequests(tab);
+          .fetchIncomingRequests(
+            status: query.status,
+            search: query.search,
+            attentionState: query.attentionState,
+            fulfillmentMethod: query.fulfillmentMethod,
+            historyScope: query.historyScope,
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo,
+            page: query.page,
+            limit: query.limit,
+          );
+    });
+
+final supplierReservationDetailProvider = FutureProvider.autoDispose
+    .family<SupplierReservationDetail, String>((ref, reservationId) async {
+      watchSupplierPortalSessionFromRef(ref);
+      return ref
+          .read(supplierRequestsRepositoryProvider)
+          .fetchReservationDetail(reservationId);
     });
 
 Future<SupplierIncomingRequest> acceptIncomingRequest(
@@ -75,10 +168,7 @@ Future<SupplierIncomingRequest> completeIncomingRequest(
 }) async {
   final result = await ref
       .read(supplierRequestsRepositoryProvider)
-      .completeRequest(
-        requestId,
-        confirmationCode: confirmationCode,
-      );
+      .completeRequest(requestId, confirmationCode: confirmationCode);
   invalidateReservationSyncProviders(ref);
   return result;
 }
@@ -95,7 +185,9 @@ Future<void> rescheduleIncomingRequest(
   String? messageToLearner,
   String? note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).rescheduleRequest(
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .rescheduleRequest(
         requestId,
         pickupWindow,
         reason: reason,
@@ -120,10 +212,9 @@ Future<void> submitNoDriverPickupWindow(
   required String requestId,
   required SupplierPickupWindow pickupWindow,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).submitNoDriverPickupWindow(
-        requestId,
-        pickupWindow,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .submitNoDriverPickupWindow(requestId, pickupWindow);
   _invalidateReservationFollowUp(ref);
 }
 
@@ -144,11 +235,9 @@ Future<void> reportNoShowForRequest(
   required String reasonCode,
   String? note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).submitNoShowReport(
-        requestId,
-        reasonCode: reasonCode,
-        note: note,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .submitNoShowReport(requestId, reasonCode: reasonCode, note: note);
   _invalidateReservationFollowUp(ref);
 }
 
@@ -156,10 +245,9 @@ Future<void> markLearnerNoShowForRequest(
   WidgetRef ref, {
   required String requestId,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).markLearnerNoShow(
-        requestId,
-        reason: 'LEARNER_DID_NOT_ARRIVE',
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .markLearnerNoShow(requestId, reason: 'LEARNER_DID_NOT_ARRIVE');
   _invalidateReservationFollowUp(ref);
 }
 
@@ -178,10 +266,9 @@ Future<void> reportNoDriverAvailableForRequest(
   required String requestId,
   required String note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).reportNoDriverAvailable(
-        requestId,
-        note: note,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .reportNoDriverAvailable(requestId, note: note);
   _invalidateReservationFollowUp(ref);
 }
 
@@ -190,9 +277,8 @@ Future<void> markDriverNoShowForDelivery(
   required String deliveryId,
   required String note,
 }) async {
-  await ref.read(supplierRequestsRepositoryProvider).markDriverNoShow(
-        deliveryId,
-        note: note,
-      );
+  await ref
+      .read(supplierRequestsRepositoryProvider)
+      .markDriverNoShow(deliveryId, note: note);
   _invalidateReservationFollowUp(ref);
 }

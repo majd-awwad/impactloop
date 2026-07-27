@@ -16,10 +16,12 @@ class ProjectEngagementStrip extends ConsumerStatefulWidget {
   const ProjectEngagementStrip({
     super.key,
     required this.project,
+    this.recommendationImpressionId,
     this.density = ProjectEngagementDensity.full,
   });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
   final ProjectEngagementDensity density;
 
   @override
@@ -100,10 +102,16 @@ class _ProjectEngagementStripState
       final result = shouldLike
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .likeProject(widget.project.id)
+                .likeProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unlikeProject(widget.project.id);
+                .unlikeProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -150,10 +158,16 @@ class _ProjectEngagementStripState
       final result = shouldSave
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .saveProject(widget.project.id)
+                .saveProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unsaveProject(widget.project.id);
+                .unsaveProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -202,10 +216,16 @@ class _ProjectEngagementStripState
       final result = shouldFollow
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .followProject(widget.project.id)
+                .followProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unfollowProject(widget.project.id);
+                .unfollowProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -360,10 +380,7 @@ class _EngagementPill extends StatelessWidget {
               Text(
                 label,
                 style: (compact ? textTheme.labelSmall : textTheme.labelMedium)
-                    ?.copyWith(
-                      color: foreground,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    ?.copyWith(color: foreground, fontWeight: FontWeight.w700),
               ),
             ],
           ),

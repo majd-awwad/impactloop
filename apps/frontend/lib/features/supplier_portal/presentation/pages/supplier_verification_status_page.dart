@@ -145,7 +145,8 @@ class _SupplierVerificationStatusPageState
         'Your supplier verification was rejected. Publishing materials is blocked until your organization is approved.',
       'CHANGES_REQUESTED' =>
         'An admin requested changes to your verification submission. Update your document and resubmit for review.',
-      _ => 'Publishing materials is blocked until your organization is approved by an admin.',
+      _ =>
+        'Publishing materials is blocked until your organization is approved by an admin.',
     };
   }
 
@@ -169,13 +170,13 @@ class _SupplierVerificationStatusPageState
               subtitle: 'We could not load your verification status.',
             ),
             const SizedBox(height: AppSpacing.lg),
-            AuthFormCard(
-              child: Text(error.toString()),
-            ),
+            AuthFormCard(child: Text(error.toString())),
           ],
         ),
         data: (status) {
-          final normalized = normalizeVerificationStatus(status.verificationStatus);
+          final normalized = normalizeVerificationStatus(
+            status.verificationStatus,
+          );
           final canResubmit = normalized == 'CHANGES_REQUESTED';
 
           return Column(
@@ -231,7 +232,9 @@ class _SupplierVerificationStatusPageState
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('Resubmit verification'),
                       ),

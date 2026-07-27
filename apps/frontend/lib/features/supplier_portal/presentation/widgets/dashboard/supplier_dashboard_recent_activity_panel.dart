@@ -30,6 +30,7 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
     final items = _buildCuratedItems(context);
 
     return AppSectionCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -39,20 +40,20 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
             context.s.recentActivitySubtitle,
             style: context.supplierBody().copyWith(
               color: colors.textSecondary,
-              fontSize: 13,
+              fontSize: 14,
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.lg),
           if (items.isEmpty)
             const _EmptyActivityState()
           else
             ...items.map(
               (item) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
                 child: _ActivityTile(item: item),
               ),
             ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.md),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
@@ -259,8 +260,8 @@ class _ActivityTile extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.sm,
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
       ),
       decoration: BoxDecoration(
         color: colors.backgroundElevated.withValues(alpha: 0.38),
@@ -271,8 +272,8 @@ class _ActivityTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               color: item.accent.withValues(alpha: 0.14),
@@ -280,7 +281,7 @@ class _ActivityTile extends StatelessWidget {
             ),
             child: Icon(item.icon, color: item.accent, size: 17),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,7 +296,7 @@ class _ActivityTile extends StatelessWidget {
                         style: context.supplierLabel().copyWith(
                           color: colors.textPrimary,
                           fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                     ),
@@ -328,7 +329,7 @@ class _ActivityTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.supplierBody().copyWith(
-                    fontSize: 12,
+                    fontSize: 13,
                     color: colors.textSecondary,
                   ),
                 ),

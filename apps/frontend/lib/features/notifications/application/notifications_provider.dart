@@ -101,9 +101,7 @@ final notificationsListProvider =
 class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
   @override
   Future<NotificationsListState> build() async {
-    final authKey = ref.watch(
-      authControllerProvider.select(_authListWatchKey),
-    );
+    final authKey = ref.watch(authControllerProvider.select(_authListWatchKey));
     final filter = ref.watch(notificationReadFilterProvider);
 
     if (authKey.$1 == AuthStatus.unknown) {
@@ -127,11 +125,13 @@ class NotificationsListNotifier extends AsyncNotifier<NotificationsListState> {
     NotificationReadFilter filter, {
     required int page,
   }) async {
-    final result = await ref.read(notificationsApiProvider).fetchNotifications(
-      page: page,
-      limit: notificationsPageSize,
-      isRead: isReadQueryForFilter(filter),
-    );
+    final result = await ref
+        .read(notificationsApiProvider)
+        .fetchNotifications(
+          page: page,
+          limit: notificationsPageSize,
+          isRead: isReadQueryForFilter(filter),
+        );
 
     if (!ref.mounted) {
       throw const ApiException(
@@ -274,9 +274,7 @@ final myNotificationUnreadCountProvider =
 class NotificationUnreadCountNotifier extends AsyncNotifier<int> {
   @override
   Future<int> build() async {
-    final authKey = ref.watch(
-      authControllerProvider.select(_authListWatchKey),
-    );
+    final authKey = ref.watch(authControllerProvider.select(_authListWatchKey));
 
     if (authKey.$1 == AuthStatus.unknown) {
       return 0;
@@ -322,9 +320,9 @@ Future<void> setNotificationReadFilter(
 
 Future<void> markNotificationRead(WidgetRef ref, String notificationId) async {
   if (ref.exists(notificationsListProvider)) {
-    await ref.read(notificationsListProvider.notifier).markReadLocal(
-      notificationId,
-    );
+    await ref
+        .read(notificationsListProvider.notifier)
+        .markReadLocal(notificationId);
     return;
   }
 

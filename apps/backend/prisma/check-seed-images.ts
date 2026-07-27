@@ -1,7 +1,7 @@
-import { prisma } from '../src/database/prisma.js';
+import { prisma } from "../src/database/prisma.js";
 
 type ImageRecord = {
-  source: 'material' | 'project-cover' | 'project-image';
+  source: "material" | "project-cover" | "project-image";
   owner: string;
   url: string;
 };
@@ -10,8 +10,8 @@ const REQUEST_TIMEOUT_MS = 12_000;
 const CONCURRENCY = 8;
 
 const checkUrl = async (record: ImageRecord) => {
-  if (!record.url.startsWith('https://')) {
-    return { ...record, ok: false, status: null, error: 'URL is not HTTPS' };
+  if (!record.url.startsWith("https://")) {
+    return { ...record, ok: false, status: null, error: "URL is not HTTPS" };
   }
 
   const controller = new AbortController();
@@ -19,25 +19,25 @@ const checkUrl = async (record: ImageRecord) => {
 
   try {
     let response = await fetch(record.url, {
-      method: 'HEAD',
-      redirect: 'follow',
+      method: "HEAD",
+      redirect: "follow",
       signal: controller.signal,
     });
 
     // Some image CDNs do not support HEAD consistently.
     if (response.status === 405 || response.status === 403) {
       response = await fetch(record.url, {
-        method: 'GET',
-        headers: { Range: 'bytes=0-1023' },
-        redirect: 'follow',
+        method: "GET",
+        headers: { Range: "bytes=0-1023" },
+        redirect: "follow",
         signal: controller.signal,
       });
     }
 
-    const contentType = response.headers.get('content-type') ?? '';
+    const contentType = response.headers.get("content-type") ?? "";
     return {
       ...record,
-      ok: response.ok && contentType.startsWith('image/'),
+      ok: response.ok && contentType.startsWith("image/"),
       status: response.status,
       contentType,
       finalUrl: response.url,
@@ -72,10 +72,7 @@ const runPool = async <T, R>(
   };
 
   await Promise.all(
-    Array.from(
-      { length: Math.min(concurrency, items.length) },
-      () => runner(),
-    ),
+    Array.from({ length: Math.min(concurrency, items.length) }, () => runner()),
   );
 
   return results;
@@ -87,7 +84,7 @@ const main = async () => {
       title: true,
       images: {
         select: { imageUrl: true },
-        orderBy: { sortOrder: 'asc' },
+        orderBy: { sortOrder: "asc" },
       },
     },
   });
@@ -98,7 +95,7 @@ const main = async () => {
       coverImageUrl: true,
       images: {
         select: { imageUrl: true },
-        orderBy: { sortOrder: 'asc' },
+        orderBy: { sortOrder: "asc" },
       },
     },
   });
@@ -114,21 +111,23 @@ const main = async () => {
   const records: ImageRecord[] = [
     ...materials.flatMap((material) =>
       material.images.map((image) => ({
-        source: 'material' as const,
+        source: "material" as const,
         owner: material.title,
         url: image.imageUrl,
       })),
     ),
     ...projects.flatMap((project) => [
       ...(project.coverImageUrl
-        ? [{
-            source: 'project-cover' as const,
-            owner: project.title,
-            url: project.coverImageUrl,
-          }]
+        ? [
+            {
+              source: "project-cover" as const,
+              owner: project.title,
+              url: project.coverImageUrl,
+            },
+          ]
         : []),
       ...project.images.map((image) => ({
-        source: 'project-image' as const,
+        source: "project-image" as const,
         owner: project.title,
         url: image.imageUrl,
       })),
@@ -144,27 +143,25 @@ const main = async () => {
   console.log(`Unique remote image URLs: ${uniqueRecords.length}`);
 
   if (materialsWithoutImages.length > 0) {
-    console.error('\nMaterials missing MaterialImage rows:');
+    console.error("\nMaterials missing MaterialImage rows:");
     for (const title of materialsWithoutImages) console.error(`- ${title}`);
   }
 
   if (projectsWithoutCovers.length > 0) {
-    console.error('\nProjects missing coverImageUrl:');
+    console.error("\nProjects missing coverImageUrl:");
     for (const title of projectsWithoutCovers) console.error(`- ${title}`);
   }
 
-  const results = await runPool(
-    uniqueRecords,
-    checkUrl,
-    CONCURRENCY,
-  );
+  const results = await runPool(uniqueRecords, checkUrl, CONCURRENCY);
 
   const failed = results.filter((result) => !result.ok);
 
-  if (failed.length === 0 &&
-      materialsWithoutImages.length === 0 &&
-      projectsWithoutCovers.length === 0) {
-    console.log('\nAll seeded image records and remote URLs passed.');
+  if (
+    failed.length === 0 &&
+    materialsWithoutImages.length === 0 &&
+    projectsWithoutCovers.length === 0
+  ) {
+    console.log("\nAll seeded image records and remote URLs passed.");
     return;
   }
 

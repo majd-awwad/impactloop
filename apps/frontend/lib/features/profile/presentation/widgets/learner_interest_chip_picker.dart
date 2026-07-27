@@ -55,10 +55,9 @@ class LearnerInterestChipPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final taxonomyKeys = options.flatItems.map((item) => item.key).toSet();
-    final customKeys = customInterestKeys(selectedKeys)
-        .where((key) => !taxonomyKeys.contains(key))
-        .toList()
-      ..sort();
+    final customKeys = customInterestKeys(
+      selectedKeys,
+    ).where((key) => !taxonomyKeys.contains(key)).toList()..sort();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

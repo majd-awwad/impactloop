@@ -1,8 +1,5 @@
 class LearnerInterestOption {
-  const LearnerInterestOption({
-    required this.key,
-    required this.label,
-  });
+  const LearnerInterestOption({required this.key, required this.label});
 
   final String key;
   final String label;
@@ -91,9 +88,7 @@ const fallbackLearnerInterestOptions = LearnerInterestOptionsResponse(
     LearnerInterestGroup(
       key: 'woodworking',
       label: 'Woodworking',
-      items: [
-        LearnerInterestOption(key: 'woodworking', label: 'Woodworking'),
-      ],
+      items: [LearnerInterestOption(key: 'woodworking', label: 'Woodworking')],
     ),
     LearnerInterestGroup(
       key: 'fabric_textiles',
@@ -108,23 +103,17 @@ const fallbackLearnerInterestOptions = LearnerInterestOptionsResponse(
     LearnerInterestGroup(
       key: 'art_crafts',
       label: 'Art & Crafts',
-      items: [
-        LearnerInterestOption(key: 'art_crafts', label: 'Art & Crafts'),
-      ],
+      items: [LearnerInterestOption(key: 'art_crafts', label: 'Art & Crafts')],
     ),
     LearnerInterestGroup(
       key: 'recycling',
       label: 'Recycling',
-      items: [
-        LearnerInterestOption(key: 'recycling', label: 'Recycling'),
-      ],
+      items: [LearnerInterestOption(key: 'recycling', label: 'Recycling')],
     ),
     LearnerInterestGroup(
       key: 'home_diy',
       label: 'Home DIY',
-      items: [
-        LearnerInterestOption(key: 'home_diy', label: 'Home DIY'),
-      ],
+      items: [LearnerInterestOption(key: 'home_diy', label: 'Home DIY')],
     ),
   ],
 );

@@ -70,11 +70,7 @@ class AppStatusStyle {
 
 /// Compact, route-independent presentation for a semantic status label.
 class AppStatusBadge extends StatelessWidget {
-  const AppStatusBadge({
-    super.key,
-    required this.label,
-    required this.tone,
-  });
+  const AppStatusBadge({super.key, required this.label, required this.tone});
 
   final String label;
   final AppStatusTone tone;

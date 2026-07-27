@@ -144,6 +144,9 @@ class MaterialDiscoveryApiMapper {
       isOwnMaterial: isOwnMaterial,
       canReserve: canReserve,
       reserveBlockReason: reserveBlockReason,
+      recommendationImpressionId: _recommendationImpressionId(
+        json['recommendationImpressionId'],
+      ),
     );
   }
 
@@ -187,6 +190,15 @@ class MaterialDiscoveryApiMapper {
     }
 
     final normalized = value.toString().trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  static String? _recommendationImpressionId(Object? value) {
+    if (value is! String) {
+      return null;
+    }
+
+    final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
   }
 

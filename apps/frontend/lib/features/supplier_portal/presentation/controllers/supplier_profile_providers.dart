@@ -8,3 +8,11 @@ final supplierProfileProvider = FutureProvider<SupplierProfileResponse>((ref) {
   watchSupplierPortalSessionFromRef(ref);
   return ref.watch(supplierProfileRepositoryProvider).fetchProfile();
 });
+
+final supplierProfileManagementProvider =
+    FutureProvider<SupplierProfileManagement>((ref) {
+      watchSupplierPortalSessionFromRef(ref);
+      return ref
+          .watch(supplierProfileRepositoryProvider)
+          .fetchManagementProfile();
+    });

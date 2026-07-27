@@ -59,11 +59,7 @@ void main() {
   });
 
   test('falls back for empty message on conflict', () {
-    const error = ApiException(
-      message: '',
-      code: 'CONFLICT',
-      statusCode: 409,
-    );
+    const error = ApiException(message: '', code: 'CONFLICT', statusCode: 409);
 
     expect(
       reservationCreateErrorMessage(error),

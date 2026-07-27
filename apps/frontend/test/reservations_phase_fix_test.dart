@@ -4,7 +4,10 @@ import 'package:frontend/features/supplier_portal/data/models/supplier_incoming_
 void main() {
   test('supplier Accepted tab query excludes awaiting confirmation', () {
     expect(SupplierIncomingRequestTab.accepted.apiQueryValue, 'accepted');
-    expect(SupplierIncomingRequestTab.needsLearner.apiQueryValue, 'needs_learner');
+    expect(
+      SupplierIncomingRequestTab.needsLearner.apiQueryValue,
+      'needs_learner',
+    );
   });
 
   test('supplier delivery WAITING_FOR_DRIVER label', () {
@@ -16,16 +19,19 @@ void main() {
     expect(summary.statusLabel, 'Waiting for driver');
   });
 
-  test('SupplierPickupWindow sends selected learner preferred delivery window', () {
-    final payload = SupplierPickupWindow(
-      start: DateTime.utc(2026, 6, 9, 8),
-      end: DateTime.utc(2026, 6, 9, 9),
-      selectedPreferredWindowIndex: 0,
-    ).toJson();
+  test(
+    'SupplierPickupWindow sends selected learner preferred delivery window',
+    () {
+      final payload = SupplierPickupWindow(
+        start: DateTime.utc(2026, 6, 9, 8),
+        end: DateTime.utc(2026, 6, 9, 9),
+        selectedPreferredWindowIndex: 0,
+      ).toJson();
 
-    expect(payload['selectedPreferredWindowIndex'], 0);
-    expect(payload.containsKey('proposedDeliveryWindowStart'), isFalse);
-  });
+      expect(payload['selectedPreferredWindowIndex'], 0);
+      expect(payload.containsKey('proposedDeliveryWindowStart'), isFalse);
+    },
+  );
 
   test('SupplierPickupWindow sends custom proposed delivery window', () {
     final proposedStart = DateTime.utc(2026, 6, 12, 12);
@@ -38,7 +44,10 @@ void main() {
       proposedDeliveryWindowEnd: proposedEnd,
     ).toJson();
 
-    expect(payload['proposedDeliveryWindowStart'], proposedStart.toIso8601String());
+    expect(
+      payload['proposedDeliveryWindowStart'],
+      proposedStart.toIso8601String(),
+    );
     expect(payload['proposedDeliveryWindowEnd'], proposedEnd.toIso8601String());
   });
 

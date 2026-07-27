@@ -1,4 +1,1 @@
-enum LearnerSetupMode {
-  registration,
-  addToExistingAccount,
-}
+enum LearnerSetupMode { registration, addToExistingAccount }

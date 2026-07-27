@@ -1,26 +1,23 @@
-import type { PrismaClient } from '../../src/generated/prisma/client.js';
-import { hashPassword } from '../../src/utils/password.js';
+import type { PrismaClient } from "../../src/generated/prisma/client.js";
+import { hashPassword } from "../../src/utils/password.js";
 
-const SEED_PASSWORD = 'SupplierPassword123!';
+const SEED_PASSWORD = "SupplierPassword123!";
 
 export type SeedSupplierVerificationsResult = {
   seeded: string[];
-  mode: 'created' | 'updated' | 'skipped';
+  mode: "created" | "updated" | "skipped";
 };
 
 type VerificationSeed = {
   email: string;
   displayName: string;
-  supplierType: 'WORKSHOP' | 'FACTORY' | 'EDUCATIONAL_INSTITUTION';
+  supplierType: "WORKSHOP" | "FACTORY" | "EDUCATIONAL_INSTITUTION";
   organizationName: string;
   city: string;
   area: string;
   verificationStatus: string;
   verificationDocumentStatus:
-    | 'PENDING'
-    | 'VERIFIED'
-    | 'REJECTED'
-    | 'CHANGES_REQUESTED';
+    "PENDING" | "VERIFIED" | "REJECTED" | "CHANGES_REQUESTED";
   adminNote?: string;
   documentUrl?: string;
   documentName?: string;
@@ -28,53 +25,53 @@ type VerificationSeed = {
 
 const VERIFICATION_SEEDS: VerificationSeed[] = [
   {
-    email: 'workshop.verify.pending@impactloop.test',
-    displayName: 'Pending Workshop Owner',
-    supplierType: 'WORKSHOP',
-    organizationName: 'Nablus Makers Workshop',
-    city: 'Nablus',
-    area: 'Old City',
-    verificationStatus: 'PENDING',
-    verificationDocumentStatus: 'PENDING',
-    documentUrl: 'https://example.com/docs/workshop-license.pdf',
-    documentName: 'workshop-license.pdf',
+    email: "workshop.verify.pending@impactloop.test",
+    displayName: "Pending Workshop Owner",
+    supplierType: "WORKSHOP",
+    organizationName: "Nablus Makers Workshop",
+    city: "Nablus",
+    area: "Old City",
+    verificationStatus: "PENDING",
+    verificationDocumentStatus: "PENDING",
+    documentUrl: "https://example.com/docs/workshop-license.pdf",
+    documentName: "workshop-license.pdf",
   },
   {
-    email: 'factory.verify.pending@impactloop.test',
-    displayName: 'Pending Factory Owner',
-    supplierType: 'FACTORY',
-    organizationName: 'Ramallah Industrial Factory',
-    city: 'Ramallah',
-    area: 'Industrial Zone',
-    verificationStatus: 'PENDING',
-    verificationDocumentStatus: 'PENDING',
-    documentUrl: 'https://example.com/docs/factory-registration.pdf',
-    documentName: 'factory-registration.pdf',
+    email: "factory.verify.pending@impactloop.test",
+    displayName: "Pending Factory Owner",
+    supplierType: "FACTORY",
+    organizationName: "Ramallah Industrial Factory",
+    city: "Ramallah",
+    area: "Industrial Zone",
+    verificationStatus: "PENDING",
+    verificationDocumentStatus: "PENDING",
+    documentUrl: "https://example.com/docs/factory-registration.pdf",
+    documentName: "factory-registration.pdf",
   },
   {
-    email: 'university.verify.approved@impactloop.test',
-    displayName: 'Approved University Owner',
-    supplierType: 'EDUCATIONAL_INSTITUTION',
-    organizationName: 'Birzeit University Lab',
-    city: 'Birzeit',
-    area: 'Campus',
-    verificationStatus: 'APPROVED',
-    verificationDocumentStatus: 'VERIFIED',
-    documentUrl: 'https://example.com/docs/university-charter.pdf',
-    documentName: 'university-charter.pdf',
+    email: "university.verify.approved@impactloop.test",
+    displayName: "Approved University Owner",
+    supplierType: "EDUCATIONAL_INSTITUTION",
+    organizationName: "Birzeit University Lab",
+    city: "Birzeit",
+    area: "Campus",
+    verificationStatus: "APPROVED",
+    verificationDocumentStatus: "VERIFIED",
+    documentUrl: "https://example.com/docs/university-charter.pdf",
+    documentName: "university-charter.pdf",
   },
   {
-    email: 'workshop.verify.changes@impactloop.test',
-    displayName: 'Changes Requested Workshop Owner',
-    supplierType: 'WORKSHOP',
-    organizationName: 'Hebron Community Workshop',
-    city: 'Hebron',
-    area: 'Downtown',
-    verificationStatus: 'CHANGES_REQUESTED',
-    verificationDocumentStatus: 'CHANGES_REQUESTED',
-    adminNote: 'Please upload a clearer business registration document.',
-    documentUrl: 'https://example.com/docs/workshop-id-blurry.pdf',
-    documentName: 'workshop-id-blurry.pdf',
+    email: "workshop.verify.changes@impactloop.test",
+    displayName: "Changes Requested Workshop Owner",
+    supplierType: "WORKSHOP",
+    organizationName: "Hebron Community Workshop",
+    city: "Hebron",
+    area: "Downtown",
+    verificationStatus: "CHANGES_REQUESTED",
+    verificationDocumentStatus: "CHANGES_REQUESTED",
+    adminNote: "Please upload a clearer business registration document.",
+    documentUrl: "https://example.com/docs/workshop-id-blurry.pdf",
+    documentName: "workshop-id-blurry.pdf",
   },
 ];
 
@@ -83,11 +80,11 @@ async function ensureVerificationSupplier(
   seed: VerificationSeed,
 ) {
   const passwordHash = await hashPassword(SEED_PASSWORD);
-  const submittedAt = new Date('2026-06-01T10:00:00.000Z');
+  const submittedAt = new Date("2026-06-01T10:00:00.000Z");
   const reviewedAt =
-    seed.verificationStatus === 'VERIFIED' ||
-    seed.verificationStatus === 'REJECTED'
-      ? new Date('2026-06-10T12:00:00.000Z')
+    seed.verificationStatus === "VERIFIED" ||
+    seed.verificationStatus === "REJECTED"
+      ? new Date("2026-06-10T12:00:00.000Z")
       : null;
 
   let user = await prisma.user.findUnique({
@@ -108,10 +105,10 @@ async function ensureVerificationSupplier(
         displayName: seed.displayName,
         email: seed.email,
         passwordHash,
-        accountStatus: 'ACTIVE',
+        accountStatus: "ACTIVE",
         emailVerifiedAt: new Date(),
         roles: {
-          create: [{ role: 'SUPPLIER', isPrimary: true }],
+          create: [{ role: "SUPPLIER", isPrimary: true }],
         },
         supplierProfile: {
           create: {
@@ -124,13 +121,13 @@ async function ensureVerificationSupplier(
             verificationAdminNote: seed.adminNote ?? null,
             defaultPickupLocation: {
               create: {
-                country: 'Palestine',
+                country: "Palestine",
                 city: seed.city,
                 area: seed.area,
                 addressLine: `${seed.area} Street`,
-                visibility: 'PRIVATE',
+                visibility: "PRIVATE",
                 isApproximate: true,
-                locationType: 'PICKUP_POINT',
+                locationType: "PICKUP_POINT",
               },
             },
             organizationProfile: {
@@ -143,13 +140,13 @@ async function ensureVerificationSupplier(
                 verificationDocumentName: seed.documentName ?? null,
                 businessLocation: {
                   create: {
-                    country: 'Palestine',
+                    country: "Palestine",
                     city: seed.city,
                     area: seed.area,
                     addressLine: `${seed.area} Business Address`,
-                    visibility: 'PRIVATE',
+                    visibility: "PRIVATE",
                     isApproximate: true,
-                    locationType: 'BUSINESS_LOCATION',
+                    locationType: "BUSINESS_LOCATION",
                   },
                 },
               },
@@ -167,15 +164,15 @@ async function ensureVerificationSupplier(
       },
     });
 
-    return 'created';
+    return "created";
   }
 
-  const hasSupplierRole = user.roles.some((role) => role.role === 'SUPPLIER');
+  const hasSupplierRole = user.roles.some((role) => role.role === "SUPPLIER");
   if (!hasSupplierRole) {
     await prisma.userRoleAssignment.create({
       data: {
         userId: user.id,
-        role: 'SUPPLIER',
+        role: "SUPPLIER",
         isPrimary: user.roles.length === 0,
       },
     });
@@ -194,7 +191,7 @@ async function ensureVerificationSupplier(
         verificationAdminNote: seed.adminNote ?? null,
       },
     });
-    return 'updated';
+    return "updated";
   }
 
   await prisma.supplierProfile.update({
@@ -233,20 +230,20 @@ async function ensureVerificationSupplier(
         verificationDocumentName: seed.documentName ?? null,
         businessLocation: {
           create: {
-            country: 'Palestine',
+            country: "Palestine",
             city: seed.city,
             area: seed.area,
             addressLine: `${seed.area} Business Address`,
-            visibility: 'PRIVATE',
+            visibility: "PRIVATE",
             isApproximate: true,
-            locationType: 'BUSINESS_LOCATION',
+            locationType: "BUSINESS_LOCATION",
           },
         },
       },
     });
   }
 
-  return 'updated';
+  return "updated";
 }
 
 export async function seedSupplierVerifications(
@@ -261,6 +258,6 @@ export async function seedSupplierVerifications(
 
   return {
     seeded,
-    mode: seeded.length > 0 ? 'created' : 'skipped',
+    mode: seeded.length > 0 ? "created" : "skipped",
   };
 }

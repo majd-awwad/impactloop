@@ -167,8 +167,7 @@ class _LearnerProfileEditPageState
           error: (_, __) => LearnerInterestChipPicker(
             options: fallbackLearnerInterestOptions,
             selectedKeys: _selectedInterestKeys,
-            onChanged: (value) =>
-                setState(() => _selectedInterestKeys = value),
+            onChanged: (value) => setState(() => _selectedInterestKeys = value),
             customInterestController: _customInterestController,
             label: 'Interests',
             errorText: _interestsError,

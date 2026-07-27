@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_reservations_api.dart';
 import '../../data/models/admin_reservations_models.dart';
@@ -137,21 +142,35 @@ final _adminReservationDetailProvider = FutureProvider.autoDispose
 
 String _statusLabel(String status) => monitoringStatusLabel(status);
 
-bool _reservationDeliveryStatusesMatch({
-  required String reservationStatus,
-  required String? deliveryStatus,
-}) {
-  final normalizedDelivery = deliveryStatus?.trim();
-  if (normalizedDelivery == null || normalizedDelivery.isEmpty) {
-    return false;
+/// Short, non-truncating labels for the fixed-width table Status column.
+/// Full wording remains available via tooltip.
+String _conciseReservationStatusLabel(String status) {
+  switch (status.toUpperCase()) {
+    case 'PENDING':
+      return 'Pending';
+    case 'AWAITING_LEARNER_CONFIRMATION':
+      return 'Waiting for learner';
+    case 'AWAITING_SUPPLIER_CONFIRMATION':
+      return 'Waiting for supplier';
+    case 'AWAITING_RESOLUTION':
+      return 'Pending admin review';
+    case 'ACCEPTED':
+      return 'Accepted';
+    case 'COMPLETED':
+      return 'Completed';
+    case 'EXPIRED':
+      return 'Expired';
+    case 'CANCELLED':
+      return 'Cancelled';
+    case 'REJECTED':
+      return 'Rejected';
+    case 'NO_SHOW':
+      return 'Pickup missed';
+    case 'FULFILLMENT_FAILED':
+      return 'Fulfillment failed';
+    default:
+      return _statusLabel(status);
   }
-  return reservationStatus.toUpperCase() == normalizedDelivery.toUpperCase();
-}
-
-String _statusBadgeText(String status, {String? scope}) {
-  final label = _statusLabel(status);
-  if (scope == null || scope.isEmpty) return label;
-  return '$scope · $label';
 }
 
 AppStatusTone _reservationStatusTone(
@@ -161,120 +180,24 @@ AppStatusTone _reservationStatusTone(
     ? deliveryStatusAppTone(status)
     : learnerReservationStatusTone(status);
 
-Color _reservationStatusAccent(BuildContext context, String status) =>
-    AppStatusStyle.of(context, _reservationStatusTone(status)).foreground;
-
-class _ReservationStatusBadge extends StatelessWidget {
-  const _ReservationStatusBadge({
-    required this.status,
-    this.isDelivery = false,
-    this.scope,
-  });
+/// Semantic status badge that never truncates: the visible label is a
+/// concise, human-readable form and the full wording is available on hover.
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status, this.isDelivery = false});
 
   final String status;
   final bool isDelivery;
-  final String? scope;
-
-  @override
-  Widget build(BuildContext context) => AppStatusBadge(
-    label: _statusBadgeText(status, scope: scope),
-    tone: _reservationStatusTone(status, isDelivery: isDelivery),
-  );
-}
-
-class _ReservationSummaryCard extends StatelessWidget {
-  const _ReservationSummaryCard({
-    required this.label,
-    required this.value,
-    required this.helper,
-    required this.icon,
-    required this.accent,
-  });
-
-  final String label;
-  final String value;
-  final String helper;
-  final IconData icon;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 96),
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: accent.withValues(alpha: palette.isDark ? 0.45 : 0.28),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ColoredBox(color: accent, child: const SizedBox(width: 4)),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 12, 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(
-                            alpha: palette.isDark ? 0.22 : 0.14,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(icon, size: 17, color: accent),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              label,
-                              style: AdminTypography.kpiLabel(palette),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              value,
-                              style: AdminTypography.kpiValue(
-                                palette,
-                              ).copyWith(fontSize: 17, color: accent),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              helper,
-                              style: AdminTypography.kpiHelper(palette),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final full = _statusLabel(status);
+    final concise = isDelivery ? full : _conciseReservationStatusLabel(status);
+    final badge = AppStatusBadge(
+      label: concise,
+      tone: _reservationStatusTone(status, isDelivery: isDelivery),
     );
+    if (concise == full) return badge;
+    return Tooltip(message: full, child: badge);
   }
 }
 
@@ -284,14 +207,6 @@ String _formatQuantity(num quantity, String unit) {
       : quantity.toString();
   final trimmedUnit = unit.trim();
   return trimmedUnit.isEmpty ? qty : '$qty $trimmedUnit';
-}
-
-String _formatPrice(AdminReservationMaterialDetail material) {
-  if (material.isFree) return 'Free';
-  if (material.price == null) return 'Paid';
-  final currency = material.currency?.trim();
-  final price = material.price!.toString();
-  return currency == null || currency.isEmpty ? price : '$currency $price';
 }
 
 class AdminReservationsPage extends ConsumerStatefulWidget {
@@ -342,22 +257,22 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
     return ColoredBox(
       color: palette.pageBackground,
       child: SingleChildScrollView(
-        padding: const EdgeInsetsDirectional.fromSTEB(20, 16, 20, 28),
+        padding: const EdgeInsetsDirectional.fromSTEB(24, 24, 24, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Reservations', style: AdminTypography.pageTitle(palette)),
+            Text(
+              'Reservations',
+              style: AdminTypography.pageTitle(palette).copyWith(fontSize: 24),
+            ),
             const SizedBox(height: 4),
             Text(
               'Monitor material reservations across learners and suppliers.',
               style: AdminTypography.pageSubtitle(palette),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             reservationsAsync.when(
-              loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: CircularProgressIndicator()),
-              ),
+              loading: () => const _ReservationsSkeleton(),
               error: (error, _) => AdminMonitoringErrorPanel(
                 title: 'Could not load reservations.',
                 message: error is ApiException
@@ -368,7 +283,7 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
               data: (data) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SummaryRow(summary: data.summary, palette: palette),
+                  _KpiRow(summary: data.summary),
                   const SizedBox(height: 16),
                   _FiltersPanel(
                     compact: compact,
@@ -400,36 +315,22 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
                   ),
                   const SizedBox(height: 16),
                   if (data.items.isEmpty)
-                    AdminEmptyState(
-                      icon: Icons.event_note_outlined,
-                      title: filters.hasActiveFilters
-                          ? 'No reservations match these filters.'
-                          : 'No reservations recorded yet.',
-                      subtitle: filters.hasActiveFilters
-                          ? 'Try adjusting filters or reset to see all reservations.'
-                          : 'Learner material reservations will appear here as they are created.',
+                    _ReservationsEmptyState(
+                      hasActiveFilters: filters.hasActiveFilters,
+                      onReset: () {
+                        _searchController.clear();
+                        ref.read(_reservationFiltersProvider.notifier).reset();
+                      },
                     )
                   else ...[
-                    _ReservationsList(
+                    _ReservationsResults(
                       items: data.items,
                       compact: compact,
                       onDetails: _showDetails,
-                    ),
-                    const SizedBox(height: 12),
-                    _PaginationRow(
-                      page: data.pagination.page,
-                      totalPages: data.pagination.totalPages,
-                      total: data.pagination.total,
-                      onPrevious: data.pagination.page > 1
-                          ? () => ref
-                                .read(_reservationFiltersProvider.notifier)
-                                .setPage(data.pagination.page - 1)
-                          : null,
-                      onNext: data.pagination.page < data.pagination.totalPages
-                          ? () => ref
-                                .read(_reservationFiltersProvider.notifier)
-                                .setPage(data.pagination.page + 1)
-                          : null,
+                      pagination: data.pagination,
+                      onPageChanged: (page) => ref
+                          .read(_reservationFiltersProvider.notifier)
+                          .setPage(page),
                     ),
                   ],
                 ],
@@ -442,14 +343,18 @@ class _AdminReservationsPageState extends ConsumerState<AdminReservationsPage> {
   }
 }
 
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({required this.summary, required this.palette});
+/// ---------------------------------------------------------------------------
+/// KPI row
+/// ---------------------------------------------------------------------------
+
+class _KpiRow extends StatelessWidget {
+  const _KpiRow({required this.summary});
 
   final AdminReservationsSummary summary;
-  final AdminPalette palette;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.adminPalette;
     final stats = [
       (
         'Total',
@@ -497,16 +402,17 @@ class _SummaryRow extends StatelessWidget {
             : constraints.maxWidth >= 480
             ? 2
             : 1;
+        const gap = 16.0;
         return Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: gap,
+          runSpacing: gap,
           children: stats
               .map(
                 (stat) => SizedBox(
                   width: columns == 1
                       ? double.infinity
-                      : (constraints.maxWidth - (columns - 1) * 10) / columns,
-                  child: _ReservationSummaryCard(
+                      : (constraints.maxWidth - (columns - 1) * gap) / columns,
+                  child: _KpiCard(
                     label: stat.$1,
                     value: stat.$2,
                     helper: stat.$3,
@@ -521,6 +427,91 @@ class _SummaryRow extends StatelessWidget {
     );
   }
 }
+
+class _KpiCard extends StatelessWidget {
+  const _KpiCard({
+    required this.label,
+    required this.value,
+    required this.helper,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String label;
+  final String value;
+  final String helper;
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 132),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow,
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: palette.isDark ? 0.2 : 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AdminTypography.kpiLabel(palette),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: AdminTypography.kpiValue(palette).copyWith(fontSize: 26),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            helper,
+            style: AdminTypography.kpiHelper(palette),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------------
+/// Filters panel
+/// ---------------------------------------------------------------------------
 
 class _FiltersPanel extends StatefulWidget {
   const _FiltersPanel({
@@ -563,7 +554,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final dropdownWidth = widget.compact ? double.infinity : 170.0;
+    final dropdownWidth = widget.compact ? double.infinity : 176.0;
     final statusValue =
         safeDropdownValue(widget.filters.status, widget.statuses) ?? 'ALL';
 
@@ -587,20 +578,43 @@ class _FiltersPanelState extends State<_FiltersPanel> {
       DropdownMenuEntry(value: kTimeRangeCustom, label: 'Custom range'),
     ];
 
-    final searchField = TextField(
-      controller: widget.searchController,
-      decoration: InputDecoration(
-        prefixIcon: const Icon(Icons.search, size: 20),
-        hintText: 'Search material, learner, or supplier…',
-        border: const OutlineInputBorder(),
-        isDense: true,
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.search, size: 20),
-          tooltip: 'Search',
-          onPressed: widget.onSearch,
+    final searchField = SizedBox(
+      height: 50,
+      child: TextField(
+        controller: widget.searchController,
+        style: Theme.of(context).textTheme.bodyMedium,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: palette.isDark
+              ? palette.cardBackground
+              : const Color(0xFFF9FAFB),
+          prefixIcon: Icon(Icons.search, size: 20, color: palette.textMuted),
+          hintText: 'Search material, learner, or supplier...',
+          hintStyle: AdminTypography.pageSubtitle(
+            palette,
+          ).copyWith(fontSize: 14, color: palette.textMuted),
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: palette.cardBorder),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: palette.cardBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: palette.primaryTeal, width: 1.4),
+          ),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.search, size: 20),
+            tooltip: 'Search',
+            onPressed: widget.onSearch,
+          ),
         ),
+        onSubmitted: (_) => widget.onSearch(),
       ),
-      onSubmitted: (_) => widget.onSearch(),
     );
 
     final statusFilter = AdminCompactFilterDropdown(
@@ -628,31 +642,51 @@ class _FiltersPanelState extends State<_FiltersPanel> {
       onSelected: widget.onTimeRangeChanged,
     );
 
-    final refreshButton = IconButton.filledTonal(
-      onPressed: widget.onRefresh,
-      tooltip: 'Refresh',
-      icon: const Icon(Icons.sync, size: 20),
+    final refreshButton = SizedBox(
+      width: 48,
+      height: 48,
+      child: IconButton(
+        onPressed: widget.onRefresh,
+        tooltip: 'Refresh',
+        style: IconButton.styleFrom(
+          backgroundColor: palette.primaryTeal.withValues(
+            alpha: palette.isDark ? 0.2 : 0.1,
+          ),
+          foregroundColor: palette.primaryTeal,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        icon: const Icon(Icons.sync, size: 20),
+      ),
     );
 
     return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 12),
+      padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 16),
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow,
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (widget.compact) ...[
             searchField,
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             statusFilter,
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             hasDeliveryFilter,
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             timeFilter,
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: refreshButton,
@@ -662,21 +696,18 @@ class _FiltersPanelState extends State<_FiltersPanel> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(flex: 3, child: searchField),
-                const SizedBox(width: 10),
+                const SizedBox(width: 14),
                 statusFilter,
-                const SizedBox(width: 10),
+                const SizedBox(width: 14),
                 hasDeliveryFilter,
-                const SizedBox(width: 10),
+                const SizedBox(width: 14),
                 timeFilter,
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: refreshButton,
-                ),
+                const SizedBox(width: 14),
+                refreshButton,
               ],
             ),
           if (widget.filters.timeRange == kTimeRangeCustom) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             if (widget.compact)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -696,7 +727,7 @@ class _FiltersPanelState extends State<_FiltersPanel> {
               )
             else
               Wrap(
-                spacing: 10,
+                spacing: 14,
                 runSpacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
@@ -768,131 +799,188 @@ class _FiltersPanelState extends State<_FiltersPanel> {
   }
 }
 
-class _ReservationsList extends StatelessWidget {
-  const _ReservationsList({
+/// ---------------------------------------------------------------------------
+/// Results: table container + footer (pagination)
+/// ---------------------------------------------------------------------------
+
+/// Shared column proportions used identically by the header and every row so
+/// columns can never drift between them.
+abstract final class _Cols {
+  static const materialFlex = 30;
+  static const learnerFlex = 20;
+  static const supplierFlex = 24;
+  static const statusWidth = 165.0;
+  static const qtyWidth = 90.0;
+  static const createdWidth = 175.0;
+  static const deliveryWidth = 150.0;
+  static const actionsWidth = 76.0;
+  static const gap = 12.0;
+}
+
+Widget _tableRowLayout({
+  required Widget material,
+  required Widget learner,
+  required Widget supplier,
+  required Widget status,
+  required Widget qty,
+  required Widget created,
+  required Widget delivery,
+  required Widget actions,
+}) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Expanded(flex: _Cols.materialFlex, child: material),
+      const SizedBox(width: _Cols.gap),
+      Expanded(flex: _Cols.learnerFlex, child: learner),
+      const SizedBox(width: _Cols.gap),
+      Expanded(flex: _Cols.supplierFlex, child: supplier),
+      const SizedBox(width: _Cols.gap),
+      SizedBox(width: _Cols.statusWidth, child: status),
+      const SizedBox(width: _Cols.gap),
+      SizedBox(width: _Cols.qtyWidth, child: qty),
+      const SizedBox(width: _Cols.gap),
+      SizedBox(width: _Cols.createdWidth, child: created),
+      const SizedBox(width: _Cols.gap),
+      SizedBox(width: _Cols.deliveryWidth, child: delivery),
+      const SizedBox(width: _Cols.gap),
+      SizedBox(width: _Cols.actionsWidth, child: actions),
+    ],
+  );
+}
+
+class _ReservationsResults extends StatelessWidget {
+  const _ReservationsResults({
     required this.items,
     required this.compact,
     required this.onDetails,
+    required this.pagination,
+    required this.onPageChanged,
   });
 
   final List<AdminReservationListItem> items;
   final bool compact;
   final ValueChanged<String> onDetails;
+  final AdminReservationsPagination pagination;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-
-    if (compact) {
-      return Column(
-        children: items
-            .map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _ReservationRow(
-                  item: item,
-                  onTap: () => onDetails(item.id),
-                ),
-              ),
-            )
-            .toList(),
-      );
-    }
+    final rangeStart = pagination.total == 0
+        ? 0
+        : (pagination.page - 1) * pagination.limit + 1;
+    final rangeEndRaw = pagination.page * pagination.limit;
+    final rangeEnd = rangeEndRaw > pagination.total
+        ? pagination.total
+        : rangeEndRaw;
 
     return Container(
       decoration: BoxDecoration(
         color: palette.cardBackground,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow,
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 14, 10),
-            decoration: BoxDecoration(
-              color: palette.isDark
-                  ? palette.cardBackground
-                  : const Color(0xFFF9FAFB),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(14),
-              ),
-              border: Border(bottom: BorderSide(color: palette.cardBorder)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Text(
-                    'Material',
-                    style: AdminTypography.kpiLabel(palette),
-                  ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (compact)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 4, 0),
+                child: Column(
+                  children: items
+                      .map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _ReservationMobileCard(
+                            item: item,
+                            onTap: () => onDetails(item.id),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Learner',
-                    style: AdminTypography.kpiLabel(palette),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    'Supplier',
-                    style: AdminTypography.kpiLabel(palette),
-                  ),
-                ),
-                SizedBox(
-                  width: 96,
-                  child: Text(
-                    'Status',
-                    style: AdminTypography.kpiLabel(palette),
-                  ),
-                ),
-                SizedBox(
-                  width: 72,
-                  child: Text('Qty', style: AdminTypography.kpiLabel(palette)),
-                ),
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    'Created',
-                    style: AdminTypography.kpiLabel(palette),
-                  ),
-                ),
-                SizedBox(
-                  width: 100,
-                  child: Text(
-                    'Delivery',
-                    style: AdminTypography.kpiLabel(palette),
-                  ),
+              )
+            else ...[
+              _TableHeader(palette: palette),
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0) Divider(height: 1, color: palette.cardBorder),
+                _ReservationTableRow(
+                  item: items[i],
+                  onTap: () => onDetails(items[i].id),
                 ),
               ],
-            ),
-          ),
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) Divider(height: 1, color: palette.cardBorder),
-            _ReservationRow(
-              item: items[i],
-              dense: true,
-              onTap: () => onDetails(items[i].id),
+            ],
+            Divider(height: 1, color: palette.cardBorder),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              child: _ResultsFooter(
+                rangeStart: rangeStart,
+                rangeEnd: rangeEnd,
+                total: pagination.total,
+                page: pagination.page,
+                totalPages: pagination.totalPages,
+                onPageChanged: onPageChanged,
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
 }
 
-class _ReservationRow extends StatelessWidget {
-  const _ReservationRow({
-    required this.item,
-    required this.onTap,
-    this.dense = false,
-  });
+class _TableHeader extends StatelessWidget {
+  const _TableHeader({required this.palette});
+
+  final AdminPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget label(String text, {TextAlign align = TextAlign.start}) => Text(
+      text,
+      textAlign: align,
+      style: AdminTypography.kpiLabel(
+        palette,
+      ).copyWith(fontSize: 12, color: palette.textSecondary),
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: palette.isDark
+            ? palette.cardBackground
+            : const Color(0xFFF9FAFB),
+        border: Border(bottom: BorderSide(color: palette.cardBorder)),
+      ),
+      child: _tableRowLayout(
+        material: label('Material'),
+        learner: label('Learner'),
+        supplier: label('Supplier'),
+        status: label('Status'),
+        qty: label('Qty'),
+        created: label('Created'),
+        delivery: label('Delivery'),
+        actions: label('Actions', align: TextAlign.center),
+      ),
+    );
+  }
+}
+
+class _ReservationTableRow extends StatelessWidget {
+  const _ReservationTableRow({required this.item, required this.onTap});
 
   final AdminReservationListItem item;
   final VoidCallback onTap;
-  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -907,243 +995,202 @@ class _ReservationRow extends StatelessWidget {
       item.supplier.email,
     );
     final deliveryStatus = item.delivery?.status;
-    final statusesMatch = _reservationDeliveryStatusesMatch(
-      reservationStatus: item.status,
-      deliveryStatus: deliveryStatus,
-    );
-    final deliveryLabel = deliveryStatus != null && deliveryStatus.isNotEmpty
-        ? _statusLabel(deliveryStatus)
-        : item.hasDelivery
-        ? 'Linked'
-        : '—';
-    final statusAccent = _reservationStatusAccent(context, item.status);
 
-    final inner = InkWell(
+    return InkWell(
       onTap: onTap,
-      child: dense
-          ? Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 14, 10),
-              child: _buildDenseRow(
-                palette,
-                learnerLabel,
-                supplierLabel,
-                created,
-                deliveryLabel,
-                statusesMatch,
-              ),
-            )
-          : _buildCard(
-              palette,
-              learnerLabel,
-              supplierLabel,
-              created,
-              deliveryLabel,
-              statusesMatch,
-            ),
-    );
-
-    return ClipRRect(
-      borderRadius: dense ? BorderRadius.zero : BorderRadius.circular(14),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ColoredBox(color: statusAccent, child: const SizedBox(width: 3)),
-            Expanded(child: inner),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDenseRow(
-    AdminPalette palette,
-    String learnerLabel,
-    String supplierLabel,
-    String created,
-    String deliveryLabel,
-    bool statusesMatch,
-  ) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          flex: 4,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: _tableRowLayout(
+          material: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _MaterialThumb(imageUrl: item.material.imageUrl, size: 40),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   item.material.title,
                   style: AdminTypography.sectionTitle(
                     palette,
-                  ).copyWith(fontSize: 13),
-                  maxLines: 2,
+                  ).copyWith(fontSize: 13.5, fontWeight: FontWeight.w700),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-        ),
-        Expanded(
-          flex: 3,
-          child: Text(
+          learner: Text(
             learnerLabel,
             style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-        ),
-        Expanded(
-          flex: 3,
-          child: Text(
+          supplier: Text(
             supplierLabel,
             style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-        ),
-        SizedBox(
-          width: 96,
-          child: _ReservationStatusBadge(
-            status: item.status,
-            scope: statusesMatch ? 'Reservation' : null,
+          status: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: _StatusBadge(status: item.status),
           ),
-        ),
-        SizedBox(
-          width: 72,
-          child: Text(
+          qty: Text(
             _formatQuantity(item.quantityRequested, item.unit),
             style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
-          ),
-        ),
-        SizedBox(
-          width: 120,
-          child: Text(
-            created,
-            style: AdminTypography.kpiHelper(palette),
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-        ),
-        SizedBox(
-          width: 100,
-          child: item.delivery != null && item.delivery!.status.isNotEmpty
-              ? _ReservationStatusBadge(
-                  status: item.delivery!.status,
-                  isDelivery: true,
-                  scope: statusesMatch ? 'Delivery' : null,
-                )
-              : Text(deliveryLabel, style: AdminTypography.kpiHelper(palette)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCard(
-    AdminPalette palette,
-    String learnerLabel,
-    String supplierLabel,
-    String created,
-    String deliveryLabel,
-    bool statusesMatch,
-  ) {
-    return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _MaterialThumb(imageUrl: item.material.imageUrl),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.material.title,
-                      style: AdminTypography.sectionTitle(
-                        palette,
-                      ).copyWith(fontSize: 14),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: [
-                        _ReservationStatusBadge(
-                          status: item.status,
-                          scope: statusesMatch ? 'Reservation' : null,
-                        ),
-                        Text(
-                          _formatQuantity(item.quantityRequested, item.unit),
-                          style: AdminTypography.kpiHelper(palette),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+          created: Text(
+            created,
+            style: AdminTypography.kpiHelper(palette).copyWith(fontSize: 12.5),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          delivery: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: deliveryStatus != null && deliveryStatus.isNotEmpty
+                ? _StatusBadge(status: deliveryStatus, isDelivery: true)
+                : Text('—', style: AdminTypography.kpiHelper(palette)),
+          ),
+          actions: Center(
+            child: IconButton(
+              onPressed: onTap,
+              tooltip: 'View reservation details',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(
+                Icons.visibility_outlined,
+                size: 19,
+                color: palette.textSecondary,
               ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _CardMetaRow(label: 'Learner', value: learnerLabel, palette: palette),
-          const SizedBox(height: 4),
-          _CardMetaRow(
-            label: 'Supplier',
-            value: supplierLabel,
-            palette: palette,
-          ),
-          const SizedBox(height: 4),
-          _CardMetaRow(label: 'Created', value: created, palette: palette),
-          if (item.hasDelivery) ...[
-            const SizedBox(height: 4),
-            _CardMetaRow(
-              label: 'Delivery',
-              value: item.delivery != null && item.delivery!.status.isNotEmpty
-                  ? '—'
-                  : deliveryLabel,
-              palette: palette,
-              trailing:
-                  item.delivery != null && item.delivery!.status.isNotEmpty
-                  ? _ReservationStatusBadge(
-                      status: item.delivery!.status,
-                      isDelivery: true,
-                      scope: statusesMatch ? 'Delivery' : null,
-                    )
-                  : null,
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _CardMetaRow extends StatelessWidget {
-  const _CardMetaRow({
-    required this.label,
-    required this.value,
-    required this.palette,
-    this.trailing,
-  });
+class _ReservationMobileCard extends StatelessWidget {
+  const _ReservationMobileCard({required this.item, required this.onTap});
 
-  final String label;
-  final String value;
-  final AdminPalette palette;
-  final Widget? trailing;
+  final AdminReservationListItem item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final created = formatAdminDateTime(item.createdAt) ?? item.createdAt;
+    final learnerLabel = displayPersonLabel(
+      item.learner.displayName,
+      item.learner.email,
+    );
+    final supplierLabel = displayPersonLabel(
+      item.supplier.displayName,
+      item.supplier.email,
+    );
+    final deliveryStatus = item.delivery?.status;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: palette.cardBackground,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: palette.cardBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _MaterialThumb(imageUrl: item.material.imageUrl, size: 44),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    item.material.title,
+                    style: AdminTypography.sectionTitle(
+                      palette,
+                    ).copyWith(fontSize: 14),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _StatusBadge(status: item.status),
+            const SizedBox(height: 10),
+            _MobileMetaRow(label: 'Learner', value: learnerLabel),
+            const SizedBox(height: 4),
+            _MobileMetaRow(label: 'Supplier', value: supplierLabel),
+            const SizedBox(height: 4),
+            _MobileMetaRow(
+              label: 'Qty',
+              value: _formatQuantity(item.quantityRequested, item.unit),
+            ),
+            const SizedBox(height: 4),
+            _MobileMetaRow(label: 'Created', value: created),
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 72,
+                  child: Text(
+                    'Delivery',
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                ),
+                Expanded(
+                  child: deliveryStatus != null && deliveryStatus.isNotEmpty
+                      ? Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: _StatusBadge(
+                            status: deliveryStatus,
+                            isDelivery: true,
+                          ),
+                        )
+                      : Text(
+                          '—',
+                          style: AdminTypography.pageSubtitle(
+                            palette,
+                          ).copyWith(fontSize: 13),
+                        ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: OutlinedButton.icon(
+                onPressed: onTap,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.neutral,
+                ),
+                icon: const Icon(Icons.visibility_outlined, size: 17),
+                label: const Text('View details'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileMetaRow extends StatelessWidget {
+  const _MobileMetaRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1152,14 +1199,12 @@ class _CardMetaRow extends StatelessWidget {
           child: Text(label, style: AdminTypography.kpiHelper(palette)),
         ),
         Expanded(
-          child:
-              trailing ??
-              Text(
-                value,
-                style: AdminTypography.pageSubtitle(
-                  palette,
-                ).copyWith(fontSize: 13),
-              ),
+          child: Text(
+            value,
+            style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -1167,7 +1212,7 @@ class _CardMetaRow extends StatelessWidget {
 }
 
 class _MaterialThumb extends StatelessWidget {
-  const _MaterialThumb({this.imageUrl, this.size = 56});
+  const _MaterialThumb({this.imageUrl, this.size = 40});
 
   final String? imageUrl;
   final double size;
@@ -1189,7 +1234,7 @@ class _MaterialThumb extends StatelessWidget {
             ? Icon(
                 Icons.image_outlined,
                 color: palette.textMuted,
-                size: size * 0.4,
+                size: size * 0.45,
               )
             : Image.network(
                 resolved,
@@ -1199,12 +1244,372 @@ class _MaterialThumb extends StatelessWidget {
                 errorBuilder: (_, _, _) => Icon(
                   Icons.broken_image_outlined,
                   color: palette.textMuted,
-                  size: size * 0.4,
+                  size: size * 0.45,
                 ),
               ),
       ),
     );
   }
+}
+
+/// ---------------------------------------------------------------------------
+/// Footer: result range + numbered pagination
+/// ---------------------------------------------------------------------------
+
+class _ResultsFooter extends StatelessWidget {
+  const _ResultsFooter({
+    required this.rangeStart,
+    required this.rangeEnd,
+    required this.total,
+    required this.page,
+    required this.totalPages,
+    required this.onPageChanged,
+  });
+
+  final int rangeStart;
+  final int rangeEnd;
+  final int total;
+  final int page;
+  final int totalPages;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        Text(
+          'Showing $rangeStart to $rangeEnd of $total results',
+          style: AdminTypography.pageSubtitle(palette).copyWith(fontSize: 13),
+        ),
+        _Pagination(
+          page: page,
+          totalPages: totalPages,
+          onPageChanged: onPageChanged,
+        ),
+      ],
+    );
+  }
+}
+
+class _Pagination extends StatelessWidget {
+  const _Pagination({
+    required this.page,
+    required this.totalPages,
+    required this.onPageChanged,
+  });
+
+  final int page;
+  final int totalPages;
+  final ValueChanged<int> onPageChanged;
+
+  List<Object> _visiblePages() {
+    final safeTotalPages = totalPages < 1 ? 1 : totalPages;
+    final pages = <int>{1, safeTotalPages};
+    for (var p = page - 1; p <= page + 1; p++) {
+      if (p >= 1 && p <= safeTotalPages) pages.add(p);
+    }
+    final sorted = pages.toList()..sort();
+    final items = <Object>[];
+    int? previous;
+    for (final p in sorted) {
+      if (previous != null && p - previous > 1) items.add('…');
+      items.add(p);
+      previous = p;
+    }
+    return items;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final neutralStyle =
+        AppStatusButtonStyle.outlined(context, AppStatusTone.neutral).copyWith(
+          minimumSize: const WidgetStatePropertyAll(Size(0, 40)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 14),
+          ),
+        );
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        OutlinedButton(
+          onPressed: page > 1 ? () => onPageChanged(page - 1) : null,
+          style: neutralStyle,
+          child: const Text('Previous'),
+        ),
+        for (final item in _visiblePages())
+          if (item == '…')
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text('…'),
+            )
+          else
+            _PageNumberButton(
+              number: item as int,
+              selected: item == page,
+              onTap: () => onPageChanged(item),
+            ),
+        OutlinedButton(
+          onPressed: page < totalPages ? () => onPageChanged(page + 1) : null,
+          style: neutralStyle,
+          child: const Text('Next'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PageNumberButton extends StatelessWidget {
+  const _PageNumberButton({
+    required this.number,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final int number;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    if (selected) {
+      return SizedBox(
+        width: 40,
+        height: 40,
+        child: FilledButton(
+          onPressed: onTap,
+          style: FilledButton.styleFrom(
+            backgroundColor: palette.primaryTeal,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: Text('$number'),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.textSecondary,
+          side: BorderSide(color: palette.cardBorder),
+          padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        child: Text('$number'),
+      ),
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------------
+/// Empty and loading states
+/// ---------------------------------------------------------------------------
+
+class _ReservationsEmptyState extends StatelessWidget {
+  const _ReservationsEmptyState({
+    required this.hasActiveFilters,
+    required this.onReset,
+  });
+
+  final bool hasActiveFilters;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            children: [
+              AdminEmptyState(
+                icon: Icons.event_note_outlined,
+                title: 'No reservations found',
+                subtitle: hasActiveFilters
+                    ? 'Try adjusting filters or reset to see all reservations.'
+                    : 'Learner material reservations will appear here as they are created.',
+              ),
+              if (hasActiveFilters) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: onReset,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
+                  icon: const Icon(Icons.filter_alt_off, size: 18),
+                  label: const Text('Reset filters'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ReservationsSkeleton extends StatelessWidget {
+  const _ReservationsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final blockColor = palette.isDark
+        ? palette.cardBorder.withValues(alpha: 0.3)
+        : const Color(0xFFEEF0EC);
+
+    Widget block({double? width, required double height, double radius = 10}) =>
+        Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: blockColor,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = 16.0;
+            final columns = constraints.maxWidth >= 1100 ? 5 : 2;
+            final width =
+                (constraints.maxWidth - (columns - 1) * gap) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: List.generate(
+                5,
+                (_) => SizedBox(
+                  width: width,
+                  child: block(height: 132, radius: 16),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        block(height: 82, radius: 16),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: palette.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: palette.cardBorder),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: List.generate(
+              5,
+              (index) => Padding(
+                padding: EdgeInsets.only(bottom: index == 4 ? 0 : 12),
+                child: block(height: 56, radius: 12),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------------
+/// Reservation details dialog (unchanged presentation, out of visual scope)
+/// ---------------------------------------------------------------------------
+
+/// Distinct soft icon tones for reservation-detail metadata and section cards.
+///
+/// This intentionally goes beyond [AppStatusTone] (which has no purple/teal
+/// entries) so each section card can carry a visually distinct, theme-derived
+/// accent as required by the reservation-details layout.
+enum _AccentTone { info, success, warning, danger, neutral, purple, teal }
+
+(Color, Color) _accentColors(AppThemeColors colors, _AccentTone tone) {
+  switch (tone) {
+    case _AccentTone.info:
+      return (colors.info.withValues(alpha: 0.14), colors.info);
+    case _AccentTone.success:
+      return (colors.successSoft, colors.success);
+    case _AccentTone.warning:
+      return (colors.warningSoft, colors.warningText);
+    case _AccentTone.danger:
+      return (colors.dangerSoft, colors.danger);
+    case _AccentTone.purple:
+      return (colors.purpleStart.withValues(alpha: 0.14), colors.purpleStart);
+    case _AccentTone.teal:
+      return (colors.accentMint.withValues(alpha: 0.16), colors.accentMint);
+    case _AccentTone.neutral:
+      return (colors.surfaceMuted, colors.textSecondary);
+  }
+}
+
+_AccentTone _fromStatusTone(AppStatusTone tone) {
+  switch (tone) {
+    case AppStatusTone.primary:
+    case AppStatusTone.success:
+      return _AccentTone.success;
+    case AppStatusTone.warning:
+      return _AccentTone.warning;
+    case AppStatusTone.danger:
+      return _AccentTone.danger;
+    case AppStatusTone.info:
+      return _AccentTone.info;
+    case AppStatusTone.neutral:
+      return _AccentTone.neutral;
+  }
+}
+
+String _linkedContextLabel(AdminReservationDetail detail) {
+  final delivery = detail.delivery;
+  if (delivery != null && delivery.status.isNotEmpty) {
+    return deliveryStatusLabel(delivery.status);
+  }
+  final report = detail.linkedReport;
+  if (report != null) {
+    return '${humanizeEnum(report.reasonCode)} reported';
+  }
+  return 'No linked delivery';
+}
+
+_AccentTone _linkedContextTone(AdminReservationDetail detail) {
+  final delivery = detail.delivery;
+  if (delivery != null && delivery.status.isNotEmpty) {
+    return _fromStatusTone(deliveryStatusAppTone(delivery.status));
+  }
+  if (detail.linkedReport != null) {
+    return _AccentTone.warning;
+  }
+  return _AccentTone.neutral;
 }
 
 class _ReservationDetailDialog extends ConsumerWidget {
@@ -1220,23 +1625,33 @@ class _ReservationDetailDialog extends ConsumerWidget {
 
     return AppDialogShell(
       title: const Text('Reservation details'),
-      maxWidth: 600,
-      content: SizedBox(
-        width: 560,
-        child: detailAsync.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (error, _) => AdminMonitoringErrorPanel(
-            title: 'Could not load reservation details.',
-            message: error is ApiException
-                ? error.displayMessage
-                : error.toString(),
-            onRetry: () =>
-                ref.invalidate(_adminReservationDetailProvider(reservationId)),
-          ),
-          data: (detail) => _ReservationDetailBody(detail: detail),
+      maxWidth: 1020,
+      borderRadius: AppRadius.xlAll,
+      content: detailAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(vertical: 48),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => AdminMonitoringErrorPanel(
+          title: 'Could not load reservation details.',
+          message: error is ApiException
+              ? error.displayMessage
+              : error.toString(),
+          onRetry: () =>
+              ref.invalidate(_adminReservationDetailProvider(reservationId)),
+        ),
+        data: (detail) => _ReservationDetailBody(detail: detail),
+      ),
+      footer: AppDialogFooter.decision(
+        secondaryAction: OutlinedButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(100, 44)),
+          child: const Text('Close'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: () => Navigator.of(context).maybePop(),
+          style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
+          child: const Text('Done'),
         ),
       ),
     );
@@ -1250,7 +1665,6 @@ class _ReservationDetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
     final learnerLabel = displayPersonLabel(
       detail.learner.displayName,
       detail.learner.email,
@@ -1263,246 +1677,243 @@ class _ReservationDetailBody extends StatelessWidget {
       detail.pickupWindowStart,
       detail.pickupWindowEnd,
     );
+    final isDelivery = detail.fulfillmentMethod.toUpperCase() == 'DELIVERY';
+    final acceptedLabel = formatAdminDateTime(detail.acceptedAt) ?? '—';
+    final incidentStatus = detail.linkedReport?.status;
+    final statusTone = learnerReservationStatusTone(
+      detail.status,
+      incidentReviewStatus: incidentStatus,
+    );
+
+    final metaStrip = _MetaStrip(
+      items: [
+        _MetaItem(
+          icon: Icons.hourglass_bottom_rounded,
+          tone: _fromStatusTone(statusTone),
+          label: 'Status',
+          valueWidget: AppStatusBadge(
+            label: _statusLabel(detail.status),
+            tone: statusTone,
+          ),
+        ),
+        _MetaItem(
+          icon: Icons.inventory_2_outlined,
+          tone: _AccentTone.teal,
+          label: 'Quantity',
+          value: _formatQuantity(detail.quantityRequested, detail.unit),
+        ),
+        _MetaItem(
+          icon: Icons.calendar_today_outlined,
+          tone: _AccentTone.neutral,
+          label: 'Created',
+          value: formatAdminDateTime(detail.createdAt) ?? detail.createdAt,
+        ),
+        _MetaItem(
+          icon: isDelivery
+              ? Icons.local_shipping_outlined
+              : Icons.storefront_outlined,
+          tone: _AccentTone.purple,
+          label: 'Fulfillment',
+          value: isDelivery ? 'Delivery' : 'Pickup',
+        ),
+        _MetaItem(
+          icon: Icons.link_rounded,
+          tone: _linkedContextTone(detail),
+          label: 'Linked delivery',
+          value: _linkedContextLabel(detail),
+        ),
+      ],
+    );
+
+    final summaryCard = _ReservationSectionCard(
+      icon: Icons.assignment_outlined,
+      tone: _AccentTone.info,
+      title: 'Reservation summary',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _NoteField(
+            label: 'Learner message',
+            value: (detail.message?.trim().isNotEmpty ?? false)
+                ? detail.message!.trim()
+                : '—',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _TwoColRow(
+            leftLabel: 'Last updated',
+            leftValue:
+                formatAdminDateTime(detail.updatedAt) ?? detail.updatedAt,
+            rightLabel: 'Accepted',
+            rightValue: acceptedLabel,
+          ),
+        ],
+      ),
+    );
+
+    final learnerCard = _ReservationSectionCard(
+      icon: Icons.person_outline,
+      tone: _AccentTone.success,
+      title: 'Learner',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AdminDetailRow(label: 'Name', value: learnerLabel),
+          AdminDetailRow(
+            label: 'Email',
+            value: detail.learner.email.isEmpty ? '—' : detail.learner.email,
+          ),
+          AdminDetailRow(
+            label: 'User ID',
+            value: detail.learner.id.isEmpty ? '—' : detail.learner.id,
+            muted: true,
+          ),
+        ],
+      ),
+    );
+
+    final supplierCard = _ReservationSectionCard(
+      icon: Icons.storefront_outlined,
+      tone: _AccentTone.purple,
+      title: 'Supplier',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AdminDetailRow(label: 'Name', value: supplierLabel),
+          _NoteField(
+            label: 'Supplier note',
+            value: (detail.supplierNote?.trim().isNotEmpty ?? false)
+                ? detail.supplierNote!.trim()
+                : '—',
+          ),
+        ],
+      ),
+    );
+
+    final pickupCard = _ReservationSectionCard(
+      icon: Icons.local_shipping_outlined,
+      tone: _AccentTone.info,
+      title: 'Pickup / delivery',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _NoteField(
+            label: isDelivery ? 'Delivery window' : 'Pickup window',
+            value: pickupWindow ?? 'No window scheduled',
+            maxLines: 2,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _TwoColRow(
+            leftLabel: 'Fulfillment',
+            leftValue: isDelivery ? 'Delivery' : 'Pickup',
+            rightLabel: 'Accepted',
+            rightValue: acceptedLabel,
+          ),
+        ],
+      ),
+    );
+
+    Widget? reportCard;
+    final report = detail.linkedReport;
+    if (report != null) {
+      reportCard = _ReservationSectionCard(
+        icon: Icons.warning_amber_rounded,
+        tone: _AccentTone.warning,
+        title: 'Linked report',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TwoColRow(
+              leftLabel: 'Reason',
+              leftValue: humanizeEnum(report.reasonCode),
+              rightLabel: 'Status',
+              rightValue: adminIncidentReportStatusLabel(report.status),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: () {
+                final reportId = report.id;
+                Navigator.pop(context);
+                if (reportId.isNotEmpty) {
+                  context.push('/admin/no-show-reports?open=$reportId');
+                } else {
+                  context.push('/admin/no-show-reports');
+                }
+              },
+              style: AppStatusButtonStyle.outlined(context, AppStatusTone.info),
+              icon: const Icon(Icons.open_in_new_rounded, size: 16),
+              label: const Text('Open report'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget? deliveryCard;
+    final delivery = detail.delivery;
+    if (delivery != null) {
+      deliveryCard = _ReservationSectionCard(
+        icon: Icons.link_rounded,
+        tone: _AccentTone.teal,
+        title: 'Linked delivery',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TwoColRow(
+              leftLabel: 'Delivery ID',
+              leftValue: delivery.id.isEmpty ? '—' : delivery.id,
+              leftMuted: true,
+              rightLabel: 'Driver',
+              rightValue: delivery.driver != null
+                  ? displayPersonLabel(
+                      delivery.driver!.displayName,
+                      delivery.driver!.email,
+                    )
+                  : '—',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: () {
+                final deliveryId = delivery.id;
+                Navigator.pop(context);
+                if (deliveryId.isNotEmpty) {
+                  context.push('/admin/deliveries?open=$deliveryId');
+                } else {
+                  context.push('/admin/deliveries');
+                }
+              },
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.neutral,
+              ),
+              icon: const Icon(Icons.open_in_new_rounded, size: 16),
+              label: const Text('Open delivery'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget? thirdRow;
+    if (reportCard != null && deliveryCard != null) {
+      thirdRow = _DetailCardRow(left: reportCard, right: deliveryCard);
+    } else if (reportCard != null) {
+      thirdRow = reportCard;
+    } else if (deliveryCard != null) {
+      thirdRow = deliveryCard;
+    }
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AdminDetailSection(
-          title: 'Reservation summary',
-          children: [
-            AdminDetailRow(label: 'Status', value: _statusLabel(detail.status)),
-            AdminDetailRow(
-              label: 'Quantity',
-              value: _formatQuantity(detail.quantityRequested, detail.unit),
-            ),
-            if (detail.message != null && detail.message!.trim().isNotEmpty)
-              AdminDetailRow(
-                label: 'Learner message',
-                value: detail.message!.trim(),
-              ),
-            AdminDetailRow(
-              label: 'Created',
-              value: formatAdminDateTime(detail.createdAt) ?? detail.createdAt,
-            ),
-            AdminDetailRow(
-              label: 'Last updated',
-              value: formatAdminDateTime(detail.updatedAt) ?? detail.updatedAt,
-            ),
-            if (detail.completedAt != null)
-              AdminDetailRow(
-                label: 'Completed',
-                value:
-                    formatAdminDateTime(detail.completedAt) ??
-                    detail.completedAt!,
-              ),
-          ],
-        ),
-        AdminDetailSection(
-          title: 'Learner',
-          children: [
-            AdminDetailRow(label: 'Name', value: learnerLabel),
-            AdminDetailRow(label: 'Email', value: detail.learner.email),
-            AdminDetailRow(
-              label: 'User ID',
-              value: detail.learner.id,
-              muted: true,
-            ),
-          ],
-        ),
-        AdminDetailSection(
-          title: 'Supplier',
-          children: [
-            AdminDetailRow(label: 'Name', value: supplierLabel),
-            AdminDetailRow(label: 'Email', value: detail.supplier.email),
-            if (detail.supplier.verificationStatus != null &&
-                detail.supplier.verificationStatus!.isNotEmpty)
-              AdminDetailRow(
-                label: 'Verification',
-                value: _statusLabel(detail.supplier.verificationStatus!),
-              ),
-            AdminDetailRow(
-              label: 'User ID',
-              value: detail.supplier.id,
-              muted: true,
-            ),
-          ],
-        ),
-        AdminDetailSection(
-          title: 'Material',
-          children: [
-            AdminDetailRow(label: 'Title', value: detail.material.title),
-            AdminDetailRow(
-              label: 'Category',
-              value: detail.material.categoryName.isEmpty
-                  ? '—'
-                  : detail.material.categoryName,
-            ),
-            AdminDetailRow(
-              label: 'Condition',
-              value: detail.material.condition.isEmpty
-                  ? '—'
-                  : _statusLabel(detail.material.condition),
-            ),
-            AdminDetailRow(
-              label: 'Price',
-              value: _formatPrice(detail.material),
-            ),
-            AdminDetailRow(
-              label: 'Pickup allowed',
-              value: detail.material.pickupAllowed ? 'Yes' : 'No',
-            ),
-            AdminDetailRow(
-              label: 'Delivery allowed',
-              value: detail.material.deliveryAllowed ? 'Yes' : 'No',
-            ),
-            AdminDetailRow(
-              label: 'Material ID',
-              value: detail.material.id,
-              muted: true,
-            ),
-          ],
-        ),
-        AdminDetailSection(
-          title: 'Pickup / decision',
-          children: [
-            if (pickupWindow != null)
-              AdminDetailRow(label: 'Pickup window', value: pickupWindow),
-            AdminDetailRow(
-              label: 'Fulfillment',
-              value: _statusLabel(detail.fulfillmentMethod),
-            ),
-            if (detail.acceptedAt != null)
-              AdminDetailRow(
-                label: 'Accepted',
-                value:
-                    formatAdminDateTime(detail.acceptedAt) ??
-                    detail.acceptedAt!,
-              ),
-            if (detail.rejectedAt != null)
-              AdminDetailRow(
-                label: 'Rejected',
-                value:
-                    formatAdminDateTime(detail.rejectedAt) ??
-                    detail.rejectedAt!,
-              ),
-            if (detail.cancelledAt != null)
-              AdminDetailRow(
-                label: 'Cancelled',
-                value:
-                    formatAdminDateTime(detail.cancelledAt) ??
-                    detail.cancelledAt!,
-              ),
-            if (detail.supplierNote != null &&
-                detail.supplierNote!.trim().isNotEmpty)
-              AdminDetailRow(
-                label: 'Supplier note',
-                value: detail.supplierNote!.trim(),
-              ),
-            if (detail.rejectionReason != null &&
-                detail.rejectionReason!.trim().isNotEmpty)
-              AdminDetailRow(
-                label: 'Rejection reason',
-                value: detail.rejectionReason!.trim(),
-              ),
-          ],
-        ),
-        if (detail.linkedReport != null)
-          AdminDetailSection(
-            title: 'Linked report',
-            children: [
-              AdminDetailRow(
-                label: 'Reason',
-                value: humanizeEnum(detail.linkedReport!.reasonCode),
-              ),
-              AdminDetailRow(
-                label: 'Status',
-                value: adminIncidentReportStatusLabel(
-                  detail.linkedReport!.status,
-                ),
-              ),
-              const SizedBox(height: 4),
-              TextButton.icon(
-                onPressed: () {
-                  final reportId = detail.linkedReport!.id;
-                  Navigator.pop(context);
-                  if (reportId.isNotEmpty) {
-                    context.push('/admin/no-show-reports?open=$reportId');
-                  } else {
-                    context.push('/admin/no-show-reports');
-                  }
-                },
-                style: AppStatusButtonStyle.text(
-                  context,
-                  AppStatusTone.neutral,
-                ),
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                label: const Text('Open report'),
-              ),
-              Text(
-                'Opens Reservation reports where admins can review and resolve this incident.',
-                style: AdminTypography.kpiHelper(palette),
-              ),
-            ],
-          ),
-        if (detail.delivery != null)
-          AdminDetailSection(
-            title: 'Linked delivery',
-            children: [
-              if (detail.delivery!.id.isNotEmpty) ...[
-                AdminDetailRow(
-                  label: 'Delivery ID',
-                  value: detail.delivery!.id,
-                  muted: true,
-                ),
-                if (detail.delivery!.status.isNotEmpty &&
-                    !_reservationDeliveryStatusesMatch(
-                      reservationStatus: detail.status,
-                      deliveryStatus: detail.delivery!.status,
-                    ))
-                  AdminDetailRow(
-                    label: 'Current status',
-                    value: _statusLabel(detail.delivery!.status),
-                  ),
-                if (detail.delivery!.driver != null)
-                  AdminDetailRow(
-                    label: 'Driver',
-                    value: displayPersonLabel(
-                      detail.delivery!.driver!.displayName,
-                      detail.delivery!.driver!.email,
-                    ),
-                  ),
-                if (detail.delivery!.requestedAt.isNotEmpty)
-                  AdminDetailRow(
-                    label: 'Requested',
-                    value:
-                        formatAdminDateTime(detail.delivery!.requestedAt) ??
-                        detail.delivery!.requestedAt,
-                  ),
-              ],
-              const SizedBox(height: 4),
-              TextButton.icon(
-                onPressed: () {
-                  final deliveryId = detail.delivery?.id;
-                  Navigator.pop(context);
-                  if (deliveryId != null && deliveryId.isNotEmpty) {
-                    context.push('/admin/deliveries?open=$deliveryId');
-                  } else {
-                    context.push('/admin/deliveries');
-                  }
-                },
-                style: AppStatusButtonStyle.text(
-                  context,
-                  AppStatusTone.neutral,
-                ),
-                icon: const Icon(Icons.local_shipping_outlined, size: 18),
-                label: const Text('View delivery details'),
-              ),
-              Text(
-                'Opens the deliveries monitor to review linked delivery records.',
-                style: AdminTypography.kpiHelper(palette),
-              ),
-            ],
-          ),
+        metaStrip,
+        const SizedBox(height: AppSpacing.md),
+        _DetailCardRow(left: summaryCard, right: learnerCard),
+        const SizedBox(height: AppSpacing.md),
+        _DetailCardRow(left: supplierCard, right: pickupCard),
+        if (thirdRow != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          thirdRow,
+        ],
       ],
     );
   }
@@ -1518,49 +1929,356 @@ class _ReservationDetailBody extends StatelessWidget {
   }
 }
 
-class _PaginationRow extends StatelessWidget {
-  const _PaginationRow({
-    required this.page,
-    required this.totalPages,
-    required this.total,
-    required this.onPrevious,
-    required this.onNext,
-  });
+/// Lays out two reservation-detail section cards side by side on wide
+/// dialogs and stacks them on narrow ones. When [right] is omitted, [left]
+/// fills the full row width (used for single-card conditional rows).
+class _DetailCardRow extends StatelessWidget {
+  const _DetailCardRow({required this.left, this.right});
 
-  final int page;
-  final int totalPages;
-  final int total;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
+  final Widget left;
+  final Widget? right;
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final buttonStyle = AppStatusButtonStyle.outlined(
-      context,
-      AppStatusTone.neutral,
-    ).copyWith(
-      minimumSize: const WidgetStatePropertyAll(Size(0, 42)),
-    );
+    if (right == null) {
+      return left;
+    }
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 640) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              left,
+              const SizedBox(height: AppSpacing.md),
+              right!,
+            ],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: left),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: right!),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Compact section-card shell with a small semantic icon tile, used for every
+/// card in the reservation-details grid so icons stay distinct per section.
+class _ReservationSectionCard extends StatelessWidget {
+  const _ReservationSectionCard({
+    required this.icon,
+    required this.tone,
+    required this.title,
+    required this.child,
+  });
+
+  final IconData icon;
+  final _AccentTone tone;
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return AppSectionCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      borderRadius: AppRadius.lgAll,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _SectionIconTile(icon: icon, tone: tone),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionIconTile extends StatelessWidget {
+  const _SectionIconTile({required this.icon, required this.tone});
+
+  final IconData icon;
+  final _AccentTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final (background, foreground) = _accentColors(colors, tone);
+    return Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Icon(icon, size: 18, color: foreground),
+    );
+  }
+}
+
+/// One horizontal metadata strip (status / quantity / created / fulfillment /
+/// linked delivery). Renders as a five-way row on wide dialogs and wraps
+/// into a balanced grid on medium/narrow widths.
+class _MetaStrip extends StatelessWidget {
+  const _MetaStrip({required this.items});
+
+  final List<Widget> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceMuted,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: colors.borderSubtle),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth >= 760) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                      child: SizedBox(
+                        height: 34,
+                        child: VerticalDivider(
+                          color: colors.borderSubtle,
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  Expanded(child: items[i]),
+                ],
+              ],
+            );
+          }
+
+          return Wrap(
+            spacing: AppSpacing.lg,
+            runSpacing: AppSpacing.md,
+            children: items,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({
+    required this.icon,
+    required this.tone,
+    required this.label,
+    this.value,
+    this.valueWidget,
+  });
+
+  final IconData icon;
+  final _AccentTone tone;
+  final String label;
+  final String? value;
+  final Widget? valueWidget;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final (background, foreground) = _accentColors(colors, tone);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        OutlinedButton(
-          onPressed: onPrevious,
-          style: buttonStyle,
-          child: const Text('Previous'),
+        Container(
+          width: 30,
+          height: 30,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: AppRadius.mdAll,
+          ),
+          child: Icon(icon, size: 16, color: foreground),
         ),
-        OutlinedButton(
-          onPressed: onNext,
-          style: buttonStyle,
-          child: const Text('Next'),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 176),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
+                ),
+                const SizedBox(height: 2),
+                if (valueWidget case final widget?)
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: widget,
+                  )
+                else
+                  Text(
+                    value?.isNotEmpty == true ? value! : '—',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
         ),
+      ],
+    );
+  }
+}
+
+/// A short label/value block used for messages and notes that must stay
+/// compact instead of growing the card to fit the full text.
+class _NoteField extends StatelessWidget {
+  const _NoteField({
+    required this.label,
+    required this.value,
+    this.maxLines = 3,
+  });
+
+  final String label;
+  final String value;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(
-          'Page $page of $totalPages · $total total',
-          style: AdminTypography.kpiHelper(palette),
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(color: colors.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          value,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: colors.textPrimary),
+          maxLines: maxLines,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+}
+
+/// Two label/value fields side by side, used for each card's bottom
+/// metadata row (e.g. Last updated / Accepted, Fulfillment / Accepted).
+class _TwoColRow extends StatelessWidget {
+  const _TwoColRow({
+    required this.leftLabel,
+    required this.leftValue,
+    required this.rightLabel,
+    required this.rightValue,
+    this.leftMuted = false,
+  });
+
+  final String leftLabel;
+  final String leftValue;
+  final String rightLabel;
+  final String rightValue;
+  final bool leftMuted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: _MiniField(
+            label: leftLabel,
+            value: leftValue,
+            muted: leftMuted,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: _MiniField(label: rightLabel, value: rightValue),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniField extends StatelessWidget {
+  const _MiniField({
+    required this.label,
+    required this.value,
+    this.muted = false,
+  });
+
+  final String label;
+  final String value;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.textMuted),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: muted ? colors.textMuted : colors.textPrimary,
+            fontWeight: muted ? FontWeight.w500 : FontWeight.w600,
+            fontSize: muted ? 12 : null,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );

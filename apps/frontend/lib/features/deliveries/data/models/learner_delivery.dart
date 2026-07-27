@@ -70,10 +70,7 @@ class LearnerDeliveryMaterial {
 }
 
 class LearnerDeliverySupplier {
-  const LearnerDeliverySupplier({
-    required this.id,
-    required this.displayName,
-  });
+  const LearnerDeliverySupplier({required this.id, required this.displayName});
 
   final String id;
   final String displayName;

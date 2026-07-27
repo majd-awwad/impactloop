@@ -5,8 +5,10 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme/app_radius.dart';
 import '../../app/theme/app_spacing.dart';
 import '../../features/auth/application/auth_controller.dart';
+import '../../features/auth/data/models/user.dart';
 import '../../features/notifications/application/notifications_provider.dart';
 import '../../features/notifications/application/notifications_routes.dart';
+import '../../features/supplier_portal/presentation/controllers/supplier_notifications_providers.dart';
 import '../widgets/materials/materials_ui_palette.dart';
 
 String formatNotificationBadgeLabel(int count) {
@@ -19,6 +21,13 @@ String formatNotificationBadgeLabel(int count) {
   return '$count';
 }
 
+String notificationRouteForBell(User? user) {
+  if (user != null && user.isSupplierMode && user.hasRole('SUPPLIER')) {
+    return '/supplier/notifications';
+  }
+  return notificationsRouteForUser(user);
+}
+
 class NotificationBellButton extends ConsumerWidget {
   const NotificationBellButton({super.key, this.compact = false});
 
@@ -28,7 +37,11 @@ class NotificationBellButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
     final user = ref.watch(authControllerProvider).user;
-    final unreadAsync = ref.watch(myNotificationUnreadCountProvider);
+    final isSupplier =
+        user?.isSupplierMode == true && user?.hasRole('SUPPLIER') == true;
+    final unreadAsync = isSupplier
+        ? ref.watch(supplierNotificationsUnreadCountProvider)
+        : ref.watch(myNotificationUnreadCountProvider);
     final unreadCount = unreadAsync.maybeWhen(
       data: (value) => value,
       orElse: () => 0,
@@ -41,7 +54,7 @@ class NotificationBellButton extends ConsumerWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          final route = notificationsRouteForUser(user);
+          final route = notificationRouteForBell(user);
           final isDriverInPortal =
               user?.isDriverMode == true && user?.hasRole('DRIVER') == true;
 

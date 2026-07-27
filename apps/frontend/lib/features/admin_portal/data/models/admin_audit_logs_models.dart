@@ -1,8 +1,5 @@
 class AdminAuditLogFilterOption {
-  const AdminAuditLogFilterOption({
-    required this.value,
-    required this.label,
-  });
+  const AdminAuditLogFilterOption({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -56,21 +53,27 @@ class AdminAuditLogFilterOptions {
     return AdminAuditLogFilterOptions(
       actions: (json['actions'] as List<dynamic>? ?? const [])
           .whereType<Map>()
-          .map((item) => AdminAuditLogFilterOption.fromJson(
-                Map<String, dynamic>.from(item),
-              ))
+          .map(
+            (item) => AdminAuditLogFilterOption.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList(),
       targetTypes: (json['targetTypes'] as List<dynamic>? ?? const [])
           .whereType<Map>()
-          .map((item) => AdminAuditLogFilterOption.fromJson(
-                Map<String, dynamic>.from(item),
-              ))
+          .map(
+            (item) => AdminAuditLogFilterOption.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList(),
       actors: (json['actors'] as List<dynamic>? ?? const [])
           .whereType<Map>()
-          .map((item) => AdminAuditLogActorOption.fromJson(
-                Map<String, dynamic>.from(item),
-              ))
+          .map(
+            (item) => AdminAuditLogActorOption.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList(),
     );
   }
@@ -164,9 +167,8 @@ class AdminAuditLogsListResponse {
       items: (json['items'] as List<dynamic>? ?? const [])
           .whereType<Map>()
           .map(
-            (item) => AdminAuditLogItem.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
+            (item) =>
+                AdminAuditLogItem.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
       pagination: AdminAuditLogsPagination.fromJson(
@@ -198,7 +200,8 @@ class AdminAuditLogsPagination {
   factory AdminAuditLogsPagination.fromJson(Map<String, dynamic> json) {
     final total = (json['total'] as num?)?.toInt() ?? 0;
     final limit = (json['limit'] as num?)?.toInt() ?? 20;
-    final totalPages = (json['totalPages'] as num?)?.toInt() ??
+    final totalPages =
+        (json['totalPages'] as num?)?.toInt() ??
         (total == 0 ? 1 : ((total + limit - 1) / limit).ceil());
 
     return AdminAuditLogsPagination(

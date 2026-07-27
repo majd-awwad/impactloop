@@ -3,6 +3,8 @@ import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import type { MaterialsQuery } from './materials.validation.js';
 
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
+
 const buildSearchClauses = (q: string): Prisma.MaterialWhereInput[] => [
   {
     title: {
@@ -385,35 +387,46 @@ export const recordMaterialView = async (
       });
 
       if (existingView) {
-        return tx.material.findUniqueOrThrow({
+        const material = await tx.material.findUniqueOrThrow({
           where: { id },
           select: {
             viewsCount: true,
           },
         });
+        return { ...material, recorded: false };
       }
     }
 
-    await tx.materialView.create({
-      data: {
-        materialId: id,
-        viewerUserId: viewerUserId ?? null,
-        viewSource,
-      },
-    });
-
-    return tx.material.update({
-      where: { id },
-      data: {
-        viewsCount: {
-          increment: 1,
-        },
-      },
-      select: {
-        viewsCount: true,
-      },
-    });
+    return appendMaterialView(id, viewerUserId, viewSource, tx);
   });
+};
+
+export const appendMaterialView = async (
+  id: string,
+  viewerUserId: string | undefined,
+  viewSource = 'detail',
+  client: PrismaClientLike = prisma,
+) => {
+  await client.materialView.create({
+    data: {
+      materialId: id,
+      viewerUserId: viewerUserId ?? null,
+      viewSource,
+    },
+  });
+
+  const material = await client.material.update({
+    where: { id },
+    data: {
+      viewsCount: {
+        increment: 1,
+      },
+    },
+    select: {
+      viewsCount: true,
+    },
+  });
+  return { ...material, recorded: true };
 };
 
 export const findMaterialById = async (id: string) => {
@@ -434,8 +447,11 @@ export const findMaterialById = async (id: string) => {
   });
 };
 
-export const findPublicMaterialById = async (id: string) => {
-  return prisma.material.findFirst({
+export const findPublicMaterialById = async (
+  id: string,
+  client: PrismaClientLike = prisma,
+) => {
+  return client.material.findFirst({
     where: {
       id,
       status: {
@@ -452,6 +468,19 @@ export const findPublicMaterialById = async (id: string) => {
       id: true,
     },
   });
+};
+
+export const recordMaterialViewOperation = async (
+  id: string,
+  viewerUserId: string,
+  viewSource: string,
+  client: Prisma.TransactionClient,
+) => {
+  const material = await findPublicMaterialById(id, client);
+  if (!material) {
+    return null;
+  }
+  return appendMaterialView(id, viewerUserId, viewSource, client);
 };
 
 export const countLikesByMaterialIds = async (materialIds: string[]) => {
@@ -489,29 +518,30 @@ export const findLikedMaterialIds = async (
   return new Set(likes.map((like) => like.materialId));
 };
 
-export const setMaterialLiked = async (materialId: string, userId: string) => {
-  await prisma.materialLike.upsert({
-    where: {
-      materialId_userId: {
-        materialId,
-        userId,
-      },
-    },
-    create: {
-      materialId,
-      userId,
-    },
-    update: {},
+export const setMaterialLiked = async (
+  materialId: string,
+  userId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<boolean> => {
+  const result = await client.materialLike.createMany({
+    data: [{ materialId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetMaterialLiked = async (materialId: string, userId: string) => {
-  await prisma.materialLike.deleteMany({
+export const unsetMaterialLiked = async (
+  materialId: string,
+  userId: string,
+  client: Prisma.TransactionClient | typeof prisma = prisma,
+): Promise<boolean> => {
+  const result = await client.materialLike.deleteMany({
     where: {
       materialId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countLikesForMaterial = async (materialId: string) => {

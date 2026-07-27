@@ -1,6 +1,6 @@
-import type { MaterialCondition } from '../generated/prisma/client.js';
+import type { MaterialCondition } from "../generated/prisma/client.js";
 
-import { roundCurrency } from '../utils/decimal.js';
+import { roundCurrency } from "../utils/decimal.js";
 
 export const MATERIAL_CONDITION_FACTORS: Record<MaterialCondition, number> = {
   NEW: 1.0,
@@ -20,6 +20,6 @@ export const applyConditionPriceMultiplier = (
   condition: MaterialCondition,
 ): number => roundCurrency(baseMaxPrice * conditionPriceMultiplier(condition));
 
-export const DEFAULT_CURRENCY = 'NIS';
-export const DEFAULT_CURRENCY_SYMBOL = '₪';
-export const OTHER_CATEGORY_NAME_EN = 'Other';
+export const DEFAULT_CURRENCY = "NIS";
+export const DEFAULT_CURRENCY_SYMBOL = "₪";
+export const OTHER_CATEGORY_NAME_EN = "Other";

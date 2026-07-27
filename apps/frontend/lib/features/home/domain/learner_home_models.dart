@@ -53,10 +53,7 @@ enum LearnerHomeSectionKey {
 }
 
 sealed class LearnerHomeItem {
-  const LearnerHomeItem({
-    required this.score,
-    required this.reasons,
-  });
+  const LearnerHomeItem({required this.score, required this.reasons});
 
   final int score;
   final List<String> reasons;

@@ -1,3 +1,5 @@
+import type { SupplierVerificationStatus } from '../supplier-verification.status.js';
+
 export type SupplierProfileUserDto = {
   id: string;
   displayName: string;
@@ -101,4 +103,41 @@ export type SupplierProfileResponseDto = {
   stats: SupplierProfileStatsDto;
   latestFollowers: SupplierFollowerListItemDto[];
   materialsPreview: SupplierProfileMaterialPreviewDto[];
+};
+
+export type SupplierProfileManagementResponseDto = {
+  hasSupplierProfile: boolean;
+  identity: {
+    supplierProfileId: string;
+    publicName: string;
+    supplierType: string;
+    description: string | null;
+    avatarImageUrl: string | null;
+    coverImageUrl: string | null;
+  } | null;
+  pickupLocation: SupplierProfileLocationDto | null;
+  organization: {
+    id: string;
+    organizationName: string;
+    organizationType: string;
+    contactPersonName: string | null;
+    workingDays: string[] | null;
+    workingHours: Record<string, string> | null;
+  } | null;
+  verification: {
+    rawStatus: string;
+    status: SupplierVerificationStatus;
+    isVerified: boolean;
+    canSubmit: boolean;
+    canResubmit: boolean;
+    adminNote: string | null;
+    submittedAt: string | null;
+    reviewedAt: string | null;
+  };
+  completion: {
+    completedCount: number;
+    totalCount: number;
+    percentage: number;
+    missingFields: string[];
+  };
 };

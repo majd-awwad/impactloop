@@ -109,11 +109,11 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = switch (status) {
       'APPROVED' => context.s.notificationStatusLabel(
-          SupplierActionNotificationStatus.approved,
-        ),
+        SupplierActionNotificationStatus.approved,
+      ),
       'REJECTED' => context.s.notificationStatusLabel(
-          SupplierActionNotificationStatus.rejected,
-        ),
+        SupplierActionNotificationStatus.rejected,
+      ),
       _ => context.s.tabPending,
     };
 

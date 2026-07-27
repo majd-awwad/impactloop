@@ -34,7 +34,9 @@ class DriverDeliveriesRepository {
     return _api.fetchActiveDeliveries();
   }
 
-  Future<DriverDeliveryInactiveContext> fetchInactiveContext(String deliveryId) {
+  Future<DriverDeliveryInactiveContext> fetchInactiveContext(
+    String deliveryId,
+  ) {
     return _api.fetchInactiveContext(deliveryId);
   }
 

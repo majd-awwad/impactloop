@@ -266,12 +266,16 @@ const notifySupplier = async (input: {
   supplierProfileId: string;
   title: string;
   body: string;
+  eventKey: string;
+  actorId: string;
 }) => {
   await repository.createSupplierVerificationNotification({
     userId: input.userId,
     supplierProfileId: input.supplierProfileId,
     title: input.title,
     body: input.body,
+    eventKey: input.eventKey,
+    actorId: input.actorId,
   });
 };
 
@@ -355,6 +359,8 @@ export const approveSupplierVerification = async (
     supplierProfileId: existing.id,
     title: 'Supplier verification approved',
     body: `Your organization verification was approved.${noteSuffix}`,
+    eventKey: `supplier-verification:${existing.id}:APPROVED:${updated.updatedAt.toISOString()}`,
+    actorId: adminId,
   });
 
   const organizationName =
@@ -393,6 +399,8 @@ export const rejectSupplierVerification = async (
     supplierProfileId: existing.id,
     title: 'Supplier verification rejected',
     body: `Your organization verification was rejected. Reason: ${adminNote}`,
+    eventKey: `supplier-verification:${existing.id}:REJECTED:${updated.updatedAt.toISOString()}`,
+    actorId: adminId,
   });
 
   const organizationName =
@@ -432,6 +440,8 @@ export const requestChangesForSupplierVerification = async (
     supplierProfileId: existing.id,
     title: 'Supplier verification changes requested',
     body: `Please update your verification submission. Admin note: ${adminNote}`,
+    eventKey: `supplier-verification:${existing.id}:CHANGES_REQUESTED:${updated.updatedAt.toISOString()}`,
+    actorId: adminId,
   });
 
   const organizationName =

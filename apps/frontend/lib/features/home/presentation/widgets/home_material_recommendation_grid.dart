@@ -41,7 +41,8 @@ class HomeMaterialRecommendationGrid extends StatelessWidget {
           variant: AppMaterialCardVariant.compact,
         );
         final includesReason = preview.any((item) => item.reasons.isNotEmpty);
-        final tileHeight = cardHeight +
+        final tileHeight =
+            cardHeight +
             (includesReason
                 ? ImpactMaterialGridCard.recommendationReasonBandHeight
                 : 0);
@@ -113,7 +114,10 @@ class _HomeMaterialRecommendationTile extends StatelessWidget {
             isLiked: material.isLiked,
             fallbackIcon: material.heroIconData,
             variant: AppMaterialCardVariant.compact,
-            onTap: () => context.push('/materials/${material.id}'),
+            onTap: () => context.push(
+              '/materials/${material.id}',
+              extra: material.recommendationImpressionId,
+            ),
           ),
         ),
         if (item.reasons.isNotEmpty) ...[
@@ -169,7 +173,8 @@ String _homeMaterialImageUrl(DiscoveryMaterial material, int index) {
     return _homeMaterialFallbackImages[4];
   }
 
-  return _homeMaterialFallbackImages[index % _homeMaterialFallbackImages.length];
+  return _homeMaterialFallbackImages[index %
+      _homeMaterialFallbackImages.length];
 }
 
 const _homeMaterialFallbackImages = [

@@ -196,7 +196,10 @@ class HomeLearningProjectCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push('/learning/${project.id}'),
+        onTap: () => context.push(
+          '/learning/${project.id}',
+          extra: project.recommendationImpressionId,
+        ),
         borderRadius: AppRadius.lgAll,
         child: SizedBox(
           height: 374,
@@ -379,6 +382,8 @@ class HomeLearningProjectCard extends StatelessWidget {
                         ],
                         ProjectEngagementStrip(
                           project: project,
+                          recommendationImpressionId:
+                              project.recommendationImpressionId,
                           density: ProjectEngagementDensity.compact,
                         ),
                       ],

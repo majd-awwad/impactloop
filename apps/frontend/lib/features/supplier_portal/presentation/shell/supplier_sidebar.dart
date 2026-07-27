@@ -42,10 +42,7 @@ class SupplierSidebar extends ConsumerWidget {
                 AppSpacing.lg,
                 AppSpacing.md,
               ),
-              child: Text(
-                l.brandName,
-                style: context.supplierNavBrand(),
-              ),
+              child: Text(l.brandName, style: context.supplierNavBrand()),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),

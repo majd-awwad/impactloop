@@ -4,6 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  parseRecommendationScorerVersion,
+  type RecommendationScorerVersion,
+} from './recommendation-scoring-version.js';
+
 const backendRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   '../..',
@@ -450,6 +455,150 @@ const parseSmtpPort = (value: string | undefined): number => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 587;
 };
 
+const parseBoundedInteger = (
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+): number => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+  return Math.min(maximum, Math.max(minimum, parsed));
+};
+
+export type RecommendationOutboxRuntimeConfig = {
+  enabled: boolean;
+  required: boolean;
+  pollIntervalMs: number;
+  batchSize: number;
+  maxAttempts: number;
+  leaseMs: number;
+};
+
+/**
+ * Pure resolver for recommendation outbox runtime flags.
+ * Accepts a plain env map so tests do not need module-cache re-imports.
+ */
+export const resolveRecommendationOutboxRuntimeConfig = (
+  processEnv: NodeJS.Dict<string> = process.env,
+): RecommendationOutboxRuntimeConfig => {
+  const nodeEnv = processEnv.NODE_ENV ?? 'development';
+  const requiredDefault = nodeEnv === 'production';
+
+  return {
+    enabled: parseBoolean(
+      processEnv.RECOMMENDATION_OUTBOX_WORKER_ENABLED,
+      false,
+    ),
+    required: parseBoolean(
+      processEnv.RECOMMENDATION_OUTBOX_WORKER_REQUIRED,
+      requiredDefault,
+    ),
+    pollIntervalMs: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_POLL_INTERVAL_MS,
+      2_000,
+      250,
+      60_000,
+    ),
+    batchSize: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_BATCH_SIZE,
+      10,
+      1,
+      100,
+    ),
+    maxAttempts: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_MAX_ATTEMPTS,
+      5,
+      1,
+      20,
+    ),
+    leaseMs: parseBoundedInteger(
+      processEnv.RECOMMENDATION_OUTBOX_LEASE_MS,
+      30_000,
+      1_000,
+      300_000,
+    ),
+  };
+};
+
+const recommendationOutboxRuntime = resolveRecommendationOutboxRuntimeConfig();
+
+export type RecommendationMlRuntimeMode =
+  | 'DETERMINISTIC'
+  | 'SHADOW'
+  | 'ML_LOCAL';
+
+export type RecommendationMlRuntimeConfig = {
+  mode: RecommendationMlRuntimeMode;
+  explicitMode: boolean;
+  materialArtifactPath: string;
+  projectArtifactPath: string;
+};
+
+export type RecommendationMlRuntimeConfigErrorCode =
+  | 'INVALID_RUNTIME_MODE'
+  | 'ML_LOCAL_ENVIRONMENT_FORBIDDEN';
+
+export class RecommendationMlRuntimeConfigError extends Error {
+  readonly code: RecommendationMlRuntimeConfigErrorCode;
+
+  constructor(code: RecommendationMlRuntimeConfigErrorCode, message: string) {
+    super(message);
+    this.name = 'RecommendationMlRuntimeConfigError';
+    this.code = code;
+  }
+}
+
+const recommendationMlRuntimeModes = new Set<RecommendationMlRuntimeMode>([
+  'DETERMINISTIC',
+  'SHADOW',
+  'ML_LOCAL',
+]);
+
+export const resolveRecommendationMlRuntimeConfig = (
+  processEnv: NodeJS.ProcessEnv,
+): RecommendationMlRuntimeConfig => {
+  const rawMode = processEnv.RECOMMENDATION_ML_RUNTIME_MODE?.trim() ?? '';
+  const explicitMode = rawMode.length > 0;
+  let mode: RecommendationMlRuntimeMode;
+
+  if (!explicitMode) {
+    mode = parseBoolean(processEnv.RECOMMENDATION_ML_SHADOW_ENABLED, false)
+      ? 'SHADOW'
+      : 'DETERMINISTIC';
+  } else if (
+    recommendationMlRuntimeModes.has(rawMode as RecommendationMlRuntimeMode)
+  ) {
+    mode = rawMode as RecommendationMlRuntimeMode;
+  } else {
+    throw new RecommendationMlRuntimeConfigError(
+      'INVALID_RUNTIME_MODE',
+      'RECOMMENDATION_ML_RUNTIME_MODE must be DETERMINISTIC, SHADOW, or ML_LOCAL.',
+    );
+  }
+
+  const nodeEnv = processEnv.NODE_ENV ?? 'development';
+  if (mode === 'ML_LOCAL' && nodeEnv !== 'development' && nodeEnv !== 'test') {
+    throw new RecommendationMlRuntimeConfigError(
+      'ML_LOCAL_ENVIRONMENT_FORBIDDEN',
+      'RECOMMENDATION_ML_RUNTIME_MODE=ML_LOCAL is restricted to development and test.',
+    );
+  }
+
+  return {
+    mode,
+    explicitMode,
+    materialArtifactPath:
+      processEnv.RECOMMENDATION_ML_MATERIAL_ARTIFACT_PATH?.trim() ?? '',
+    projectArtifactPath:
+      processEnv.RECOMMENDATION_ML_PROJECT_ARTIFACT_PATH?.trim() ?? '',
+  };
+};
+
+const recommendationMlRuntime = resolveRecommendationMlRuntimeConfig(process.env);
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   serviceName: process.env.SERVICE_NAME?.trim() || 'impactloop-api',
@@ -528,6 +677,31 @@ export const env = {
     process.env.AI_WEB_SEARCH_TIMEOUT_MS,
     8_000,
   ),
+  recommendationScorerVersion: parseRecommendationScorerVersion(
+    process.env.RECOMMENDATION_SCORER_VERSION,
+  ) as RecommendationScorerVersion,
+  recommendationMlRuntimeMode: recommendationMlRuntime.mode,
+  recommendationMlRuntimeModeExplicit: recommendationMlRuntime.explicitMode,
+  recommendationMlShadowEnabled:
+    recommendationMlRuntime.mode !== 'DETERMINISTIC',
+  recommendationMlMaterialServingEnabled: parseBoolean(
+    process.env.RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED,
+    false,
+  ),
+  recommendationMlProjectServingEnabled: parseBoolean(
+    process.env.RECOMMENDATION_ML_PROJECT_SERVING_ENABLED,
+    false,
+  ),
+  recommendationMlMaterialArtifactPath:
+    recommendationMlRuntime.materialArtifactPath,
+  recommendationMlProjectArtifactPath:
+    recommendationMlRuntime.projectArtifactPath,
+  recommendationOutboxWorkerEnabled: recommendationOutboxRuntime.enabled,
+  recommendationOutboxWorkerRequired: recommendationOutboxRuntime.required,
+  recommendationOutboxPollIntervalMs: recommendationOutboxRuntime.pollIntervalMs,
+  recommendationOutboxBatchSize: recommendationOutboxRuntime.batchSize,
+  recommendationOutboxMaxAttempts: recommendationOutboxRuntime.maxAttempts,
+  recommendationOutboxLeaseMs: recommendationOutboxRuntime.leaseMs,
   nominatimBaseUrl:
     process.env.NOMINATIM_BASE_URL?.trim() ||
     'https://nominatim.openstreetmap.org',
@@ -851,5 +1025,23 @@ export const logEmailInvitationStartupConfig = (): void => {
     }
   } else {
     console.log('  Mock provider: invitation links are logged to this console.');
+  }
+};
+
+export const logRecommendationOutboxStartupConfig = (): void => {
+  const outbox = recommendationOutboxRuntime;
+  console.log('[Recommendation outbox config]');
+  console.log(`  enabled: ${outbox.enabled}`);
+  console.log(`  required: ${outbox.required}`);
+  console.log(`  pollIntervalMs: ${outbox.pollIntervalMs}`);
+  console.log(`  batchSize: ${outbox.batchSize}`);
+  console.log(`  maxAttempts: ${outbox.maxAttempts}`);
+  console.log(`  leaseMs: ${outbox.leaseMs}`);
+  if (!outbox.enabled && outbox.required) {
+    console.log(
+      '  WARNING: worker is required but disabled; readiness will remain not ready',
+    );
+  } else if (!outbox.enabled) {
+    console.log('  worker intentionally disabled (optional in this environment)');
   }
 };

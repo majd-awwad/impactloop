@@ -14,7 +14,7 @@ import {
   buildMaterialMatchHaystack,
   isCustomInterestKey,
   matchCustomInterestKeyAgainstMaterial,
-  matchInterestKeyAgainstMaterial,
+  matchInterestKeyAgainstMaterialForScorerVersion,
   normalizeInterestToken,
   normalizeText,
   resolveInterestKey,
@@ -22,6 +22,7 @@ import {
   type LearnerInterestMatch,
   type MaterialMatchHaystack,
 } from './learner-interest-taxonomy.js';
+import type { RecommendationScorerVersion } from '../../config/recommendation-scoring-version.js';
 import {
   FREE_MATERIAL_TIERS,
   SAVED_PROJECT_MATERIAL_TIERS,
@@ -35,6 +36,8 @@ import {
   UNAVAILABLE_MATERIAL_PENALTY,
   locationMatches,
   orderMaterialReasons,
+  resolveMaterialScorerVersion,
+  resolveNonCanonicalMaterialScorerVersion,
   type ScoredMaterialResult,
 } from './learner-home.scoring.js';
 import type {
@@ -46,6 +49,13 @@ import type {
   LearnerHomeSavedLocationContext,
   LearnerHomeSavedProjectComponent,
 } from './learner-home.types.js';
+import {
+  CANONICAL_SCORING_MODE,
+  CanonicalScoringContextRequiredError,
+  assertCanonicalContextPresent,
+  scoreCanonicalMaterialPool,
+  type CanonicalMaterialScoringContext,
+} from './learner-home.canonical-scoring.js';
 
 const FEATURE_CACHE_TTL_MS = 60_000;
 const GENERIC_BROAD_INTEREST_KEYS = new Set(['electronics']);
@@ -341,8 +351,19 @@ const signalsOverlap = (
   );
 };
 
-const buildMaterialSourceSignature = (material: LearnerHomeMaterialCandidate) =>
+/**
+ * RP-03.1 correction: interest matching is scorer-version-dependent
+ * (`matchInterestKeyAgainstMaterialForScorerVersion`), so the cached feature
+ * signature must include the resolved scorer version. Otherwise a whole-request
+ * legacy fallback could reuse feature-pool entries built under a different
+ * process-global mode and silently regain normalized-alias semantics.
+ */
+const buildMaterialSourceSignature = (
+  material: LearnerHomeMaterialCandidate,
+  scorerVersion: RecommendationScorerVersion,
+) =>
   JSON.stringify([
+    scorerVersion,
     material.id,
     material.title,
     material.description,
@@ -353,9 +374,12 @@ const buildMaterialSourceSignature = (material: LearnerHomeMaterialCandidate) =>
     [...material.tags].sort(),
   ]);
 
-const buildPoolSignature = (materials: LearnerHomeMaterialCandidate[]) =>
+const buildPoolSignature = (
+  materials: LearnerHomeMaterialCandidate[],
+  scorerVersion: RecommendationScorerVersion,
+) =>
   materials
-    .map(buildMaterialSourceSignature)
+    .map((material) => buildMaterialSourceSignature(material, scorerVersion))
     .sort()
     .join('|');
 
@@ -372,7 +396,12 @@ const indexTerm = (
 
 export const buildMaterialRecommendationFeature = (
   material: LearnerHomeMaterialCandidate,
+  scorerVersion?: RecommendationScorerVersion,
 ): MaterialRecommendationFeature => {
+  // Sealed: this legacy/normalized feature builder must never process
+  // canonical-taxonomy-v3, and no canonical value may reach
+  // matchInterestKeyAgainstMaterialForScorerVersion through it.
+  const resolvedScorerVersion = resolveNonCanonicalMaterialScorerVersion(scorerVersion);
   const haystackParts = buildMaterialMatchHaystack({
     title: material.title,
     description: material.description,
@@ -385,7 +414,11 @@ export const buildMaterialRecommendationFeature = (
   const interestMatches = new Map<string, LearnerInterestMatch>();
 
   for (const key of ALL_LEARNER_INTEREST_KEYS) {
-    const match = matchInterestKeyAgainstMaterial(haystackParts, key);
+    const match = matchInterestKeyAgainstMaterialForScorerVersion(
+      haystackParts,
+      key,
+      resolvedScorerVersion,
+    );
     if (match) {
       interestKeys.add(key);
       interestMatches.set(key, match);
@@ -404,7 +437,7 @@ export const buildMaterialRecommendationFeature = (
 
   return {
     materialId: material.id,
-    sourceSignature: buildMaterialSourceSignature(material),
+    sourceSignature: buildMaterialSourceSignature(material, resolvedScorerVersion),
     haystackParts,
     normalizedTitle: normalizeText(material.title),
     normalizedCategory: normalizeText(
@@ -467,8 +500,12 @@ export const buildMaterialFeatureIndex = (
 
 export const getOrBuildMaterialFeaturePool = (
   materials: LearnerHomeMaterialCandidate[],
+  scorerVersion?: RecommendationScorerVersion,
 ) => {
-  const poolSignature = buildPoolSignature(materials);
+  // Sealed: this legacy/normalized feature pool must never process
+  // canonical-taxonomy-v3.
+  const resolvedScorerVersion = resolveNonCanonicalMaterialScorerVersion(scorerVersion);
+  const poolSignature = buildPoolSignature(materials, resolvedScorerVersion);
   const now = Date.now();
 
   if (
@@ -486,6 +523,9 @@ export const getOrBuildMaterialFeaturePool = (
     };
   }
 
+  // Per-material sourceSignature already embeds scorerVersion, so reuse across a
+  // scorer-version change is impossible even when the pool-level signature check
+  // above misses (e.g. same materials, different mode).
   const cachedFeaturesById = new Map(
     featurePoolCache && featurePoolCache.expiresAt > now
       ? featurePoolCache.features.map((feature) => [feature.materialId, feature])
@@ -493,11 +533,11 @@ export const getOrBuildMaterialFeaturePool = (
   );
   const features = materials.map((material) => {
     const cachedFeature = cachedFeaturesById.get(material.id);
-    const sourceSignature = buildMaterialSourceSignature(material);
+    const sourceSignature = buildMaterialSourceSignature(material, resolvedScorerVersion);
 
     return cachedFeature?.sourceSignature === sourceSignature
       ? cachedFeature
-      : buildMaterialRecommendationFeature(material);
+      : buildMaterialRecommendationFeature(material, resolvedScorerVersion);
   });
   featurePoolCache = {
     expiresAt: now + FEATURE_CACHE_TTL_MS,
@@ -1137,8 +1177,12 @@ export const scoreMaterialPoolWithFeatures = (input: {
   savedLocation: LearnerHomeSavedLocationContext;
   behavior: LearnerBehaviorContext;
   behaviorAffinityProfile: LearnerAffinityProfile;
+  scorerVersion?: RecommendationScorerVersion;
 }): MaterialScoreRecord[] => {
-  const { features } = getOrBuildMaterialFeaturePool(input.materials);
+  // Sealed: this legacy/normalized pool scorer must never process
+  // canonical-taxonomy-v3.
+  const scorerVersion = resolveNonCanonicalMaterialScorerVersion(input.scorerVersion);
+  const { features } = getOrBuildMaterialFeaturePool(input.materials, scorerVersion);
   const user = buildUserSignalProfile(input);
 
   const featureByMaterialId = new Map(
@@ -1186,8 +1230,41 @@ export const preScoreMaterialPool = (input: {
   savedLocation: LearnerHomeSavedLocationContext;
   behavior: LearnerBehaviorContext;
   behaviorAffinityProfile: LearnerAffinityProfile;
-}): PreScoredMaterialEntry[] =>
-  scoreMaterialPoolWithFeatures(input).map((record) => ({
+  scorerVersion?: RecommendationScorerVersion;
+  canonicalContext?: CanonicalMaterialScoringContext;
+}): PreScoredMaterialEntry[] => {
+  // RP-03.1 correction: dispatch on the explicitly resolved scorer version, not
+  // merely on whether a canonicalContext happens to be present. A caller that
+  // requests canonical-taxonomy-v3 without a successful context must fail
+  // loudly rather than silently drift into legacy scoring with the wrong
+  // interest-matching semantics.
+  const scorerVersion = resolveMaterialScorerVersion(input.scorerVersion);
+
+  if (scorerVersion === CANONICAL_SCORING_MODE) {
+    const canonicalContext = assertCanonicalContextPresent(input.canonicalContext);
+    if (canonicalContext.effectiveScoringMode !== CANONICAL_SCORING_MODE) {
+      throw new CanonicalScoringContextRequiredError(
+        'canonical-taxonomy-v3 requires a successful CanonicalMaterialScoringContext',
+      );
+    }
+
+    return scoreCanonicalMaterialPool({
+      materials: input.materials,
+      context: canonicalContext,
+      savedLocation: input.savedLocation,
+      behavior: input.behavior,
+    }).map((record) => ({
+      material: record.material,
+      ownerId: record.ownerId,
+      scores: {
+        suggested: record.scores.suggested,
+        savedProjects: record.scores.savedProjects,
+        free: record.scores.free,
+      },
+    }));
+  }
+
+  return scoreMaterialPoolWithFeatures({ ...input, scorerVersion }).map((record) => ({
     material: record.candidate,
     ownerId: record.ownerId,
     scores: {
@@ -1196,3 +1273,4 @@ export const preScoreMaterialPool = (input: {
       free: record.free,
     },
   }));
+};

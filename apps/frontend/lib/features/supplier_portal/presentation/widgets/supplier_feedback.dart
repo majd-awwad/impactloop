@@ -48,10 +48,7 @@ void _showSupplierSnackBar(
             Icon(icon, color: accent, size: 20),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: colors.textPrimary),
-              ),
+              child: Text(message, style: TextStyle(color: colors.textPrimary)),
             ),
           ],
         ),

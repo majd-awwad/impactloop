@@ -5,10 +5,7 @@ import '../theme/admin_decoration_set.dart';
 import 'admin_kpi_card.dart' show AdminTypography;
 
 class AdminWelcomeBanner extends StatelessWidget {
-  const AdminWelcomeBanner({
-    super.key,
-    this.adminName = 'ImpactLoop Admin',
-  });
+  const AdminWelcomeBanner({super.key, this.adminName = 'ImpactLoop Admin'});
 
   final String adminName;
 
@@ -16,8 +13,9 @@ class AdminWelcomeBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AdminL10n.of(context);
     final palette = context.adminPalette;
-    final today =
-        MaterialLocalizations.of(context).formatFullDate(DateTime.now());
+    final today = MaterialLocalizations.of(
+      context,
+    ).formatFullDate(DateTime.now());
 
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(18, 16, 18, 16),
@@ -35,9 +33,9 @@ class AdminWelcomeBanner extends StatelessWidget {
               children: [
                 Text(
                   l.welcomeTitle(adminName),
-                  style: AdminTypography.sectionTitle(palette).copyWith(
-                    fontSize: 18,
-                  ),
+                  style: AdminTypography.sectionTitle(
+                    palette,
+                  ).copyWith(fontSize: 18),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -53,9 +51,9 @@ class AdminWelcomeBanner extends StatelessWidget {
             children: [
               Text(
                 l.bannerOverviewLabel,
-                style: AdminTypography.kpiLabel(palette).copyWith(
-                  color: palette.primaryTeal,
-                ),
+                style: AdminTypography.kpiLabel(
+                  palette,
+                ).copyWith(color: palette.primaryTeal),
               ),
               const SizedBox(height: 8),
               Text(
@@ -64,9 +62,9 @@ class AdminWelcomeBanner extends StatelessWidget {
               ),
               Text(
                 today,
-                style: AdminTypography.kpiHelper(palette).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AdminTypography.kpiHelper(
+                  palette,
+                ).copyWith(color: palette.textSecondary),
                 textAlign: TextAlign.end,
               ),
             ],

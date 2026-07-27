@@ -44,18 +44,18 @@ class AdminDashboardCard extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: palette.textPrimary,
-                            fontSize: 16,
-                          ),
+                        fontWeight: FontWeight.w800,
+                        color: palette.textPrimary,
+                        fontSize: 16,
+                      ),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 3),
                       Text(
                         subtitle!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: palette.textSecondary,
-                            ),
+                          color: palette.textSecondary,
+                        ),
                       ),
                     ],
                   ],

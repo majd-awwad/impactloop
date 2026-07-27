@@ -10,6 +10,13 @@ import {
 import * as priceRuleRequestsRepository from '../price-rule-requests/price-rule-requests.repository.js';
 import { mapSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
 import * as supplierReservationsRepository from '../supplier-reservations/supplier-reservations.repository.js';
+import {
+  classifySupplierNotification,
+  type SupplierNotificationClassification,
+  type SupplierNotificationTarget,
+} from './supplier-notification-classifier.js';
+import * as supplierNotificationsRepository from './supplier-notifications.repository.js';
+import type { SupplierNotificationsQuery } from './supplier-notifications.validation.js';
 
 export type SupplierActionNotification = {
   id: string;
@@ -24,7 +31,10 @@ export type SupplierActionNotification = {
     | 'PRICE_REJECTED'
     | 'PRICE_PENDING'
     | 'PRICE_COMPLETED'
-    | 'RESERVATION_PENDING';
+    | 'RESERVATION_PENDING'
+    | 'MATERIAL_MODERATION_UPDATE'
+    | 'SUPPLIER_VERIFICATION_UPDATE'
+    | 'UNKNOWN';
   title: string;
   body: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -459,34 +469,334 @@ const buildSummary = (
   completedCount: notifications.filter((item) => item.isCompleted).length,
 });
 
-export const listSupplierActionNotifications = async (userId: string) => {
-  const [categoryRequests, priceRuleRequests, pendingReservations] =
-    await Promise.all([
-      categoryRequestsRepository.listCategoryRequestsWithDrafts(userId),
-      priceRuleRequestsRepository.listPriceRuleRequestsForSupplier(userId),
-      supplierReservationsRepository.findSupplierReservations(userId, ['PENDING']),
-    ]);
+type ResolvedSupplierNotificationTarget = {
+  classifierTarget: SupplierNotificationTarget;
+  entityType: string | null;
+  entityId: string | null;
+  title: string | null;
+  status: string | null;
+  publishedMaterialId: string | null;
+  approvedCategoryId: string | null;
+  approvedCategoryName: string | null;
+};
 
-  const notifications: SupplierActionNotification[] = [
-    ...categoryRequests.map(mapCategoryRequestNotification),
-    ...priceRuleRequests.map(mapPriceRuleRequestNotification),
-    ...pendingReservations
-      .map((reservation) => mapSupplierReservation(reservation))
-      .map(mapReservationNotification),
-  ];
+const effectiveEntity = (row: supplierNotificationsRepository.SupplierNotificationRow) => ({
+  type: row.entityType ?? row.relatedEntityType,
+  id: row.entityId ?? row.relatedEntityId,
+});
 
-  // Ensure rejected category notifications never show raw IDs.
-  await Promise.all(
-    notifications.map(async (notification) => {
-      if (notification.kind !== 'CATEGORY_REJECTED') return;
-      notification.body = await resolveCategoryRejectionBody(notification.body);
-    }),
-  );
+const resolveTarget = (
+  row: supplierNotificationsRepository.SupplierNotificationRow,
+  targets: Awaited<ReturnType<typeof supplierNotificationsRepository.findSupplierNotificationTargets>>,
+): ResolvedSupplierNotificationTarget => {
+  const entity = effectiveEntity(row);
+  if (!entity.type || !entity.id) {
+    return {
+      classifierTarget: null,
+      entityType: entity.type,
+      entityId: entity.id,
+      title: null,
+      status: null,
+      publishedMaterialId: null,
+      approvedCategoryId: null,
+      approvedCategoryName: null,
+    };
+  }
 
-  sortNotifications(notifications);
+  if (entity.type === 'RESERVATION') {
+    const reservation = targets.reservations.find((item) => item.id === entity.id);
+    if (!reservation) return { classifierTarget: null, entityType: entity.type, entityId: entity.id, title: null, status: null, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null };
+    const mapped = mapSupplierReservation(reservation, null);
+    return {
+      classifierTarget: {
+        kind: 'RESERVATION',
+        status: mapped.status,
+        attentionState: mapped.attentionState,
+        nextActor: mapped.nextActor,
+        availableActions: mapped.availableActions,
+      },
+      entityType: entity.type,
+      entityId: entity.id,
+      title: mapped.material.title,
+      status: mapped.status,
+      publishedMaterialId: null,
+      approvedCategoryId: null,
+      approvedCategoryName: null,
+    };
+  }
+
+  if (entity.type === 'CATEGORY_REQUEST') {
+    const request = targets.categories.find((item) => item.id === entity.id);
+    if (!request) return { classifierTarget: null, entityType: entity.type, entityId: entity.id, title: null, status: null, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null };
+    return {
+      classifierTarget: { kind: 'CATEGORY_REQUEST', status: request.status, hasDraft: request.listingDraftJson != null, isPublished: request.publishedMaterialId != null },
+      entityType: entity.type,
+      entityId: entity.id,
+      title: request.requestedName,
+      status: request.status,
+      publishedMaterialId: request.publishedMaterialId,
+      approvedCategoryId: request.approvedCategoryId,
+      approvedCategoryName: request.approvedCategory?.nameEn ?? null,
+    };
+  }
+
+  if (entity.type === 'PRICE_RULE_REQUEST') {
+    const request = targets.prices.find((item) => item.id === entity.id);
+    if (!request) return { classifierTarget: null, entityType: entity.type, entityId: entity.id, title: null, status: null, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null };
+    return {
+      classifierTarget: { kind: 'PRICE_RULE_REQUEST', status: request.status, hasDraft: request.listingDraftJson != null, isPublished: request.publishedMaterialId != null },
+      entityType: entity.type,
+      entityId: entity.id,
+      title: request.materialName,
+      status: request.status,
+      publishedMaterialId: request.publishedMaterialId,
+      approvedCategoryId: null,
+      approvedCategoryName: request.category?.nameEn ?? null,
+    };
+  }
+
+  if (entity.type === 'MATERIAL') {
+    const material = targets.materials.find((item) => item.id === entity.id);
+    return material
+      ? { classifierTarget: { kind: 'MATERIAL', status: material.status }, entityType: entity.type, entityId: entity.id, title: material.title, status: material.status, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null }
+      : { classifierTarget: null, entityType: entity.type, entityId: entity.id, title: null, status: null, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null };
+  }
+
+  if (entity.type === 'SUPPLIER_PROFILE') {
+    const profile = targets.profiles.find((item) => item.id === entity.id);
+    return profile
+      ? { classifierTarget: { kind: 'SUPPLIER_PROFILE', verificationStatus: profile.verificationStatus }, entityType: entity.type, entityId: entity.id, title: null, status: profile.verificationStatus, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null }
+      : { classifierTarget: null, entityType: entity.type, entityId: entity.id, title: null, status: null, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null };
+  }
+
+  return { classifierTarget: null, entityType: entity.type, entityId: entity.id, title: null, status: null, publishedMaterialId: null, approvedCategoryId: null, approvedCategoryName: null };
+};
+
+const iconForCategory = (category: SupplierNotificationClassification['category']) =>
+  ({
+    RESERVATION: 'RESERVATION',
+    MATERIAL_REVIEW: 'MATERIAL_REVIEW',
+    DELIVERY_RECOVERY: 'DELIVERY_RECOVERY',
+    ACCOUNT: 'ACCOUNT',
+    SYSTEM: 'SYSTEM',
+    UNKNOWN: 'UNKNOWN',
+  })[category];
+
+const destinationForAction = (
+  actionType: SupplierNotificationClassification['actionType'],
+  entityType: string | null,
+) => {
+  if (
+    actionType === 'REVIEW_RESERVATION' ||
+    actionType === 'OPEN_RESERVATION' ||
+    actionType === 'CHOOSE_PICKUP_WINDOW'
+  ) {
+    return 'SUPPLIER_RESERVATION_DETAIL';
+  }
+  if (actionType === 'CONTINUE_LISTING' || actionType === 'EDIT_LISTING') {
+    return entityType === 'PRICE_RULE_REQUEST'
+      ? 'SUPPLIER_ADD_MATERIAL_PRICE_REQUEST'
+      : 'SUPPLIER_ADD_MATERIAL_CATEGORY_REQUEST';
+  }
+  if (actionType === 'OPEN_MATERIAL') return 'SUPPLIER_MATERIAL_DETAIL';
+  if (actionType === 'OPEN_PROFILE') return 'SUPPLIER_PROFILE';
+  return null;
+};
+
+const canonicalItem = (
+  row: supplierNotificationsRepository.SupplierNotificationRow,
+  resolved: ResolvedSupplierNotificationTarget,
+  classification: SupplierNotificationClassification,
+) => ({
+  id: row.id,
+  rawType: row.notificationType,
+  category: classification.category,
+  state: classification.state,
+  title: row.title.trim() || 'Notification',
+  message: row.body,
+  createdAt: row.createdAt.toISOString(),
+  isRead: row.isRead,
+  readAt: row.readAt?.toISOString() ?? null,
+  iconKey: iconForCategory(classification.category),
+  entity: resolved.entityId
+    ? {
+        type: resolved.entityType,
+        id: resolved.entityId,
+        title: resolved.title,
+        status: resolved.status,
+      }
+    : null,
+  action: {
+    type: classification.actionType,
+    destination: destinationForAction(classification.actionType, resolved.entityType),
+    target:
+      classification.actionType !== 'NONE' && classification.actionType !== 'UNKNOWN' && resolved.entityId
+        ? { entityType: resolved.entityType, entityId: resolved.entityId }
+        : null,
+  },
+  waitingOn: classification.waitingOn,
+  resolvedAt: row.resolvedAt?.toISOString() ?? null,
+  priority:
+    classification.state === 'NEEDS_ACTION'
+      ? 'HIGH'
+      : classification.state === 'WAITING'
+        ? 'NORMAL'
+        : 'LOW',
+});
+
+const toLegacySupplierNotification = (
+  item: ReturnType<typeof canonicalItem>,
+  resolved: ResolvedSupplierNotificationTarget,
+): SupplierActionNotification => {
+  const isReservation = item.entity?.type === 'RESERVATION';
+  const isCategory = item.entity?.type === 'CATEGORY_REQUEST';
+  const isPrice = item.entity?.type === 'PRICE_RULE_REQUEST';
+  const kind = isReservation
+    ? 'RESERVATION_PENDING'
+    : isCategory
+      ? resolved.publishedMaterialId
+        ? 'CATEGORY_COMPLETED'
+        : resolved.status === 'APPROVED'
+          ? 'CATEGORY_APPROVED'
+          : resolved.status === 'REJECTED'
+            ? 'CATEGORY_REJECTED'
+            : 'CATEGORY_PENDING'
+      : isPrice
+        ? resolved.publishedMaterialId
+          ? 'PRICE_COMPLETED'
+          : resolved.status === 'APPROVED'
+            ? 'PRICE_APPROVED'
+            : resolved.status === 'REJECTED'
+              ? 'PRICE_REJECTED'
+              : 'PRICE_PENDING'
+        : item.rawType === 'MATERIAL_MODERATION_UPDATE'
+          ? 'MATERIAL_MODERATION_UPDATE'
+          : item.rawType === 'SUPPLIER_VERIFICATION_UPDATE'
+            ? 'SUPPLIER_VERIFICATION_UPDATE'
+            : 'UNKNOWN';
 
   return {
-    notifications,
-    summary: buildSummary(notifications),
+    id: item.id,
+    group: isReservation ? 'RESERVATION_ALERT' : 'REVIEW_UPDATE',
+    kind,
+    title: item.title,
+    body: item.message,
+    status: (resolved.status === 'APPROVED' || resolved.status === 'REJECTED' ? resolved.status : 'PENDING'),
+    createdAt: item.createdAt,
+    actionNeeded: item.state === 'NEEDS_ACTION',
+    isCompleted: item.state === 'RESOLVED',
+    actionLabel: item.action.type === 'REVIEW_RESERVATION' ? 'Review request' : item.action.type === 'CONTINUE_LISTING' ? 'Continue listing' : item.action.type === 'EDIT_LISTING' ? 'Edit listing' : null,
+    actionType: item.action.type === 'REVIEW_RESERVATION' ? 'REVIEW_REQUEST' : item.action.type === 'EDIT_LISTING' ? 'EDIT_LISTING' : item.action.type === 'CONTINUE_LISTING' ? 'CONTINUE_LISTING' : null,
+    categoryRequestId: isCategory ? item.entity?.id ?? null : null,
+    priceRuleRequestId: isPrice ? item.entity?.id ?? null : null,
+    reservationId: isReservation ? item.entity?.id ?? null : null,
+    publishedMaterialId: resolved.publishedMaterialId,
+    approvedCategoryId: resolved.approvedCategoryId,
+    approvedCategoryName: resolved.approvedCategoryName,
+    maxAllowedUnitPriceNis: null,
+    unit: null,
+    supplierRequestedUnitPriceNis: null,
+  };
+};
+
+export const listCanonicalSupplierNotifications = async (
+  userId: string,
+  query: SupplierNotificationsQuery,
+) => {
+  const page = query.page;
+  const limit = query.limit;
+  const requestedStart = (page - 1) * limit;
+  const requestedEnd = requestedStart + limit;
+  const ranked: Array<{
+    item: ReturnType<typeof canonicalItem>;
+    resolved: ResolvedSupplierNotificationTarget;
+  }> = [];
+  const counts = {
+    total: 0,
+    unread: 0,
+    needsAction: 0,
+    waiting: 0,
+    updates: 0,
+    resolved: 0,
+    unknownState: 0,
+    reservations: 0,
+    materials: 0,
+    deliveryRecovery: 0,
+    account: 0,
+    system: 0,
+    unknownCategory: 0,
+  };
+
+  const statePriority: Record<SupplierNotificationClassification['state'], number> = {
+    NEEDS_ACTION: 1,
+    WAITING: 2,
+    UPDATE: 3,
+    RESOLVED: 4,
+    UNKNOWN: 5,
+  };
+  const compareRank = (
+    left: ReturnType<typeof canonicalItem>,
+    right: ReturnType<typeof canonicalItem>,
+  ) =>
+    statePriority[left.state] - statePriority[right.state] ||
+    right.createdAt.localeCompare(left.createdAt) ||
+    right.id.localeCompare(left.id);
+
+  await supplierNotificationsRepository.forEachSupplierNotificationBatch({
+    filter: { userId, ...query },
+    batchSize: 100,
+    onBatch: async (rows) => {
+      const targets = await supplierNotificationsRepository.findSupplierNotificationTargets({
+        userId,
+        reservationIds: rows.map((row) => effectiveEntity(row)).filter((entity) => entity.type === 'RESERVATION' && entity.id).map((entity) => entity.id as string),
+        categoryRequestIds: rows.map((row) => effectiveEntity(row)).filter((entity) => entity.type === 'CATEGORY_REQUEST' && entity.id).map((entity) => entity.id as string),
+        priceRuleRequestIds: rows.map((row) => effectiveEntity(row)).filter((entity) => entity.type === 'PRICE_RULE_REQUEST' && entity.id).map((entity) => entity.id as string),
+        materialIds: rows.map((row) => effectiveEntity(row)).filter((entity) => entity.type === 'MATERIAL' && entity.id).map((entity) => entity.id as string),
+        supplierProfileIds: rows.map((row) => effectiveEntity(row)).filter((entity) => entity.type === 'SUPPLIER_PROFILE' && entity.id).map((entity) => entity.id as string),
+      });
+
+      rows.forEach((row) => {
+        const resolved = resolveTarget(row, targets);
+        const classification = classifySupplierNotification({ rawType: row.notificationType, target: resolved.classifierTarget, resolvedAt: row.resolvedAt });
+        const item = canonicalItem(row, resolved, classification);
+
+        if (query.category && classification.category !== query.category) return;
+        if (query.state && classification.state !== query.state) return;
+
+        counts.total += 1;
+        if (!item.isRead) counts.unread += 1;
+        if (classification.state === 'NEEDS_ACTION') counts.needsAction += 1;
+        if (classification.state === 'WAITING') counts.waiting += 1;
+        if (classification.state === 'UPDATE') counts.updates += 1;
+        if (classification.state === 'RESOLVED') counts.resolved += 1;
+        if (classification.state === 'UNKNOWN') counts.unknownState += 1;
+        if (classification.category === 'RESERVATION') counts.reservations += 1;
+        if (classification.category === 'MATERIAL_REVIEW') counts.materials += 1;
+        if (classification.category === 'DELIVERY_RECOVERY') counts.deliveryRecovery += 1;
+        if (classification.category === 'ACCOUNT') counts.account += 1;
+        if (classification.category === 'SYSTEM') counts.system += 1;
+        if (classification.category === 'UNKNOWN') counts.unknownCategory += 1;
+
+        ranked.push({ item, resolved });
+        ranked.sort((left, right) => compareRank(left.item, right.item));
+        if (ranked.length > requestedEnd) ranked.pop();
+      });
+    },
+  });
+
+  const pageRows = ranked.slice(requestedStart, requestedEnd);
+
+  return {
+    items: pageRows.map((row) => row.item),
+    notifications: pageRows.map((row) => toLegacySupplierNotification(row.item, row.resolved)),
+    pagination: { page, limit, total: counts.total, totalPages: Math.ceil(counts.total / limit) || 0 },
+    summary: {
+      ...counts,
+      totalCount: counts.total,
+      actionNeededCount: counts.needsAction,
+      reviewCount: counts.materials,
+      reservationCount: counts.reservations,
+      completedCount: counts.resolved,
+    },
   };
 };

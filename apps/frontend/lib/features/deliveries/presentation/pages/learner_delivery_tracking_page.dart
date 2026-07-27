@@ -226,7 +226,8 @@ class _LearnerDeliveryTrackingPageState
                         title: 'Could not load tracking.',
                         subtitle: 'Please try again.',
                         actionLabel: 'Retry',
-                        onAction: () => unawaited(_fetchTracking(initial: true)),
+                        onAction: () =>
+                            unawaited(_fetchTracking(initial: true)),
                       ),
                     )
                   : _tracking == null
@@ -247,9 +248,8 @@ class _LearnerDeliveryTrackingPageState
                             backgroundWarning: _backgroundWarning,
                             showAutoUpdateHint:
                                 _tracking!.canTrack && !_tracking!.isTerminal,
-                            onRefresh: () => unawaited(
-                              _fetchTracking(manual: true),
-                            ),
+                            onRefresh: () =>
+                                unawaited(_fetchTracking(manual: true)),
                           ),
                         ),
                       ),
@@ -358,9 +358,9 @@ class _TrackingContent extends StatelessWidget {
                 color: AppThemeColors.of(context).warningSoft,
                 borderRadius: AppRadius.lgAll,
                 border: Border.all(
-                  color: AppThemeColors.of(context).warningBorder.withValues(
-                    alpha: 0.35,
-                  ),
+                  color: AppThemeColors.of(
+                    context,
+                  ).warningBorder.withValues(alpha: 0.35),
                 ),
               ),
               child: Row(
@@ -387,9 +387,9 @@ class _TrackingContent extends StatelessWidget {
                 color: AppThemeColors.of(context).warningSoft,
                 borderRadius: AppRadius.lgAll,
                 border: Border.all(
-                  color: AppThemeColors.of(context).warningBorder.withValues(
-                    alpha: 0.35,
-                  ),
+                  color: AppThemeColors.of(
+                    context,
+                  ).warningBorder.withValues(alpha: 0.35),
                 ),
               ),
               child: Row(
@@ -535,8 +535,8 @@ class _TrackingMapState extends State<_TrackingMap> {
       widget.driverLocation.latitude,
       widget.driverLocation.longitude,
     );
-    final dropoffPoint = widget.dropoffLatitude != null &&
-            widget.dropoffLongitude != null
+    final dropoffPoint =
+        widget.dropoffLatitude != null && widget.dropoffLongitude != null
         ? LatLng(widget.dropoffLatitude!, widget.dropoffLongitude!)
         : null;
 
@@ -546,7 +546,11 @@ class _TrackingMapState extends State<_TrackingMap> {
         width: 40,
         height: 40,
         alignment: Alignment.center,
-        child: Icon(Icons.local_shipping_outlined, color: palette.mint, size: 28),
+        child: Icon(
+          Icons.local_shipping_outlined,
+          color: palette.mint,
+          size: 28,
+        ),
       ),
       if (dropoffPoint != null)
         Marker(
@@ -554,7 +558,11 @@ class _TrackingMapState extends State<_TrackingMap> {
           width: 40,
           height: 40,
           alignment: Alignment.center,
-          child: Icon(Icons.home_outlined, color: palette.textSecondary, size: 28),
+          child: Icon(
+            Icons.home_outlined,
+            color: palette.textSecondary,
+            size: 28,
+          ),
         ),
     ];
 

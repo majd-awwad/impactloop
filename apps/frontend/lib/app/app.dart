@@ -10,10 +10,7 @@ import '../features/auth/application/auth_providers.dart';
 class ImpactLoopApp extends ConsumerWidget {
   const ImpactLoopApp({super.key});
 
-  static const supportedLocales = [
-    Locale('en'),
-    Locale('ar'),
-  ];
+  static const supportedLocales = [Locale('en'), Locale('ar')];
 
   static const localizationsDelegates = [
     GlobalMaterialLocalizations.delegate,

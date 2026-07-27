@@ -82,8 +82,10 @@ String notificationActionLabel(AppNotification notification) {
     if (notification.notificationType == 'DRIVER_NEW_JOB') {
       return 'View jobs';
     }
-    if (notification.notificationType == 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
-        notification.notificationType == 'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN') {
+    if (notification.notificationType ==
+            'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
+        notification.notificationType ==
+            'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN') {
       return 'View details';
     }
     return 'View delivery';

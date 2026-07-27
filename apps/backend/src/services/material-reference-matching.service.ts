@@ -180,6 +180,9 @@ const pickBestCandidates = (
 export const matchMaterialReference = async (input: {
   materialName: string;
   categoryId: string;
+  client?: Parameters<
+    typeof materialTypesRepository.findActiveMaterialTypesForMatching
+  >[1];
 }): Promise<MaterialReferenceMatchResult> => {
   const normalizedInput = normalizeSearchText(input.materialName);
 
@@ -190,6 +193,7 @@ export const matchMaterialReference = async (input: {
   const materialTypes =
     await materialTypesRepository.findActiveMaterialTypesForMatching(
       input.categoryId,
+      input.client,
     );
 
   const scoredCandidates = materialTypes

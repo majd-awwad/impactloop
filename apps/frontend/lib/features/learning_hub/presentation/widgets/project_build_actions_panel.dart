@@ -11,9 +11,14 @@ import '../../domain/models/learning_project.dart';
 import '../theme/learning_ui_palette.dart';
 
 class ProjectBuildActionsPanel extends ConsumerStatefulWidget {
-  const ProjectBuildActionsPanel({super.key, required this.project});
+  const ProjectBuildActionsPanel({
+    super.key,
+    required this.project,
+    this.recommendationImpressionId,
+  });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<ProjectBuildActionsPanel> createState() =>
@@ -29,7 +34,7 @@ class _ProjectBuildActionsPanelState
     final destination = '/learning/$projectId/build';
 
     if (hasBuild) {
-      context.go(destination);
+      context.go(destination, extra: widget.recommendationImpressionId);
       return;
     }
 
@@ -46,10 +51,15 @@ class _ProjectBuildActionsPanelState
 
     setState(() => _isStarting = true);
     try {
-      await ref.read(learningHubRepositoryProvider).startBuild(projectId);
+      await ref
+          .read(learningHubRepositoryProvider)
+          .startBuild(
+            projectId,
+            recommendationImpressionId: widget.recommendationImpressionId,
+          );
       ref.invalidate(projectBuildProvider(projectId));
       if (mounted) {
-        context.go(destination);
+        context.go(destination, extra: widget.recommendationImpressionId);
       }
     } catch (error) {
       if (mounted) {
