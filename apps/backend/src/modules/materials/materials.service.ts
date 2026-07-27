@@ -31,15 +31,12 @@ import {
 import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
-<<<<<<< Updated upstream
 import {
   commitRecommendationMaterialView,
   commitRecommendationToggleTransition,
   resolveRecommendationSourceOperationId,
 } from '../recommendation-events/recommendation-events.service.js';
-=======
 import * as publicSuppliersRepository from '../public-suppliers/public-suppliers.repository.js';
->>>>>>> Stashed changes
 
 import * as materialsRepository from './materials.repository.js';
 import type {
