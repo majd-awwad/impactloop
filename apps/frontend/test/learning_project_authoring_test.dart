@@ -17,7 +17,6 @@ import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
 import 'package:frontend/features/learning_hub/domain/learning_project_repository.dart';
-import 'package:frontend/features/learning_hub/domain/learning_projects_result.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project.dart';
 import 'package:frontend/features/learning_hub/domain/models/learning_project_submission.dart';
 import 'package:frontend/features/learning_hub/presentation/pages/learning_add_draft_page.dart';
@@ -26,14 +25,12 @@ import 'package:frontend/features/learning_hub/presentation/pages/learning_proje
 import 'package:frontend/shared/utils/content_text_direction.dart';
 import 'package:frontend/features/materials/data/models/category.dart';
 import 'package:frontend/shared/models/localized_text.dart';
-import 'package:frontend/shared/widgets/app_primary_button.dart';
 
 class _AuthoringTestRepository implements LearningProjectRepository {
   _AuthoringTestRepository({
     required this.categories,
     this.draftSubmission,
     this.createHandler,
-    this.reopenHandler,
   });
 
   final List<MaterialCategory> categories;
@@ -58,12 +55,6 @@ class _AuthoringTestRepository implements LearningProjectRepository {
     String? locale,
   })?
   createHandler;
-
-  Future<LearningProjectAuthoringSession> Function({
-    required String projectId,
-    String? locale,
-  })?
-  reopenHandler;
 
   @override
   Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
@@ -105,9 +96,6 @@ class _AuthoringTestRepository implements LearningProjectRepository {
   }) async {
     reopenCalls += 1;
     lastReopenProjectId = projectId;
-    if (reopenHandler != null) {
-      return reopenHandler!(projectId: projectId, locale: locale);
-    }
     return LearningProjectAuthoringSession(
       learningProjectId: projectId,
       conversationId: 'conversation-1',
@@ -255,7 +243,7 @@ class _RecordingAiRepository implements AiRepository {
   Future<AiConversationMessagesPage> listMessages({
     required String conversationId,
     int limit = 50,
-    String? cursor,
+    int page = 1,
   }) async {
     listMessagesCalls += 1;
     return AiConversationMessagesPage(

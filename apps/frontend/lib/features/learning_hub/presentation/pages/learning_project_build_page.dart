@@ -64,6 +64,7 @@ class _LearningProjectBuildPageState
     if (oldWidget.projectId != widget.projectId ||
         oldWidget.recommendationImpressionId !=
             widget.recommendationImpressionId) {
+      _refreshBuild();
       _isStarting = false;
       _updatingItemIds.clear();
       _completingStepIds.clear();

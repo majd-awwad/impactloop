@@ -44,7 +44,7 @@ const normalizeAssistantConversationMode = (
 const presentAssistantConversationMode = (
   mode: AiConversationMode,
 ): AiAssistantConversationMode =>
-  mode === 'GENERAL_LEARNING' ? 'LEARNER_ASSISTANT' : mode;
+  mode === 'GENERAL_LEARNING' || mode === 'LEARNER_AGENT' ? 'LEARNER_ASSISTANT' : mode;
 
 const mapConversationSummary = (input: {
   id: string;

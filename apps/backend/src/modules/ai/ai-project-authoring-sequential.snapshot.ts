@@ -1,8 +1,8 @@
-import type { AiMessage } from '@prisma/client';
+import type { AiMessage } from '../../generated/prisma/client.js';
 import { z } from 'zod';
 
 import { AppError } from '../../utils/app-error.js';
-import type { learningProjectsRepository } from '../learning-projects/learning-projects.repository.js';
+import type * as learningProjectsRepository from '../learning-projects/learning-projects.repository.js';
 
 import {
   aiProjectAuthoringSessionBlockSchema,
@@ -195,10 +195,12 @@ const mapProgressStage = (stage: SequentialStage): SequentialProgressStage | nul
 };
 
 const completedProgressStages = (
-  acceptedStages: SequentialStage[],
+  acceptedStages: string[],
 ): SequentialProgressStage[] => {
   const mapped = acceptedStages
-    .map((stage) => mapProgressStage(stage))
+    .map((stage) =>
+      mapProgressStage(stage as SequentialStage),
+    )
     .filter((stage): stage is SequentialProgressStage => stage != null);
   return Array.from(new Set(mapped));
 };
@@ -311,7 +313,7 @@ export const reconcileAuthoringSessionBlock = (
     return {
       ...session,
       stage: 'STEPS_OVERVIEW',
-      acceptedStages,
+      acceptedStages: acceptedStages as AiProjectAuthoringSessionBlock['acceptedStages'],
       awaitingComponentsFinalSave: false,
       currentTurnId:
         session.flowStatus === 'WAITING_FOR_USER' ? session.currentTurnId : null,
@@ -453,8 +455,7 @@ export const buildAuthoringSnapshot = (input: {
         ? 'GENERATION_FAILED'
         : session.flowStatus === 'STALE'
           ? 'STALE'
-          : session.flowStatus === 'PROCESSING' ||
-              session.flowStatus === 'WAITING_FOR_ASSISTANT' ||
+          : session.flowStatus === 'WAITING_FOR_ASSISTANT' ||
               session.flowStatus === 'SAVING'
             ? 'PROCESSING'
             : 'WAITING_FOR_USER';

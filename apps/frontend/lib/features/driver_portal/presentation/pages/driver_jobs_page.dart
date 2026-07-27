@@ -1151,7 +1151,6 @@ class _StatePanel extends StatelessWidget {
     required this.subtitle,
     this.actionLabel,
     this.onAction,
-    this.actions = const [],
     this.compact = false,
   });
 
@@ -1160,7 +1159,6 @@ class _StatePanel extends StatelessWidget {
   final String subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
-  final List<Widget> actions;
   final bool compact;
 
   @override
@@ -1195,14 +1193,6 @@ class _StatePanel extends StatelessWidget {
                 AppStatusTone.primary,
               ),
               child: Text(actionLabel!),
-            ),
-          ],
-          if (actions.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: actions,
             ),
           ],
         ],

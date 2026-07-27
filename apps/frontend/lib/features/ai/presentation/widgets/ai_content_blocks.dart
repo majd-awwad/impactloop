@@ -2199,9 +2199,6 @@ class _AiProjectAuthoringProposalCardState
       };
     }
 
-    bool isResolvedDecision(String decision) =>
-        decision == 'ACCEPT_PROPOSAL' || decision == 'KEEP_CURRENT';
-
     bool isDiscussionDecision(String decision) =>
         decision == 'UNDER_DISCUSSION' ||
         decision == 'REVISION_REQUESTED' ||

@@ -18,7 +18,7 @@ import {
   buildAvailableActions,
   reconcileAuthoringSessionBlock,
   resolveCurrentTurn,
-} from './project-authoring-session.state.js';
+} from './ai-project-authoring-sequential.snapshot.js';
 
 const ldrCatalog = [
   {

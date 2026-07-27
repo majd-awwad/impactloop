@@ -78,6 +78,7 @@ import {
 } from './project-authoring-session.state.js';
 import { projectAuthoringSessionRepository } from './project-authoring-session.repository.js';
 import {
+  buildPersistedAuthoringContentBlocks,
   createPersistedAuthoringAssistantTurnResponse,
   latestConversationMessageId,
   migrateLegacyConversationToPersistedSession,
@@ -85,6 +86,19 @@ import {
   startPersistedAuthoringSession,
   submitPersistedComposerFeedback,
 } from './project-authoring-session.service.js';
+
+const normalizeSequentialComponents = (
+  components: Array<Omit<SequentialComponent, 'componentRole'> & { componentRole: string }>,
+): Array<SequentialComponent & { searchKeywords: string[]; notes: string | null }> =>
+  components.map((component) => ({
+    ...component,
+    componentRole:
+      component.componentRole === 'TOOL' || component.componentRole === 'CONSUMABLE'
+        ? component.componentRole
+        : 'REQUIRED_MATERIAL',
+    searchKeywords: component.searchKeywords ?? [],
+    notes: component.notes ?? null,
+  }));
 import type {
   PersistedActionBody,
   PersistedAuthoringAction,
@@ -795,7 +809,10 @@ const createNextStageTurn = async (input: {
     const turn = buildTurnForStage({
       session: sessionWithComponents,
       stage: 'COMPONENTS',
-      draft: { ...input.draft, components: generated.components },
+      draft: {
+        ...input.draft,
+        components: normalizeSequentialComponents(generated.components),
+      },
       locale: input.locale,
       explanation: generated.explanation,
       baseUpdatedAt: projectBasis,
@@ -1223,7 +1240,7 @@ const assertRefreshedProjectMatchesPatch = (
   }
   if (patch.requiredComponents !== undefined) {
     const saved = componentListSignature(
-      project.requiredComponents.map((component) => ({
+      normalizeSequentialComponents(project.requiredComponents.map((component) => ({
         componentName: component.componentName,
         materialType: component.materialType,
         quantity: Number(component.quantity),
@@ -1233,9 +1250,9 @@ const assertRefreshedProjectMatchesPatch = (
         canBeSubstituted: component.canBeSubstituted,
         searchKeywords: [],
         notes: component.notes,
-      })),
+      }))),
     );
-    const expected = componentListSignature(patch.requiredComponents);
+    const expected = componentListSignature(normalizeSequentialComponents(patch.requiredComponents));
     if (JSON.stringify(saved) !== JSON.stringify(expected)) {
       throw new AppError(
         'Canonical components were not updated.',
@@ -1806,6 +1823,105 @@ const buildPersistedActionBody = (
   };
 };
 
+const isAiTurnResponse = (
+  value: AiTurnResponse | { session: unknown } | null,
+): value is AiTurnResponse =>
+  Boolean(value && typeof value === 'object' && 'contentBlocks' in value);
+
+/**
+ * Legacy sequential endpoints expect AiTurnResponse (with authoringSnapshot +
+ * session/turn content blocks). Persisted composer feedback may return either
+ * AiTurnResponse or AuthoringSessionResponse. Never invent a text-only turn —
+ * rebuild from the refreshed persisted session so Flutter can apply the snapshot.
+ */
+const toLegacyAiTurnResponse = async (input: {
+  result: AiTurnResponse | { session: { id: string } } | null;
+  conversationId: string;
+  locale: AiLocale;
+  project: LegacyBridgeProjectRecord;
+  conversation: AiConversation;
+}): Promise<AiTurnResponse | null> => {
+  if (!input.result) {
+    return null;
+  }
+
+  const session = await projectAuthoringSessionRepository.findByConversationId(
+    input.conversationId,
+  );
+  if (!session) {
+    return isAiTurnResponse(input.result) ? input.result : null;
+  }
+
+  const authoringSnapshot = buildLegacyAuthoringSnapshotFromPersistedSession({
+    session,
+    project: input.project,
+  });
+
+  if (isAiTurnResponse(input.result)) {
+    if (input.result.authoringSnapshot) {
+      return input.result;
+    }
+    return {
+      ...input.result,
+      authoringSnapshot,
+      contentBlocks:
+        input.result.contentBlocks.length > 0
+          ? input.result.contentBlocks
+          : buildPersistedAuthoringContentBlocks({ session }),
+    };
+  }
+
+  const messages = await loadRecentConversationMessages({
+    conversationId: input.conversationId,
+    limit: env.aiChatMaxHistoryMessages,
+  });
+  const lastUser = [...messages].reverse().find((message) => message.role === 'USER');
+  const lastAssistant = [...messages]
+    .reverse()
+    .find((message) => message.role === 'ASSISTANT');
+
+  let assistantText: string | undefined;
+  if (lastAssistant?.contentText?.trim()) {
+    assistantText = lastAssistant.contentText.trim();
+  } else if (lastAssistant?.contentBlocks) {
+    const existingBlocks = parseStoredContentBlocks(lastAssistant.contentBlocks);
+    const textBlockEntry = existingBlocks.find(
+      (block): block is Extract<AiContentBlock, { type: 'text' }> =>
+        block.type === 'text',
+    );
+    if (textBlockEntry?.text?.trim()) {
+      assistantText = textBlockEntry.text.trim();
+    }
+  }
+
+  const contentBlocks = buildPersistedAuthoringContentBlocks({
+    session,
+    assistantText,
+  });
+
+  return {
+    conversationId: input.conversationId,
+    userMessageId: lastUser?.id ?? input.conversationId,
+    assistantMessageId: lastAssistant?.id ?? null,
+    mode: 'PROJECT_AUTHORING',
+    locale: input.locale,
+    contentBlocks,
+    authoringSnapshot,
+    meta: {
+      provider: lastAssistant?.provider ?? 'system',
+      model: lastAssistant?.model ?? null,
+      policyVersion:
+        lastAssistant?.policyVersion ?? PROJECT_AUTHORING_SEQUENTIAL_POLICY_VERSION,
+      scopeClassification: lastAssistant?.scopeClassification ?? 'DOMAIN_KNOWLEDGE',
+      latencyMs: lastAssistant?.latencyMs ?? null,
+      usage: {
+        inputTokens: lastAssistant?.inputTokens ?? null,
+        outputTokens: lastAssistant?.outputTokens ?? null,
+      },
+    },
+  };
+};
+
 export const delegateSequentialActionToPersisted = async (input: {
   userId: string;
   conversationId: string;
@@ -1842,15 +1958,21 @@ export const delegateSequentialActionToPersisted = async (input: {
     if (!comment) {
       throw new AppError('Comment is required.', 400, 'VALIDATION_ERROR');
     }
-    return submitPersistedComposerFeedback({
-      userId: input.userId,
-      sessionId: session.id,
-      conversation: input.ownedConversation,
-      project: input.project,
+    return toLegacyAiTurnResponse({
+      result: await submitPersistedComposerFeedback({
+        userId: input.userId,
+        sessionId: session.id,
+        conversation: input.ownedConversation,
+        project: input.project,
+        locale: input.locale,
+        comment,
+        clientMessageId: input.body.clientMessageId,
+        expectedVersion: session.version,
+      }),
+      conversationId: input.conversationId,
       locale: input.locale,
-      comment,
-      clientMessageId: input.body.clientMessageId,
-      expectedVersion: session.version,
+      project: input.project,
+      conversation: input.ownedConversation,
     });
   }
 
@@ -1996,6 +2118,9 @@ const continueLegacyAuthoringToSequential = async (input: {
 
   const assistantMessage = await createAssistantMessage({
     conversationId: input.ownedConversation.id,
+    inReplyToMessageId:
+      (await latestConversationMessageId(input.ownedConversation.id)) ??
+      input.ownedConversation.id,
     status: 'COMPLETED',
     contentBlocks: blocks,
     scopeClassification: 'DOMAIN_KNOWLEDGE',
@@ -2079,7 +2204,10 @@ export const runSequentialAuthoringActionForUser = async (
     );
   }
 
-  await acquireConversationProcessingLock(ownedConversation.id);
+  await acquireConversationProcessingLock({
+    conversationId: ownedConversation.id,
+    staleBefore: new Date(Date.now() - env.aiChatProcessingStaleMs),
+  });
   try {
     if (body.action === 'START') {
       if (session.stage !== 'OVERVIEW') {
@@ -3418,7 +3546,10 @@ export const runSequentialAuthoringActionForUser = async (
         newTurn = buildTurnForStage({
           session: sessionWithTurn,
           stage: 'COMPONENTS',
-          draft: { ...draft, components: generated.components },
+          draft: {
+            ...draft,
+            components: normalizeSequentialComponents(generated.components),
+          },
           locale,
           explanation: generated.explanation,
         });
@@ -3612,7 +3743,7 @@ export const discussSequentialAuthoringTurnForUser = async (
       staleBefore: new Date(Date.now() - env.aiChatProcessingStaleMs),
     });
     try {
-      return await submitPersistedComposerFeedback({
+      const result = await submitPersistedComposerFeedback({
         userId,
         sessionId: persistedSession.id,
         conversation: ownedConversation,
@@ -3622,6 +3753,21 @@ export const discussSequentialAuthoringTurnForUser = async (
         clientMessageId: body.clientMessageId,
         expectedVersion: persistedSession.version,
       });
+      const turn = await toLegacyAiTurnResponse({
+        result,
+        conversationId: ownedConversation.id,
+        locale,
+        project,
+        conversation: ownedConversation,
+      });
+      if (!turn) {
+        throw new AppError(
+          'Failed to process authoring feedback.',
+          500,
+          'AI_AUTHORING_FEEDBACK_FAILED',
+        );
+      }
+      return turn;
     } finally {
       await releaseConversationProcessingLock(ownedConversation.id);
     }

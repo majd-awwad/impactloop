@@ -63,10 +63,11 @@ export const installSemanticTestHarness = (
   customPlannerOverride = override ?? null;
   resetPlannerInvocationCount();
   if (isSemanticRouterV2Active()) {
-    if (customPlannerOverride) {
+    const plannerOverride = customPlannerOverride;
+    if (plannerOverride) {
       setSemanticUnderstandingOverrideForTests(async (input) => {
         plannerInvocationCount += 1;
-        const v1 = await customPlannerOverride({
+        const v1 = await plannerOverride({
           userMessage: input.userMessage,
           locale: input.locale,
           deterministicRoute: 'GENERAL_LEARNING',

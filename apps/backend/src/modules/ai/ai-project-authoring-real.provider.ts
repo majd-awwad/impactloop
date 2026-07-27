@@ -1589,7 +1589,7 @@ export const buildComponentReferenceCatalog = (
       const aliases = new Set<string>([
         canonicalName,
         ...extractParentheticalAliases(canonicalName),
-        ...component.searchKeywords,
+        ...(component.searchKeywords ?? []),
       ]);
       for (const group of SAFE_SEMANTIC_ALIAS_GROUPS) {
         if (group.componentPattern.test(canonicalName)) {

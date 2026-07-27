@@ -1270,7 +1270,10 @@ const handleReservationDraftContinuation = async (input: {
     userId: input.authenticatedUserId,
   });
 
-  const viewer = { sub: input.authenticatedUserId, roles: ['LEARNER'] as const };
+  const viewer: AccessTokenPayload = {
+    sub: input.authenticatedUserId,
+    roles: ['LEARNER'],
+  };
   const material = await getMaterialById(draftPayload.target.materialId, viewer);
   const conversation = await prisma.aiConversation.findUnique({
     where: { id: input.conversationId },
@@ -1555,7 +1558,7 @@ const handleActionRequestTurn = async (input: {
       };
     }
 
-    if (built && 'actionType' in built) {
+    if (built?.actionType && built.payload) {
       const prepared = await prepareAiPendingAction({
         userId: input.authenticatedUserId,
         conversationId: input.conversationId,
@@ -1830,7 +1833,7 @@ const handleActionRequestTurn = async (input: {
 
       return {
         blocks: [
-          textBlock(reservationClarification(input.locale, built.missing), 'clarification'),
+          textBlock(reservationClarification(input.locale, built.missing ?? []), 'clarification'),
         ],
         usedProvider: false,
         providerName: 'system',

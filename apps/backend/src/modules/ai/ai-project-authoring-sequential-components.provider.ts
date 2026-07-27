@@ -4,7 +4,10 @@ import { resolveAiChatProvider } from '../../config/env.js';
 import { AppError } from '../../utils/app-error.js';
 import { getAiChatProvider } from './providers/ai-chat-provider.factory.js';
 
-import type { AiProjectAuthoringClarificationBlock } from './ai.content-blocks.js';
+import type {
+  AiContentBlock,
+  AiProjectAuthoringClarificationBlock,
+} from './ai.content-blocks.js';
 import {
   generateRealAuthoringComponentList,
   type RealAuthoringComponentListInput,
@@ -67,6 +70,8 @@ export type ComponentListContext = {
   durationMinutes?: number | null;
   clarification: AiProjectAuthoringClarificationBlock;
   recentAnswers: string[];
+  feedback?: string;
+  previousComponents?: SequentialComponent[];
   repairAttempt?: boolean;
   repairIssue?: string | null;
 };
@@ -910,9 +915,10 @@ const generateComponentConversationExplanation = async (input: {
     scopeClassification: 'DOMAIN_KNOWLEDGE',
   });
 
-  const assistantText = answer.data.blocks
+  const assistantText = (answer.data.blocks as unknown as AiContentBlock[])
+    .map((block) => block as unknown as { type: string; text?: string })
     .filter((block) => block.type === 'text' && typeof block.text === 'string')
-    .map((block) => block.text as string)
+    .map((block) => block.text!)
     .join('\n\n')
     .trim();
 

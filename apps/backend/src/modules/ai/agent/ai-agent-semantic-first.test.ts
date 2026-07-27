@@ -1319,7 +1319,7 @@ describe('material result set filter continuation', () => {
       confidence: 0.9,
       entities: [],
       clarificationNeeded: false,
-      toolCall: null,
+      toolCall: undefined,
     }));
 
     const plan = await resolveAgentExecutionPlan({
@@ -1389,7 +1389,7 @@ describe('material result set filter continuation', () => {
       confidence: 0.92,
       entities: [],
       clarificationNeeded: false,
-      toolCall: null,
+      toolCall: undefined,
     }));
 
     const plan = await resolveAgentExecutionPlan({

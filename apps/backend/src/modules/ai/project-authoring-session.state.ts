@@ -5,7 +5,12 @@ import { z } from 'zod';
 
 import type * as LearningProjectsRepository from '../learning-projects/learning-projects.repository.js';
 
-import { buildAvailableActions } from './ai-project-authoring-sequential.snapshot.js';
+import {
+  authoringCanonicalProjectSchema,
+  buildAvailableActions,
+} from './ai-project-authoring-sequential.snapshot.js';
+import type { SequentialComponent } from './ai-project-authoring-sequential.policy.js';
+export type { SequentialComponent } from './ai-project-authoring-sequential.policy.js';
 import {
   mapAuthoringCanonicalProject,
   type AuthoringSnapshot,
@@ -51,24 +56,24 @@ export const authoringTurnStateSchema = z.object({
 export const authoringSessionResponseSchema = z.object({
   session: authoringSessionStateSchema,
   currentTurn: authoringTurnStateSchema.nullable(),
-  canonicalProject: z.record(z.string(), z.unknown()),
+  canonicalProject: authoringCanonicalProjectSchema,
   availableActions: z.array(z.string()),
-  conversationMessages: z.array(z.record(z.string(), z.unknown())).optional(),
+  conversationMessages: z
+    .array(
+      z
+        .object({
+          id: z.string(),
+          role: z.string(),
+          status: z.string(),
+          contentText: z.string().nullable(),
+          createdAt: z.string(),
+        })
+        .passthrough(),
+    )
+    .optional(),
 });
 
 export type AuthoringSessionResponse = z.infer<typeof authoringSessionResponseSchema>;
-
-export type SequentialComponent = {
-  componentName: string;
-  materialType: string;
-  quantity: number;
-  unit: string;
-  componentRole: 'REQUIRED_MATERIAL' | 'TOOL' | 'CONSUMABLE';
-  isRequired: boolean;
-  canBeSubstituted: boolean;
-  searchKeywords?: string[];
-  notes?: string | null;
-};
 
 export type SequentialStep = {
   title: string;

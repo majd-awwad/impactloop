@@ -209,6 +209,10 @@ describe('project authoring persisted session', () => {
         requiredComponents: true,
         steps: true,
         category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
       },
     });
 
@@ -609,7 +613,15 @@ describe('project authoring persisted session', () => {
     });
     const refreshedProject = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     await prisma.projectAuthoringSession.create({
       data: {
@@ -798,7 +810,15 @@ describe('project authoring persisted session', () => {
 
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
 
     const response = await submitPersistedComposerFeedback({
@@ -929,7 +949,15 @@ describe('project authoring persisted session', () => {
 
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
 
     const first = await submitPersistedComposerFeedback({
@@ -1033,7 +1061,15 @@ describe('project authoring persisted session', () => {
     });
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     const beforeComponents = await prisma.projectRequiredComponent.count({
       where: { projectId: project.id },
@@ -1109,7 +1145,15 @@ describe('project authoring persisted session', () => {
     });
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     const response = await submitPersistedComposerFeedback({
       userId: learner.id,
@@ -1175,7 +1219,15 @@ describe('project authoring persisted session', () => {
     });
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     const comment = 'وضح أكثر.';
     const first = await submitPersistedComposerFeedback({
@@ -1267,7 +1319,15 @@ describe('project authoring persisted session', () => {
     });
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     const response = await submitPersistedComposerFeedback({
       userId: learner.id,
@@ -1332,7 +1392,15 @@ describe('project authoring persisted session', () => {
     });
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     const response = await submitPersistedComposerFeedback({
       userId: learner.id,
@@ -1407,7 +1475,15 @@ describe('project authoring persisted session', () => {
     });
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     const response = await submitPersistedComposerFeedback({
       userId: learner.id,
@@ -1478,7 +1554,15 @@ describe('project authoring persisted session', () => {
     });
     const projectRecord = await prisma.learningProject.findUniqueOrThrow({
       where: { id: project.id },
-      include: { requiredComponents: true, steps: true, category: true },
+      include: {
+        requiredComponents: true,
+        steps: true,
+        category: true,
+        tags: true,
+        images: true,
+        createdByUser: true,
+        links: true,
+      },
     });
     const first = await submitPersistedComposerFeedback({
       userId: learner.id,

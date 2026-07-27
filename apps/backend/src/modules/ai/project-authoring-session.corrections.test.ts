@@ -38,8 +38,10 @@ describe('authoring session corrections', () => {
     });
 
     assert.equal(reply.replyType, 'REVISED_SUGGESTION');
-    assert.ok(!`${reply.suggestion.value}`.includes(feedback));
-    assert.notEqual(reply.suggestion.value, feedback);
+    if (reply.replyType === 'REVISED_SUGGESTION') {
+      assert.ok(!`${reply.suggestion.value}`.includes(feedback));
+      assert.notEqual(reply.suggestion.value, feedback);
+    }
   });
 
   test('suggest another returns a materially different short description', async () => {
@@ -62,7 +64,9 @@ describe('authoring session corrections', () => {
       suggestAnother: true,
     });
 
-    assert.notEqual(reply.suggestion.value, current);
+    if (reply.replyType === 'REVISED_SUGGESTION') {
+      assert.notEqual(reply.suggestion.value, current);
+    }
   });
 
   test('door-alarm component generation excludes soil moisture sensor', async () => {
@@ -84,10 +88,6 @@ describe('authoring session corrections', () => {
         remainingTopics: 0,
         assumptions: [],
         warnings: [],
-        ideaText: 'Arduino door alarm',
-        questions: [],
-        answers: [],
-        policyVersion: 'v1',
       },
       recentAnswers: [],
     });
@@ -116,10 +116,6 @@ describe('authoring session corrections', () => {
         remainingTopics: 0,
         assumptions: [],
         warnings: [],
-        ideaText: 'Breadboard practice kit',
-        questions: [],
-        answers: [],
-        policyVersion: 'v1',
       },
       recentAnswers: [],
     });

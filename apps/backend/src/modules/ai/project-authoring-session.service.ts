@@ -291,10 +291,6 @@ export const latestConversationMessageId = async (conversationId: string) => {
   return message?.id ?? null;
 };
 
-type ProjectRecord = NonNullable<
-  Awaited<ReturnType<typeof learningProjectsRepository.findMyLearningProjectSubmissionById>>
->;
-
 const STAGE_ORDER: ProjectAuthoringSessionStage[] = [
   'OVERVIEW',
   'TITLE',
@@ -535,8 +531,11 @@ const mapConversationMessagesForAuthoringResponse = (
       ? parseStoredContentBlocks(message.contentBlocks)
       : [];
     const textFromBlocks = blocks
-      .filter((block) => block.type === 'text' && typeof block.text === 'string')
-      .map((block) => block.text as string)
+      .filter(
+        (block): block is Extract<(typeof blocks)[number], { type: 'text' }> =>
+          block.type === 'text',
+      )
+      .map((block) => block.text)
       .join('\n\n')
       .trim();
     return {
@@ -604,7 +603,7 @@ const handleStepReviewComposerFeedback = async (input: {
   userMessageId: string;
   expectedVersion: number;
   skipLegacyAssistantMessage?: boolean;
-}): Promise<AuthoringSessionResponse | null> => {
+}): Promise<AuthoringSessionResponse | AiTurnResponse | null> => {
   const stepState = parseStepWorkingState(input.sessionRecord.stepWorkingState);
   if (!stepState || stepState.workingSteps.length === 0) {
     throw new AppError('Step working state is missing.', 409, 'VALIDATION_ERROR');
@@ -881,7 +880,7 @@ export const startPersistedAuthoringSession = async (
         session,
         locale,
         inReplyToMessageId,
-        assistantText: question,
+        assistantText: question ?? undefined,
       });
     }
 
@@ -920,7 +919,7 @@ export const startPersistedAuthoringSession = async (
         session,
         locale,
         inReplyToMessageId,
-        assistantText,
+        assistantText: assistantText ?? undefined,
       });
     }
 
@@ -963,7 +962,7 @@ export type PersistedAuthoringAction =
   | SessionPersistedAuthoringAction
   | 'GENERATE_STEP_PLAN';
 
-export type PersistedAuthoringActionBody = PersistedActionBody & {
+export type PersistedAuthoringActionBody = Omit<PersistedActionBody, 'action'> & {
   action: PersistedAuthoringAction;
 };
 
@@ -1016,7 +1015,11 @@ export const runPersistedAuthoringSessionAction = async (
     return buildAuthoringSessionResponse({ session: refreshed, project });
   }
 
-  return executePersistedAuthoringAction(userId, sessionId, body);
+  return executePersistedAuthoringAction(
+    userId,
+    sessionId,
+    body as PersistedActionBody,
+  );
 };
 
 export const buildPersistedLegacySnapshot = async (
@@ -1245,7 +1248,11 @@ const handleComponentFailureStateConversation = async (input: {
   const composerResult = await processComponentStageComposerMessage({
     comment: input.comment,
     context: componentContext,
-    currentComponents,
+    currentComponents: currentComponents.map((component) => ({
+      ...component,
+      searchKeywords: component.searchKeywords ?? [],
+      notes: component.notes ?? null,
+    })),
     history,
     project: input.project,
   });
@@ -1536,7 +1543,7 @@ export const submitPersistedComposerFeedback = async (input: {
         locale,
         inReplyToMessageId: userMessage.id,
         userMessageId: userMessage.id,
-        assistantText: question,
+        assistantText: question ?? undefined,
       });
     }
 

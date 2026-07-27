@@ -12,7 +12,7 @@ import 'package:frontend/features/ai/application/ai_chat_controller.dart';
 import 'package:frontend/features/ai/data/ai_repository.dart';
 import 'package:frontend/features/ai/domain/ai_helpers.dart';
 import 'package:frontend/features/ai/domain/ai_models.dart';
-import 'package:frontend/features/ai/presentation/l10n/ai_l10n.dart';
+import 'package:frontend/features/ai/domain/authoring_session_models.dart';
 import 'package:frontend/features/ai/presentation/pages/general_learning_chat_page.dart';
 import 'package:frontend/features/ai/presentation/widgets/ai_assistant_launcher.dart';
 import 'package:frontend/features/ai/presentation/widgets/ai_assistant_shell.dart';
@@ -1611,7 +1611,11 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectBuild> startBuild(String projectId) async => _build;
+  Future<ProjectBuild> startBuild(
+    String projectId, {
+    String? recommendationImpressionId,
+  }) async =>
+      _build;
 
   @override
   Future<ProjectBuild> updateBuildItem(
@@ -1619,6 +1623,7 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
     String itemId, {
     required ProjectBuildItemStatus status,
     String? learnerNote,
+    String? recommendationImpressionId,
   }) async {
     return _build;
   }
@@ -1657,32 +1662,50 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
   Future<List<MaterialCategory>> fetchMaterialCategories() async => const [];
 
   @override
-  Future<ProjectEngagement> likeProject(String id) async {
+  Future<ProjectEngagement> likeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectEngagement> unlikeProject(String id) async {
+  Future<ProjectEngagement> unlikeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectSaveStatus> saveProject(String id) async {
+  Future<ProjectSaveStatus> saveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectSaveStatus> unsaveProject(String id) async {
+  Future<ProjectSaveStatus> unsaveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectFollowStatus> followProject(String id) async {
+  Future<ProjectFollowStatus> followProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     throw UnimplementedError();
   }
 
   @override
-  Future<ProjectFollowStatus> unfollowProject(String id) async {
+  Future<ProjectFollowStatus> unfollowProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     throw UnimplementedError();
   }
 
@@ -2038,6 +2061,47 @@ class _FakeAiRepository implements AiRepository {
     required String conversationId,
   }) async {
     return null;
+  }
+
+  @override
+  Future<AuthoringSessionResponse> startAuthoringSession({
+    required String conversationId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> loadAuthoringSession({
+    required String sessionId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> sendAuthoringSessionMessage({
+    required String sessionId,
+    required int expectedVersion,
+    String? text,
+    String? clientMessageId,
+    String? questionId,
+    List<String>? selectedOptionIds,
+    String? otherText,
+    String? currentTurnId,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthoringSessionResponse> runAuthoringSessionAction({
+    required String sessionId,
+    required String action,
+    required int expectedVersion,
+    String? turnId,
+    Object? manualValue,
+    String? mode,
+    String? targetStage,
+  }) async {
+    throw UnimplementedError();
   }
 }
 

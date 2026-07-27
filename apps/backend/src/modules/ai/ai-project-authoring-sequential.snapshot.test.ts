@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import type { AiMessage } from '@prisma/client';
+import type { AiMessage } from '../../generated/prisma/client.js';
 import { describe, test } from 'node:test';
 
 import { AppError } from '../../utils/app-error.js';
@@ -72,7 +72,7 @@ const assistantMessage = (blocks: unknown[]): AiMessage =>
     contentBlocks: blocks,
     createdAt: new Date(TIMESTAMP),
     updatedAt: new Date(TIMESTAMP),
-  }) as AiMessage;
+  }) as unknown as AiMessage;
 
 const projectRecord = (projectId: string) =>
   ({

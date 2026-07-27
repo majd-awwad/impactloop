@@ -424,7 +424,6 @@ class _ReservationTrackingBuildRepository implements LearningProjectRepository {
   Future<ProjectBuild?> fetchMyBuild(String projectId) async {
     fetchMyBuildCalls += 1;
     lastProjectId = projectId;
-    const reserved = true;
     return ProjectBuild(
       id: 'build-1',
       projectId: projectId,
@@ -437,8 +436,8 @@ class _ReservationTrackingBuildRepository implements LearningProjectRepository {
       progress: const ProjectBuildProgress(total: 3, ready: 1, percent: 33),
       materialReadiness: ProjectBuildMaterialReadiness(
         ready: 1,
-        linked: reserved ? 0 : 1,
-        reserved: reserved ? 1 : 0,
+        linked: 0,
+        reserved: 1,
         missing: 2,
         total: 3,
       ),
@@ -467,9 +466,7 @@ class _ReservationTrackingBuildRepository implements LearningProjectRepository {
           requiredComponentId: 'cmp-led',
           status: ProjectBuildItemStatus.missing,
           isReadyForBuild: false,
-          readinessLabel: reserved
-              ? 'Reservation pending — waiting for supplier'
-              : 'Material selected — reserve or acquire before building',
+          readinessLabel: 'Reservation pending — waiting for supplier',
           linkedMaterial: const LinkedMaterialSummary(
             id: 'mat-led',
             title: 'LED material',
@@ -484,15 +481,13 @@ class _ReservationTrackingBuildRepository implements LearningProjectRepository {
             pickupAllowed: true,
             deliveryAllowed: false,
           ),
-          linkedReservation: reserved
-              ? const LinkedReservationSummary(
-                  id: 'res-1',
-                  status: 'PENDING',
-                  materialId: 'mat-led',
-                  needsAction: false,
-                  statusLabel: 'Reservation pending — waiting for supplier',
-                )
-              : null,
+          linkedReservation: const LinkedReservationSummary(
+            id: 'res-1',
+            status: 'PENDING',
+            materialId: 'mat-led',
+            needsAction: false,
+            statusLabel: 'Reservation pending — waiting for supplier',
+          ),
           component: const ProjectRequiredComponentItem(
             id: 'cmp-led',
             name: LocalizedText(en: 'LED', ar: 'LED'),

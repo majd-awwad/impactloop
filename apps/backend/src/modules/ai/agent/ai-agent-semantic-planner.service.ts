@@ -1322,8 +1322,10 @@ export const validatePlannerOutput = (raw: unknown): AgentPlannerOutput | null =
       return parsed.data;
     }
 
-    const toolName =
-      parsed.data.toolCall?.name ?? 'match_projects_by_owned_materials';
+    const toolCall = parsed.data.toolCall as
+      | { name: string; arguments: Record<string, unknown> }
+      | undefined;
+    const toolName = toolCall?.name ?? 'match_projects_by_owned_materials';
     if (toolName !== 'match_projects_by_owned_materials') {
       return null;
     }
@@ -1331,7 +1333,7 @@ export const validatePlannerOutput = (raw: unknown): AgentPlannerOutput | null =
     try {
       sanitizePlannerArguments(
         toolName,
-        parsed.data.toolCall?.arguments ?? {},
+        toolCall?.arguments ?? {},
       );
     } catch {
       return null;

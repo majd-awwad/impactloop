@@ -70,7 +70,7 @@ describe('foundation authoring provider', () => {
   });
 
   test('start intent override is respected in tests', async () => {
-    setOverviewStartIntentGeneratorForTests(async () => 'UPDATE_IDEA');
+    setOverviewStartIntentGeneratorForTests(async () => 'UPDATE_IDEA' as const);
     assert.equal(await classifyOverviewStartIntent('اه', 'ar'), 'UPDATE_IDEA');
     setOverviewStartIntentGeneratorForTests(null);
   });

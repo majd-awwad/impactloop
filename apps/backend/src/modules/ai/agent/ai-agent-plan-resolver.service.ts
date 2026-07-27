@@ -900,6 +900,7 @@ const resolveContextualProjectBudgetToolInput = (input: {
       type: 'PROJECT' as const,
       id: entity.id,
       title: entity.title,
+      normalizedTitle: entity.title.trim().toLowerCase(),
       resultIndex: entity.resultIndex,
       parentContext: entity.parentContext,
       status: entity.status,

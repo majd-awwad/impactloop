@@ -591,7 +591,11 @@ export const generateSequentialStepList = async (
   invokeConfiguredStepProvider(input);
 
 export const generateSequentialStepListWithRepair = async (
-  input: StepListContext,
+  input: StepListContext & {
+    suggestAnother?: boolean;
+    previousSteps?: SequentialStep[];
+    feedback?: string | null;
+  },
 ): Promise<{ steps: SequentialStep[]; explanation: string }> => {
   try {
     return await generateSequentialStepList(input);

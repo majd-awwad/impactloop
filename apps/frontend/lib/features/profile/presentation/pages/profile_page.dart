@@ -253,7 +253,6 @@ class _ProfileContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppThemeColors.of(context);
     final learnerProfile = user.learnerProfile;
     final isDesktopLayout =
         MediaQuery.sizeOf(context).width >= _profileDesktopBreakpoint;

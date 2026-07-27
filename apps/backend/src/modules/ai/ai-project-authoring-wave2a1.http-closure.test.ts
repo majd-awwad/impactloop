@@ -2,6 +2,11 @@ import assert from 'node:assert/strict';
 import type { Server } from 'node:http';
 import { after, afterEach, before, describe, test } from 'node:test';
 
+import type {
+  AiChatClassifyScopeInput,
+  AiChatGenerateAnswerInput,
+} from './providers/ai-chat-provider.types.js';
+
 process.env.JWT_ACCESS_SECRET ??= 'ai-project-authoring-wave2a1-access-secret';
 process.env.JWT_REFRESH_SECRET ??= 'ai-project-authoring-wave2a1-refresh-secret';
 process.env.NODE_TEST_CONTEXT ??= '1';
@@ -44,13 +49,13 @@ class CountingGeneralProvider {
   readonly name = 'mock';
 
   async classifyScope(
-    input: Parameters<MockAiChatProviderClass['classifyScope']>[0],
+    input: AiChatClassifyScopeInput,
   ) {
     return new MockAiChatProviderClass().classifyScope(input);
   }
 
   async generateGeneralLearningAnswer(
-    input: Parameters<MockAiChatProviderClass['generateGeneralLearningAnswer']>[0],
+    input: AiChatGenerateAnswerInput,
   ) {
     this.answerCalls += 1;
     return new MockAiChatProviderClass().generateGeneralLearningAnswer(input);

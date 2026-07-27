@@ -17,7 +17,6 @@ import {
   validateComponentList,
 } from './ai-project-authoring-sequential-components.provider.js';
 import {
-  reindexWorkingSteps,
   validateComponentStepConsistency,
   type SequentialComponent as PolicySequentialComponent,
 } from './ai-project-authoring-sequential.policy.js';
@@ -1006,6 +1005,7 @@ const mutateStepWorking = async (input: {
     throw new AppError('Step working state is missing.', 400, 'VALIDATION_ERROR');
   }
 
+  let workingSteps = [...stepState.workingSteps];
   const index =
     typeof input.body.manualValue === 'number' ? input.body.manualValue : stepState.currentIndex;
 
@@ -1808,8 +1808,8 @@ export const executePersistedAuthoringAction = async (
         ? parseStoredContentBlocks(message.contentBlocks)
         : [];
       const textFromBlocks = blocks
-        .filter((block) => block.type === 'text' && typeof block.text === 'string')
-        .map((block) => block.text as string)
+        .filter((block) => block.type === 'text' && 'text' in block)
+        .map((block) => block.text)
         .join('\n\n')
         .trim();
       return {

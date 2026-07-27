@@ -1169,7 +1169,6 @@ class AiEmbeddedAuthoringAssistant extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final chatState = ref.watch(aiAssistantControllerProvider);
     final workspaceState = ref.watch(authoringWorkspaceControllerProvider);
     final workspaceScope = ref.watch(authoringActiveWorkspaceProvider);
     final locale = resolveAiLocale(context);

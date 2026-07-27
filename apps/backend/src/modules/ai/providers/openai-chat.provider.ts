@@ -18,12 +18,21 @@ import {
   buildClassifierPrompt,
 } from './chat-prompt-builders.js';
 
-type OpenAiChatClient = {
+type OpenAiChatCompletion = {
+  model?: string | null;
+  choices: Array<{ message: { content: string | null } }>;
+  usage?: {
+    prompt_tokens?: number | null;
+    completion_tokens?: number | null;
+  } | null;
+};
+
+export type OpenAiChatClient = {
   chat: {
     completions: {
       create: (
         ...args: Parameters<OpenAI['chat']['completions']['create']>
-      ) => Promise<OpenAI.Chat.Completions.ChatCompletion>;
+      ) => Promise<OpenAiChatCompletion>;
     };
   };
 };
@@ -77,11 +86,11 @@ const createDefaultClient = (): OpenAiChatClient => {
   return new OpenAI({
     apiKey: env.openaiApiKey,
     timeout: env.aiChatTimeoutMs,
-  });
+  }) as unknown as OpenAiChatClient;
 };
 
 const readCompletionText = (
-  response: OpenAI.Chat.Completions.ChatCompletion,
+  response: OpenAiChatCompletion,
 ): string => {
   const text = response.choices[0]?.message?.content?.trim();
   if (!text) {

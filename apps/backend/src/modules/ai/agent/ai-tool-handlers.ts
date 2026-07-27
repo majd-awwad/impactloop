@@ -538,9 +538,7 @@ type LearningProjectListItem = Awaited<
 
 const collectProjectEvidenceTokens = (project: LearningProjectListItem): Set<string> => {
   const tokens = new Set<string>();
-  const tagLabels = (project.tags ?? []).map((tag) =>
-    typeof tag === 'string' ? tag : tag.tag,
-  );
+  const tagLabels = project.tags ?? [];
   const parts = [
     project.title,
     project.shortDescription ?? '',
@@ -812,12 +810,15 @@ const mapCandidateMaterialToCardInput = (material: {
 }) => ({
   id: material.id,
   title: material.title,
-  condition: material.condition,
+  condition: material.condition ?? undefined,
   isFree: material.isFree,
   price: material.price,
   currency: material.currency,
   category: material.category,
-  location: { city: material.city ?? null, area: material.area ?? null },
+  location: {
+    city: material.city ?? '',
+    area: material.area ?? '',
+  },
   imageUrl: material.imageUrl,
   pickupAllowed: material.pickupAllowed,
   deliveryAllowed: material.deliveryAllowed,
@@ -1484,6 +1485,7 @@ export const executeLearnerAgentTool = async (
           materials.push(
             mapCandidateMaterialToCardInput({
               ...material,
+              condition: material.condition ?? undefined,
               city: material.city,
               area: material.area,
             }),

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  Prisma,
   ProjectAuthoringSessionStage,
   ProjectAuthoringTurnKind,
 } from '../../generated/prisma/client.js';
@@ -452,8 +453,8 @@ const assertClarificationSessionLanguage = (
     assertSessionLanguageSurface(contentLocale, question.prompt, 'clarification question');
   }
   for (const option of question?.options ?? []) {
-    if (option.label?.trim()) {
-      assertSessionLanguageSurface(contentLocale, option.label, 'clarification option');
+    if (option.trim()) {
+      assertSessionLanguageSurface(contentLocale, option, 'clarification option');
     }
   }
   if (block.summary?.trim()) {
@@ -680,14 +681,12 @@ export const buildStepAuthoringContext = async (input: {
         key: entry.questionId,
         label: entry.label,
         value: entry.answer,
+        source: 'LEARNER_ANSWER',
       })),
       nextQuestion: null,
       remainingTopics: 0,
       assumptions: [],
       warnings: learnerConstraintHints(input.project),
-      ideaText: ideaMessage,
-      questions: [],
-      answers: clarificationSummaries.map((entry) => entry.answer),
       policyVersion: 'v1',
     } as StepListContext['clarification'],
     recentAnswers: augmentedRecentAnswers,
@@ -721,9 +720,6 @@ export const buildStepListContext = (
     remainingTopics: 0,
     assumptions: [],
     warnings: learnerConstraintHints(project),
-    ideaText: project.title,
-    questions: [],
-    answers: [],
     policyVersion: 'v1',
   } as StepListContext['clarification'],
   recentAnswers: [],
@@ -1310,8 +1306,8 @@ export const generateScalarConversationExplanation = async (input: {
   });
 
   const assistantText = answer.data.blocks
-    .filter((block) => block.type === 'text' && typeof block.text === 'string')
-    .map((block) => block.text as string)
+    .filter((block) => block.type === 'text' && 'text' in block)
+    .map((block) => block.text)
     .join('\n\n')
     .trim();
 
@@ -1426,7 +1422,7 @@ export const persistSessionConfirmedRequirements = async (input: {
   return projectAuthoringSessionRepository.updateSession({
     sessionId: input.sessionId,
     expectedVersion: input.expectedVersion,
-    patch: { componentWorkingState },
+    patch: { componentWorkingState: componentWorkingState as Prisma.InputJsonValue },
   });
 };
 
@@ -1623,8 +1619,8 @@ export const generateStepsConversationExplanation = async (input: {
   });
 
   const assistantText = answer.data.blocks
-    .filter((block) => block.type === 'text' && typeof block.text === 'string')
-    .map((block) => block.text as string)
+    .filter((block) => block.type === 'text' && 'text' in block)
+    .map((block) => block.text)
     .join('\n\n')
     .trim();
 
@@ -1742,8 +1738,8 @@ export const reviseSingleStepFromComposerFeedback = async (input: {
   });
 
   const rawText = answer.data.blocks
-    .filter((block) => block.type === 'text' && typeof block.text === 'string')
-    .map((block) => block.text as string)
+    .filter((block) => block.type === 'text' && 'text' in block)
+    .map((block) => block.text)
     .join('\n\n')
     .trim();
 
@@ -3092,8 +3088,8 @@ const generateOverviewClarificationWithRepair = async (
     return true;
   };
 
-  let providerResult: Awaited<ReturnType<typeof generateAuthoringClarification>>;
-  let clarification: AiProjectAuthoringClarificationBlock;
+  let providerResult!: Awaited<ReturnType<typeof generateAuthoringClarification>>;
+  let clarification!: AiProjectAuthoringClarificationBlock;
   let usedRepair = false;
 
   const runClarificationAttempt = async (

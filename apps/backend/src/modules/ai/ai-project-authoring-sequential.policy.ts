@@ -11,8 +11,8 @@ export type SequentialComponent = {
   componentRole: 'REQUIRED_MATERIAL' | 'TOOL' | 'CONSUMABLE';
   isRequired: boolean;
   canBeSubstituted: boolean;
-  searchKeywords: string[];
-  notes: string | null;
+  searchKeywords?: string[];
+  notes?: string | null;
 };
 
 export type SequentialStep = {

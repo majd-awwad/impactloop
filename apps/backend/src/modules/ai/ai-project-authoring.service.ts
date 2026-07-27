@@ -27,6 +27,13 @@ import {
   recordAuthoringValidationDiagnostic,
   validateAuthoringClarificationPolicy,
 } from './ai-project-authoring-clarification.provider.js';
+import { generateAuthoringProposal } from './ai-project-authoring-proposal.provider.js';
+import {
+  buildAuthoringProposalRepairIssue,
+  normalizeAuthoringProposalProviderPayload,
+  validateAuthoringProposalQuality,
+  stampAuthoringProposalBlock,
+} from './ai-project-authoring-proposal.policy.js';
 import { classifyScopeDeterministic } from './ai-scope-guard.js';
 import { DANGEROUS_SAFETY_COPY } from './agent/ai-agent-safety-guard.service.js';
 import {
@@ -293,8 +300,8 @@ const buildAuthoringContext = async (input: {
       latestClarification,
       recentAuthoringAnswers,
       repairAttempt: false,
-      repairIssue: null,
-      previousInvalidOutput: null,
+      repairIssue: null as string | null,
+      previousInvalidOutput: null as string | null,
     },
   };
 };
@@ -485,9 +492,9 @@ const produceAuthoringClarification = async (input: {
       remainingQuestionBudget,
     });
 
-  let providerResult: Awaited<ReturnType<typeof generateAuthoringClarification>>;
-  let clarification: AiProjectAuthoringClarificationBlock;
-  let assistantText: string;
+  let providerResult!: Awaited<ReturnType<typeof generateAuthoringClarification>>;
+  let clarification!: AiProjectAuthoringClarificationBlock;
+  let assistantText!: string;
   let usedRepair = false;
 
   try {
@@ -786,7 +793,7 @@ export const bootstrapProjectAuthoringForUser = async (
   } catch (error) {
     logger.warn(
       {
-        err: error,
+        err: { message: error instanceof Error ? error.message : String(error) },
         conversationId: ownedConversation.id,
         learningProjectId: ownedConversation.learningProjectId,
       },
@@ -1000,7 +1007,7 @@ export const sendProjectAuthoringMessageForUser = async (input: {
 
     logger.warn(
       {
-        err: error,
+        err: { message: error instanceof Error ? error.message : String(error) },
         conversationId: ownedConversation.id,
       },
       'Project authoring message turn failed',
@@ -1106,7 +1113,7 @@ const produceAuthoringProposal = async (input: {
     return true;
   };
 
-  let providerResult: Awaited<ReturnType<typeof generateAuthoringProposal>>;
+  let providerResult!: Awaited<ReturnType<typeof generateAuthoringProposal>>;
   let usedRepair = false;
 
   try {
@@ -1168,7 +1175,8 @@ const produceAuthoringProposal = async (input: {
     throwInvalidAuthoringProposal(input.locale);
   }
 
-  const mergedWarnings = [...normalized.warnings, ...quality.warnings];
+  const qualityWarnings = quality.ok ? quality.warnings : [];
+  const mergedWarnings = [...normalized.warnings, ...qualityWarnings];
 
   const proposalBlock = stampAuthoringProposalBlock({
     proposalId: randomUUID(),

@@ -1524,8 +1524,7 @@ class _ActiveStageCard extends ConsumerWidget {
                 ),
               ] else if (session.awaitingStepsFinalSave &&
                   (session.stage == 'STEPS_OVERVIEW' ||
-                      session.stage == 'STEP_REVIEW') &&
-                  suggestion != null) ...[
+                      session.stage == 'STEP_REVIEW')) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   locale == 'ar' ? 'الخطة المراجعة' : 'Reviewed plan',
@@ -1555,7 +1554,6 @@ class _ActiveStageCard extends ConsumerWidget {
                 ),
               ] else if (session.stage == 'STEP_REVIEW' &&
                   session.isStepByStep &&
-                  suggestion != null &&
                   suggestion.step != null) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(
@@ -1649,7 +1647,6 @@ class _ActiveStageCard extends ConsumerWidget {
                 ),
               ] else if ((session.stage == 'STEPS_OVERVIEW' ||
                       session.stage == 'STEP_REVIEW') &&
-                  suggestion != null &&
                   suggestion.hasStepList) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(
@@ -1728,7 +1725,6 @@ class _ActiveStageCard extends ConsumerWidget {
                 ),
               ] else if ((session.stage == 'STEPS_OVERVIEW' ||
                       session.stage == 'STEP_REVIEW') &&
-                  suggestion != null &&
                   !suggestion.hasStepList &&
                   session.status != 'PROCESSING') ...[
                 const SizedBox(height: AppSpacing.sm),
@@ -1751,7 +1747,6 @@ class _ActiveStageCard extends ConsumerWidget {
                 ),
               ] else if ((session.stage == 'STEPS_OVERVIEW' ||
                       session.stage == 'STEP_REVIEW') &&
-                  suggestion != null &&
                   isGenericStepPlaceholderText(suggestion.explanation)) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Text(

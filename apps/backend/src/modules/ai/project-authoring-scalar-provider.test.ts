@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, afterEach, beforeEach, describe, test } from 'node:test';
 
+import type { NormalizedSequentialDiscussionReply } from './ai-project-authoring-sequential-discussion.provider.js';
+
 process.env.NODE_TEST_CONTEXT ??= '1';
 
 const baseContext = {
@@ -13,6 +15,13 @@ const baseContext = {
   projectEstimatedMinutes: 90,
   explanation: 'Initial suggestion',
   repairAttempt: false,
+};
+
+const suggestionValue = (reply: NormalizedSequentialDiscussionReply) => {
+  if (reply.replyType !== 'REVISED_SUGGESTION') {
+    throw new Error(`Expected a revised suggestion, received ${reply.replyType}`);
+  }
+  return reply.suggestion.value;
 };
 
 describe('scalar authoring provider orchestration', () => {
@@ -72,7 +81,7 @@ describe('scalar authoring provider orchestration', () => {
 
     assert.equal(invoked, true);
     assert.equal(reply.replyType, 'REVISED_SUGGESTION');
-    assert.equal(reply.suggestion.value, 'Arduino Door Alarm Kit');
+    assert.equal(suggestionValue(reply), 'Arduino Door Alarm Kit');
   });
 
   test('mock scalar path may call mock revision only when provider=mock', async () => {
@@ -89,7 +98,7 @@ describe('scalar authoring provider orchestration', () => {
     });
 
     assert.equal(reply.replyType, 'REVISED_SUGGESTION');
-    assert.ok(`${reply.suggestion.value}`.length > 0);
+    assert.ok(`${suggestionValue(reply)}`.length > 0);
   });
 
   test('disabled provider fabricates no proposal', async () => {
@@ -157,7 +166,7 @@ describe('scalar authoring provider orchestration', () => {
       stage: 'TITLE',
     });
 
-    assert.equal(proposal.payload.value, 'Smart Door Alarm');
+    assert.equal((proposal.payload as { value: string | number }).value, 'Smart Door Alarm');
   });
 
   test('short description feedback creates revised suggestion', async () => {
@@ -194,7 +203,7 @@ describe('scalar authoring provider orchestration', () => {
     });
 
     assert.equal(reply.replyType, 'REVISED_SUGGESTION');
-    assert.ok(!`${reply.suggestion.value}`.includes(feedback));
+    assert.ok(!`${suggestionValue(reply)}`.includes(feedback));
   });
 
   test('learner feedback is not embedded in revised value', async () => {
@@ -237,7 +246,7 @@ describe('scalar authoring provider orchestration', () => {
     });
 
     assert.equal(reply.replyType, 'REVISED_SUGGESTION');
-    assert.ok(!`${reply.suggestion.value}`.includes(feedback));
+    assert.ok(!`${suggestionValue(reply)}`.includes(feedback));
   });
 
   test('full description feedback uses structured provider result', async () => {
@@ -269,7 +278,7 @@ describe('scalar authoring provider orchestration', () => {
       currentProposal: { value: 'Basic door alarm build.' },
     });
 
-    assert.match(`${reply.suggestion.value}`, /step by step/i);
+    assert.match(`${suggestionValue(reply)}`, /step by step/i);
   });
 
   test('difficulty revision validates allowed value', async () => {
@@ -300,7 +309,7 @@ describe('scalar authoring provider orchestration', () => {
       currentProposal: { value: 'BEGINNER' },
     });
 
-    assert.equal(reply.suggestion.value, 'INTERMEDIATE');
+    assert.equal(suggestionValue(reply), 'INTERMEDIATE');
   });
 
   test('Arabic duration feedback أعلى من 60 returns value greater than 60', async () => {
@@ -340,7 +349,7 @@ describe('scalar authoring provider orchestration', () => {
     });
 
     assert.equal(reply.replyType, 'REVISED_SUGGESTION');
-    assert.ok(Number(reply.suggestion.value) > 60);
+    assert.ok(Number(suggestionValue(reply)) > 60);
   });
 
   test('suggest another title is materially different', async () => {
@@ -373,7 +382,7 @@ describe('scalar authoring provider orchestration', () => {
       suggestAnother: true,
     });
 
-    assert.notEqual(reply.suggestion.value, current);
+    assert.notEqual(suggestionValue(reply), current);
   });
 
   test('suggest another description is materially different', async () => {
@@ -408,7 +417,7 @@ describe('scalar authoring provider orchestration', () => {
       suggestAnother: true,
     });
 
-    assert.notEqual(reply.suggestion.value, current);
+    assert.notEqual(suggestionValue(reply), current);
   });
 
   test('identical suggest-another result triggers one repair', async () => {
@@ -446,7 +455,7 @@ describe('scalar authoring provider orchestration', () => {
     });
 
     assert.equal(calls, 2);
-    assert.notEqual(reply.suggestion.value, current);
+    assert.notEqual(suggestionValue(reply), current);
   });
 
   test('repeated identical suggest-another result returns AI_AUTHORING_NO_ALTERNATIVE', async () => {
@@ -553,7 +562,7 @@ describe('scalar authoring provider orchestration', () => {
       currentProposal: { value: 'Untitled project' },
     });
 
-    assert.equal(reply.suggestion.value, 'Injected Provider Title');
+    assert.equal(suggestionValue(reply), 'Injected Provider Title');
     assert.equal(getAuthoringRealScalarInvokerCallCountForTests(), 1);
   });
 

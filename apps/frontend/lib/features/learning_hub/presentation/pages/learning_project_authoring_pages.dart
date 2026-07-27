@@ -58,28 +58,28 @@ AuthoringDraftSnapshot? authoringDraftSnapshotFromSubmission(
       difficulty: submission.difficulty,
       estimatedMinutes: submission.estimatedDurationMinutes,
       components: submission.requiredComponents
-        .map(
-          (component) => AiAuthoringProposalComponent(
-            componentName: component.name,
-            materialType: component.materialType ?? '',
-            quantity: component.quantity,
-            unit: component.unit,
-            componentRole: component.role.apiValue,
-            isRequired: component.isRequired,
-            canBeSubstituted: component.canBeSubstituted,
-            searchKeywords: component.searchKeywords,
-            notes: component.notes,
-          ),
-        )
-        .toList(growable: false),
-    steps: submission.steps
-        .map(
-          (step) => AiAuthoringProposalStep(
-            title: step.title,
-            description: step.description,
-          ),
-        )
-        .toList(growable: false),
+          .map(
+            (component) => AiAuthoringProposalComponent(
+              componentName: component.name,
+              materialType: component.materialType ?? '',
+              quantity: component.quantity,
+              unit: component.unit,
+              componentRole: component.role.apiValue,
+              isRequired: component.isRequired,
+              canBeSubstituted: component.canBeSubstituted,
+              searchKeywords: component.searchKeywords,
+              notes: component.notes,
+            ),
+          )
+          .toList(growable: false),
+      steps: submission.steps
+          .map(
+            (step) => AiAuthoringProposalStep(
+              title: step.title,
+              description: step.description,
+            ),
+          )
+          .toList(growable: false),
     ),
   );
 }
@@ -147,10 +147,8 @@ class LearningAuthoringL10n {
   );
 
   static const starterSubtitle = LocalizedText(
-    en:
-        'Describe what you want to build. You can review and edit every detail before submitting it.',
-    ar:
-        'صف ما تريد بناءه. يمكنك مراجعة كل التفاصيل وتعديلها قبل الإرسال.',
+    en: 'Describe what you want to build. You can review and edit every detail before submitting it.',
+    ar: 'صف ما تريد بناءه. يمكنك مراجعة كل التفاصيل وتعديلها قبل الإرسال.',
   );
 
   static const ideaLabel = LocalizedText(
@@ -203,31 +201,20 @@ class LearningAuthoringL10n {
     ar: 'فئة المشروع',
   );
 
-  static const difficultyLabel = LocalizedText(
-    en: 'Difficulty',
-    ar: 'الصعوبة',
-  );
+  static const difficultyLabel = LocalizedText(en: 'Difficulty', ar: 'الصعوبة');
 
-  static const difficultyBeginner = LocalizedText(
-    en: 'Beginner',
-    ar: 'مبتدئ',
-  );
+  static const difficultyBeginner = LocalizedText(en: 'Beginner', ar: 'مبتدئ');
 
   static const difficultyIntermediate = LocalizedText(
     en: 'Intermediate',
     ar: 'متوسط',
   );
 
-  static const difficultyAdvanced = LocalizedText(
-    en: 'Advanced',
-    ar: 'متقدم',
-  );
+  static const difficultyAdvanced = LocalizedText(en: 'Advanced', ar: 'متقدم');
 
   static const starterCallout = LocalizedText(
-    en:
-        'You will be able to edit the title, description, components, and steps after the draft is created.',
-    ar:
-        'ستتمكن من تعديل العنوان والوصف والمكونات والخطوات بعد إنشاء المسودة.',
+    en: 'You will be able to edit the title, description, components, and steps after the draft is created.',
+    ar: 'ستتمكن من تعديل العنوان والوصف والمكونات والخطوات بعد إنشاء المسودة.',
   );
 
   static const createDraft = LocalizedText(
@@ -263,10 +250,8 @@ class LearningAuthoringL10n {
   );
 
   static const foundationCopy = LocalizedText(
-    en:
-        'Your idea is saved. The assistant will help you refine and structure it in the next step.',
-    ar:
-        'تم حفظ فكرتك. سيساعدك المساعد على تحسينها وتنظيمها في الخطوة التالية.',
+    en: 'Your idea is saved. The assistant will help you refine and structure it in the next step.',
+    ar: 'تم حفظ فكرتك. سيساعدك المساعد على تحسينها وتنظيمها في الخطوة التالية.',
   );
 
   static const draftStatus = LocalizedText(en: 'Draft', ar: 'مسودة');
@@ -281,10 +266,7 @@ class LearningAuthoringL10n {
     ar: 'جارٍ الحفظ…',
   );
 
-  static const saveStateSaved = LocalizedText(
-    en: 'Saved',
-    ar: 'تم الحفظ',
-  );
+  static const saveStateSaved = LocalizedText(en: 'Saved', ar: 'تم الحفظ');
 
   static const saveStateFailed = LocalizedText(
     en: 'Save failed',
@@ -551,9 +533,7 @@ class _CreateChoiceCard extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                color: emphasized
-                    ? palette.heroAccent
-                    : palette.textSecondary,
+                color: emphasized ? palette.heroAccent : palette.textSecondary,
                 size: 28,
               ),
               const SizedBox(width: AppSpacing.md),
@@ -618,12 +598,8 @@ class _LearningProjectAiStarterPageState
       final replace = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: Text(
-            LearningAuthoringL10n.replaceIdeaTitle.resolve(context),
-          ),
-          content: Text(
-            LearningAuthoringL10n.replaceIdeaBody.resolve(context),
-          ),
+          title: Text(LearningAuthoringL10n.replaceIdeaTitle.resolve(context)),
+          content: Text(LearningAuthoringL10n.replaceIdeaBody.resolve(context)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -821,16 +797,16 @@ class _LearningProjectAiStarterPageState
                                                 .resolve(context),
                                             style: AppTextStyles.label(context)
                                                 .copyWith(
-                                              color: palette.heroAccent,
-                                            ),
+                                                  color: palette.heroAccent,
+                                                ),
                                           ),
                                           Text(
                                             LearningAuthoringL10n.starterTitle
                                                 .resolve(context),
                                             style: AppTextStyles.title(context)
                                                 .copyWith(
-                                              color: palette.textPrimary,
-                                            ),
+                                                  color: palette.textPrimary,
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -839,19 +815,21 @@ class _LearningProjectAiStarterPageState
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 Text(
-                                  LearningAuthoringL10n.starterSubtitle
-                                      .resolve(context),
-                                  style: AppTextStyles.body(context).copyWith(
-                                    color: palette.textSecondary,
+                                  LearningAuthoringL10n.starterSubtitle.resolve(
+                                    context,
                                   ),
+                                  style: AppTextStyles.body(
+                                    context,
+                                  ).copyWith(color: palette.textSecondary),
                                 ),
                                 const SizedBox(height: AppSpacing.lg),
                                 AppTextArea(
                                   controller: _ideaController,
                                   label: LearningAuthoringL10n.ideaLabel
                                       .resolve(context),
-                                  hint: LearningAuthoringL10n.ideaHint
-                                      .resolve(context),
+                                  hint: LearningAuthoringL10n.ideaHint.resolve(
+                                    context,
+                                  ),
                                   minLines: 4,
                                   maxLines: 8,
                                   validator: _validateIdea,
@@ -862,9 +840,9 @@ class _LearningProjectAiStarterPageState
                                   LearningAuthoringL10n.ideaHelper.resolve(
                                     context,
                                   ),
-                                  style: AppTextStyles.label(context).copyWith(
-                                    color: palette.textSecondary,
-                                  ),
+                                  style: AppTextStyles.label(
+                                    context,
+                                  ).copyWith(color: palette.textSecondary),
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 Wrap(
@@ -882,8 +860,8 @@ class _LearningProjectAiStarterPageState
                                         onPressed: _isSubmitting
                                             ? null
                                             : () => _applyIdeaExample(
-                                                  example.resolve(context),
-                                                ),
+                                                example.resolve(context),
+                                              ),
                                       ),
                                   ],
                                 ),
@@ -909,9 +887,9 @@ class _LearningProjectAiStarterPageState
                                           onChanged: _isSubmitting
                                               ? null
                                               : (value) => setState(
-                                                    () => _selectedCategoryId =
-                                                        value,
-                                                  ),
+                                                  () => _selectedCategoryId =
+                                                      value,
+                                                ),
                                           validator: (value) {
                                             if (value == null ||
                                                 value.isEmpty) {
@@ -997,9 +975,8 @@ class _LearningProjectAiStarterPageState
                                     onChanged: _isSubmitting
                                         ? null
                                         : (value) => setState(
-                                              () =>
-                                                  _selectedCategoryId = value,
-                                            ),
+                                            () => _selectedCategoryId = value,
+                                          ),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return const LocalizedText(
@@ -1012,8 +989,7 @@ class _LearningProjectAiStarterPageState
                                   ),
                                   const SizedBox(height: AppSpacing.md),
                                   AppDropdownField<String>(
-                                    label: LearningAuthoringL10n
-                                        .difficultyLabel
+                                    label: LearningAuthoringL10n.difficultyLabel
                                         .resolve(context),
                                     value: _selectedDifficulty,
                                     items: [
@@ -1047,8 +1023,8 @@ class _LearningProjectAiStarterPageState
                                         : (value) {
                                             if (value != null) {
                                               setState(
-                                                () => _selectedDifficulty =
-                                                    value,
+                                                () =>
+                                                    _selectedDifficulty = value,
                                               );
                                             }
                                           },
@@ -1079,8 +1055,8 @@ class _LearningProjectAiStarterPageState
                                       onPressed: _isSubmitting
                                           ? null
                                           : () => context.go(
-                                                learningProjectCreateRoute,
-                                              ),
+                                              learningProjectCreateRoute,
+                                            ),
                                     ),
                                     const Spacer(),
                                     FilledButton(
@@ -1149,9 +1125,9 @@ class _StarterCallout extends StatelessWidget {
             Expanded(
               child: Text(
                 message,
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textSecondary,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
               ),
             ),
           ],
@@ -1230,7 +1206,9 @@ class _LearningProjectAuthoringWorkspacePageState
       }
 
       ref.read(aiAssistantShellProvider.notifier).clearBuildGuideContext();
-      ref.read(authoringActiveWorkspaceProvider.notifier).activate(
+      ref
+          .read(authoringActiveWorkspaceProvider.notifier)
+          .activate(
             projectId: widget.projectId,
             conversationId: session.conversationId,
           );
@@ -1241,7 +1219,9 @@ class _LearningProjectAuthoringWorkspacePageState
       final hasLegacyBlocks = ref
           .read(aiAssistantControllerProvider.notifier)
           .hasLegacyAuthoringWithoutSession;
-      await ref.read(authoringWorkspaceControllerProvider.notifier).activateAndLoad(
+      await ref
+          .read(authoringWorkspaceControllerProvider.notifier)
+          .activateAndLoad(
             projectId: widget.projectId,
             conversationId: session.conversationId,
             hasLegacyBlocks: hasLegacyBlocks,
@@ -1289,21 +1269,21 @@ class _LearningProjectAuthoringWorkspacePageState
       myLearningProjectSubmissionProvider(widget.projectId),
     );
 
-    ref.listen(
-      myLearningProjectSubmissionProvider(widget.projectId),
-      (previous, next) {
-        final submission = next.asData?.value;
-        if (submission != null &&
-            submission.status != LearningProjectSubmissionStatus.draft) {
-          setState(() {
-            _initError = const ApiException(
-              message: 'Project is no longer an editable draft.',
-              code: 'PROJECT_NOT_DRAFT',
-            );
-          });
-        }
-      },
-    );
+    ref.listen(myLearningProjectSubmissionProvider(widget.projectId), (
+      previous,
+      next,
+    ) {
+      final submission = next.asData?.value;
+      if (submission != null &&
+          submission.status != LearningProjectSubmissionStatus.draft) {
+        setState(() {
+          _initError = const ApiException(
+            message: 'Project is no longer an editable draft.',
+            code: 'PROJECT_NOT_DRAFT',
+          );
+        });
+      }
+    });
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -1313,9 +1293,7 @@ class _LearningProjectAuthoringWorkspacePageState
           children: [
             const EntryNavBar(homeRoute: '/home'),
             if (_initializing && workspaceState.snapshot == null)
-              const Expanded(
-                child: Center(child: CircularProgressIndicator()),
-              )
+              const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_initError != null)
               Expanded(
                 child: _AuthoringStatePanel(
@@ -1353,7 +1331,8 @@ class _LearningProjectAuthoringWorkspacePageState
                     onAction: () => context.go('/learning/submissions'),
                   ),
                   data: (submission) {
-                    if (submission.status != LearningProjectSubmissionStatus.draft) {
+                    if (submission.status !=
+                        LearningProjectSubmissionStatus.draft) {
                       return _AuthoringStatePanel(
                         icon: Icons.lock_outline,
                         title: LearningAuthoringL10n.projectNotDraft,
@@ -1377,8 +1356,9 @@ class _LearningProjectAuthoringWorkspacePageState
                       saveStateNotifier: _saveStateNotifier,
                     );
 
-                    final projectTitle =
-                        maskAuthoringDraftFieldTitle(submission.title);
+                    final projectTitle = maskAuthoringDraftFieldTitle(
+                      submission.title,
+                    );
 
                     if (wide && _session != null && _assistantPanelOpen) {
                       return Column(
@@ -1391,16 +1371,20 @@ class _LearningProjectAuthoringWorkspacePageState
                             assistantPanelOpen: true,
                             onBack: () {
                               ref
-                                  .read(authoringWorkspaceControllerProvider.notifier)
+                                  .read(
+                                    authoringWorkspaceControllerProvider
+                                        .notifier,
+                                  )
                                   .deactivate();
                               ref
-                                  .read(authoringActiveWorkspaceProvider.notifier)
+                                  .read(
+                                    authoringActiveWorkspaceProvider.notifier,
+                                  )
                                   .deactivate();
                               context.go('/learning/submissions');
                             },
-                            onToggleAssistant: () => setState(
-                              () => _assistantPanelOpen = false,
-                            ),
+                            onToggleAssistant: () =>
+                                setState(() => _assistantPanelOpen = false),
                           ),
                           Expanded(
                             child: Row(
@@ -1410,11 +1394,11 @@ class _LearningProjectAuthoringWorkspacePageState
                                   child: Padding(
                                     padding:
                                         const EdgeInsetsDirectional.fromSTEB(
-                                      AppSpacing.md,
-                                      0,
-                                      AppSpacing.sm,
-                                      AppSpacing.md,
-                                    ),
+                                          AppSpacing.md,
+                                          0,
+                                          AppSpacing.sm,
+                                          AppSpacing.md,
+                                        ),
                                     child: AppSectionCard(
                                       padding: EdgeInsets.zero,
                                       child: editor,
@@ -1428,8 +1412,8 @@ class _LearningProjectAuthoringWorkspacePageState
                                       _session?.updatedAt,
                                   draftSnapshot:
                                       authoringDraftSnapshotFromSubmission(
-                                    submissionAsync.asData?.value,
-                                  ),
+                                        submissionAsync.asData?.value,
+                                      ),
                                   onClose: () => setState(
                                     () => _assistantPanelOpen = false,
                                   ),
@@ -1451,7 +1435,9 @@ class _LearningProjectAuthoringWorkspacePageState
                           assistantPanelOpen: false,
                           onBack: () {
                             ref
-                                .read(authoringWorkspaceControllerProvider.notifier)
+                                .read(
+                                  authoringWorkspaceControllerProvider.notifier,
+                                )
                                 .deactivate();
                             ref
                                 .read(authoringActiveWorkspaceProvider.notifier)
@@ -1701,9 +1687,9 @@ class _AuthoringWorkspaceToolbar extends StatelessWidget {
                 children: [
                   Text(
                     LearningAuthoringL10n.workspaceTitle.resolve(context),
-                    style: AppTextStyles.title(context).copyWith(
-                      color: palette.textPrimary,
-                    ),
+                    style: AppTextStyles.title(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Row(
@@ -1726,9 +1712,9 @@ class _AuthoringWorkspaceToolbar extends StatelessWidget {
                           projectTitle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.label(context).copyWith(
-                            color: palette.textSecondary,
-                          ),
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
                         ),
                       ),
                     ],
@@ -1759,9 +1745,7 @@ class _AuthoringWorkspaceToolbar extends StatelessWidget {
                       onPressed: onOpenAssistant,
                       icon: const Icon(Icons.auto_awesome_outlined),
                       label: Text(
-                        LearningAuthoringL10n.openAiAssistant.resolve(
-                          context,
-                        ),
+                        LearningAuthoringL10n.openAiAssistant.resolve(context),
                       ),
                     ),
           ],
@@ -1848,53 +1832,6 @@ class _AuthoringStatePanel extends StatelessWidget {
               FilledButton(
                 onPressed: onAction,
                 child: Text(actionLabel.resolve(context)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AuthoringInfoBanner extends StatelessWidget {
-  const _AuthoringInfoBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
-
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        AppSpacing.md,
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: palette.hintSurface,
-          borderRadius: AppRadius.mdAll,
-          border: Border.all(color: palette.hintBorder),
-        ),
-        child: Padding(
-          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: palette.heroAccent,
-                size: 20,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  LearningAuthoringL10n.authoringNotReady.resolve(context),
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                  ),
-                ),
               ),
             ],
           ),

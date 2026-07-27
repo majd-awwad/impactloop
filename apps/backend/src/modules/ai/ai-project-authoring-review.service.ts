@@ -59,6 +59,7 @@ import {
   type DraftProjectSnapshot,
   reviewStateFingerprint,
   validateFinalMergedProject,
+  markReviewStateApplied,
 } from './ai-project-authoring-review.policy.js';
 import {
   acquireConversationProcessingLock,
@@ -289,16 +290,6 @@ export const ensureRevisionProviderConfigured = () => {
     );
   }
 };
-
-import {
-  acquireConversationProcessingLock,
-  createAssistantMessage,
-  findOwnedConversation,
-  loadRecentConversationMessages,
-  releaseConversationProcessingLock,
-  touchConversationActivity,
-} from './ai.repository.js';
-import type { AiLocale, AiTurnResponse } from './ai.types.js';
 
 export const PROJECT_AUTHORING_REVIEW_POLICY_VERSION = 'project-authoring-v2c';
 

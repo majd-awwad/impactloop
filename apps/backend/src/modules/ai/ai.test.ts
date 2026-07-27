@@ -936,8 +936,12 @@ describe('manual draft copilot', () => {
     });
 
     assert.equal(provider.answerCalls, 0);
-    assert.equal(result.contentBlocks[0]?.purpose, 'refusal');
-    assert.match(result.contentBlocks[0]?.text ?? '', /learning project/i);
+    const [firstBlock] = result.contentBlocks;
+    assert.ok(firstBlock?.type === 'text');
+    if (firstBlock?.type === 'text') {
+      assert.equal(firstBlock.purpose, 'refusal');
+      assert.match(firstBlock.text, /learning project/i);
+    }
   });
 
   test('manual draft copilot performs no database writes', async () => {

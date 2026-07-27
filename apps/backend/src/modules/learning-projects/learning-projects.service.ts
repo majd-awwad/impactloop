@@ -770,7 +770,10 @@ export const submitMyLearningProjectDraftById = async (
   id: string,
   userId: string,
   idempotencyKey: string,
-) => {
+): Promise<{
+  response: ReturnType<typeof mapMyLearningProjectSubmissionDetail>;
+  replayed: boolean;
+}> => {
   const project =
     await learningProjectsRepository.findMyLearningProjectSubmissionById(id, userId);
 
@@ -802,7 +805,7 @@ export const submitMyLearningProjectDraftById = async (
     key: idempotencyKey,
     payload: { projectId: id },
     resourceType: 'LEARNING_PROJECT',
-    getResourceId: (response) => response.id,
+    getResourceId: (response: { id: string }) => response.id,
     handler: async (tx) => {
       const updated = await learningProjectsRepository.submitMyLearningProjectDraft({
         id,

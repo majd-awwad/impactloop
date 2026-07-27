@@ -25,6 +25,13 @@ export const projectAuthoringSessionRepository = {
     });
   },
 
+  findById(sessionId: string) {
+    return prisma.projectAuthoringSession.findUnique({
+      where: { id: sessionId },
+      include: sessionInclude,
+    });
+  },
+
   findByIdForOwner(sessionId: string, ownerId: string) {
     return prisma.projectAuthoringSession.findFirst({
       where: { id: sessionId, ownerId },

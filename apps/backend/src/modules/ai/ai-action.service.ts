@@ -24,6 +24,7 @@ import {
   aiActionConfirmationBlockSchema,
   type AiContentBlock,
 } from './ai.content-blocks.js';
+import { z } from 'zod';
 import type { AiPendingActionType, Prisma } from '../../generated/prisma/client.js';
 import {
   appendActionResultToAssistantMessage,
@@ -115,7 +116,7 @@ const buildResultBlock = (input: {
     title: string;
   };
   navigation?: { route: string; id: string };
-}): AiContentBlock => ({
+}): Extract<AiContentBlock, { type: 'action_result' }> => ({
   type: 'action_result',
   actionType: input.actionType,
   status: input.status,
@@ -582,7 +583,7 @@ const executeConfirmedAction = async (input: {
         target: {
           type: 'MATERIAL',
           id: result.materialId,
-          title: input.payload.displaySnapshot.title,
+          title: payload.displaySnapshot.title,
         },
       });
     }
@@ -617,8 +618,8 @@ const executeConfirmedAction = async (input: {
             : 'Project removed from your saved list.',
         target: {
           type: 'PROJECT',
-          id: input.payload.target.projectId!,
-          title: input.payload.displaySnapshot.title,
+          id: payload.target.projectId,
+          title: payload.displaySnapshot.title,
         },
       });
     }
@@ -698,8 +699,8 @@ const executeConfirmedAction = async (input: {
             : 'Material unlinked from the component.',
         target: {
           type: 'COMPONENT',
-          id: input.payload.target.buildItemId!,
-          title: input.payload.displaySnapshot.title,
+          id: payload.target.buildItemId,
+          title: payload.displaySnapshot.title,
         },
         navigation: { route: 'project_build', id: linkedBuild.id },
       });

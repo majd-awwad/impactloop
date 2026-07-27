@@ -9,6 +9,7 @@ import {
   completeProjectBuildStepById,
   getMyProjectBuildById,
   getOrCreateBuildGuideConversationByProjectId,
+  linkBuildItemMaterialById,
   startProjectBuildById,
   updateProjectBuildItemById,
 } from './learning-projects.service.js';
@@ -249,7 +250,7 @@ async function createPublishedProjectWithSteps(input: {
             stepNumber: 2,
             title: 'Add the resistor',
             description: 'Connect resistor in series',
-            reviewStatus: 'APPROVED',
+            reviewStatus: 'ACCEPTED',
           },
         ],
       },
@@ -411,6 +412,7 @@ describe('learning project build step progress', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'ALREADY_OWNED',
+        learnerNote: null,
       });
     }
 
@@ -480,6 +482,7 @@ describe('learning project build step progress', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'ALREADY_OWNED',
+        learnerNote: null,
       });
     }
 
@@ -578,6 +581,7 @@ describe('learning project build step progress', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, owner.id, item.id, {
         status: 'ALREADY_OWNED',
+        learnerNote: null,
       });
     }
 
@@ -702,7 +706,7 @@ describe('build step unlock material readiness', () => {
   test('keeps steps LOCKED when checklist status is AVAILABLE self-report', async () => {
     const learner = await createLearnerUser('readiness-available');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('available');
+      await createProjectCategories('available');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -728,7 +732,7 @@ describe('build step unlock material readiness', () => {
     const learner = await createLearnerUser('readiness-linked');
     const supplier = await createSupplierUser('readiness-linked');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('linked');
+      await createProjectCategories('linked');
     const location = await createLocation();
     const material = await createMaterial({
       ownerId: supplier.id,
@@ -760,7 +764,7 @@ describe('build step unlock material readiness', () => {
   test('keeps steps LOCKED for active RESERVED checklist status', async () => {
     const learner = await createLearnerUser('readiness-reserved');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('reserved');
+      await createProjectCategories('reserved');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -785,7 +789,7 @@ describe('build step unlock material readiness', () => {
     const learner = await createLearnerUser('readiness-completed');
     const supplier = await createSupplierUser('readiness-completed');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('completed');
+      await createProjectCategories('completed');
     const location = await createLocation();
     const material = await createMaterial({
       ownerId: supplier.id,
@@ -835,7 +839,7 @@ describe('build step unlock material readiness', () => {
   test('unlocks steps for ALREADY_OWNED checklist status', async () => {
     const learner = await createLearnerUser('readiness-owned');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('owned');
+      await createProjectCategories('owned');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -847,6 +851,7 @@ describe('build step unlock material readiness', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'ALREADY_OWNED',
+        learnerNote: null,
       });
     }
 
@@ -860,7 +865,7 @@ describe('build step unlock material readiness', () => {
   test('keeps steps LOCKED for suggested ALTERNATIVE status', async () => {
     const learner = await createLearnerUser('readiness-alternative');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('alternative');
+      await createProjectCategories('alternative');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -885,7 +890,7 @@ describe('build step unlock material readiness', () => {
   test('returns stable progress for a project with zero steps', async () => {
     const learner = await createLearnerUser('readiness-zero-steps');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('zero-steps');
+      await createProjectCategories('zero-steps');
     const project = await createPublishedProjectWithZeroSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -897,6 +902,7 @@ describe('build step unlock material readiness', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'ALREADY_OWNED',
+        learnerNote: null,
       });
     }
 
@@ -914,7 +920,7 @@ describe('build step unlock material readiness', () => {
   test('unlocks step 1 when every material is genuinely ready on multi-step builds', async () => {
     const learner = await createLearnerUser('readiness-multi');
     const { projectCategory, materialCategory } =
-      await createProjectCategoryAndMaterialCategory('multi');
+      await createProjectCategories('multi');
     const project = await createPublishedProjectWithSteps({
       authorId: learner.id,
       projectCategoryId: projectCategory.id,
@@ -926,6 +932,7 @@ describe('build step unlock material readiness', () => {
     for (const item of started.items) {
       await updateProjectBuildItemById(project.id, learner.id, item.id, {
         status: 'ALREADY_OWNED',
+        learnerNote: null,
       });
     }
 
