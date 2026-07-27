@@ -18,6 +18,7 @@ import {
   detectAmbiguousLearnerRequest,
   detectBareOwnedMaterialsPossession,
   detectDeterministicPlatformActionIntent,
+  detectLearnerReservationStatusQuery,
   detectMaterialDetailsIntent,
   detectMaterialSearchIntent,
   detectOwnedMaterialsBuildFollowUp,
@@ -28,6 +29,7 @@ import {
   detectProjectBudgetEstimationIntent,
   detectProjectBudgetEstimationFollowUp,
   detectProjectMaterialAvailabilitySelectionFollowUp,
+  detectProjectSearchIntent,
   detectProjectsWithinBudgetIntent,
   detectProjectMaterialAvailabilityIntent,
   extractBudgetBound,
@@ -37,17 +39,22 @@ import {
   hasRecentOwnedMaterialsProjectContext,
   hasRecentProjectBudgetConfirmation,
   isAffirmativeOwnedMaterialsContinuation,
+  hasTrustedProjectMaterialContext,
   isExplicitMaterialSearchCommand,
   mergeMaterialSearchPlan,
   messageImpliesFreeFilter,
   parseOwnedMaterialsProjectInput,
   resolveOwnedMaterialsFromConversation,
+  shouldCorrectToMaterialSearch,
   shouldDeferMaterialSearchForOwnedMaterialsProjectUse,
   shouldDeferMaterialSearchForProjectMaterialAvailability,
 } from './ai-agent-filter-extractor.service.js';
 import { buildToolInputForRoute, parseRecommendationInput } from './ai-agent-input-parser.service.js';
 import {
   buildPlannerConversationContext,
+  detectMaterialResultSetFilterFollowUp,
+  resolveMaterialResultSetFilterContinuation,
+  TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER,
   type PlannerConversationContext,
 } from './ai-agent-planner-context.service.js';
 import {
@@ -69,7 +76,11 @@ import { routeToToolName } from './ai-agent-route-mapping.js';
 import { resolveEntityFromContext } from './ai-agent-reference-resolver.service.js';
 import { findProjectsWithinBudgetInputSchema } from './ai-tool.types.js';
 
-export type AgentRoutingMode = 'semantic' | 'provider_failure_fallback';
+export type AgentRoutingMode =
+  | 'semantic'
+  | 'semantic_invalid_fallback'
+  | 'provider_unavailable_fallback'
+  | 'structured_continuation';
 
 export type AgentExecutionDiagnostics = {
   deterministicRoute: AiAgentRouteType;
@@ -91,6 +102,7 @@ export type AgentExecutionPlan = {
   diagnostics: AgentExecutionDiagnostics;
   clarificationReason?: string;
   semanticUnderstandingRoute?: SemanticRoute;
+  semanticDataTopic?: string;
   assistantUnavailable?: boolean;
 };
 
@@ -108,19 +120,76 @@ const markSemanticRoutingDiagnostics = (
   },
 });
 
-const markProviderFailureFallbackDiagnostics = (
+const markProviderUnavailableFallbackDiagnostics = (
   plan: AgentExecutionPlan,
 ): AgentExecutionPlan => ({
   ...plan,
   diagnostics: {
     ...plan.diagnostics,
-    routingMode: 'provider_failure_fallback',
+    routingMode: 'provider_unavailable_fallback',
   },
 });
 
+const markSemanticInvalidFallbackDiagnostics = (
+  plan: AgentExecutionPlan,
+): AgentExecutionPlan => ({
+  ...plan,
+  diagnostics: {
+    ...plan.diagnostics,
+    routingMode: 'semantic_invalid_fallback',
+  },
+});
+
+const markStructuredContinuationDiagnostics = (
+  plan: AgentExecutionPlan,
+): AgentExecutionPlan => ({
+  ...plan,
+  diagnostics: {
+    ...plan.diagnostics,
+    routingMode: 'structured_continuation',
+  },
+});
+
+const buildMaterialResultSetFilterExecutionPlan = (input: {
+  toolInput: Record<string, unknown>;
+  semanticPlannerUsed: boolean;
+  plannerConfidence: number | null;
+}): AgentExecutionPlan => ({
+  route: 'MATERIAL_SEARCH',
+  toolName: 'search_available_materials',
+  toolInput: input.toolInput,
+  semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+  semanticDataTopic: 'MATERIAL_RESULT_SET_FILTER',
+  diagnostics: {
+    deterministicRoute: 'MATERIAL_SEARCH',
+    deterministicConfidence: 0.96,
+    semanticPlannerUsed: input.semanticPlannerUsed,
+    semanticRoute: 'MATERIAL_SEARCH',
+    validatedRoute: 'MATERIAL_SEARCH',
+    normalizedFilters: input.toolInput,
+    toolName: 'search_available_materials',
+    plannerConfidence: input.plannerConfidence,
+    resolvedEntityTitle: null,
+  },
+});
+
+/** @deprecated use isProviderUnavailableFallbackPlan */
 export const isProviderFailureFallbackPlan = (
   plan: AgentExecutionPlan,
-): boolean => plan.diagnostics.routingMode === 'provider_failure_fallback';
+): boolean => isProviderUnavailableFallbackPlan(plan);
+
+export const isProviderUnavailableFallbackPlan = (
+  plan: AgentExecutionPlan,
+): boolean =>
+  plan.diagnostics.routingMode === 'provider_unavailable_fallback';
+
+export const isSemanticInvalidFallbackPlan = (
+  plan: AgentExecutionPlan,
+): boolean => plan.diagnostics.routingMode === 'semantic_invalid_fallback';
+
+export const isStructuredContinuationPlan = (
+  plan: AgentExecutionPlan,
+): boolean => plan.diagnostics.routingMode === 'structured_continuation';
 
 const STATIC_ROUTES = new Set<AiAgentRouteType>([
   'CONVERSATIONAL_STATIC',
@@ -200,6 +269,14 @@ const buildOwnedMaterialsSemanticFallbackPlan = (input: {
   conversationContext?: PlannerConversationContext;
 }): AgentExecutionPlan | null => {
   if (detectPlatformGuidanceIntent(input.userMessage)) {
+    return null;
+  }
+
+  if (detectLearnerReservationStatusQuery(input.userMessage)) {
+    return null;
+  }
+
+  if (isExplicitMaterialSearchCommand(input.userMessage)) {
     return null;
   }
 
@@ -917,6 +994,149 @@ const buildProjectBudgetFallbackPlan = (input: {
     fallback.diagnostics.plannerConfidence = input.plannerConfidence;
   }
   return fallback;
+};
+
+const buildLearnerReservationStatusPlan = (input: {
+  semanticPlannerUsed: boolean;
+  plannerConfidence: number | null;
+  routingMode?: AgentRoutingMode;
+}): AgentExecutionPlan => {
+  const plan: AgentExecutionPlan = {
+    route: 'MATERIAL_DETAILS',
+    toolName: null,
+    toolInput: {},
+    semanticDataTopic: 'LEARNER_RESERVATION_STATUS',
+    semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+    diagnostics: {
+      deterministicRoute: 'MATERIAL_DETAILS',
+      deterministicConfidence: 0.94,
+      semanticPlannerUsed: input.semanticPlannerUsed,
+      semanticRoute: null,
+      validatedRoute: 'MATERIAL_DETAILS',
+      normalizedFilters: null,
+      toolName: null,
+      plannerConfidence: input.plannerConfidence,
+      resolvedEntityTitle: null,
+      routingMode: input.routingMode ?? 'semantic',
+    },
+  };
+
+  if (input.routingMode === 'provider_unavailable_fallback') {
+    return markProviderUnavailableFallbackDiagnostics(plan);
+  }
+  if (input.routingMode === 'semantic_invalid_fallback') {
+    return markSemanticInvalidFallbackDiagnostics(plan);
+  }
+  return markSemanticRoutingDiagnostics(plan);
+};
+
+const MUTATION_TOOL_NAMES = new Set([
+  'prepare_action',
+  'update_learner_location',
+  'save_material',
+  'unsave_material',
+  'save_project',
+  'unsave_project',
+]);
+
+const READ_ONLY_DATA_ROUTES = new Set<AiAgentRouteType>([
+  'MATERIAL_SEARCH',
+  'MATERIAL_DETAILS',
+  'PROJECT_SEARCH',
+  'PROJECT_DETAILS',
+  'PROJECT_COMPONENTS',
+  'SAVED_PROJECTS',
+  'ACTIVE_PROJECT_BUILDS',
+  'BUILD_GAP_ANALYSIS',
+  'COMPONENT_MATERIAL_MATCHING',
+  'PROJECT_MATERIAL_MATCHING',
+  'PROJECT_MATERIAL_AVAILABILITY',
+  'PROJECT_BUDGET_ESTIMATION',
+  'PROJECTS_WITHIN_BUDGET',
+  'OWNED_MATERIALS_PROJECT_MATCH',
+  'MATERIAL_COMPARISON',
+  'PROJECT_COMPARISON',
+  'PERSONALIZED_RECOMMENDATION',
+]);
+
+const reconcileSemanticExecutionPlan = (input: {
+  userMessage: string;
+  plan: AgentExecutionPlan;
+  understanding: SemanticUnderstanding;
+  conversationContext?: PlannerConversationContext;
+}): { plan: AgentExecutionPlan; rejected: boolean } => {
+  let plan = input.plan;
+
+  if (
+    READ_ONLY_DATA_ROUTES.has(plan.route) &&
+    plan.toolName &&
+    MUTATION_TOOL_NAMES.has(plan.toolName)
+  ) {
+    return { plan, rejected: true };
+  }
+
+  if (
+    (plan.route === 'PROJECT_MATERIAL_AVAILABILITY' ||
+      plan.toolName === 'match_available_materials_for_project') &&
+    !hasTrustedProjectMaterialContext(input.userMessage)
+  ) {
+    return { plan, rejected: true };
+  }
+
+  if (
+    plan.route === 'MATERIAL_SEARCH' &&
+    plan.toolInput.nearLearner === true &&
+    plan.toolName === 'update_learner_location'
+  ) {
+    return { plan, rejected: true };
+  }
+
+  if (input.understanding.topic === 'LEARNER_RESERVATION_STATUS') {
+    plan = {
+      ...plan,
+      route: 'MATERIAL_DETAILS',
+      toolName: null,
+      toolInput: {},
+      semanticDataTopic: 'LEARNER_RESERVATION_STATUS',
+      semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+    };
+  }
+
+  const materialResultSet = input.conversationContext?.latestMaterialResultSet;
+  if (
+    materialResultSet &&
+    detectMaterialResultSetFilterFollowUp(input.userMessage) &&
+    (plan.route === 'GENERAL_LEARNING' ||
+      plan.route === 'CLARIFICATION' ||
+      input.understanding.route === 'GENERAL_LEARNING' ||
+      input.understanding.route === 'CLARIFICATION_REQUIRED')
+  ) {
+    const constraints: Record<string, unknown> = {
+      [TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER]: true,
+      sourceMaterialIds: materialResultSet.materialIds,
+      sourceMessageId: materialResultSet.messageId,
+    };
+    if (messageImpliesFreeFilter(input.userMessage)) {
+      constraints.isFree = true;
+    }
+
+    plan = {
+      route: 'MATERIAL_SEARCH',
+      toolName: 'search_available_materials',
+      toolInput: constraints,
+      semanticDataTopic: 'MATERIAL_RESULT_SET_FILTER',
+      semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+      diagnostics: {
+        ...plan.diagnostics,
+        validatedRoute: 'MATERIAL_SEARCH',
+        normalizedFilters: constraints,
+        toolName: 'search_available_materials',
+        semanticRoute: 'MATERIAL_SEARCH',
+      },
+    };
+  }
+
+  return { plan, rejected: false };
 };
 
 const applyPlannerPlan = (input: {
@@ -1656,7 +1876,7 @@ const understandingToPlannerOutput = (
 export const buildSemanticProviderUnavailablePlan = (
   locale: AiLocale,
 ): AgentExecutionPlan =>
-  markProviderFailureFallbackDiagnostics({
+  markProviderUnavailableFallbackDiagnostics({
     route: 'CLARIFICATION',
     toolName: null,
     toolInput: {},
@@ -1690,7 +1910,7 @@ const buildProviderFailureClarificationPlan = (input: {
   locale: AiLocale;
   reason: string;
 }): AgentExecutionPlan =>
-  markProviderFailureFallbackDiagnostics({
+  markProviderUnavailableFallbackDiagnostics({
     route: 'CLARIFICATION',
     toolName: null,
     toolInput: {},
@@ -1713,9 +1933,26 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
   userMessage: string;
   locale: AiLocale;
   conversationContext?: PlannerConversationContext;
-}): AgentExecutionPlan => {
+}): AgentExecutionPlan =>
+  buildPhraseDetectorFallbackPlan(input, markProviderUnavailableFallbackDiagnostics);
+
+export const buildSemanticInvalidFallbackPlan = (input: {
+  userMessage: string;
+  locale: AiLocale;
+  conversationContext?: PlannerConversationContext;
+}): AgentExecutionPlan =>
+  buildPhraseDetectorFallbackPlan(input, markSemanticInvalidFallbackDiagnostics);
+
+const buildPhraseDetectorFallbackPlan = (
+  input: {
+    userMessage: string;
+    locale: AiLocale;
+    conversationContext?: PlannerConversationContext;
+  },
+  markFallback: (plan: AgentExecutionPlan) => AgentExecutionPlan,
+): AgentExecutionPlan => {
   if (detectDeterministicPlatformActionIntent(input.userMessage)) {
-    return markProviderFailureFallbackDiagnostics({
+    return markFallback({
       route: 'ACTION_REQUEST',
       toolName: 'prepare_action',
       toolInput: {},
@@ -1729,9 +1966,33 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
         toolName: 'prepare_action',
         plannerConfidence: null,
         resolvedEntityTitle: null,
-        routingMode: 'provider_failure_fallback',
       },
     });
+  }
+
+  if (detectLearnerReservationStatusQuery(input.userMessage)) {
+    return markFallback(
+      buildLearnerReservationStatusPlan({
+        semanticPlannerUsed: false,
+        plannerConfidence: null,
+      }),
+    );
+  }
+
+  if (detectProjectSearchIntent(input.userMessage)) {
+    return markFallback(
+      buildDeterministicFallbackPlan({
+        userMessage: input.userMessage,
+        routeDecision: {
+          route: 'PROJECT_SEARCH',
+          confidence: 0.92,
+          source: 'deterministic',
+          suggestedTool: 'search_learning_projects',
+        },
+        locale: input.locale,
+        conversationContext: input.conversationContext,
+      }),
+    );
   }
 
   const routeDecision = resolveAgentRoute({
@@ -1744,7 +2005,7 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
     routeDecision.route !== 'ACTION_REQUEST' &&
     routeDecision.route !== 'EXTERNAL_DOMAIN_KNOWLEDGE'
   ) {
-    return markProviderFailureFallbackDiagnostics(
+    return markFallback(
       buildDeterministicFallbackPlan({
         userMessage: input.userMessage,
         routeDecision,
@@ -1766,12 +2027,12 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
     conversationContext: input.conversationContext,
   });
   if (ownedFallback) {
-    return markProviderFailureFallbackDiagnostics(ownedFallback);
+    return markFallback(ownedFallback);
   }
 
   const guidanceTopic = detectPlatformGuidanceIntent(input.userMessage);
   if (guidanceTopic) {
-    return markProviderFailureFallbackDiagnostics({
+    return markFallback({
       route: 'PLATFORM_GUIDANCE',
       toolName: null,
       toolInput: {},
@@ -1786,13 +2047,12 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
         toolName: null,
         plannerConfidence: null,
         resolvedEntityTitle: null,
-        routingMode: 'provider_failure_fallback',
       },
     });
   }
 
   if (routeDecision.route === 'OUT_OF_SCOPE') {
-    return markProviderFailureFallbackDiagnostics({
+    return markFallback({
       route: 'OUT_OF_SCOPE',
       toolName: null,
       toolInput: {},
@@ -1807,7 +2067,6 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
         toolName: null,
         plannerConfidence: null,
         resolvedEntityTitle: null,
-        routingMode: 'provider_failure_fallback',
       },
     });
   }
@@ -1817,7 +2076,7 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
   }
 
   if (routeDecision.route === 'CONVERSATIONAL_STATIC') {
-    return markProviderFailureFallbackDiagnostics({
+    return markFallback({
       route: 'CONVERSATIONAL_STATIC',
       toolName: null,
       toolInput: {},
@@ -1831,7 +2090,6 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
         toolName: null,
         plannerConfidence: null,
         resolvedEntityTitle: null,
-        routingMode: 'provider_failure_fallback',
       },
     });
   }
@@ -1844,22 +2102,26 @@ export const buildProviderFailureDeterministicFallbackPlan = (input: {
   }
 
   if (detectAmbiguousLearnerRequest(input.userMessage)) {
-    return buildProviderFailureClarificationPlan({
+    return markFallback(
+      buildProviderFailureClarificationPlan({
+        locale: input.locale,
+        reason:
+          input.locale === 'ar'
+            ? 'ماذا تريد أن أفعل بالضبط في ImpactLoop؟'
+            : 'What exactly would you like me to do in ImpactLoop?',
+      }),
+    );
+  }
+
+  return markFallback(
+    buildProviderFailureClarificationPlan({
       locale: input.locale,
       reason:
         input.locale === 'ar'
-          ? 'ماذا تريد أن أفعل بالضبط في ImpactLoop؟'
-          : 'What exactly would you like me to do in ImpactLoop?',
-    });
-  }
-
-  return buildProviderFailureClarificationPlan({
-    locale: input.locale,
-    reason:
-      input.locale === 'ar'
-        ? 'أخبرني أكثر عن ما تريد القيام به في ImpactLoop.'
-        : 'Tell me more about what you want to do in ImpactLoop.',
-  });
+          ? 'أخبرني أكثر عن ما تريد القيام به في ImpactLoop.'
+          : 'Tell me more about what you want to do in ImpactLoop.',
+    }),
+  );
 };
 
 export const buildSemanticFallbackPlan = (input: {
@@ -1968,18 +2230,58 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
       )
     : null;
   if (numericBudgetContinuation) {
-    return buildProjectsWithinBudgetExecutionPlan({
-      routeDecision: {
-        route: 'PROJECTS_WITHIN_BUDGET',
-        confidence: 0.95,
-        source: 'deterministic',
-        suggestedTool: 'find_projects_within_budget',
-      },
-      toolInput: numericBudgetContinuation,
-      semanticPlannerUsed: false,
-      semanticRoute: null,
-      plannerConfidence: null,
+    return markStructuredContinuationDiagnostics(
+      buildProjectsWithinBudgetExecutionPlan({
+        routeDecision: {
+          route: 'PROJECTS_WITHIN_BUDGET',
+          confidence: 0.95,
+          source: 'deterministic',
+          suggestedTool: 'find_projects_within_budget',
+        },
+        toolInput: numericBudgetContinuation,
+        semanticPlannerUsed: false,
+        semanticRoute: null,
+        plannerConfidence: null,
+      }),
+    );
+  }
+
+  if (input.conversationId) {
+    const materialFilterContinuation = await resolveMaterialResultSetFilterContinuation({
+      userMessage: input.userMessage,
+      locale: input.locale,
+      conversationId: input.conversationId,
+      conversationContext,
     });
+    if (materialFilterContinuation?.kind === 'filter') {
+      return markStructuredContinuationDiagnostics(
+        buildMaterialResultSetFilterExecutionPlan({
+          toolInput: materialFilterContinuation.toolInput,
+          semanticPlannerUsed: false,
+          plannerConfidence: null,
+        }),
+      );
+    }
+    if (materialFilterContinuation?.kind === 'clarification') {
+      return markStructuredContinuationDiagnostics({
+        route: 'CLARIFICATION',
+        toolName: null,
+        toolInput: {},
+        clarificationReason: materialFilterContinuation.reason,
+        semanticUnderstandingRoute: 'CLARIFICATION_REQUIRED',
+        diagnostics: {
+          deterministicRoute: 'CLARIFICATION',
+          deterministicConfidence: 0.9,
+          semanticPlannerUsed: false,
+          semanticRoute: null,
+          validatedRoute: 'CLARIFICATION',
+          normalizedFilters: null,
+          toolName: null,
+          plannerConfidence: null,
+          resolvedEntityTitle: null,
+        },
+      });
+    }
   }
 
   if (
@@ -2017,7 +2319,7 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
       conversationContext,
     });
     if (ownedContinuation) {
-      return ownedContinuation;
+      return markStructuredContinuationDiagnostics(ownedContinuation);
     }
   }
 
@@ -2028,6 +2330,13 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
   });
 
   if (plannerResult.status === 'failure') {
+    if (plannerResult.reason === 'semantic_invalid') {
+      return buildSemanticInvalidFallbackPlan({
+        userMessage: input.userMessage,
+        locale: input.locale,
+        conversationContext,
+      });
+    }
     return buildProviderFailureDeterministicFallbackPlan({
       userMessage: input.userMessage,
       locale: input.locale,
@@ -2037,10 +2346,27 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
 
   const understanding = plannerResult.understanding;
 
+  const finalizeSemanticPlan = (plan: AgentExecutionPlan): AgentExecutionPlan => {
+    const reconciled = reconcileSemanticExecutionPlan({
+      userMessage: input.userMessage,
+      plan,
+      understanding,
+      conversationContext,
+    });
+    if (reconciled.rejected) {
+      return buildSemanticInvalidFallbackPlan({
+        userMessage: input.userMessage,
+        locale: input.locale,
+        conversationContext,
+      });
+    }
+    return markSemanticRoutingDiagnostics(reconciled.plan);
+  };
+
   if (understanding) {
     const mapped = mapSemanticToExecutionPlan(understanding);
     if (mapped.route === 'PLATFORM_GUIDANCE') {
-      return markSemanticRoutingDiagnostics({
+      return finalizeSemanticPlan({
         route: 'PLATFORM_GUIDANCE',
         toolName: null,
         toolInput: {},
@@ -2115,8 +2441,28 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
         },
       });
     }
+    if (understanding.topic === 'LEARNER_RESERVATION_STATUS') {
+      return finalizeSemanticPlan({
+        route: 'MATERIAL_DETAILS',
+        toolName: null,
+        toolInput: {},
+        semanticDataTopic: 'LEARNER_RESERVATION_STATUS',
+        semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
+        diagnostics: {
+          deterministicRoute: 'MATERIAL_DETAILS',
+          deterministicConfidence: understanding.confidence,
+          semanticPlannerUsed: true,
+          semanticRoute: null,
+          validatedRoute: 'MATERIAL_DETAILS',
+          normalizedFilters: null,
+          toolName: null,
+          plannerConfidence: understanding.confidence,
+          resolvedEntityTitle: null,
+        },
+      });
+    }
     if (mapped.route === 'CLARIFICATION') {
-      return markSemanticRoutingDiagnostics({
+      return finalizeSemanticPlan({
         route: 'CLARIFICATION',
         toolName: null,
         toolInput: {},
@@ -2150,7 +2496,7 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
       conversationContext,
       locale: input.locale,
     });
-    return markSemanticRoutingDiagnostics({
+    return finalizeSemanticPlan({
       ...plan,
       semanticUnderstandingRoute: 'SYSTEM_DATA_QUERY',
       diagnostics: {
@@ -2160,9 +2506,10 @@ const resolveSemanticFirstAgentExecutionPlan = async (input: {
     });
   }
 
-  return buildSemanticFallbackPlan({
+  return buildSemanticInvalidFallbackPlan({
     userMessage: input.userMessage,
     locale: input.locale,
+    conversationContext,
   });
 };
 

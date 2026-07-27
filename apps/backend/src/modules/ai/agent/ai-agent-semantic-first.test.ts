@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
+import { describe, test, afterEach } from 'node:test';
 
 import { PLATFORM_GUIDANCE_TOPICS, AI_DISABLED_COPY } from '../ai.policy.js';
 import { setResolvedAiChatProviderForTests } from '../../../config/env.js';
@@ -8,12 +8,34 @@ import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import {
   detectEducationalLearningIntent,
   detectMaterialSearchIntent,
+  extractMaterialSearchFilters,
+  filterLearnerReservationsForStatusQuery,
+  isLearnerAllReservationsQuery,
+  isLearnerPendingReservationQuery,
+  isMaterialSearchNoiseQuery,
+  mergeMaterialSearchPlan,
 } from './ai-agent-filter-extractor.service.js';
+import {
+  filterByMaxPrice,
+  resolveMaterialSearchFetchLimit,
+} from './ai-tool-handlers.js';
+import {
+  buildPlannerConversationContext,
+  detectMaterialResultSetFilterFollowUp,
+  extractLatestMaterialResultSetFromBlocks,
+  extractMaterialResultSetFilterConstraints,
+  messageReferencesPriorMaterialResultSet,
+  resolveMaterialResultSetFilterContinuation,
+  TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER,
+} from './ai-agent-planner-context.service.js';
 import {
   resolveAgentExecutionPlan,
   isProviderUnavailableExecutionPlan,
   isSemanticAmbiguityExecutionPlan,
   isProviderFailureFallbackPlan,
+  isProviderUnavailableFallbackPlan,
+  isSemanticInvalidFallbackPlan,
+  isStructuredContinuationPlan,
 } from './ai-agent-plan-resolver.service.js';
 import { resolveAgentRoute } from './ai-agent-router.service.js';
 import { scoreEntityTitleMatch as scoreTitle } from './ai-agent-reference-resolver.service.js';
@@ -44,7 +66,6 @@ import {
   requireSemanticRouterV2,
   resetSemanticTestHarness,
 } from './ai-agent-semantic-test-harness.js';
-import { mergeMaterialSearchPlan } from './ai-agent-filter-extractor.service.js';
 import { setSemanticPlannerOverrideForTests, setSemanticUnderstandingOverrideForTests } from './ai-agent-semantic-planner.service.js';
 
 describe('semantic v2 harness-level contract', () => {
@@ -442,15 +463,18 @@ describe('semantic planner failure vs ambiguity', () => {
     }
   });
 
-  test('reservation status query uses guidance during outage', async () => {
+  test('reservation status query uses learner reservation read during outage', async () => {
     installPlannerFailure();
     try {
       const plan = await resolveAgentExecutionPlan({
         userMessage: 'هل عندي حجوزات معلقة؟',
         locale: 'ar',
       });
-      assert.equal(plan.route, 'PLATFORM_GUIDANCE');
-      assert.equal(isProviderFailureFallbackPlan(plan), true);
+      assert.equal(plan.semanticUnderstandingRoute, 'SYSTEM_DATA_QUERY');
+      assert.equal(plan.toolName, null);
+      assert.equal(plan.semanticDataTopic, 'LEARNER_RESERVATION_STATUS');
+      assert.equal(isProviderUnavailableFallbackPlan(plan), true);
+      assert.equal(plan.diagnostics.routingMode, 'provider_unavailable_fallback');
     } finally {
       resetPlannerFailure();
     }
@@ -818,5 +842,621 @@ describe('semantic-first project title resolution', () => {
       locale: 'ar',
     });
     assert.equal(route.route, 'PROJECT_COMPONENTS');
+  });
+});
+
+describe('AI-SR-01 semantic planner contract and reconciliation', () => {
+  test('real-shaped valid material-search output passes v2 validation', () => {
+    const validated = validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'SYSTEM_DATA_QUERY',
+      topic: 'MATERIAL_SEARCH',
+      action: null,
+      entities: [],
+      filters: { categoryText: 'electronics', query: 'arduino' },
+      confidence: 0.95,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: { name: 'search_available_materials', arguments: {} },
+    });
+    assert.ok(validated);
+    assert.equal(mapSemanticToExecutionPlan(validated!).toolName, 'search_available_materials');
+  });
+
+  test('string toolCall and filter aliases coerce to valid material search', () => {
+    const validated = validateSemanticUnderstanding({
+      schemaVersion: 1,
+      route: 'SYSTEM_DATA_QUERY',
+      topic: 'MATERIAL_SEARCH',
+      action: null,
+      entities: [],
+      filters: { categoryText: 'electronics', nearLearner: true, maxPrice: '20' },
+      confidence: 0.95,
+      needsClarification: false,
+      clarificationQuestion: null,
+      toolCall: 'search_available_materials',
+    });
+    assert.ok(validated);
+    assert.equal(validated?.toolCall?.name, 'search_available_materials');
+    assert.equal(validated?.filters?.maxPrice, 20);
+  });
+
+  test('arduino intended-use search maps directly to search_available_materials', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildSystemDataUnderstanding('MATERIAL_SEARCH', {
+        name: 'search_available_materials',
+        arguments: { categoryText: 'electronics', query: 'arduino' },
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'MATERIAL_SEARCH');
+      assert.equal(plan.toolName, 'search_available_materials');
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('misspelled arduino material search uses the same semantic route', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildSystemDataUnderstanding('MATERIAL_SEARCH', {
+        name: 'search_available_materials',
+        arguments: { categoryText: 'electronics', query: 'arduino' },
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مواد إلكترونية متاحة للاردنو',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'MATERIAL_SEARCH');
+      assert.equal(plan.toolName, 'search_available_materials');
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('beginner electronics project query maps directly to project search', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildSystemDataUnderstanding('PROJECT_SEARCH', {
+        name: 'search_learning_projects',
+        arguments: { category: 'electronics', difficulty: 'BEGINNER' },
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مشاريع تعلم مناسبة للمبتدئين في الإلكترونيات',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'PROJECT_SEARCH');
+      assert.equal(plan.toolName, 'search_learning_projects');
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('pending-reservation query has explicit reservation-status semantic topic', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      validateSemanticUnderstanding({
+        schemaVersion: 1,
+        route: 'SYSTEM_DATA_QUERY',
+        topic: 'LEARNER_RESERVATION_STATUS',
+        action: null,
+        entities: [],
+        confidence: 0.98,
+        needsClarification: false,
+        clarificationQuestion: null,
+        toolCall: null,
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'هل عندي حجوزات معلقة؟',
+        locale: 'ar',
+      });
+      assert.equal(plan.semanticDataTopic, 'LEARNER_RESERVATION_STATUS');
+      assert.equal(plan.toolName, null);
+      assert.notEqual(plan.toolInput.learnerReservationStatusQuery, true);
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('near-me max-price output contains nearLearner and maxPrice', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildSystemDataUnderstanding('MATERIAL_SEARCH', {
+        name: 'search_available_materials',
+        arguments: { categoryText: 'electronics', nearLearner: true, maxPrice: 20 },
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مواد إلكترونية قريبة مني وسعرها أقل من 20 شيكل',
+        locale: 'ar',
+      });
+      assert.equal(plan.toolInput.nearLearner, true);
+      assert.equal(plan.toolInput.maxPrice, 20);
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('gold free near output remains read-only material search', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildSystemDataUnderstanding('MATERIAL_SEARCH', {
+        name: 'search_available_materials',
+        arguments: { query: 'gold', isFree: true, nearLearner: true },
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مواد مصنوعة من الذهب ومجانية وقريبة مني',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'MATERIAL_SEARCH');
+      assert.equal(plan.toolName, 'search_available_materials');
+      assert.equal(plan.toolInput.isFree, true);
+      assert.equal(plan.toolInput.nearLearner, true);
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('no valid semantic result is overridden by phrase detectors', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildGeneralLearningUnderstanding(),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'اشرحلي كيف بشتغل حساس الضوء LDR',
+        locale: 'ar',
+      });
+      assert.equal(plan.route, 'GENERAL_LEARNING');
+      assert.equal(plan.diagnostics.routingMode, 'semantic');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('invalid semantic combinations are rejected and use semantic_invalid_fallback', async () => {
+    setSemanticUnderstandingOverrideForTests(async () =>
+      buildSystemDataUnderstanding('PROJECT_MATERIAL_AVAILABILITY', {
+        name: 'match_available_materials_for_project',
+        arguments: { projectQuery: 'Arduino' },
+      }),
+    );
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino',
+        locale: 'ar',
+      });
+      assert.equal(isSemanticInvalidFallbackPlan(plan), true);
+      assert.equal(plan.diagnostics.routingMode, 'semantic_invalid_fallback');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('provider outage uses provider_unavailable_fallback', async () => {
+    setSemanticUnderstandingOverrideForTests(async () => ({ status: 'failure', reason: 'provider_unavailable' }));
+    try {
+      const plan = await resolveAgentExecutionPlan({
+        userMessage: 'ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino',
+        locale: 'ar',
+      });
+      assert.equal(isProviderUnavailableFallbackPlan(plan), true);
+      assert.equal(plan.diagnostics.routingMode, 'provider_unavailable_fallback');
+    } finally {
+      setSemanticUnderstandingOverrideForTests(null);
+    }
+  });
+
+  test('semantic_invalid and provider_unavailable fallbacks are distinguishable', async () => {
+    setSemanticUnderstandingOverrideForTests(async () => ({ status: 'failure', reason: 'semantic_invalid' }));
+    const invalidPlan = await resolveAgentExecutionPlan({
+      userMessage: 'ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino',
+      locale: 'ar',
+    });
+    setSemanticUnderstandingOverrideForTests(async () => ({ status: 'failure', reason: 'provider_unavailable' }));
+    const outagePlan = await resolveAgentExecutionPlan({
+      userMessage: 'ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino',
+      locale: 'ar',
+    });
+    setSemanticUnderstandingOverrideForTests(null);
+    assert.equal(invalidPlan.diagnostics.routingMode, 'semantic_invalid_fallback');
+    assert.equal(outagePlan.diagnostics.routingMode, 'provider_unavailable_fallback');
+    assert.notEqual(invalidPlan.diagnostics.routingMode, outagePlan.diagnostics.routingMode);
+  });
+
+  test('reservation navigation guidance routes to PLATFORM_GUIDANCE', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'وين بروح بالتطبيق إذا لقيت مادة وعجبتني؟',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'PLATFORM_GUIDANCE');
+    assert.equal(plan.toolName, null);
+    assert.equal(plan.diagnostics.routingMode, 'semantic');
+  });
+
+  test('supplier publish guidance routes to PLATFORM_GUIDANCE without tools', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'كيف بقدر أنشر مادة عندي؟',
+      locale: 'ar',
+    });
+    assert.equal(plan.route, 'PLATFORM_GUIDANCE');
+    assert.equal(plan.toolName, null);
+    assert.equal(plan.diagnostics.routingMode, 'semantic');
+  });
+});
+
+describe('AI-SR-01 max-price material search regressions', () => {
+  test('Arabic maxPrice 20 is normalized as numeric 20', () => {
+    const filters = extractMaterialSearchFilters(
+      'ورجيني مواد إلكترونية وسعرها أقل من 20 شيكل',
+    );
+    assert.equal(filters.maxPrice, 20);
+    const plan = mergeMaterialSearchPlan(
+      'ورجيني مواد إلكترونية وسعرها أقل من 20 شيكل',
+    );
+    assert.equal(plan.maxPrice, 20);
+    assert.equal(plan.nearLearner, undefined);
+  });
+
+  test('Arabic maxPrice 60 is normalized as numeric 60', () => {
+    const filters = extractMaterialSearchFilters(
+      'ورجيني مواد إلكترونية وسعرها أقل من 60 شيكل',
+    );
+    assert.equal(filters.maxPrice, 60);
+    const plan = mergeMaterialSearchPlan(
+      'ورجيني مواد إلكترونية وسعرها أقل من 60 شيكل',
+    );
+    assert.equal(plan.maxPrice, 60);
+  });
+
+  test('price-only query does not set nearLearner', () => {
+    const plan = mergeMaterialSearchPlan(
+      'ورجيني مواد إلكترونية وسعرها أقل من 20 شيكل',
+    );
+    assert.equal(plan.nearLearner, undefined);
+    assert.equal(plan.query, undefined);
+  });
+
+  test('electronic materials priced 10 and 12 match maxPrice 20', () => {
+    const items = [
+      { isFree: false, price: 10 },
+      { isFree: false, price: 12 },
+      { isFree: false, price: 45 },
+    ];
+    const matched = filterByMaxPrice(items, 20);
+    assert.deepEqual(
+      matched.map((item) => item.price),
+      [10, 12],
+    );
+  });
+
+  test('electronic material priced 45 matches maxPrice 60', () => {
+    const items = [
+      { isFree: false, price: 10 },
+      { isFree: false, price: 45 },
+      { isFree: false, price: 75 },
+    ];
+    const matched = filterByMaxPrice(items, 60);
+    assert.deepEqual(
+      matched.map((item) => item.price),
+      [10, 45],
+    );
+  });
+
+  test('material priced above threshold is excluded', () => {
+    const matched = filterByMaxPrice([{ isFree: false, price: 75 }], 60);
+    assert.equal(matched.length, 0);
+  });
+
+  test('candidate fetching happens before final response slicing', () => {
+    assert.equal(resolveMaterialSearchFetchLimit({ limit: 10, maxPrice: 20 }), 100);
+    assert.equal(resolveMaterialSearchFetchLimit({ limit: 10 }), 10);
+  });
+
+  test('empty results only when fixture has no matches', () => {
+    assert.equal(filterByMaxPrice([], 20).length, 0);
+    assert.equal(filterByMaxPrice([{ isFree: false, price: 10 }], 20).length, 1);
+  });
+
+  test('free materials match positive maxPrice per existing contract', () => {
+    const matched = filterByMaxPrice(
+      [{ isFree: true, price: null }, { isFree: false, price: 25 }],
+      20,
+    );
+    assert.equal(matched.length, 1);
+    assert.equal(matched[0]?.isFree, true);
+  });
+
+  test('price fragment queries are treated as search noise', () => {
+    assert.equal(isMaterialSearchNoiseQuery('ية وسعرها'), true);
+    assert.equal(isMaterialSearchNoiseQuery('arduino'), false);
+  });
+});
+
+describe('AI-SR-01 learner reservation status regressions', () => {
+  const sampleReservations = [
+    { id: '1', status: 'PENDING', material: { title: 'Active pending' } },
+    { id: '2', status: 'EXPIRED', material: { title: 'Arduino Uno R3 Boards' } },
+    { id: '3', status: 'COMPLETED', material: { title: 'Done board' } },
+    { id: '4', status: 'CANCELLED', material: { title: 'Cancelled board' } },
+    { id: '5', status: 'REJECTED', material: { title: 'Rejected board' } },
+    { id: '6', status: 'ACCEPTED', material: { title: 'Accepted board' } },
+  ];
+
+  test('pending-reservation query applies pending-status filter', () => {
+    assert.equal(isLearnerPendingReservationQuery('هل عندي حجوزات معلقة؟'), true);
+    const pending = filterLearnerReservationsForStatusQuery(
+      sampleReservations,
+      'pending',
+    );
+    assert.equal(pending.length, 1);
+    assert.equal(pending[0]?.status, 'PENDING');
+  });
+
+  test('terminal statuses are excluded from pending-only filter', () => {
+    const pending = filterLearnerReservationsForStatusQuery(
+      sampleReservations,
+      'pending',
+    );
+    for (const status of ['EXPIRED', 'COMPLETED', 'CANCELLED', 'REJECTED']) {
+      assert.equal(
+        pending.some((reservation) => reservation.status === status),
+        false,
+        status,
+      );
+    }
+  });
+
+  test('genuinely pending reservation is included', () => {
+    const pending = filterLearnerReservationsForStatusQuery(
+      sampleReservations,
+      'pending',
+    );
+    assert.equal(pending[0]?.material.title, 'Active pending');
+  });
+
+  test('empty pending reservations return truthful empty state input', () => {
+    const pending = filterLearnerReservationsForStatusQuery(
+      sampleReservations.filter((reservation) => reservation.status !== 'PENDING'),
+      'pending',
+    );
+    assert.equal(pending.length, 0);
+  });
+
+  test('all-reservations query remains distinct from pending-only', () => {
+    assert.equal(isLearnerAllReservationsQuery('شو كل حجوزاتي؟'), true);
+    assert.equal(isLearnerPendingReservationQuery('شو كل حجوزاتي؟'), false);
+    const all = filterLearnerReservationsForStatusQuery(sampleReservations, 'all');
+    assert.ok(all.length > 1);
+    assert.ok(all.some((reservation) => reservation.status === 'EXPIRED'));
+  });
+});
+
+describe('material result set filter continuation', () => {
+  const electronicsMaterials = [
+    {
+      materialId: 'mat-wire',
+      title: 'Community Jumper Wire Pieces',
+      priceLabel: 'مجاني',
+    },
+    {
+      materialId: 'mat-sensor',
+      title: 'Free Workshop Ultrasonic Sensors',
+      priceLabel: 'مجاني',
+    },
+    {
+      materialId: 'mat-paid',
+      title: 'Paid Arduino Kit',
+      priceLabel: '₪120',
+    },
+  ];
+
+  const woodMaterials = [
+    {
+      materialId: 'mat-wood',
+      title: 'Wood Plank',
+      priceLabel: 'مجاني',
+    },
+  ];
+
+  const electronicsResultSet = {
+    messageId: 'msg-electronics',
+    materialIds: electronicsMaterials.map((item) => item.materialId),
+    itemCount: electronicsMaterials.length,
+    titles: electronicsMaterials.map((item) => item.title),
+  };
+
+  const woodResultSet = {
+    messageId: 'msg-wood',
+    materialIds: woodMaterials.map((item) => item.materialId),
+    itemCount: woodMaterials.length,
+    titles: woodMaterials.map((item) => item.title),
+  };
+
+  const buildContext = (latestMaterialResultSet = electronicsResultSet) => ({
+    recentMessages: [
+      { role: 'USER' as const, text: 'ورجيني مواد إلكترونية متاحة' },
+      { role: 'ASSISTANT' as const, text: 'وجدت مواد متاحة.' },
+      { role: 'USER' as const, text: 'قارنلي بين الأولى والثانية' },
+      { role: 'ASSISTANT' as const, text: 'مقارنة بين المواد.' },
+    ],
+    entities: [],
+    latestMaterialResultSet,
+  });
+
+  afterEach(() => {
+    setSemanticPlannerOverrideForTests(null);
+  });
+
+  test('detects Arabic free-only follow-up after comparison context', () => {
+    assert.equal(detectMaterialResultSetFilterFollowUp('بس ورجيني المجاني منهم'), true);
+    assert.equal(messageReferencesPriorMaterialResultSet('بس ورجيني المجاني منهم'), true);
+    assert.deepEqual(extractMaterialResultSetFilterConstraints('بس ورجيني المجاني منهم'), {
+      isFree: true,
+    });
+  });
+
+  test('detects English and mixed-language free-only follow-ups', () => {
+    assert.equal(detectMaterialResultSetFilterFollowUp('Only show me the free ones.'), true);
+    assert.equal(detectMaterialResultSetFilterFollowUp('بس show me المجاني منهم'), true);
+  });
+
+  test('structured continuation routes material search with isFree after comparison', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'GENERAL_LEARNING',
+      confidence: 0.9,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: null,
+    }));
+
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'بس ورجيني المجاني منهم',
+      locale: 'ar',
+      conversationId: 'conv-filter-1',
+      conversationContext: buildContext(),
+    });
+
+    assert.equal(plan.route, 'MATERIAL_SEARCH');
+    assert.notEqual(plan.route, 'GENERAL_LEARNING');
+    assert.equal(plan.toolInput.isFree, true);
+    assert.equal(plan.toolInput[TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER], true);
+    assert.deepEqual(plan.toolInput.sourceMaterialIds, electronicsResultSet.materialIds);
+    assert.equal(plan.semanticDataTopic, 'MATERIAL_RESULT_SET_FILTER');
+    assert.equal(plan.semanticUnderstandingRoute, 'SYSTEM_DATA_QUERY');
+    assert.equal(isStructuredContinuationPlan(plan), true);
+    assert.equal(plan.toolName, 'search_available_materials');
+  });
+
+  test('comparison block does not erase latest trusted material result set extraction', () => {
+    const blocks = [
+      {
+        type: 'material_results',
+        items: electronicsMaterials,
+      },
+      {
+        type: 'comparison',
+        subject: 'MATERIAL',
+        items: electronicsMaterials.slice(0, 2).map((item) => ({
+          id: item.materialId,
+          title: item.title,
+        })),
+      },
+    ] as unknown as import('../ai.content-blocks.js').AiContentBlock[];
+
+    const extracted = extractLatestMaterialResultSetFromBlocks(blocks, 'msg-1');
+    assert.ok(extracted);
+    assert.equal(extracted?.itemCount, 3);
+    assert.deepEqual(extracted?.materialIds, electronicsResultSet.materialIds);
+  });
+
+  test('latest electronics result set wins over older wood search', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'بس المجاني منهم',
+      locale: 'ar',
+      conversationId: 'conv-filter-2',
+      conversationContext: {
+        recentMessages: [
+          { role: 'USER', text: 'اعرضلي مواد خشبية متاحة' },
+          { role: 'ASSISTANT', text: 'مواد خشبية' },
+          { role: 'USER', text: 'اعرضلي مواد إلكترونية متاحة' },
+          { role: 'ASSISTANT', text: 'مواد إلكترونية' },
+        ],
+        entities: [],
+        latestMaterialResultSet: electronicsResultSet,
+      },
+    });
+
+    assert.deepEqual(plan.toolInput.sourceMaterialIds, electronicsResultSet.materialIds);
+    assert.notDeepEqual(plan.toolInput.sourceMaterialIds, woodResultSet.materialIds);
+  });
+
+  test('no-context follow-up asks focused clarification instead of GENERAL_LEARNING', async () => {
+    setSemanticPlannerOverrideForTests(async () => ({
+      route: 'GENERAL_LEARNING',
+      confidence: 0.92,
+      entities: [],
+      clarificationNeeded: false,
+      toolCall: null,
+    }));
+
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'بس ورجيني المجاني منهم',
+      locale: 'ar',
+      conversationId: 'conv-filter-empty',
+      conversationContext: {
+        recentMessages: [],
+        entities: [],
+        latestMaterialResultSet: null,
+      },
+    });
+
+    assert.equal(plan.route, 'CLARIFICATION');
+    assert.notEqual(plan.route, 'GENERAL_LEARNING');
+    assert.match(plan.clarificationReason ?? '', /مواد|materials/i);
+  });
+
+  test('reconcile repairs GENERAL_LEARNING when trusted material result set exists', async () => {
+    const plan = await resolveAgentExecutionPlan({
+      userMessage: 'بس ورجيني المجاني منهم',
+      locale: 'ar',
+      conversationId: 'conv-filter-reconcile',
+      conversationContext: buildContext(),
+    });
+
+    assert.equal(plan.route, 'MATERIAL_SEARCH');
+    assert.equal(plan.toolInput.isFree, true);
+    assert.equal(plan.toolInput[TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER], true);
+  });
+
+  test('resolveMaterialResultSetFilterContinuation returns only trusted source ids', async () => {
+    const continuation = await resolveMaterialResultSetFilterContinuation({
+      userMessage: 'Only show me the free ones.',
+      locale: 'en',
+      conversationId: 'conv-filter-3',
+      conversationContext: buildContext(),
+    });
+
+    assert.equal(continuation?.kind, 'filter');
+    if (continuation?.kind !== 'filter') {
+      return;
+    }
+
+    assert.equal(continuation.toolInput.isFree, true);
+    assert.deepEqual(continuation.toolInput.sourceMaterialIds, electronicsResultSet.materialIds);
+    assert.ok(
+      (continuation.toolInput.sourceMaterialIds as string[]).every((id) =>
+        electronicsResultSet.materialIds.includes(id),
+      ),
+    );
+    assert.equal(
+      (continuation.toolInput.sourceMaterialIds as string[]).includes('fabricated-id'),
+      false,
+    );
+  });
+
+  test('planner context summary includes latestMaterialResultSet for reopen', async () => {
+    const { summarizePlannerContextForPrompt } = await import(
+      './ai-agent-planner-context.service.js'
+    );
+    const summary = summarizePlannerContextForPrompt({
+      recentMessages: [{ role: 'USER', text: 'ورجيني مواد' }],
+      entities: [],
+      latestMaterialResultSet: electronicsResultSet,
+    });
+    assert.match(summary, /latestMaterialResultSet/);
+    assert.match(summary, /mat-wire/);
   });
 });

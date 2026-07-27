@@ -35,6 +35,8 @@ import { getRegisteredTool, isRegisteredToolName } from './ai-tool-registry.js';
 import {
   mergeMaterialSearchPlan,
   normalizeMaterialItemQuery,
+  isMaterialSearchNoiseQuery,
+  normalizeMaterialCategoryText,
   parseOwnedMaterialsProjectInput,
   resolveOwnedMaterialsFromConversation,
   extractProjectTitleQuery,
@@ -143,6 +145,7 @@ const SYSTEM_DATA_TOPICS = [
   'MATERIAL_COMPARISON',
   'PROJECT_COMPARISON',
   'PERSONALIZED_RECOMMENDATION',
+  'LEARNER_RESERVATION_STATUS',
 ] as const;
 
 const SEMANTIC_ACTION_TYPES = [
@@ -239,7 +242,9 @@ export const semanticUnderstandingSchema = z
 
 export type SemanticUnderstanding = z.infer<typeof semanticUnderstandingSchema>;
 
-export type SemanticPlannerFailureReason = 'provider_unavailable';
+export type SemanticPlannerFailureReason =
+  | 'provider_unavailable'
+  | 'semantic_invalid';
 
 export type SemanticPlannerResult =
   | { status: 'success'; understanding: SemanticUnderstanding }
@@ -307,6 +312,29 @@ const ACTION_CONFIDENCE_THRESHOLD = 0.72;
 
 const LEGACY_PLANNER_SYSTEM_DATA_ROUTES = new Set<string>(SYSTEM_DATA_TOPICS);
 
+const SEMANTIC_FILTER_KEYS = new Set([
+  'query',
+  'categoryText',
+  'isFree',
+  'minPrice',
+  'maxPrice',
+  'city',
+  'area',
+  'nearLearner',
+  'pickupAllowed',
+  'deliveryAllowed',
+  'limit',
+] as const);
+
+const SEMANTIC_FILTER_ALIASES: Record<string, string> = {
+  freeOnly: 'isFree',
+};
+
+const TOPIC_DEFAULT_TOOL_NAMES: Partial<Record<string, string>> = {
+  MATERIAL_SEARCH: 'search_available_materials',
+  PROJECT_SEARCH: 'search_learning_projects',
+};
+
 const compactNullableRecord = (
   value: unknown,
 ): Record<string, unknown> | undefined => {
@@ -322,6 +350,152 @@ const compactNullableRecord = (
   }
 
   return Object.keys(compact).length > 0 ? compact : undefined;
+};
+
+const normalizeSemanticFilters = (
+  value: unknown,
+): Record<string, unknown> | undefined => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const normalized: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (entry === null || entry === undefined) {
+      continue;
+    }
+
+    const targetKey = SEMANTIC_FILTER_ALIASES[key] ?? key;
+    if ((SEMANTIC_FILTER_KEYS as Set<string>).has(targetKey)) {
+      if (targetKey === 'maxPrice' || targetKey === 'minPrice') {
+        const numeric =
+          typeof entry === 'string' ? Number(entry.trim()) : entry;
+        if (typeof numeric === 'number' && !Number.isNaN(numeric)) {
+          normalized[targetKey] = numeric;
+        }
+        continue;
+      }
+      normalized[targetKey] = entry;
+      continue;
+    }
+
+    if (key === 'materialType' && typeof entry === 'string' && entry.trim()) {
+      normalized.query = entry.trim();
+    }
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+};
+
+const normalizePlannerToolArguments = (
+  toolName: string,
+  argumentsValue: Record<string, unknown>,
+): Record<string, unknown> => {
+  const normalized: Record<string, unknown> = { ...argumentsValue };
+
+  if (toolName === 'search_learning_projects') {
+    if (typeof normalized.level === 'string' && !normalized.difficulty) {
+      const level = normalized.level.trim().toUpperCase();
+      if (level === 'BEGINNER' || level === 'INTERMEDIATE' || level === 'ADVANCED') {
+        normalized.difficulty = level;
+      }
+      delete normalized.level;
+    }
+    if (typeof normalized.difficulty === 'string') {
+      const difficulty = normalized.difficulty.trim().toUpperCase();
+      if (
+        difficulty === 'BEGINNER' ||
+        difficulty === 'INTERMEDIATE' ||
+        difficulty === 'ADVANCED'
+      ) {
+        normalized.difficulty = difficulty;
+      }
+    }
+  }
+
+  for (const key of ['maxPrice', 'minPrice', 'limit']) {
+    const entry = normalized[key];
+    if (typeof entry === 'string' && entry.trim()) {
+      const numeric = Number(entry.trim());
+      if (!Number.isNaN(numeric)) {
+        normalized[key] = numeric;
+      }
+    }
+  }
+
+  return normalized;
+};
+
+const normalizeSemanticToolCall = (
+  value: unknown,
+  topic?: unknown,
+): SemanticUnderstanding['toolCall'] => {
+  if (topic === 'LEARNER_RESERVATION_STATUS') {
+    return null;
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const name = value.trim();
+    if (name === 'get_learner_reservations') {
+      return null;
+    }
+    return { name, arguments: {} };
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const source = value as Record<string, unknown>;
+  const name =
+    typeof source.name === 'string'
+      ? source.name.trim()
+      : typeof source.tool === 'string'
+        ? source.tool.trim()
+        : '';
+
+  if (!name || name === 'get_learner_reservations') {
+    return null;
+  }
+
+  const argumentsValue =
+    source.arguments &&
+    typeof source.arguments === 'object' &&
+    !Array.isArray(source.arguments)
+      ? normalizePlannerToolArguments(
+          name,
+          source.arguments as Record<string, unknown>,
+        )
+      : {};
+
+  return { name, arguments: argumentsValue };
+};
+
+const normalizeSemanticTopic = (
+  route: unknown,
+  topic: unknown,
+): unknown => {
+  if (route === 'SYSTEM_DATA_QUERY' && topic === 'MATERIAL_RESERVATION') {
+    return 'LEARNER_RESERVATION_STATUS';
+  }
+  return topic;
+};
+
+const inferToolCallForTopic = (
+  route: unknown,
+  topic: unknown,
+  toolCall: SemanticUnderstanding['toolCall'],
+): SemanticUnderstanding['toolCall'] => {
+  if (toolCall?.name || route !== 'SYSTEM_DATA_QUERY' || typeof topic !== 'string') {
+    return toolCall;
+  }
+
+  const defaultToolName = TOPIC_DEFAULT_TOOL_NAMES[topic];
+  if (!defaultToolName) {
+    return toolCall;
+  }
+
+  return { name: defaultToolName, arguments: {} };
 };
 
 const normalizeSemanticEntities = (
@@ -356,13 +530,19 @@ export const coerceSemanticUnderstandingFromGemini = (
   let route = source.route;
 
   if (typeof route === 'string' && LEGACY_PLANNER_SYSTEM_DATA_ROUTES.has(route)) {
+    const topic = route;
+    const normalizedToolCall = inferToolCallForTopic(
+      'SYSTEM_DATA_QUERY',
+      topic,
+      normalizeSemanticToolCall(source.toolCall, topic),
+    );
     return {
       schemaVersion: 1,
       route: 'SYSTEM_DATA_QUERY',
-      topic: route,
+      topic,
       action: null,
       entities: normalizeSemanticEntities(source.entities),
-      filters: compactNullableRecord(source.filters),
+      filters: normalizeSemanticFilters(source.filters),
       confidence: typeof source.confidence === 'number' ? source.confidence : 0.85,
       needsClarification:
         source.needsClarification === true || source.clarificationNeeded === true,
@@ -372,7 +552,7 @@ export const coerceSemanticUnderstandingFromGemini = (
           : typeof source.clarificationReason === 'string'
             ? source.clarificationReason
             : null,
-      toolCall: source.toolCall ?? null,
+      toolCall: normalizedToolCall,
     };
   }
 
@@ -382,14 +562,20 @@ export const coerceSemanticUnderstandingFromGemini = (
 
   const needsClarification =
     source.needsClarification === true || source.clarificationNeeded === true;
+  const topic = normalizeSemanticTopic(route, source.topic ?? null);
+  const normalizedToolCall = inferToolCallForTopic(
+    route,
+    topic,
+    normalizeSemanticToolCall(source.toolCall, topic),
+  );
 
   return {
     schemaVersion: source.schemaVersion ?? 1,
     route,
-    topic: source.topic ?? null,
+    topic,
     action: source.action ?? null,
     entities: normalizeSemanticEntities(source.entities),
-    filters: compactNullableRecord(source.filters),
+    filters: normalizeSemanticFilters(source.filters),
     confidence: typeof source.confidence === 'number' ? source.confidence : 0.85,
     needsClarification,
     clarificationQuestion:
@@ -398,7 +584,7 @@ export const coerceSemanticUnderstandingFromGemini = (
         : typeof source.clarificationReason === 'string'
           ? source.clarificationReason
           : null,
-    toolCall: source.toolCall ?? null,
+    toolCall: normalizedToolCall,
   };
 };
 
@@ -415,14 +601,24 @@ export const validateSemanticUnderstanding = (
 
   if (data.toolCall?.name) {
     if (!isRegisteredToolName(data.toolCall.name)) {
+      if (data.topic === 'LEARNER_RESERVATION_STATUS') {
+        return { ...data, toolCall: undefined };
+      }
       return null;
     }
     try {
-      sanitizePlannerArguments(
+      const sanitized = sanitizePlannerArguments(
         data.toolCall.name,
         data.toolCall.arguments ?? {},
       );
+      return { ...data, toolCall: { name: data.toolCall.name, arguments: sanitized } };
     } catch {
+      if (data.filters && Object.keys(data.filters).length > 0) {
+        return {
+          ...data,
+          toolCall: { name: data.toolCall.name, arguments: {} },
+        };
+      }
       return null;
     }
   }
@@ -511,6 +707,16 @@ export const mapSemanticToExecutionPlan = (
     };
   }
 
+  if (understanding.topic === 'LEARNER_RESERVATION_STATUS') {
+    return {
+      route: 'MATERIAL_DETAILS',
+      toolName: null,
+      toolInput: {},
+      semanticRoute: 'SYSTEM_DATA_QUERY',
+      plannerConfidence: understanding.confidence,
+    };
+  }
+
   const granularRoute = systemDataTopicToRoute(
     (understanding.topic ??
       'MATERIAL_SEARCH') as SystemDataTopic,
@@ -519,23 +725,28 @@ export const mapSemanticToExecutionPlan = (
     understanding.toolCall?.name ?? routeToToolName(granularRoute);
   let toolInput: Record<string, unknown> = {};
 
-  if (understanding.toolCall?.name && isRegisteredToolName(understanding.toolCall.name)) {
-    try {
-      toolInput = sanitizePlannerArguments(
-        understanding.toolCall.name,
-        understanding.toolCall.arguments ?? {},
-      );
-    } catch {
-      toolInput = {};
-    }
-  } else if (understanding.filters) {
-    const compact: Record<string, unknown> = {};
+  if (understanding.filters) {
     for (const [key, value] of Object.entries(understanding.filters)) {
       if (value !== null && value !== undefined) {
-        compact[key] = value;
+        toolInput[key] = value;
       }
     }
-    toolInput = compact;
+  }
+
+  if (understanding.toolCall?.name && isRegisteredToolName(understanding.toolCall.name)) {
+    try {
+      toolInput = {
+        ...toolInput,
+        ...sanitizePlannerArguments(
+          understanding.toolCall.name,
+          understanding.toolCall.arguments ?? {},
+        ),
+      };
+    } catch {
+      if (Object.keys(toolInput).length === 0) {
+        toolInput = {};
+      }
+    }
   }
 
   return {
@@ -571,11 +782,22 @@ export const buildSemanticPlannerPrompt = (input: {
     SEMANTIC_ACTION_TYPES.join(', '),
     'Never include userId, coordinates, conversationId, or arbitrary database IDs.',
     'Never invent inventory facts.',
-    'Always include every top-level field: schemaVersion, route, topic, action, entities, confidence, needsClarification, clarificationQuestion.',
+    'Always include every top-level field: schemaVersion, route, topic, action, entities, filters, confidence, needsClarification, clarificationQuestion, toolCall.',
+    'toolCall must be an object { name, arguments } or null — never a bare tool name string.',
+    'filters may only use: query, categoryText, isFree, minPrice, maxPrice, city, area, nearLearner, pickupAllowed, deliveryAllowed, limit.',
     'Use null for topic, action, and clarificationQuestion when not applicable.',
     'Representative examples (meaning only):',
     '- "شو أعمل عشان أطلب قطعة من المواد الموجودة؟" -> PLATFORM_GUIDANCE, topic MATERIAL_RESERVATION',
-    '- "ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino" -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, filters.categoryText electronics, filters.query arduino',
+    '- "وين بروح بالتطبيق إذا لقيت مادة وعجبتني؟" -> PLATFORM_GUIDANCE, topic MATERIAL_RESERVATION (navigation to reserve, not project matching)',
+    '- "كيف بقدر أنشر مادة عندي؟" -> PLATFORM_GUIDANCE, topic GENERAL_PLATFORM (supplier publish workflow guidance only)',
+    '- "ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino" -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, toolCall.name search_available_materials, filters.categoryText electronics, filters.query arduino',
+    '- "ورجيني مواد إلكترونية قريبة مني وسعرها أقل من 20 شيكل" -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, toolCall.name search_available_materials, filters.nearLearner true, filters.maxPrice 20 (read saved location only; never update profile)',
+    '- "هل عندي حجوزات معلقة؟" -> SYSTEM_DATA_QUERY, topic LEARNER_RESERVATION_STATUS, toolCall null (learner reservation read, not platform how-to guidance)',
+    '- "ورجيني مشاريع تعلم مناسبة للمبتدئين في الإلكترونيات" -> SYSTEM_DATA_QUERY, topic PROJECT_SEARCH, toolCall.name search_learning_projects',
+    '- When latestMaterialResultSet exists in trusted context and the user narrows those results (e.g. free only, "from them"), use SYSTEM_DATA_QUERY + MATERIAL_SEARCH with filters on the prior result set — never GENERAL_LEARNING',
+    '- "بس ورجيني المجاني منهم" after material results -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, filters.isFree true (continuation on latestMaterialResultSet, not a fresh unrelated search)',
+    '- "Only show me the free ones." after material results -> SYSTEM_DATA_QUERY, topic MATERIAL_SEARCH, filters.isFree true',
+    '- Arduino/ESP32/robotics mentioned only as intended use for materials is MATERIAL_SEARCH, not PROJECT_MATERIAL_AVAILABILITY, unless the user names a specific published learning project or build',
     '- "اشرحلي كيف بشتغل حساس الضوء LDR" -> GENERAL_LEARNING',
     '- "شو الطقس اليوم؟" -> OUT_OF_SCOPE',
     '- "بدي آخذ هالخشبة" without trusted prior material -> CLARIFICATION_REQUIRED with a focused question',
@@ -591,7 +813,7 @@ export const buildSemanticPlannerPrompt = (input: {
         confidence: 0.93,
         needsClarification: false,
         clarificationQuestion: null,
-        toolCall: null,
+        toolCall: { name: 'search_available_materials', arguments: {} },
       },
       null,
       2,
@@ -1251,9 +1473,13 @@ export const planSemanticUnderstanding = async (input: {
   }
 
   if (resolveAiChatProvider() === 'mock') {
+    const understanding = buildMockSemanticUnderstanding(input);
+    if (!understanding) {
+      return toSemanticPlannerFailure('semantic_invalid');
+    }
     return {
       status: 'success',
-      understanding: buildMockSemanticUnderstanding(input),
+      understanding,
     };
   }
 
@@ -1274,7 +1500,7 @@ export const planSemanticUnderstanding = async (input: {
         { userMessageLength: input.userMessage.length },
         'AI semantic understanding planner returned invalid output',
       );
-      return toSemanticPlannerFailure();
+      return toSemanticPlannerFailure('semantic_invalid');
     }
     return { status: 'success', understanding };
   } catch (error) {
@@ -1465,6 +1691,13 @@ export const materialSearchPlanFromPlanner = (
 
   if (merged.query && typeof merged.query === 'string') {
     merged.query = normalizeMaterialItemQuery(merged.query as string);
+    if (isMaterialSearchNoiseQuery(merged.query as string | undefined)) {
+      delete merged.query;
+    }
+  }
+
+  if (merged.categoryText && typeof merged.categoryText === 'string') {
+    merged.categoryText = normalizeMaterialCategoryText(merged.categoryText as string);
   }
 
   if (merged.query && typeof merged.query === 'string') {

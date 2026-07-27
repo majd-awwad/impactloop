@@ -11,6 +11,9 @@ import {
   type RecentEntityRecord,
 } from './ai-agent-recent-entities.service.js';
 import {
+  extractLatestMaterialResultSetFromBlocks,
+} from './ai-agent-planner-context.service.js';
+import {
   resolveProjectFromRecentEntities,
   scoreEntityTitleMatch,
 } from './ai-agent-reference-resolver.service.js';
@@ -385,4 +388,57 @@ describe('recommendation subtype classification', () => {
       assert.equal(parseRecommendationInput(row.message).type, row.expected);
     });
   }
+});
+
+describe('material result set context after comparison', () => {
+  const materialResultsBlock = {
+    type: 'material_results',
+    items: [
+      { materialId: 'mat-1', title: 'Community Jumper Wire Pieces', priceLabel: 'مجاني' },
+      { materialId: 'mat-2', title: 'Free Workshop Ultrasonic Sensors', priceLabel: 'مجاني' },
+      { materialId: 'mat-3', title: 'Paid Arduino Kit', priceLabel: '₪120' },
+    ],
+  } as unknown as AiContentBlock;
+
+  const materialComparisonBlock = {
+    type: 'comparison',
+    subject: 'MATERIAL',
+    items: [
+      { id: 'mat-1', title: 'Community Jumper Wire Pieces', facts: ['free'] },
+      { id: 'mat-2', title: 'Free Workshop Ultrasonic Sensors', facts: ['free'] },
+    ],
+  } as unknown as AiContentBlock;
+
+  test('comparison entities coexist with full material_results source set', () => {
+    const materialEntities = extractRecentEntitiesFromBlock(
+      materialResultsBlock,
+      'msg-search',
+      0,
+    );
+    const comparisonEntities = extractRecentEntitiesFromBlock(
+      materialComparisonBlock,
+      'msg-compare',
+      1,
+    );
+
+    assert.equal(materialEntities.length, 3);
+    assert.equal(comparisonEntities.length, 2);
+    assert.ok(
+      materialEntities.every((entity) => entity.blockType === 'material_results'),
+    );
+    assert.ok(
+      comparisonEntities.every((entity) => entity.blockType === 'comparison'),
+    );
+  });
+
+  test('latest material_results block remains extractable when comparison follows', () => {
+    const extracted = extractLatestMaterialResultSetFromBlocks(
+      [materialResultsBlock, materialComparisonBlock],
+      'msg-compare',
+    );
+
+    assert.ok(extracted);
+    assert.deepEqual(extracted?.materialIds, ['mat-1', 'mat-2', 'mat-3']);
+    assert.equal(extracted?.itemCount, 3);
+  });
 });

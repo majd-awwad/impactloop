@@ -13,6 +13,11 @@ import {
   detectProjectsWithinBudgetIntent,
   detectProjectMaterialAvailabilityIntent,
   detectProjectMaterialAvailabilitySelectionFollowUp,
+  detectAppMaterialNavigationGuidanceIntent,
+  detectSupplierPublishGuidanceIntent,
+  detectLearnerReservationStatusQuery,
+  detectProjectSearchIntent,
+  shouldCorrectToMaterialSearch,
   extractMaterialSearchFilters,
   extractProjectTitleQuery,
   isGenericProjectBrowseQuery,
@@ -1234,5 +1239,57 @@ requireSemanticRouterV2(() => {
       } finally {
       resetSemanticTestHarness();
     }
+  });
+});
+
+describe('acceptance: AI-SR-01 intent detectors', () => {
+  test('reservation navigation guidance is detected structurally', () => {
+    assert.equal(
+      detectAppMaterialNavigationGuidanceIntent(
+        'وين بروح بالتطبيق إذا لقيت مادة وعجبتني؟',
+      ),
+      true,
+    );
+    assert.equal(
+      detectAppMaterialNavigationGuidanceIntent(
+        'Where should I go in the app after I find a material I like?',
+      ),
+      true,
+    );
+  });
+
+  test('supplier publish guidance is detected structurally', () => {
+    assert.equal(detectSupplierPublishGuidanceIntent('كيف بقدر أنشر مادة عندي؟'), true);
+    assert.equal(
+      detectSupplierPublishGuidanceIntent('How can I publish a material I have as a supplier?'),
+      true,
+    );
+  });
+
+  test('arduino explicit material search should correct away from project matching', () => {
+    const message = 'ورجيني مواد إلكترونية متاحة ممكن أستخدمها مع Arduino';
+    assert.equal(isExplicitMaterialSearchCommand(message), true);
+    assert.equal(shouldCorrectToMaterialSearch(message), true);
+    assert.equal(detectProjectMaterialAvailabilityIntent(message), false);
+  });
+
+  test('near-me filters stay read-only search parameters', () => {
+    const filters = extractMaterialSearchFilters(
+      'ورجيني مواد إلكترونية قريبة مني وسعرها أقل من 20 شيكل',
+    );
+    assert.equal(filters.nearLearner, true);
+    assert.equal(filters.maxPrice, 20);
+  });
+
+  test('reservation status query is not platform guidance', () => {
+    assert.equal(detectLearnerReservationStatusQuery('هل عندي حجوزات معلقة؟'), true);
+    assert.equal(detectProjectSearchIntent('هل عندي حجوزات معلقة؟'), false);
+  });
+
+  test('beginner electronics project browse is project search', () => {
+    assert.equal(
+      detectProjectSearchIntent('ورجيني مشاريع تعلم مناسبة للمبتدئين في الإلكترونيات'),
+      true,
+    );
   });
 });

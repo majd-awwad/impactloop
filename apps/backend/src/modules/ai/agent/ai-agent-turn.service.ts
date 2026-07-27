@@ -8,6 +8,7 @@ import {
   buildBoundedConversationHistory,
   parseStoredContentBlocks,
 } from '../ai-context-builder.js';
+import { listMessagesForConversation } from '../ai.repository.js';
 import type { AiContentBlock } from '../ai.content-blocks.js';
 import { aiContentBlocksSchema } from '../ai.content-blocks.js';
 import {
@@ -19,6 +20,7 @@ import {
   CLARIFICATION_COPY,
   REFUSAL_COPY,
   buildPlatformGuidanceResponse,
+  buildSupplierPublishGuidanceResponse,
 } from '../ai.policy.js';
 import {
   assessDangerousRequest,
@@ -28,7 +30,16 @@ import { getAiChatProvider } from '../providers/ai-chat-provider.factory.js';
 import type { AiLocale } from '../ai.types.js';
 import { prepareAiPendingAction, buildMaterialSavePayload, buildProjectSavePayload, buildStartBuildPayload, buildLinkMaterialPayload, buildUnsaveMaterialPayload, buildUnsaveProjectPayload, buildUnlinkMaterialPayload, buildReservationPayload, buildUpdateBuildComponentStatusesPayload, saveReservationDraft, cancelReservationDraft, findActiveReservationDraft } from '../ai-action.service.js';
 import * as learningProjectsRepository from '../../learning-projects/learning-projects.repository.js';
-import { normalizeArabicVariants, detectMaterialSearchIntent, detectPlatformGuidanceIntent } from './ai-agent-filter-extractor.service.js';
+import {
+  detectMaterialSearchIntent,
+  detectPlatformGuidanceIntent,
+  detectSupplierPublishGuidanceIntent,
+  filterLearnerReservationsForStatusQuery,
+  isLearnerAllReservationsQuery,
+  isLearnerPendingReservationQuery,
+  normalizeArabicVariants,
+} from './ai-agent-filter-extractor.service.js';
+import { listMyReservations } from '../../reservations/reservations.service.js';
 import { prepareMaterialReservationPayloadSchema } from '../ai-action.payloads.js';
 import { classifyScopeDeterministic } from '../ai-scope-guard.js';
 import type { AiPendingActionType } from '../../../generated/prisma/client.js';
@@ -56,6 +67,9 @@ import {
   buildComparisonFollowUpAnswer,
   findLatestComparisonBlock,
 } from './ai-agent-comparison-followup.service.js';
+import {
+  TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER,
+} from './ai-agent-planner-context.service.js';
 import { detectComparisonFollowUpIntent, extractProjectTitleQuery } from './ai-agent-filter-extractor.service.js';
 import {
   AI_AGENT_PLATFORM_ROUTES,
@@ -2092,6 +2106,19 @@ const handlePlatformGuidanceTurn = (input: {
   userMessage: string;
   locale: AiLocale;
 }): AgentTurnExecutionResult => {
+  if (detectSupplierPublishGuidanceIntent(input.userMessage)) {
+    return {
+      blocks: [textBlock(buildSupplierPublishGuidanceResponse(input.locale), 'answer')],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'PLATFORM_GUIDANCE',
+    };
+  }
+
   const topic = detectPlatformGuidanceIntent(input.userMessage) ?? 'GENERAL_PLATFORM';
 
   return {
@@ -2103,6 +2130,93 @@ const handlePlatformGuidanceTurn = (input: {
     inputTokens: null,
     outputTokens: null,
     route: 'PLATFORM_GUIDANCE',
+  };
+};
+
+const formatReservationStatusLabel = (status: string, locale: AiLocale): string => {
+  const labels: Record<string, { en: string; ar: string }> = {
+    PENDING: { en: 'Pending', ar: 'معلّق' },
+    ACCEPTED: { en: 'Accepted', ar: 'مقبول' },
+    REJECTED: { en: 'Rejected', ar: 'مرفوض' },
+    CANCELLED: { en: 'Cancelled', ar: 'ملغى' },
+    COMPLETED: { en: 'Completed', ar: 'مكتمل' },
+    EXPIRED: { en: 'Expired', ar: 'منتهٍ' },
+    AWAITING_RESOLUTION: { en: 'Awaiting resolution', ar: 'بانتظار المعالجة' },
+  };
+  const entry = labels[status];
+  return entry ? entry[locale === 'ar' ? 'ar' : 'en'] : status;
+};
+
+const handleLearnerReservationStatusTurn = async (input: {
+  userMessage: string;
+  locale: AiLocale;
+  authenticatedUserId: string;
+  semanticDataTopic?: string;
+}): Promise<AgentTurnExecutionResult> => {
+  const reservations = await listMyReservations(input.authenticatedUserId);
+  const pendingOnly =
+    !isLearnerAllReservationsQuery(input.userMessage) &&
+    (input.semanticDataTopic === 'LEARNER_RESERVATION_STATUS' ||
+      isLearnerPendingReservationQuery(input.userMessage));
+  const filtered = filterLearnerReservationsForStatusQuery(
+    reservations,
+    pendingOnly ? 'pending' : 'all',
+  );
+
+  if (filtered.length === 0) {
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? pendingOnly
+              ? 'لا توجد لديك حجوزات معلّقة حاليًا.'
+              : 'لا توجد لديك حجوزات حاليًا.'
+            : pendingOnly
+              ? 'You do not have any pending reservations right now.'
+              : 'You do not have any reservations right now.',
+          'answer',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'MATERIAL_DETAILS',
+      semanticRoute: 'SYSTEM_DATA_QUERY',
+    };
+  }
+
+  const lines = filtered.slice(0, 10).map((reservation) => {
+    const statusLabel = formatReservationStatusLabel(reservation.status, input.locale);
+    if (input.locale === 'ar') {
+      return `• ${reservation.material.title}: ${statusLabel}`;
+    }
+    return `• ${reservation.material.title}: ${statusLabel}`;
+  });
+
+  return {
+    blocks: [
+      textBlock(
+        input.locale === 'ar'
+          ? pendingOnly
+            ? ['حجوزاتك المعلّقة:', ...lines].join('\n')
+            : ['حجوزاتك الحالية:', ...lines].join('\n')
+          : pendingOnly
+            ? ['Your pending reservations:', ...lines].join('\n')
+            : ['Your current reservations:', ...lines].join('\n'),
+        'answer',
+      ),
+    ],
+    usedProvider: false,
+    providerName: 'system',
+    model: null,
+    latencyMs: null,
+    inputTokens: null,
+    outputTokens: null,
+    route: 'MATERIAL_DETAILS',
+    semanticRoute: 'SYSTEM_DATA_QUERY',
   };
 };
 
@@ -2119,8 +2233,8 @@ const buildGracefulToolFailureResult = (input: {
       blocks: [
         textBlock(
           input.responseLocale === 'ar'
-            ? 'حدّث موقعك المحفوظ في الملف الشخصي للبحث عن مواد قريبة منك.'
-            : 'Update your saved location in profile settings to search nearby materials.',
+            ? 'لا يوجد موقع محفوظ في ملفك الشخصي للبحث عن مواد قريبة. يمكنك إضافته من إعدادات الملف الشخصي—لن أغيّر موقعك نيابةً عنك.'
+            : 'There is no saved location on your profile for nearby search. You can add one in profile settings—I will not change your location for you.',
           'clarification',
         ),
       ],
@@ -2219,6 +2333,143 @@ const buildMaterialResultsIntro = (count: number, locale: AiLocale): string =>
   locale === 'ar'
     ? `وجدت ${count} مواد متاحة تطابق طلبك على ImpactLoop.`
     : `I found ${count} currently available matching materials on ImpactLoop.`;
+
+const isFreeMaterialCardPriceLabel = (priceLabel: string): boolean => {
+  const normalized = priceLabel.trim().toLowerCase();
+  return normalized === 'مجاني' || normalized === 'free';
+};
+
+const handleMaterialResultSetFilterTurn = async (input: {
+  locale: AiLocale;
+  conversationId: string;
+  toolInput: Record<string, unknown>;
+}): Promise<AgentTurnExecutionResult> => {
+  const sourceMaterialIds = Array.isArray(input.toolInput.sourceMaterialIds)
+    ? input.toolInput.sourceMaterialIds.filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      )
+    : [];
+  const allowedIds = new Set(sourceMaterialIds);
+  const isFreeFilter = input.toolInput.isFree === true;
+
+  const { total } = await listMessagesForConversation({
+    conversationId: input.conversationId,
+    limit: 1,
+    offset: 0,
+  });
+  const { items } = await listMessagesForConversation({
+    conversationId: input.conversationId,
+    limit: 24,
+    offset: Math.max(0, total - 24),
+  });
+
+  const sourceMessageId =
+    typeof input.toolInput.sourceMessageId === 'string'
+      ? input.toolInput.sourceMessageId
+      : null;
+
+  let sourceBlock: Extract<AiContentBlock, { type: 'material_results' }> | null = null;
+
+  const findMaterialResultsInMessage = (message: (typeof items)[number]) => {
+    const blocks = parseStoredContentBlocks(message.contentBlocks);
+    for (let blockIndex = blocks.length - 1; blockIndex >= 0; blockIndex -= 1) {
+      const block = blocks[blockIndex];
+      if (block.type === 'material_results') {
+        return block;
+      }
+    }
+    return null;
+  };
+
+  if (sourceMessageId) {
+    const targetMessage = items.find((message) => message.id === sourceMessageId);
+    if (targetMessage?.role === 'ASSISTANT') {
+      sourceBlock = findMaterialResultsInMessage(targetMessage);
+    }
+  }
+
+  if (!sourceBlock) {
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      const message = items[index];
+      if (message.role !== 'ASSISTANT') {
+        continue;
+      }
+      sourceBlock = findMaterialResultsInMessage(message);
+      if (sourceBlock) {
+        break;
+      }
+    }
+  }
+
+  if (!sourceBlock) {
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? 'لا أجد نتائج مواد سابقة لتصفيتها. اعرضلي أولاً مواداً متاحة.'
+            : 'I cannot find prior material results to filter. Show me available materials first.',
+          'clarification',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'CLARIFICATION',
+      semanticRoute: 'CLARIFICATION_REQUIRED',
+    };
+  }
+
+  const trustedItems = sourceBlock.items.filter((item) =>
+    allowedIds.size > 0 ? allowedIds.has(item.materialId) : true,
+  );
+  const filteredItems = isFreeFilter
+    ? trustedItems.filter((item) => isFreeMaterialCardPriceLabel(item.priceLabel))
+    : trustedItems;
+
+  if (filteredItems.length === 0) {
+    return {
+      blocks: [
+        textBlock(
+          input.locale === 'ar'
+            ? 'لا توجد مواد مطابقة للتصفية ضمن آخر نتائج موثوقة.'
+            : 'No materials in the latest trusted results match that filter.',
+          'clarification',
+        ),
+      ],
+      usedProvider: false,
+      providerName: 'system',
+      model: null,
+      latencyMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      route: 'CLARIFICATION',
+      semanticRoute: 'CLARIFICATION_REQUIRED',
+    };
+  }
+
+  const resultBlock: AiContentBlock = {
+    type: 'material_results',
+    items: filteredItems,
+  };
+
+  return {
+    blocks: [
+      textBlock(buildMaterialResultsIntro(filteredItems.length, input.locale)),
+      resultBlock,
+    ],
+    usedProvider: false,
+    providerName: 'system',
+    model: null,
+    latencyMs: null,
+    inputTokens: null,
+    outputTokens: null,
+    route: 'MATERIAL_SEARCH',
+    semanticRoute: 'SYSTEM_DATA_QUERY',
+  };
+};
 
 const buildProjectResultsIntro = (
   block: Extract<AiContentBlock, { type: 'project_results' }>,
@@ -2841,6 +3092,26 @@ export const executeLearnerAgentPlatformTurn = async (input: {
       locale: responseLocale,
     });
     return { ...guidanceTurn, semanticRoute: semanticRoute ?? 'PLATFORM_GUIDANCE' };
+  }
+
+  if (executionPlan.semanticDataTopic === 'LEARNER_RESERVATION_STATUS') {
+    return handleLearnerReservationStatusTurn({
+      userMessage: input.userMessage,
+      locale: responseLocale,
+      authenticatedUserId: input.authenticatedUserId,
+      semanticDataTopic: executionPlan.semanticDataTopic,
+    });
+  }
+
+  if (
+    executionPlan.semanticDataTopic === 'MATERIAL_RESULT_SET_FILTER' ||
+    executionPlan.toolInput[TRUSTED_MATERIAL_RESULT_SET_FILTER_MARKER] === true
+  ) {
+    return handleMaterialResultSetFilterTurn({
+      locale: responseLocale,
+      conversationId: input.conversationId,
+      toolInput: executionPlan.toolInput,
+    });
   }
 
   if (executionPlan.route === 'GENERAL_LEARNING') {

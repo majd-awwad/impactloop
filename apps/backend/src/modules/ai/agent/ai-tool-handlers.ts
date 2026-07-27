@@ -27,6 +27,9 @@ import type { AiContentBlock } from '../ai.content-blocks.js';
 import type { AiLocale } from '../ai.types.js';
 import {
   isGenericProjectBrowseQuery,
+  isMaterialSearchNoiseQuery,
+  normalizeMaterialCategoryText,
+  normalizeMaterialItemQuery,
   normalizeOwnedMaterialForMatching,
   ownedMaterialAliasGroups,
   stripProjectBudgetCostSuffix,
@@ -333,6 +336,24 @@ const filterByMaxPrice = <T extends { price?: number | null; isFree: boolean }>(
 
   return items.filter((item) => item.isFree || (item.price ?? Infinity) <= maxPrice);
 };
+
+export { filterByMaxPrice };
+
+const resolveMaterialSearchFetchLimit = (input: {
+  limit: number;
+  maxPrice?: number;
+  maxDistanceKm?: number;
+  nearLearner?: boolean;
+}): number => {
+  const needsPostFilter =
+    input.maxPrice != null ||
+    input.maxDistanceKm != null ||
+    input.nearLearner === true;
+
+  return needsPostFilter ? Math.min(Math.max(input.limit * 10, 50), 100) : input.limit;
+};
+
+export { resolveMaterialSearchFetchLimit };
 
 const filterByDistance = <T>(
   items: T[],
@@ -1030,13 +1051,23 @@ export const executeLearnerAgentTool = async (
     }
 
     case 'search_available_materials': {
-      const input = searchAvailableMaterialsInputSchema.parse(rawInput ?? {});
+      const parsedInput = searchAvailableMaterialsInputSchema.parse(rawInput ?? {});
+      const input = {
+        ...parsedInput,
+        query: normalizeMaterialItemQuery(parsedInput.query),
+        categoryText: normalizeMaterialCategoryText(parsedInput.categoryText),
+      };
+      if (isMaterialSearchNoiseQuery(input.query)) {
+        delete input.query;
+      }
+
       const limit = Math.min(input.limit ?? 10, 10);
-      const needsPostFilter =
-        input.maxPrice != null ||
-        input.maxDistanceKm != null ||
-        input.nearLearner === true;
-      const fetchLimit = needsPostFilter ? Math.min(Math.max(limit * 10, 50), 100) : limit;
+      const fetchLimit = resolveMaterialSearchFetchLimit({
+        limit,
+        maxPrice: input.maxPrice,
+        maxDistanceKm: input.maxDistanceKm,
+        nearLearner: input.nearLearner,
+      });
       const query = await toMaterialsQuery(input, context, { queryLimit: fetchLimit });
       const result = await getMaterials(query, viewer);
       let items = [...result.items].filter(

@@ -159,6 +159,10 @@ const CATEGORY_SYNONYMS: Array<{ terms: string[]; categoryText: string }> = [
       'الكترونيات',
       'الالكترونيات',
       'الكترونيه',
+      'إلكترونية',
+      'الكترونية',
+      'إلكترونيه',
+      'الكترونيه',
       'دوائر كهربائية',
       'دوائر كهربائيه',
       'دوائر',
@@ -405,6 +409,66 @@ export const extractMaterialSearchFilters = (
   return filters;
 };
 
+const PRICE_FILTER_TERMS = [
+  'وسعرها',
+  'سعرها',
+  'سعر',
+  'أقل',
+  'اقل',
+  'شيكل',
+  'شيكلات',
+  'nis',
+  'under',
+  'below',
+  'max',
+  'maximum',
+  'price',
+];
+
+export const isMaterialSearchNoiseQuery = (query: string | undefined): boolean => {
+  if (!query?.trim()) {
+    return true;
+  }
+
+  const normalized = normalizeArabicVariants(normalize(query));
+  if (!normalized) {
+    return true;
+  }
+
+  if (/(وسعرها|سعرها|شيكل|اقل|أقل)/i.test(normalized)) {
+    return true;
+  }
+
+  if (/^(ية|يه|ه)$/iu.test(normalized)) {
+    return true;
+  }
+
+  return isLowQualityMaterialQuery(query);
+};
+
+export const normalizeMaterialCategoryText = (
+  categoryText: string | undefined,
+): string | undefined => {
+  if (!categoryText?.trim()) {
+    return undefined;
+  }
+
+  const normalized = normalizeArabicVariants(normalize(categoryText));
+  for (const category of CATEGORY_SYNONYMS) {
+    if (
+      category.terms.some(
+        (term) =>
+          normalizeArabicVariants(normalize(term)) === normalized ||
+          normalized.includes(normalizeArabicVariants(normalize(term))),
+      )
+    ) {
+      return category.categoryText;
+    }
+  }
+
+  return categoryText.trim();
+};
+
 const isLowQualityMaterialQuery = (query: string): boolean => {
   const normalized = normalizeArabicVariants(normalize(query));
   if (!normalized) {
@@ -442,6 +506,7 @@ export const extractMaterialItemQuery = (
     ...NEAR_TERMS,
     ...DELIVERY_TERMS,
     ...PICKUP_TERMS,
+    ...PRICE_FILTER_TERMS,
     ...CATEGORY_SYNONYMS.flatMap((entry) => entry.terms),
   ]) {
     working = working.replace(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
@@ -472,7 +537,7 @@ export const extractMaterialItemQuery = (
   }
 
   const candidate = tokens.join(' ').slice(0, 120);
-  if (isLowQualityMaterialQuery(candidate)) {
+  if (isMaterialSearchNoiseQuery(candidate)) {
     return undefined;
   }
 
@@ -488,7 +553,7 @@ const ITEM_QUERY_ALIASES: Record<string, string> = {
 export const normalizeMaterialItemQuery = (
   query: string | undefined,
 ): string | undefined => {
-  if (!query) {
+  if (!query || isMaterialSearchNoiseQuery(query)) {
     return undefined;
   }
 
@@ -528,11 +593,174 @@ export type PlatformGuidanceTopic =
   | 'GENERAL_PLATFORM';
 
 const hasPlatformGuidanceHowToCue = (text: string, normalized: string): boolean =>
-  /(كيف\s+(?:أ|ا)?(?:قدر|قدر|بقدر)|how\s+(?:can|do)\s+i|how\s+to|كيف\s+(?:أ|ا)?(?:حفظ|احفظ|احجز|اطلب|أطلب)|what\s+(?:happens|is\s+the\s+process)|شو\s+بيصير|شو\s+بصير|ما\s+الخطوات|what\s+are\s+the\s+steps)/i.test(
+  /(كيف\s+(?:أ|ا)?(?:قدر|قدر|بقدر)|how\s+(?:can|do)\s+i|how\s+to|كيف\s+(?:أ|ا)?(?:حفظ|احفظ|احجز|اطلب|أطلب|أنشر|انشر)|what\s+(?:happens|is\s+the\s+process)|شو\s+بيصير|شو\s+بصير|ما\s+الخطوات|what\s+are\s+the\s+steps)/i.test(
     normalized,
   ) ||
   /(كيف\s+(?:أ|ا)?(?:قدر|قدر)|how\s+(?:can|do)\s+i)/i.test(text) ||
   /(شو\s+أعمل|شو\s+اعمل|what\s+(?:should|do)\s+i\s+do)/i.test(normalized);
+
+export const LEARNER_RESERVATION_STATUS_QUERY_MARKER =
+  'learnerReservationStatusQuery' as const;
+
+export const isLearnerReservationStatusQueryPlan = (
+  toolInput: Record<string, unknown> | undefined,
+): boolean => toolInput?.[LEARNER_RESERVATION_STATUS_QUERY_MARKER] === true;
+
+export const detectLearnerReservationStatusQuery = (
+  userMessage: string,
+): boolean => {
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+  if (hasPlatformGuidanceHowToCue(userMessage, normalized)) {
+    return false;
+  }
+
+  const asksOwnData =
+    /(هل\s+عندي|do\s+i\s+have|show\s+my|list\s+my|my\s+reservations?)/i.test(
+      normalized,
+    );
+  const mentionsReservations = /(حجوز|reservation)/i.test(normalized);
+
+  return asksOwnData && mentionsReservations;
+};
+
+export const LEARNER_RESERVATION_TERMINAL_STATUSES = new Set([
+  'EXPIRED',
+  'COMPLETED',
+  'CANCELLED',
+  'REJECTED',
+]);
+
+export const isLearnerPendingReservationQuery = (userMessage: string): boolean => {
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+  return (
+    /(معلقه|pending)/i.test(normalized) &&
+    !/(كل|all|any|اي|أي)/i.test(normalized)
+  );
+};
+
+export const isLearnerAllReservationsQuery = (userMessage: string): boolean => {
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+  return /(كل\s+حجوزاتي|كل\s+حجوزات|all\s+my\s+reservations|every\s+reservation)/i.test(
+    normalized,
+  );
+};
+
+export const filterLearnerReservationsForStatusQuery = <
+  T extends { status: string },
+>(
+  reservations: T[],
+  scope: 'pending' | 'all',
+): T[] => {
+  if (scope === 'pending') {
+    return reservations.filter((reservation) => reservation.status === 'PENDING');
+  }
+
+  return reservations;
+};
+
+export const detectSupplierPublishGuidanceIntent = (
+  userMessage: string,
+): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+  if (isImperativePlatformAction(userMessage, normalized)) {
+    return false;
+  }
+
+  const mentionsMaterial = /(مواد|مادة|ماده|materials?|listing)/i.test(normalized);
+  const publishCue =
+    /(أنشر|انشر|publish|listing|list\s+a\s+material|post\s+a\s+material)/i.test(
+      normalized,
+    );
+  const howToCue = hasPlatformGuidanceHowToCue(userMessage, normalized);
+  const supplierCue = /(supplier|مورد|بائع|vendor)/i.test(normalized);
+
+  return mentionsMaterial && publishCue && (howToCue || supplierCue || /عندي/i.test(normalized));
+};
+
+export const detectAppMaterialNavigationGuidanceIntent = (
+  userMessage: string,
+): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+
+  const normalized = normalizeArabicVariants(normalize(userMessage));
+  const hasAppContext =
+    /(من\s+التطبيق|بالتطبيق|in\s+the\s+app|on\s+impactloop|impactloop|حجوزاتي|my\s+reservations)/i.test(
+      normalized,
+    );
+  const navigationCue =
+    /(وين\s+بروح|وين\s+أروح|أين\s+أذهب|اين\s+اذهب|where\s+(?:do\s+i\s+go|should\s+i\s+go|to\s+go))/i.test(
+      normalized,
+    );
+  const materialCue = /(مواد|مادة|ماده|material)/i.test(normalized);
+  const interestCue =
+    /(عجبتني|عجبني|لقيت|وجدت|found|like|liked|interested)/i.test(normalized);
+
+  return hasAppContext && navigationCue && materialCue && interestCue;
+};
+
+export const isMaterialUseContextQuery = (userMessage: string): boolean =>
+  /(?:مع|لل|لـ|ل\s|with|for|usable\s+with|use\s+with|أستخدمها\s+مع|للاردو|لأردو|للاردنو)\s*(?:arduino|اردو|أردو|اردنو|esp32|robot|روبوت)/i.test(
+    userMessage,
+  ) ||
+  /(?:arduino|اردو|أردو|اردنو).*(?:مواد|materials|قطع|parts)/i.test(userMessage);
+
+export const detectProjectSearchIntent = (userMessage: string): boolean => {
+  if (detectEducationalLearningIntent(userMessage)) {
+    return false;
+  }
+  if (detectProjectsWithinBudgetIntent(userMessage)) {
+    return false;
+  }
+
+  const parsedMessage = stripBenignListPrefixForParsing(userMessage);
+  const normalized = normalize(parsedMessage);
+  const asksProjects = /(مشاريع|projects)/i.test(normalized);
+  const searchCue =
+    includesAny(normalized, SEARCH_VERBS) ||
+    /(مناسبة|suitable|for\s+beginners?|مبتدئ|beginner)/i.test(normalized);
+
+  return asksProjects && searchCue;
+};
+
+export const hasTrustedProjectMaterialContext = (userMessage: string): boolean => {
+  if (hasContextualProjectMaterialReference(userMessage)) {
+    return true;
+  }
+
+  if (isMaterialUseContextQuery(userMessage)) {
+    return false;
+  }
+
+  if (isExplicitMaterialSearchCommand(userMessage)) {
+    return false;
+  }
+
+  if (detectProjectSearchIntent(userMessage)) {
+    return false;
+  }
+
+  const normalized = normalize(stripBenignListPrefixForParsing(userMessage));
+  if (/(مشروع|project)/i.test(normalized)) {
+    if (/(?:بدي|بدك|want to|i want to)\s+(?:أعمل|اعمل|build|make)/i.test(userMessage)) {
+      return true;
+    }
+    if (extractProjectTitleQuery(userMessage) != null) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+export const shouldCorrectToMaterialSearch = (userMessage: string): boolean =>
+  isExplicitMaterialSearchCommand(userMessage) &&
+  !hasTrustedProjectMaterialContext(userMessage);
 
 const isReservationWorkflowGuidanceQuestion = (
   userMessage: string,
@@ -579,17 +807,15 @@ export const detectPlatformGuidanceIntent = (
     return 'MATERIAL_RESERVATION';
   }
 
-  if (
-    /(حجوزات|reservations?)/i.test(normalized) &&
-    /(معلقة|pending|status|حالتها|حالة)/i.test(normalized)
-  ) {
-    return 'GENERAL_PLATFORM';
+  if (detectLearnerReservationStatusQuery(userMessage)) {
+    return null;
   }
 
-  if (
-    /(هل\s+عندي|do\s+i\s+have)/i.test(normalized) &&
-    /(حجوز|reservation)/i.test(normalized)
-  ) {
+  if (detectAppMaterialNavigationGuidanceIntent(userMessage)) {
+    return 'MATERIAL_RESERVATION';
+  }
+
+  if (detectSupplierPublishGuidanceIntent(userMessage)) {
     return 'GENERAL_PLATFORM';
   }
 
@@ -1443,10 +1669,7 @@ export const detectProjectMaterialAvailabilityIntent = (
   if (detectComponentMaterialMatchingIntent(userMessage)) {
     return false;
   }
-  if (
-    isExplicitMaterialSearchCommand(userMessage) &&
-    !hasContextualProjectMaterialReference(userMessage)
-  ) {
+  if (shouldCorrectToMaterialSearch(userMessage)) {
     return false;
   }
   if (/(احجز|reserve|book)\b/i.test(userMessage)) {
@@ -1697,7 +1920,7 @@ export const mergeMaterialSearchPlan = (
     plan.query = query;
   }
   if (filters.categoryText) {
-    plan.categoryText = filters.categoryText;
+    plan.categoryText = normalizeMaterialCategoryText(filters.categoryText);
   }
   if (filters.isFree != null) {
     plan.isFree = filters.isFree;
@@ -2099,8 +2322,26 @@ export const detectBareOwnedMaterialsPossession = (userMessage: string): boolean
 
 export const isAffirmativeOwnedMaterialsContinuation = (userMessage: string): boolean => {
   const trimmed = userMessage.trim();
-  return /^(?:آه|اه|أجل|ايوه|ايوا|نعم|ورجيني|ورّيني|أكيد|تمام|yes|yeah|yep|sure|ok|okay|please|go\s+ahead)(?:\s|[,.،]|$)/i.test(
-    trimmed,
+  const normalized = normalize(trimmed);
+
+  if (
+    /^(?:ورجيني|ورّيني|وريني)\s+\S+/iu.test(normalized) &&
+    !/^(?:ورجيني|ورّيني|وريني)\s*[?.!،.]*$/i.test(normalized) &&
+    !/^(?:ورجيني|ورّيني|وريني)\s*(?:اللي|يلي|هذول|هاي|هذي)\s*[?.!،.]*$/iu.test(
+      normalized,
+    )
+  ) {
+    return false;
+  }
+
+  return (
+    /^(?:آه|اه|أجل|ايوه|ايوا|نعم|أكيد|تمام|yes|yeah|yep|sure|ok|okay|please|go\s+ahead)\s*[?.!،.]*$/i.test(
+      normalized,
+    ) ||
+    /^(?:ورجيني|ورّيني|وريني)\s*[?.!،.]*$/i.test(normalized) ||
+    /^(?:آه|اه|أجل|ايوه|ايوا|نعم|أكيد|تمام)[\s،,]+(?:ورجيني|ورّيني|وريني)\s*[?.!،.]*$/i.test(
+      normalized,
+    )
   );
 };
 

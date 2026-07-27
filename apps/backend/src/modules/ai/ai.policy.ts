@@ -187,3 +187,25 @@ export const buildPlatformGuidanceResponse = (
   topic: PlatformGuidanceTopic,
   locale: 'en' | 'ar',
 ): string => PLATFORM_GUIDANCE_COPY[topic][locale];
+
+export const SUPPLIER_PUBLISH_GUIDANCE_COPY = {
+  en: [
+    'To publish a material you own on ImpactLoop as a Supplier:',
+    '1) Open Become a Supplier from the app and complete the personal supplier onboarding steps.',
+    '2) Finish supplier profile and verification requirements when prompted.',
+    '3) Open the Supplier portal and choose Publish material.',
+    '4) Add photos, quantity, pickup/delivery options, and pricing details, then submit for review.',
+    '5) Track approval status from your supplier materials list. Publishing stays in the Supplier portal—I cannot publish on your behalf from chat.',
+  ].join('\n'),
+  ar: [
+    'لنشر مادة تملكها على ImpactLoop كمورد:',
+    '1) افتح «كن مورّدًا» من التطبيق وأكمل خطوات الانضمام كمورد فردي.',
+    '2) أكمل ملف المورد ومتطلبات التحقق عندما يُطلب منك ذلك.',
+    '3) افتح بوابة المورد واختر «نشر المادة».',
+    '4) أضف الصور والكمية وخيارات الاستلام/التوصيل وتفاصيل السعر، ثم أرسل للمراجعة.',
+    '5) تابع حالة الموافقة من قائمة مواد المورد. النشر يتم من بوابة المورد—لا أستطيع النشر نيابةً عنك من المحادثة.',
+  ].join('\n'),
+} as const;
+
+export const buildSupplierPublishGuidanceResponse = (locale: 'en' | 'ar'): string =>
+  SUPPLIER_PUBLISH_GUIDANCE_COPY[locale];
