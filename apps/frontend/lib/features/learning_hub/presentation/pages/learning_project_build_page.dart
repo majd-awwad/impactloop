@@ -64,9 +64,13 @@ class _LearningProjectBuildPageState
     if (oldWidget.projectId != widget.projectId ||
         oldWidget.recommendationImpressionId !=
             widget.recommendationImpressionId) {
-      _buildOverride = null;
       _isStarting = false;
       _updatingItemIds.clear();
+      _completingStepIds.clear();
+      _activeGuideConversationId = null;
+      _guideRestoreRequest = null;
+      _redirectedNarrowGuide = false;
+      _refreshBuild();
     }
   }
 
