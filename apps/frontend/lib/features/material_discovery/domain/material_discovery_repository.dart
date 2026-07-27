@@ -16,13 +16,10 @@ abstract class MaterialDiscoveryRepository {
     String? recommendationImpressionId,
   });
 
-<<<<<<< Updated upstream
   Future<MaterialEngagement> unlikeMaterial(
     String id, {
     String? recommendationImpressionId,
   });
-=======
-  Future<MaterialEngagement> unlikeMaterial(String id);
 
   Future<PublicSupplier?> fetchPublicSupplier(String supplierProfileId);
 
@@ -34,5 +31,4 @@ abstract class MaterialDiscoveryRepository {
   Future<SupplierFollowStatus> followSupplier(String supplierProfileId);
 
   Future<SupplierFollowStatus> unfollowSupplier(String supplierProfileId);
->>>>>>> Stashed changes
 }
