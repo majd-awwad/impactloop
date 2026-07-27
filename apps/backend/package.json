@@ -26,6 +26,7 @@
     "recommendations:ml:snapshot:local": "tsx scripts/export-local-ml-training-snapshot.ts",
     "recommendations:ml:train:local": "tsx scripts/train-local-lightfm.ts train",
     "recommendations:ml:validate:local": "tsx scripts/train-local-lightfm.ts validate-artifact",
+    "recommendations:ml:smoke:local": "tsx scripts/recommendations-ml-smoke-local.ts",
     "test:recommendations:ml:local": "node --import tsx --test scripts/train-local-lightfm.test.ts",
     "typecheck:recommendations:ml:local": "tsc --ignoreConfig --noEmit --target ES2022 --module Node16 --moduleResolution Node16 --strict --esModuleInterop --skipLibCheck src/types/express.d.ts scripts/train-local-lightfm.ts scripts/train-local-lightfm.test.ts",
     "validate:production-config": "tsx scripts/validate-production-config.ts",
