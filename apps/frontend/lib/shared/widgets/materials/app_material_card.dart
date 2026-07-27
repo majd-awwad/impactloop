@@ -90,10 +90,7 @@ class AppMaterialCard extends StatelessWidget {
           height: ImpactMaterialGridCard.heightForWidth(
             width,
             variant: variant,
-<<<<<<< Updated upstream
-=======
             includesSupplierAttribution: includesSupplierAttribution,
->>>>>>> Stashed changes
           ),
           child: ImpactMaterialGridCard(
             title: title,
@@ -342,21 +339,6 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                                 AppSpacing.sm + AppSpacing.xs,
                                 AppSpacing.sm + AppSpacing.xs,
                               ),
-<<<<<<< Updated upstream
-                              textAlign: TextAlign.start,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: _CompactPriceBadge(
-                                    label: priceLabel,
-                                    isFree: isFree,
-=======
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -370,7 +352,6 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                                     textAlign: TextAlign.start,
                                     maxLines: title.runes.length > 34 ? 2 : 1,
                                     overflow: TextOverflow.ellipsis,
->>>>>>> Stashed changes
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
