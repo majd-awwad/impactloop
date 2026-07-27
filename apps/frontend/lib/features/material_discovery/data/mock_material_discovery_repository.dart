@@ -107,4 +107,43 @@ class MockMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
       isLiked: false,
     );
   }
+
+  @override
+  Future<PublicSupplier?> fetchPublicSupplier(String supplierProfileId) async {
+    return null;
+  }
+
+  @override
+  Future<MaterialDiscoveryResult> fetchSupplierMaterials(
+    String supplierProfileId,
+    MaterialDiscoveryQuery query,
+  ) async {
+    return const MaterialDiscoveryResult(
+      items: [],
+      pagination: MaterialDiscoveryPagination(
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0,
+      ),
+    );
+  }
+
+  @override
+  Future<SupplierFollowStatus> followSupplier(String supplierProfileId) async {
+    return SupplierFollowStatus(
+      supplierProfileId: supplierProfileId,
+      followersCount: 1,
+      isFollowedByViewer: true,
+    );
+  }
+
+  @override
+  Future<SupplierFollowStatus> unfollowSupplier(String supplierProfileId) async {
+    return SupplierFollowStatus(
+      supplierProfileId: supplierProfileId,
+      followersCount: 0,
+      isFollowedByViewer: false,
+    );
+  }
 }

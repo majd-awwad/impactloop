@@ -17,6 +17,7 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   final Dio _client;
 
   static const _basePath = '/api/materials';
+  static const _suppliersBasePath = '/api/suppliers';
 
   @override
   Future<MaterialDiscoveryResult> fetchMaterials(MaterialDiscoveryQuery query) {
@@ -170,6 +171,58 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
         ),
       ),
       MaterialEngagement.fromJson,
+    );
+  }
+
+  @override
+  Future<PublicSupplier?> fetchPublicSupplier(String supplierProfileId) async {
+    try {
+      return await unwrapApiResponse(
+        _client.get<Map<String, dynamic>>(
+          '$_suppliersBasePath/$supplierProfileId',
+        ),
+        PublicSupplier.fromJson,
+      );
+    } on ApiException catch (error) {
+      if (error.statusCode == 404 || error.code == 'NOT_FOUND') {
+        return null;
+      }
+
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MaterialDiscoveryResult> fetchSupplierMaterials(
+    String supplierProfileId,
+    MaterialDiscoveryQuery query,
+  ) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/materials',
+        queryParameters: buildQueryParameters(query),
+      ),
+      _parseResult,
+    );
+  }
+
+  @override
+  Future<SupplierFollowStatus> followSupplier(String supplierProfileId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/follow',
+      ),
+      SupplierFollowStatus.fromJson,
+    );
+  }
+
+  @override
+  Future<SupplierFollowStatus> unfollowSupplier(String supplierProfileId) {
+    return unwrapApiResponse(
+      _client.delete<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/follow',
+      ),
+      SupplierFollowStatus.fromJson,
     );
   }
 }

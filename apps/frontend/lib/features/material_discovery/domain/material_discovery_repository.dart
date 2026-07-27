@@ -16,8 +16,23 @@ abstract class MaterialDiscoveryRepository {
     String? recommendationImpressionId,
   });
 
+<<<<<<< Updated upstream
   Future<MaterialEngagement> unlikeMaterial(
     String id, {
     String? recommendationImpressionId,
   });
+=======
+  Future<MaterialEngagement> unlikeMaterial(String id);
+
+  Future<PublicSupplier?> fetchPublicSupplier(String supplierProfileId);
+
+  Future<MaterialDiscoveryResult> fetchSupplierMaterials(
+    String supplierProfileId,
+    MaterialDiscoveryQuery query,
+  );
+
+  Future<SupplierFollowStatus> followSupplier(String supplierProfileId);
+
+  Future<SupplierFollowStatus> unfollowSupplier(String supplierProfileId);
+>>>>>>> Stashed changes
 }

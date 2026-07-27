@@ -1,0 +1,11 @@
+ apps/backend/src/app.ts                            | Unmerged
+ apps/backend/src/app.ts                            |  28 [32m++[m
+ .../src/modules/materials/materials.service.ts     | Unmerged
+ .../src/modules/materials/materials.service.ts     | 194 [32m+++++++++[m[31m-[m
+ .../domain/material_discovery_repository.dart      | Unmerged
+ .../domain/material_discovery_repository.dart      |  15 [32m+[m
+ .../widgets/materials/app_material_card.dart       | Unmerged
+ .../widgets/materials/app_material_card.dart       | 397 [32m++++++++++++++[m[31m-------[m
+ .../test/material_discovery_api_mapper_test.dart   | Unmerged
+ .../test/material_discovery_api_mapper_test.dart   |  74 [32m++++[m
+ 5 files changed, 570 insertions(+), 138 deletions(-)

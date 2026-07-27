@@ -80,6 +80,7 @@ class MaterialDiscoveryApiMapper {
     final imageUrl = galleryImages.isNotEmpty
         ? galleryImages.first.url
         : _resolveImageUrl(json);
+    final supplier = _mapSupplierSummary(json);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
@@ -125,6 +126,7 @@ class MaterialDiscoveryApiMapper {
           const LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
       supplierType: supplierType,
       supplierVerified: supplierVerified,
+      supplier: supplier,
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
       imageUrl: imageUrl,
@@ -147,6 +149,35 @@ class MaterialDiscoveryApiMapper {
       recommendationImpressionId: _recommendationImpressionId(
         json['recommendationImpressionId'],
       ),
+    );
+  }
+
+  static DiscoveryMaterialSupplierSummary? _mapSupplierSummary(
+    Map<String, dynamic> json,
+  ) {
+    final supplierJson = _asMap(json['supplier']);
+    if (supplierJson == null) {
+      return null;
+    }
+
+    final id = _nullableString(supplierJson['id']);
+    if (id == null) {
+      return null;
+    }
+
+    final avatarUrl = _nullableString(supplierJson['avatarUrl']);
+
+    return DiscoveryMaterialSupplierSummary(
+      id: id,
+      displayName: _stringOrFallback(
+        supplierJson['displayName'],
+        fallback: 'ImpactLoop supplier',
+      ),
+      avatarUrl: avatarUrl == null ? null : ApiConfig.resolveMediaUrl(avatarUrl),
+      city: _nullableString(supplierJson['city']),
+      area: _nullableString(supplierJson['area']),
+      followersCount: _intFromDynamic(supplierJson['followersCount']),
+      isFollowedByViewer: supplierJson['isFollowedByViewer'] == true,
     );
   }
 

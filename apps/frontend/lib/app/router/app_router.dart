@@ -36,6 +36,7 @@ import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -721,6 +722,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             buildItemId: query['buildItemId'],
             returnTo: query['returnTo'],
             componentName: query['componentName'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/suppliers/:supplierProfileId',
+        builder: (context, state) {
+          final supplierProfileId = state.pathParameters['supplierProfileId']!;
+
+          return PublicSupplierPage(
+            supplierProfileId: supplierProfileId,
           );
         },
       ),
