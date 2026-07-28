@@ -9,9 +9,14 @@ import '../domain/material_engagement.dart';
 import '../domain/material_discovery_query.dart';
 import '../domain/material_discovery_repository.dart';
 import '../domain/material_discovery_result.dart';
+import '../domain/material_performance_models.dart';
 import 'material_discovery_api_mapper.dart';
 
-class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
+class ApiMaterialDiscoveryRepository
+    implements
+        MaterialDiscoveryRepository,
+        MaterialDetailsPerformanceRepository,
+        PublicSupplierPerformanceRepository {
   const ApiMaterialDiscoveryRepository(this._client);
 
   final Dio _client;
@@ -143,6 +148,87 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
   }
 
   @override
+  Future<DiscoveryMaterial?> getPublicMaterialById(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await unwrapApiResponse(
+        _client.get<Map<String, dynamic>>(
+          '$_basePath/$id',
+          cancelToken: cancelToken,
+        ),
+        MaterialDiscoveryApiMapper.fromJson,
+      );
+    } on ApiException catch (error) {
+      if (error.statusCode == 404 || error.code == 'NOT_FOUND') return null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MaterialViewerState> getMaterialViewerState(
+    String id, {
+    CancelToken? cancelToken,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$id/viewer-state',
+        cancelToken: cancelToken,
+      ),
+      MaterialViewerState.fromJson,
+    );
+  }
+
+  @override
+  Future<void> recordMaterialView(
+    String id, {
+    required String operationKey,
+    String? recommendationImpressionId,
+  }) async {
+    await _client.post<Map<String, dynamic>>(
+      '$_basePath/$id/view',
+      options: Options(
+        headers: {
+          'Idempotency-Key': operationKey,
+          ...?recommendationHeaders(recommendationImpressionId),
+        },
+      ),
+    );
+  }
+
+  @override
+  Future<RelatedMaterialsResult> fetchRelatedMaterials(
+    String id, {
+    int limit = 4,
+    CancelToken? cancelToken,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/$id/related',
+        queryParameters: {'limit': limit},
+        cancelToken: cancelToken,
+      ),
+      (json) {
+        List<DiscoveryMaterial> parse(Object? value) => value is List
+            ? value
+                  .whereType<Map>()
+                  .map(
+                    (item) => MaterialDiscoveryApiMapper.fromJson(
+                      Map<String, dynamic>.from(item),
+                    ),
+                  )
+                  .toList(growable: false)
+            : const [];
+        return RelatedMaterialsResult(
+          category: parse(json['category']),
+          nearby: parse(json['nearby']),
+        );
+      },
+    );
+  }
+
+  @override
   Future<MaterialEngagement> likeMaterial(
     String id, {
     String? recommendationImpressionId,
@@ -190,6 +276,56 @@ class ApiMaterialDiscoveryRepository implements MaterialDiscoveryRepository {
 
       rethrow;
     }
+  }
+
+  @override
+  Future<PublicSupplier?> fetchPublicSupplierCore(
+    String supplierProfileId, {
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await unwrapApiResponse(
+        _client.get<Map<String, dynamic>>(
+          '$_suppliersBasePath/$supplierProfileId',
+          cancelToken: cancelToken,
+        ),
+        PublicSupplier.fromJson,
+      );
+    } on ApiException catch (error) {
+      if (error.statusCode == 404 || error.code == 'NOT_FOUND') return null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<SupplierViewerState> fetchSupplierViewerState(
+    String supplierProfileId, {
+    CancelToken? cancelToken,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/viewer-state',
+        cancelToken: cancelToken,
+      ),
+      SupplierViewerState.fromJson,
+    );
+  }
+
+  @override
+  Future<MaterialDiscoveryResult> fetchSupplierMaterialsPage(
+    String supplierProfileId, {
+    required int page,
+    required int limit,
+    CancelToken? cancelToken,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_suppliersBasePath/$supplierProfileId/materials',
+        queryParameters: {'page': page, 'limit': limit},
+        cancelToken: cancelToken,
+      ),
+      _parseResult,
+    );
   }
 
   @override

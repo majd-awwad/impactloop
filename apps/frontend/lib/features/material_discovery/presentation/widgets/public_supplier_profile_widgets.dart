@@ -53,6 +53,12 @@ class PublicSupplierProfileHeader extends StatelessWidget {
                   : Image.network(
                       resolvedCover,
                       fit: BoxFit.cover,
+                      cacheWidth: 1400,
+                      filterQuality: FilterQuality.low,
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                          ? child
+                          : const _PublicSupplierCoverFallback(),
                       errorBuilder: (_, _, _) =>
                           const _PublicSupplierCoverFallback(),
                     ),
@@ -106,9 +112,10 @@ class PublicSupplierProfileHeader extends StatelessWidget {
                                     Expanded(
                                       child: Text(
                                         location,
-                                        style: AppTextStyles.body(
-                                          context,
-                                        ).copyWith(color: palette.textSecondary),
+                                        style: AppTextStyles.body(context)
+                                            .copyWith(
+                                              color: palette.textSecondary,
+                                            ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -155,14 +162,15 @@ class PublicSupplierProfileHeader extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: isUpdatingFollow ? null : onToggleFollow,
-                    style: AppStatusButtonStyle.filled(
-                      context,
-                      AppStatusTone.primary,
-                    ).copyWith(
-                      minimumSize: const WidgetStatePropertyAll(
-                        Size.fromHeight(44),
-                      ),
-                    ),
+                    style:
+                        AppStatusButtonStyle.filled(
+                          context,
+                          AppStatusTone.primary,
+                        ).copyWith(
+                          minimumSize: const WidgetStatePropertyAll(
+                            Size.fromHeight(44),
+                          ),
+                        ),
                     child: isUpdatingFollow
                         ? const SizedBox(
                             width: 20,
@@ -215,10 +223,7 @@ class _PublicSupplierCoverFallback extends StatelessWidget {
 }
 
 class _PublicSupplierHeaderChip extends StatelessWidget {
-  const _PublicSupplierHeaderChip({
-    required this.label,
-    required this.icon,
-  });
+  const _PublicSupplierHeaderChip({required this.label, required this.icon});
 
   final String label;
   final IconData icon;
@@ -244,9 +249,10 @@ class _PublicSupplierHeaderChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w600),
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -338,7 +344,10 @@ class _PublicSupplierStatCell extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
 
     return AppSectionCard(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 12),
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: 8,
+        vertical: 12,
+      ),
       borderRadius: AppRadius.mdAll,
       tone: item.tone,
       child: Column(
@@ -420,8 +429,9 @@ class PublicSupplierTabBar extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: AppTextStyles.label(context).copyWith(
                           color: selected ? palette.mint : palette.textMuted,
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                         ),
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -33,18 +34,20 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
   final Map<String, CommentsPagination?> _replyPagination = {};
   final Set<String> _expandedRoots = {};
   final Set<String> _loadingReplies = {};
+  final Map<String, CancelToken> _replyCancelTokens = {};
 
   CommentItem? _replyingTo;
   String? _editingCommentId;
   bool _submitting = false;
 
-  CommentsTargetKey get _key => (
-    type: widget.targetType,
-    targetId: widget.targetId,
-  );
+  CommentsTargetKey get _key =>
+      (type: widget.targetType, targetId: widget.targetId);
 
   @override
   void dispose() {
+    for (final token in _replyCancelTokens.values) {
+      token.cancel('Comments section disposed');
+    }
     _composerController.dispose();
     super.dispose();
   }
@@ -86,6 +89,9 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
     });
 
     try {
+      _replyCancelTokens[root.id]?.cancel('Reply request replaced');
+      final cancelToken = CancelToken();
+      _replyCancelTokens[root.id] = cancelToken;
       final currentPage = reset
           ? 1
           : ((_replyPagination[root.id]?.page ?? 0) + 1);
@@ -96,6 +102,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
             targetId: widget.targetId,
             rootCommentId: root.id,
             page: currentPage,
+            cancelToken: cancelToken,
           );
 
       if (!mounted) {
@@ -110,7 +117,14 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
         _replyPagination[root.id] = page.pagination;
         _expandedRoots.add(root.id);
       });
+    } on DioException catch (error) {
+      if (!CancelToken.isCancel(error) && mounted) {
+        showErrorSnackBar(context, error);
+      }
     } on ApiException catch (error) {
+      if (error.isCancellation) {
+        return;
+      }
       if (mounted) {
         showErrorSnackBar(context, error.message);
       }
@@ -120,6 +134,7 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
           _loadingReplies.remove(root.id);
         });
       }
+      _replyCancelTokens.remove(root.id);
     }
   }
 
@@ -320,7 +335,9 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (error, _) => Text(
-              error is ApiException ? error.message : 'Could not load comments.',
+              error is ApiException
+                  ? error.message
+                  : 'Could not load comments.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.error,
               ),
@@ -358,7 +375,8 @@ class _CommentsSectionState extends ConsumerState<CommentsSection> {
                           children: [
                             if (!_expandedRoots.contains(root.id))
                               TextButton(
-                                onPressed: () => _loadReplies(root, reset: true),
+                                onPressed: () =>
+                                    _loadReplies(root, reset: true),
                                 child: Text(
                                   'View ${root.repliesCount} ${root.repliesCount == 1 ? 'reply' : 'replies'}',
                                 ),
@@ -573,10 +591,7 @@ class _CommentTile extends StatelessWidget {
                       ),
                     ),
                   ),
-                Text(
-                  comment.body ?? '',
-                  style: theme.textTheme.bodyMedium,
-                ),
+                Text(comment.body ?? '', style: theme.textTheme.bodyMedium),
               ],
               if (!comment.isDeleted) ...[
                 const SizedBox(height: AppSpacing.xs),

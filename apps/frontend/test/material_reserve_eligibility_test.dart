@@ -231,4 +231,19 @@ void main() {
       'You cannot reserve your own material.',
     );
   });
+
+  test('viewer-state merge can clear a previous reserve block reason', () {
+    final material = _material(
+      canReserve: false,
+      reserveBlockReason: 'OPEN_RESERVATION_EXISTS',
+    );
+
+    final refreshed = material.copyWith(
+      canReserve: true,
+      reserveBlockReason: null,
+    );
+
+    expect(refreshed.canReserve, isTrue);
+    expect(refreshed.reserveBlockReason, isNull);
+  });
 }

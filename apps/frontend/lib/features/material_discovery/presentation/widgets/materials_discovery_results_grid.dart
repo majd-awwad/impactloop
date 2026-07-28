@@ -6,7 +6,6 @@ import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../domain/discovery_material.dart';
 import '../material_discovery_content.dart';
-import '../../../../shared/widgets/supplier/supplier_identity_widgets.dart';
 
 int materialDiscoveryGridColumnCount(double width) {
   if (width >= 1320) {
@@ -90,7 +89,8 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
         final effectiveCardVariant = itemWidth < 400
             ? AppMaterialCardVariant.compact
             : cardVariant;
-        final includesSupplierAttribution = showSupplierAttribution &&
+        final includesSupplierAttribution =
+            showSupplierAttribution &&
             materials.any(
               (material) =>
                   materialDiscoverySupplierDisplayName(material, context) !=
@@ -200,6 +200,78 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
           ? materialDiscoverySupplierTapHandler(context, material)
           : null,
       onTap: onMaterialTap == null ? null : () => onMaterialTap!(material),
+    );
+  }
+}
+
+class SliverMaterialsDiscoveryResultsGrid extends StatelessWidget {
+  const SliverMaterialsDiscoveryResultsGrid({
+    super.key,
+    required this.materials,
+    this.cardVariant = AppMaterialCardVariant.standard,
+    this.onMaterialTap,
+    this.showSupplierAttribution = true,
+  });
+
+  final List<DiscoveryMaterial> materials;
+  final AppMaterialCardVariant cardVariant;
+  final ValueChanged<DiscoveryMaterial>? onMaterialTap;
+  final bool showSupplierAttribution;
+
+  @override
+  Widget build(BuildContext context) {
+    final helper = MaterialsDiscoveryResultsGrid(
+      materials: materials,
+      cardVariant: cardVariant,
+      onMaterialTap: onMaterialTap,
+      showSupplierAttribution: showSupplierAttribution,
+    );
+    return SliverLayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.crossAxisExtent;
+        if (width < 600) {
+          return SliverList.separated(
+            itemCount: materials.length,
+            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+            itemBuilder: (context, index) =>
+                helper._buildCompactCard(context, materials[index]),
+          );
+        }
+
+        final columns = materialDiscoveryGridColumnCount(width);
+        final itemWidth = (width - ((columns - 1) * AppSpacing.md)) / columns;
+        final effectiveCardVariant = itemWidth < 400
+            ? AppMaterialCardVariant.compact
+            : cardVariant;
+        final includesSupplierAttribution =
+            showSupplierAttribution &&
+            materials.any(
+              (material) =>
+                  materialDiscoverySupplierDisplayName(material, context) !=
+                  null,
+            );
+        final cardHeight = ImpactMaterialGridCard.heightForWidth(
+          itemWidth,
+          variant: effectiveCardVariant,
+          includesSupplierAttribution: includesSupplierAttribution,
+        );
+        return SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: AppSpacing.md,
+            mainAxisSpacing: AppSpacing.md,
+            mainAxisExtent: cardHeight,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => helper._buildGridCard(
+              context,
+              materials[index],
+              effectiveCardVariant: effectiveCardVariant,
+            ),
+            childCount: materials.length,
+          ),
+        );
+      },
     );
   }
 }

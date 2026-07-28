@@ -495,6 +495,13 @@ class _CompactCardMediaState extends State<_CompactCardMedia> {
                 Image.network(
                   widget.imageUrl!.trim(),
                   fit: BoxFit.cover,
+                  cacheWidth: 480,
+                  filterQuality: FilterQuality.low,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                   errorBuilder: (context, error, stackTrace) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && !_imageFailed) {
@@ -786,6 +793,13 @@ class _GridCardMediaState extends State<_GridCardMedia> {
                 child: Image.network(
                   widget.imageUrl!.trim(),
                   fit: BoxFit.cover,
+                  cacheWidth: 720,
+                  filterQuality: FilterQuality.low,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                   errorBuilder: (context, error, stackTrace) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && !_imageFailed) {

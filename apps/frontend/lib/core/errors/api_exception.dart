@@ -18,6 +18,8 @@ class ApiException implements Exception {
   final int? statusCode;
   final Map<String, dynamic>? details;
 
+  bool get isCancellation => code == 'CANCELLED';
+
   List<ApiFieldIssue> get fieldIssues {
     final rawIssues = details?['issues'];
 
@@ -126,9 +128,10 @@ String projectSubmissionFieldMessage(ApiFieldIssue issue) {
     'difficulty' => 'Choose a difficulty level before submitting.',
     'estimatedDurationMinutes' =>
       'Add an estimated project duration before submitting.',
-    _ => issue.message.trim().isNotEmpty
-        ? issue.message
-        : 'Complete this required project detail before submitting.',
+    _ =>
+      issue.message.trim().isNotEmpty
+          ? issue.message
+          : 'Complete this required project detail before submitting.',
   };
 }
 

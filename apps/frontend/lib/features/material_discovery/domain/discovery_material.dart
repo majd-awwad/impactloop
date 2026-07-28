@@ -8,6 +8,8 @@ import '../../../shared/widgets/materials/material_status_badge.dart';
 import 'material_discovery_constants.dart';
 import 'discovery_material_image.dart';
 
+const _copyWithUnset = Object();
+
 class DiscoveryMaterialSupplierSummary {
   const DiscoveryMaterialSupplierSummary({
     required this.id,
@@ -143,6 +145,9 @@ class DiscoveryMaterial {
     int? viewsCount,
     int? likesCount,
     bool? isLiked,
+    bool? isOwnMaterial,
+    bool? canReserve,
+    Object? reserveBlockReason = _copyWithUnset,
     String? recommendationImpressionId,
   }) {
     return DiscoveryMaterial(
@@ -187,9 +192,11 @@ class DiscoveryMaterial {
       postedAt: postedAt,
       suggestedUses: suggestedUses,
       sourceType: sourceType,
-      isOwnMaterial: isOwnMaterial,
-      canReserve: canReserve,
-      reserveBlockReason: reserveBlockReason,
+      isOwnMaterial: isOwnMaterial ?? this.isOwnMaterial,
+      canReserve: canReserve ?? this.canReserve,
+      reserveBlockReason: identical(reserveBlockReason, _copyWithUnset)
+          ? this.reserveBlockReason
+          : reserveBlockReason as String?,
       recommendationImpressionId:
           recommendationImpressionId ?? this.recommendationImpressionId,
     );
@@ -282,10 +289,7 @@ class PublicSupplier {
   final int followersCount;
   final bool isFollowedByViewer;
 
-  PublicSupplier copyWith({
-    int? followersCount,
-    bool? isFollowedByViewer,
-  }) {
+  PublicSupplier copyWith({int? followersCount, bool? isFollowedByViewer}) {
     return PublicSupplier(
       id: id,
       displayName: displayName,
@@ -362,7 +366,8 @@ class SupplierFollowStatus {
   factory SupplierFollowStatus.fromJson(Map<String, dynamic> json) {
     return SupplierFollowStatus(
       supplierProfileId: json['supplierProfileId'] as String? ?? '',
-      followersCount: PublicSupplier._intFromDynamic(json['followersCount']) ?? 0,
+      followersCount:
+          PublicSupplier._intFromDynamic(json['followersCount']) ?? 0,
       isFollowedByViewer: json['isFollowedByViewer'] == true,
     );
   }

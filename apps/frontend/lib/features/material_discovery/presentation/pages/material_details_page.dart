@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -26,12 +27,9 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/widgets/supplier/supplier_identity_widgets.dart';
 import '../../../comments/domain/comment_models.dart';
 import '../../../comments/presentation/comments_section.dart';
-import '../../../deliveries/application/learner_deliveries_provider.dart';
-import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../learning_hub/application/learning_hub_providers.dart';
-import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
@@ -44,8 +42,9 @@ import '../../../reservations/presentation/reservation_create_error_message.dart
 import '../../../reservations/presentation/widgets/reservation_price_breakdown.dart';
 import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
-import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
+import '../../domain/material_performance_models.dart';
+import '../../domain/material_view_operation_key.dart';
 import '../material_reserve_eligibility.dart';
 import '../material_discovery_content.dart';
 import '../widgets/material_details_gallery.dart';
@@ -90,8 +89,17 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
       _MaterialDetailsPageState();
 }
 
-class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
-  static const _reservationRefreshInterval = Duration(seconds: 10);
+class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
+    with WidgetsBindingObserver {
+  static const _reservationRefreshInterval = Duration(seconds: 30);
+  static const _transitionalDeliveryStatuses = {
+    'WAITING_FOR_DRIVER',
+    'DRIVER_ASSIGNED',
+    'ARRIVED_PICKUP',
+    'PICKED_UP',
+    'ON_THE_WAY',
+    'ARRIVED_DROPOFF',
+  };
 
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
@@ -99,40 +107,173 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   DiscoveryMaterial? _materialOverride;
   bool _showReservationStatusCta = false;
   bool _isLikeUpdating = false;
+  MaterialViewerState? _viewerState;
+  bool _viewerStateLoading = false;
+  CancelToken? _materialCancelToken;
+  CancelToken? _viewerCancelToken;
+  late String _viewOperationKey;
+  bool _viewRecorded = false;
   Timer? _reservationRefreshTimer;
+  int _likeMutationGeneration = 0;
+  bool _observingLifecycle = false;
+  bool _isActive = true;
 
   @override
   void initState() {
     super.initState();
+    _startObservingLifecycle();
     _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
-    _materialFuture = _activeRepository.getMaterialById(
+    _viewOperationKey = createMaterialViewOperationKey(widget.materialId);
+    _materialFuture = _loadPublicMaterial();
+    Future.microtask(_loadViewerStateIfAuthenticated);
+  }
+
+  void _startObservingLifecycle() {
+    if (_observingLifecycle) return;
+    WidgetsBinding.instance.addObserver(this);
+    _observingLifecycle = true;
+  }
+
+  void _stopObservingLifecycle() {
+    if (!_observingLifecycle) return;
+    WidgetsBinding.instance.removeObserver(this);
+    _observingLifecycle = false;
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _isActive = true;
+    _startObservingLifecycle();
+  }
+
+  @override
+  void deactivate() {
+    _isActive = false;
+    _stopObservingLifecycle();
+    super.deactivate();
+  }
+
+  Future<DiscoveryMaterial?> _loadPublicMaterial() {
+    _materialCancelToken?.cancel('Material request replaced');
+    final cancelToken = CancelToken();
+    _materialCancelToken = cancelToken;
+    final repository = _activeRepository;
+    if (repository is MaterialDetailsPerformanceRepository) {
+      final performanceRepository =
+          repository as MaterialDetailsPerformanceRepository;
+      return performanceRepository
+          .getPublicMaterialById(widget.materialId, cancelToken: cancelToken)
+          .then((material) {
+            if (material != null) _recordViewOnce(performanceRepository);
+            return material;
+          });
+    }
+    return repository.getMaterialById(
       widget.materialId,
       recommendationImpressionId: widget.recommendationImpressionId,
     );
-    _startReservationPolling();
   }
 
-  void _startReservationPolling() {
+  void _recordViewOnce(MaterialDetailsPerformanceRepository repository) {
+    if (_viewRecorded) return;
+    _viewRecorded = true;
+    unawaited(
+      repository
+          .recordMaterialView(
+            widget.materialId,
+            operationKey: _viewOperationKey,
+            recommendationImpressionId: widget.recommendationImpressionId,
+          )
+          .catchError((_) {}),
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (mounted && _isActive && state == AppLifecycleState.resumed) {
+      unawaited(_loadViewerStateIfAuthenticated());
+    }
+  }
+
+  Future<void> _loadViewerStateIfAuthenticated() async {
+    // `mounted` remains true while a state is deactivated. Avoid reading a
+    // provider from a page that has already left the active element tree.
+    if (!mounted || !_isActive) return;
+    final authState = ref.read(authControllerProvider);
+    final repository = _activeRepository;
+    if (authState.status != AuthStatus.authenticated ||
+        repository is! MaterialDetailsPerformanceRepository) {
+      _viewerCancelToken?.cancel('Viewer is not authenticated');
+      if (mounted) {
+        setState(() {
+          _viewerState = null;
+          _viewerStateLoading = false;
+        });
+      }
+      _reservationRefreshTimer?.cancel();
+      return;
+    }
+
+    _viewerCancelToken?.cancel('Viewer-state request replaced');
+    final cancelToken = CancelToken();
+    _viewerCancelToken = cancelToken;
+    if (mounted) setState(() => _viewerStateLoading = true);
+    try {
+      final state = await (repository as MaterialDetailsPerformanceRepository)
+          .getMaterialViewerState(widget.materialId, cancelToken: cancelToken);
+      if (!mounted || !_isActive || cancelToken.isCancelled) return;
+      setState(() {
+        _viewerState = state;
+        _viewerStateLoading = false;
+      });
+      _syncReservationPolling();
+    } on DioException catch (error) {
+      if (CancelToken.isCancel(error)) return;
+      if (!cancelToken.isCancelled && mounted && _isActive) {
+        setState(() => _viewerStateLoading = false);
+      }
+    } catch (_) {
+      if (!cancelToken.isCancelled && mounted && _isActive) {
+        setState(() => _viewerStateLoading = false);
+      }
+    }
+  }
+
+  void _syncReservationPolling() {
     _reservationRefreshTimer?.cancel();
+    final reservation = _viewerState?.reservation;
+    if (reservation == null || !_shouldPollReservation(reservation)) {
+      return;
+    }
     _reservationRefreshTimer = Timer.periodic(_reservationRefreshInterval, (_) {
       if (!mounted) {
         return;
       }
-
-      final authState = ref.read(authControllerProvider);
-      if (authState.status != AuthStatus.authenticated ||
-          authState.user?.hasRole('LEARNER') != true) {
-        return;
-      }
-
-      ref.invalidate(myReservationsProvider);
+      unawaited(_loadViewerStateIfAuthenticated());
     });
+  }
+
+  bool _shouldPollReservation(LearnerReservation reservation) {
+    if (reservation.isPending ||
+        reservation.isAwaitingConfirmation ||
+        reservation.isAwaitingSupplierConfirmation) {
+      return true;
+    }
+
+    final deliveryStatus = reservation.activeDelivery?.status.toUpperCase();
+    return deliveryStatus != null &&
+        _transitionalDeliveryStatuses.contains(deliveryStatus);
   }
 
   @override
   void dispose() {
+    _isActive = false;
+    _stopObservingLifecycle();
     _reservationRefreshTimer?.cancel();
+    _materialCancelToken?.cancel('Material details disposed');
+    _viewerCancelToken?.cancel('Material details disposed');
     super.dispose();
   }
 
@@ -140,10 +281,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     setState(() {
       _materialOverride = null;
       _showReservationStatusCta = false;
-      _materialFuture = _activeRepository.getMaterialById(
-        widget.materialId,
-        recommendationImpressionId: widget.recommendationImpressionId,
-      );
+      _materialFuture = _loadPublicMaterial();
     });
   }
 
@@ -157,12 +295,15 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
             widget.recommendationImpressionId ||
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
+      _likeMutationGeneration += 1;
+      _isLikeUpdating = false;
       _showReservationStatusCta = false;
       _materialOverride = null;
-      _materialFuture = _activeRepository.getMaterialById(
-        widget.materialId,
-        recommendationImpressionId: widget.recommendationImpressionId,
-      );
+      _viewerState = null;
+      _viewRecorded = false;
+      _viewOperationKey = createMaterialViewOperationKey(widget.materialId);
+      _materialFuture = _loadPublicMaterial();
+      Future.microtask(_loadViewerStateIfAuthenticated);
     }
   }
 
@@ -174,13 +315,12 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       final previousUserId = previous?.user?.id;
       final nextUserId = next.user?.id;
       if (previous?.status != next.status || previousUserId != nextUserId) {
-        setState(() {
+        if (previousUserId != nextUserId) {
+          _likeMutationGeneration += 1;
           _materialOverride = null;
-          _materialFuture = _activeRepository.getMaterialById(
-            widget.materialId,
-            recommendationImpressionId: widget.recommendationImpressionId,
-          );
-        });
+          _isLikeUpdating = false;
+        }
+        unawaited(_loadViewerStateIfAuthenticated());
       }
     });
 
@@ -225,7 +365,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
           );
         }
 
-        final material = _materialOverride ?? snapshot.data;
+        var material = _materialOverride ?? snapshot.data;
         if (material == null) {
           return _SimpleStateScaffold(
             child: _MaterialDetailsStatePanel(
@@ -250,14 +390,27 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
           );
         }
 
+        final viewerState = _viewerState;
+        if (viewerState != null) {
+          material = material.copyWith(
+            isLiked: _materialOverride?.isLiked ?? viewerState.isLiked,
+            isOwnMaterial: viewerState.isOwnMaterial,
+            canReserve: viewerState.canReserve,
+            reserveBlockReason: viewerState.reserveBlockReason,
+          );
+        }
+
+        final loadedMaterial = material;
         return _MaterialDetailsLoadedContent(
-          material: material,
+          material: loadedMaterial,
+          learnerReservation: viewerState?.reservation,
+          isLoadingReservation: _viewerStateLoading,
           buildItemId: widget.buildItemId,
           componentName: widget.componentName,
           showReservationStatusCta: _showReservationStatusCta,
           isLikeUpdating: _isLikeUpdating,
-          onReserve: () => _handleReserve(material),
-          onToggleLike: () => _handleToggleLike(material),
+          onReserve: () => _handleReserve(loadedMaterial),
+          onToggleLike: () => _handleToggleLike(loadedMaterial),
         );
       },
     );
@@ -289,6 +442,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       likesCount: optimisticLikes,
       isLiked: shouldLike,
     );
+    final mutationGeneration = ++_likeMutationGeneration;
 
     setState(() {
       _isLikeUpdating = true;
@@ -306,7 +460,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
               recommendationImpressionId: widget.recommendationImpressionId,
             );
 
-      if (!mounted) {
+      if (!mounted || mutationGeneration != _likeMutationGeneration) {
         return;
       }
 
@@ -318,7 +472,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         );
       });
     } catch (error) {
-      if (!mounted) {
+      if (!mounted || mutationGeneration != _likeMutationGeneration) {
         return;
       }
 
@@ -327,7 +481,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       });
       showErrorSnackBar(context, error);
     } finally {
-      if (mounted) {
+      if (mounted && mutationGeneration == _likeMutationGeneration) {
         setState(() {
           _isLikeUpdating = false;
         });
@@ -392,8 +546,8 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       return;
     }
 
-    ref.invalidate(myReservationsProvider);
     ref.invalidate(homeSuggestedMaterialsProvider);
+    unawaited(_loadViewerStateIfAuthenticated());
 
     final projectId = widget.projectId?.trim();
     if (projectId != null && projectId.isNotEmpty) {
@@ -417,6 +571,8 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 class _MaterialDetailsLoadedContent extends ConsumerWidget {
   const _MaterialDetailsLoadedContent({
     required this.material,
+    required this.learnerReservation,
+    required this.isLoadingReservation,
     this.buildItemId,
     this.componentName,
     required this.showReservationStatusCta,
@@ -426,6 +582,8 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   });
 
   final DiscoveryMaterial material;
+  final LearnerReservation? learnerReservation;
+  final bool isLoadingReservation;
   final String? buildItemId;
   final String? componentName;
   final bool showReservationStatusCta;
@@ -437,29 +595,12 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final reserveState = ref.watch(reservationCreateControllerProvider);
-    final shouldLoadReservationDetails =
-        authState.status == AuthStatus.authenticated &&
-        authState.user?.hasRole('LEARNER') == true;
-    final myReservationsState = shouldLoadReservationDetails
-        ? ref.watch(myReservationsProvider)
-        : null;
-    final learnerReservation = myReservationsState?.maybeWhen(
-      data: (reservations) => _reservationForMaterial(reservations, material),
-      orElse: () => null,
-    );
-    final myDeliveriesState = learnerReservation != null
-        ? ref.watch(learnerDeliveriesProvider)
-        : null;
-    final learnerDelivery = myDeliveriesState?.maybeWhen(
-      data: (deliveries) =>
-          _deliveryForReservation(deliveries, learnerReservation!.id),
-      orElse: () => null,
-    );
+    final learnerDelivery = learnerReservation?.activeDelivery;
     final reservationUi = MaterialReserveEligibility.resolve(
       material: material,
       authState: authState,
       isSubmitting: reserveState.isLoading,
-      isLoadingReservation: false,
+      isLoadingReservation: isLoadingReservation,
       showReservationStatusCta: showReservationStatusCta,
       learnerReservation: learnerReservation,
     );
@@ -551,16 +692,20 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               const SizedBox(
                                 height: _materialDetailsRelatedSectionsTopGap,
                               ),
-                              _RelatedMaterialsSections(
-                                material: material,
-                                layout: _RelatedMaterialsLayout.desktop,
+                              _LazyViewportSection(
+                                builder: (_) => _RelatedMaterialsSections(
+                                  material: material,
+                                  layout: _RelatedMaterialsLayout.desktop,
+                                ),
                               ),
                               const SizedBox(
                                 height: _materialDetailsSectionGap,
                               ),
-                              CommentsSection(
-                                targetType: CommentTargetType.material,
-                                targetId: material.id,
+                              _LazyViewportSection(
+                                builder: (_) => CommentsSection(
+                                  targetType: CommentTargetType.material,
+                                  targetId: material.id,
+                                ),
                               ),
                             ],
                           )
@@ -594,16 +739,20 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               const SizedBox(height: AppSpacing.md),
                               _SupplierCard(material: material),
                               const SizedBox(height: AppSpacing.md),
-                              CommentsSection(
-                                targetType: CommentTargetType.material,
-                                targetId: material.id,
+                              _LazyViewportSection(
+                                builder: (_) => CommentsSection(
+                                  targetType: CommentTargetType.material,
+                                  targetId: material.id,
+                                ),
                               ),
                               const SizedBox(height: AppSpacing.md),
                               const DiscoveryLocationPrivacyPanel(),
                               const SizedBox(height: AppSpacing.md),
-                              _RelatedMaterialsSections(
-                                material: material,
-                                layout: _RelatedMaterialsLayout.mobile,
+                              _LazyViewportSection(
+                                builder: (_) => _RelatedMaterialsSections(
+                                  material: material,
+                                  layout: _RelatedMaterialsLayout.mobile,
+                                ),
                               ),
                               const SizedBox(height: AppSpacing.md),
                               _ReportMaterialSection(materialId: material.id),
@@ -618,44 +767,6 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
       ),
     );
   }
-}
-
-LearnerDelivery? _deliveryForReservation(
-  List<LearnerDelivery> deliveries,
-  String reservationId,
-) {
-  LearnerDelivery? latest;
-
-  for (final delivery in deliveries) {
-    if (delivery.reservationId != reservationId) {
-      continue;
-    }
-
-    if (latest == null || delivery.requestedAt.isAfter(latest.requestedAt)) {
-      latest = delivery;
-    }
-  }
-
-  return latest;
-}
-
-LearnerReservation? _reservationForMaterial(
-  List<LearnerReservation> reservations,
-  DiscoveryMaterial material,
-) {
-  for (final reservation in reservations) {
-    if (reservation.material.id != material.id) {
-      continue;
-    }
-
-    if (!reservation.blocksNewMaterialReservation) {
-      continue;
-    }
-
-    return reservation;
-  }
-
-  return null;
 }
 
 class _SimpleStateScaffold extends StatelessWidget {
@@ -1299,7 +1410,9 @@ class _SupplierCardState extends ConsumerState<_SupplierCard> {
 
   Future<void> _toggleFollow() async {
     final supplierProfileId = _supplierProfileId;
-    if (supplierProfileId == null || supplierProfileId.isEmpty || _isUpdatingFollow) {
+    if (supplierProfileId == null ||
+        supplierProfileId.isEmpty ||
+        _isUpdatingFollow) {
       return;
     }
 
@@ -1613,7 +1726,7 @@ class _ReservationPanel extends StatelessWidget {
 
   final DiscoveryMaterial material;
   final MaterialReserveEligibility reservationUi;
-  final LearnerDelivery? learnerDelivery;
+  final LearnerReservationActiveDelivery? learnerDelivery;
   final VoidCallback onReserve;
   final bool showPrimaryReserveButton;
   final bool emphasized;
@@ -1914,7 +2027,7 @@ class _DetailsSideColumn extends StatelessWidget {
 
   final DiscoveryMaterial material;
   final MaterialReserveEligibility reservationUi;
-  final LearnerDelivery? learnerDelivery;
+  final LearnerReservationActiveDelivery? learnerDelivery;
   final VoidCallback onReserve;
   final bool showPrimaryReserveButton;
 
@@ -1986,14 +2099,17 @@ class _LearnerReservationStateCard extends StatelessWidget {
   });
 
   final LearnerReservation reservation;
-  final LearnerDelivery? delivery;
+  final LearnerReservationActiveDelivery? delivery;
   final bool deliveryAvailable;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final detail = _reservationDetailText(reservation);
-    final activeDelivery = delivery?.isActive == true ? delivery : null;
+    final activeDelivery =
+        delivery != null && _isActiveDelivery(delivery!.status)
+        ? delivery
+        : null;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -2060,11 +2176,11 @@ class _LearnerReservationStateCard extends StatelessWidget {
 
 String _materialDetailReservationText({
   required LearnerReservation reservation,
-  required LearnerDelivery? delivery,
+  required LearnerReservationActiveDelivery? delivery,
   required bool deliveryAvailable,
   required String fallback,
 }) {
-  if (delivery != null && delivery.isActive) {
+  if (delivery != null && _isActiveDelivery(delivery.status)) {
     return 'Delivery status: ${deliveryStatusLabel(delivery.status)}.';
   }
 
@@ -2078,6 +2194,15 @@ String _materialDetailReservationText({
 
   return fallback;
 }
+
+bool _isActiveDelivery(String status) => !const {
+  'DELIVERED',
+  'CANCELLED',
+  'FAILED_PICKUP',
+  'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+}.contains(status);
 
 String _reservationActionLabel(String status) {
   switch (status) {
@@ -2404,9 +2529,64 @@ class _ReportMaterialSection extends ConsumerWidget {
   }
 }
 
+class _LazyViewportSection extends StatefulWidget {
+  const _LazyViewportSection({required this.builder});
+
+  final WidgetBuilder builder;
+
+  @override
+  State<_LazyViewportSection> createState() => _LazyViewportSectionState();
+}
+
+class _LazyViewportSectionState extends State<_LazyViewportSection> {
+  ScrollPosition? _position;
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bindAndCheck());
+  }
+
+  void _bindAndCheck() {
+    if (!mounted || _visible) return;
+    final next = Scrollable.maybeOf(context)?.position;
+    if (!identical(next, _position)) {
+      _position?.removeListener(_check);
+      _position = next;
+      _position?.addListener(_check);
+    }
+    _check();
+  }
+
+  void _check() {
+    if (!mounted || _visible) return;
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final top = box.localToGlobal(Offset.zero).dy;
+    if (top <= MediaQuery.sizeOf(context).height + 400) {
+      _position?.removeListener(_check);
+      setState(() => _visible = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _position?.removeListener(_check);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_visible) return widget.builder(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bindAndCheck());
+    return const SizedBox(height: 1);
+  }
+}
+
 enum _RelatedMaterialsLayout { desktop, mobile }
 
-class _RelatedMaterialsSections extends ConsumerWidget {
+class _RelatedMaterialsSections extends ConsumerStatefulWidget {
   const _RelatedMaterialsSections({
     required this.material,
     required this.layout,
@@ -2416,57 +2596,107 @@ class _RelatedMaterialsSections extends ConsumerWidget {
   final _RelatedMaterialsLayout layout;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categoryId = material.categoryId?.trim();
-    final city = material.city?.trim();
-    final strips = <Widget>[];
+  ConsumerState<_RelatedMaterialsSections> createState() =>
+      _RelatedMaterialsSectionsState();
+}
 
-    if (categoryId != null && categoryId.isNotEmpty) {
-      strips.add(
-        _RelatedMaterialsStrip(
-          excludeMaterialId: material.id,
-          layout: layout,
-          query: MaterialDiscoveryQuery(
-            categoryId: categoryId,
-            status: 'AVAILABLE',
-            limit: 5,
-          ),
-          title: LocalizedText(
-            en: 'More in ${material.category.en}',
-            ar: 'المزيد في ${material.category.ar}',
-          ),
+class _RelatedMaterialsSectionsState
+    extends ConsumerState<_RelatedMaterialsSections> {
+  RelatedMaterialsResult? _result;
+  CancelToken? _cancelToken;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RelatedMaterialsSections oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.material.id != widget.material.id) {
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cancelToken?.cancel('Related section disposed');
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    _cancelToken?.cancel('Related request replaced');
+    final repository = ref.read(materialDiscoveryRepositoryProvider);
+    if (repository is! MaterialDetailsPerformanceRepository) {
+      return;
+    }
+    final performanceRepository =
+        repository as MaterialDetailsPerformanceRepository;
+    final token = CancelToken();
+    _cancelToken = token;
+    if (mounted) {
+      setState(() {
+        _result = null;
+        _error = null;
+      });
+    }
+    try {
+      final result = await performanceRepository.fetchRelatedMaterials(
+        widget.material.id,
+        cancelToken: token,
+      );
+      if (mounted && !token.isCancelled) {
+        setState(() => _result = result);
+      }
+    } on DioException catch (error) {
+      if (!CancelToken.isCancel(error) && mounted) {
+        setState(() => _error = error);
+      }
+    } catch (error) {
+      if (error is ApiException && error.isCancellation) {
+        return;
+      }
+      if (mounted) setState(() => _error = error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final result = _result;
+    if (result == null) {
+      if (_error == null) return const SizedBox.shrink();
+      return Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TextButton.icon(
+          onPressed: _load,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Retry related materials'),
         ),
       );
     }
-
-    if (city != null && city.isNotEmpty) {
-      final area = material.area?.trim();
-      final locationLabel = area != null && area.isNotEmpty
-          ? '$city, $area'
-          : city;
-
-      strips.add(
+    final strips = <Widget>[
+      if (result.category.isNotEmpty)
         _RelatedMaterialsStrip(
-          excludeMaterialId: material.id,
-          layout: layout,
-          query: MaterialDiscoveryQuery(
-            city: city,
-            area: area?.isNotEmpty == true ? area : null,
-            status: 'AVAILABLE',
-            limit: 5,
-          ),
+          layout: widget.layout,
+          materials: result.category,
           title: LocalizedText(
-            en: 'More in $locationLabel',
-            ar: 'المزيد في $locationLabel',
+            en: 'More in ${widget.material.category.en}',
+            ar: 'المزيد في ${widget.material.category.ar}',
           ),
         ),
-      );
-    }
-
-    if (strips.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
+      if (result.nearby.isNotEmpty)
+        _RelatedMaterialsStrip(
+          layout: widget.layout,
+          materials: result.nearby,
+          title: const LocalizedText(
+            en: 'More nearby',
+            ar: 'المزيد بالقرب منك',
+          ),
+        ),
+    ];
+    if (strips.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2479,98 +2709,35 @@ class _RelatedMaterialsSections extends ConsumerWidget {
   }
 }
 
-class _RelatedMaterialsStrip extends ConsumerStatefulWidget {
+class _RelatedMaterialsStrip extends StatelessWidget {
   const _RelatedMaterialsStrip({
-    required this.excludeMaterialId,
     required this.layout,
-    required this.query,
+    required this.materials,
     required this.title,
   });
 
-  final String excludeMaterialId;
   final _RelatedMaterialsLayout layout;
-  final MaterialDiscoveryQuery query;
+  final List<DiscoveryMaterial> materials;
   final LocalizedText title;
 
   @override
-  ConsumerState<_RelatedMaterialsStrip> createState() =>
-      _RelatedMaterialsStripState();
-}
-
-class _RelatedMaterialsStripState
-    extends ConsumerState<_RelatedMaterialsStrip> {
-  List<DiscoveryMaterial> _materials = const [];
-  var _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMaterials();
-  }
-
-  @override
-  void didUpdateWidget(covariant _RelatedMaterialsStrip oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.excludeMaterialId != widget.excludeMaterialId ||
-        oldWidget.query != widget.query) {
-      _loaded = false;
-      _materials = const [];
-      _loadMaterials();
-    }
-  }
-
-  Future<void> _loadMaterials() async {
-    try {
-      final repository = ref.read(materialDiscoveryRepositoryProvider);
-      final result = await repository.fetchMaterials(widget.query);
-      final materials = result.items
-          .where((item) => item.id != widget.excludeMaterialId)
-          .take(4)
-          .toList(growable: false);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _materials = materials;
-        _loaded = true;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _materials = const [];
-        _loaded = true;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (!_loaded || _materials.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
     final palette = MaterialsUiPalette.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          widget.title.resolve(context),
+          title.resolve(context),
           style: AppTextStyles.title(
             context,
           ).copyWith(color: palette.textPrimary),
         ),
         const SizedBox(height: AppSpacing.md),
-        if (widget.layout == _RelatedMaterialsLayout.desktop)
+        if (layout == _RelatedMaterialsLayout.desktop)
           Wrap(
             spacing: AppSpacing.lg,
             runSpacing: AppSpacing.lg,
-            children: _materials
+            children: materials
                 .map(
                   (related) => SizedBox(
                     width: _relatedCompactCardWidth,
@@ -2585,11 +2752,11 @@ class _RelatedMaterialsStripState
             height: ImpactMaterialCompactCard.baseHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _materials.length,
+              itemCount: materials.length,
               separatorBuilder: (context, index) =>
                   const SizedBox(width: AppSpacing.md),
               itemBuilder: (context, index) {
-                final related = _materials[index];
+                final related = materials[index];
 
                 return SizedBox(
                   width: 320,

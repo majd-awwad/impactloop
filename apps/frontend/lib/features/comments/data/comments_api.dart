@@ -22,11 +22,13 @@ class CommentsApi {
     required String targetId,
     int page = 1,
     int limit = 20,
+    CancelToken? cancelToken,
   }) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         _basePath(type, targetId),
         queryParameters: {'page': page, 'limit': limit},
+        cancelToken: cancelToken,
       ),
       CommentsPage.fromJson,
     );
@@ -38,11 +40,13 @@ class CommentsApi {
     required String rootCommentId,
     int page = 1,
     int limit = 20,
+    CancelToken? cancelToken,
   }) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         '${_basePath(type, targetId)}/$rootCommentId/replies',
         queryParameters: {'page': page, 'limit': limit},
+        cancelToken: cancelToken,
       ),
       CommentsPage.fromJson,
     );

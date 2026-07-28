@@ -49,15 +49,24 @@ class _FakeSupplierRepository implements MaterialDiscoveryRepository {
   }
 
   @override
-  Future<DiscoveryMaterial?> getMaterialById(String id) async => null;
+  Future<DiscoveryMaterial?> getMaterialById(
+    String id, {
+    String? recommendationImpressionId,
+  }) async => null;
 
   @override
-  Future<MaterialEngagement> likeMaterial(String id) async {
+  Future<MaterialEngagement> likeMaterial(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return MaterialEngagement(materialId: id, likesCount: 0, isLiked: true);
   }
 
   @override
-  Future<MaterialEngagement> unlikeMaterial(String id) async {
+  Future<MaterialEngagement> unlikeMaterial(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return MaterialEngagement(materialId: id, likesCount: 0, isLiked: false);
   }
 
@@ -151,10 +160,7 @@ Widget _supplierTestApp({
       materialDiscoveryRepositoryProvider.overrideWithValue(repository),
       authControllerProvider.overrideWith(_LearnerAuthController.new),
     ],
-    child: MaterialApp(
-      locale: const Locale('en'),
-      home: child,
-    ),
+    child: MaterialApp(locale: const Locale('en'), home: child),
   );
 }
 
@@ -256,9 +262,7 @@ void main() {
             displayName: 'Route Supplier',
           ),
         ),
-        child: const PublicSupplierPage(
-          supplierProfileId: supplierProfileId,
-        ),
+        child: const PublicSupplierPage(supplierProfileId: supplierProfileId),
       ),
     );
     await tester.pumpAndSettle();
@@ -284,9 +288,7 @@ void main() {
     await tester.pumpWidget(
       _supplierTestApp(
         repository: repository,
-        child: const PublicSupplierPage(
-          supplierProfileId: 'sp-follow',
-        ),
+        child: const PublicSupplierPage(supplierProfileId: 'sp-follow'),
       ),
     );
 
@@ -318,9 +320,7 @@ void main() {
     await tester.pumpWidget(
       _supplierTestApp(
         repository: repository,
-        child: const PublicSupplierPage(
-          supplierProfileId: 'sp-unfollow',
-        ),
+        child: const PublicSupplierPage(supplierProfileId: 'sp-unfollow'),
       ),
     );
 
@@ -351,9 +351,7 @@ void main() {
     await tester.pumpWidget(
       _supplierTestApp(
         repository: repository,
-        child: const PublicSupplierPage(
-          supplierProfileId: 'sp-fail',
-        ),
+        child: const PublicSupplierPage(supplierProfileId: 'sp-fail'),
       ),
     );
 
@@ -441,7 +439,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final gridView = tester.widget<GridView>(find.byType(GridView));
+    final gridView = tester.widget<SliverGrid>(find.byType(SliverGrid));
     final delegate =
         gridView.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
     expect(delegate.crossAxisCount, 4);
