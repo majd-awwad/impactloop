@@ -11,10 +11,12 @@ import {
   resolveRequestId,
 } from '../observability/request-id.js';
 import type { LogContext } from '../observability/log-types.js';
+import { getDatabasePoolSnapshot } from '../database/prisma.js';
 
 type ObservabilityLocals = {
   errorLogged?: boolean;
   completionLogged?: boolean;
+  abortController?: AbortController;
 };
 
 const getObservabilityLocals = (res: Response): ObservabilityLocals => {
@@ -33,6 +35,11 @@ export const markErrorLogged = (res: Response): void => {
 
 export const hasErrorBeenLogged = (res: Response): boolean =>
   Boolean(getObservabilityLocals(res).errorLogged);
+
+export const getRequestAbortSignal = (res: Response): AbortSignal => {
+  const locals = getObservabilityLocals(res);
+  return (locals.abortController ??= new AbortController()).signal;
+};
 
 const normalizeRequestPath = (req: Request): string => {
   const routePattern = req.route?.path;
@@ -102,6 +109,7 @@ const logRequestCompletion = (
     statusCode,
     durationMs,
     ...(Number.isFinite(responseSize) ? { responseSize } : {}),
+    ...getDatabasePoolSnapshot(),
   };
 
   const level = isHealthCheckPath(route)
@@ -133,18 +141,22 @@ export const requestContextMiddleware = (
   };
 
   runWithRequestContext(context, () => {
+    const abortController = new AbortController();
+    getObservabilityLocals(res).abortController = abortController;
     const onFinish = () => {
       logRequestCompletion(req, res, 'finished');
     };
 
     const onClose = () => {
       if (!res.writableFinished) {
+        abortController.abort();
         logRequestCompletion(req, res, 'aborted');
       }
     };
 
     res.on('finish', onFinish);
     res.on('close', onClose);
+    req.once('aborted', () => abortController.abort());
 
     next();
   });

@@ -124,6 +124,12 @@ export const materialIdParamSchema = z.object({
   id: z.string().trim().min(1),
 });
 
+export const relatedMaterialsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(8).default(4),
+});
+
+export type RelatedMaterialsQuery = z.infer<typeof relatedMaterialsQuerySchema>;
+
 export const priceCheckSchema = z.object({
   isFree: z.boolean(),
   categoryId: z.string().trim().min(1),

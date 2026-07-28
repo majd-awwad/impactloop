@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "CommentStatus" AS ENUM ('VISIBLE', 'DELETED', 'MODERATED');
 
 -- CreateTable
@@ -59,3 +59,6 @@ ALTER TABLE "comments" ADD CONSTRAINT "comments_root_comment_id_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "comments" ADD CONSTRAINT "comments_reply_to_comment_id_fkey" FOREIGN KEY ("reply_to_comment_id") REFERENCES "comments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Exactly one target (material XOR learning project)
+ALTER TABLE "comments" ADD CONSTRAINT "comments_exactly_one_target" CHECK (("material_id" IS NULL) <> ("learning_project_id" IS NULL));

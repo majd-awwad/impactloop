@@ -24,6 +24,9 @@ class ApiResponse<T> {
 }
 
 ApiException mapDioException(DioException error) {
+  if (error.type == DioExceptionType.cancel) {
+    return const ApiException(message: 'Request cancelled', code: 'CANCELLED');
+  }
   if (error.type == DioExceptionType.connectionTimeout ||
       error.type == DioExceptionType.sendTimeout ||
       error.type == DioExceptionType.receiveTimeout) {

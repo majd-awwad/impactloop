@@ -51,5 +51,14 @@ export const buildMaterialImageFilename = (
 export const publicMaterialImageUrl = (filename: string): string =>
   `${MATERIAL_UPLOAD_PUBLIC_PREFIX}/${filename}`;
 
+export const materialThumbnailFilename = (filename: string): string =>
+  `thumb_${path.parse(filename).name}.webp`;
+
+export const materialThumbnailPath = (filename: string): string =>
+  path.join(MATERIAL_UPLOADS_DIR, materialThumbnailFilename(filename));
+
+export const publicMaterialThumbnailUrl = (filename: string): string =>
+  publicMaterialImageUrl(materialThumbnailFilename(filename));
+
 export const isAllowedMaterialImageMime = (mimeType: string): boolean =>
   MATERIAL_UPLOAD_ALLOWED_MIME_TYPES.has(mimeType);

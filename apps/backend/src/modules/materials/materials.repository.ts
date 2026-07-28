@@ -124,7 +124,7 @@ const buildMaterialsWhere = (
   return where;
 };
 
-const materialInclude = {
+export const materialInclude = {
   category: {
     select: {
       id: true,
@@ -467,14 +467,25 @@ export const appendMaterialView = async (
   viewerUserId: string | undefined,
   viewSource = 'detail',
   client: PrismaClientLike = prisma,
+  operationKey?: string,
 ) => {
-  await client.materialView.create({
-    data: {
+  const inserted = await client.materialView.createMany({
+    data: [{
       materialId: id,
       viewerUserId: viewerUserId ?? null,
+      operationKey: operationKey ?? null,
       viewSource,
-    },
+    }],
+    skipDuplicates: true,
   });
+
+  if (inserted.count === 0) {
+    const material = await client.material.findUniqueOrThrow({
+      where: { id },
+      select: { viewsCount: true },
+    });
+    return { ...material, recorded: false };
+  }
 
   const material = await client.material.update({
     where: { id },
@@ -533,15 +544,79 @@ export const findPublicMaterialById = async (
 
 export const recordMaterialViewOperation = async (
   id: string,
-  viewerUserId: string,
+  viewerUserId: string | undefined,
   viewSource: string,
   client: Prisma.TransactionClient,
+  operationKey?: string,
 ) => {
   const material = await findPublicMaterialById(id, client);
   if (!material) {
     return null;
   }
-  return appendMaterialView(id, viewerUserId, viewSource, client);
+  return appendMaterialView(
+    id,
+    viewerUserId,
+    viewSource,
+    client,
+    operationKey,
+  );
+};
+
+export const recordIdempotentMaterialView = async (input: {
+  id: string;
+  viewerUserId?: string;
+  viewSource?: string;
+  operationKey: string;
+}) => {
+  return prisma.$transaction(async (tx) => {
+    const material = await findPublicMaterialById(input.id, tx);
+    if (!material) {
+      return null;
+    }
+
+    return appendMaterialView(
+      input.id,
+      input.viewerUserId,
+      input.viewSource ?? 'material_detail',
+      tx,
+      input.operationKey,
+    );
+  });
+};
+
+export const findRelatedMaterials = async (
+  material: { id: string; categoryId: string; locationId: string },
+  limit: number,
+) => {
+  const publicWhere: Prisma.MaterialWhereInput = {
+    id: { not: material.id },
+    status: { in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'] },
+    category: {
+      isActive: true,
+      categoryType: { in: ['MATERIAL', 'BOTH'] },
+    },
+  };
+
+  const [category, nearby] = await Promise.all([
+    prisma.material.findMany({
+      where: { ...publicWhere, categoryId: material.categoryId },
+      include: materialInclude,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit,
+    }),
+    prisma.material.findMany({
+      where: { ...publicWhere, locationId: material.locationId },
+      include: materialInclude,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: limit * 2,
+    }),
+  ]);
+
+  const categoryIds = new Set(category.map((item) => item.id));
+  return {
+    category,
+    nearby: nearby.filter((item) => !categoryIds.has(item.id)).slice(0, limit),
+  };
 };
 
 export const countLikesByMaterialIds = async (materialIds: string[]) => {

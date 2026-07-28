@@ -1,8 +1,11 @@
 import { AppError } from '../../utils/app-error.js';
+import sharp from 'sharp';
 
 import {
   isAllowedMaterialImageMime,
   publicMaterialImageUrl,
+  publicMaterialThumbnailUrl,
+  materialThumbnailPath,
 } from './uploads.storage.js';
 import {
   isAllowedProfileImageMime,
@@ -14,18 +17,19 @@ export type UploadedMaterialImage = {
   filename: string;
   mimeType: string;
   sizeBytes: number;
+  thumbnailUrl?: string;
 };
 
 export type UploadedProfileImage = UploadedMaterialImage;
 
-export const mapUploadedMaterialImages = (
+export const mapUploadedMaterialImages = async (
   files: Express.Multer.File[],
-): UploadedMaterialImage[] => {
+): Promise<UploadedMaterialImage[]> => {
   if (!files.length) {
     throw new AppError('Select at least one image to upload.', 400, 'VALIDATION_ERROR');
   }
 
-  return files.map((file) => {
+  return Promise.all(files.map(async (file) => {
     if (!isAllowedMaterialImageMime(file.mimetype)) {
       throw new AppError(
         'Only JPG, PNG, and WebP images are allowed.',
@@ -34,13 +38,20 @@ export const mapUploadedMaterialImages = (
       );
     }
 
+    await sharp(file.path)
+      .rotate()
+      .resize({ width: 480, height: 480, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toFile(materialThumbnailPath(file.filename));
+
     return {
       url: publicMaterialImageUrl(file.filename),
+      thumbnailUrl: publicMaterialThumbnailUrl(file.filename),
       filename: file.filename,
       mimeType: file.mimetype,
       sizeBytes: file.size,
     };
-  });
+  }));
 };
 
 export const mapUploadedProfileImage = (

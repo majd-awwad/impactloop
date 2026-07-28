@@ -37,7 +37,8 @@
     "clean-dev-notifications": "tsx ../../scripts/clean-dev-notifications.ts",
     "clean-driver-notifications": "tsx ../../scripts/clean-driver-notifications.ts",
     "backfill-driver-new-job-notifications": "tsx ../../scripts/backfill-driver-new-job-notifications.ts",
-    "verify-driver-notifications": "tsx ../../scripts/verify-driver-notifications.ts"
+    "verify-driver-notifications": "tsx ../../scripts/verify-driver-notifications.ts",
+    "backfill:material-thumbnails": "tsx scripts/backfill-material-thumbnails.ts"
   },
   "keywords": [],
   "author": "",
@@ -58,6 +59,7 @@
     "openai": "^6.46.0",
     "pg": "^8.21.0",
     "pino": "^10.3.1",
+    "sharp": "^0.35.3",
     "zod": "^4.1.11"
   },
   "devDependencies": {

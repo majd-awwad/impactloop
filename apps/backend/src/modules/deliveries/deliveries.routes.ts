@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { privateNoStoreMiddleware } from '../../middlewares/cache-control.middleware.js';
 
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
@@ -13,6 +14,7 @@ import {
 import { deliveryIdParamsSchema } from './deliveries.validation.js';
 
 export const deliveriesRouter = Router();
+deliveriesRouter.use(privateNoStoreMiddleware);
 
 deliveriesRouter.get(
   '/my',

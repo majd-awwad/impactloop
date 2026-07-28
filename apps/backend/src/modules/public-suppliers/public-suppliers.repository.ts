@@ -1,5 +1,5 @@
 import { prisma } from '../../database/prisma.js';
-import type { MaterialsQuery } from '../materials/materials.validation.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import * as materialsRepository from '../materials/materials.repository.js';
 
 const publicSupplierProfileSelect = {
@@ -119,8 +119,25 @@ export const findFollowedSupplierIds = async (
 
 export const findPublicMaterialsBySupplierProfileId = async (
   supplierProfileId: string,
-  query: MaterialsQuery,
-  coordinates?: materialsRepository.ViewerCoordinates,
+  query: { page: number; limit: number },
 ) => {
-  return materialsRepository.findMaterials(query, coordinates, supplierProfileId);
+  const where: Prisma.MaterialWhereInput = {
+    supplierProfileId,
+    status: { in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'] },
+    category: {
+      isActive: true,
+      categoryType: { in: ['MATERIAL', 'BOTH'] },
+    },
+  };
+  const [items, total] = await Promise.all([
+    prisma.material.findMany({
+      where,
+      include: materialsRepository.materialInclude,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    }),
+    prisma.material.count({ where }),
+  ]);
+  return { items, total };
 };

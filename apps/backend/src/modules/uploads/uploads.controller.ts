@@ -13,7 +13,7 @@ export const uploadMaterialImagesHandler = async (
   res: Response,
 ): Promise<void> => {
   const files = (req.files as Express.Multer.File[] | undefined) ?? [];
-  const images = mapUploadedMaterialImages(files);
+  const images = await mapUploadedMaterialImages(files);
 
   res.status(201).json(successResponse('Images uploaded.', { images }));
 };
