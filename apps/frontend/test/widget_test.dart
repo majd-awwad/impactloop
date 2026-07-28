@@ -23,6 +23,9 @@ import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/auth/application/auth_navigation.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_dashboard.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_dashboard_providers.dart';
+import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_avatar_providers.dart';
+import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_notifications_providers.dart';
+import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_profile_providers.dart';
 import 'package:frontend/features/material_discovery/application/material_discovery_providers.dart';
 import 'package:frontend/features/material_discovery/data/mock_material_discovery_repository.dart';
 import 'package:frontend/features/locations/application/saved_locations_providers.dart';
@@ -55,6 +58,47 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  Future<GoRouter> pumpAuthenticatedRouter(
+    WidgetTester tester,
+    User user,
+  ) async {
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshResult: const AuthTokens(
+          accessToken: 'restored-access',
+          refreshToken: 'rotated-refresh',
+        ),
+        meResult: user,
+      ),
+      tokenStorage: _FakeTokenStorage(initialRefreshToken: 'stored-refresh'),
+      accessTokenHolder: AccessTokenHolder(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+          authRepositoryProvider.overrideWithValue(repository),
+          supplierDashboardProvider.overrideWith(
+            (ref) async => _testSupplierDashboard(),
+          ),
+          supplierActionNeededCountProvider.overrideWith((ref) => 0),
+          supplierDisplayAvatarUrlProvider.overrideWith((ref) => null),
+          supplierProfileManagementProvider.overrideWith(
+            (ref) => Future.error(StateError('Profile rendering stub')),
+          ),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    return container.read(appRouterProvider);
   }
 
   Future<void> pumpResponsivePage(
@@ -434,6 +478,88 @@ void main() {
 
     expect(router.routeInformationProvider.value.uri.path, '/home');
   });
+
+  testWidgets('learner-active users can open both learning profile routes', (
+    tester,
+  ) async {
+    final router = await pumpAuthenticatedRouter(tester, _testUser());
+
+    router.go('/profile/learning');
+    await tester.pumpAndSettle();
+    expect(router.routeInformationProvider.value.uri.path, '/profile/learning');
+    expect(find.text('No learning details yet'), findsOneWidget);
+
+    router.go('/profile/learner/edit');
+    await tester.pumpAndSettle();
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/profile/learner/edit',
+    );
+  });
+
+  testWidgets('signed-out learning profile deep link preserves its target', (
+    tester,
+  ) async {
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshError: DioException(
+          requestOptions: RequestOptions(path: '/api/auth/refresh'),
+        ),
+      ),
+      tokenStorage: _FakeTokenStorage(initialRefreshToken: 'stale-refresh'),
+      accessTokenHolder: AccessTokenHolder(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    router.go('/profile/learning');
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/login');
+    expect(uri.queryParameters['from'], '/profile/learning');
+  });
+
+  testWidgets(
+    'supplier-active users are redirected from both learning profile routes',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final router = await pumpAuthenticatedRouter(
+        tester,
+        _testUser(roles: const ['LEARNER', 'SUPPLIER'], activeRole: 'SUPPLIER'),
+      );
+
+      router.go('/profile/learning');
+      await tester.pumpAndSettle();
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/supplier/profile',
+      );
+
+      router.go('/profile/learner/edit');
+      await tester.pumpAndSettle();
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/supplier/profile',
+      );
+    },
+  );
 
   testWidgets('supplier users are redirected from /login to /supplier', (
     tester,

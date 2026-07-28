@@ -25,12 +25,71 @@ class LearnerProfileL10n {
     'Your learning details help shape a more relevant experience.',
     'تساعد تفاصيل تعلّمك في تقديم تجربة أكثر ملاءمة لك.',
   );
+  String get learningProfileIntro => t(
+    'Your learner type, skill level, and interests help ImpactLoop tailor your learning experience. Your bio is optional.',
+    'يساعد نوع المتعلّم ومستوى الخبرة والاهتمامات ImpactLoop على تهيئة تجربة التعلّم لك. النبذة اختيارية.',
+  );
+  String get editLearningProfile =>
+      t('Edit learning profile', 'تعديل ملف التعلّم');
+  String get setUpLearningProfile =>
+      t('Set up learning profile', 'إعداد ملف التعلّم');
+  String get noLearningProfileTitle =>
+      t('No learning details yet', 'لا توجد تفاصيل تعلّم بعد');
+  String get noLearningProfileBody => t(
+    'Add your learner type, skill level, interests, and an optional bio.',
+    'أضف نوع المتعلّم ومستوى الخبرة والاهتمامات ونبذة اختيارية.',
+  );
+  String get learningDetails => t('Learning details', 'تفاصيل التعلّم');
   String get learnerType => t('Learner type', 'نوع المتعلّم');
   String get skillLevel => t('Skill level', 'مستوى الخبرة');
   String get interests => t('Interests', 'الاهتمامات');
-  String get about => t('About', 'نبذة');
+  String get about => t('Bio', 'نبذة');
   String get edit => t('Edit', 'تعديل');
+  String get viewDetails => t('View details', 'عرض التفاصيل');
+  String get notAdded => t('Not added', 'غير مضاف');
+  String get optionalNotAdded =>
+      t('Not added (optional)', 'غير مضافة (اختيارية)');
+  String get noInterestsAdded => t('No interests added.', 'لم تُضف اهتمامات.');
+  String showMore(int count) => t('Show $count more', 'عرض $count أخرى');
+  String get showMoreContent => t('Show more', 'عرض المزيد');
+  String get showLess => t('Show less', 'عرض أقل');
+  String get back => t('Back', 'رجوع');
   String moreInterests(int count) => t('+$count more', '+$count أخرى');
+
+  String get selectLearnerType =>
+      t('Select your learner type', 'اختر نوع المتعلّم');
+  String get selectSkillLevel =>
+      t('Select your skill level', 'اختر مستوى الخبرة');
+  String get learnerTypeRequired =>
+      t('Learner type is required', 'نوع المتعلّم مطلوب');
+  String get skillLevelRequired =>
+      t('Skill level is required', 'مستوى الخبرة مطلوب');
+  String get bioHint => t(
+    'Share a short note about what you enjoy learning',
+    'شارك نبذة قصيرة عمّا تستمتع بتعلّمه',
+  );
+  String get addAnotherInterest =>
+      t('Add another interest (optional)', 'أضف اهتماماً آخر (اختياري)');
+  String get customInterestHint =>
+      t('Solar energy, CNC, etc.', 'الطاقة الشمسية، CNC، وغيرها.');
+  String get saveChanges => t('Save changes', 'حفظ التغييرات');
+  String get saving => t('Saving...', 'جارٍ الحفظ...');
+  String get learnerProfileUpdated =>
+      t('Learning profile updated.', 'تم تحديث ملف التعلّم.');
+  String get updateLearnerProfileFailed => t(
+    'Could not update your learning profile. Please try again.',
+    'تعذّر تحديث ملف التعلّم. حاول مرة أخرى.',
+  );
+  String get learnerOnlyEditMessage => t(
+    'Learning profile editing is available in learner mode.',
+    'يتوفر تعديل ملف التعلّم في وضع المتعلّم.',
+  );
+  String get loadingInterests =>
+      t('Loading interests...', 'جارٍ تحميل الاهتمامات...');
+  String get interestFallbackMessage => t(
+    'Interests could not be refreshed. You can still use the built-in list.',
+    'تعذّر تحديث الاهتمامات. لا يزال بإمكانك استخدام القائمة المضمنة.',
+  );
 
   String get setupProfileTitle =>
       t('Set up your learning profile', 'أعدّ ملف التعلّم الخاص بك');
@@ -188,6 +247,9 @@ class LearnerProfileL10n {
 
   String interestLabel(String value) {
     final normalized = value.trim().toLowerCase();
+    if (normalized.startsWith('custom:')) {
+      return humanize(normalized.substring('custom:'.length));
+    }
     return switch (normalized) {
       'electronics' => t('Electronics', 'الإلكترونيات'),
       'arduino' => t('Arduino', 'أردوينو'),
@@ -204,6 +266,26 @@ class LearnerProfileL10n {
       'home_diy' => t('Home DIY', 'الأعمال المنزلية اليدوية'),
       _ => humanize(value),
     };
+  }
+
+  bool hasLocalizedInterestLabel(String value) {
+    final normalized = value.trim().toLowerCase();
+    return normalized.startsWith('custom:') ||
+        const {
+          'electronics',
+          'arduino',
+          'robotics',
+          'sensors',
+          'circuits',
+          'displays',
+          'wires_connectors',
+          'audio_media',
+          'woodworking',
+          'fabric_textiles',
+          'art_crafts',
+          'recycling',
+          'home_diy',
+        }.contains(normalized);
   }
 
   String humanize(String value) {

@@ -119,17 +119,17 @@ class LearnerProfileHubContent extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           LearnerProfileActionPrompt(
             state: prompt,
-            onPressed: () => context.push('/profile/learner/edit'),
+            onPressed: () => context.push(learnerProfileEditRoute),
           ),
         ],
         const SizedBox(height: AppSpacing.md),
         LearnerProfilePreviewCard(
           profile: user.learnerProfile,
-          onEdit: () => context.push('/profile/learner/edit'),
+          onEdit: () => context.push(learningProfileRoute),
         ),
         const SizedBox(height: AppSpacing.md),
         ProfileDestinationsSection(
-          onOpenLearningProfile: () => context.push('/profile/learner/edit'),
+          onOpenLearningProfile: () => context.push(learningProfileRoute),
           onOpenAccountSettings: onOpenAccountSettings,
         ),
         if (_hasPortalActions(user)) ...[
@@ -509,7 +509,7 @@ class LearnerProfilePreviewCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              TextButton(onPressed: onEdit, child: Text(l10n.edit)),
+              TextButton(onPressed: onEdit, child: Text(l10n.viewDetails)),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -576,14 +576,12 @@ class LearnerProfilePreviewCard extends StatelessWidget {
                 skillLevel.isNotEmpty &&
                 interests.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
-              TextButton(
-                onPressed: onEdit,
-                style: TextButton.styleFrom(
-                  foregroundColor: colors.primary,
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
+              Text(
+                l10n.optionalNotAdded,
+                style: AppTextStyles.label(context).copyWith(
+                  color: colors.textMuted,
+                  fontStyle: FontStyle.italic,
                 ),
-                child: Text(l10n.addBio),
               ),
             ],
           ],

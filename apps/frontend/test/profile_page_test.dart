@@ -156,7 +156,8 @@ void main() {
     );
 
     expect(find.byType(LearnerProfileActionPrompt), findsNothing);
-    expect(find.text('Add a short bio'), findsOneWidget);
+    expect(find.text('Not added (optional)'), findsOneWidget);
+    expect(find.text('Add a short bio'), findsNothing);
     expect(find.textContaining('complete'), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -192,6 +193,33 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.lastRequestedRole, 'SUPPLIER');
     expect(find.text('Supplier overview route'), findsOneWidget);
+  });
+
+  testWidgets('generic learning profile entries open the read destination', (
+    tester,
+  ) async {
+    final router = await _pumpProfile(tester, user: _testUser());
+
+    await tester.tap(find.text('View details'));
+    await tester.pumpAndSettle();
+    expect(find.text('Learning profile route'), findsOneWidget);
+
+    router.go('/profile');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Learning Profile'));
+    await _tapDestinationTile(tester, 'Learning Profile');
+    await tester.pumpAndSettle();
+    expect(find.text('Learning profile route'), findsOneWidget);
+  });
+
+  testWidgets('targeted completion prompt keeps the single edit flow', (
+    tester,
+  ) async {
+    await _pumpProfile(tester, user: _testUser(learnerProfile: null));
+
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Learning edit route'), findsOneWidget);
   });
 
   testWidgets('account launcher preserves existing account-action access', (
@@ -285,6 +313,10 @@ Future<GoRouter> _pumpProfile(
       GoRoute(
         path: '/profile/edit',
         builder: (_, _) => const Scaffold(body: Text('Edit profile route')),
+      ),
+      GoRoute(
+        path: '/profile/learning',
+        builder: (_, _) => const Scaffold(body: Text('Learning profile route')),
       ),
       GoRoute(
         path: '/profile/learner/edit',

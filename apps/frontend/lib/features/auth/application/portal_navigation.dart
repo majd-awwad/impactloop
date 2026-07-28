@@ -58,6 +58,14 @@ String profileRouteForActiveRole(User user) {
   return portalRouteForActiveRole(user);
 }
 
+String? activeLearnerProfileRedirect(User user) {
+  if (user.isLearnerMode && user.hasRole('LEARNER')) {
+    return null;
+  }
+
+  return profileRouteForActiveRole(user);
+}
+
 String oppositePortalSwitchRoute(User user, String targetRole) {
   final normalized = targetRole.trim().toUpperCase();
   if (normalized == 'SUPPLIER') {

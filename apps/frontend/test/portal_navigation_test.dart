@@ -187,4 +187,46 @@ void main() {
       );
     });
   });
+
+  group('activeLearnerProfileRedirect', () {
+    test('allows only learner-active accounts', () {
+      expect(activeLearnerProfileRedirect(_user()), isNull);
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['LEARNER', 'SUPPLIER'], activeRole: 'LEARNER'),
+        ),
+        isNull,
+      );
+    });
+
+    test('returns supplier-active accounts to their supplier profile', () {
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['LEARNER', 'SUPPLIER'], activeRole: 'SUPPLIER'),
+        ),
+        supplierProfileRoute,
+      );
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['SUPPLIER'], activeRole: 'SUPPLIER'),
+        ),
+        supplierProfileRoute,
+      );
+    });
+
+    test('returns staff accounts to their active portal', () {
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['ADMIN'], activeRole: 'ADMIN'),
+        ),
+        adminPortalRoute,
+      );
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['DRIVER'], activeRole: 'DRIVER'),
+        ),
+        driverPortalRoute,
+      );
+    });
+  });
 }

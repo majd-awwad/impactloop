@@ -38,6 +38,7 @@ import '../../features/material_discovery/presentation/pages/material_details_pa
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
+import '../../features/profile/presentation/pages/learning_profile_page.dart';
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
@@ -86,6 +87,7 @@ enum _RouteAccessLevel {
   public,
   authenticated,
   learner,
+  activeLearner,
   supplier,
   driver,
   admin,
@@ -153,6 +155,10 @@ bool _isAuthPage(String path) =>
     path == resetPasswordRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
+  if (path == learningProfileRoute || path == learnerProfileEditRoute) {
+    return _RouteAccessLevel.activeLearner;
+  }
+
   if (path == becomeSupplierRoute || path == '/supplier/onboarding') {
     return _RouteAccessLevel.authenticated;
   }
@@ -258,6 +264,11 @@ String? _resolveProtectedRoute(
   if (accessLevel == _RouteAccessLevel.learner &&
       !_userHasLearnerRole(authState)) {
     return homeRoute;
+  }
+
+  if (accessLevel == _RouteAccessLevel.activeLearner) {
+    final user = authState.user!;
+    return activeLearnerProfileRedirect(user);
   }
 
   if (accessLevel == _RouteAccessLevel.driver &&
@@ -577,7 +588,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ProfileEditPage(),
       ),
       GoRoute(
-        path: '/profile/learner/edit',
+        path: learningProfileRoute,
+        builder: (context, state) => const LearningProfilePage(),
+      ),
+      GoRoute(
+        path: learnerProfileEditRoute,
         builder: (context, state) => const LearnerProfileEditPage(),
       ),
       GoRoute(

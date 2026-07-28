@@ -184,10 +184,14 @@ class ProfileSubpageScaffold extends StatelessWidget {
     super.key,
     required this.title,
     required this.child,
+    this.backFallbackRoute = '/profile',
+    this.backTooltip = 'Back',
   });
 
   final String title;
   final Widget child;
+  final String backFallbackRoute;
+  final String backTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -209,9 +213,9 @@ class ProfileSubpageScaffold extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => context.popOrGo('/profile'),
+                    onPressed: () => context.popOrGo(backFallbackRoute),
                     icon: const Icon(Icons.arrow_back_rounded),
-                    tooltip: 'Back',
+                    tooltip: backTooltip,
                   ),
                   Expanded(
                     child: Text(

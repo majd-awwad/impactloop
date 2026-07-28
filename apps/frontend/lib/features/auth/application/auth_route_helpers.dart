@@ -17,6 +17,8 @@ const adminPortalRoute = '/admin';
 const inviteAcceptRoute = '/invite/accept';
 const homeRoute = '/home';
 const profileRoute = '/profile';
+const learningProfileRoute = '/profile/learning';
+const learnerProfileEditRoute = '/profile/learner/edit';
 const learnerReservationsRoute = '/learner/reservations';
 const supplierProfileRoute = '/supplier/profile';
 
