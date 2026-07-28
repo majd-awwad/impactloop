@@ -1,11 +1,32 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/api_config.dart';
 import '../../../shared/models/localized_text.dart';
 import '../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../shared/widgets/materials/material_status_badge.dart';
 
 import 'material_discovery_constants.dart';
 import 'discovery_material_image.dart';
+
+class DiscoveryMaterialSupplierSummary {
+  const DiscoveryMaterialSupplierSummary({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+    this.city,
+    this.area,
+    this.followersCount,
+    this.isFollowedByViewer = false,
+  });
+
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+  final String? city;
+  final String? area;
+  final int? followersCount;
+  final bool isFollowedByViewer;
+}
 
 class DiscoveryMaterial {
   const DiscoveryMaterial({
@@ -38,6 +59,7 @@ class DiscoveryMaterial {
     required this.supplierSubtitle,
     this.supplierType,
     this.supplierVerified = false,
+    this.supplier,
     required this.heroIconData,
     required this.cardGradient,
     this.imageUrl,
@@ -84,6 +106,7 @@ class DiscoveryMaterial {
   final LocalizedText supplierSubtitle;
   final String? supplierType;
   final bool supplierVerified;
+  final DiscoveryMaterialSupplierSummary? supplier;
   final IconData heroIconData;
   final List<int> cardGradient;
   final String? imageUrl;
@@ -152,6 +175,7 @@ class DiscoveryMaterial {
       supplierSubtitle: supplierSubtitle,
       supplierType: supplierType,
       supplierVerified: supplierVerified,
+      supplier: supplier,
       heroIconData: heroIconData,
       cardGradient: cardGradient,
       imageUrl: imageUrl,
@@ -226,5 +250,120 @@ class DiscoveryMaterial {
       default:
         return null;
     }
+  }
+}
+
+class PublicSupplier {
+  const PublicSupplier({
+    required this.id,
+    required this.displayName,
+    this.supplierType,
+    this.description,
+    this.avatarUrl,
+    this.coverImageUrl,
+    this.city,
+    this.area,
+    this.isVerified = false,
+    this.materialsCount = 0,
+    this.followersCount = 0,
+    this.isFollowedByViewer = false,
+  });
+
+  final String id;
+  final String displayName;
+  final String? supplierType;
+  final String? description;
+  final String? avatarUrl;
+  final String? coverImageUrl;
+  final String? city;
+  final String? area;
+  final bool isVerified;
+  final int materialsCount;
+  final int followersCount;
+  final bool isFollowedByViewer;
+
+  PublicSupplier copyWith({
+    int? followersCount,
+    bool? isFollowedByViewer,
+  }) {
+    return PublicSupplier(
+      id: id,
+      displayName: displayName,
+      supplierType: supplierType,
+      description: description,
+      avatarUrl: avatarUrl,
+      coverImageUrl: coverImageUrl,
+      city: city,
+      area: area,
+      isVerified: isVerified,
+      materialsCount: materialsCount,
+      followersCount: followersCount ?? this.followersCount,
+      isFollowedByViewer: isFollowedByViewer ?? this.isFollowedByViewer,
+    );
+  }
+
+  factory PublicSupplier.fromJson(Map<String, dynamic> json) {
+    final avatarUrl = _nullableString(json['avatarUrl']);
+    final coverImageUrl = _nullableString(json['coverImageUrl']);
+
+    return PublicSupplier(
+      id: json['id'] as String? ?? '',
+      displayName: json['displayName'] as String? ?? 'ImpactLoop supplier',
+      supplierType: _nullableString(json['supplierType']),
+      description: _nullableString(json['description']),
+      avatarUrl: avatarUrl == null
+          ? null
+          : ApiConfig.resolveMediaUrl(avatarUrl),
+      coverImageUrl: coverImageUrl == null
+          ? null
+          : ApiConfig.resolveMediaUrl(coverImageUrl),
+      city: _nullableString(json['city']),
+      area: _nullableString(json['area']),
+      isVerified: json['isVerified'] == true,
+      materialsCount: _intFromDynamic(json['materialsCount']) ?? 0,
+      followersCount: _intFromDynamic(json['followersCount']) ?? 0,
+      isFollowedByViewer: json['isFollowedByViewer'] == true,
+    );
+  }
+
+  static String? _nullableString(Object? value) {
+    if (value == null) {
+      return null;
+    }
+
+    final normalized = value.toString().trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  static int? _intFromDynamic(Object? value) {
+    if (value is int) {
+      return value;
+    }
+
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '');
+  }
+}
+
+class SupplierFollowStatus {
+  const SupplierFollowStatus({
+    required this.supplierProfileId,
+    required this.followersCount,
+    required this.isFollowedByViewer,
+  });
+
+  final String supplierProfileId;
+  final int followersCount;
+  final bool isFollowedByViewer;
+
+  factory SupplierFollowStatus.fromJson(Map<String, dynamic> json) {
+    return SupplierFollowStatus(
+      supplierProfileId: json['supplierProfileId'] as String? ?? '',
+      followersCount: PublicSupplier._intFromDynamic(json['followersCount']) ?? 0,
+      isFollowedByViewer: json['isFollowedByViewer'] == true,
+    );
   }
 }

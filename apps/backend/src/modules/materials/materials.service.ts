@@ -36,6 +36,7 @@ import {
   commitRecommendationToggleTransition,
   resolveRecommendationSourceOperationId,
 } from '../recommendation-events/recommendation-events.service.js';
+import * as publicSuppliersRepository from '../public-suppliers/public-suppliers.repository.js';
 
 import * as materialsRepository from './materials.repository.js';
 import type {
@@ -420,6 +421,148 @@ const resolveSupplierName = (material: {
   );
 };
 
+type MaterialSupplierProfileForSummary = {
+  id: string;
+  publicName: string | null;
+  avatarImageUrl: string | null;
+  user: {
+    displayName: string;
+    profileImageUrl: string | null;
+  };
+  defaultPickupLocation: {
+    city: string;
+    area: string | null;
+  } | null;
+  organizationProfile: {
+    businessLocation: {
+      city: string;
+      area: string | null;
+    } | null;
+  } | null;
+};
+
+const resolveMaterialSupplierDisplayName = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return (
+    supplierProfile.publicName?.trim() ||
+    supplierProfile.user.displayName?.trim() ||
+    'ImpactLoop supplier'
+  );
+};
+
+const resolveMaterialSupplierAvatarUrl = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return supplierProfile.avatarImageUrl ?? supplierProfile.user.profileImageUrl ?? null;
+};
+
+const resolveMaterialSupplierCity = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return (
+    supplierProfile.defaultPickupLocation?.city ??
+    supplierProfile.organizationProfile?.businessLocation?.city ??
+    null
+  );
+};
+
+const resolveMaterialSupplierArea = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+) => {
+  return (
+    supplierProfile.defaultPickupLocation?.area ??
+    supplierProfile.organizationProfile?.businessLocation?.area ??
+    null
+  );
+};
+
+const mapMaterialSupplierSummary = (
+  supplierProfile: MaterialSupplierProfileForSummary,
+  followedSupplierIds: Set<string>,
+  options: { followersCount?: number } = {},
+) => {
+  const summary = {
+    id: supplierProfile.id,
+    displayName: resolveMaterialSupplierDisplayName(supplierProfile),
+    avatarUrl: resolveMaterialSupplierAvatarUrl(supplierProfile),
+    city: resolveMaterialSupplierCity(supplierProfile),
+    area: resolveMaterialSupplierArea(supplierProfile),
+    isFollowedByViewer: followedSupplierIds.has(supplierProfile.id),
+  };
+
+  if (options.followersCount !== undefined) {
+    return {
+      ...summary,
+      followersCount: options.followersCount,
+    };
+  }
+
+  return summary;
+};
+
+const collectSupplierProfileIds = (
+  materials: Array<{ supplierProfile: { id: string } | null }>,
+) => {
+  const ids = new Set<string>();
+
+  for (const material of materials) {
+    if (material.supplierProfile?.id) {
+      ids.add(material.supplierProfile.id);
+    }
+  }
+
+  return [...ids];
+};
+
+const attachSupplierSummariesToMappedMaterials = async <
+  TMaterial extends { supplierProfile: MaterialSupplierProfileForSummary | null },
+  TMapped extends Record<string, unknown>,
+>(
+  rawMaterials: TMaterial[],
+  mappedMaterials: TMapped[],
+  viewer?: AccessTokenPayload,
+  options: { includeFollowersCountForSingle?: boolean } = {},
+) => {
+  const supplierProfileIds = collectSupplierProfileIds(rawMaterials);
+  const followedSupplierIds =
+    await publicSuppliersRepository.findFollowedSupplierIds(
+      viewer?.sub,
+      supplierProfileIds,
+    );
+
+  let followersCountBySupplierId = new Map<string, number>();
+
+  if (
+    options.includeFollowersCountForSingle &&
+    supplierProfileIds.length === 1
+  ) {
+    const supplierProfileId = supplierProfileIds[0]!;
+    const followersCount =
+      await publicSuppliersRepository.countSupplierFollowers(supplierProfileId);
+    followersCountBySupplierId = new Map([[supplierProfileId, followersCount]]);
+  }
+
+  return mappedMaterials.map((mapped, index) => {
+    const supplierProfile = rawMaterials[index]?.supplierProfile;
+
+    if (!supplierProfile?.id) {
+      return mapped;
+    }
+
+    return {
+      ...mapped,
+      supplier: mapMaterialSupplierSummary(
+        supplierProfile,
+        followedSupplierIds,
+        {
+          followersCount: followersCountBySupplierId.get(supplierProfile.id),
+        },
+      ),
+    };
+  });
+};
+
 const resolvePrimaryImageUrl = (material: {
   images: { imageUrl: string; isCover?: boolean }[];
 }) => {
@@ -665,6 +808,7 @@ const buildMaterialReserveEnrichment = async (
 export const getMaterials = async (
   query: MaterialsQuery,
   viewer?: AccessTokenPayload,
+  options: { supplierProfileId?: string } = {},
 ) => {
   let viewerCoordinates: materialsRepository.ViewerCoordinates | undefined;
 
@@ -699,6 +843,7 @@ export const getMaterials = async (
   const result = await materialsRepository.findMaterials(
     query,
     viewerCoordinates,
+    options.supplierProfileId,
   );
   const materialIds = result.items.map((item) => item.id);
 
@@ -711,21 +856,29 @@ export const getMaterials = async (
       materialsRepository.findLikedMaterialIds(viewer?.sub, materialIds),
     ]);
 
-  return {
-    items: result.items.map((item) =>
-      mapMaterial(
-        item,
-        heldByMaterialId.get(item.id) ?? toDecimal(0),
-        {
-          likesCount: likesByMaterialId.get(item.id) ?? 0,
-          isLiked: likedMaterialIds.has(item.id),
-        },
-        {
-          includeApproximateLocation: true,
-          distanceKm: result.distanceByMaterialId.get(item.id),
-        },
-      ),
+  const mappedItems = result.items.map((item) =>
+    mapMaterial(
+      item,
+      heldByMaterialId.get(item.id) ?? toDecimal(0),
+      {
+        likesCount: likesByMaterialId.get(item.id) ?? 0,
+        isLiked: likedMaterialIds.has(item.id),
+      },
+      {
+        includeApproximateLocation: true,
+        distanceKm: result.distanceByMaterialId.get(item.id),
+      },
     ),
+  );
+
+  const items = await attachSupplierSummariesToMappedMaterials(
+    result.items,
+    mappedItems,
+    viewer,
+  );
+
+  return {
+    items,
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -812,10 +965,16 @@ export const getMaterialById = async (
     },
   );
   const detailFields = mapMaterialDetailFields(material);
+  const [materialWithSupplier] = await attachSupplierSummariesToMappedMaterials(
+    [material],
+    [mappedMaterial],
+    viewer,
+    { includeFollowersCountForSingle: true },
+  );
 
   if (!viewer) {
     return {
-      ...mappedMaterial,
+      ...materialWithSupplier,
       ...detailFields,
     };
   }
@@ -827,7 +986,7 @@ export const getMaterialById = async (
   );
 
   return {
-    ...mappedMaterial,
+    ...materialWithSupplier,
     ...detailFields,
     ...reserveEnrichment,
   };

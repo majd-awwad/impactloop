@@ -23,6 +23,9 @@ import '../../../materials/data/material_reports_api.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../../shared/widgets/supplier/supplier_identity_widgets.dart';
+import '../../../comments/domain/comment_models.dart';
+import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
@@ -552,6 +555,13 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                 material: material,
                                 layout: _RelatedMaterialsLayout.desktop,
                               ),
+                              const SizedBox(
+                                height: _materialDetailsSectionGap,
+                              ),
+                              CommentsSection(
+                                targetType: CommentTargetType.material,
+                                targetId: material.id,
+                              ),
                             ],
                           )
                         : Column(
@@ -583,6 +593,11 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               _MaterialProjectHandoffPanel(material: material),
                               const SizedBox(height: AppSpacing.md),
                               _SupplierCard(material: material),
+                              const SizedBox(height: AppSpacing.md),
+                              CommentsSection(
+                                targetType: CommentTargetType.material,
+                                targetId: material.id,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               const DiscoveryLocationPrivacyPanel(),
                               const SizedBox(height: AppSpacing.md),
@@ -1241,86 +1256,249 @@ class _DetailTextSection extends StatelessWidget {
   }
 }
 
-class _SupplierCard extends StatelessWidget {
+class _SupplierCard extends ConsumerStatefulWidget {
   const _SupplierCard({required this.material});
 
   final DiscoveryMaterial material;
 
   @override
+  ConsumerState<_SupplierCard> createState() => _SupplierCardState();
+}
+
+class _SupplierCardState extends ConsumerState<_SupplierCard> {
+  late bool _isFollowedByViewer;
+  late int _followersCount;
+  bool _isUpdatingFollow = false;
+
+  DiscoveryMaterial get material => widget.material;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromMaterial();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SupplierCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.material.id != material.id ||
+        oldWidget.material.supplier?.isFollowedByViewer !=
+            material.supplier?.isFollowedByViewer ||
+        oldWidget.material.supplier?.followersCount !=
+            material.supplier?.followersCount) {
+      _syncFromMaterial();
+    }
+  }
+
+  void _syncFromMaterial() {
+    _isFollowedByViewer = material.supplier?.isFollowedByViewer ?? false;
+    _followersCount = material.supplier?.followersCount ?? 0;
+  }
+
+  String? get _supplierProfileId => material.supplier?.id.trim();
+
+  Future<void> _toggleFollow() async {
+    final supplierProfileId = _supplierProfileId;
+    if (supplierProfileId == null || supplierProfileId.isEmpty || _isUpdatingFollow) {
+      return;
+    }
+
+    final authState = ref.read(authControllerProvider);
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/materials/${material.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(context, 'Use a learner account to follow suppliers.');
+      return;
+    }
+
+    final previousFollowing = _isFollowedByViewer;
+    final previousCount = _followersCount;
+    final shouldFollow = !_isFollowedByViewer;
+
+    setState(() {
+      _isUpdatingFollow = true;
+      _isFollowedByViewer = shouldFollow;
+      _followersCount = shouldFollow
+          ? _followersCount + 1
+          : (_followersCount > 0 ? _followersCount - 1 : 0);
+    });
+
+    try {
+      final repository = ref.read(materialDiscoveryRepositoryProvider);
+      final status = shouldFollow
+          ? await repository.followSupplier(supplierProfileId)
+          : await repository.unfollowSupplier(supplierProfileId);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _followersCount = status.followersCount;
+        _isFollowedByViewer = status.isFollowedByViewer;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isFollowedByViewer = previousFollowing;
+        _followersCount = previousCount;
+      });
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingFollow = false;
+        });
+      }
+    }
+  }
+
+  void _openSupplierProfile() {
+    final supplierProfileId = _supplierProfileId;
+    if (supplierProfileId == null || supplierProfileId.isEmpty) {
+      return;
+    }
+
+    context.go('/suppliers/$supplierProfileId');
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final supplier = material.supplier;
+    final displayName =
+        supplier?.displayName ?? material.supplierName.resolve(context);
+    final location = [
+      supplier?.city,
+      supplier?.area,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
+    final canNavigate = _supplierProfileId != null;
 
     return _Panel(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: palette.mint.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: palette.borderSubtle),
-            ),
-            child: Icon(
-              Icons.storefront_outlined,
-              color: palette.mint,
-              size: 22,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: canNavigate ? _openSupplierProfile : null,
+                child: SupplierIdentityAvatar(
+                  displayName: displayName,
+                  avatarUrl: supplier?.avatarUrl,
+                  radius: 28,
+                  borderColor: palette.cardSurface,
+                  borderWidth: 2,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: GestureDetector(
+                  onTap: canNavigate ? _openSupplierProfile : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        const LocalizedText(
+                          en: 'Supplier',
+                          ar: 'المورد',
+                        ).resolve(context),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(color: palette.textMuted),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              displayName,
+                              style: AppTextStyles.title(
+                                context,
+                              ).copyWith(color: palette.textPrimary),
+                            ),
+                          ),
+                          if (material.supplierVerified)
+                            Icon(
+                              Icons.verified_rounded,
+                              color: palette.mint,
+                              size: 18,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        material.supplierSubtitle.resolve(context),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
+                      ),
+                      if (location.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          location,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (canNavigate) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
               children: [
-                Text(
-                  const LocalizedText(
-                    en: 'Supplier',
-                    ar: 'المورد',
-                  ).resolve(context),
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: palette.textMuted),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  material.supplierName.resolve(context),
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  material.supplierSubtitle.resolve(context),
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: palette.textSecondary),
-                ),
-                if (material.supplierVerified) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: palette.mint.withValues(alpha: 0.1),
-                      borderRadius: AppRadius.pillAll,
-                      border: Border.all(color: palette.borderSubtle),
-                    ),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _isUpdatingFollow ? null : _toggleFollow,
                     child: Text(
-                      const LocalizedText(
-                        en: 'Verified supplier',
-                        ar: 'مورد موثّق',
-                      ).resolve(context),
-                      style: AppTextStyles.label(
-                        context,
-                      ).copyWith(color: palette.textSecondary),
+                      _isFollowedByViewer
+                          ? const LocalizedText(
+                              en: 'Following',
+                              ar: 'متابَع',
+                            ).resolve(context)
+                          : const LocalizedText(
+                              en: 'Follow',
+                              ar: 'متابعة',
+                            ).resolve(context),
                     ),
                   ),
-                ],
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: _openSupplierProfile,
+                  child: Text(
+                    const LocalizedText(
+                      en: 'View profile',
+                      ar: 'عرض الملف',
+                    ).resolve(context),
+                  ),
+                ),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              LocalizedText(
+                en: '$_followersCount followers',
+                ar: '$_followersCount متابع',
+              ).resolve(context),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
+            ),
+          ],
         ],
       ),
     );
@@ -2396,7 +2574,7 @@ class _RelatedMaterialsStripState
                 .map(
                   (related) => SizedBox(
                     width: _relatedCompactCardWidth,
-                    height: ImpactMaterialCompactCard.height,
+                    height: ImpactMaterialCompactCard.baseHeight,
                     child: _RelatedMaterialCompactCard(material: related),
                   ),
                 )
@@ -2404,7 +2582,7 @@ class _RelatedMaterialsStripState
           )
         else
           SizedBox(
-            height: ImpactMaterialCompactCard.height,
+            height: ImpactMaterialCompactCard.baseHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _materials.length,

@@ -20,4 +20,15 @@ abstract class MaterialDiscoveryRepository {
     String id, {
     String? recommendationImpressionId,
   });
+
+  Future<PublicSupplier?> fetchPublicSupplier(String supplierProfileId);
+
+  Future<MaterialDiscoveryResult> fetchSupplierMaterials(
+    String supplierProfileId,
+    MaterialDiscoveryQuery query,
+  );
+
+  Future<SupplierFollowStatus> followSupplier(String supplierProfileId);
+
+  Future<SupplierFollowStatus> unfollowSupplier(String supplierProfileId);
 }

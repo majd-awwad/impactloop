@@ -18,6 +18,7 @@ import { priceRuleRequestsRouter } from './modules/price-rule-requests/price-rul
 import { reservationsRouter } from './modules/reservations/reservations.routes.js';
 import { adminRouter } from './modules/admin/admin.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { publicSuppliersRouter } from './modules/public-suppliers/public-suppliers.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
 import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/saved-dropoff-addresses.routes.js';
@@ -117,6 +118,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/learner', learnerHomeRouter);
   app.use('/api/ai/v1', aiRouter);
   app.use('/api/notifications', notificationsRouter);
+  app.use('/api/suppliers', publicSuppliersRouter);
   app.use('/api/supplier', supplierRouter);
   app.use('/api/admin', adminRouter);
 
