@@ -1,11 +1,9 @@
 import { AppError } from '../../utils/app-error.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
-import {
-  getMaterials,
-  getMaterialById,
-} from '../materials/materials.service.js';
+import { mapFocusedMaterialCards } from '../materials/materials.service.js';
 import type { MaterialsQuery } from '../materials/materials.validation.js';
+import type { PublicSupplierMaterialsQuery } from './public-suppliers.routes.js';
 
 import * as publicSuppliersRepository from './public-suppliers.repository.js';
 
@@ -134,28 +132,60 @@ export const getPublicSupplierById = async (
 ) => {
   const profile = await assertSupplierProfileExists(supplierProfileId);
 
-  const [materialsCount, followersCount, isFollowedByViewer] =
-    await Promise.all([
+  const [materialsCount, followersCount] = await Promise.all([
       publicSuppliersRepository.countPublicMaterialsForSupplier(profile.id),
       publicSuppliersRepository.countSupplierFollowers(profile.id),
-      resolveIsFollowedByViewer(profile.id, viewer),
     ]);
 
-  return mapPublicSupplierProfile(profile, {
+  const result = mapPublicSupplierProfile(profile, {
     materialsCount,
     followersCount,
-    isFollowedByViewer,
+    isFollowedByViewer: false,
   });
+  if (!viewer) {
+    return result;
+  }
+  return {
+    ...result,
+    isFollowedByViewer: await resolveIsFollowedByViewer(profile.id, viewer),
+  };
+};
+
+export const getPublicSupplierViewerStateById = async (
+  supplierProfileId: string,
+  viewer: AccessTokenPayload,
+) => {
+  await assertSupplierProfileExists(supplierProfileId);
+  return {
+    supplierProfileId,
+    isFollowedByViewer: await resolveIsFollowedByViewer(
+      supplierProfileId,
+      viewer,
+    ),
+  };
 };
 
 export const getPublicSupplierMaterials = async (
   supplierProfileId: string,
-  query: MaterialsQuery,
+  query: PublicSupplierMaterialsQuery & Partial<MaterialsQuery>,
   viewer?: AccessTokenPayload,
 ) => {
   await assertSupplierProfileExists(supplierProfileId);
-
-  return getMaterials(query, viewer, { supplierProfileId });
+  const result =
+    await publicSuppliersRepository.findPublicMaterialsBySupplierProfileId(
+      supplierProfileId,
+      query,
+    );
+  const items = await mapFocusedMaterialCards(result.items, viewer);
+  return {
+    items,
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+      totalPages: result.total === 0 ? 0 : Math.ceil(result.total / query.limit),
+    },
+  };
 };
 
 export const followSupplierById = async (

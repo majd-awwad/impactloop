@@ -8,7 +8,7 @@ import {
   logEmailInvitationStartupConfig,
   logRecommendationOutboxStartupConfig,
 } from './config/env.js';
-import { prisma } from './database/prisma.js';
+import { databasePool, getDatabasePoolSnapshot, prisma } from './database/prisma.js';
 import { verifySmtpInvitationTransport } from './modules/invitations/email/smtp-email-invitation-provider.js';
 import {
   beginReadinessShutdown,
@@ -20,6 +20,7 @@ import {
   RECOMMENDATION_OUTBOX_SHUTDOWN_WAIT_MS,
 } from './modules/recommendation-events/recommendation-events.outbox.worker.js';
 import { preloadRecommendationMlRuntime } from './modules/recommendations/ml-runtime-state.service.js';
+import { ReservationLifecycleWorker } from './modules/reservations/reservation-lifecycle.worker.js';
 
 logAiPriceSuggestionStartupConfig();
 logAiPlatformDiagnostics();
@@ -72,8 +73,13 @@ registerRecommendationOutboxHealthProvider({
   },
 });
 
+const reservationLifecycleWorker = new ReservationLifecycleWorker();
+reservationLifecycleWorker.start();
+
 const server = app.listen(env.port, () => {
-  console.log(`ImpactLoop API listening on port ${env.port}`);
+  console.log(
+    `ImpactLoop API pid=${process.pid} listening on port ${env.port} pool=${JSON.stringify(getDatabasePoolSnapshot())}`,
+  );
 });
 
 let shuttingDown = false;
@@ -82,6 +88,7 @@ const shutdown = async (signal: string): Promise<void> => {
     return;
   }
   shuttingDown = true;
+  reservationLifecycleWorker.stop();
   console.log(`[ImpactLoop API] ${signal} received; shutting down`);
 
   await runReadinessAwareShutdown({
@@ -92,7 +99,10 @@ const shutdown = async (signal: string): Promise<void> => {
       new Promise<void>((resolve) => {
         server.close(() => resolve());
       }),
-    disconnectDb: () => prisma.$disconnect(),
+    disconnectDb: async () => {
+      await prisma.$disconnect();
+      await databasePool.end();
+    },
     markWorkerStopped: () => {
       recommendationOutboxWorker.markStopped();
     },

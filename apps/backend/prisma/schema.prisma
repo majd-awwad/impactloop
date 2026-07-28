@@ -1346,6 +1346,7 @@ model MaterialView {
   id           String   @id @default(cuid())
   materialId   String   @map("material_id")
   viewerUserId String?  @map("viewer_user_id")
+  operationKey String?  @map("operation_key")
   viewSource   String?  @map("view_source")
   createdAt    DateTime @default(now()) @map("created_at")
   material     Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
@@ -1353,6 +1354,7 @@ model MaterialView {
 
   @@index([materialId])
   @@index([viewerUserId])
+  @@unique([materialId, operationKey])
   @@map("material_views")
 }
 

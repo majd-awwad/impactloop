@@ -7,12 +7,15 @@ import {
 } from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
+import { privateNoStoreMiddleware } from '../../middlewares/cache-control.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 import { materialsQuerySchema } from '../materials/materials.validation.js';
+import { paginationQuerySchema } from '../../utils/zod-helpers.js';
 
 import {
   followSupplier,
   getPublicSupplier,
+  getPublicSupplierViewerState,
   listPublicSupplierMaterials,
   unfollowSupplier,
 } from './public-suppliers.controller.js';
@@ -25,7 +28,7 @@ export type SupplierProfileIdParams = z.infer<
   typeof supplierProfileIdParamSchema
 >;
 
-export const publicSupplierMaterialsQuerySchema = materialsQuerySchema;
+export const publicSupplierMaterialsQuerySchema = paginationQuerySchema;
 
 export type PublicSupplierMaterialsQuery = z.infer<
   typeof publicSupplierMaterialsQuerySchema
@@ -46,6 +49,14 @@ publicSuppliersRouter.get(
   validate(supplierProfileIdParamSchema, 'params'),
   validate(publicSupplierMaterialsQuerySchema, 'query'),
   asyncHandler(listPublicSupplierMaterials),
+);
+
+publicSuppliersRouter.get(
+  '/:supplierProfileId/viewer-state',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  validate(supplierProfileIdParamSchema, 'params'),
+  asyncHandler(getPublicSupplierViewerState),
 );
 
 publicSuppliersRouter.post(

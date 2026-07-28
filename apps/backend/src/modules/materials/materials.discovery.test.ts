@@ -4,6 +4,7 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
 import {
   getOrBuildMaterialFeaturePool,
   resetMaterialFeaturePoolCacheForTests,
@@ -23,9 +24,11 @@ import {
 
 import {
   getMaterialById,
+  getMaterialViewerState,
   getMaterials,
   likeMaterialById,
   unlikeMaterialById,
+  recordMaterialViewById,
 } from './materials.service.js';
 import { materialsQuerySchema } from './materials.validation.js';
 
@@ -471,7 +474,7 @@ describe('public material discovery', () => {
     assert.equal(ids.indexOf(highViews.id) < ids.indexOf(lowViews.id), true);
   });
 
-  test('GET material detail increments viewsCount', async () => {
+  test('GET material detail is pure and explicit views are idempotent', async () => {
     const unique = `${TEST_MARKER}-views-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} views stock`,
@@ -479,10 +482,18 @@ describe('public material discovery', () => {
     });
 
     const first = await getMaterialById(material.id);
-    assert.equal(first.viewsCount, 4);
+    assert.equal(first.viewsCount, 3);
 
     const second = await getMaterialById(material.id);
-    assert.equal(second.viewsCount, 5);
+    assert.equal(second.viewsCount, 3);
+
+    await recordMaterialViewById(material.id, `${unique}-operation-1`);
+    const replay = await recordMaterialViewById(
+      material.id,
+      `${unique}-operation-1`,
+    );
+    assert.equal(replay.recorded, false);
+    await recordMaterialViewById(material.id, `${unique}-operation-2`);
 
     const viewRows = await prisma.materialView.count({
       where: { materialId: material.id },
@@ -490,7 +501,7 @@ describe('public material discovery', () => {
     assert.equal(viewRows, 2);
   });
 
-  test('authenticated material detail records viewer and liked state', async () => {
+  test('viewer state exposes likes and explicit authenticated views deduplicate', async () => {
     const unique = `${TEST_MARKER}-viewer-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} viewer stock`,
@@ -502,32 +513,32 @@ describe('public material discovery', () => {
       likeMaterialById(material.id, learner.id),
     );
 
-    const detail = await getMaterialById(material.id, {
+    const viewer: AccessTokenPayload = {
       sub: learner.id,
       roles: ['LEARNER'],
-    });
+    };
+    const detail = await getMaterialViewerState(material.id, viewer);
 
-    assert.equal(detail.likesCount, 1);
     assert.equal(detail.isLiked, true);
-    assert.equal(detail.viewsCount, 1);
+    await runWithRecommendationEventOrigin('TEST', () =>
+      recordMaterialViewById(material.id, `${unique}-view`, viewer),
+    );
 
     const historicalView = await prisma.materialView.findFirstOrThrow({
       where: { materialId: material.id, viewerUserId: learner.id },
       select: { id: true, createdAt: true },
     });
 
-    const repeatDetail = await getMaterialById(material.id, {
-      sub: learner.id,
-      roles: ['LEARNER'],
-    });
-
-    assert.equal(repeatDetail.viewsCount, 2);
+    const repeat = await runWithRecommendationEventOrigin('TEST', () =>
+      recordMaterialViewById(material.id, `${unique}-view`, viewer),
+    );
+    assert.equal(repeat.recorded, true);
 
     const trackedViews = await prisma.materialView.findMany({
       where: { materialId: material.id, viewerUserId: learner.id },
       orderBy: { createdAt: 'asc' },
     });
-    assert.equal(trackedViews.length, 2);
+    assert.equal(trackedViews.length, 1);
     assert.equal(trackedViews[0]?.id, historicalView.id);
     assert.equal(
       trackedViews[0]?.createdAt.toISOString(),
@@ -1033,7 +1044,7 @@ describe('public material discovery', () => {
     const detail = await getMaterialById(material.id, {
       sub: ctx.supplierId,
       roles: ['SUPPLIER'],
-    }) as {
+    }) as unknown as {
       isOwnMaterial: boolean;
       canReserve: boolean;
       reserveBlockReason: string | null;

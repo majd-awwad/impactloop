@@ -200,7 +200,7 @@ const resolveReservationOperationalDelivery = (
   };
 };
 
-const mapLearnerReservation = (
+export const mapLearnerReservation = (
   reservation: reservationsRepository.LearnerReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {

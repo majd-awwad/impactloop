@@ -16,11 +16,14 @@ import { AppError } from '../../utils/app-error.js';
 import { decimalToNumber, roundCurrency } from '../../utils/decimal.js';
 import type { AccessTokenPayload } from '../../utils/jwt.js';
 import { isOtherCategory } from '../categories/categories.repository.js';
+import { cardMaterialImageUrl } from '../../utils/material-image-url.js';
 import * as categoriesRepository from '../categories/categories.repository.js';
 import * as materialTypesRepository from '../material-types/material-types.repository.js';
 import {
   expireStalePendingReservationsForMaterials,
+  mapLearnerReservation,
 } from '../reservations/reservations.service.js';
+import * as reservationsRepository from '../reservations/reservations.repository.js';
 import {
   ACTIVE_HOLD_STATUSES,
   computeAvailableQuantity,
@@ -567,7 +570,8 @@ const resolvePrimaryImageUrl = (material: {
   images: { imageUrl: string; isCover?: boolean }[];
 }) => {
   const cover = material.images.find((image) => image.isCover);
-  return cover?.imageUrl ?? material.images[0]?.imageUrl ?? null;
+  const original = cover?.imageUrl ?? material.images[0]?.imageUrl ?? null;
+  return original ? cardMaterialImageUrl(original) : null;
 };
 
 type PublicMaterialImageRecord = {
@@ -617,7 +621,7 @@ const approximateDistanceKm = (distanceKm: number | null | undefined) => {
   return Math.round(distanceKm * 10) / 10;
 };
 
-const mapMaterial = (
+export const mapMaterial = (
   material: {
     id: string;
     title: string;
@@ -847,8 +851,6 @@ export const getMaterials = async (
   );
   const materialIds = result.items.map((item) => item.id);
 
-  await expireStalePendingReservationsForMaterials(materialIds);
-
   const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
     await Promise.all([
       getHeldQuantitiesByMaterialIds(materialIds),
@@ -891,35 +893,130 @@ export const getMaterials = async (
 export const getMaterialById = async (
   id: string,
   viewer?: AccessTokenPayload,
+  abortSignal?: AbortSignal,
 ) => {
   const material = await materialsRepository.findMaterialById(id);
 
   if (!material) {
     throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
+  assertRequestActive(abortSignal);
 
-  await expireStalePendingReservationsForMaterials([material.id]);
-
-  const isLearner = Boolean(
-    viewer?.sub &&
-      viewer.roles.some((role) => role.toUpperCase() === 'LEARNER'),
+  const [heldByMaterialId, likesByMaterialId] = await Promise.all([
+    getHeldQuantitiesByMaterialIds([material.id]),
+    materialsRepository.countLikesByMaterialIds([material.id]),
+  ]);
+  assertRequestActive(abortSignal);
+  const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
+  const mappedMaterial = mapMaterial(
+    material,
+    heldQuantity,
+    {
+      likesCount: likesByMaterialId.get(material.id) ?? 0,
+      isLiked: false,
+    },
   );
-  const sourceOperationId = isLearner
-    ? resolveRecommendationSourceOperationId()
-    : undefined;
-  let replayed = false;
-  let incremented: { viewsCount: number; recorded: boolean };
+  const detailFields = mapMaterialDetailFields(material);
+  const [materialWithSupplier] = await attachSupplierSummariesToMappedMaterials(
+    [material],
+    [mappedMaterial],
+    undefined,
+    { includeFollowersCountForSingle: true },
+  );
 
-  if (viewer?.sub && isLearner && sourceOperationId) {
+  const publicDetail = {
+    ...materialWithSupplier,
+    ...detailFields,
+  };
+
+  if (!viewer) {
+    return publicDetail;
+  }
+
+  const viewerState = await getMaterialViewerState(id, viewer);
+  const publicSupplier =
+    'supplier' in publicDetail ? publicDetail.supplier : undefined;
+  return {
+    ...publicDetail,
+    ...viewerState,
+    ...(publicSupplier
+      ? {
+          supplier: {
+            ...publicSupplier,
+            isFollowedByViewer: viewerState.supplierFollowed,
+          },
+        }
+      : {}),
+  };
+};
+
+export const getMaterialViewerState = async (
+  id: string,
+  viewer: AccessTokenPayload,
+  abortSignal?: AbortSignal,
+) => {
+  const material = await materialsRepository.findMaterialById(id);
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
+  }
+  assertRequestActive(abortSignal);
+
+  const isLearner = viewer.roles.includes('LEARNER');
+  const [heldByMaterialId, likedMaterialIds, followedSupplierIds, reservation] =
+    await Promise.all([
+      getHeldQuantitiesByMaterialIds([material.id]),
+      materialsRepository.findLikedMaterialIds(viewer.sub, [material.id]),
+      publicSuppliersRepository.findFollowedSupplierIds(
+        viewer.sub,
+        material.supplierProfileId ? [material.supplierProfileId] : [],
+      ),
+      isLearner
+        ? reservationsRepository.findActiveLearnerReservationForMaterial(
+            viewer.sub,
+            material.id,
+          )
+        : Promise.resolve(null),
+    ]);
+  assertRequestActive(abortSignal);
+  const availableQuantity = computeAvailableQuantity(
+    material.quantity,
+    heldByMaterialId.get(material.id) ?? toDecimal(0),
+  ).toNumber();
+  const reserve = await buildMaterialReserveEnrichment(
+    material,
+    availableQuantity,
+    viewer,
+  );
+
+  return {
+    materialId: material.id,
+    isLiked: likedMaterialIds.has(material.id),
+    supplierFollowed: material.supplierProfileId
+      ? followedSupplierIds.has(material.supplierProfileId)
+      : false,
+    ...reserve,
+    reservation: reservation ? mapLearnerReservation(reservation) : null,
+  };
+};
+
+export const recordMaterialViewById = async (
+  id: string,
+  operationKey: string,
+  viewer?: AccessTokenPayload,
+) => {
+  const isLearner = viewer?.roles.includes('LEARNER') === true;
+  if (viewer?.sub && isLearner) {
     const committed = await commitRecommendationMaterialView({
       learnerId: viewer.sub,
-      materialId: material.id,
+      materialId: id,
+      sourceOperationId: operationKey,
       apply: async (tx) => {
         const recorded = await materialsRepository.recordMaterialViewOperation(
-          material.id,
+          id,
           viewer.sub,
           'material_detail',
           tx,
+          operationKey,
         );
         if (!recorded) {
           throw new AppError('Material not found', 404, 'NOT_FOUND');
@@ -927,69 +1024,67 @@ export const getMaterialById = async (
         return recorded;
       },
     });
-    incremented = committed.response;
-    replayed = committed.replayed;
-  } else if (viewer?.sub && isLearner) {
-    incremented = await prisma.$transaction((tx) =>
-      materialsRepository.appendMaterialView(
-        material.id,
-        viewer.sub,
-        'material_detail',
-        tx,
-      ),
-    );
-  } else {
-    incremented = await materialsRepository.recordMaterialView(
-      material.id,
-      viewer?.sub,
-      'material_detail',
-    );
+    if (committed.response.recorded && !committed.replayed) {
+      invalidateLearnerHomeCache(viewer.sub);
+    }
+    return committed.response;
   }
 
-  const [heldByMaterialId, likesByMaterialId, likedMaterialIds] =
-    await Promise.all([
-      getHeldQuantitiesByMaterialIds([material.id]),
-      materialsRepository.countLikesByMaterialIds([material.id]),
-      materialsRepository.findLikedMaterialIds(viewer?.sub, [material.id]),
-    ]);
-  const heldQuantity = heldByMaterialId.get(material.id) ?? toDecimal(0);
-  if (viewer?.sub && incremented.recorded && !replayed) {
-    invalidateLearnerHomeCache(viewer.sub);
+  const recorded = await materialsRepository.recordIdempotentMaterialView({
+    id,
+    viewerUserId: viewer?.sub,
+    operationKey,
+  });
+  if (!recorded) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
-  const mappedMaterial = mapMaterial(
-    { ...material, viewsCount: incremented.viewsCount },
-    heldQuantity,
-    {
-      likesCount: likesByMaterialId.get(material.id) ?? 0,
-      isLiked: likedMaterialIds.has(material.id),
-    },
-  );
-  const detailFields = mapMaterialDetailFields(material);
-  const [materialWithSupplier] = await attachSupplierSummariesToMappedMaterials(
-    [material],
-    [mappedMaterial],
-    viewer,
-    { includeFollowersCountForSingle: true },
-  );
+  return recorded;
+};
 
-  if (!viewer) {
-    return {
-      ...materialWithSupplier,
-      ...detailFields,
-    };
+export const mapFocusedMaterialCards = async (
+  records: Awaited<
+    ReturnType<typeof materialsRepository.findRelatedMaterials>
+  >['category'],
+  viewer?: AccessTokenPayload,
+) => {
+  const ids = records.map((item) => item.id);
+  const [held, likes, liked] = await Promise.all([
+    getHeldQuantitiesByMaterialIds(ids),
+    materialsRepository.countLikesByMaterialIds(ids),
+    materialsRepository.findLikedMaterialIds(viewer?.sub, ids),
+  ]);
+  return records.map((item) =>
+    mapMaterial(item, held.get(item.id) ?? toDecimal(0), {
+      likesCount: likes.get(item.id) ?? 0,
+      isLiked: liked.has(item.id),
+    }),
+  );
+};
+
+export const getRelatedMaterials = async (
+  id: string,
+  limit: number,
+  viewer?: AccessTokenPayload,
+  abortSignal?: AbortSignal,
+) => {
+  const material = await materialsRepository.findMaterialById(id);
+  if (!material) {
+    throw new AppError('Material not found', 404, 'NOT_FOUND');
   }
+  assertRequestActive(abortSignal);
+  const related = await materialsRepository.findRelatedMaterials(material, limit);
+  assertRequestActive(abortSignal);
+  const [category, nearby] = await Promise.all([
+    mapFocusedMaterialCards(related.category, viewer),
+    mapFocusedMaterialCards(related.nearby, viewer),
+  ]);
+  return { category, nearby };
+};
 
-  const reserveEnrichment = await buildMaterialReserveEnrichment(
-    material,
-    mappedMaterial.availableQuantity,
-    viewer,
-  );
-
-  return {
-    ...materialWithSupplier,
-    ...detailFields,
-    ...reserveEnrichment,
-  };
+const assertRequestActive = (signal?: AbortSignal): void => {
+  if (signal?.aborted) {
+    throw new AppError('Client closed request', 499, 'CLIENT_CLOSED_REQUEST');
+  }
 };
 
 export const likeMaterialById = async (id: string, userId: string) => {

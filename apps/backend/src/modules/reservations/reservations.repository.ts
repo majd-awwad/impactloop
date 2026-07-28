@@ -244,6 +244,21 @@ export const findLearnerReservationById = async (
   });
 };
 
+export const findActiveLearnerReservationForMaterial = async (
+  requesterId: string,
+  materialId: string,
+) => {
+  return prisma.reservation.findFirst({
+    where: {
+      requesterId,
+      materialId,
+      status: { in: [...ACTIVE_HOLD_STATUSES] },
+    },
+    select: learnerReservationListSelect,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+  });
+};
+
 export const createLearnerReservation = async (input: {
   requesterId: string;
   materialId: string;
