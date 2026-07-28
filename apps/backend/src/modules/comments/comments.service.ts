@@ -63,11 +63,6 @@ const mapComment = (
 ): CommentDto => {
   const placeholder = isPlaceholderStatus(comment.status);
   const isOwner = Boolean(viewer?.sub && viewer.sub === comment.authorId);
-  const isModerator = Boolean(
-    viewer?.roles.some(
-      (role) => role === 'ADMIN' || role === 'MODERATOR',
-    ),
-  );
 
   return {
     id: comment.id,
@@ -84,21 +79,15 @@ const mapComment = (
     editedAt: comment.editedAt?.toISOString() ?? null,
     deletedAt: comment.deletedAt?.toISOString() ?? null,
     author: mapAuthor(comment.author),
-    replyTo:
-      comment.replyTo && !isPlaceholderStatus(comment.replyTo.status)
-        ? {
-            id: comment.replyTo.id,
-            author: mapAuthor(comment.replyTo.author),
-          }
-        : comment.replyTo
-          ? {
-              id: comment.replyTo.id,
-              author: mapAuthor(comment.replyTo.author),
-            }
-          : null,
+    replyTo: comment.replyTo
+      ? {
+          id: comment.replyTo.id,
+          author: mapAuthor(comment.replyTo.author),
+        }
+      : null,
     ...(repliesCount === undefined ? {} : { repliesCount }),
     canEdit: isOwner && !placeholder,
-    canDelete: (isOwner || isModerator) && !placeholder,
+    canDelete: isOwner && !placeholder,
   };
 };
 
