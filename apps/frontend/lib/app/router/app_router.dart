@@ -352,6 +352,13 @@ String? _resolveActivePortalRedirect(AuthState authState, String path) {
 
   final user = authState.user!;
 
+  if (path == profileRoute) {
+    final target = profileRouteForActiveRole(user);
+    if (target != profileRoute) {
+      return target;
+    }
+  }
+
   if (user.isSupplierMode &&
       _isLearnerPortalHomePath(path) &&
       user.canSwitchToSupplier) {
@@ -730,9 +737,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final supplierProfileId = state.pathParameters['supplierProfileId']!;
 
-          return PublicSupplierPage(
-            supplierProfileId: supplierProfileId,
-          );
+          return PublicSupplierPage(supplierProfileId: supplierProfileId);
         },
       ),
       GoRoute(

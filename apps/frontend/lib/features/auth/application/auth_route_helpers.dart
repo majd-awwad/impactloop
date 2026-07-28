@@ -16,6 +16,7 @@ const driverPortalRoute = '/driver/jobs';
 const adminPortalRoute = '/admin';
 const inviteAcceptRoute = '/invite/accept';
 const homeRoute = '/home';
+const profileRoute = '/profile';
 const learnerReservationsRoute = '/learner/reservations';
 const supplierProfileRoute = '/supplier/profile';
 
