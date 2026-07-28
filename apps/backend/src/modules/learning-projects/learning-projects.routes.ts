@@ -55,6 +55,7 @@ import {
   updateMyLearningProjectSubmissionSchema,
   updateProjectBuildItemSchema,
 } from './learning-projects.validation.js';
+import { attachCommentRoutes } from '../comments/comments.routes.js';
 
 export const learningProjectsRouter = Router();
 
@@ -287,6 +288,8 @@ learningProjectsRouter.delete(
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(deleteLearningProjectReview),
 );
+
+attachCommentRoutes(learningProjectsRouter);
 
 learningProjectsRouter.get(
   '/:id',

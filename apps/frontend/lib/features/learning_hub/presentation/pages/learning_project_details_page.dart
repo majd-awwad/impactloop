@@ -10,6 +10,8 @@ import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../comments/domain/comment_models.dart';
+import '../../../comments/presentation/comments_section.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
 import '../theme/learning_project_visuals.dart';
@@ -134,6 +136,11 @@ class _ProjectDetailsBody extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.lg),
                       ProjectReviewsSection(project: project),
+                      const SizedBox(height: AppSpacing.lg),
+                      CommentsSection(
+                        targetType: CommentTargetType.learningProject,
+                        targetId: project.id,
+                      ),
                       const SizedBox(height: AppSpacing.lg),
                       if (project.components.isNotEmpty) ...[
                         ProjectComponentsSection(

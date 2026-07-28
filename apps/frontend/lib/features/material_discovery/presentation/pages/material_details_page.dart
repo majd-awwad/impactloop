@@ -24,6 +24,8 @@ import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/widgets/supplier/supplier_identity_widgets.dart';
+import '../../../comments/domain/comment_models.dart';
+import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
 import '../../../deliveries/data/models/learner_delivery.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
@@ -553,6 +555,13 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                                 material: material,
                                 layout: _RelatedMaterialsLayout.desktop,
                               ),
+                              const SizedBox(
+                                height: _materialDetailsSectionGap,
+                              ),
+                              CommentsSection(
+                                targetType: CommentTargetType.material,
+                                targetId: material.id,
+                              ),
                             ],
                           )
                         : Column(
@@ -584,6 +593,11 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               _MaterialProjectHandoffPanel(material: material),
                               const SizedBox(height: AppSpacing.md),
                               _SupplierCard(material: material),
+                              const SizedBox(height: AppSpacing.md),
+                              CommentsSection(
+                                targetType: CommentTargetType.material,
+                                targetId: material.id,
+                              ),
                               const SizedBox(height: AppSpacing.md),
                               const DiscoveryLocationPrivacyPanel(),
                               const SizedBox(height: AppSpacing.md),

@@ -9,6 +9,8 @@ import {
   adminCreateInvitationSchema,
   invitationIdParamSchema,
 } from '../invitations/invitations.validation.js';
+import { moderateCommentHandler } from '../comments/comments.controller.js';
+import { adminCommentIdParamSchema } from '../comments/comments.validation.js';
 
 import {
   createAdminInvitation,
@@ -715,4 +717,12 @@ adminRouter.post(
   validate(adminNoShowReportIdParamSchema, 'params'),
   validate(cancelReleaseHoldSchema),
   asyncHandler(cancelReleaseHoldAdminNoShowReportHandler),
+);
+
+adminRouter.delete(
+  '/comments/:id',
+  authMiddleware,
+  requireRoles('ADMIN', 'MODERATOR'),
+  validate(adminCommentIdParamSchema, 'params'),
+  asyncHandler(moderateCommentHandler),
 );

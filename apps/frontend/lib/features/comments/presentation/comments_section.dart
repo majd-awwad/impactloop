@@ -1,0 +1,627 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme/app_radius.dart';
+import '../../../app/theme/app_spacing.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../shared/widgets/app_feedback.dart';
+import '../../../shared/widgets/supplier/supplier_identity_widgets.dart';
+import '../../auth/application/auth_controller.dart';
+import '../application/comments_providers.dart';
+import '../domain/comment_models.dart';
+
+class CommentsSection extends ConsumerStatefulWidget {
+  const CommentsSection({
+    super.key,
+    required this.targetType,
+    required this.targetId,
+    this.title = 'Comments',
+  });
+
+  final CommentTargetType targetType;
+  final String targetId;
+  final String title;
+
+  @override
+  ConsumerState<CommentsSection> createState() => _CommentsSectionState();
+}
+
+class _CommentsSectionState extends ConsumerState<CommentsSection> {
+  final TextEditingController _composerController = TextEditingController();
+  final Map<String, List<CommentItem>> _loadedReplies = {};
+  final Map<String, CommentsPagination?> _replyPagination = {};
+  final Set<String> _expandedRoots = {};
+  final Set<String> _loadingReplies = {};
+
+  CommentItem? _replyingTo;
+  String? _editingCommentId;
+  bool _submitting = false;
+
+  CommentsTargetKey get _key => (
+    type: widget.targetType,
+    targetId: widget.targetId,
+  );
+
+  @override
+  void dispose() {
+    _composerController.dispose();
+    super.dispose();
+  }
+
+  String get _loginFromPath {
+    switch (widget.targetType) {
+      case CommentTargetType.material:
+        return '/materials/${widget.targetId}';
+      case CommentTargetType.learningProject:
+        return '/learning/${widget.targetId}';
+    }
+  }
+
+  bool _ensureAuthenticated() {
+    final authState = ref.read(authControllerProvider);
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent(_loginFromPath);
+      context.go('/login?from=$from');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _refreshRoots() async {
+    ref.invalidate(rootCommentsProvider(_key));
+  }
+
+  Future<void> _loadReplies(CommentItem root, {bool reset = false}) async {
+    if (_loadingReplies.contains(root.id)) {
+      return;
+    }
+
+    setState(() {
+      _loadingReplies.add(root.id);
+      if (reset) {
+        _loadedReplies.remove(root.id);
+        _replyPagination.remove(root.id);
+      }
+    });
+
+    try {
+      final currentPage = reset
+          ? 1
+          : ((_replyPagination[root.id]?.page ?? 0) + 1);
+      final page = await ref
+          .read(commentsApiProvider)
+          .listReplies(
+            type: widget.targetType,
+            targetId: widget.targetId,
+            rootCommentId: root.id,
+            page: currentPage,
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        final existing = reset
+            ? <CommentItem>[]
+            : (_loadedReplies[root.id] ?? <CommentItem>[]);
+        _loadedReplies[root.id] = [...existing, ...page.items];
+        _replyPagination[root.id] = page.pagination;
+        _expandedRoots.add(root.id);
+      });
+    } on ApiException catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error.message);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loadingReplies.remove(root.id);
+        });
+      }
+    }
+  }
+
+  Future<void> _submitComposer() async {
+    if (_submitting || !_ensureAuthenticated()) {
+      return;
+    }
+
+    final body = _composerController.text.trim();
+    if (body.isEmpty) {
+      showInfoSnackBar(context, 'Write a comment before posting.');
+      return;
+    }
+    if (body.length > 1000) {
+      showInfoSnackBar(context, 'Comments can be at most 1000 characters.');
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      final api = ref.read(commentsApiProvider);
+
+      if (_editingCommentId != null) {
+        await api.updateComment(
+          type: widget.targetType,
+          targetId: widget.targetId,
+          commentId: _editingCommentId!,
+          body: body,
+        );
+      } else if (_replyingTo != null) {
+        final replyTarget = _replyingTo!;
+        final rootId = replyTarget.rootCommentId ?? replyTarget.id;
+        await api.createComment(
+          type: widget.targetType,
+          targetId: widget.targetId,
+          body: body,
+          parentCommentId: rootId,
+          replyToCommentId: replyTarget.id,
+        );
+        await _refreshRoots();
+        await _loadReplies(
+          CommentItem(
+            id: rootId,
+            body: null,
+            status: 'VISIBLE',
+            isDeleted: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            author: const CommentAuthor(id: '', displayName: ''),
+            canEdit: false,
+            canDelete: false,
+            repliesCount: 0,
+          ),
+          reset: true,
+        );
+      } else {
+        await api.createComment(
+          type: widget.targetType,
+          targetId: widget.targetId,
+          body: body,
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      _composerController.clear();
+      setState(() {
+        _replyingTo = null;
+        _editingCommentId = null;
+      });
+      await _refreshRoots();
+    } on ApiException catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error.message);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteComment(CommentItem comment) async {
+    if (!_ensureAuthenticated()) {
+      return;
+    }
+
+    try {
+      await ref
+          .read(commentsApiProvider)
+          .deleteComment(
+            type: widget.targetType,
+            targetId: widget.targetId,
+            commentId: comment.id,
+          );
+      await _refreshRoots();
+      final rootId = comment.rootCommentId ?? comment.id;
+      if (_expandedRoots.contains(rootId)) {
+        await _loadReplies(
+          CommentItem(
+            id: rootId,
+            body: null,
+            status: 'VISIBLE',
+            isDeleted: false,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+            author: const CommentAuthor(id: '', displayName: ''),
+            canEdit: false,
+            canDelete: false,
+          ),
+          reset: true,
+        );
+      }
+    } on ApiException catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error.message);
+      }
+    }
+  }
+
+  void _startReply(CommentItem comment) {
+    if (!_ensureAuthenticated()) {
+      return;
+    }
+    setState(() {
+      _editingCommentId = null;
+      _replyingTo = comment;
+    });
+  }
+
+  void _startEdit(CommentItem comment) {
+    setState(() {
+      _replyingTo = null;
+      _editingCommentId = comment.id;
+      _composerController.text = comment.body ?? '';
+    });
+  }
+
+  void _cancelComposerMode() {
+    setState(() {
+      _replyingTo = null;
+      _editingCommentId = null;
+      _composerController.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final rootsAsync = ref.watch(rootCommentsProvider(_key));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.55),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.title,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Share a thought or reply in the thread. Replies stay under the same comment.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _Composer(
+            controller: _composerController,
+            submitting: _submitting,
+            replyingTo: _replyingTo,
+            editing: _editingCommentId != null,
+            onCancel: _cancelComposerMode,
+            onSubmit: _submitComposer,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          rootsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => Text(
+              error is ApiException ? error.message : 'Could not load comments.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            data: (page) {
+              if (page.items.isEmpty) {
+                return Text(
+                  'No comments yet. Be the first to start the discussion.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final root in page.items) ...[
+                    _CommentTile(
+                      comment: root,
+                      isReply: false,
+                      onReply: () => _startReply(root),
+                      onEdit: root.canEdit ? () => _startEdit(root) : null,
+                      onDelete: root.canDelete
+                          ? () => _deleteComment(root)
+                          : null,
+                    ),
+                    if ((root.repliesCount) > 0) ...[
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: 44,
+                          top: AppSpacing.sm,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (!_expandedRoots.contains(root.id))
+                              TextButton(
+                                onPressed: () => _loadReplies(root, reset: true),
+                                child: Text(
+                                  'View ${root.repliesCount} ${root.repliesCount == 1 ? 'reply' : 'replies'}',
+                                ),
+                              ),
+                            if (_expandedRoots.contains(root.id)) ...[
+                              for (final reply
+                                  in _loadedReplies[root.id] ??
+                                      const <CommentItem>[])
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.sm,
+                                  ),
+                                  child: _CommentTile(
+                                    comment: reply,
+                                    isReply: true,
+                                    onReply: () => _startReply(reply),
+                                    onEdit: reply.canEdit
+                                        ? () => _startEdit(reply)
+                                        : null,
+                                    onDelete: reply.canDelete
+                                        ? () => _deleteComment(reply)
+                                        : null,
+                                  ),
+                                ),
+                              if (_loadingReplies.contains(root.id))
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: AppSpacing.sm,
+                                  ),
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              if ((_replyPagination[root.id]?.hasMore ??
+                                      false) &&
+                                  !_loadingReplies.contains(root.id))
+                                TextButton(
+                                  onPressed: () => _loadReplies(root),
+                                  child: const Text('Load more replies'),
+                                ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Composer extends StatelessWidget {
+  const _Composer({
+    required this.controller,
+    required this.submitting,
+    required this.replyingTo,
+    required this.editing,
+    required this.onCancel,
+    required this.onSubmit,
+  });
+
+  final TextEditingController controller;
+  final bool submitting;
+  final CommentItem? replyingTo;
+  final bool editing;
+  final VoidCallback onCancel;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final modeLabel = editing
+        ? 'Editing your comment'
+        : replyingTo != null
+        ? 'Replying to ${replyingTo!.author.displayName}'
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (modeLabel != null) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  modeLabel,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              TextButton(onPressed: onCancel, child: const Text('Cancel')),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        TextField(
+          controller: controller,
+          minLines: 2,
+          maxLines: 5,
+          maxLength: 1000,
+          decoration: InputDecoration(
+            hintText: editing
+                ? 'Update your comment'
+                : replyingTo != null
+                ? 'Write a reply…'
+                : 'Write a comment…',
+            border: OutlineInputBorder(borderRadius: AppRadius.mdAll),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: FilledButton(
+            onPressed: submitting ? null : onSubmit,
+            child: submitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(editing ? 'Save' : 'Post'),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CommentTile extends StatelessWidget {
+  const _CommentTile({
+    required this.comment,
+    required this.isReply,
+    required this.onReply,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  final CommentItem comment;
+  final bool isReply;
+  final VoidCallback onReply;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final showMention =
+        isReply &&
+        comment.replyTo != null &&
+        comment.replyTo!.id != (comment.rootCommentId ?? '');
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SupplierIdentityAvatar(
+          displayName: comment.author.displayName,
+          avatarUrl: comment.author.avatarUrl,
+          radius: isReply ? 14 : 18,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      comment.author.displayName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  if (comment.editedAt != null && !comment.isDeleted)
+                    Text(
+                      'Edited',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              if (comment.isDeleted)
+                Text(
+                  'This comment was removed.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              else ...[
+                if (showMention)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Text(
+                      'Replying to ${comment.replyTo!.author.displayName}',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                Text(
+                  comment.body ?? '',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+              if (!comment.isDeleted) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  children: [
+                    TextButton(
+                      onPressed: onReply,
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Reply'),
+                    ),
+                    if (onEdit != null)
+                      TextButton(
+                        onPressed: onEdit,
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Edit'),
+                      ),
+                    if (onDelete != null)
+                      TextButton(
+                        onPressed: onDelete,
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Delete'),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
