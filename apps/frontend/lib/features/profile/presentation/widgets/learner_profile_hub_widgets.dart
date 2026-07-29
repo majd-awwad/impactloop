@@ -10,9 +10,8 @@ import '../../../../shared/widgets/account_status_presentation.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/user_avatar.dart';
-import '../../../auth/application/auth_navigation.dart';
 import '../../../auth/data/models/user.dart';
-import '../../../auth/presentation/widgets/portal_switch_menu.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../l10n/learner_profile_l10n.dart';
 
 enum LearnerProfilePromptKind { setup, interests, learningDetails }
@@ -132,19 +131,8 @@ class LearnerProfileHubContent extends ConsumerWidget {
           onOpenLearningProfile: () => context.push(learningProfileRoute),
           onOpenAccountSettings: onOpenAccountSettings,
         ),
-        if (_hasPortalActions(user)) ...[
-          const SizedBox(height: AppSpacing.md),
-          PortalAccessCard(user: user, ref: ref),
-        ],
       ],
     );
-  }
-
-  bool _hasPortalActions(User user) {
-    return shouldShowBecomeSupplier(user) ||
-        shouldShowSwitchToSupplier(user) ||
-        user.hasRole('SUPPLIER') ||
-        user.supplierProfile != null;
   }
 }
 
@@ -777,77 +765,6 @@ class ProfileDestinationTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class PortalAccessCard extends StatelessWidget {
-  const PortalAccessCard({super.key, required this.user, required this.ref});
-
-  final User user;
-  final WidgetRef ref;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = LearnerProfileL10n.of(context);
-    final hasSupplierAccess =
-        user.hasRole('SUPPLIER') || user.supplierProfile != null;
-    final actions = <Widget>[];
-
-    if (shouldShowBecomeSupplier(user) || hasSupplierAccess) {
-      actions.add(
-        ProfileDestinationTile(
-          icon: hasSupplierAccess
-              ? Icons.storefront_outlined
-              : Icons.add_business_outlined,
-          title: hasSupplierAccess ? l10n.supplierProfile : l10n.becomeSupplier,
-          subtitle: hasSupplierAccess
-              ? l10n.supplierProfileBody
-              : l10n.becomeSupplierBody,
-          onTap: () => context.push(supplierEntryRouteForUser(user)),
-        ),
-      );
-    }
-
-    if (shouldShowSwitchToSupplier(user)) {
-      if (actions.isNotEmpty) {
-        actions.add(const Divider(height: 1));
-      }
-      actions.add(
-        ProfileDestinationTile(
-          icon: Icons.swap_horiz_rounded,
-          title: l10n.switchToSupplier,
-          subtitle: l10n.switchToSupplierBody,
-          onTap: () => handlePortalRoleSwitch(
-            context: context,
-            ref: ref,
-            targetRole: 'SUPPLIER',
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: AppSpacing.xs,
-            bottom: AppSpacing.sm,
-          ),
-          child: Text(
-            l10n.accountAccess,
-            style: AppTextStyles.label(context).copyWith(
-              color: AppThemeColors.of(context).textSecondary,
-              fontSize: 12,
-            ),
-          ),
-        ),
-        AppSectionCard(
-          padding: EdgeInsets.zero,
-          child: Column(children: actions),
-        ),
-      ],
     );
   }
 }

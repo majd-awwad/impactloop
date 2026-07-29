@@ -45,7 +45,7 @@ void main() {
     expect(find.text('Achievements'), findsNothing);
     expect(find.text('Points'), findsNothing);
     expect(find.text('Streaks'), findsNothing);
-    expect(find.text('Become a supplier'), findsOneWidget);
+    expect(find.text('Become a supplier'), findsNothing);
     expect(
       observer.addedProviderDescriptions.where(_isForbiddenFeatureProvider),
       isEmpty,
@@ -162,7 +162,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('dual-role learner-active profile preserves supplier actions', (
+  testWidgets('dual-role learner-active profile moves supplier actions', (
     tester,
   ) async {
     final controller = _TestAuthController(
@@ -176,23 +176,11 @@ void main() {
         ),
       ),
     );
-    final router = await _pumpProfile(tester, controller: controller);
+    await _pumpProfile(tester, controller: controller);
 
-    expect(find.text('Supplier profile'), findsOneWidget);
-    expect(find.text('Switch to Supplier'), findsOneWidget);
-
-    await tester.ensureVisible(find.text('Supplier profile'));
-    await _tapDestinationTile(tester, 'Supplier profile');
-    await tester.pumpAndSettle();
-    expect(find.text('Supplier profile route'), findsOneWidget);
-
-    router.go('/profile');
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Switch to Supplier'));
-    await _tapDestinationTile(tester, 'Switch to Supplier');
-    await tester.pumpAndSettle();
-    expect(controller.lastRequestedRole, 'SUPPLIER');
-    expect(find.text('Supplier overview route'), findsOneWidget);
+    expect(find.text('Supplier profile'), findsNothing);
+    expect(find.text('Switch to Supplier'), findsNothing);
+    expect(find.text('Account and Settings'), findsOneWidget);
   });
 
   testWidgets('generic learning profile entries open the read destination', (
@@ -222,7 +210,7 @@ void main() {
     expect(find.text('Learning edit route'), findsOneWidget);
   });
 
-  testWidgets('account launcher preserves existing account-action access', (
+  testWidgets('account tile opens the dedicated account destination', (
     tester,
   ) async {
     await _pumpProfile(tester, user: _testUser());
@@ -231,16 +219,8 @@ void main() {
     await _tapDestinationTile(tester, 'Account and Settings');
     await tester.pumpAndSettle();
 
-    expect(find.text('Personal information'), findsOneWidget);
-    expect(find.text('Saved locations'), findsOneWidget);
-    expect(find.text('Security'), findsOneWidget);
-    expect(find.text('Appearance'), findsOneWidget);
-    expect(find.text('Language'), findsOneWidget);
-    expect(find.text('Logout'), findsOneWidget);
-
-    await _tapDestinationTile(tester, 'Personal information');
-    await tester.pumpAndSettle();
-    expect(find.text('Edit profile route'), findsOneWidget);
+    expect(find.text('Account settings route'), findsOneWidget);
+    expect(find.text('Personal information'), findsNothing);
   });
 
   testWidgets('Arabic hub is RTL and stable at 320px', (tester) async {
@@ -310,6 +290,10 @@ Future<GoRouter> _pumpProfile(
     initialLocation: '/profile',
     routes: [
       GoRoute(path: '/profile', builder: (_, _) => const ProfilePage()),
+      GoRoute(
+        path: '/profile/account',
+        builder: (_, _) => const Scaffold(body: Text('Account settings route')),
+      ),
       GoRoute(
         path: '/profile/edit',
         builder: (_, _) => const Scaffold(body: Text('Edit profile route')),

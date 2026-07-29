@@ -11,6 +11,7 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/presentation/widgets/portal_switch_menu.dart';
 import '../../features/auth/data/models/user.dart';
+import '../../features/profile/presentation/l10n/account_settings_l10n.dart';
 import '../../shared/widgets/app_feedback.dart';
 import '../../shared/widgets/user_avatar.dart';
 import 'impact_loop_logo.dart';
@@ -870,6 +871,11 @@ class _AccountMenu extends StatelessWidget {
                   icon: Icons.person_outline_rounded,
                   label: 'Profile',
                   onPressed: () => context.go('/profile'),
+                ),
+                _AccountMenuItem(
+                  icon: Icons.manage_accounts_outlined,
+                  label: AccountSettingsL10n.of(context).pageTitle,
+                  onPressed: () => context.go(accountSettingsRoute),
                 ),
                 if (_showLearnerActions)
                   _AccountMenuItem(

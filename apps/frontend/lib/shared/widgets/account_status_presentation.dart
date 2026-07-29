@@ -6,6 +6,7 @@ AppStatusTone accountStatusTone(String status) {
     case 'ACTIVE':
       return AppStatusTone.primary;
     case 'SUSPENDED':
+    case 'INACTIVE':
       return AppStatusTone.warning;
     case 'DISABLED':
       return AppStatusTone.danger;

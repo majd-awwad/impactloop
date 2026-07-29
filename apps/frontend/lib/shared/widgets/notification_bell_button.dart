@@ -22,10 +22,7 @@ String formatNotificationBadgeLabel(int count) {
 }
 
 String notificationRouteForBell(User? user) {
-  if (user != null && user.isSupplierMode && user.hasRole('SUPPLIER')) {
-    return '/supplier/notifications';
-  }
-  return notificationsRouteForUser(user);
+  return notificationInboxRouteForUser(user);
 }
 
 class NotificationBellButton extends ConsumerWidget {

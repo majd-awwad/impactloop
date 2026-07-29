@@ -136,52 +136,6 @@ class LearnerProfileL10n {
     'المعلومات الشخصية والمواقع والأمان والمظهر واللغة.',
   );
 
-  String get accountSettingsLauncherTitle =>
-      t('Account and Settings', 'الحساب والإعدادات');
-  String get accountSettingsLauncherBody => t(
-    'Manage the account actions already available in ImpactLoop.',
-    'أدر إجراءات الحساب المتاحة حالياً في ImpactLoop.',
-  );
-  String get personalInformation =>
-      t('Personal information', 'المعلومات الشخصية');
-  String get personalInformationBody =>
-      t('Name, phone, and profile photo.', 'الاسم والهاتف وصورة الملف.');
-  String get savedLocations => t('Saved locations', 'المواقع المحفوظة');
-  String get savedLocationsBody => t(
-    'Manage private addresses used for discovery.',
-    'أدر العناوين الخاصة المستخدمة في الاستكشاف.',
-  );
-  String get security => t('Security', 'الأمان');
-  String get securityBody => t('Change your password.', 'غيّر كلمة المرور.');
-  String get appearance => t('Appearance', 'المظهر');
-  String get language => t('Language', 'اللغة');
-  String get systemTheme => t('System', 'النظام');
-  String get lightTheme => t('Light', 'فاتح');
-  String get darkTheme => t('Dark', 'داكن');
-  String get english => t('English', 'الإنجليزية');
-  String get arabic => t('Arabic', 'العربية');
-  String get logout => t('Logout', 'تسجيل الخروج');
-  String get close => t('Close', 'إغلاق');
-  String get localLogoutWarning => t(
-    'You were signed out locally, but the server could not be reached.',
-    'تم تسجيل خروجك محلياً، لكن تعذّر الوصول إلى الخادم.',
-  );
-
-  String get accountAccess => t('Account access', 'الوصول إلى الحساب');
-  String get supplierProfile => t('Supplier profile', 'ملف المورد');
-  String get supplierProfileBody =>
-      t('Manage your supplier details.', 'أدر تفاصيل ملف المورد.');
-  String get becomeSupplier => t('Become a supplier', 'انضم كمورد');
-  String get becomeSupplierBody => t(
-    'Start sharing reusable materials.',
-    'ابدأ بمشاركة المواد القابلة لإعادة الاستخدام.',
-  );
-  String get switchToSupplier => t('Switch to Supplier', 'التبديل إلى المورد');
-  String get switchToSupplierBody => t(
-    'Open the supplier portal on this account.',
-    'افتح بوابة المورد باستخدام هذا الحساب.',
-  );
-
   String memberSince(String date) => t('Member since $date', 'عضو منذ $date');
 
   String get emailNotVerifiedTitle =>

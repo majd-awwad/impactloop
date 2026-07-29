@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../l10n/learner_profile_l10n.dart';
-import '../widgets/account_settings_launcher_sheet.dart';
 import '../widgets/learner_profile_hub_widgets.dart';
 
 const _profileHubMaxWidth = 760.0;
@@ -52,10 +53,7 @@ class ProfilePage extends ConsumerWidget {
                         : LearnerProfileHubContent(
                             user: user,
                             onOpenAccountSettings: () =>
-                                showAccountSettingsLauncherSheet(
-                                  context: context,
-                                  ref: ref,
-                                ),
+                                context.push(accountSettingsRoute),
                           ),
                   ),
                 ),

@@ -13,6 +13,7 @@ Future<void> handlePortalRoleSwitch({
   required WidgetRef ref,
   required String targetRole,
   VoidCallback? onBeforeSwitch,
+  String? failureMessage,
 }) async {
   final router = GoRouter.of(context);
   final messenger = ScaffoldMessenger.maybeOf(context);
@@ -29,7 +30,10 @@ Future<void> handlePortalRoleSwitch({
       return;
     }
 
-    showAppInlineErrorSnackBar(messenger, error.displayMessage);
+    showAppInlineErrorSnackBar(
+      messenger,
+      failureMessage ?? error.displayMessage,
+    );
   }
 }
 

@@ -38,6 +38,7 @@ import '../../features/material_discovery/presentation/pages/material_details_pa
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
+import '../../features/profile/presentation/pages/account_settings_page.dart';
 import '../../features/profile/presentation/pages/learning_profile_page.dart';
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -582,6 +583,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: accountSettingsRoute,
+        builder: (context, state) => const AccountSettingsPage(),
       ),
       GoRoute(
         path: '/profile/edit',

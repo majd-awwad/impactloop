@@ -497,6 +497,63 @@ void main() {
     );
   });
 
+  for (final role in const ['LEARNER', 'SUPPLIER', 'ADMIN', 'DRIVER']) {
+    testWidgets('$role-active users can open the account settings route', (
+      tester,
+    ) async {
+      final router = await pumpAuthenticatedRouter(
+        tester,
+        _testUser(roles: [role], activeRole: role),
+      );
+
+      router.go('/profile/account');
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routeInformationProvider.value.uri.path,
+        '/profile/account',
+      );
+      expect(find.text('Account and Settings'), findsOneWidget);
+    });
+  }
+
+  testWidgets('signed-out account settings deep link preserves its target', (
+    tester,
+  ) async {
+    final repository = AuthRepository(
+      api: _FakeAuthApi(
+        refreshError: DioException(
+          requestOptions: RequestOptions(path: '/api/auth/refresh'),
+        ),
+      ),
+      tokenStorage: _FakeTokenStorage(initialRefreshToken: 'stale-refresh'),
+      accessTokenHolder: AccessTokenHolder(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ImpactLoopApp)),
+    );
+    final router = container.read(appRouterProvider);
+
+    router.go('/profile/account');
+    await tester.pumpAndSettle();
+
+    final uri = router.routeInformationProvider.value.uri;
+    expect(uri.path, '/login');
+    expect(uri.queryParameters['from'], '/profile/account');
+  });
+
   testWidgets('signed-out learning profile deep link preserves its target', (
     tester,
   ) async {
