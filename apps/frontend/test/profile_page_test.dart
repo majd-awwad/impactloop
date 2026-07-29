@@ -9,6 +9,7 @@ import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/profile/presentation/pages/profile_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/learner_profile_hub_widgets.dart';
+import 'package:frontend/features/profile/presentation/widgets/profile_visual_components.dart';
 import 'package:frontend/shared/widgets/user_avatar.dart';
 
 void main() {
@@ -29,14 +30,16 @@ void main() {
     expect(find.text('Learner'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
     expect(find.byType(AccountVerificationNotice), findsNothing);
-    expect(find.text('University student'), findsOneWidget);
-    expect(find.text('Beginner'), findsOneWidget);
+    expect(find.textContaining('University student'), findsOneWidget);
+    expect(find.textContaining('Beginner'), findsOneWidget);
     expect(find.text('Robotics'), findsOneWidget);
     expect(
       find.text('Building useful projects with reused parts.'),
       findsOneWidget,
     );
-    expect(find.byType(LearnerProfileActionPrompt), findsNothing);
+    expect(find.text('Complete learning profile'), findsNothing);
+    expect(find.byType(ProfileIdentityHeroCard), findsOneWidget);
+    expect(find.byType(LearnerProfilePreviewCard), findsOneWidget);
     expect(find.textContaining('%'), findsNothing);
     expect(find.textContaining('CO₂'), findsNothing);
     expect(find.textContaining('kilogram'), findsNothing);
@@ -90,7 +93,7 @@ void main() {
   ) async {
     await _pumpProfile(tester, user: _testUser(learnerProfile: null));
 
-    expect(find.byType(LearnerProfileActionPrompt), findsOneWidget);
+    expect(find.text('Complete learning profile'), findsOneWidget);
     expect(find.text('Set up your learning profile'), findsOneWidget);
     expect(
       find.text('Your supported learning details will appear here.'),
@@ -114,7 +117,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(LearnerProfileActionPrompt), findsOneWidget);
+    expect(find.text('Complete learning profile'), findsOneWidget);
     expect(find.text('Add your interests'), findsOneWidget);
     expect(find.text('Add your learning details'), findsNothing);
     expect(find.text('Add a short bio'), findsNothing);
@@ -135,7 +138,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(LearnerProfileActionPrompt), findsOneWidget);
+    expect(find.text('Complete learning profile'), findsOneWidget);
     expect(find.text('Add your learning details'), findsOneWidget);
     expect(find.text('Add your learner type and skill level.'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -155,7 +158,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(LearnerProfileActionPrompt), findsNothing);
+    expect(find.text('Complete learning profile'), findsNothing);
     expect(find.text('Not added (optional)'), findsOneWidget);
     expect(find.text('Add a short bio'), findsNothing);
     expect(find.textContaining('complete'), findsNothing);
@@ -183,19 +186,14 @@ void main() {
     expect(find.text('Account and Settings'), findsOneWidget);
   });
 
-  testWidgets('generic learning profile entries open the read destination', (
+  testWidgets('merged learning profile preview opens the read destination', (
     tester,
   ) async {
-    final router = await _pumpProfile(tester, user: _testUser());
+    await _pumpProfile(tester, user: _testUser());
 
-    await tester.tap(find.text('View details'));
-    await tester.pumpAndSettle();
-    expect(find.text('Learning profile route'), findsOneWidget);
-
-    router.go('/profile');
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Learning Profile'));
-    await _tapDestinationTile(tester, 'Learning Profile');
+    expect(find.byType(LearnerProfilePreviewCard), findsOneWidget);
+    expect(find.text('Learning profile'), findsOneWidget);
+    await tester.tap(find.byType(LearnerProfilePreviewCard));
     await tester.pumpAndSettle();
     expect(find.text('Learning profile route'), findsOneWidget);
   });
@@ -205,7 +203,7 @@ void main() {
   ) async {
     await _pumpProfile(tester, user: _testUser(learnerProfile: null));
 
-    await tester.tap(find.text('Edit'));
+    await tester.tap(find.text('Complete learning profile'));
     await tester.pumpAndSettle();
     expect(find.text('Learning edit route'), findsOneWidget);
   });
@@ -233,12 +231,13 @@ void main() {
       ),
       locale: const Locale('ar'),
       size: const Size(320, 760),
+      textScale: 1.5,
     );
 
     expect(find.text('الملف الشخصي'), findsOneWidget);
     expect(find.text('متعلّم'), findsOneWidget);
-    expect(find.text('طالب جامعي'), findsOneWidget);
-    expect(find.text('مبتدئ'), findsOneWidget);
+    expect(find.textContaining('طالب جامعي'), findsOneWidget);
+    expect(find.textContaining('مبتدئ'), findsOneWidget);
     expect(find.text('الروبوتات'), findsOneWidget);
     expect(find.text('البريد الإلكتروني غير موثّق'), findsOneWidget);
     expect(find.byType(AccountVerificationNotice), findsOneWidget);
@@ -256,6 +255,24 @@ void main() {
       TextDirection.ltr,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('hub is stable and constrained across phone and tablet widths', (
+    tester,
+  ) async {
+    for (final width in [360.0, 430.0, 800.0]) {
+      await _pumpProfile(
+        tester,
+        user: _testUser(phone: '+970 599 000 000'),
+        size: Size(width, 1200),
+      );
+
+      final hero = tester.renderObject<RenderBox>(
+        find.byType(ProfileIdentityHeroCard),
+      );
+      expect(hero.size.width, lessThanOrEqualTo(720));
+      expect(tester.takeException(), isNull);
+    }
   });
 }
 
@@ -276,6 +293,7 @@ Future<GoRouter> _pumpProfile(
   _TestAuthController? controller,
   Locale locale = const Locale('en'),
   Size size = const Size(400, 900),
+  double textScale = 1,
   ProviderObserver? observer,
 }) async {
   tester.view.physicalSize = size;
@@ -364,6 +382,12 @@ Future<GoRouter> _pumpProfile(
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child!,
+        ),
         routerConfig: router,
       ),
     ),

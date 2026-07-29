@@ -199,16 +199,20 @@ class _PhoneAppBarLayout extends StatelessWidget {
         ),
         if (phoneTitle != null) ...[
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            phoneTitle!,
-            style: AuthDarkTextStyles.label(context).copyWith(
-              color: colors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: Text(
+              phoneTitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AuthDarkTextStyles.label(context).copyWith(
+                color: colors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-        ],
-        const Spacer(),
+        ] else
+          const Spacer(),
         if (isAuthenticated && user != null && showAccountMenu)
           _AccountMenu(
             user: user!,

@@ -9,10 +9,10 @@ import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
-import '../../../../shared/widgets/user_avatar.dart';
 import '../../../auth/application/portal_navigation.dart';
 import '../../../auth/data/models/user.dart';
 import '../l10n/account_settings_l10n.dart';
+import 'profile_visual_components.dart';
 
 enum AccountRoleActionKind {
   supplierProfile,
@@ -65,100 +65,21 @@ AccountRoleAccessResolution resolveAccountRoleAccess(User user) {
 }
 
 class AccountIdentitySummaryCard extends StatelessWidget {
-  const AccountIdentitySummaryCard({
-    super.key,
-    required this.user,
-    required this.onEdit,
-  });
+  const AccountIdentitySummaryCard({super.key, required this.user});
 
   final User user;
-  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
     final l10n = AccountSettingsL10n.of(context);
-    final displayName = user.displayName.trim().isEmpty
-        ? l10n.accountFallback
-        : user.displayName.trim();
-
-    return AppSectionCard(
-      emphasized: true,
-      borderRadius: AppRadius.xlAll,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Semantics(
-            label: l10n.avatarLabel,
-            image: true,
-            child: ExcludeSemantics(
-              child: UserAvatar(
-                displayName: displayName,
-                profileImageUrl: user.profileImageUrl,
-                radius: 32,
-                backgroundColor: colors.primarySoft,
-                foregroundColor: colors.primary,
-                initialTextStyle: AppTextStyles.title(
-                  context,
-                ).copyWith(color: colors.primary, fontWeight: FontWeight.w800),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: colors.textPrimary, fontSize: 21),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                AccountLtrValue(value: user.email),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    Semantics(
-                      label: l10n.roleLabel(user.activeRole),
-                      child: ExcludeSemantics(
-                        child: AppStatusBadge(
-                          label: l10n.roleLabel(user.activeRole),
-                          tone: AppStatusTone.primary,
-                        ),
-                      ),
-                    ),
-                    Semantics(
-                      label: l10n.accountStatusLabel(user.accountStatus),
-                      child: ExcludeSemantics(
-                        child: AppStatusBadge(
-                          label: l10n.accountStatusLabel(user.accountStatus),
-                          tone: accountStatusTone(user.accountStatus),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                TextButton.icon(
-                  onPressed: onEdit,
-                  style: TextButton.styleFrom(
-                    foregroundColor: colors.primary,
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                    alignment: AlignmentDirectional.centerStart,
-                  ),
-                  icon: const Icon(Icons.edit_outlined, size: 17),
-                  label: Text(l10n.editPersonalInformation),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return ProfileIdentityHeroCard(
+      user: user,
+      fallbackName: l10n.accountFallback,
+      roleLabel: l10n.roleLabel(user.activeRole),
+      statusLabel: l10n.accountStatusLabel(user.accountStatus),
+      statusTone: accountStatusTone(user.accountStatus),
+      compact: true,
+      avatarSemanticLabel: l10n.avatarLabel,
     );
   }
 }
@@ -198,6 +119,7 @@ class AccountSettingsSection extends StatelessWidget {
         ),
         AppSectionCard(
           padding: EdgeInsets.zero,
+          showShadow: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -205,36 +127,34 @@ class AccountSettingsSection extends StatelessWidget {
                 if (index > 0) const Divider(height: 1),
                 children[index],
               ],
-              if (note != null) ...[
-                const Divider(height: 1),
-                Padding(
-                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.devices_outlined,
-                        size: 17,
-                        color: colors.textMuted,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: Text(
-                          note!,
-                          style: AppTextStyles.label(context).copyWith(
-                            color: colors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                            height: 1.35,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           ),
         ),
+        if (note != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.xs,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.devices_outlined, size: 17, color: colors.textMuted),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    note!,
+                    style: AppTextStyles.label(context).copyWith(
+                      color: colors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -261,108 +181,100 @@ class AccountSettingsDestinationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-
-    return Semantics(
-      button: true,
-      enabled: onTap != null,
-      label: trailingValue == null ? title : '$title, $trailingValue',
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
-          child: Padding(
-            padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: colors.primarySoft,
-                    borderRadius: AppRadius.mdAll,
-                  ),
-                  child: Icon(icon, color: colors.primary, size: 20),
+    return ProfileDestinationRow(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      busy: busy,
+      onTap: onTap,
+      trailing: trailingValue == null
+          ? null
+          : ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 92),
+              child: Text(
+                trailingValue!,
+                textAlign: TextAlign.end,
+                style: AppTextStyles.label(context).copyWith(
+                  color: colors.textSecondary,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: AppTextStyles.label(context).copyWith(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      if (subtitle != null) ...[
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          subtitle!,
-                          style: AppTextStyles.body(
-                            context,
-                          ).copyWith(color: colors.textSecondary, height: 1.35),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                if (busy)
-                  const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else ...[
-                  if (trailingValue != null)
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 92),
-                      child: Text(
-                        trailingValue!,
-                        textAlign: TextAlign.end,
-                        style: AppTextStyles.label(context).copyWith(
-                          color: colors.textSecondary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: colors.textMuted,
-                    textDirection: Directionality.of(context),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }
 
-class AccountPreferenceRow extends StatelessWidget {
-  const AccountPreferenceRow({
+class AccountInlinePreferenceControl<T> extends StatelessWidget {
+  const AccountInlinePreferenceControl({
     super.key,
     required this.icon,
     required this.title,
-    required this.currentValue,
-    required this.onTap,
+    required this.selectedValue,
+    required this.options,
+    required this.onSelected,
   });
 
   final IconData icon;
   final String title;
-  final String currentValue;
-  final VoidCallback onTap;
+  final T selectedValue;
+  final List<AccountPreferenceOption<T>> options;
+  final ValueChanged<T> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    return AccountSettingsDestinationRow(
-      icon: icon,
-      title: title,
-      trailingValue: currentValue,
-      onTap: onTap,
+    final colors = AppThemeColors.of(context);
+    return Padding(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: colors.primary, size: 20),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.label(context).copyWith(
+                    color: colors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              for (final option in options)
+                Semantics(
+                  selected: option.value == selectedValue,
+                  button: true,
+                  child: ChoiceChip(
+                    selected: option.value == selectedValue,
+                    onSelected: (_) => onSelected(option.value),
+                    avatar: Icon(option.icon, size: 17),
+                    label: Text(option.label),
+                    showCheckmark: false,
+                    backgroundColor: colors.surfaceMuted,
+                    selectedColor: colors.primarySoft,
+                    side: BorderSide(
+                      color: option.value == selectedValue
+                          ? colors.primary
+                          : colors.borderSubtle,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.pillAll,
+                    ),
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -439,7 +351,7 @@ class AccountStateCard extends StatelessWidget {
     final phone = user.phone?.trim() ?? '';
 
     return AccountSettingsSection(
-      title: l10n.accountState,
+      title: l10n.verification,
       children: [
         AccountVerificationRow(
           label: l10n.email,
@@ -495,36 +407,50 @@ class AccountVerificationRow extends StatelessWidget {
       label: '$label, $value, $statusLabel',
       child: Padding(
         padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    label,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                ExcludeSemantics(
-                  child: AppStatusBadge(label: statusLabel, tone: tone),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            if (forceLtr)
-              AccountLtrValue(value: value)
-            else
-              Text(
-                value,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: colors.textSecondary),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final stackHeader =
+                constraints.maxWidth < 300 ||
+                MediaQuery.textScalerOf(context).scale(1) > 1.3;
+            final title = Text(
+              label,
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
               ),
-          ],
+            );
+            final badge = ExcludeSemantics(
+              child: AppStatusBadge(label: statusLabel, tone: tone),
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (stackHeader) ...[
+                  title,
+                  const SizedBox(height: AppSpacing.sm),
+                  badge,
+                ] else
+                  Row(
+                    children: [
+                      Expanded(child: title),
+                      const SizedBox(width: AppSpacing.sm),
+                      badge,
+                    ],
+                  ),
+                const SizedBox(height: AppSpacing.sm),
+                if (forceLtr)
+                  AccountLtrValue(value: value)
+                else
+                  Text(
+                    value,
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: colors.textSecondary),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -622,87 +548,6 @@ class AccountPreferenceOption<T> {
   final T value;
   final String label;
   final IconData icon;
-}
-
-class AccountPreferenceSelectorSheet<T> extends StatelessWidget {
-  const AccountPreferenceSelectorSheet({
-    super.key,
-    required this.title,
-    required this.selectedValue,
-    required this.options,
-  });
-
-  final String title;
-  final T selectedValue;
-  final List<AccountPreferenceOption<T>> options;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(
-          AppSpacing.md,
-          0,
-          AppSpacing.md,
-          AppSpacing.lg,
-        ),
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: colors.textPrimary, fontSize: 20),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                AppSectionCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      for (var index = 0; index < options.length; index++) ...[
-                        if (index > 0) const Divider(height: 1),
-                        Semantics(
-                          selected: options[index].value == selectedValue,
-                          button: true,
-                          child: ListTile(
-                            minTileHeight: 56,
-                            leading: Icon(
-                              options[index].icon,
-                              color: colors.primary,
-                            ),
-                            title: Text(options[index].label),
-                            trailing: Icon(
-                              options[index].value == selectedValue
-                                  ? Icons.radio_button_checked_rounded
-                                  : Icons.radio_button_off_rounded,
-                              color: options[index].value == selectedValue
-                                  ? colors.primary
-                                  : colors.textMuted,
-                            ),
-                            onTap: () =>
-                                Navigator.of(context).pop(options[index].value),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class AccountLogoutConfirmationDialog extends StatelessWidget {

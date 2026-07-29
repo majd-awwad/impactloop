@@ -92,6 +92,7 @@ class AccountSettingsL10n {
   );
 
   String get accountState => t('Account state', 'حالة الحساب');
+  String get verification => t('Verification', 'التحقق');
   String get email => t('Email', 'البريد الإلكتروني');
   String get phone => t('Phone', 'الهاتف');
   String get verified => t('Verified', 'موثّق');

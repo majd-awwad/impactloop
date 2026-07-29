@@ -27,77 +27,6 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
   bool _isLoggingOut = false;
   AccountRoleActionKind? _busyRoleAction;
 
-  Future<T?> _showPreferenceSelector<T>({
-    required String title,
-    required T selectedValue,
-    required List<AccountPreferenceOption<T>> options,
-  }) {
-    return showModalBottomSheet<T>(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) => AccountPreferenceSelectorSheet<T>(
-        title: title,
-        selectedValue: selectedValue,
-        options: options,
-      ),
-    );
-  }
-
-  Future<void> _chooseTheme(ThemeMode current) async {
-    final l10n = AccountSettingsL10n.of(context);
-    final selected = await _showPreferenceSelector<ThemeMode>(
-      title: l10n.chooseAppearance,
-      selectedValue: current,
-      options: [
-        AccountPreferenceOption(
-          value: ThemeMode.system,
-          label: l10n.systemTheme,
-          icon: Icons.brightness_auto_outlined,
-        ),
-        AccountPreferenceOption(
-          value: ThemeMode.light,
-          label: l10n.lightTheme,
-          icon: Icons.light_mode_outlined,
-        ),
-        AccountPreferenceOption(
-          value: ThemeMode.dark,
-          label: l10n.darkTheme,
-          icon: Icons.dark_mode_outlined,
-        ),
-      ],
-    );
-
-    if (selected != null && selected != current) {
-      ref.read(appSettingsProvider.notifier).setThemeMode(selected);
-    }
-  }
-
-  Future<void> _chooseLanguage(String current) async {
-    final l10n = AccountSettingsL10n.of(context);
-    final selected = await _showPreferenceSelector<String>(
-      title: l10n.chooseLanguage,
-      selectedValue: current,
-      options: [
-        AccountPreferenceOption(
-          value: 'en',
-          label: l10n.english,
-          icon: Icons.translate_rounded,
-        ),
-        AccountPreferenceOption(
-          value: 'ar',
-          label: l10n.arabic,
-          icon: Icons.translate_rounded,
-        ),
-      ],
-    );
-
-    if (selected != null && selected != current) {
-      ref.read(appSettingsProvider.notifier).setLanguageCode(selected);
-    }
-  }
-
   void _openNotifications(User user) {
     final route = notificationInboxRouteForUser(user);
     if (user.isDriverMode && user.hasRole('DRIVER')) {
@@ -208,11 +137,8 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AccountIdentitySummaryCard(
-          user: user,
-          onEdit: () => context.push('/profile/edit'),
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        AccountIdentitySummaryCard(user: user),
+        const SizedBox(height: AppSpacing.md),
         AccountSettingsSection(
           title: l10n.accountDetails,
           children: [
@@ -236,28 +162,60 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
+        AccountStateCard(user: user),
+        const SizedBox(height: AppSpacing.md),
         AccountSettingsSection(
           title: l10n.appPreferences,
           note: l10n.localPreferencesNote,
           children: [
-            AccountPreferenceRow(
+            AccountInlinePreferenceControl<ThemeMode>(
               icon: Icons.brightness_6_outlined,
               title: l10n.appearance,
-              currentValue: _themeLabel(l10n, settings.themeMode),
-              onTap: () => _chooseTheme(settings.themeMode),
+              selectedValue: settings.themeMode,
+              options: [
+                AccountPreferenceOption(
+                  value: ThemeMode.system,
+                  label: l10n.systemTheme,
+                  icon: Icons.brightness_auto_outlined,
+                ),
+                AccountPreferenceOption(
+                  value: ThemeMode.light,
+                  label: l10n.lightTheme,
+                  icon: Icons.light_mode_outlined,
+                ),
+                AccountPreferenceOption(
+                  value: ThemeMode.dark,
+                  label: l10n.darkTheme,
+                  icon: Icons.dark_mode_outlined,
+                ),
+              ],
+              onSelected: (value) =>
+                  ref.read(appSettingsProvider.notifier).setThemeMode(value),
             ),
-            AccountPreferenceRow(
+            AccountInlinePreferenceControl<String>(
               icon: Icons.language_rounded,
               title: l10n.language,
-              currentValue: settings.languageCode == 'ar'
-                  ? l10n.arabic
-                  : l10n.english,
-              onTap: () => _chooseLanguage(settings.languageCode),
+              selectedValue: settings.languageCode,
+              options: [
+                AccountPreferenceOption(
+                  value: 'en',
+                  label: l10n.english,
+                  icon: Icons.translate_rounded,
+                ),
+                AccountPreferenceOption(
+                  value: 'ar',
+                  label: l10n.arabic,
+                  icon: Icons.translate_rounded,
+                ),
+              ],
+              onSelected: (value) => ref
+                  .read(appSettingsProvider.notifier)
+                  .setLanguageCode(value),
             ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
         AccountSettingsSection(
           title: l10n.communication,
           children: [
@@ -270,15 +228,13 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
           ],
         ),
         if (!roleAccess.isEmpty) ...[
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.md),
           AccountRoleAccessSection(
             resolution: roleAccess,
             busyAction: _busyRoleAction,
             onAction: (action) => _handleRoleAction(user, action),
           ),
         ],
-        const SizedBox(height: AppSpacing.lg),
-        AccountStateCard(user: user),
         const SizedBox(height: AppSpacing.lg),
         AccountSessionSection(
           isLoggingOut: _isLoggingOut,
@@ -288,11 +244,4 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
     );
   }
 
-  String _themeLabel(AccountSettingsL10n l10n, ThemeMode mode) {
-    return switch (mode) {
-      ThemeMode.system => l10n.systemTheme,
-      ThemeMode.light => l10n.lightTheme,
-      ThemeMode.dark => l10n.darkTheme,
-    };
-  }
 }

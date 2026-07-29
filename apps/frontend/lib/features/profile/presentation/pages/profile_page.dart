@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_theme_colors.dart';
-import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
+import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -11,7 +11,7 @@ import '../../../auth/application/auth_route_helpers.dart';
 import '../l10n/learner_profile_l10n.dart';
 import '../widgets/learner_profile_hub_widgets.dart';
 
-const _profileHubMaxWidth = 760.0;
+const _profileHubMaxWidth = 720.0;
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -37,7 +37,12 @@ class ProfilePage extends ConsumerWidget {
             ),
             Expanded(
               child: SingleChildScrollView(
-                padding: appMobileAwareScrollPadding(context),
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(

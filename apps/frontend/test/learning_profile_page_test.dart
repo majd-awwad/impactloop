@@ -9,6 +9,7 @@ import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/profile/presentation/pages/learning_profile_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/learning_profile_widgets.dart';
+import 'package:frontend/features/profile/presentation/widgets/profile_visual_components.dart';
 
 void main() {
   testWidgets('renders only supported authenticated-user learning data', (
@@ -20,7 +21,7 @@ void main() {
     expect(find.text('Beginner'), findsOneWidget);
     expect(find.text('Robotics'), findsOneWidget);
     expect(find.text('A short learning bio.'), findsOneWidget);
-    expect(find.text('Edit learning profile'), findsOneWidget);
+    expect(find.text('Edit'), findsOneWidget);
     expect(find.textContaining('%'), findsNothing);
     expect(find.textContaining('achievement'), findsNothing);
     expect(find.text('Impact'), findsNothing);
@@ -33,9 +34,9 @@ void main() {
   ) async {
     await _pumpPage(tester, user: _user(profile: null));
 
-    expect(find.text('Set up learning profile'), findsOneWidget);
+    expect(find.text('Set up'), findsOneWidget);
     expect(find.text('No learning details yet'), findsOneWidget);
-    expect(find.byType(LearningProfileDetailsCard), findsNothing);
+    expect(find.byType(LearningProfileSummaryCard), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -59,7 +60,7 @@ void main() {
     expect(find.text('Robotics'), findsOneWidget);
     expect(find.text('Solar Energy'), findsOneWidget);
     expect(find.text('Not added (optional)'), findsOneWidget);
-    expect(find.byType(LearningProfileInterestChip), findsNWidgets(2));
+    expect(find.byType(ProfileInterestChip), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 
@@ -85,14 +86,36 @@ void main() {
       ),
     );
 
-    expect(find.byType(LearningProfileInterestChip), findsNWidgets(12));
-    await tester.ensureVisible(find.text('Show 2 more'));
-    await tester.tap(find.text('Show 2 more'));
+    expect(find.byType(ProfileInterestChip), findsNWidgets(8));
+    final collapsedToggle = find.ancestor(
+      of: find.text('Show 6 more interests'),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.expanded != null,
+      ),
+    );
+    expect(collapsedToggle, findsOneWidget);
+    expect(
+      tester.widget<Semantics>(collapsedToggle).properties.expanded,
+      isFalse,
+    );
+    await tester.ensureVisible(find.text('Show 6 more interests'));
+    await tester.tap(find.text('Show 6 more interests'));
     await tester.pumpAndSettle();
-    expect(find.byType(LearningProfileInterestChip), findsNWidgets(14));
+    expect(find.byType(ProfileInterestChip), findsNWidgets(14));
+    final expandedToggle = find.ancestor(
+      of: find.text('Show fewer interests'),
+      matching: find.byWidgetPredicate(
+        (widget) => widget is Semantics && widget.properties.expanded != null,
+      ),
+    );
+    expect(expandedToggle, findsOneWidget);
+    expect(
+      tester.widget<Semantics>(expandedToggle).properties.expanded,
+      isTrue,
+    );
 
-    await tester.ensureVisible(find.text('Show more'));
-    await tester.tap(find.text('Show more'));
+    await tester.ensureVisible(find.text('Show more bio'));
+    await tester.tap(find.text('Show more bio'));
     await tester.pumpAndSettle();
     final bioText = tester.widget<Text>(find.text(longBio));
     expect(bioText.maxLines, isNull);
@@ -134,14 +157,25 @@ void main() {
   ) async {
     await _pumpPage(tester, user: _user());
 
-    final editButton = find.widgetWithText(
-      FilledButton,
-      'Edit learning profile',
-    );
-    tester.widget<FilledButton>(editButton).onPressed?.call();
+    final editButton = find.widgetWithText(OutlinedButton, 'Edit');
+    tester.widget<OutlinedButton>(editButton).onPressed?.call();
     await tester.pumpAndSettle();
 
     expect(find.text('Editor route'), findsOneWidget);
+  });
+
+  testWidgets('learning profile is constrained across responsive widths', (
+    tester,
+  ) async {
+    for (final width in [360.0, 430.0, 800.0]) {
+      await _pumpPage(tester, user: _user(), size: Size(width, 1200));
+
+      final summary = tester.renderObject<RenderBox>(
+        find.byType(LearningProfileSummaryCard),
+      );
+      expect(summary.size.width, lessThanOrEqualTo(720));
+      expect(tester.takeException(), isNull);
+    }
   });
 }
 

@@ -74,7 +74,7 @@ void main() {
 
     expect(find.text('Account and Settings'), findsOneWidget);
     expect(find.text('Test User'), findsOneWidget);
-    expect(find.text('user@example.com'), findsNWidgets(2));
+    expect(find.text('user@example.com'), findsOneWidget);
     expect(find.text('Learner'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
     expect(find.text('Personal information'), findsOneWidget);
@@ -156,8 +156,7 @@ void main() {
   ) async {
     final harness = await _pumpAccount(tester, user: _user());
 
-    await tester.tap(find.text('Appearance'));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Dark'));
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
     expect(
@@ -166,8 +165,7 @@ void main() {
     );
     expect(await harness.storage.readThemeMode(), ThemeMode.dark);
 
-    await tester.tap(find.text('Language'));
-    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Arabic'));
     await tester.tap(find.text('Arabic'));
     await tester.pumpAndSettle();
     expect(harness.container.read(appSettingsProvider).languageCode, 'ar');
@@ -311,6 +309,20 @@ void main() {
       TextDirection.ltr,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('account page is constrained across responsive widths', (
+    tester,
+  ) async {
+    for (final width in [360.0, 430.0, 800.0]) {
+      await _pumpAccount(tester, user: _user(), size: Size(width, 1200));
+
+      final hero = tester.renderObject<RenderBox>(
+        find.byType(AccountIdentitySummaryCard),
+      );
+      expect(hero.size.width, lessThanOrEqualTo(720));
+      expect(tester.takeException(), isNull);
+    }
   });
 }
 

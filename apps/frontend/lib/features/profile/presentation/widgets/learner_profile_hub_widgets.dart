@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
@@ -8,11 +7,10 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/account_status_presentation.dart';
 import '../../../../shared/widgets/app_section_card.dart';
-import '../../../../shared/widgets/app_status_badge.dart';
-import '../../../../shared/widgets/user_avatar.dart';
-import '../../../auth/data/models/user.dart';
 import '../../../auth/application/auth_route_helpers.dart';
+import '../../../auth/data/models/user.dart';
 import '../l10n/learner_profile_l10n.dart';
+import 'profile_visual_components.dart';
 
 enum LearnerProfilePromptKind { setup, interests, learningDetails }
 
@@ -93,7 +91,7 @@ LearnerProfilePromptState? resolveLearnerProfilePrompt(User user) {
   return null;
 }
 
-class LearnerProfileHubContent extends ConsumerWidget {
+class LearnerProfileHubContent extends StatelessWidget {
   const LearnerProfileHubContent({
     super.key,
     required this.user,
@@ -104,55 +102,8 @@ class LearnerProfileHubContent extends ConsumerWidget {
   final VoidCallback onOpenAccountSettings;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final prompt = resolveLearnerProfilePrompt(user);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LearnerIdentityCard(
-          user: user,
-          onOpenPersonalInformation: () => context.push('/profile/edit'),
-        ),
-        if (prompt != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          LearnerProfileActionPrompt(
-            state: prompt,
-            onPressed: () => context.push(learnerProfileEditRoute),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.md),
-        LearnerProfilePreviewCard(
-          profile: user.learnerProfile,
-          onEdit: () => context.push(learningProfileRoute),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ProfileDestinationsSection(
-          onOpenLearningProfile: () => context.push(learningProfileRoute),
-          onOpenAccountSettings: onOpenAccountSettings,
-        ),
-      ],
-    );
-  }
-}
-
-class LearnerIdentityCard extends StatelessWidget {
-  const LearnerIdentityCard({
-    super.key,
-    required this.user,
-    required this.onOpenPersonalInformation,
-  });
-
-  final User user;
-  final VoidCallback onOpenPersonalInformation;
-
-  @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
     final l10n = LearnerProfileL10n.of(context);
-    final displayName = user.displayName.trim().isEmpty
-        ? l10n.accountFallback
-        : user.displayName.trim();
     final phone = user.phone?.trim() ?? '';
     final memberSince = user.createdAt.millisecondsSinceEpoch == 0
         ? null
@@ -161,78 +112,49 @@ class LearnerIdentityCard extends StatelessWidget {
           );
     final verificationNotice = resolveAccountVerificationNotice(user);
 
-    return AppSectionCard(
-      emphasized: true,
-      borderRadius: AppRadius.xlAll,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          UserAvatar(
-            displayName: displayName,
-            profileImageUrl: user.profileImageUrl,
-            radius: 34,
-            backgroundColor: colors.primarySoft,
-            foregroundColor: colors.primary,
-            initialTextStyle: AppTextStyles.title(
-              context,
-            ).copyWith(color: colors.primary, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayName,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: colors.textPrimary, fontSize: 21),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ProfileIdentityHeroCard(
+          user: user,
+          fallbackName: l10n.accountFallback,
+          roleLabel: l10n.roleLabel(user.activeRole),
+          statusLabel: l10n.accountStatusLabel(user.accountStatus),
+          statusTone: accountStatusTone(user.accountStatus),
+          metadata: [
+            _LtrContactValue(value: user.email),
+            if (phone.isNotEmpty) _LtrContactValue(value: phone),
+            if (memberSince != null) _IdentityMetadataValue(value: memberSince),
+          ],
+          footer: verificationNotice == null
+              ? null
+              : AccountVerificationNotice(
+                  state: verificationNotice,
+                  onOpenPersonalInformation: () =>
+                      context.push('/profile/edit'),
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                _LtrContactValue(value: user.email),
-                if (phone.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  _LtrContactValue(value: phone),
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    AppStatusBadge(
-                      label: l10n.roleLabel(user.activeRole),
-                      tone: AppStatusTone.primary,
-                    ),
-                    AppStatusBadge(
-                      label: l10n.accountStatusLabel(user.accountStatus),
-                      tone: accountStatusTone(user.accountStatus),
-                    ),
-                  ],
-                ),
-                if (memberSince != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    memberSince,
-                    style: AppTextStyles.label(
-                      context,
-                    ).copyWith(color: colors.textMuted, fontSize: 12),
-                  ),
-                ],
-                if (verificationNotice != null) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  AccountVerificationNotice(
-                    state: verificationNotice,
-                    onOpenPersonalInformation: onOpenPersonalInformation,
-                  ),
-                ],
-              ],
-            ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        LearnerProfilePreviewCard(
+          profile: user.learnerProfile,
+          prompt: resolveLearnerProfilePrompt(user),
+          onOpen: () => context.push(learningProfileRoute),
+          onEdit: () => context.push(learnerProfileEditRoute),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _ProfileSectionLabel(label: l10n.accountSection),
+        const SizedBox(height: AppSpacing.sm),
+        AppSectionCard(
+          padding: EdgeInsets.zero,
+          showShadow: false,
+          child: ProfileDestinationRow(
+            icon: Icons.manage_accounts_outlined,
+            title: l10n.accountSettingsDestination,
+            subtitle: l10n.accountSettingsDestinationBody,
+            onTap: onOpenAccountSettings,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -271,16 +193,16 @@ class AccountVerificationNotice extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: colors.surfaceMuted,
+        color: colors.warningSoft,
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: colors.borderSubtle),
+        border: Border.all(color: colors.warningBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: colors.textMuted, size: 18),
+          Icon(Icons.info_outline_rounded, color: colors.warningText, size: 20),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -290,18 +212,16 @@ class AccountVerificationNotice extends StatelessWidget {
                   title,
                   style: AppTextStyles.label(context).copyWith(
                     color: colors.textPrimary,
-                    fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   body,
-                  style: AppTextStyles.label(context).copyWith(
+                  style: AppTextStyles.body(context).copyWith(
                     color: colors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
+                    fontSize: 13,
+                    height: 1.4,
                   ),
                 ),
                 if (actionLabel != null) ...[
@@ -309,9 +229,10 @@ class AccountVerificationNotice extends StatelessWidget {
                   TextButton(
                     onPressed: onOpenPersonalInformation,
                     style: TextButton.styleFrom(
-                      foregroundColor: colors.primary,
+                      foregroundColor: colors.warningText,
+                      minimumSize: const Size(48, 48),
                       padding: EdgeInsets.zero,
-                      visualDensity: VisualDensity.compact,
+                      alignment: AlignmentDirectional.centerStart,
                     ),
                     child: Text(actionLabel),
                   ),
@@ -325,42 +246,176 @@ class AccountVerificationNotice extends StatelessWidget {
   }
 }
 
-class _LtrContactValue extends StatelessWidget {
-  const _LtrContactValue({required this.value});
+class LearnerProfilePreviewCard extends StatelessWidget {
+  const LearnerProfilePreviewCard({
+    super.key,
+    required this.profile,
+    required this.prompt,
+    required this.onOpen,
+    required this.onEdit,
+  });
 
-  final String value;
+  final LearnerProfile? profile;
+  final LearnerProfilePromptState? prompt;
+  final VoidCallback onOpen;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = LearnerProfileL10n.of(context);
+    final learnerType = profile?.learnerType.trim() ?? '';
+    final skillLevel = profile?.skillLevel.trim() ?? '';
+    final bio = profile?.bio?.trim() ?? '';
+    final interests = _cleanInterests(profile?.interests ?? const <String>[]);
+    final hasDetails =
+        learnerType.isNotEmpty ||
+        skillLevel.isNotEmpty ||
+        interests.isNotEmpty ||
+        bio.isNotEmpty;
+    final visibleInterests = interests.take(4).toList(growable: false);
+    final remainingInterests = interests.length - visibleInterests.length;
 
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.left,
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: colors.textSecondary, fontSize: 14),
+    return AppSectionCard(
+      padding: EdgeInsets.zero,
+      showShadow: false,
+      child: Semantics(
+        button: true,
+        label: l10n.openLearningProfile,
+        child: InkWell(
+          onTap: onOpen,
+          borderRadius: AppRadius.lgAll,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ProfileSurfaceHeader(
+                      icon: Icons.school_outlined,
+                      title: l10n.learnerProfile,
+                      subtitle: l10n.learnerProfileDescription,
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: colors.textMuted,
+                        textDirection: Directionality.of(context),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (!hasDetails)
+                      _InlineEmptyValue(
+                        icon: Icons.school_outlined,
+                        label: l10n.noLearningDetails,
+                      )
+                    else ...[
+                      LayoutBuilder(
+                        builder: (context, constraints) => Wrap(
+                          spacing: AppSpacing.sm,
+                          runSpacing: AppSpacing.sm,
+                          children: [
+                            if (learnerType.isNotEmpty)
+                              _LearningSummaryValue(
+                                label: l10n.learnerType,
+                                value: l10n.learnerTypeLabel(learnerType),
+                                maxWidth: constraints.maxWidth,
+                              ),
+                            if (skillLevel.isNotEmpty)
+                              _LearningSummaryValue(
+                                label: l10n.skillLevel,
+                                value: l10n.skillLevelLabel(skillLevel),
+                                maxWidth: constraints.maxWidth,
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (interests.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          l10n.interests,
+                          style: AppTextStyles.label(
+                            context,
+                          ).copyWith(color: colors.textSecondary, fontSize: 12),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        LayoutBuilder(
+                          builder: (context, constraints) => Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              for (final interest in visibleInterests)
+                                ProfileInterestChip(
+                                  label: l10n.interestLabel(interest),
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                              if (remainingInterests > 0)
+                                ProfileInterestChip(
+                                  label: l10n.moreInterests(remainingInterests),
+                                  maxWidth: constraints.maxWidth,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (bio.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          bio,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: colors.textSecondary, height: 1.45),
+                        ),
+                      ] else if (learnerType.isNotEmpty &&
+                          skillLevel.isNotEmpty &&
+                          interests.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          l10n.optionalNotAdded,
+                          style: AppTextStyles.label(context).copyWith(
+                            color: colors.textMuted,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+              if (prompt != null) ...[
+                const Divider(height: 1),
+                _LearnerProfileCompletionStrip(state: prompt!, onEdit: onEdit),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
+
+  static List<String> _cleanInterests(List<String> raw) {
+    final values = <String>[];
+    final seen = <String>{};
+    for (final interest in raw) {
+      final clean = interest.trim();
+      if (clean.isNotEmpty && seen.add(clean.toLowerCase())) {
+        values.add(clean);
+      }
+    }
+    return values;
+  }
 }
 
-class LearnerProfileActionPrompt extends StatelessWidget {
-  const LearnerProfileActionPrompt({
-    super.key,
+class _LearnerProfileCompletionStrip extends StatelessWidget {
+  const _LearnerProfileCompletionStrip({
     required this.state,
-    required this.onPressed,
+    required this.onEdit,
   });
 
   final LearnerProfilePromptState state;
-  final VoidCallback onPressed;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -384,22 +439,14 @@ class LearnerProfileActionPrompt extends StatelessWidget {
       ),
     };
 
-    return AppSectionCard(
-      tone: AppStatusTone.primary,
+    return Container(
+      color: colors.primarySoft.withValues(alpha: 0.58),
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: colors.primarySoft,
-              borderRadius: AppRadius.mdAll,
-            ),
-            child: Icon(Icons.tune_rounded, color: colors.primary, size: 20),
-          ),
-          const SizedBox(width: AppSpacing.md),
+          Icon(Icons.tune_rounded, color: colors.primary, size: 20),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,19 +461,23 @@ class LearnerProfileActionPrompt extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   body,
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: colors.textSecondary, height: 1.4),
+                  style: AppTextStyles.body(context).copyWith(
+                    color: colors.textSecondary,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                TextButton(
-                  onPressed: onPressed,
+                const SizedBox(height: AppSpacing.xs),
+                TextButton.icon(
+                  onPressed: onEdit,
                   style: TextButton.styleFrom(
                     foregroundColor: colors.primary,
+                    minimumSize: const Size(48, 48),
                     padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
+                    alignment: AlignmentDirectional.centerStart,
                   ),
-                  child: Text(l10n.edit),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: Text(l10n.completeLearningProfile),
                 ),
               ],
             ),
@@ -437,263 +488,74 @@ class LearnerProfileActionPrompt extends StatelessWidget {
   }
 }
 
-class LearnerProfilePreviewCard extends StatelessWidget {
-  const LearnerProfilePreviewCard({
-    super.key,
-    required this.profile,
-    required this.onEdit,
+class _LearningSummaryValue extends StatelessWidget {
+  const _LearningSummaryValue({
+    required this.label,
+    required this.value,
+    required this.maxWidth,
   });
-
-  final LearnerProfile? profile;
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    final l10n = LearnerProfileL10n.of(context);
-    final learnerType = profile?.learnerType.trim() ?? '';
-    final skillLevel = profile?.skillLevel.trim() ?? '';
-    final bio = profile?.bio?.trim() ?? '';
-    final interests = <String>[];
-    final seenInterests = <String>{};
-    for (final interest in profile?.interests ?? const <String>[]) {
-      final clean = interest.trim();
-      if (clean.isNotEmpty && seenInterests.add(clean.toLowerCase())) {
-        interests.add(clean);
-      }
-    }
-    final hasDetails =
-        learnerType.isNotEmpty ||
-        skillLevel.isNotEmpty ||
-        interests.isNotEmpty ||
-        bio.isNotEmpty;
-    final visibleInterests = interests.take(4).toList(growable: false);
-    final remainingInterests = interests.length - visibleInterests.length;
-
-    return AppSectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.learnerProfile,
-                      style: AppTextStyles.title(
-                        context,
-                      ).copyWith(color: colors.textPrimary, fontSize: 18),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      l10n.learnerProfileDescription,
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: colors.textSecondary, height: 1.35),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              TextButton(onPressed: onEdit, child: Text(l10n.viewDetails)),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (!hasDetails)
-            Text(
-              l10n.noLearningDetails,
-              style: AppTextStyles.body(
-                context,
-              ).copyWith(color: colors.textSecondary),
-            )
-          else ...[
-            if (learnerType.isNotEmpty)
-              _ProfileInfoRow(
-                label: l10n.learnerType,
-                value: l10n.learnerTypeLabel(learnerType),
-              ),
-            if (learnerType.isNotEmpty && skillLevel.isNotEmpty)
-              const Divider(height: AppSpacing.lg),
-            if (skillLevel.isNotEmpty)
-              _ProfileInfoRow(
-                label: l10n.skillLevel,
-                value: l10n.skillLevelLabel(skillLevel),
-              ),
-            if (interests.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                l10n.interests,
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: colors.textSecondary, fontSize: 12),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  for (final interest in visibleInterests)
-                    _InterestChip(label: l10n.interestLabel(interest)),
-                  if (remainingInterests > 0)
-                    _InterestChip(
-                      label: l10n.moreInterests(remainingInterests),
-                    ),
-                ],
-              ),
-            ],
-            if (bio.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                l10n.about,
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: colors.textSecondary, fontSize: 12),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                bio,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: colors.textSecondary, height: 1.45),
-              ),
-            ] else if (learnerType.isNotEmpty &&
-                skillLevel.isNotEmpty &&
-                interests.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                l10n.optionalNotAdded,
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textMuted,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileInfoRow extends StatelessWidget {
-  const _ProfileInfoRow({required this.label, required this.value});
 
   final String label;
   final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: colors.textSecondary, fontSize: 12),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: colors.textPrimary, fontWeight: FontWeight.w800),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _InterestChip extends StatelessWidget {
-  const _InterestChip({required this.label});
-
-  final String label;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
 
     return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: colors.primarySoft,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: colors.primary.withValues(alpha: 0.24)),
+        color: colors.surfaceMuted,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.borderSubtle),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(
-          color: colors.primary,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: colors.textSecondary, fontSize: 12),
+            ),
+            TextSpan(
+              text: value,
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class ProfileDestinationsSection extends StatelessWidget {
-  const ProfileDestinationsSection({
-    super.key,
-    required this.onOpenLearningProfile,
-    required this.onOpenAccountSettings,
-  });
+class _InlineEmptyValue extends StatelessWidget {
+  const _InlineEmptyValue({required this.icon, required this.label});
 
-  final VoidCallback onOpenLearningProfile;
-  final VoidCallback onOpenAccountSettings;
+  final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = LearnerProfileL10n.of(context);
     final colors = AppThemeColors.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: AppSpacing.xs,
-            bottom: AppSpacing.sm,
-          ),
+        Icon(icon, color: colors.textMuted, size: 18),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
           child: Text(
-            l10n.destinations,
-            style: AppTextStyles.label(
+            label,
+            style: AppTextStyles.body(
               context,
-            ).copyWith(color: colors.textSecondary, fontSize: 12),
-          ),
-        ),
-        AppSectionCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              ProfileDestinationTile(
-                icon: Icons.school_outlined,
-                title: l10n.learningProfileDestination,
-                subtitle: l10n.learningProfileDestinationBody,
-                onTap: onOpenLearningProfile,
-              ),
-              const Divider(height: 1),
-              ProfileDestinationTile(
-                icon: Icons.manage_accounts_outlined,
-                title: l10n.accountSettingsDestination,
-                subtitle: l10n.accountSettingsDestinationBody,
-                onTap: onOpenAccountSettings,
-              ),
-            ],
+            ).copyWith(color: colors.textSecondary),
           ),
         ),
       ],
@@ -701,70 +563,64 @@ class ProfileDestinationsSection extends StatelessWidget {
   }
 }
 
-class ProfileDestinationTile extends StatelessWidget {
-  const ProfileDestinationTile({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+class _ProfileSectionLabel extends StatelessWidget {
+  const _ProfileSectionLabel({required this.label});
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(start: AppSpacing.xs),
+      child: Text(
+        label,
+        style: AppTextStyles.title(
+          context,
+        ).copyWith(color: colors.textPrimary, fontSize: 17),
+      ),
+    );
+  }
+}
 
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-        child: Row(
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: colors.primarySoft,
-                borderRadius: AppRadius.mdAll,
-              ),
-              child: Icon(icon, color: colors.primary, size: 21),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    subtitle,
-                    style: AppTextStyles.body(
-                      context,
-                    ).copyWith(color: colors.textSecondary, height: 1.35),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: colors.textMuted,
-              textDirection: Directionality.of(context),
-            ),
-          ],
+class _LtrContactValue extends StatelessWidget {
+  const _LtrContactValue({required this.value});
+
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Text(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.left,
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: colors.textSecondary, fontSize: 14),
         ),
       ),
+    );
+  }
+}
+
+class _IdentityMetadataValue extends StatelessWidget {
+  const _IdentityMetadataValue({required this.value});
+
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      value,
+      style: AppTextStyles.label(
+        context,
+      ).copyWith(color: AppThemeColors.of(context).textMuted, fontSize: 12),
     );
   }
 }

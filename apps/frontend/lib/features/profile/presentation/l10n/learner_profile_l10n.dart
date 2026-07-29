@@ -31,6 +31,7 @@ class LearnerProfileL10n {
   );
   String get editLearningProfile =>
       t('Edit learning profile', 'تعديل ملف التعلّم');
+  String get setUp => t('Set up', 'إعداد');
   String get setUpLearningProfile =>
       t('Set up learning profile', 'إعداد ملف التعلّم');
   String get noLearningProfileTitle =>
@@ -40,6 +41,8 @@ class LearnerProfileL10n {
     'أضف نوع المتعلّم ومستوى الخبرة والاهتمامات ونبذة اختيارية.',
   );
   String get learningDetails => t('Learning details', 'تفاصيل التعلّم');
+  String get learningSummaryTitle =>
+      t('Your learning profile', 'ملف تعلّمك');
   String get learnerType => t('Learner type', 'نوع المتعلّم');
   String get skillLevel => t('Skill level', 'مستوى الخبرة');
   String get interests => t('Interests', 'الاهتمامات');
@@ -51,6 +54,14 @@ class LearnerProfileL10n {
       t('Not added (optional)', 'غير مضافة (اختيارية)');
   String get noInterestsAdded => t('No interests added.', 'لم تُضف اهتمامات.');
   String showMore(int count) => t('Show $count more', 'عرض $count أخرى');
+  String showMoreInterests(int count) => t(
+    'Show $count more interests',
+    'عرض $count اهتمامات أخرى',
+  );
+  String get showFewerInterests =>
+      t('Show fewer interests', 'عرض اهتمامات أقل');
+  String get showMoreBio => t('Show more bio', 'عرض المزيد من النبذة');
+  String get showLessBio => t('Show less bio', 'عرض أقل من النبذة');
   String get showMoreContent => t('Show more', 'عرض المزيد');
   String get showLess => t('Show less', 'عرض أقل');
   String get back => t('Back', 'رجوع');
@@ -124,7 +135,12 @@ class LearnerProfileL10n {
   );
 
   String get destinations => t('Your profile', 'ملفك الشخصي');
-  String get learningProfileDestination => t('Learning Profile', 'ملف التعلّم');
+  String get accountSection => t('Account', 'الحساب');
+  String get learningProfileDestination => t('Learning profile', 'ملف التعلّم');
+  String get openLearningProfile =>
+      t('Open learning profile', 'فتح ملف التعلّم');
+  String get completeLearningProfile =>
+      t('Complete learning profile', 'إكمال ملف التعلّم');
   String get learningProfileDestinationBody => t(
     'View and update your learning details.',
     'اعرض تفاصيل تعلّمك وحدّثها.',

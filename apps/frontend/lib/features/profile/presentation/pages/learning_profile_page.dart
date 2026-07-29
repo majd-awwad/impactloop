@@ -16,11 +16,21 @@ class LearningProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = LearnerProfileL10n.of(context);
     final user = ref.watch(authControllerProvider).user;
+    void onEdit() => context.push(learnerProfileEditRoute);
 
     return ProfileSubpageScaffold(
       title: l10n.learnerProfile,
       backFallbackRoute: profileRoute,
       backTooltip: l10n.back,
+      headerAction: user == null
+          ? null
+          : _LearningProfileHeaderAction(
+              label: user.learnerProfile == null ? l10n.setUp : l10n.edit,
+              tooltip: user.learnerProfile == null
+                  ? l10n.setUpLearningProfile
+                  : l10n.editLearningProfile,
+              onPressed: onEdit,
+            ),
       child: user == null
           ? AppEmptyStateCard(
               icon: Icons.person_outline_rounded,
@@ -28,10 +38,39 @@ class LearningProfilePage extends ConsumerWidget {
               subtitle: l10n.signInToViewProfile,
               compact: true,
             )
-          : LearningProfileContent(
-              profile: user.learnerProfile,
-              onEdit: () => context.push(learnerProfileEditRoute),
-            ),
+          : LearningProfileContent(profile: user.learnerProfile),
+    );
+  }
+}
+
+class _LearningProfileHeaderAction extends StatelessWidget {
+  const _LearningProfileHeaderAction({
+    required this.label,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final compact =
+        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(1) > 1.3;
+    if (compact) {
+      return IconButton.outlined(
+        onPressed: onPressed,
+        tooltip: tooltip,
+        icon: const Icon(Icons.edit_outlined, size: 20),
+      );
+    }
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.edit_outlined, size: 18),
+      label: Text(label),
     );
   }
 }

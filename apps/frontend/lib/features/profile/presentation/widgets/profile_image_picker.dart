@@ -186,12 +186,14 @@ class ProfileSubpageScaffold extends StatelessWidget {
     required this.child,
     this.backFallbackRoute = '/profile',
     this.backTooltip = 'Back',
+    this.headerAction,
   });
 
   final String title;
   final Widget child;
   final String backFallbackRoute;
   final String backTooltip;
+  final Widget? headerAction;
 
   @override
   Widget build(BuildContext context) {
@@ -210,22 +212,34 @@ class ProfileSubpageScaffold extends StatelessWidget {
                 AppSpacing.md,
                 0,
               ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => context.popOrGo(backFallbackRoute),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    tooltip: backTooltip,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => context.popOrGo(backFallbackRoute),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        tooltip: backTooltip,
+                      ),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.title(context).copyWith(
+                            color: colors.textPrimary,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                      if (headerAction != null) ...[
+                        const SizedBox(width: AppSpacing.sm),
+                        headerAction!,
+                      ],
+                    ],
                   ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: AppTextStyles.title(
-                        context,
-                      ).copyWith(color: colors.textPrimary, fontSize: 20),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
             Expanded(
