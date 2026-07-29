@@ -9,6 +9,7 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
+import { ACTIVE_RESERVATION_STATUSES } from '../reservations/reservation-status.js';
 import { resolveReservationFollowUp } from '../reservations/reservation-follow-up.js';
 import {
   buildSelfPickupCodeData,
@@ -399,14 +400,6 @@ export const findSupplierReservationsByIds = async (
   });
 };
 
-const ACTIVE_RESERVATION_STATUSES: ReservationStatus[] = [
-  'PENDING',
-  'AWAITING_LEARNER_CONFIRMATION',
-  'AWAITING_SUPPLIER_CONFIRMATION',
-  'ACCEPTED',
-  'AWAITING_RESOLUTION',
-];
-
 export type SupplierReservationReadFilter = {
   statuses?: ReservationStatus[];
   fulfillmentMethod?: 'PICKUP' | 'DELIVERY';
@@ -431,10 +424,10 @@ const buildSupplierReservationWhere = (
   }
   if (filter.materialId) and.push({ materialId: filter.materialId });
   if (filter.historyScope === 'ACTIVE') {
-    and.push({ status: { in: ACTIVE_RESERVATION_STATUSES } });
+    and.push({ status: { in: [...ACTIVE_RESERVATION_STATUSES] } });
   }
   if (filter.historyScope === 'TERMINAL') {
-    and.push({ status: { notIn: ACTIVE_RESERVATION_STATUSES } });
+    and.push({ status: { notIn: [...ACTIVE_RESERVATION_STATUSES] } });
   }
   if (filter.dateFrom || filter.dateTo) {
     and.push({

@@ -74,6 +74,7 @@ import type {
   ReservationStatus,
 } from '../../generated/prisma/client.js';
 import { isActiveReservationBehaviorStatus } from '../reservations/reservations.quantity.js';
+import { isContinueBuildItemReady } from '../learning-projects/project-build-continuation.js';
 import { getRequestId } from '../../observability/request-context.js';
 import {
   RECOMMENDATION_ALGORITHM_NAME,
@@ -509,22 +510,10 @@ const SECTION_SUBTITLES: Record<LearnerHomeSectionKey, string> = {
   popular_projects: 'Popular learning projects across ImpactLoop.',
 };
 
-const BUILD_ITEM_READY_STATUSES = new Set([
-  'ALREADY_OWNED',
-  'AVAILABLE',
-  'ALTERNATIVE',
-]);
-
 const isBuildItemReady = (item: {
   status: string;
   linkedReservation: { status: string } | null;
-}) => {
-  if (item.linkedReservation?.status === 'COMPLETED') {
-    return true;
-  }
-
-  return BUILD_ITEM_READY_STATUSES.has(item.status);
-};
+}) => isContinueBuildItemReady(item);
 
 const mapBuildItem = (
   item: Awaited<

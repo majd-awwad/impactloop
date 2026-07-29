@@ -1,4 +1,5 @@
 import '../../auth/data/models/user.dart';
+import 'models/learner_profile_summary.dart';
 import 'models/uploaded_profile_image.dart';
 import 'profile_api.dart';
 
@@ -6,6 +7,10 @@ class ProfileRepository {
   const ProfileRepository({required ProfileApi api}) : _api = api;
 
   final ProfileApi _api;
+
+  Future<LearnerProfileSummary> fetchLearnerProfileSummary() {
+    return _api.fetchLearnerProfileSummary();
+  }
 
   Future<User> updateProfile({
     String? displayName,
