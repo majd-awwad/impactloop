@@ -19,6 +19,86 @@ class LearnerProfileL10n {
   String get accountFallback => t('Account', 'الحساب');
   String get signInToViewProfile =>
       t('Sign in to view your profile.', 'سجّل الدخول لعرض ملفك الشخصي.');
+  String get editProfile => t('Edit profile', 'تعديل الملف');
+  String avatarLabel(String name) =>
+      t('Profile photo for $name', 'الصورة الشخصية لـ $name');
+  String get verifiedLearner => t('Verified learner', 'متعلّم موثّق');
+
+  String get profileCompletion =>
+      t('Profile completion', 'اكتمال الملف الشخصي');
+  String get profileCompletionBody => t(
+    'You are closer to a complete, personalized experience.',
+    'اقتربت من تجربة مكتملة ومخصصة لك.',
+  );
+  String completionSteps(int completed, int total) => t(
+    '$completed of $total steps complete',
+    '$completed من $total خطوات مكتملة',
+  );
+  String completionSemantics(int percentage, int completed, int total) => t(
+    'Profile completion, $percentage percent, $completed of $total steps complete',
+    'اكتمال الملف الشخصي، $percentage بالمئة، $completed من $total خطوات مكتملة',
+  );
+  String get profileComplete => t('Profile complete', 'ملفك مكتمل');
+  String get profileCompleteBody =>
+      t('Your learner profile is ready.', 'ملف المتعلّم الخاص بك جاهز.');
+  String completionAction(String step) {
+    return switch (step) {
+      'display_name' => t('Add or update your name', 'أضف اسمك أو حدّثه'),
+      'phone' => t('Add or review your phone', 'أضف رقم هاتفك أو راجعه'),
+      'learning_basics' => t('Add your learning basics', 'أضف أساسيات التعلّم'),
+      'interests' => t('Add your interests', 'أضف اهتماماتك'),
+      'bio' => t('Add a short bio', 'أضف نبذة قصيرة'),
+      'saved_location' => t('Add a saved location', 'أضف موقعاً محفوظاً'),
+      _ => t('Complete your profile', 'أكمل ملفك الشخصي'),
+    };
+  }
+
+  String get yourJourney => t('Your journey', 'رحلتك في ImpactLoop');
+  String get activeReservations => t('Active reservations', 'حجوزات نشطة');
+  String get completedBuilds => t('Completed builds', 'مشاريع مكتملة');
+  String get savedProjects => t('Saved projects', 'مشاريع محفوظة');
+  String get likedMaterials => t('Liked materials', 'مواد مفضلة');
+  String metricSemantics(String label, String count) =>
+      t('$label, $count. Open.', '$label، $count. فتح.');
+
+  String get continueProject => t('Continue project', 'متابعة المشروع');
+  String get continueProjectBody =>
+      t('Pick up where you left off.', 'أكمل من حيث توقفت.');
+  String buildProgress(int completed, int total) =>
+      t('$completed of $total steps', '$completed من $total خطوات');
+  String lastActivity(String date) =>
+      t('Last activity $date', 'آخر نشاط $date');
+  String continueProjectSemantics(
+    String title,
+    int percentage,
+    int completed,
+    int total,
+  ) => t(
+    'Continue $title. $percentage percent complete, $completed of $total steps.',
+    'متابعة $title. مكتمل بنسبة $percentage بالمئة، $completed من $total خطوات.',
+  );
+
+  String get learningIdentity => t('Your learning profile', 'ملف تعلّمك');
+  String get quickActions => t('Quick actions', 'إجراءات سريعة');
+  String get savedLocations => t('Saved locations', 'المواقع المحفوظة');
+  String get openSavedLocations =>
+      t('Open saved locations', 'فتح المواقع المحفوظة');
+  String get openAccountSettings =>
+      t('Open Account and Settings', 'فتح الحساب والإعدادات');
+
+  String get dashboardLoading =>
+      t('Loading profile dashboard', 'جارٍ تحميل لوحة الملف الشخصي');
+  String get dashboardLoadFailed =>
+      t('Your dashboard could not be loaded.', 'تعذّر تحميل لوحة ملفك الشخصي.');
+  String get dashboardLoadFailedBody => t(
+    'Your account and learning details are still available.',
+    'لا تزال تفاصيل حسابك وتعلّمك متاحة.',
+  );
+  String get retry => t('Try again', 'حاول مرة أخرى');
+  String get refreshFailed => t(
+    'Some profile details could not be refreshed.',
+    'تعذّر تحديث بعض تفاصيل الملف الشخصي.',
+  );
 
   String get learnerProfile => t('Learning profile', 'ملف التعلّم');
   String get learnerProfileDescription => t(
@@ -41,8 +121,7 @@ class LearnerProfileL10n {
     'أضف نوع المتعلّم ومستوى الخبرة والاهتمامات ونبذة اختيارية.',
   );
   String get learningDetails => t('Learning details', 'تفاصيل التعلّم');
-  String get learningSummaryTitle =>
-      t('Your learning profile', 'ملف تعلّمك');
+  String get learningSummaryTitle => t('Your learning profile', 'ملف تعلّمك');
   String get learnerType => t('Learner type', 'نوع المتعلّم');
   String get skillLevel => t('Skill level', 'مستوى الخبرة');
   String get interests => t('Interests', 'الاهتمامات');
@@ -54,10 +133,8 @@ class LearnerProfileL10n {
       t('Not added (optional)', 'غير مضافة (اختيارية)');
   String get noInterestsAdded => t('No interests added.', 'لم تُضف اهتمامات.');
   String showMore(int count) => t('Show $count more', 'عرض $count أخرى');
-  String showMoreInterests(int count) => t(
-    'Show $count more interests',
-    'عرض $count اهتمامات أخرى',
-  );
+  String showMoreInterests(int count) =>
+      t('Show $count more interests', 'عرض $count اهتمامات أخرى');
   String get showFewerInterests =>
       t('Show fewer interests', 'عرض اهتمامات أقل');
   String get showMoreBio => t('Show more bio', 'عرض المزيد من النبذة');
@@ -173,6 +250,7 @@ class LearnerProfileL10n {
     'راجع رقم الهاتف المحفوظ في هذا الحساب.',
   );
   String get reviewPhoneAction => t('Review phone', 'مراجعة الهاتف');
+  String get reviewAccountAction => t('Review account', 'مراجعة الحساب');
 
   String roleLabel(String role) {
     return switch (role.trim().toUpperCase()) {
@@ -197,6 +275,7 @@ class LearnerProfileL10n {
 
   String learnerTypeLabel(String value) {
     return switch (value.trim().toLowerCase()) {
+      'student' => t('Student', 'طالب'),
       'university student' => t('University student', 'طالب جامعي'),
       'school student' => t('School student', 'طالب مدرسة'),
       'self learner' => t('Self learner', 'متعلّم ذاتي'),

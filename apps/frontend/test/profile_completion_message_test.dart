@@ -4,6 +4,34 @@ import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/profile/presentation/widgets/learner_profile_hub_widgets.dart';
 
 void main() {
+  test('summary completion actions follow the locked first-step mapping', () {
+    const routes = {
+      'display_name': '/profile/edit',
+      'phone': '/profile/edit',
+      'learning_basics': '/profile/learner/edit',
+      'interests': '/profile/learner/edit',
+      'bio': '/profile/learner/edit',
+      'saved_location': '/profile/locations',
+    };
+
+    for (final entry in routes.entries) {
+      final action = resolveLearnerProfileCompletionAction([
+        entry.key,
+        'saved_location',
+      ]);
+      expect(action?.step, entry.key);
+      expect(action?.route, entry.value);
+    }
+  });
+
+  test('completed and future unknown steps do not invent an action', () {
+    expect(resolveLearnerProfileCompletionAction(const []), isNull);
+    expect(
+      resolveLearnerProfileCompletionAction(const ['future_step']),
+      isNull,
+    );
+  });
+
   test('complete supported profile has no targeted prompt', () {
     expect(resolveLearnerProfilePrompt(_user()), isNull);
   });
