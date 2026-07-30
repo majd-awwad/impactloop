@@ -7,12 +7,12 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/account_status_presentation.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
-import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/user_avatar.dart';
 import '../../../auth/application/portal_navigation.dart';
 import '../../../auth/data/models/user.dart';
 import '../l10n/account_settings_l10n.dart';
-import 'profile_visual_components.dart';
+import 'profile_family_page_widgets.dart';
 
 enum AccountRoleActionKind {
   supplierProfile,
@@ -72,14 +72,89 @@ class AccountIdentitySummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AccountSettingsL10n.of(context);
-    return ProfileIdentityHeroCard(
-      user: user,
-      fallbackName: l10n.accountFallback,
-      roleLabel: l10n.roleLabel(user.activeRole),
-      statusLabel: l10n.accountStatusLabel(user.accountStatus),
-      statusTone: accountStatusTone(user.accountStatus),
-      compact: true,
-      avatarSemanticLabel: l10n.avatarLabel,
+    final colors = AppThemeColors.of(context);
+    final displayName = user.displayName.trim().isEmpty
+        ? l10n.accountFallback
+        : user.displayName.trim();
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+
+    return ProfileFamilyIntroductionSurface(
+      padding: EdgeInsetsDirectional.all(
+        MediaQuery.sizeOf(context).width < 390 ? AppSpacing.md : AppSpacing.lg,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final stackIdentity = constraints.maxWidth < 270 || scale >= 1.3;
+          final avatar = Semantics(
+            image: true,
+            label: l10n.avatarLabel(displayName),
+            child: ExcludeSemantics(
+              child: UserAvatar(
+                displayName: displayName,
+                profileImageUrl: user.profileImageUrl,
+                radius: 34,
+                backgroundColor: colors.primarySoft,
+                foregroundColor: colors.primary,
+                initialTextStyle: AppTextStyles.title(context).copyWith(
+                  color: colors.primary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          );
+          final identity = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ProfileFamilyDirectionalText(
+                displayName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.title(context).copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 23,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              AccountLtrValue(value: user.email, compact: true),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  AppStatusBadge(
+                    label: l10n.roleLabel(user.activeRole),
+                    tone: AppStatusTone.primary,
+                  ),
+                  AppStatusBadge(
+                    label: l10n.accountStatusLabel(user.accountStatus),
+                    tone: accountStatusTone(user.accountStatus),
+                  ),
+                ],
+              ),
+            ],
+          );
+
+          if (stackIdentity) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                avatar,
+                const SizedBox(height: AppSpacing.md),
+                identity,
+              ],
+            );
+          }
+          return Row(
+            children: [
+              avatar,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(child: identity),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -87,11 +162,13 @@ class AccountIdentitySummaryCard extends StatelessWidget {
 class AccountSettingsSection extends StatelessWidget {
   const AccountSettingsSection({
     super.key,
+    required this.icon,
     required this.title,
     required this.children,
     this.note,
   });
 
+  final IconData icon;
   final String title;
   final String? note;
   final List<Widget> children;
@@ -101,53 +178,41 @@ class AccountSettingsSection extends StatelessWidget {
     final colors = AppThemeColors.of(context);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: AppSpacing.xs,
-            bottom: AppSpacing.sm,
-          ),
-          child: Text(
-            title,
-            style: AppTextStyles.label(context).copyWith(
-              color: colors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        AppSectionCard(
-          padding: EdgeInsets.zero,
-          showShadow: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var index = 0; index < children.length; index++) ...[
-                if (index > 0) const Divider(height: 1),
-                children[index],
-              ],
-            ],
-          ),
-        ),
+        ProfileFamilySectionHeading(icon: icon, title: title),
+        if (children.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          for (var index = 0; index < children.length; index++) ...[
+            if (index > 0) const SizedBox(height: AppSpacing.sm),
+            children[index],
+          ],
+        ],
         if (note != null) ...[
           const SizedBox(height: AppSpacing.sm),
-          Padding(
-            padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: AppSpacing.xs,
-            ),
+          ProfileFamilySurface(
+            showShadow: false,
+            tone: ProfileFamilyTone.neutral,
+            padding: const EdgeInsetsDirectional.all(AppSpacing.sm + 4),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.devices_outlined, size: 17, color: colors.textMuted),
+                ExcludeSemantics(
+                  child: Icon(
+                    Icons.devices_outlined,
+                    size: 18,
+                    color: colors.textMuted,
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     note!,
                     style: AppTextStyles.label(context).copyWith(
                       color: colors.textSecondary,
-                      fontWeight: FontWeight.w500,
-                      height: 1.35,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.4,
                     ),
                   ),
                 ),
@@ -169,6 +234,7 @@ class AccountSettingsDestinationRow extends StatelessWidget {
     required this.onTap,
     this.trailingValue,
     this.busy = false,
+    this.tone = ProfileFamilyTone.neutral,
   });
 
   final IconData icon;
@@ -177,29 +243,25 @@ class AccountSettingsDestinationRow extends StatelessWidget {
   final VoidCallback? onTap;
   final String? trailingValue;
   final bool busy;
+  final ProfileFamilyTone tone;
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppThemeColors.of(context);
-    return ProfileDestinationRow(
+    final l10n = AccountSettingsL10n.of(context);
+    final detail = [
+      if (subtitle?.trim().isNotEmpty ?? false) subtitle!.trim(),
+      if (trailingValue?.trim().isNotEmpty ?? false) trailingValue!.trim(),
+    ].join(' ');
+
+    return ProfileFamilyDestinationTile(
       icon: icon,
       title: title,
-      subtitle: subtitle,
+      subtitle: detail,
+      semanticLabel: l10n.destinationSemantics(title, detail),
+      onTap: onTap ?? () {},
+      enabled: onTap != null,
       busy: busy,
-      onTap: onTap,
-      trailing: trailingValue == null
-          ? null
-          : ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 92),
-              child: Text(
-                trailingValue!,
-                textAlign: TextAlign.end,
-                style: AppTextStyles.label(context).copyWith(
-                  color: colors.textSecondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+      tone: tone,
     );
   }
 }
@@ -223,14 +285,22 @@ class AccountInlinePreferenceControl<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
-    return Padding(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+    final l10n = AccountSettingsL10n.of(context);
+
+    return ProfileFamilySurface(
+      showShadow: false,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.sm + 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Icon(icon, color: colors.primary, size: 20),
+              ProfileFamilyIconContainer(
+                icon: icon,
+                tone: ProfileFamilyTone.primary,
+                size: 40,
+                iconSize: 20,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
@@ -250,25 +320,33 @@ class AccountInlinePreferenceControl<T> extends StatelessWidget {
             children: [
               for (final option in options)
                 Semantics(
+                  label: l10n.preferenceOptionSemantics(
+                    title,
+                    option.label,
+                    option.value == selectedValue,
+                  ),
                   selected: option.value == selectedValue,
                   button: true,
-                  child: ChoiceChip(
-                    selected: option.value == selectedValue,
-                    onSelected: (_) => onSelected(option.value),
-                    avatar: Icon(option.icon, size: 17),
-                    label: Text(option.label),
-                    showCheckmark: false,
-                    backgroundColor: colors.surfaceMuted,
-                    selectedColor: colors.primarySoft,
-                    side: BorderSide(
-                      color: option.value == selectedValue
-                          ? colors.primary
-                          : colors.borderSubtle,
+                  child: ExcludeSemantics(
+                    child: ChoiceChip(
+                      selected: option.value == selectedValue,
+                      onSelected: (_) => onSelected(option.value),
+                      avatar: Icon(option.icon, size: 17),
+                      label: Text(option.label),
+                      showCheckmark: true,
+                      checkmarkColor: colors.primary,
+                      backgroundColor: colors.surfaceMuted,
+                      selectedColor: colors.primarySoft,
+                      side: BorderSide(
+                        color: option.value == selectedValue
+                            ? colors.primary
+                            : colors.borderSubtle,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppRadius.pillAll,
+                      ),
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.pillAll,
-                    ),
-                    materialTapTargetSize: MaterialTapTargetSize.padded,
                   ),
                 ),
             ],
@@ -296,6 +374,7 @@ class AccountRoleAccessSection extends StatelessWidget {
     final l10n = AccountSettingsL10n.of(context);
 
     return AccountSettingsSection(
+      icon: Icons.switch_account_outlined,
       title: l10n.rolesAndAccess,
       note: resolution.showOrganizationRestriction
           ? l10n.organizationSupplierRestriction
@@ -307,11 +386,20 @@ class AccountRoleAccessSection extends StatelessWidget {
             title: _titleFor(l10n, action),
             subtitle: _subtitleFor(l10n, action),
             busy: busyAction == action,
+            tone: _toneFor(action),
             onTap: busyAction == null ? () => onAction(action) : null,
           ),
       ],
     );
   }
+
+  ProfileFamilyTone _toneFor(AccountRoleActionKind action) => switch (action) {
+    AccountRoleActionKind.supplierProfile => ProfileFamilyTone.blue,
+    AccountRoleActionKind.becomeSupplier => ProfileFamilyTone.mint,
+    AccountRoleActionKind.switchToSupplier => ProfileFamilyTone.blue,
+    AccountRoleActionKind.switchToLearner => ProfileFamilyTone.mint,
+    AccountRoleActionKind.becomeLearner => ProfileFamilyTone.mint,
+  };
 
   IconData _iconFor(AccountRoleActionKind action) => switch (action) {
     AccountRoleActionKind.supplierProfile => Icons.storefront_outlined,
@@ -351,9 +439,11 @@ class AccountStateCard extends StatelessWidget {
     final phone = user.phone?.trim() ?? '';
 
     return AccountSettingsSection(
+      icon: Icons.verified_user_outlined,
       title: l10n.verification,
       children: [
         AccountVerificationRow(
+          icon: Icons.email_outlined,
           label: l10n.email,
           value: user.email,
           statusLabel: user.emailVerifiedAt == null
@@ -364,6 +454,7 @@ class AccountStateCard extends StatelessWidget {
               : AppStatusTone.success,
         ),
         AccountVerificationRow(
+          icon: Icons.phone_outlined,
           label: l10n.phone,
           value: phone.isEmpty ? l10n.notAdded : phone,
           forceLtr: phone.isNotEmpty,
@@ -386,6 +477,7 @@ class AccountStateCard extends StatelessWidget {
 class AccountVerificationRow extends StatelessWidget {
   const AccountVerificationRow({
     super.key,
+    required this.icon,
     required this.label,
     required this.value,
     required this.statusLabel,
@@ -393,6 +485,7 @@ class AccountVerificationRow extends StatelessWidget {
     this.forceLtr = true,
   });
 
+  final IconData icon;
   final String label;
   final String value;
   final String statusLabel;
@@ -402,55 +495,85 @@ class AccountVerificationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = AccountSettingsL10n.of(context);
+    final status = AppStatusStyle.of(context, tone);
+    final profileTone = switch (tone) {
+      AppStatusTone.success => ProfileFamilyTone.success,
+      AppStatusTone.warning => ProfileFamilyTone.warning,
+      _ => ProfileFamilyTone.neutral,
+    };
 
     return Semantics(
-      label: '$label, $value, $statusLabel',
-      child: Padding(
-        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final stackHeader =
-                constraints.maxWidth < 300 ||
-                MediaQuery.textScalerOf(context).scale(1) > 1.3;
-            final title = Text(
-              label,
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w800,
+      label: l10n.verificationSemantics(label, value, statusLabel),
+      child: ExcludeSemantics(
+        child: ProfileFamilySurface(
+          showShadow: false,
+          tone: profileTone,
+          padding: const EdgeInsetsDirectional.all(AppSpacing.sm + 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ProfileFamilyIconContainer(
+                icon: icon,
+                tone: profileTone,
+                size: 40,
+                iconSize: 20,
               ),
-            );
-            final badge = ExcludeSemantics(
-              child: AppStatusBadge(label: statusLabel, tone: tone),
-            );
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (stackHeader) ...[
-                  title,
-                  const SizedBox(height: AppSpacing.sm),
-                  badge,
-                ] else
-                  Row(
-                    children: [
-                      Expanded(child: title),
-                      const SizedBox(width: AppSpacing.sm),
-                      badge,
-                    ],
-                  ),
-                const SizedBox(height: AppSpacing.sm),
-                if (forceLtr)
-                  AccountLtrValue(value: value)
-                else
-                  Text(
-                    value,
-                    style: AppTextStyles.body(
-                      context,
-                    ).copyWith(color: colors.textSecondary),
-                  ),
-              ],
-            );
-          },
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: AppTextStyles.label(context).copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    if (forceLtr)
+                      AccountLtrValue(value: value, compact: true)
+                    else
+                      ProfileFamilyDirectionalText(
+                        value,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: colors.textSecondary, fontSize: 13),
+                      ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tone == AppStatusTone.success
+                              ? Icons.check_circle_rounded
+                              : tone == AppStatusTone.warning
+                              ? Icons.error_outline_rounded
+                              : Icons.info_outline_rounded,
+                          size: 17,
+                          color: status.foreground,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Flexible(
+                          child: Text(
+                            statusLabel,
+                            style: AppTextStyles.label(context).copyWith(
+                              color: status.foreground,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -458,9 +581,10 @@ class AccountVerificationRow extends StatelessWidget {
 }
 
 class AccountLtrValue extends StatelessWidget {
-  const AccountLtrValue({super.key, required this.value});
+  const AccountLtrValue({super.key, required this.value, this.compact = false});
 
   final String value;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -473,9 +597,10 @@ class AccountLtrValue extends StatelessWidget {
           textAlign: TextAlign.left,
           overflow: TextOverflow.ellipsis,
           maxLines: 2,
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: AppThemeColors.of(context).textSecondary),
+          style: AppTextStyles.body(context).copyWith(
+            color: AppThemeColors.of(context).textSecondary,
+            fontSize: compact ? 13 : 15,
+          ),
         ),
       ),
     );
@@ -495,45 +620,39 @@ class AccountSessionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AccountSettingsL10n.of(context);
+    final colors = AppThemeColors.of(context);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.only(
-            start: AppSpacing.xs,
-            bottom: AppSpacing.sm,
-          ),
-          child: Text(
-            l10n.session,
-            style: AppTextStyles.label(context).copyWith(
-              color: AppThemeColors.of(context).textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-        SizedBox(
+    return Semantics(
+      label: l10n.logoutSemantics,
+      button: true,
+      enabled: onLogout != null,
+      child: ExcludeSemantics(
+        child: SizedBox(
           width: double.infinity,
+          height: 52,
           child: OutlinedButton.icon(
             onPressed: onLogout,
-            style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger)
-                .copyWith(
-                  minimumSize: const WidgetStatePropertyAll(Size(0, 52)),
-                  shape: WidgetStatePropertyAll(
-                    RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
-                  ),
-                ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colors.danger,
+              backgroundColor: colors.dangerSoft.withValues(alpha: 0.38),
+              side: BorderSide(color: colors.danger.withValues(alpha: 0.62)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
             icon: isLoggingOut
-                ? const SizedBox.square(
+                ? SizedBox.square(
                     dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.danger,
+                    ),
                   )
                 : const Icon(Icons.logout_rounded),
             label: Text(isLoggingOut ? l10n.loggingOut : l10n.logout),
           ),
         ),
-      ],
+      ),
     );
   }
 }

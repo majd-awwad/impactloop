@@ -26,6 +26,7 @@ class AccountSettingsL10n {
       t('Edit personal information', 'تعديل المعلومات الشخصية');
 
   String get accountDetails => t('Account details', 'تفاصيل الحساب');
+  String get accountEssentials => t('Account essentials', 'أساسيات الحساب');
   String get personalInformation =>
       t('Personal information', 'المعلومات الشخصية');
   String get personalInformationBody =>
@@ -115,7 +116,22 @@ class AccountSettingsL10n {
     'تم تسجيل خروجك محلياً، لكن تعذّر الوصول إلى الخادم.',
   );
 
-  String get avatarLabel => t('Profile image', 'صورة الملف الشخصي');
+  String avatarLabel(String name) =>
+      t('Profile image for $name', 'صورة الملف الشخصي لـ $name');
+  String destinationSemantics(String title, String detail) =>
+      t('$title. $detail Open destination.', '$title. $detail فتح الوجهة.');
+  String verificationSemantics(String field, String value, String status) =>
+      t('$field, $value, $status.', '$field، $value، $status.');
+  String preferenceOptionSemantics(
+    String group,
+    String option,
+    bool selected,
+  ) => t(
+    '$group, $option, ${selected ? 'selected' : 'not selected'}.',
+    '$group، $option، ${selected ? 'محدد' : 'غير محدد'}.',
+  );
+  String get logoutSemantics =>
+      t('Logout. Destructive action.', 'تسجيل الخروج. إجراء حاسم.');
 
   String roleLabel(String role) {
     return switch (role.trim().toUpperCase()) {

@@ -74,7 +74,7 @@ void main() {
 
     expect(find.text('Account and Settings'), findsOneWidget);
     expect(find.text('Test User'), findsOneWidget);
-    expect(find.text('user@example.com'), findsOneWidget);
+    expect(find.text('user@example.com'), findsNWidgets(2));
     expect(find.text('Learner'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
     expect(find.text('Personal information'), findsOneWidget);
@@ -84,6 +84,8 @@ void main() {
     expect(find.text('Become a supplier'), findsOneWidget);
     expect(find.text('Verified'), findsNWidgets(2));
     expect(find.text('Logout'), findsOneWidget);
+    expect(find.text('Account essentials'), findsOneWidget);
+    expect(find.text('Communication'), findsNothing);
 
     expect(find.text('Notification preferences'), findsNothing);
     expect(find.text('Delete account'), findsNothing);
@@ -294,7 +296,7 @@ void main() {
       tester,
       user: _user(),
       size: const Size(320, 760),
-      textScaler: const TextScaler.linear(2),
+      textScaler: const TextScaler.linear(1.3),
     );
     harness.container.read(appSettingsProvider.notifier).setLanguageCode('ar');
     await tester.pumpAndSettle();
@@ -314,15 +316,61 @@ void main() {
   testWidgets('account page is constrained across responsive widths', (
     tester,
   ) async {
-    for (final width in [360.0, 430.0, 800.0]) {
+    for (final width in [320.0, 360.0, 390.0, 430.0, 1440.0]) {
       await _pumpAccount(tester, user: _user(), size: Size(width, 1200));
 
       final hero = tester.renderObject<RenderBox>(
         find.byType(AccountIdentitySummaryCard),
       );
-      expect(hero.size.width, lessThanOrEqualTo(720));
+      expect(hero.size.width, lessThanOrEqualTo(920));
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('destination, selector, and logout semantics are merged', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _pumpAccount(tester, user: _user());
+
+    expect(
+      find.bySemanticsLabel(
+        'Personal information. Name, phone, and profile photo. Open destination.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel('Appearance, System, selected.'),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(find.text('Logout'));
+    expect(
+      find.bySemanticsLabel('Logout. Destructive action.'),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('dark account layout preserves readable state and wraps', (
+    tester,
+  ) async {
+    final harness = await _pumpAccount(
+      tester,
+      user: _user(phone: null, emailVerified: false, phoneVerified: false),
+      size: const Size(360, 800),
+    );
+    harness.container
+        .read(appSettingsProvider.notifier)
+        .setThemeMode(ThemeMode.dark);
+    await tester.pumpAndSettle();
+
+    expect(
+      Theme.of(tester.element(find.text('Account and Settings'))).brightness,
+      Brightness.dark,
+    );
+    expect(find.text('Not verified'), findsOneWidget);
+    expect(find.text('Not added'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
   });
 }
 

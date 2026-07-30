@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
-import '../../../../shared/widgets/app_empty_state_card.dart';
-import '../../../../shared/widgets/app_section_card.dart';
+import '../../../../shared/widgets/user_avatar.dart';
 import '../../../auth/data/models/user.dart';
 import '../l10n/learner_profile_l10n.dart';
-import 'profile_visual_components.dart';
+import 'profile_family_page_widgets.dart';
 
 class LearningProfileViewData {
   const LearningProfileViewData({
@@ -50,78 +48,196 @@ class LearningProfileViewData {
 }
 
 class LearningProfileContent extends StatelessWidget {
-  const LearningProfileContent({super.key, required this.profile});
+  const LearningProfileContent({super.key, required this.user});
 
-  final LearnerProfile? profile;
+  final User user;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = LearnerProfileL10n.of(context);
-    if (profile == null) {
-      return AppEmptyStateCard(
-        icon: Icons.school_outlined,
-        title: l10n.noLearningProfileTitle,
-        subtitle: l10n.noLearningProfileBody,
-        compact: true,
-      );
-    }
+    final data = user.learnerProfile == null
+        ? null
+        : LearningProfileViewData.fromProfile(user.learnerProfile!);
 
-    final data = LearningProfileViewData.fromProfile(profile!);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        LearningProfileSummaryCard(data: data),
+        LearningProfileSummaryCard(user: user, data: data),
         const SizedBox(height: AppSpacing.md),
-        LearningProfileDetailsSurface(data: data),
+        if (data == null)
+          const LearningProfileEmptyDetailsSurface()
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final details = <Widget>[
+                Expanded(child: LearningProfileInterestsSurface(data: data)),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: LearningProfileBioSurface(data: data)),
+              ];
+              if (constraints.maxWidth >= profileFamilyWideBreakpoint) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: details,
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LearningProfileInterestsSurface(data: data),
+                  const SizedBox(height: AppSpacing.md),
+                  LearningProfileBioSurface(data: data),
+                ],
+              );
+            },
+          ),
       ],
     );
   }
 }
 
 class LearningProfileSummaryCard extends StatelessWidget {
-  const LearningProfileSummaryCard({super.key, required this.data});
+  const LearningProfileSummaryCard({
+    super.key,
+    required this.user,
+    required this.data,
+  });
 
-  final LearningProfileViewData data;
+  final User user;
+  final LearningProfileViewData? data;
 
   @override
   Widget build(BuildContext context) {
     final l10n = LearnerProfileL10n.of(context);
+    final colors = AppThemeColors.of(context);
+    final displayName = user.displayName.trim().isEmpty
+        ? l10n.accountFallback
+        : user.displayName.trim();
+    final date = MaterialLocalizations.of(
+      context,
+    ).formatMediumDate(user.createdAt.toLocal());
+    final compact = MediaQuery.sizeOf(context).width < 390;
     final scale = MediaQuery.textScalerOf(context).scale(1);
 
-    return AppSectionCard(
-      emphasized: true,
-      borderRadius: AppRadius.xlAll,
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+    return ProfileFamilyIntroductionSurface(
+      padding: EdgeInsetsDirectional.all(
+        compact ? AppSpacing.md : AppSpacing.lg,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ProfileSurfaceHeader(
-            icon: Icons.school_outlined,
-            title: l10n.learningSummaryTitle,
-            subtitle: l10n.learningProfileIntro,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stackIdentity = constraints.maxWidth < 270 || scale >= 1.3;
+              final avatar = Semantics(
+                image: true,
+                label: l10n.avatarLabel(displayName),
+                child: ExcludeSemantics(
+                  child: UserAvatar(
+                    displayName: displayName,
+                    profileImageUrl: user.profileImageUrl,
+                    radius: compact ? 32 : 36,
+                    backgroundColor: colors.primarySoft,
+                    foregroundColor: colors.primary,
+                    initialTextStyle: AppTextStyles.title(context).copyWith(
+                      color: colors.primary,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              );
+              final identity = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ProfileFamilyDirectionalText(
+                    displayName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.title(context).copyWith(
+                      color: colors.textPrimary,
+                      fontSize: compact ? 23 : 25,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.learnerProfileDescription,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 13.5,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ExcludeSemantics(
+                        child: Icon(
+                          Icons.calendar_today_outlined,
+                          size: 17,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Flexible(
+                        child: Text(
+                          l10n.memberSince(date),
+                          style: AppTextStyles.label(context).copyWith(
+                            color: colors.textSecondary,
+                            fontSize: 12.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+
+              if (stackIdentity) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    avatar,
+                    const SizedBox(height: AppSpacing.md),
+                    identity,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  avatar,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(child: identity),
+                ],
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.md),
           LayoutBuilder(
             builder: (context, constraints) {
-              final tiles = [
+              final tiles = <Widget>[
                 LearningProfileSummaryTile(
                   icon: Icons.person_outline_rounded,
+                  tone: ProfileFamilyTone.mint,
                   label: l10n.learnerType,
-                  value: data.learnerType == null
+                  value: data?.learnerType == null
                       ? l10n.notAdded
-                      : l10n.learnerTypeLabel(data.learnerType!),
-                  isMissing: data.learnerType == null,
+                      : l10n.learnerTypeLabel(data!.learnerType!),
+                  isMissing: data?.learnerType == null,
                 ),
                 LearningProfileSummaryTile(
                   icon: Icons.signal_cellular_alt_rounded,
+                  tone: ProfileFamilyTone.blue,
                   label: l10n.skillLevel,
-                  value: data.skillLevel == null
+                  value: data?.skillLevel == null
                       ? l10n.notAdded
-                      : l10n.skillLevelLabel(data.skillLevel!),
-                  isMissing: data.skillLevel == null,
+                      : l10n.skillLevelLabel(data!.skillLevel!),
+                  isMissing: data?.skillLevel == null,
                 ),
               ];
-              if (constraints.maxWidth >= 360 && scale <= 1.3) {
+              final stackValues = constraints.maxWidth < 280 || scale >= 1.3;
+              if (!stackValues) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -150,12 +266,14 @@ class LearningProfileSummaryTile extends StatelessWidget {
   const LearningProfileSummaryTile({
     super.key,
     required this.icon,
+    required this.tone,
     required this.label,
     required this.value,
     required this.isMissing,
   });
 
   final IconData icon;
+  final ProfileFamilyTone tone;
   final String label;
   final String value;
   final bool isMissing;
@@ -163,52 +281,68 @@ class LearningProfileSummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final style = ProfileFamilyToneStyle.of(context, tone);
+    final iconWidget = ProfileFamilyIconContainer(
+      icon: isMissing ? Icons.add_rounded : icon,
+      tone: isMissing ? ProfileFamilyTone.neutral : tone,
+      size: 40,
+      iconSize: 20,
+    );
+    final copy = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: colors.textSecondary, fontSize: 12.5),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        ProfileFamilyDirectionalText(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: AppTextStyles.label(context).copyWith(
+            color: isMissing ? colors.textSecondary : colors.textPrimary,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
 
     return Semantics(
       label: '$label: $value',
       child: ExcludeSemantics(
         child: Container(
-          width: double.infinity,
-          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+          constraints: const BoxConstraints(minHeight: 76),
+          padding: const EdgeInsetsDirectional.all(AppSpacing.sm + 4),
           decoration: BoxDecoration(
-            color: colors.surfaceMuted,
-            borderRadius: AppRadius.mdAll,
-            border: Border.all(color: colors.borderSubtle),
+            color: style.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: style.border),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                isMissing ? Icons.add_circle_outline_rounded : icon,
-                color: isMissing ? colors.textMuted : colors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 170) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      label,
-                      style: AppTextStyles.label(context).copyWith(
-                        color: colors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      value,
-                      style: AppTextStyles.label(context).copyWith(
-                        color: isMissing
-                            ? colors.textSecondary
-                            : colors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                    iconWidget,
+                    const SizedBox(height: AppSpacing.sm),
+                    copy,
                   ],
-                ),
-              ),
-            ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  iconWidget,
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: copy),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -216,39 +350,35 @@ class LearningProfileSummaryTile extends StatelessWidget {
   }
 }
 
-class LearningProfileDetailsSurface extends StatefulWidget {
-  const LearningProfileDetailsSurface({super.key, required this.data});
+class LearningProfileInterestsSurface extends StatefulWidget {
+  const LearningProfileInterestsSurface({super.key, required this.data});
 
   final LearningProfileViewData data;
 
   @override
-  State<LearningProfileDetailsSurface> createState() =>
-      _LearningProfileDetailsSurfaceState();
+  State<LearningProfileInterestsSurface> createState() =>
+      _LearningProfileInterestsSurfaceState();
 }
 
-class _LearningProfileDetailsSurfaceState
-    extends State<LearningProfileDetailsSurface> {
-  static const _collapsedInterestCount = 8;
-  static const _collapsedBioLines = 4;
-  bool _interestsExpanded = false;
-  bool _bioExpanded = false;
+class _LearningProfileInterestsSurfaceState
+    extends State<LearningProfileInterestsSurface> {
+  static const _collapsedInterestCount = 4;
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
     final l10n = LearnerProfileL10n.of(context);
     final interests = widget.data.interests;
-    final visibleInterests = _interestsExpanded
+    final visible = _expanded
         ? interests
         : interests.take(_collapsedInterestCount).toList(growable: false);
-    final remaining = interests.length - visibleInterests.length;
+    final hiddenCount = interests.length - visible.length;
 
-    return AppSectionCard(
-      showShadow: false,
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+    return ProfileFamilySurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ProfileSurfaceHeader(
+          ProfileFamilySectionHeading(
             icon: Icons.interests_outlined,
             title: l10n.interests,
           ),
@@ -259,117 +389,166 @@ class _LearningProfileDetailsSurfaceState
               label: l10n.noInterestsAdded,
             )
           else
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    for (final interest in visibleInterests)
-                      ProfileInterestChip(
-                        label: l10n.interestLabel(interest),
-                        maxWidth: constraints.maxWidth,
-                      ),
-                  ],
-                );
-              },
+            Wrap(
+              alignment: WrapAlignment.start,
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final interest in visible)
+                  ProfileFamilyIntrinsicChip(
+                    label: l10n.interestLabel(interest),
+                  ),
+                if (!_expanded && hiddenCount > 0)
+                  ProfileFamilyIntrinsicChip(
+                    label: l10n.moreInterests(hiddenCount),
+                    semanticLabel: l10n.hiddenInterestsSemantics(hiddenCount),
+                    expanded: false,
+                    onPressed: () => setState(() => _expanded = true),
+                    tone: ProfileFamilyTone.blue,
+                  ),
+                if (_expanded && interests.length > _collapsedInterestCount)
+                  ProfileFamilyIntrinsicChip(
+                    label: l10n.showFewerInterests,
+                    semanticLabel: l10n.showFewerInterestsSemantics,
+                    expanded: true,
+                    onPressed: () => setState(() => _expanded = false),
+                    tone: ProfileFamilyTone.neutral,
+                  ),
+              ],
             ),
-          if (remaining > 0 || _interestsExpanded) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Semantics(
-                button: true,
-                expanded: _interestsExpanded,
-                child: TextButton.icon(
-                  onPressed: () => setState(
-                    () => _interestsExpanded = !_interestsExpanded,
-                  ),
-                  icon: Icon(
-                    _interestsExpanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                  ),
-                  label: Text(
-                    _interestsExpanded
-                        ? l10n.showFewerInterests
-                        : l10n.showMoreInterests(remaining),
-                  ),
-                ),
-              ),
-            ),
-          ],
-          const Padding(
-            padding: EdgeInsetsDirectional.symmetric(vertical: AppSpacing.md),
-            child: Divider(height: 1),
-          ),
-          ProfileSurfaceHeader(icon: Icons.notes_rounded, title: l10n.about),
-          const SizedBox(height: AppSpacing.md),
-          _buildBio(context),
         ],
       ),
     );
   }
+}
 
-  Widget _buildBio(BuildContext context) {
+class LearningProfileBioSurface extends StatefulWidget {
+  const LearningProfileBioSurface({super.key, required this.data});
+
+  final LearningProfileViewData data;
+
+  @override
+  State<LearningProfileBioSurface> createState() =>
+      _LearningProfileBioSurfaceState();
+}
+
+class _LearningProfileBioSurfaceState extends State<LearningProfileBioSurface> {
+  static const _collapsedBioLines = 4;
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = LearnerProfileL10n.of(context);
     final colors = AppThemeColors.of(context);
     final bio = widget.data.bio;
-    if (bio == null) {
-      return _EmptyLearningValue(
-        icon: Icons.notes_rounded,
-        label: l10n.optionalNotAdded,
-      );
-    }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final style = AppTextStyles.body(
-          context,
-        ).copyWith(color: colors.textSecondary, height: 1.55);
-        final painter = TextPainter(
-          text: TextSpan(text: bio, style: style),
-          maxLines: _collapsedBioLines,
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-        )..layout(maxWidth: constraints.maxWidth);
-        final overflows = painter.didExceedMaxLines;
+    return ProfileFamilySurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ProfileFamilySectionHeading(
+            icon: Icons.notes_rounded,
+            title: l10n.about,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (bio == null)
+            _EmptyLearningValue(
+              icon: Icons.notes_rounded,
+              label: l10n.optionalNotAdded,
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final direction = profileFamilyContentDirection(
+                  bio,
+                  Directionality.of(context),
+                );
+                final style = AppTextStyles.body(
+                  context,
+                ).copyWith(color: colors.textSecondary, height: 1.58);
+                final painter = TextPainter(
+                  text: TextSpan(text: bio, style: style),
+                  maxLines: _collapsedBioLines,
+                  textDirection: direction,
+                  textScaler: MediaQuery.textScalerOf(context),
+                )..layout(maxWidth: constraints.maxWidth);
+                final overflows = painter.didExceedMaxLines;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              bio,
-              maxLines: _bioExpanded ? null : _collapsedBioLines,
-              overflow: _bioExpanded
-                  ? TextOverflow.visible
-                  : TextOverflow.ellipsis,
-              style: style,
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Directionality(
+                      textDirection: direction,
+                      child: Text(
+                        bio,
+                        textAlign: TextAlign.start,
+                        maxLines: _expanded ? null : _collapsedBioLines,
+                        overflow: _expanded
+                            ? TextOverflow.visible
+                            : TextOverflow.ellipsis,
+                        style: style,
+                      ),
+                    ),
+                    if (overflows || _expanded) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Semantics(
+                          button: true,
+                          expanded: _expanded,
+                          label: _expanded
+                              ? l10n.showLessBio
+                              : l10n.showMoreBio,
+                          child: ExcludeSemantics(
+                            child: TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _expanded = !_expanded),
+                              icon: Icon(
+                                _expanded
+                                    ? Icons.expand_less_rounded
+                                    : Icons.expand_more_rounded,
+                              ),
+                              label: Text(
+                                _expanded ? l10n.showLessBio : l10n.showMoreBio,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              },
             ),
-            if (overflows || _bioExpanded) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Semantics(
-                  button: true,
-                  expanded: _bioExpanded,
-                  child: TextButton.icon(
-                    onPressed: () => setState(() => _bioExpanded = !_bioExpanded),
-                    icon: Icon(
-                      _bioExpanded
-                          ? Icons.expand_less_rounded
-                          : Icons.expand_more_rounded,
-                    ),
-                    label: Text(
-                      _bioExpanded ? l10n.showLessBio : l10n.showMoreBio,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        );
-      },
+        ],
+      ),
+    );
+  }
+}
+
+class LearningProfileEmptyDetailsSurface extends StatelessWidget {
+  const LearningProfileEmptyDetailsSurface({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = LearnerProfileL10n.of(context);
+
+    return ProfileFamilySurface(
+      tone: ProfileFamilyTone.neutral,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ProfileFamilySectionHeading(
+            icon: Icons.school_outlined,
+            title: l10n.noLearningProfileTitle,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _EmptyLearningValue(
+            icon: Icons.add_circle_outline_rounded,
+            label: l10n.noLearningProfileBody,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -387,14 +566,14 @@ class _EmptyLearningValue extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: colors.textMuted, size: 18),
+        ExcludeSemantics(child: Icon(icon, color: colors.textMuted, size: 18)),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Text(
             label,
             style: AppTextStyles.body(
               context,
-            ).copyWith(color: colors.textSecondary),
+            ).copyWith(color: colors.textSecondary, height: 1.5),
           ),
         ),
       ],

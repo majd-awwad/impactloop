@@ -9,7 +9,7 @@ import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/profile/presentation/pages/learning_profile_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/learning_profile_widgets.dart';
-import 'package:frontend/features/profile/presentation/widgets/profile_visual_components.dart';
+import 'package:frontend/features/profile/presentation/widgets/profile_family_page_widgets.dart';
 
 void main() {
   testWidgets('renders only supported authenticated-user learning data', (
@@ -22,6 +22,8 @@ void main() {
     expect(find.text('Robotics'), findsOneWidget);
     expect(find.text('A short learning bio.'), findsOneWidget);
     expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Learning profile'), findsOneWidget);
+    expect(find.text('Your learning profile'), findsNothing);
     expect(find.textContaining('%'), findsNothing);
     expect(find.textContaining('achievement'), findsNothing);
     expect(find.text('Impact'), findsNothing);
@@ -36,7 +38,9 @@ void main() {
 
     expect(find.text('Set up'), findsOneWidget);
     expect(find.text('No learning details yet'), findsOneWidget);
-    expect(find.byType(LearningProfileSummaryCard), findsNothing);
+    expect(find.byType(LearningProfileSummaryCard), findsOneWidget);
+    expect(find.text('Not added'), findsNWidgets(2));
+    expect(find.text('Learning profile'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -60,7 +64,7 @@ void main() {
     expect(find.text('Robotics'), findsOneWidget);
     expect(find.text('Solar Energy'), findsOneWidget);
     expect(find.text('Not added (optional)'), findsOneWidget);
-    expect(find.byType(ProfileInterestChip), findsNWidgets(2));
+    expect(find.byType(ProfileFamilyIntrinsicChip), findsNWidgets(2));
     expect(tester.takeException(), isNull);
   });
 
@@ -86,9 +90,9 @@ void main() {
       ),
     );
 
-    expect(find.byType(ProfileInterestChip), findsNWidgets(8));
+    expect(find.byType(ProfileFamilyIntrinsicChip), findsNWidgets(5));
     final collapsedToggle = find.ancestor(
-      of: find.text('Show 6 more interests'),
+      of: find.text('+10 more'),
       matching: find.byWidgetPredicate(
         (widget) => widget is Semantics && widget.properties.expanded != null,
       ),
@@ -98,10 +102,10 @@ void main() {
       tester.widget<Semantics>(collapsedToggle).properties.expanded,
       isFalse,
     );
-    await tester.ensureVisible(find.text('Show 6 more interests'));
-    await tester.tap(find.text('Show 6 more interests'));
+    await tester.ensureVisible(find.text('+10 more'));
+    await tester.tap(find.text('+10 more'));
     await tester.pumpAndSettle();
-    expect(find.byType(ProfileInterestChip), findsNWidgets(14));
+    expect(find.byType(ProfileFamilyIntrinsicChip), findsNWidgets(15));
     final expandedToggle = find.ancestor(
       of: find.text('Show fewer interests'),
       matching: find.byWidgetPredicate(
@@ -149,6 +153,10 @@ void main() {
       Directionality.of(tester.element(find.text('طالب جامعي'))),
       TextDirection.rtl,
     );
+    expect(
+      Directionality.of(tester.element(find.text('Solar Energy'))),
+      TextDirection.ltr,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -167,16 +175,151 @@ void main() {
   testWidgets('learning profile is constrained across responsive widths', (
     tester,
   ) async {
-    for (final width in [360.0, 430.0, 800.0]) {
+    for (final width in [320.0, 360.0, 390.0, 430.0, 1440.0]) {
       await _pumpPage(tester, user: _user(), size: Size(width, 1200));
 
       final summary = tester.renderObject<RenderBox>(
         find.byType(LearningProfileSummaryCard),
       );
-      expect(summary.size.width, lessThanOrEqualTo(720));
+      expect(summary.size.width, lessThanOrEqualTo(920));
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets('interest chips stay intrinsic and dark mode has no overflow', (
+    tester,
+  ) async {
+    await _pumpPage(
+      tester,
+      user: _user(
+        profile: const LearnerProfile(
+          learnerType: 'University student',
+          skillLevel: 'Intermediate',
+          interests: ['arduino', 'robotics', 'sensors', 'circuits', 'displays'],
+          bio: 'A compact learner bio.',
+        ),
+      ),
+      size: const Size(360, 800),
+      brightness: Brightness.dark,
+    );
+
+    final chips = find.byType(ProfileFamilyIntrinsicChip);
+    expect(chips, findsNWidgets(5));
+    for (final element in chips.evaluate()) {
+      final box = element.renderObject! as RenderBox;
+      expect(box.size.width, lessThan(180));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('interest controls meet 48px targets at 320px', (tester) async {
+    await _expectInteractiveInterestTargets(tester, size: const Size(320, 800));
+  });
+
+  testWidgets('Arabic RTL interest controls meet 48px targets at 360px', (
+    tester,
+  ) async {
+    await _expectInteractiveInterestTargets(
+      tester,
+      locale: const Locale('ar'),
+      size: const Size(360, 800),
+    );
+  });
+
+  testWidgets('scaled interest controls meet 48px targets at text scale 1.3', (
+    tester,
+  ) async {
+    await _expectInteractiveInterestTargets(
+      tester,
+      size: const Size(360, 800),
+      textScale: 1.3,
+    );
+  });
+}
+
+Future<void> _expectInteractiveInterestTargets(
+  WidgetTester tester, {
+  required Size size,
+  Locale locale = const Locale('en'),
+  double textScale = 1,
+}) async {
+  await _pumpPage(
+    tester,
+    locale: locale,
+    size: size,
+    textScale: textScale,
+    user: _user(
+      profile: const LearnerProfile(
+        learnerType: 'University student',
+        skillLevel: 'Intermediate',
+        interests: [
+          'arduino',
+          'robotics',
+          'sensors',
+          'circuits',
+          'displays',
+          'woodworking',
+        ],
+      ),
+    ),
+  );
+
+  final collapsedControl = find.byWidgetPredicate(
+    (widget) =>
+        widget is ProfileFamilyIntrinsicChip &&
+        widget.onPressed != null &&
+        widget.expanded == false,
+  );
+  _expectMinimumInteractiveChipTarget(
+    tester,
+    collapsedControl,
+    expanded: false,
+  );
+
+  await tester.ensureVisible(collapsedControl);
+  await tester.tap(collapsedControl);
+  await tester.pumpAndSettle();
+
+  final expandedControl = find.byWidgetPredicate(
+    (widget) =>
+        widget is ProfileFamilyIntrinsicChip &&
+        widget.onPressed != null &&
+        widget.expanded == true,
+  );
+  await tester.ensureVisible(expandedControl);
+  _expectMinimumInteractiveChipTarget(tester, expandedControl, expanded: true);
+  expect(tester.takeException(), isNull);
+}
+
+void _expectMinimumInteractiveChipTarget(
+  WidgetTester tester,
+  Finder chip, {
+  required bool expanded,
+}) {
+  expect(chip, findsOneWidget);
+  final chipSize = tester.getSize(chip);
+  expect(chipSize.width, greaterThanOrEqualTo(48));
+  expect(chipSize.height, greaterThanOrEqualTo(48));
+
+  final semantics = find.descendant(
+    of: chip,
+    matching: find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.properties.expanded != null,
+    ),
+  );
+  expect(semantics, findsOneWidget);
+  expect(tester.getRect(semantics), tester.getRect(chip));
+  final semanticsWidget = tester.widget<Semantics>(semantics);
+  expect(semanticsWidget.properties.button, isTrue);
+  expect(semanticsWidget.properties.expanded, expanded);
+  expect(
+    find.descendant(of: chip, matching: find.byType(Material)),
+    findsOneWidget,
+  );
+  expect(
+    find.descendant(of: chip, matching: find.byType(InkWell)),
+    findsOneWidget,
+  );
 }
 
 Future<GoRouter> _pumpPage(
@@ -185,6 +328,7 @@ Future<GoRouter> _pumpPage(
   Locale locale = const Locale('en'),
   Size size = const Size(400, 900),
   double textScale = 1,
+  Brightness brightness = Brightness.light,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -218,7 +362,7 @@ Future<GoRouter> _pumpPage(
         authControllerProvider.overrideWith(() => _TestAuthController(user)),
       ],
       child: MaterialApp.router(
-        theme: AppTheme.light,
+        theme: brightness == Brightness.dark ? AppTheme.dark : AppTheme.light,
         locale: locale,
         supportedLocales: const [Locale('en'), Locale('ar')],
         localizationsDelegates: const [

@@ -221,7 +221,7 @@ void main() {
     expect(find.text('رحلتك في ImpactLoop'), findsOneWidget);
     expect(find.text('حجوزات نشطة'), findsOneWidget);
     expect(find.text('مشاريع مكتملة'), findsOneWidget);
-    expect(find.text('مواد مفضلة'), findsOneWidget);
+    expect(find.text('المواد التي أعجبتني'), findsOneWidget);
     expect(
       Directionality.of(tester.element(find.text('حجوزات نشطة'))),
       TextDirection.rtl,

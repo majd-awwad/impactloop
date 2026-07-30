@@ -7,7 +7,7 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_route_helpers.dart';
 import '../l10n/learner_profile_l10n.dart';
 import '../widgets/learning_profile_widgets.dart';
-import '../widgets/profile_image_picker.dart';
+import '../widgets/profile_family_page_widgets.dart';
 
 class LearningProfilePage extends ConsumerWidget {
   const LearningProfilePage({super.key});
@@ -18,7 +18,7 @@ class LearningProfilePage extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).user;
     void onEdit() => context.push(learnerProfileEditRoute);
 
-    return ProfileSubpageScaffold(
+    return ProfileFamilyPageScaffold(
       title: l10n.learnerProfile,
       backFallbackRoute: profileRoute,
       backTooltip: l10n.back,
@@ -38,7 +38,7 @@ class LearningProfilePage extends ConsumerWidget {
               subtitle: l10n.signInToViewProfile,
               compact: true,
             )
-          : LearningProfileContent(profile: user.learnerProfile),
+          : LearningProfileContent(user: user),
     );
   }
 }
@@ -58,19 +58,28 @@ class _LearningProfileHeaderAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final compact =
         MediaQuery.sizeOf(context).width < 360 ||
-        MediaQuery.textScalerOf(context).scale(1) > 1.3;
+        MediaQuery.textScalerOf(context).scale(1) >= 1.3;
     if (compact) {
-      return IconButton.outlined(
-        onPressed: onPressed,
-        tooltip: tooltip,
-        icon: const Icon(Icons.edit_outlined, size: 20),
+      return SizedBox.square(
+        dimension: 48,
+        child: IconButton.outlined(
+          onPressed: onPressed,
+          tooltip: tooltip,
+          icon: const Icon(Icons.edit_outlined, size: 20),
+        ),
       );
     }
 
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: const Icon(Icons.edit_outlined, size: 18),
-      label: Text(label),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsetsDirectional.symmetric(horizontal: 16),
+        ),
+        icon: const Icon(Icons.edit_outlined, size: 18),
+        label: Text(label),
+      ),
     );
   }
 }

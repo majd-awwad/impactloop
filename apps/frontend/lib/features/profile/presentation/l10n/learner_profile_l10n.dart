@@ -57,7 +57,7 @@ class LearnerProfileL10n {
   String get activeReservations => t('Active reservations', 'حجوزات نشطة');
   String get completedBuilds => t('Completed builds', 'مشاريع مكتملة');
   String get savedProjects => t('Saved projects', 'مشاريع محفوظة');
-  String get likedMaterials => t('Liked materials', 'مواد مفضلة');
+  String get likedMaterials => t('Liked materials', 'المواد التي أعجبتني');
   String metricSemantics(String label, String count) =>
       t('$label, $count. Open.', '$label، $count. فتح.');
 
@@ -137,6 +137,14 @@ class LearnerProfileL10n {
       t('Show $count more interests', 'عرض $count اهتمامات أخرى');
   String get showFewerInterests =>
       t('Show fewer interests', 'عرض اهتمامات أقل');
+  String hiddenInterestsSemantics(int count) => t(
+    '$count more interests. Expand interests.',
+    '$count اهتمامات أخرى. توسيع الاهتمامات.',
+  );
+  String get showFewerInterestsSemantics => t(
+    'Show fewer interests. Collapse interests.',
+    'عرض اهتمامات أقل. طي الاهتمامات.',
+  );
   String get showMoreBio => t('Show more bio', 'عرض المزيد من النبذة');
   String get showLessBio => t('Show less bio', 'عرض أقل من النبذة');
   String get showMoreContent => t('Show more', 'عرض المزيد');

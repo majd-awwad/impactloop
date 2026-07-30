@@ -13,7 +13,7 @@ import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../../../notifications/application/notifications_routes.dart';
 import '../l10n/account_settings_l10n.dart';
 import '../widgets/account_settings_widgets.dart';
-import '../widgets/profile_image_picker.dart';
+import '../widgets/profile_family_page_widgets.dart';
 
 class AccountSettingsPage extends ConsumerStatefulWidget {
   const AccountSettingsPage({super.key});
@@ -112,9 +112,10 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
     final user = ref.watch(authControllerProvider).user;
     final settings = ref.watch(appSettingsProvider);
 
-    return ProfileSubpageScaffold(
+    return ProfileFamilyPageScaffold(
       title: l10n.pageTitle,
       backTooltip: l10n.back,
+      backFallbackRoute: profileRoute,
       child: user == null
           ? AppEmptyStateCard(
               icon: Icons.manage_accounts_outlined,
@@ -133,115 +134,161 @@ class _AccountSettingsPageState extends ConsumerState<AccountSettingsPage> {
     AccountSettingsL10n l10n,
   ) {
     final roleAccess = resolveAccountRoleAccess(user);
+    final essentials = AccountSettingsSection(
+      icon: Icons.manage_accounts_outlined,
+      title: l10n.accountEssentials,
+      children: [
+        AccountSettingsDestinationRow(
+          icon: Icons.person_outline_rounded,
+          title: l10n.personalInformation,
+          subtitle: l10n.personalInformationBody,
+          tone: ProfileFamilyTone.mint,
+          onTap: () => context.push('/profile/edit'),
+        ),
+        AccountSettingsDestinationRow(
+          icon: Icons.location_on_outlined,
+          title: l10n.savedLocations,
+          subtitle: l10n.savedLocationsBody,
+          tone: ProfileFamilyTone.blue,
+          onTap: () => context.push('/profile/locations'),
+        ),
+        AccountSettingsDestinationRow(
+          icon: Icons.lock_outline_rounded,
+          title: l10n.security,
+          subtitle: l10n.securityBody,
+          tone: ProfileFamilyTone.amber,
+          onTap: () => context.push('/profile/security'),
+        ),
+      ],
+    );
+    final verification = AccountStateCard(user: user);
+    final preferences = AccountSettingsSection(
+      icon: Icons.tune_rounded,
+      title: l10n.appPreferences,
+      note: l10n.localPreferencesNote,
+      children: [
+        AccountInlinePreferenceControl<ThemeMode>(
+          icon: Icons.brightness_6_outlined,
+          title: l10n.appearance,
+          selectedValue: settings.themeMode,
+          options: [
+            AccountPreferenceOption(
+              value: ThemeMode.system,
+              label: l10n.systemTheme,
+              icon: Icons.brightness_auto_outlined,
+            ),
+            AccountPreferenceOption(
+              value: ThemeMode.light,
+              label: l10n.lightTheme,
+              icon: Icons.light_mode_outlined,
+            ),
+            AccountPreferenceOption(
+              value: ThemeMode.dark,
+              label: l10n.darkTheme,
+              icon: Icons.dark_mode_outlined,
+            ),
+          ],
+          onSelected: (value) =>
+              ref.read(appSettingsProvider.notifier).setThemeMode(value),
+        ),
+        AccountInlinePreferenceControl<String>(
+          icon: Icons.language_rounded,
+          title: l10n.language,
+          selectedValue: settings.languageCode,
+          options: [
+            AccountPreferenceOption(
+              value: 'en',
+              label: l10n.english,
+              icon: Icons.translate_rounded,
+            ),
+            AccountPreferenceOption(
+              value: 'ar',
+              label: l10n.arabic,
+              icon: Icons.translate_rounded,
+            ),
+          ],
+          onSelected: (value) =>
+              ref.read(appSettingsProvider.notifier).setLanguageCode(value),
+        ),
+        AccountSettingsDestinationRow(
+          icon: Icons.notifications_none_rounded,
+          title: l10n.notifications,
+          subtitle: l10n.notificationsBody,
+          tone: ProfileFamilyTone.blue,
+          onTap: () => _openNotifications(user),
+        ),
+      ],
+    );
+    final role = roleAccess.isEmpty
+        ? null
+        : AccountRoleAccessSection(
+            resolution: roleAccess,
+            busyAction: _busyRoleAction,
+            onAction: (action) => _handleRoleAction(user, action),
+          );
+    final session = AccountSessionSection(
+      isLoggingOut: _isLoggingOut,
+      onLogout: _isLoggingOut ? null : _logout,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AccountIdentitySummaryCard(user: user),
         const SizedBox(height: AppSpacing.md),
-        AccountSettingsSection(
-          title: l10n.accountDetails,
-          children: [
-            AccountSettingsDestinationRow(
-              icon: Icons.person_outline_rounded,
-              title: l10n.personalInformation,
-              subtitle: l10n.personalInformationBody,
-              onTap: () => context.push('/profile/edit'),
-            ),
-            AccountSettingsDestinationRow(
-              icon: Icons.location_on_outlined,
-              title: l10n.savedLocations,
-              subtitle: l10n.savedLocationsBody,
-              onTap: () => context.push('/profile/locations'),
-            ),
-            AccountSettingsDestinationRow(
-              icon: Icons.lock_outline_rounded,
-              title: l10n.security,
-              subtitle: l10n.securityBody,
-              onTap: () => context.push('/profile/security'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AccountStateCard(user: user),
-        const SizedBox(height: AppSpacing.md),
-        AccountSettingsSection(
-          title: l10n.appPreferences,
-          note: l10n.localPreferencesNote,
-          children: [
-            AccountInlinePreferenceControl<ThemeMode>(
-              icon: Icons.brightness_6_outlined,
-              title: l10n.appearance,
-              selectedValue: settings.themeMode,
-              options: [
-                AccountPreferenceOption(
-                  value: ThemeMode.system,
-                  label: l10n.systemTheme,
-                  icon: Icons.brightness_auto_outlined,
-                ),
-                AccountPreferenceOption(
-                  value: ThemeMode.light,
-                  label: l10n.lightTheme,
-                  icon: Icons.light_mode_outlined,
-                ),
-                AccountPreferenceOption(
-                  value: ThemeMode.dark,
-                  label: l10n.darkTheme,
-                  icon: Icons.dark_mode_outlined,
-                ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= profileFamilyWideBreakpoint) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        essentials,
+                        const SizedBox(height: AppSpacing.md),
+                        verification,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        preferences,
+                        if (role != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          role,
+                        ],
+                        const SizedBox(height: AppSpacing.lg),
+                        session,
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                essentials,
+                const SizedBox(height: AppSpacing.md),
+                verification,
+                const SizedBox(height: AppSpacing.md),
+                preferences,
+                if (role != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  role,
+                ],
+                const SizedBox(height: AppSpacing.lg),
+                session,
               ],
-              onSelected: (value) =>
-                  ref.read(appSettingsProvider.notifier).setThemeMode(value),
-            ),
-            AccountInlinePreferenceControl<String>(
-              icon: Icons.language_rounded,
-              title: l10n.language,
-              selectedValue: settings.languageCode,
-              options: [
-                AccountPreferenceOption(
-                  value: 'en',
-                  label: l10n.english,
-                  icon: Icons.translate_rounded,
-                ),
-                AccountPreferenceOption(
-                  value: 'ar',
-                  label: l10n.arabic,
-                  icon: Icons.translate_rounded,
-                ),
-              ],
-              onSelected: (value) => ref
-                  .read(appSettingsProvider.notifier)
-                  .setLanguageCode(value),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AccountSettingsSection(
-          title: l10n.communication,
-          children: [
-            AccountSettingsDestinationRow(
-              icon: Icons.notifications_none_rounded,
-              title: l10n.notifications,
-              subtitle: l10n.notificationsBody,
-              onTap: () => _openNotifications(user),
-            ),
-          ],
-        ),
-        if (!roleAccess.isEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          AccountRoleAccessSection(
-            resolution: roleAccess,
-            busyAction: _busyRoleAction,
-            onAction: (action) => _handleRoleAction(user, action),
-          ),
-        ],
-        const SizedBox(height: AppSpacing.lg),
-        AccountSessionSection(
-          isLoggingOut: _isLoggingOut,
-          onLogout: _isLoggingOut ? null : _logout,
+            );
+          },
         ),
       ],
     );
   }
-
 }
