@@ -96,11 +96,15 @@ import {
   suspendUserSchema,
 } from '../admin-people/admin-people.validation.js';
 import {
+  exportAdminReservationsHandler,
   getAdminReservationHandler,
   listAdminReservationsHandler,
+  preflightAdminReservationsExportHandler,
 } from '../admin-reservations/admin-reservations.controller.js';
 import {
   adminReservationIdParamSchema,
+  adminReservationsExportDownloadQuerySchema,
+  adminReservationsExportFiltersSchema,
   adminReservationsListQuerySchema,
 } from '../admin-reservations/admin-reservations.validation.js';
 import {
@@ -460,6 +464,22 @@ adminRouter.patch(
   requireRoles('ADMIN'),
   validate(adminPeopleUserIdParamSchema, 'params'),
   asyncHandler(reactivateAdminPerson),
+);
+
+adminRouter.get(
+  '/reservations/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminReservationsExportHandler),
+);
+
+adminRouter.get(
+  '/reservations/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminReservationsHandler),
 );
 
 adminRouter.get(
