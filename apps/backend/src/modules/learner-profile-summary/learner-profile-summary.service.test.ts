@@ -86,6 +86,7 @@ describe('learner profile summary service', () => {
       'profile:learner-1',
       'location:learner-1',
       'reservations:learner-1',
+      'likes:learner-1',
       'saves:learner-1',
       'follows:learner-1',
       'active-builds:learner-1',
@@ -95,6 +96,7 @@ describe('learner profile summary service', () => {
     assert.deepEqual(summary.journey, {
       activeReservationsCount: 3,
       completedReservationsCount: 9,
+      likedMaterialsCount: 8,
       savedProjectsCount: 7,
       followedProjectsCount: 2,
       activeBuildsCount: 1,
@@ -191,6 +193,10 @@ const createRepository = (options: {
     async summarizeLearnerReservationCounts(userId) {
       record('reservations', userId);
       return { activeReservationsCount: 3, completedReservationsCount: 9 };
+    },
+    async countVisibleLikedMaterials(userId) {
+      record('likes', userId);
+      return 8;
     },
     async countVisibleSavedProjects(userId) {
       record('saves', userId);

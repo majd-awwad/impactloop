@@ -28,6 +28,7 @@ void main() {
       'saved_location',
     ]);
     expect(summary.journey.activeReservationsCount, 3);
+    expect(summary.journey.likedMaterialsCount, 8);
     expect(summary.journey.completedBuildsCount, 4);
     expect(summary.continueProject?.projectId, 'project-1');
     expect(summary.continueProject?.imageUrl, isNull);
@@ -140,6 +141,7 @@ Map<String, dynamic> _summaryJson() => {
   'journey': {
     'activeReservationsCount': 3,
     'completedReservationsCount': 9,
+    'likedMaterialsCount': 8,
     'savedProjectsCount': 7,
     'followedProjectsCount': 2,
     'activeBuildsCount': 1,

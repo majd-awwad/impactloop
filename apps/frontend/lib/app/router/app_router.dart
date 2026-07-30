@@ -35,6 +35,7 @@ import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
+import '../../features/material_discovery/presentation/pages/liked_materials_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
@@ -195,6 +196,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/') ||
       path.startsWith('/home/recommendations/') ||
+      path == '/materials/liked' ||
       path == '/ai/assistant' ||
       path == '/ai/general-learning') {
     return _RouteAccessLevel.learner;
@@ -733,6 +735,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           );
         },
+      ),
+      GoRoute(
+        path: '/materials/liked',
+        builder: (context, state) => const LikedMaterialsPage(),
       ),
       GoRoute(
         path: '/materials/:id',

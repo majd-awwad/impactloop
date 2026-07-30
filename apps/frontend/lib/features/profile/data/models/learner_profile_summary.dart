@@ -63,6 +63,7 @@ class LearnerJourneySummary {
   const LearnerJourneySummary({
     required this.activeReservationsCount,
     required this.completedReservationsCount,
+    required this.likedMaterialsCount,
     required this.savedProjectsCount,
     required this.followedProjectsCount,
     required this.activeBuildsCount,
@@ -71,6 +72,7 @@ class LearnerJourneySummary {
 
   final int activeReservationsCount;
   final int completedReservationsCount;
+  final int likedMaterialsCount;
   final int savedProjectsCount;
   final int followedProjectsCount;
   final int activeBuildsCount;
@@ -83,6 +85,7 @@ class LearnerJourneySummary {
         json,
         'completedReservationsCount',
       ),
+      likedMaterialsCount: _requiredInt(json, 'likedMaterialsCount'),
       savedProjectsCount: _requiredInt(json, 'savedProjectsCount'),
       followedProjectsCount: _requiredInt(json, 'followedProjectsCount'),
       activeBuildsCount: _requiredInt(json, 'activeBuildsCount'),

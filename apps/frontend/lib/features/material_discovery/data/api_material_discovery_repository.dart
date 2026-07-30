@@ -9,12 +9,15 @@ import '../domain/material_engagement.dart';
 import '../domain/material_discovery_query.dart';
 import '../domain/material_discovery_repository.dart';
 import '../domain/material_discovery_result.dart';
+import '../domain/liked_materials_repository.dart';
+import '../domain/liked_materials_result.dart';
 import '../domain/material_performance_models.dart';
 import 'material_discovery_api_mapper.dart';
 
 class ApiMaterialDiscoveryRepository
     implements
         MaterialDiscoveryRepository,
+        LikedMaterialsRepository,
         MaterialDetailsPerformanceRepository,
         PublicSupplierPerformanceRepository {
   const ApiMaterialDiscoveryRepository(this._client);
@@ -32,6 +35,23 @@ class ApiMaterialDiscoveryRepository
         queryParameters: buildQueryParameters(query),
       ),
       _parseResult,
+    );
+  }
+
+  @override
+  Future<LikedMaterialsResult> fetchLikedMaterials({
+    required int page,
+    int limit = 20,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '$_basePath/me/liked',
+        queryParameters: {'page': page, 'limit': limit},
+      ),
+      (json) => LikedMaterialsResult.fromJson(
+        json,
+        parseMaterial: MaterialDiscoveryApiMapper.fromJson,
+      ),
     );
   }
 

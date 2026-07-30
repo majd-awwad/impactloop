@@ -1,0 +1,3202 @@
+diff --git a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.repository.ts b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.repository.ts
+index 6eba33f8..0a58e0e9 100644
+--- a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.repository.ts
++++ b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.repository.ts
+@@ -9,6 +9,7 @@ import {
+   ACTIVE_RESERVATION_STATUSES,
+   COMPLETED_RESERVATION_STATUSES,
+ } from '../reservations/reservation-status.js';
++import { countVisibleLikedMaterials as countVisibleMaterialLikes } from '../materials/materials.repository.js';
+ 
+ export type ProfileCompletionContext = {
+   displayName: string;
+@@ -96,6 +97,9 @@ export const countVisibleFollowedProjects = (userId: string): Promise<number> =>
+     where: { userId, project: PUBLIC_CONTINUE_PROJECT_WHERE },
+   });
+ 
++export const countVisibleLikedMaterials = (userId: string): Promise<number> =>
++  countVisibleMaterialLikes(userId);
++
+ export const countActiveBuilds = (userId: string): Promise<number> =>
+   prisma.projectBuild.count({
+     where: buildContinuableProjectBuildWhere(userId),
+diff --git a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.test.ts b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.test.ts
+index 37ac12ec..5bd0c212 100644
+--- a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.test.ts
++++ b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.test.ts
+@@ -86,6 +86,7 @@ describe('learner profile summary service', () => {
+       'profile:learner-1',
+       'location:learner-1',
+       'reservations:learner-1',
++      'likes:learner-1',
+       'saves:learner-1',
+       'follows:learner-1',
+       'active-builds:learner-1',
+@@ -95,6 +96,7 @@ describe('learner profile summary service', () => {
+     assert.deepEqual(summary.journey, {
+       activeReservationsCount: 3,
+       completedReservationsCount: 9,
++      likedMaterialsCount: 8,
+       savedProjectsCount: 7,
+       followedProjectsCount: 2,
+       activeBuildsCount: 1,
+@@ -192,6 +194,10 @@ const createRepository = (options: {
+       record('reservations', userId);
+       return { activeReservationsCount: 3, completedReservationsCount: 9 };
+     },
++    async countVisibleLikedMaterials(userId) {
++      record('likes', userId);
++      return 8;
++    },
+     async countVisibleSavedProjects(userId) {
+       record('saves', userId);
+       return 7;
+diff --git a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.ts b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.ts
+index be40240a..9ec37933 100644
+--- a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.ts
++++ b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.service.ts
+@@ -64,6 +64,7 @@ export type LearnerProfileSummaryRepository = {
+   ) => Promise<Awaited<ReturnType<typeof summaryRepository.summarizeLearnerReservationCounts>>>;
+   countVisibleSavedProjects: (userId: string) => Promise<number>;
+   countVisibleFollowedProjects: (userId: string) => Promise<number>;
++  countVisibleLikedMaterials: (userId: string) => Promise<number>;
+   countActiveBuilds: (userId: string) => Promise<number>;
+   countCompletedBuilds: (userId: string) => Promise<number>;
+   findLatestContinueProject: (
+@@ -82,6 +83,7 @@ export const createLearnerProfileSummaryService = (
+   const [
+     hasSavedLocation,
+     reservationCounts,
++    likedMaterialsCount,
+     savedProjectsCount,
+     followedProjectsCount,
+     activeBuildsCount,
+@@ -90,6 +92,7 @@ export const createLearnerProfileSummaryService = (
+   ] = await Promise.all([
+     repository.hasUsableSavedLocation(userId),
+     repository.summarizeLearnerReservationCounts(userId),
++    repository.countVisibleLikedMaterials(userId),
+     repository.countVisibleSavedProjects(userId),
+     repository.countVisibleFollowedProjects(userId),
+     repository.countActiveBuilds(userId),
+@@ -123,6 +126,7 @@ export const createLearnerProfileSummaryService = (
+     profileCompletion: calculateProfileCompletion(context, hasSavedLocation),
+     journey: {
+       ...reservationCounts,
++      likedMaterialsCount,
+       savedProjectsCount,
+       followedProjectsCount,
+       activeBuildsCount,
+diff --git a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.test.ts b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.test.ts
+index 00a4b17f..791c4376 100644
+--- a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.test.ts
++++ b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.test.ts
+@@ -14,6 +14,7 @@ const ids = {
+   locations: [] as string[],
+   categoryId: '',
+   materialId: '',
++  hiddenMaterialId: '',
+ };
+ 
+ let learnerId = '';
+@@ -128,6 +129,28 @@ before(async () => {
+     },
+   });
+   ids.materialId = material.id;
++  await prisma.materialLike.create({
++    data: { materialId: material.id, userId: learner.id },
++  });
++  const hiddenMaterial = await prisma.material.create({
++    data: {
++      ownerId: nonLearner.id,
++      categoryId: category.id,
++      locationId: materialLocation.id,
++      title: `${marker} unavailable material`,
++      description: 'Historical like that must remain private.',
++      materialType: 'Electronics',
++      quantity: 1,
++      unit: 'piece',
++      condition: 'GOOD',
++      sourceType: 'WORKSHOP_SURPLUS',
++      status: 'UNAVAILABLE',
++    },
++  });
++  ids.hiddenMaterialId = hiddenMaterial.id;
++  await prisma.materialLike.create({
++    data: { materialId: hiddenMaterial.id, userId: learner.id },
++  });
+ 
+   const statuses: ReservationStatus[] = [
+     'PENDING',
+@@ -313,11 +336,19 @@ after(async () => {
+     });
+   }
+   if (ids.materialId) {
++    await prisma.materialLike.deleteMany({
++      where: {
++        materialId: { in: [ids.materialId, ids.hiddenMaterialId] },
++      },
++    });
+     await prisma.reservation.deleteMany({
+       where: { materialId: ids.materialId },
+     });
+     await prisma.material.deleteMany({ where: { id: ids.materialId } });
+   }
++  if (ids.hiddenMaterialId) {
++    await prisma.material.deleteMany({ where: { id: ids.hiddenMaterialId } });
++  }
+   await prisma.userSavedLocation.deleteMany({
+     where: { userId: { in: ids.users } },
+   });
+@@ -359,6 +390,7 @@ describe('GET /api/learner/profile-summary', () => {
+     assert.deepEqual(body.data.journey, {
+       activeReservationsCount: 5,
+       completedReservationsCount: 1,
++      likedMaterialsCount: 1,
+       savedProjectsCount: 2,
+       followedProjectsCount: 1,
+       activeBuildsCount: 2,
+@@ -420,6 +452,7 @@ describe('GET /api/learner/profile-summary', () => {
+     assert.deepEqual(body.data.journey, {
+       activeReservationsCount: 0,
+       completedReservationsCount: 0,
++      likedMaterialsCount: 0,
+       savedProjectsCount: 0,
+       followedProjectsCount: 0,
+       activeBuildsCount: 0,
+@@ -428,3 +461,67 @@ describe('GET /api/learner/profile-summary', () => {
+     assert.equal(body.data.continueProject, null);
+   });
+ });
++
++describe('GET /api/materials/me/liked', () => {
++  test('returns the acting learner collection with private caching', async () => {
++    const response = await fetch(
++      `${serverUrl}/api/materials/me/liked?page=1&limit=20`,
++      {
++        headers: {
++          Authorization: `Bearer ${signAccessToken({
++            sub: learnerId,
++            roles: ['LEARNER', 'SUPPLIER'],
++          })}`,
++        },
++      },
++    );
++    const body = (await response.json()) as {
++      success: boolean;
++      data: Record<string, any>;
++    };
++
++    assert.equal(response.status, 200);
++    assert.equal(response.headers.get('cache-control'), 'private, no-store');
++    assert.equal(body.success, true);
++    assert.equal(body.data.items.length, 1);
++    assert.equal(body.data.items[0].material.id, ids.materialId);
++    assert.equal(body.data.items[0].material.isLiked, true);
++    assert.deepEqual(body.data.pagination, {
++      page: 1,
++      limit: 20,
++      total: 1,
++      totalPages: 1,
++    });
++  });
++
++  test('rejects signed-out and non-learner callers', async () => {
++    const signedOut = await fetch(`${serverUrl}/api/materials/me/liked`);
++    assert.equal(signedOut.status, 401);
++
++    const nonLearner = await fetch(`${serverUrl}/api/materials/me/liked`, {
++      headers: {
++        Authorization: `Bearer ${signAccessToken({
++          sub: nonLearnerId,
++          roles: ['SUPPLIER'],
++        })}`,
++      },
++    });
++    assert.equal(nonLearner.status, 403);
++  });
++
++  test('does not return another learner collection', async () => {
++    const response = await fetch(`${serverUrl}/api/materials/me/liked`, {
++      headers: {
++        Authorization: `Bearer ${signAccessToken({
++          sub: emptyLearnerId,
++          roles: ['LEARNER'],
++        })}`,
++      },
++    });
++    const body = (await response.json()) as { data: Record<string, any> };
++
++    assert.equal(response.status, 200);
++    assert.deepEqual(body.data.items, []);
++    assert.equal(body.data.pagination.total, 0);
++  });
++});
+diff --git a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.types.ts b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.types.ts
+index bd81b585..69805a02 100644
+--- a/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.types.ts
++++ b/apps/backend/src/modules/learner-profile-summary/learner-profile-summary.types.ts
+@@ -16,6 +16,7 @@ export type LearnerProfileCompletionSummary = {
+ export type LearnerJourneySummary = {
+   activeReservationsCount: number;
+   completedReservationsCount: number;
++  likedMaterialsCount: number;
+   savedProjectsCount: number;
+   followedProjectsCount: number;
+   activeBuildsCount: number;
+diff --git a/apps/backend/src/modules/materials/materials.controller.ts b/apps/backend/src/modules/materials/materials.controller.ts
+index b4795e86..4e82e9d8 100644
+--- a/apps/backend/src/modules/materials/materials.controller.ts
++++ b/apps/backend/src/modules/materials/materials.controller.ts
+@@ -12,6 +12,7 @@ import { getRequestAbortSignal } from '../../middlewares/request-context.middlew
+ import {
+   checkMaterialPrice,
+   getListingPolicy,
++  getLikedMaterials,
+   likeMaterialById,
+   getMaterialById,
+   getMaterialViewerState,
+@@ -21,6 +22,7 @@ import {
+   unlikeMaterialById,
+ } from './materials.service.js';
+ import type {
++  LikedMaterialsQuery,
+   MaterialsQuery,
+   PriceCheckInput,
+ } from './materials.validation.js';
+@@ -53,6 +55,18 @@ export const listMaterials = async (
+   res.json(successResponse('Materials fetched successfully', materials));
+ };
+ 
++export const listLikedMaterials = async (
++  req: Request,
++  res: Response,
++): Promise<void> => {
++  const materials = await getLikedMaterials(
++    req.auth!.sub,
++    readValidatedQuery<LikedMaterialsQuery>(req),
++  );
++
++  res.json(successResponse('Liked materials fetched successfully', materials));
++};
++
+ export const getMaterial = async (
+   req: Request,
+   res: Response,
+diff --git a/apps/backend/src/modules/materials/materials.discovery.test.ts b/apps/backend/src/modules/materials/materials.discovery.test.ts
+index 7ff2791d..a4681026 100644
+--- a/apps/backend/src/modules/materials/materials.discovery.test.ts
++++ b/apps/backend/src/modules/materials/materials.discovery.test.ts
+@@ -26,11 +26,15 @@ import {
+   getMaterialById,
+   getMaterialViewerState,
+   getMaterials,
++  getLikedMaterials,
+   likeMaterialById,
+   unlikeMaterialById,
+   recordMaterialViewById,
+ } from './materials.service.js';
+-import { materialsQuerySchema } from './materials.validation.js';
++import {
++  likedMaterialsQuerySchema,
++  materialsQuerySchema,
++} from './materials.validation.js';
+ 
+ const TEST_MARKER = '[test-materials-discovery]';
+ 
+@@ -607,6 +611,101 @@ describe('public material discovery', () => {
+     assert.equal(unlikedAgain.isLiked, false);
+   });
+ 
++  test('liked collection is user-scoped, visible, ordered, and bounded', async () => {
++    const unique = `${TEST_MARKER}-collection-${Date.now()}`;
++    const learner = await createLearnerUser(`collection-${Date.now()}`);
++    const otherLearner = await createLearnerUser(
++      `collection-other-${Date.now()}`,
++    );
++    ctx.createdUserIds.push(learner.id, otherLearner.id);
++
++    const oldMaterial = await createMaterial(ctx, {
++      title: `${unique} old`,
++    });
++    const middleMaterial = await createMaterial(ctx, {
++      title: `${unique} middle`,
++      status: 'PENDING_RESERVATION',
++    });
++    const newestMaterial = await createMaterial(ctx, {
++      title: `${unique} newest`,
++      status: 'RESERVED',
++    });
++    const hiddenMaterial = await createMaterial(ctx, {
++      title: `${unique} unavailable`,
++    });
++    const otherMaterial = await createMaterial(ctx, {
++      title: `${unique} other learner`,
++    });
++
++    await prisma.materialLike.createMany({
++      data: [
++        {
++          userId: learner.id,
++          materialId: oldMaterial.id,
++          createdAt: new Date('2026-07-27T00:00:00.000Z'),
++        },
++        {
++          userId: learner.id,
++          materialId: middleMaterial.id,
++          createdAt: new Date('2026-07-28T00:00:00.000Z'),
++        },
++        {
++          userId: learner.id,
++          materialId: newestMaterial.id,
++          createdAt: new Date('2026-07-29T00:00:00.000Z'),
++        },
++        {
++          userId: learner.id,
++          materialId: hiddenMaterial.id,
++          createdAt: new Date('2026-07-30T00:00:00.000Z'),
++        },
++        {
++          userId: otherLearner.id,
++          materialId: otherMaterial.id,
++          createdAt: new Date('2026-07-31T00:00:00.000Z'),
++        },
++      ],
++    });
++    await prisma.material.update({
++      where: { id: hiddenMaterial.id },
++      data: { status: 'UNAVAILABLE' },
++    });
++
++    const firstPage = await getLikedMaterials(learner.id, {
++      page: 1,
++      limit: 2,
++    });
++    assert.deepEqual(
++      firstPage.items.map((item) => item.material.id),
++      [newestMaterial.id, middleMaterial.id],
++    );
++    assert.equal(firstPage.items.every((item) => item.material.isLiked), true);
++    assert.deepEqual(firstPage.pagination, {
++      page: 1,
++      limit: 2,
++      total: 3,
++      totalPages: 2,
++    });
++
++    const secondPage = await getLikedMaterials(learner.id, {
++      page: 2,
++      limit: 2,
++    });
++    assert.deepEqual(
++      secondPage.items.map((item) => item.material.id),
++      [oldMaterial.id],
++    );
++    assert.equal(
++      firstPage.items.some((item) => item.material.id === otherMaterial.id),
++      false,
++    );
++    assert.deepEqual(likedMaterialsQuerySchema.parse({}), {
++      page: 1,
++      limit: 20,
++    });
++    assert.throws(() => likedMaterialsQuerySchema.parse({ limit: 101 }));
++  });
++
+   test('material like and unlike invalidate only the acting learner home cache', async () => {
+     const unique = `${TEST_MARKER}-home-cache-${Date.now()}`;
+     const material = await createMaterial(ctx, {
+diff --git a/apps/backend/src/modules/materials/materials.liked.service.test.ts b/apps/backend/src/modules/materials/materials.liked.service.test.ts
+new file mode 100644
+index 00000000..330d4a3b
+--- /dev/null
++++ b/apps/backend/src/modules/materials/materials.liked.service.test.ts
+@@ -0,0 +1,128 @@
++import assert from 'node:assert/strict';
++import { describe, test } from 'node:test';
++
++import {
++  createLikedMaterialsService,
++  type LikedMaterialsServiceDependencies,
++} from './materials.service.js';
++
++type VisibleLike = Awaited<
++  ReturnType<LikedMaterialsServiceDependencies['findVisibleLikedMaterials']>
++>[number];
++
++const visibleLike = {
++  id: 'like-1',
++  userId: 'learner-1',
++  materialId: 'material-1',
++  createdAt: new Date('2026-07-29T00:00:00.000Z'),
++  material: {
++    id: 'material-1',
++    title: 'Reusable sensor',
++    description: 'A working sensor.',
++    category: {
++      id: 'category-1',
++      nameEn: 'Electronics',
++      nameAr: 'إلكترونيات',
++      isActive: true,
++      categoryType: 'BOTH',
++    },
++    condition: 'GOOD',
++    status: 'RESERVED',
++    quantity: 5,
++    unit: 'piece',
++    isFree: true,
++    price: null,
++    location: {
++      city: 'Nablus',
++      area: 'Rafidia',
++      latitude: null,
++      longitude: null,
++    },
++    deliveryAllowed: false,
++    pickupAllowed: true,
++    images: [],
++    supplierProfile: null,
++    owner: { displayName: 'Supplier' },
++    viewsCount: 4,
++    createdAt: new Date('2026-07-28T00:00:00.000Z'),
++    _count: { likes: 3 },
++  },
++} as unknown as VisibleLike;
++
++describe('liked materials service', () => {
++  test('uses two parallel bounded reads and one batched quantity read', async () => {
++    const calls: string[] = [];
++    let releasePage!: (value: VisibleLike[]) => void;
++    let releaseCount!: (value: number) => void;
++    const page = new Promise<VisibleLike[]>((resolve) => {
++      releasePage = resolve;
++    });
++    const count = new Promise<number>((resolve) => {
++      releaseCount = resolve;
++    });
++
++    const load = createLikedMaterialsService({
++      findVisibleLikedMaterials: async (userId, query) => {
++        calls.push(`page:${userId}:${query.page}:${query.limit}`);
++        return page;
++      },
++      countVisibleLikedMaterials: async (userId) => {
++        calls.push(`count:${userId}`);
++        return count;
++      },
++      getHeldQuantitiesByMaterialIds: async (ids) => {
++        calls.push(`held:${ids.join(',')}`);
++        return new Map();
++      },
++    });
++
++    const pending = load('learner-1', { page: 2, limit: 20 });
++    await Promise.resolve();
++    assert.deepEqual(calls, ['page:learner-1:2:20', 'count:learner-1']);
++
++    releasePage([visibleLike]);
++    releaseCount(21);
++    const result = await pending;
++
++    assert.deepEqual(calls, [
++      'page:learner-1:2:20',
++      'count:learner-1',
++      'held:material-1',
++    ]);
++    assert.equal(result.items.length, 1);
++    assert.equal(result.items[0]?.likedAt, '2026-07-29T00:00:00.000Z');
++    assert.equal(result.items[0]?.material.id, 'material-1');
++    assert.equal(result.items[0]?.material.isLiked, true);
++    assert.equal(result.items[0]?.material.likesCount, 3);
++    assert.deepEqual(result.pagination, {
++      page: 2,
++      limit: 20,
++      total: 21,
++      totalPages: 2,
++    });
++  });
++
++  test('returns an explicit empty first page without per-item work', async () => {
++    let heldCalls = 0;
++    const load = createLikedMaterialsService({
++      findVisibleLikedMaterials: async () => [],
++      countVisibleLikedMaterials: async () => 0,
++      getHeldQuantitiesByMaterialIds: async (ids) => {
++        heldCalls += 1;
++        assert.deepEqual(ids, []);
++        return new Map();
++      },
++    });
++
++    const result = await load('learner-1', { page: 1, limit: 20 });
++
++    assert.deepEqual(result.items, []);
++    assert.deepEqual(result.pagination, {
++      page: 1,
++      limit: 20,
++      total: 0,
++      totalPages: 0,
++    });
++    assert.equal(heldCalls, 1);
++  });
++});
+diff --git a/apps/backend/src/modules/materials/materials.repository.ts b/apps/backend/src/modules/materials/materials.repository.ts
+index eba2a607..a7de9548 100644
+--- a/apps/backend/src/modules/materials/materials.repository.ts
++++ b/apps/backend/src/modules/materials/materials.repository.ts
+@@ -1,7 +1,11 @@
+ import { Prisma } from '../../generated/prisma/client.js';
+ 
+ import { prisma } from '../../database/prisma.js';
+-import type { MaterialsQuery } from './materials.validation.js';
++import type {
++  LikedMaterialsQuery,
++  MaterialsQuery,
++} from './materials.validation.js';
++import { buildPublicMaterialWhere } from './public-material-visibility.js';
+ 
+ type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
+ 
+@@ -55,15 +59,7 @@ const buildSearchClauses = (q: string): Prisma.MaterialWhereInput[] => [
+ const buildMaterialsWhere = (
+   query: MaterialsQuery,
+ ): Prisma.MaterialWhereInput => {
+-  const where: Prisma.MaterialWhereInput = {
+-    status: query.status,
+-    category: {
+-      isActive: true,
+-      categoryType: {
+-        in: ['MATERIAL', 'BOTH'],
+-      },
+-    },
+-  };
++  const where = buildPublicMaterialWhere(query.status);
+ 
+   if (query.categoryId) {
+     where.categoryId = query.categoryId;
+@@ -504,16 +500,8 @@ export const appendMaterialView = async (
+ export const findMaterialById = async (id: string) => {
+   return prisma.material.findFirst({
+     where: {
++      ...buildPublicMaterialWhere(),
+       id,
+-      status: {
+-        in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'],
+-      },
+-      category: {
+-        isActive: true,
+-        categoryType: {
+-          in: ['MATERIAL', 'BOTH'],
+-        },
+-      },
+     },
+     include: materialDetailInclude,
+   });
+@@ -525,16 +513,8 @@ export const findPublicMaterialById = async (
+ ) => {
+   return client.material.findFirst({
+     where: {
++      ...buildPublicMaterialWhere(),
+       id,
+-      status: {
+-        in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'],
+-      },
+-      category: {
+-        isActive: true,
+-        categoryType: {
+-          in: ['MATERIAL', 'BOTH'],
+-        },
+-      },
+     },
+     select: {
+       id: true,
+@@ -589,12 +569,8 @@ export const findRelatedMaterials = async (
+   limit: number,
+ ) => {
+   const publicWhere: Prisma.MaterialWhereInput = {
++    ...buildPublicMaterialWhere(),
+     id: { not: material.id },
+-    status: { in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'] },
+-    category: {
+-      isActive: true,
+-      categoryType: { in: ['MATERIAL', 'BOTH'] },
+-    },
+   };
+ 
+   const [category, nearby] = await Promise.all([
+@@ -685,3 +661,35 @@ export const countLikesForMaterial = async (materialId: string) => {
+     where: { materialId },
+   });
+ };
++
++const likedMaterialInclude = {
++  material: {
++    include: {
++      ...materialInclude,
++      _count: { select: { likes: true } },
++    },
++  },
++} satisfies Prisma.MaterialLikeInclude;
++
++export const findVisibleLikedMaterials = (
++  userId: string,
++  query: LikedMaterialsQuery,
++) =>
++  prisma.materialLike.findMany({
++    where: {
++      userId,
++      material: buildPublicMaterialWhere(),
++    },
++    include: likedMaterialInclude,
++    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
++    skip: (query.page - 1) * query.limit,
++    take: query.limit,
++  });
++
++export const countVisibleLikedMaterials = (userId: string): Promise<number> =>
++  prisma.materialLike.count({
++    where: {
++      userId,
++      material: buildPublicMaterialWhere(),
++    },
++  });
+diff --git a/apps/backend/src/modules/materials/materials.routes.ts b/apps/backend/src/modules/materials/materials.routes.ts
+index 022a3955..a81a23a0 100644
+--- a/apps/backend/src/modules/materials/materials.routes.ts
++++ b/apps/backend/src/modules/materials/materials.routes.ts
+@@ -16,6 +16,7 @@ import {
+   getRelatedMaterialsHandler,
+   recordMaterialViewHandler,
+   likeMaterial,
++  listLikedMaterials,
+   listMaterials,
+   priceCheckHandler,
+   unlikeMaterial,
+@@ -23,6 +24,7 @@ import {
+ import { submitMaterialReport } from '../admin-materials/admin-materials.controller.js';
+ import {
+   materialIdParamSchema,
++  likedMaterialsQuerySchema,
+   materialsQuerySchema,
+   relatedMaterialsQuerySchema,
+   priceCheckSchema,
+@@ -48,6 +50,15 @@ materialsRouter.get(
+   asyncHandler(listMaterials),
+ );
+ 
++materialsRouter.get(
++  '/me/liked',
++  privateNoStoreMiddleware,
++  authMiddleware,
++  requireRoles('LEARNER'),
++  validate(likedMaterialsQuerySchema, 'query'),
++  asyncHandler(listLikedMaterials),
++);
++
+ materialsRouter.post(
+   '/:id/like',
+   authMiddleware,
+diff --git a/apps/backend/src/modules/materials/materials.service.ts b/apps/backend/src/modules/materials/materials.service.ts
+index b6e3372f..3e499e02 100644
+--- a/apps/backend/src/modules/materials/materials.service.ts
++++ b/apps/backend/src/modules/materials/materials.service.ts
+@@ -43,6 +43,7 @@ import * as publicSuppliersRepository from '../public-suppliers/public-suppliers
+ 
+ import * as materialsRepository from './materials.repository.js';
+ import type {
++  LikedMaterialsQuery,
+   MaterialsQuery,
+   PriceCheckInput,
+ } from './materials.validation.js';
+@@ -890,6 +891,57 @@ export const getMaterials = async (
+   };
+ };
+ 
++export type LikedMaterialsServiceDependencies = {
++  findVisibleLikedMaterials: (
++    userId: string,
++    query: LikedMaterialsQuery,
++  ) => Promise<
++    Awaited<ReturnType<typeof materialsRepository.findVisibleLikedMaterials>>
++  >;
++  countVisibleLikedMaterials: (userId: string) => Promise<number>;
++  getHeldQuantitiesByMaterialIds: (
++    materialIds: string[],
++  ) => Promise<Awaited<ReturnType<typeof getHeldQuantitiesByMaterialIds>>>;
++};
++
++export const createLikedMaterialsService = (
++  dependencies: LikedMaterialsServiceDependencies,
++) => async (userId: string, query: LikedMaterialsQuery) => {
++  const [likes, total] = await Promise.all([
++    dependencies.findVisibleLikedMaterials(userId, query),
++    dependencies.countVisibleLikedMaterials(userId),
++  ]);
++  const materialIds = likes.map((like) => like.materialId);
++  const heldByMaterialId =
++    await dependencies.getHeldQuantitiesByMaterialIds(materialIds);
++
++  return {
++    items: likes.map((like) => ({
++      likedAt: like.createdAt.toISOString(),
++      material: mapMaterial(
++        like.material,
++        heldByMaterialId.get(like.materialId) ?? toDecimal(0),
++        {
++          likesCount: like.material._count.likes,
++          isLiked: true,
++        },
++      ),
++    })),
++    pagination: {
++      page: query.page,
++      limit: query.limit,
++      total,
++      totalPages: total === 0 ? 0 : Math.ceil(total / query.limit),
++    },
++  };
++};
++
++export const getLikedMaterials = createLikedMaterialsService({
++  findVisibleLikedMaterials: materialsRepository.findVisibleLikedMaterials,
++  countVisibleLikedMaterials: materialsRepository.countVisibleLikedMaterials,
++  getHeldQuantitiesByMaterialIds,
++});
++
+ export const getMaterialById = async (
+   id: string,
+   viewer?: AccessTokenPayload,
+diff --git a/apps/backend/src/modules/materials/materials.validation.ts b/apps/backend/src/modules/materials/materials.validation.ts
+index 16cf7dba..734acd64 100644
+--- a/apps/backend/src/modules/materials/materials.validation.ts
++++ b/apps/backend/src/modules/materials/materials.validation.ts
+@@ -124,6 +124,8 @@ export const materialIdParamSchema = z.object({
+   id: z.string().trim().min(1),
+ });
+ 
++export const likedMaterialsQuerySchema = paginationQuerySchema;
++
+ export const relatedMaterialsQuerySchema = z.object({
+   limit: z.coerce.number().int().min(1).max(8).default(4),
+ });
+@@ -144,4 +146,5 @@ export const priceCheckSchema = z.object({
+ });
+ 
+ export type MaterialsQuery = z.infer<typeof materialsQuerySchema>;
++export type LikedMaterialsQuery = z.infer<typeof likedMaterialsQuerySchema>;
+ export type PriceCheckInput = z.infer<typeof priceCheckSchema>;
+diff --git a/apps/backend/src/modules/materials/public-material-visibility.test.ts b/apps/backend/src/modules/materials/public-material-visibility.test.ts
+new file mode 100644
+index 00000000..a2938286
+--- /dev/null
++++ b/apps/backend/src/modules/materials/public-material-visibility.test.ts
+@@ -0,0 +1,34 @@
++import assert from 'node:assert/strict';
++import { describe, test } from 'node:test';
++
++import {
++  PUBLIC_MATERIAL_STATUSES,
++  buildPublicMaterialWhere,
++} from './public-material-visibility.js';
++
++describe('public material visibility', () => {
++  test('keeps legitimate workflow materials visible by default', () => {
++    assert.deepEqual(PUBLIC_MATERIAL_STATUSES, [
++      'AVAILABLE',
++      'PENDING_RESERVATION',
++      'RESERVED',
++    ]);
++    assert.deepEqual(buildPublicMaterialWhere(), {
++      status: { in: [...PUBLIC_MATERIAL_STATUSES] },
++      category: {
++        isActive: true,
++        categoryType: { in: ['MATERIAL', 'BOTH'] },
++      },
++    });
++  });
++
++  test('preserves an explicitly requested public status', () => {
++    assert.deepEqual(buildPublicMaterialWhere('AVAILABLE'), {
++      status: 'AVAILABLE',
++      category: {
++        isActive: true,
++        categoryType: { in: ['MATERIAL', 'BOTH'] },
++      },
++    });
++  });
++});
+diff --git a/apps/backend/src/modules/materials/public-material-visibility.ts b/apps/backend/src/modules/materials/public-material-visibility.ts
+new file mode 100644
+index 00000000..60ecef07
+--- /dev/null
++++ b/apps/backend/src/modules/materials/public-material-visibility.ts
+@@ -0,0 +1,20 @@
++import type {
++  MaterialStatus,
++  Prisma,
++} from '../../generated/prisma/client.js';
++
++export const PUBLIC_MATERIAL_STATUSES = [
++  'AVAILABLE',
++  'PENDING_RESERVATION',
++  'RESERVED',
++] as const satisfies readonly MaterialStatus[];
++
++export const buildPublicMaterialWhere = (
++  status?: MaterialStatus,
++): Prisma.MaterialWhereInput => ({
++  status: status ?? { in: [...PUBLIC_MATERIAL_STATUSES] },
++  category: {
++    isActive: true,
++    categoryType: { in: ['MATERIAL', 'BOTH'] },
++  },
++});
+diff --git a/apps/frontend/lib/app/router/app_router.dart b/apps/frontend/lib/app/router/app_router.dart
+index dd8d922e..4b0d2feb 100644
+--- a/apps/frontend/lib/app/router/app_router.dart
++++ b/apps/frontend/lib/app/router/app_router.dart
+@@ -35,6 +35,7 @@ import '../../features/landing/presentation/pages/landing_page.dart';
+ import '../../features/locations/presentation/pages/saved_locations_page.dart';
+ import '../../features/material_discovery/domain/material_discovery_query.dart';
+ import '../../features/material_discovery/presentation/pages/material_details_page.dart';
++import '../../features/material_discovery/presentation/pages/liked_materials_page.dart';
+ import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+ import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
+ import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
+@@ -195,6 +196,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
+       path.startsWith('/learner/reservations/') ||
+       path.startsWith('/learner/deliveries/') ||
+       path.startsWith('/home/recommendations/') ||
++      path == '/materials/liked' ||
+       path == '/ai/assistant' ||
+       path == '/ai/general-learning') {
+     return _RouteAccessLevel.learner;
+@@ -734,6 +736,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
+           );
+         },
+       ),
++      GoRoute(
++        path: '/materials/liked',
++        builder: (context, state) => const LikedMaterialsPage(),
++      ),
+       GoRoute(
+         path: '/materials/:id',
+         builder: (context, state) {
+diff --git a/apps/frontend/lib/features/material_discovery/application/liked_materials_controller.dart b/apps/frontend/lib/features/material_discovery/application/liked_materials_controller.dart
+new file mode 100644
+index 00000000..a5766133
+--- /dev/null
++++ b/apps/frontend/lib/features/material_discovery/application/liked_materials_controller.dart
+@@ -0,0 +1,249 @@
++import 'dart:async';
++
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++
++import '../../../core/errors/api_exception.dart';
++import '../../auth/application/auth_controller.dart';
++import '../../home/application/home_suggested_materials_provider.dart';
++import '../../profile/application/profile_providers.dart';
++import '../domain/liked_materials_result.dart';
++import 'material_discovery_providers.dart';
++
++const likedMaterialsPageSize = 20;
++
++Duration? _noAutomaticLikedMaterialsRetry(int retryCount, Object error) => null;
++
++typedef _LikedMaterialsAuthKey = (
++  AuthStatus status,
++  String? userId,
++  bool hasLearnerRole,
++);
++
++_LikedMaterialsAuthKey _authKey(AuthState authState) => (
++  authState.status,
++  authState.user?.id,
++  authState.user?.hasRole('LEARNER') == true,
++);
++
++class LikedMaterialsState {
++  const LikedMaterialsState({
++    required this.items,
++    required this.page,
++    required this.totalPages,
++    required this.total,
++    this.isLoadingMore = false,
++    this.isRefreshing = false,
++    this.hasLoadMoreError = false,
++    this.hasRefreshError = false,
++    this.pendingUnlikeIds = const <String>{},
++  });
++
++  final List<LikedMaterialItem> items;
++  final int page;
++  final int totalPages;
++  final int total;
++  final bool isLoadingMore;
++  final bool isRefreshing;
++  final bool hasLoadMoreError;
++  final bool hasRefreshError;
++  final Set<String> pendingUnlikeIds;
++
++  bool get hasMore => page < totalPages;
++
++  LikedMaterialsState copyWith({
++    List<LikedMaterialItem>? items,
++    int? page,
++    int? totalPages,
++    int? total,
++    bool? isLoadingMore,
++    bool? isRefreshing,
++    bool? hasLoadMoreError,
++    bool? hasRefreshError,
++    Set<String>? pendingUnlikeIds,
++  }) {
++    return LikedMaterialsState(
++      items: items ?? this.items,
++      page: page ?? this.page,
++      totalPages: totalPages ?? this.totalPages,
++      total: total ?? this.total,
++      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
++      isRefreshing: isRefreshing ?? this.isRefreshing,
++      hasLoadMoreError: hasLoadMoreError ?? this.hasLoadMoreError,
++      hasRefreshError: hasRefreshError ?? this.hasRefreshError,
++      pendingUnlikeIds: pendingUnlikeIds ?? this.pendingUnlikeIds,
++    );
++  }
++}
++
++final likedMaterialsControllerProvider =
++    AsyncNotifierProvider.autoDispose<
++      LikedMaterialsController,
++      LikedMaterialsState
++    >(LikedMaterialsController.new, retry: _noAutomaticLikedMaterialsRetry);
++
++class LikedMaterialsController extends AsyncNotifier<LikedMaterialsState> {
++  final Set<String> _unlikeInFlight = <String>{};
++
++  @override
++  Future<LikedMaterialsState> build() async {
++    final auth = ref.watch(authControllerProvider.select(_authKey));
++    if (auth.$1 == AuthStatus.unknown) {
++      throw const ApiException(
++        message: 'Checking your session…',
++        code: 'AUTH_PENDING',
++      );
++    }
++    if (auth.$1 != AuthStatus.authenticated || auth.$2 == null) {
++      throw const ApiException(
++        message: 'Sign in to view liked materials.',
++        code: 'UNAUTHENTICATED',
++      );
++    }
++    if (!auth.$3) {
++      throw const ApiException(
++        message: 'Learner access is required.',
++        code: 'FORBIDDEN',
++      );
++    }
++
++    return _fetchPage(1);
++  }
++
++  Future<LikedMaterialsState> _fetchPage(int page) async {
++    final result = await ref
++        .read(likedMaterialsRepositoryProvider)
++        .fetchLikedMaterials(page: page, limit: likedMaterialsPageSize);
++    return LikedMaterialsState(
++      items: result.items,
++      page: result.pagination.page,
++      totalPages: result.pagination.totalPages,
++      total: result.pagination.total,
++    );
++  }
++
++  Future<void> refresh() async {
++    final current = state.value;
++    if (current == null) {
++      ref.invalidateSelf();
++      return;
++    }
++
++    state = AsyncData(
++      current.copyWith(isRefreshing: true, hasRefreshError: false),
++    );
++    try {
++      final refreshed = await _fetchPage(1);
++      if (ref.mounted) {
++        state = AsyncData(
++          refreshed.copyWith(
++            pendingUnlikeIds: Set<String>.unmodifiable(_unlikeInFlight),
++          ),
++        );
++      }
++    } catch (_) {
++      if (ref.mounted) {
++        state = AsyncData(
++          current.copyWith(isRefreshing: false, hasRefreshError: true),
++        );
++      }
++      rethrow;
++    }
++  }
++
++  Future<void> loadMore() async {
++    final current = state.value;
++    if (current == null || !current.hasMore || current.isLoadingMore) return;
++
++    state = AsyncData(
++      current.copyWith(isLoadingMore: true, hasLoadMoreError: false),
++    );
++    try {
++      final next = await _fetchPage(current.page + 1);
++      if (!ref.mounted) return;
++
++      final latest = state.value ?? current;
++      final byId = <String, LikedMaterialItem>{
++        for (final item in latest.items) item.material.id: item,
++        for (final item in next.items) item.material.id: item,
++      };
++      state = AsyncData(
++        latest.copyWith(
++          items: List<LikedMaterialItem>.unmodifiable(byId.values),
++          page: next.page,
++          totalPages: next.totalPages,
++          total: next.total,
++          isLoadingMore: false,
++          hasLoadMoreError: false,
++        ),
++      );
++    } catch (_) {
++      if (ref.mounted) {
++        state = AsyncData(
++          (state.value ?? current).copyWith(
++            isLoadingMore: false,
++            hasLoadMoreError: true,
++          ),
++        );
++      }
++      rethrow;
++    }
++  }
++
++  Future<void> unlike(String materialId) async {
++    final current = state.value;
++    if (current == null || !_unlikeInFlight.add(materialId)) {
++      return;
++    }
++
++    state = AsyncData(
++      current.copyWith(
++        pendingUnlikeIds: Set<String>.unmodifiable(_unlikeInFlight),
++      ),
++    );
++    try {
++      await ref
++          .read(likedMaterialsRepositoryProvider)
++          .unlikeMaterial(materialId);
++      _unlikeInFlight.remove(materialId);
++      if (!ref.mounted) return;
++
++      final latest = state.value ?? current;
++      final nextTotal = latest.total > 0 ? latest.total - 1 : 0;
++      final nextTotalPages = nextTotal == 0
++          ? 0
++          : (nextTotal / likedMaterialsPageSize).ceil();
++      state = AsyncData(
++        latest.copyWith(
++          items: latest.items
++              .where((item) => item.material.id != materialId)
++              .toList(growable: false),
++          total: nextTotal,
++          totalPages: nextTotalPages,
++          pendingUnlikeIds: Set<String>.unmodifiable(_unlikeInFlight),
++        ),
++      );
++      ref.invalidate(homeSuggestedMaterialsProvider);
++      invalidateLearnerProfileSummaryProvider(ref);
++      unawaited(_refreshAfterUnlike());
++    } catch (_) {
++      _unlikeInFlight.remove(materialId);
++      if (ref.mounted) {
++        final latest = state.value ?? current;
++        state = AsyncData(
++          latest.copyWith(
++            pendingUnlikeIds: Set<String>.unmodifiable(_unlikeInFlight),
++          ),
++        );
++      }
++      rethrow;
++    }
++  }
++
++  Future<void> _refreshAfterUnlike() async {
++    try {
++      await refresh();
++    } catch (_) {
++      // The confirmed unlike remains applied; the state exposes a retry banner.
++    }
++  }
++}
+diff --git a/apps/frontend/lib/features/material_discovery/application/material_discovery_providers.dart b/apps/frontend/lib/features/material_discovery/application/material_discovery_providers.dart
+index bc907da7..a8da18fe 100644
+--- a/apps/frontend/lib/features/material_discovery/application/material_discovery_providers.dart
++++ b/apps/frontend/lib/features/material_discovery/application/material_discovery_providers.dart
+@@ -2,9 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ import '../../../core/network/api_client.dart';
+ import '../data/api_material_discovery_repository.dart';
++import '../domain/liked_materials_repository.dart';
+ import '../domain/material_discovery_repository.dart';
+ 
++final apiMaterialDiscoveryRepositoryProvider =
++    Provider<ApiMaterialDiscoveryRepository>((ref) {
++      return ApiMaterialDiscoveryRepository(ref.watch(apiClientProvider));
++    });
++
+ final materialDiscoveryRepositoryProvider =
+     Provider<MaterialDiscoveryRepository>((ref) {
+-      return ApiMaterialDiscoveryRepository(ref.watch(apiClientProvider));
++      return ref.watch(apiMaterialDiscoveryRepositoryProvider);
+     });
++
++final likedMaterialsRepositoryProvider = Provider<LikedMaterialsRepository>((
++  ref,
++) {
++  return ref.watch(apiMaterialDiscoveryRepositoryProvider);
++});
+diff --git a/apps/frontend/lib/features/material_discovery/data/api_material_discovery_repository.dart b/apps/frontend/lib/features/material_discovery/data/api_material_discovery_repository.dart
+index 5c80fc7b..9aacdb04 100644
+--- a/apps/frontend/lib/features/material_discovery/data/api_material_discovery_repository.dart
++++ b/apps/frontend/lib/features/material_discovery/data/api_material_discovery_repository.dart
+@@ -9,12 +9,15 @@ import '../domain/material_engagement.dart';
+ import '../domain/material_discovery_query.dart';
+ import '../domain/material_discovery_repository.dart';
+ import '../domain/material_discovery_result.dart';
++import '../domain/liked_materials_repository.dart';
++import '../domain/liked_materials_result.dart';
+ import '../domain/material_performance_models.dart';
+ import 'material_discovery_api_mapper.dart';
+ 
+ class ApiMaterialDiscoveryRepository
+     implements
+         MaterialDiscoveryRepository,
++        LikedMaterialsRepository,
+         MaterialDetailsPerformanceRepository,
+         PublicSupplierPerformanceRepository {
+   const ApiMaterialDiscoveryRepository(this._client);
+@@ -35,6 +38,23 @@ class ApiMaterialDiscoveryRepository
+     );
+   }
+ 
++  @override
++  Future<LikedMaterialsResult> fetchLikedMaterials({
++    required int page,
++    int limit = 20,
++  }) {
++    return unwrapApiResponse(
++      _client.get<Map<String, dynamic>>(
++        '$_basePath/me/liked',
++        queryParameters: {'page': page, 'limit': limit},
++      ),
++      (json) => LikedMaterialsResult.fromJson(
++        json,
++        parseMaterial: MaterialDiscoveryApiMapper.fromJson,
++      ),
++    );
++  }
++
+   @visibleForTesting
+   static Map<String, dynamic> buildQueryParameters(
+     MaterialDiscoveryQuery query,
+diff --git a/apps/frontend/lib/features/material_discovery/domain/liked_materials_repository.dart b/apps/frontend/lib/features/material_discovery/domain/liked_materials_repository.dart
+new file mode 100644
+index 00000000..3fc6d2e6
+--- /dev/null
++++ b/apps/frontend/lib/features/material_discovery/domain/liked_materials_repository.dart
+@@ -0,0 +1,14 @@
++import 'liked_materials_result.dart';
++import 'material_engagement.dart';
++
++abstract class LikedMaterialsRepository {
++  Future<LikedMaterialsResult> fetchLikedMaterials({
++    required int page,
++    int limit = 20,
++  });
++
++  Future<MaterialEngagement> unlikeMaterial(
++    String id, {
++    String? recommendationImpressionId,
++  });
++}
+diff --git a/apps/frontend/lib/features/material_discovery/domain/liked_materials_result.dart b/apps/frontend/lib/features/material_discovery/domain/liked_materials_result.dart
+new file mode 100644
+index 00000000..b923c347
+--- /dev/null
++++ b/apps/frontend/lib/features/material_discovery/domain/liked_materials_result.dart
+@@ -0,0 +1,53 @@
++import 'discovery_material.dart';
++import 'material_discovery_result.dart';
++
++class LikedMaterialItem {
++  const LikedMaterialItem({required this.likedAt, required this.material});
++
++  final DateTime likedAt;
++  final DiscoveryMaterial material;
++}
++
++class LikedMaterialsResult {
++  const LikedMaterialsResult({required this.items, required this.pagination});
++
++  final List<LikedMaterialItem> items;
++  final MaterialDiscoveryPagination pagination;
++
++  factory LikedMaterialsResult.fromJson(
++    Map<String, dynamic> json, {
++    required DiscoveryMaterial Function(Map<String, dynamic>) parseMaterial,
++  }) {
++    final rawItems = json['items'];
++    final rawPagination = json['pagination'];
++    if (rawItems is! List || rawPagination is! Map) {
++      throw const FormatException('Invalid liked materials response');
++    }
++
++    final items = rawItems
++        .map((rawItem) {
++          if (rawItem is! Map) {
++            throw const FormatException('Invalid liked material item');
++          }
++          final item = Map<String, dynamic>.from(rawItem);
++          final likedAt = item['likedAt'];
++          final material = item['material'];
++          if (likedAt is! String || material is! Map) {
++            throw const FormatException('Invalid liked material item');
++          }
++
++          return LikedMaterialItem(
++            likedAt: DateTime.parse(likedAt).toUtc(),
++            material: parseMaterial(Map<String, dynamic>.from(material)),
++          );
++        })
++        .toList(growable: false);
++
++    return LikedMaterialsResult(
++      items: List<LikedMaterialItem>.unmodifiable(items),
++      pagination: MaterialDiscoveryPagination.fromJson(
++        Map<String, dynamic>.from(rawPagination),
++      ),
++    );
++  }
++}
+diff --git a/apps/frontend/lib/features/material_discovery/presentation/l10n/liked_materials_l10n.dart b/apps/frontend/lib/features/material_discovery/presentation/l10n/liked_materials_l10n.dart
+new file mode 100644
+index 00000000..3377cb1c
+--- /dev/null
++++ b/apps/frontend/lib/features/material_discovery/presentation/l10n/liked_materials_l10n.dart
+@@ -0,0 +1,56 @@
++import 'package:flutter/widgets.dart';
++
++class LikedMaterialsL10n {
++  LikedMaterialsL10n._(this._languageCode);
++
++  final String _languageCode;
++
++  bool get isArabic => _languageCode == 'ar';
++
++  static LikedMaterialsL10n of(BuildContext context) => LikedMaterialsL10n._(
++    Localizations.localeOf(context).languageCode.toLowerCase(),
++  );
++
++  String t(String en, String ar) => isArabic ? ar : en;
++
++  String get title => t('Liked materials', 'المواد التي أعجبتني');
++  String get description => t(
++    'Return to reusable materials you liked and open their latest details.',
++    'عُد إلى المواد القابلة لإعادة الاستخدام التي أعجبتك وافتح أحدث تفاصيلها.',
++  );
++  String get back => t('Back', 'رجوع');
++  String get refresh => t('Refresh liked materials', 'تحديث المواد المعجب بها');
++  String get loading =>
++      t('Loading liked materials…', 'جارٍ تحميل المواد المعجب بها…');
++  String get emptyTitle =>
++      t('No liked materials yet', 'لا توجد مواد أعجبتك بعد');
++  String get emptyBody => t(
++    'Like materials from their details to return to them here.',
++    'أبدِ إعجابك بالمواد من صفحة تفاصيلها لتعود إليها هنا.',
++  );
++  String get browseMaterials => t('Browse materials', 'تصفّح المواد');
++  String get loadFailed =>
++      t('Could not load liked materials.', 'تعذّر تحميل المواد المعجب بها.');
++  String get retry => t('Try again', 'حاول مرة أخرى');
++  String get loadingMore => t('Loading more…', 'جارٍ تحميل المزيد…');
++  String get loadMore => t('Load more', 'تحميل المزيد');
++  String get loadMoreFailed => t(
++    'Could not load more materials. Your current items are still available.',
++    'تعذّر تحميل المزيد من المواد. لا تزال العناصر الحالية متاحة.',
++  );
++  String get refreshFailed => t(
++    'The collection could not be refreshed. Try again.',
++    'تعذّر تحديث المجموعة. حاول مرة أخرى.',
++  );
++  String get unlikeFailed => t(
++    'Could not remove this material from your likes.',
++    'تعذّرت إزالة الإعجاب بهذه المادة.',
++  );
++  String showing(int loaded, int total) =>
++      t('Showing $loaded of $total', 'عرض $loaded من $total');
++  String openMaterial(String title) => t('Open $title', 'فتح $title');
++  String removeMaterial(String title) => t(
++    'Remove $title from liked materials',
++    'إزالة $title من المواد التي أعجبتني',
++  );
++}
+diff --git a/apps/frontend/lib/features/material_discovery/presentation/pages/liked_materials_page.dart b/apps/frontend/lib/features/material_discovery/presentation/pages/liked_materials_page.dart
+new file mode 100644
+index 00000000..daa0a760
+--- /dev/null
++++ b/apps/frontend/lib/features/material_discovery/presentation/pages/liked_materials_page.dart
+@@ -0,0 +1,430 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
++
++import '../../../../app/router/navigation_extensions.dart';
++import '../../../../app/theme/app_radius.dart';
++import '../../../../app/theme/app_spacing.dart';
++import '../../../../app/theme/app_text_styles.dart';
++import '../../../../app/widgets/entry_nav_bar.dart';
++import '../../../../shared/widgets/app_empty_state_card.dart';
++import '../../../../shared/widgets/app_status_badge.dart';
++import '../../../../shared/models/localized_text.dart';
++import '../../../../shared/widgets/materials/materials_ui_palette.dart';
++import '../../application/liked_materials_controller.dart';
++import '../../domain/discovery_material.dart';
++import '../l10n/liked_materials_l10n.dart';
++import '../widgets/materials_discovery_results_grid.dart';
++
++class LikedMaterialsPage extends ConsumerWidget {
++  const LikedMaterialsPage({super.key});
++
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final palette = MaterialsUiPalette.of(context);
++    final l10n = LikedMaterialsL10n.of(context);
++    final collection = ref.watch(likedMaterialsControllerProvider);
++
++    return Scaffold(
++      backgroundColor: palette.pageBackground,
++      body: SafeArea(
++        child: Column(
++          crossAxisAlignment: CrossAxisAlignment.stretch,
++          children: [
++            const EntryNavBar(
++              showSignIn: false,
++              showCreateAccount: false,
++              homeRoute: '/home',
++            ),
++            _LikedMaterialsHeader(l10n: l10n),
++            Expanded(
++              child: collection.when(
++                skipLoadingOnReload: true,
++                loading: () => Center(
++                  child: Semantics(
++                    label: l10n.loading,
++                    child: CircularProgressIndicator(color: palette.mint),
++                  ),
++                ),
++                error: (_, _) => _ScrollableState(
++                  child: AppEmptyStateCard(
++                    icon: Icons.cloud_off_outlined,
++                    title: l10n.loadFailed,
++                    subtitle: l10n.refreshFailed,
++                    tone: AppStatusTone.danger,
++                    actions: [
++                      FilledButton.icon(
++                        onPressed: () =>
++                            ref.invalidate(likedMaterialsControllerProvider),
++                        icon: const Icon(Icons.refresh_rounded),
++                        label: Text(l10n.retry),
++                      ),
++                    ],
++                  ),
++                ),
++                data: (state) => RefreshIndicator(
++                  onRefresh: () => _refresh(context, ref),
++                  child: CustomScrollView(
++                    physics: const AlwaysScrollableScrollPhysics(),
++                    slivers: [
++                      SliverPadding(
++                        padding: const EdgeInsetsDirectional.fromSTEB(
++                          AppSpacing.md,
++                          AppSpacing.sm,
++                          AppSpacing.md,
++                          AppSpacing.xl,
++                        ),
++                        sliver: SliverToBoxAdapter(
++                          child: Center(
++                            child: ConstrainedBox(
++                              constraints: const BoxConstraints(maxWidth: 1320),
++                              child: _LikedMaterialsContent(
++                                state: state,
++                                l10n: l10n,
++                                onOpen: (material) =>
++                                    _openMaterial(context, ref, material),
++                                onUnlike: (material) =>
++                                    _unlike(context, ref, material),
++                                onRetryLoadMore: () => _loadMore(context, ref),
++                                onRetryRefresh: () => _refresh(context, ref),
++                              ),
++                            ),
++                          ),
++                        ),
++                      ),
++                    ],
++                  ),
++                ),
++              ),
++            ),
++          ],
++        ),
++      ),
++    );
++  }
++
++  Future<void> _openMaterial(
++    BuildContext context,
++    WidgetRef ref,
++    DiscoveryMaterial material,
++  ) async {
++    await context.push('/materials/${material.id}');
++    if (!context.mounted) return;
++    try {
++      await ref.read(likedMaterialsControllerProvider.notifier).refresh();
++    } catch (_) {
++      // The retained collection displays its refresh error and retry action.
++    }
++  }
++
++  Future<void> _unlike(
++    BuildContext context,
++    WidgetRef ref,
++    DiscoveryMaterial material,
++  ) async {
++    try {
++      await ref
++          .read(likedMaterialsControllerProvider.notifier)
++          .unlike(material.id);
++    } catch (_) {
++      if (context.mounted) {
++        _showError(context, LikedMaterialsL10n.of(context).unlikeFailed);
++      }
++    }
++  }
++
++  Future<void> _loadMore(BuildContext context, WidgetRef ref) async {
++    try {
++      await ref.read(likedMaterialsControllerProvider.notifier).loadMore();
++    } catch (_) {
++      if (context.mounted) {
++        _showError(context, LikedMaterialsL10n.of(context).loadMoreFailed);
++      }
++    }
++  }
++
++  Future<void> _refresh(BuildContext context, WidgetRef ref) async {
++    try {
++      await ref.read(likedMaterialsControllerProvider.notifier).refresh();
++    } catch (_) {
++      if (context.mounted) {
++        _showError(context, LikedMaterialsL10n.of(context).refreshFailed);
++      }
++    }
++  }
++
++  void _showError(BuildContext context, String message) {
++    final colors = Theme.of(context).colorScheme;
++    ScaffoldMessenger.of(context)
++      ..hideCurrentSnackBar()
++      ..showSnackBar(
++        SnackBar(
++          content: Text(message),
++          behavior: SnackBarBehavior.floating,
++          backgroundColor: colors.errorContainer,
++          showCloseIcon: true,
++          closeIconColor: colors.onErrorContainer,
++        ),
++      );
++  }
++}
++
++class _LikedMaterialsHeader extends StatelessWidget {
++  const _LikedMaterialsHeader({required this.l10n});
++
++  final LikedMaterialsL10n l10n;
++
++  @override
++  Widget build(BuildContext context) {
++    final palette = MaterialsUiPalette.of(context);
++    return Padding(
++      padding: const EdgeInsetsDirectional.fromSTEB(
++        AppSpacing.md,
++        AppSpacing.sm,
++        AppSpacing.md,
++        AppSpacing.sm,
++      ),
++      child: Center(
++        child: ConstrainedBox(
++          constraints: const BoxConstraints(maxWidth: 1320),
++          child: Row(
++            crossAxisAlignment: CrossAxisAlignment.start,
++            children: [
++              IconButton(
++                onPressed: () => context.popOrGo('/profile'),
++                tooltip: l10n.back,
++                icon: const Icon(Icons.arrow_back_rounded),
++              ),
++              const SizedBox(width: AppSpacing.xs),
++              Expanded(
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    Text(
++                      l10n.title,
++                      maxLines: 2,
++                      overflow: TextOverflow.ellipsis,
++                      style: AppTextStyles.title(
++                        context,
++                      ).copyWith(color: palette.textPrimary, fontSize: 22),
++                    ),
++                    const SizedBox(height: AppSpacing.xs),
++                    Text(
++                      l10n.description,
++                      style: AppTextStyles.body(
++                        context,
++                      ).copyWith(color: palette.textSecondary),
++                    ),
++                  ],
++                ),
++              ),
++            ],
++          ),
++        ),
++      ),
++    );
++  }
++}
++
++class _LikedMaterialsContent extends StatelessWidget {
++  const _LikedMaterialsContent({
++    required this.state,
++    required this.l10n,
++    required this.onOpen,
++    required this.onUnlike,
++    required this.onRetryLoadMore,
++    required this.onRetryRefresh,
++  });
++
++  final LikedMaterialsState state;
++  final LikedMaterialsL10n l10n;
++  final ValueChanged<DiscoveryMaterial> onOpen;
++  final ValueChanged<DiscoveryMaterial> onUnlike;
++  final VoidCallback onRetryLoadMore;
++  final VoidCallback onRetryRefresh;
++
++  @override
++  Widget build(BuildContext context) {
++    final palette = MaterialsUiPalette.of(context);
++    final materials = state.items.map((item) => item.material).toList();
++
++    if (materials.isEmpty) {
++      return AppEmptyStateCard(
++        icon: Icons.favorite_border_rounded,
++        title: l10n.emptyTitle,
++        subtitle: l10n.emptyBody,
++        actions: [
++          FilledButton.icon(
++            onPressed: () => context.go('/materials'),
++            icon: const Icon(Icons.search_rounded),
++            label: Text(l10n.browseMaterials),
++          ),
++        ],
++      );
++    }
++
++    return Column(
++      crossAxisAlignment: CrossAxisAlignment.stretch,
++      children: [
++        Row(
++          children: [
++            Expanded(
++              child: Text(
++                l10n.showing(materials.length, state.total),
++                style: AppTextStyles.label(
++                  context,
++                ).copyWith(color: palette.textSecondary),
++              ),
++            ),
++            if (state.isRefreshing)
++              const SizedBox(
++                width: 20,
++                height: 20,
++                child: CircularProgressIndicator(strokeWidth: 2),
++              ),
++          ],
++        ),
++        if (state.hasRefreshError) ...[
++          const SizedBox(height: AppSpacing.sm),
++          _ErrorStrip(
++            message: l10n.refreshFailed,
++            actionLabel: l10n.retry,
++            onPressed: onRetryRefresh,
++          ),
++        ],
++        const SizedBox(height: AppSpacing.md),
++        MaterialsDiscoveryResultsGrid(
++          materials: materials,
++          onMaterialTap: onOpen,
++          trailingBuilder: (context, material) {
++            final pending = state.pendingUnlikeIds.contains(material.id);
++            return _UnlikeButton(
++              label: l10n.removeMaterial(material.title.resolve(context)),
++              pending: pending,
++              onPressed: pending ? null : () => onUnlike(material),
++            );
++          },
++        ),
++        if (state.hasLoadMoreError) ...[
++          const SizedBox(height: AppSpacing.md),
++          _ErrorStrip(
++            message: l10n.loadMoreFailed,
++            actionLabel: l10n.retry,
++            onPressed: onRetryLoadMore,
++          ),
++        ] else if (state.hasMore) ...[
++          const SizedBox(height: AppSpacing.lg),
++          Center(
++            child: OutlinedButton.icon(
++              onPressed: state.isLoadingMore ? null : onRetryLoadMore,
++              icon: state.isLoadingMore
++                  ? const SizedBox(
++                      width: 18,
++                      height: 18,
++                      child: CircularProgressIndicator(strokeWidth: 2),
++                    )
++                  : const Icon(Icons.expand_more_rounded),
++              label: Text(
++                state.isLoadingMore ? l10n.loadingMore : l10n.loadMore,
++              ),
++            ),
++          ),
++        ],
++      ],
++    );
++  }
++}
++
++class _UnlikeButton extends StatelessWidget {
++  const _UnlikeButton({
++    required this.label,
++    required this.pending,
++    required this.onPressed,
++  });
++
++  final String label;
++  final bool pending;
++  final VoidCallback? onPressed;
++
++  @override
++  Widget build(BuildContext context) {
++    final palette = MaterialsUiPalette.of(context);
++    return Semantics(
++      button: true,
++      enabled: onPressed != null,
++      label: label,
++      child: Material(
++        color: palette.cardSurface.withValues(alpha: 0.94),
++        shape: const CircleBorder(),
++        elevation: 2,
++        child: IconButton(
++          constraints: const BoxConstraints.tightFor(width: 48, height: 48),
++          tooltip: label,
++          onPressed: onPressed,
++          icon: pending
++              ? const SizedBox(
++                  width: 20,
++                  height: 20,
++                  child: CircularProgressIndicator(strokeWidth: 2),
++                )
++              : Icon(Icons.favorite_rounded, color: palette.mint),
++        ),
++      ),
++    );
++  }
++}
++
++class _ErrorStrip extends StatelessWidget {
++  const _ErrorStrip({
++    required this.message,
++    required this.actionLabel,
++    required this.onPressed,
++  });
++
++  final String message;
++  final String actionLabel;
++  final VoidCallback onPressed;
++
++  @override
++  Widget build(BuildContext context) {
++    final colors = Theme.of(context).colorScheme;
++    return Container(
++      padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
++      decoration: BoxDecoration(
++        color: colors.errorContainer,
++        borderRadius: AppRadius.mdAll,
++        border: Border.all(color: colors.error),
++      ),
++      child: Wrap(
++        alignment: WrapAlignment.spaceBetween,
++        crossAxisAlignment: WrapCrossAlignment.center,
++        spacing: AppSpacing.sm,
++        runSpacing: AppSpacing.xs,
++        children: [
++          Text(message, style: TextStyle(color: colors.onErrorContainer)),
++          TextButton(onPressed: onPressed, child: Text(actionLabel)),
++        ],
++      ),
++    );
++  }
++}
++
++class _ScrollableState extends StatelessWidget {
++  const _ScrollableState({required this.child});
++
++  final Widget child;
++
++  @override
++  Widget build(BuildContext context) {
++    return LayoutBuilder(
++      builder: (context, constraints) => SingleChildScrollView(
++        physics: const AlwaysScrollableScrollPhysics(),
++        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
++        child: ConstrainedBox(
++          constraints: BoxConstraints(minHeight: constraints.maxHeight),
++          child: child,
++        ),
++      ),
++    );
++  }
++}
+diff --git a/apps/frontend/lib/features/material_discovery/presentation/pages/material_details_page.dart b/apps/frontend/lib/features/material_discovery/presentation/pages/material_details_page.dart
+index cf86f7a9..e153cae5 100644
+--- a/apps/frontend/lib/features/material_discovery/presentation/pages/material_details_page.dart
++++ b/apps/frontend/lib/features/material_discovery/presentation/pages/material_details_page.dart
+@@ -29,6 +29,7 @@ import '../../../comments/domain/comment_models.dart';
+ import '../../../comments/presentation/comments_section.dart';
+ import '../../../deliveries/presentation/delivery_status_presentation.dart';
+ import '../../../home/application/home_suggested_materials_provider.dart';
++import '../../../profile/application/profile_providers.dart';
+ import '../../../learning_hub/application/learning_hub_providers.dart';
+ import '../../../reservations/application/reservation_create_controller.dart';
+ import '../../../reservations/application/reservation_timing_policy.dart';
+@@ -465,6 +466,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
+       }
+ 
+       ref.invalidate(homeSuggestedMaterialsProvider);
++      ref.invalidate(learnerProfileSummaryProvider);
+       setState(() {
+         _materialOverride = optimisticMaterial.copyWith(
+           likesCount: engagement.likesCount,
+diff --git a/apps/frontend/lib/features/material_discovery/presentation/widgets/materials_discovery_results_grid.dart b/apps/frontend/lib/features/material_discovery/presentation/widgets/materials_discovery_results_grid.dart
+index cb5383ae..1472c4c0 100644
+--- a/apps/frontend/lib/features/material_discovery/presentation/widgets/materials_discovery_results_grid.dart
++++ b/apps/frontend/lib/features/material_discovery/presentation/widgets/materials_discovery_results_grid.dart
+@@ -59,12 +59,15 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
+     this.cardVariant = AppMaterialCardVariant.standard,
+     this.onMaterialTap,
+     this.showSupplierAttribution = true,
++    this.trailingBuilder,
+   });
+ 
+   final List<DiscoveryMaterial> materials;
+   final AppMaterialCardVariant cardVariant;
+   final ValueChanged<DiscoveryMaterial>? onMaterialTap;
+   final bool showSupplierAttribution;
++  final Widget Function(BuildContext context, DiscoveryMaterial material)?
++  trailingBuilder;
+ 
+   @override
+   Widget build(BuildContext context) {
+@@ -158,6 +161,7 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
+           ? materialDiscoverySupplierTapHandler(context, material)
+           : null,
+       onTap: onMaterialTap == null ? null : () => onMaterialTap!(material),
++      trailing: trailingBuilder?.call(context, material),
+     );
+   }
+ 
+@@ -200,6 +204,7 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
+           ? materialDiscoverySupplierTapHandler(context, material)
+           : null,
+       onTap: onMaterialTap == null ? null : () => onMaterialTap!(material),
++      trailing: trailingBuilder?.call(context, material),
+     );
+   }
+ }
+diff --git a/apps/frontend/lib/features/profile/data/models/learner_profile_summary.dart b/apps/frontend/lib/features/profile/data/models/learner_profile_summary.dart
+index c4347cc6..8e98de64 100644
+--- a/apps/frontend/lib/features/profile/data/models/learner_profile_summary.dart
++++ b/apps/frontend/lib/features/profile/data/models/learner_profile_summary.dart
+@@ -63,6 +63,7 @@ class LearnerJourneySummary {
+   const LearnerJourneySummary({
+     required this.activeReservationsCount,
+     required this.completedReservationsCount,
++    required this.likedMaterialsCount,
+     required this.savedProjectsCount,
+     required this.followedProjectsCount,
+     required this.activeBuildsCount,
+@@ -71,6 +72,7 @@ class LearnerJourneySummary {
+ 
+   final int activeReservationsCount;
+   final int completedReservationsCount;
++  final int likedMaterialsCount;
+   final int savedProjectsCount;
+   final int followedProjectsCount;
+   final int activeBuildsCount;
+@@ -83,6 +85,7 @@ class LearnerJourneySummary {
+         json,
+         'completedReservationsCount',
+       ),
++      likedMaterialsCount: _requiredInt(json, 'likedMaterialsCount'),
+       savedProjectsCount: _requiredInt(json, 'savedProjectsCount'),
+       followedProjectsCount: _requiredInt(json, 'followedProjectsCount'),
+       activeBuildsCount: _requiredInt(json, 'activeBuildsCount'),
+diff --git a/apps/frontend/lib/shared/widgets/materials/app_material_card.dart b/apps/frontend/lib/shared/widgets/materials/app_material_card.dart
+index fcc744b1..4923f8b8 100644
+--- a/apps/frontend/lib/shared/widgets/materials/app_material_card.dart
++++ b/apps/frontend/lib/shared/widgets/materials/app_material_card.dart
+@@ -290,6 +290,10 @@ class ImpactMaterialCompactCard extends StatelessWidget {
+     final textTheme = Theme.of(context).textTheme;
+     final includesSupplierAttribution =
+         supplierDisplayName != null && supplierDisplayName!.trim().isNotEmpty;
++    final textScale = MediaQuery.textScalerOf(context).scale(1);
++    final scaledHeightAdjustment = trailing == null
++        ? 0.0
++        : ((textScale - 1).clamp(0.0, 1.0) * 104);
+ 
+     return Semantics(
+       button: onTap != null,
+@@ -297,9 +301,11 @@ class ImpactMaterialCompactCard extends StatelessWidget {
+           '$title, $category, $conditionLabel, $locationLabel, '
+           '$priceLabel, $statusLabel',
+       child: SizedBox(
+-        height: heightFor(
+-          includesSupplierAttribution: includesSupplierAttribution,
+-        ),
++        height:
++            heightFor(
++              includesSupplierAttribution: includesSupplierAttribution,
++            ) +
++            scaledHeightAdjustment,
+         child: Material(
+           color: Colors.transparent,
+           child: Ink(
+@@ -315,113 +321,130 @@ class ImpactMaterialCompactCard extends StatelessWidget {
+                 ),
+               ],
+             ),
+-            child: Row(
+-              crossAxisAlignment: CrossAxisAlignment.stretch,
++            child: Stack(
+               children: [
+-                _CompactCardMedia(
+-                  imageUrl: imageUrl,
+-                  gradientColors: gradientColors,
+-                  fallbackIcon: fallbackIcon,
+-                ),
+-                Expanded(
+-                  child: Column(
++                Positioned.fill(
++                  child: Row(
+                     crossAxisAlignment: CrossAxisAlignment.stretch,
+                     children: [
++                      _CompactCardMedia(
++                        imageUrl: imageUrl,
++                        gradientColors: gradientColors,
++                        fallbackIcon: fallbackIcon,
++                      ),
+                       Expanded(
+-                        child: Material(
+-                          color: Colors.transparent,
+-                          child: InkWell(
+-                            onTap: onTap,
+-                            child: Padding(
+-                              padding: const EdgeInsetsDirectional.fromSTEB(
+-                                AppSpacing.md,
+-                                AppSpacing.sm + AppSpacing.xs,
+-                                AppSpacing.sm + AppSpacing.xs,
+-                                AppSpacing.sm + AppSpacing.xs,
+-                              ),
+-                              child: Column(
+-                                crossAxisAlignment: CrossAxisAlignment.start,
+-                                children: [
+-                                  Text(
+-                                    title,
+-                                    style: textTheme.titleMedium?.copyWith(
+-                                      color: palette.textPrimary,
+-                                      fontWeight: FontWeight.w600,
+-                                      height: 1.18,
+-                                    ),
+-                                    textAlign: TextAlign.start,
+-                                    maxLines: title.runes.length > 34 ? 2 : 1,
+-                                    overflow: TextOverflow.ellipsis,
+-                                  ),
+-                                  const SizedBox(height: 4),
+-                                  Text(
+-                                    '$category · $conditionLabel',
+-                                    style: textTheme.labelMedium?.copyWith(
+-                                      color: palette.textSecondary,
+-                                      fontWeight: FontWeight.w500,
+-                                      height: 1.2,
+-                                    ),
+-                                    textAlign: TextAlign.start,
+-                                    maxLines: 1,
+-                                    overflow: TextOverflow.ellipsis,
+-                                  ),
+-                                  const SizedBox(height: 5),
+-                                  if (locationLabel.isNotEmpty)
+-                                    _CompactLocationLine(label: locationLabel)
+-                                  else if (quantityLabel.isNotEmpty)
+-                                    Text(
+-                                      quantityLabel,
+-                                      style: textTheme.labelMedium?.copyWith(
+-                                        color: palette.textSecondary,
+-                                        fontWeight: FontWeight.w500,
+-                                        height: 1.2,
+-                                      ),
+-                                      textAlign: TextAlign.start,
+-                                      maxLines: 1,
+-                                      overflow: TextOverflow.ellipsis,
+-                                    ),
+-                                  const Spacer(),
+-                                  Row(
+-                                    children: [
+-                                      Flexible(
+-                                        child: Align(
+-                                          alignment:
+-                                              AlignmentDirectional.centerStart,
+-                                          child: _CompactPriceBadge(
+-                                            label: priceLabel,
+-                                            isFree: isFree,
++                        child: Column(
++                          crossAxisAlignment: CrossAxisAlignment.stretch,
++                          children: [
++                            Expanded(
++                              child: Material(
++                                color: Colors.transparent,
++                                child: InkWell(
++                                  onTap: onTap,
++                                  child: Padding(
++                                    padding:
++                                        const EdgeInsetsDirectional.fromSTEB(
++                                          AppSpacing.md,
++                                          AppSpacing.sm + AppSpacing.xs,
++                                          AppSpacing.sm + AppSpacing.xs,
++                                          AppSpacing.sm + AppSpacing.xs,
++                                        ),
++                                    child: Column(
++                                      crossAxisAlignment:
++                                          CrossAxisAlignment.start,
++                                      children: [
++                                        Text(
++                                          title,
++                                          style: textTheme.titleMedium
++                                              ?.copyWith(
++                                                color: palette.textPrimary,
++                                                fontWeight: FontWeight.w600,
++                                                height: 1.18,
++                                              ),
++                                          textAlign: TextAlign.start,
++                                          maxLines: title.runes.length > 34
++                                              ? 2
++                                              : 1,
++                                          overflow: TextOverflow.ellipsis,
++                                        ),
++                                        const SizedBox(height: 4),
++                                        Text(
++                                          '$category · $conditionLabel',
++                                          style: textTheme.labelMedium
++                                              ?.copyWith(
++                                                color: palette.textSecondary,
++                                                fontWeight: FontWeight.w500,
++                                                height: 1.2,
++                                              ),
++                                          textAlign: TextAlign.start,
++                                          maxLines: 1,
++                                          overflow: TextOverflow.ellipsis,
++                                        ),
++                                        const SizedBox(height: 5),
++                                        if (locationLabel.isNotEmpty)
++                                          _CompactLocationLine(
++                                            label: locationLabel,
++                                          )
++                                        else if (quantityLabel.isNotEmpty)
++                                          Text(
++                                            quantityLabel,
++                                            style: textTheme.labelMedium
++                                                ?.copyWith(
++                                                  color: palette.textSecondary,
++                                                  fontWeight: FontWeight.w500,
++                                                  height: 1.2,
++                                                ),
++                                            textAlign: TextAlign.start,
++                                            maxLines: 1,
++                                            overflow: TextOverflow.ellipsis,
+                                           ),
++                                        const Spacer(),
++                                        Wrap(
++                                          spacing: AppSpacing.sm,
++                                          runSpacing: AppSpacing.xs,
++                                          crossAxisAlignment:
++                                              WrapCrossAlignment.center,
++                                          children: [
++                                            _CompactPriceBadge(
++                                              label: priceLabel,
++                                              isFree: isFree,
++                                            ),
++                                            _CompactEngagementBadge(
++                                              viewsCount: viewsCount,
++                                              likesCount: likesCount,
++                                              isLiked: isLiked,
++                                            ),
++                                            _CompactViewAffordance(
++                                              color: palette.mint,
++                                            ),
++                                          ],
+                                         ),
+-                                      ),
+-                                      const SizedBox(width: AppSpacing.sm),
+-                                      _CompactEngagementBadge(
+-                                        viewsCount: viewsCount,
+-                                        likesCount: likesCount,
+-                                        isLiked: isLiked,
+-                                      ),
+-                                      const SizedBox(width: AppSpacing.sm),
+-                                      _CompactViewAffordance(
+-                                        color: palette.mint,
+-                                      ),
+-                                    ],
++                                      ],
++                                    ),
+                                   ),
+-                                ],
++                                ),
+                               ),
+                             ),
+-                          ),
++                            if (includesSupplierAttribution)
++                              _MaterialSupplierAttributionBar(
++                                displayName: supplierDisplayName!,
++                                avatarUrl: supplierAvatarUrl,
++                                isVerified: supplierVerified,
++                                onTap: onSupplierTap,
++                                compact: true,
++                              ),
++                          ],
+                         ),
+                       ),
+-                      if (includesSupplierAttribution)
+-                        _MaterialSupplierAttributionBar(
+-                          displayName: supplierDisplayName!,
+-                          avatarUrl: supplierAvatarUrl,
+-                          isVerified: supplierVerified,
+-                          onTap: onSupplierTap,
+-                          compact: true,
+-                        ),
+                     ],
+                   ),
+                 ),
++                if (trailing != null)
++                  PositionedDirectional(
++                    top: AppSpacing.xs,
++                    start: AppSpacing.xs,
++                    child: trailing!,
++                  ),
+               ],
+             ),
+           ),
+@@ -655,60 +678,72 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
+               ),
+             ],
+           ),
+-          child: ClipRRect(
+-            borderRadius: AppRadius.lgAll,
+-            child: Column(
+-              crossAxisAlignment: CrossAxisAlignment.stretch,
+-              children: [
+-                Expanded(
+-                  child: Material(
+-                    color: Colors.transparent,
+-                    child: InkWell(
+-                      onTap: widget.onTap,
+-                      child: Column(
+-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+-                        children: [
+-                          _GridCardMedia(
+-                            category: widget.category,
+-                            priceLabel: widget.priceLabel,
+-                            isFree: widget.isFree,
+-                            imageUrl: widget.imageUrl,
+-                            gradientColors: widget.gradientColors,
+-                            fallbackIcon: widget.fallbackIcon,
+-                            hovered: _hovered,
+-                            viewsCount: widget.viewsCount,
+-                            likesCount: widget.likesCount,
+-                            isLiked: widget.isLiked,
+-                          ),
+-                          Expanded(
+-                            child: _GridCardContent(
+-                              title: widget.title,
+-                              category: widget.category,
+-                              conditionLabel: widget.conditionLabel,
+-                              statusLabel: widget.statusLabel,
+-                              statusTone: widget.statusTone,
+-                              quantityLabel: widget.quantityLabel,
+-                              locationLabel: widget.locationLabel,
+-                              availabilityLabel: widget.availabilityLabel,
+-                              deliveryAvailable: widget.deliveryAvailable,
+-                              compact: compact,
++          child: Stack(
++            children: [
++              Positioned.fill(
++                child: ClipRRect(
++                  borderRadius: AppRadius.lgAll,
++                  child: Column(
++                    crossAxisAlignment: CrossAxisAlignment.stretch,
++                    children: [
++                      Expanded(
++                        child: Material(
++                          color: Colors.transparent,
++                          child: InkWell(
++                            onTap: widget.onTap,
++                            child: Column(
++                              crossAxisAlignment: CrossAxisAlignment.stretch,
++                              children: [
++                                _GridCardMedia(
++                                  category: widget.category,
++                                  priceLabel: widget.priceLabel,
++                                  isFree: widget.isFree,
++                                  imageUrl: widget.imageUrl,
++                                  gradientColors: widget.gradientColors,
++                                  fallbackIcon: widget.fallbackIcon,
++                                  hovered: _hovered,
++                                  viewsCount: widget.viewsCount,
++                                  likesCount: widget.likesCount,
++                                  isLiked: widget.isLiked,
++                                ),
++                                Expanded(
++                                  child: _GridCardContent(
++                                    title: widget.title,
++                                    category: widget.category,
++                                    conditionLabel: widget.conditionLabel,
++                                    statusLabel: widget.statusLabel,
++                                    statusTone: widget.statusTone,
++                                    quantityLabel: widget.quantityLabel,
++                                    locationLabel: widget.locationLabel,
++                                    availabilityLabel: widget.availabilityLabel,
++                                    deliveryAvailable: widget.deliveryAvailable,
++                                    compact: compact,
++                                  ),
++                                ),
++                              ],
+                             ),
+                           ),
+-                        ],
++                        ),
+                       ),
+-                    ),
++                      if (_showsSupplierAttribution)
++                        _MaterialSupplierAttributionBar(
++                          displayName: widget.supplierDisplayName!,
++                          avatarUrl: widget.supplierAvatarUrl,
++                          isVerified: widget.supplierVerified,
++                          onTap: widget.onSupplierTap,
++                          compact: compact,
++                        ),
++                    ],
+                   ),
+                 ),
+-                if (_showsSupplierAttribution)
+-                  _MaterialSupplierAttributionBar(
+-                    displayName: widget.supplierDisplayName!,
+-                    avatarUrl: widget.supplierAvatarUrl,
+-                    isVerified: widget.supplierVerified,
+-                    onTap: widget.onSupplierTap,
+-                    compact: compact,
+-                  ),
+-              ],
+-            ),
++              ),
++              if (widget.trailing != null)
++                PositionedDirectional(
++                  top: 52,
++                  end: AppSpacing.sm,
++                  child: widget.trailing!,
++                ),
++            ],
+           ),
+         ),
+       ),
+diff --git a/apps/frontend/test/learner_profile_summary_contract_test.dart b/apps/frontend/test/learner_profile_summary_contract_test.dart
+index ac243b77..15aa8e97 100644
+--- a/apps/frontend/test/learner_profile_summary_contract_test.dart
++++ b/apps/frontend/test/learner_profile_summary_contract_test.dart
+@@ -28,6 +28,7 @@ void main() {
+       'saved_location',
+     ]);
+     expect(summary.journey.activeReservationsCount, 3);
++    expect(summary.journey.likedMaterialsCount, 8);
+     expect(summary.journey.completedBuildsCount, 4);
+     expect(summary.continueProject?.projectId, 'project-1');
+     expect(summary.continueProject?.imageUrl, isNull);
+@@ -140,6 +141,7 @@ Map<String, dynamic> _summaryJson() => {
+   'journey': {
+     'activeReservationsCount': 3,
+     'completedReservationsCount': 9,
++    'likedMaterialsCount': 8,
+     'savedProjectsCount': 7,
+     'followedProjectsCount': 2,
+     'activeBuildsCount': 1,
+diff --git a/apps/frontend/test/liked_materials_feature_test.dart b/apps/frontend/test/liked_materials_feature_test.dart
+new file mode 100644
+index 00000000..1b3e68c3
+--- /dev/null
++++ b/apps/frontend/test/liked_materials_feature_test.dart
+@@ -0,0 +1,488 @@
++import 'package:dio/dio.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_localizations/flutter_localizations.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:frontend/app/theme/app_theme.dart';
++import 'package:frontend/features/auth/application/auth_controller.dart';
++import 'package:frontend/features/auth/data/models/user.dart';
++import 'package:frontend/features/material_discovery/application/liked_materials_controller.dart';
++import 'package:frontend/features/material_discovery/application/material_discovery_providers.dart';
++import 'package:frontend/features/material_discovery/data/api_material_discovery_repository.dart';
++import 'package:frontend/features/material_discovery/data/material_discovery_api_mapper.dart';
++import 'package:frontend/features/material_discovery/domain/liked_materials_repository.dart';
++import 'package:frontend/features/material_discovery/domain/liked_materials_result.dart';
++import 'package:frontend/features/material_discovery/domain/material_discovery_result.dart';
++import 'package:frontend/features/material_discovery/domain/material_engagement.dart';
++import 'package:frontend/features/material_discovery/presentation/pages/liked_materials_page.dart';
++import 'package:go_router/go_router.dart';
++
++void main() {
++  test('API requests and parses the liked materials envelope', () async {
++    final repository = ApiMaterialDiscoveryRepository(
++      _dioWithHandler((options) {
++        expect(options.method, 'GET');
++        expect(options.path, '/api/materials/me/liked');
++        expect(options.queryParameters, {'page': 2, 'limit': 20});
++        return {
++          'success': true,
++          'data': {
++            'items': [
++              {
++                'likedAt': '2026-07-29T00:00:00.000Z',
++                'material': _materialJson('material-1'),
++              },
++            ],
++            'pagination': {
++              'page': 2,
++              'limit': 20,
++              'total': 21,
++              'totalPages': 2,
++            },
++          },
++        };
++      }),
++    );
++
++    final result = await repository.fetchLikedMaterials(page: 2);
++
++    expect(result.items.single.material.id, 'material-1');
++    expect(result.items.single.material.isLiked, isTrue);
++    expect(result.items.single.likedAt, DateTime.utc(2026, 7, 29));
++    expect(result.pagination.total, 21);
++  });
++
++  test('contract rejects missing required wrapper fields', () {
++    expect(
++      () => LikedMaterialsResult.fromJson({
++        'items': [
++          {'material': _materialJson('material-1')},
++        ],
++        'pagination': {'page': 1, 'limit': 20, 'total': 1, 'totalPages': 1},
++      }, parseMaterial: MaterialDiscoveryApiMapper.fromJson),
++      throwsA(isA<FormatException>()),
++    );
++  });
++
++  test(
++    'controller paginates, de-duplicates, and removes after unlike',
++    () async {
++      final repository = _FakeLikedMaterialsRepository(
++        pages: {
++          1: _result(['a', 'b'], page: 1, total: 3, totalPages: 2),
++          2: _result(['b', 'c'], page: 2, total: 3, totalPages: 2),
++        },
++      );
++      final container = _container(repository);
++      addTearDown(container.dispose);
++      final subscription = container.listen(
++        likedMaterialsControllerProvider,
++        (_, _) {},
++      );
++      addTearDown(subscription.close);
++
++      await container.read(likedMaterialsControllerProvider.future);
++      await container
++          .read(likedMaterialsControllerProvider.notifier)
++          .loadMore();
++      expect(
++        container
++            .read(likedMaterialsControllerProvider)
++            .requireValue
++            .items
++            .map((item) => item.material.id),
++        ['a', 'b', 'c'],
++      );
++
++      final notifier = container.read(
++        likedMaterialsControllerProvider.notifier,
++      );
++      final unlike = notifier.unlike('b');
++      final duplicateUnlike = notifier.unlike('b');
++      await Future.wait([unlike, duplicateUnlike]);
++      expect(repository.unlikedIds, ['b']);
++      expect(
++        container
++            .read(likedMaterialsControllerProvider)
++            .requireValue
++            .items
++            .any((item) => item.material.id == 'b'),
++        isFalse,
++      );
++    },
++  );
++
++  test('failed unlike keeps the material and clears its busy state', () async {
++    final repository = _FakeLikedMaterialsRepository(
++      pages: {
++        1: _result(['a'], page: 1, total: 1, totalPages: 1),
++      },
++      failUnlike: true,
++    );
++    final container = _container(repository);
++    addTearDown(container.dispose);
++    final subscription = container.listen(
++      likedMaterialsControllerProvider,
++      (_, _) {},
++    );
++    addTearDown(subscription.close);
++    await container.read(likedMaterialsControllerProvider.future);
++
++    await expectLater(
++      container.read(likedMaterialsControllerProvider.notifier).unlike('a'),
++      throwsStateError,
++    );
++
++    final state = container.read(likedMaterialsControllerProvider).requireValue;
++    expect(state.items.single.material.id, 'a');
++    expect(state.pendingUnlikeIds, isEmpty);
++  });
++
++  test(
++    'load-more failure preserves the first page and exposes retry state',
++    () async {
++      final repository = _FakeLikedMaterialsRepository(
++        pages: {
++          1: _result(['a'], page: 1, total: 2, totalPages: 2),
++          2: _result(['b'], page: 2, total: 2, totalPages: 2),
++        },
++        failedPages: {2},
++      );
++      final container = _container(repository);
++      addTearDown(container.dispose);
++      final subscription = container.listen(
++        likedMaterialsControllerProvider,
++        (_, _) {},
++      );
++      addTearDown(subscription.close);
++      await container.read(likedMaterialsControllerProvider.future);
++
++      await expectLater(
++        container.read(likedMaterialsControllerProvider.notifier).loadMore(),
++        throwsStateError,
++      );
++
++      final state = container
++          .read(likedMaterialsControllerProvider)
++          .requireValue;
++      expect(state.items.map((item) => item.material.id), ['a']);
++      expect(state.hasLoadMoreError, isTrue);
++    },
++  );
++
++  test('refresh replaces stale pages with the latest first page', () async {
++    final repository = _FakeLikedMaterialsRepository(
++      pages: {
++        1: _result(['a'], page: 1, total: 1, totalPages: 1),
++      },
++    );
++    final container = _container(repository);
++    addTearDown(container.dispose);
++    final subscription = container.listen(
++      likedMaterialsControllerProvider,
++      (_, _) {},
++    );
++    addTearDown(subscription.close);
++    await container.read(likedMaterialsControllerProvider.future);
++    repository.pages[1] = _result(['b'], page: 1, total: 1, totalPages: 1);
++
++    await container.read(likedMaterialsControllerProvider.notifier).refresh();
++
++    expect(
++      container
++          .read(likedMaterialsControllerProvider)
++          .requireValue
++          .items
++          .single
++          .material
++          .id,
++      'b',
++    );
++  });
++
++  testWidgets('empty collection offers material discovery', (tester) async {
++    final repository = _FakeLikedMaterialsRepository(
++      pages: {1: _result([], page: 1, total: 0, totalPages: 0)},
++    );
++    await _pumpPage(tester, repository: repository);
++
++    expect(find.text('No liked materials yet'), findsOneWidget);
++    expect(find.text('Browse materials'), findsOneWidget);
++    expect(tester.takeException(), isNull);
++  });
++
++  testWidgets('initial failure retries without losing the page route', (
++    tester,
++  ) async {
++    final repository = _FakeLikedMaterialsRepository(
++      pages: {
++        1: _result(['a'], page: 1, total: 1, totalPages: 1),
++      },
++      failedPages: {1},
++    );
++    await _pumpPage(tester, repository: repository);
++    expect(find.text('Could not load liked materials.'), findsOneWidget);
++
++    repository.failedPages.clear();
++    await tester.tap(find.text('Try again'));
++    await tester.pumpAndSettle();
++
++    expect(find.text('Reusable sensor a'), findsOneWidget);
++    expect(tester.takeException(), isNull);
++  });
++
++  testWidgets('material card opens the existing detail route', (tester) async {
++    final repository = _FakeLikedMaterialsRepository(
++      pages: {
++        1: _result(['a'], page: 1, total: 1, totalPages: 1),
++      },
++    );
++    await _pumpPage(tester, repository: repository);
++
++    await tester.tap(find.text('Reusable sensor a'));
++    await tester.pumpAndSettle();
++
++    expect(find.text('Material a'), findsOneWidget);
++  });
++
++  testWidgets('Arabic collection fits 320px at increased text scale', (
++    tester,
++  ) async {
++    final repository = _FakeLikedMaterialsRepository(
++      pages: {
++        1: _result(['a'], page: 1, total: 1, totalPages: 1),
++      },
++    );
++    tester.view.physicalSize = const Size(320, 900);
++    tester.view.devicePixelRatio = 1;
++    addTearDown(tester.view.resetPhysicalSize);
++    addTearDown(tester.view.resetDevicePixelRatio);
++
++    await _pumpPage(
++      tester,
++      repository: repository,
++      locale: const Locale('ar'),
++      textScale: 1.6,
++    );
++
++    expect(find.text('المواد التي أعجبتني'), findsOneWidget);
++    expect(find.bySemanticsLabel(RegExp('إزالة')), findsOneWidget);
++    expect(tester.takeException(), isNull);
++  });
++}
++
++ProviderContainer _container(LikedMaterialsRepository repository) {
++  return ProviderContainer(
++    overrides: [
++      authControllerProvider.overrideWith(_LearnerAuthController.new),
++      likedMaterialsRepositoryProvider.overrideWithValue(repository),
++    ],
++  );
++}
++
++Future<void> _pumpPage(
++  WidgetTester tester, {
++  required LikedMaterialsRepository repository,
++  Locale locale = const Locale('en'),
++  double textScale = 1,
++}) async {
++  final router = GoRouter(
++    initialLocation: '/materials/liked',
++    routes: [
++      GoRoute(
++        path: '/materials/liked',
++        builder: (_, _) => const LikedMaterialsPage(),
++      ),
++      GoRoute(
++        path: '/materials',
++        builder: (_, _) => const Scaffold(body: Text('Materials discovery')),
++      ),
++      GoRoute(
++        path: '/materials/:id',
++        builder: (_, state) =>
++            Scaffold(body: Text('Material ${state.pathParameters['id']}')),
++      ),
++      GoRoute(
++        path: '/profile',
++        builder: (_, _) => const Scaffold(body: Text('Profile')),
++      ),
++      GoRoute(
++        path: '/home',
++        builder: (_, _) => const Scaffold(body: Text('Home')),
++      ),
++      GoRoute(
++        path: '/learning',
++        builder: (_, _) => const Scaffold(body: Text('Learning')),
++      ),
++      GoRoute(
++        path: '/learner/reservations',
++        builder: (_, _) => const Scaffold(body: Text('Reservations')),
++      ),
++    ],
++  );
++  addTearDown(router.dispose);
++
++  await tester.pumpWidget(
++    ProviderScope(
++      overrides: [
++        authControllerProvider.overrideWith(_LearnerAuthController.new),
++        likedMaterialsRepositoryProvider.overrideWithValue(repository),
++      ],
++      child: MaterialApp.router(
++        theme: AppTheme.light,
++        locale: locale,
++        supportedLocales: const [Locale('en'), Locale('ar')],
++        localizationsDelegates: const [
++          GlobalMaterialLocalizations.delegate,
++          GlobalWidgetsLocalizations.delegate,
++          GlobalCupertinoLocalizations.delegate,
++        ],
++        builder: (context, child) => MediaQuery(
++          data: MediaQuery.of(
++            context,
++          ).copyWith(textScaler: TextScaler.linear(textScale)),
++          child: child!,
++        ),
++        routerConfig: router,
++      ),
++    ),
++  );
++  await tester.pumpAndSettle();
++}
++
++class _LearnerAuthController extends AuthController {
++  @override
++  AuthState build() => AuthState(
++    user: User(
++      id: 'learner-1',
++      displayName: 'Learner',
++      email: 'learner@example.com',
++      accountStatus: 'ACTIVE',
++      roles: const ['LEARNER', 'SUPPLIER'],
++      activeRole: 'SUPPLIER',
++      createdAt: DateTime(2026),
++    ),
++    accessToken: 'token',
++    hasBootstrapped: true,
++  );
++}
++
++class _FakeLikedMaterialsRepository implements LikedMaterialsRepository {
++  _FakeLikedMaterialsRepository({
++    required this.pages,
++    this.failUnlike = false,
++    Set<int>? failedPages,
++  }) : failedPages = failedPages ?? <int>{};
++
++  final Map<int, LikedMaterialsResult> pages;
++  final bool failUnlike;
++  final Set<int> failedPages;
++  final List<String> unlikedIds = [];
++
++  @override
++  Future<LikedMaterialsResult> fetchLikedMaterials({
++    required int page,
++    int limit = 20,
++  }) async {
++    if (failedPages.contains(page)) throw StateError('Page $page failed');
++    final result = pages[page];
++    if (result == null) throw StateError('Missing page $page');
++    return result;
++  }
++
++  @override
++  Future<MaterialEngagement> unlikeMaterial(
++    String id, {
++    String? recommendationImpressionId,
++  }) async {
++    if (failUnlike) throw StateError('Unlike failed');
++    unlikedIds.add(id);
++    for (final entry in pages.entries.toList()) {
++      final filtered = entry.value.items
++          .where((item) => item.material.id != id)
++          .toList(growable: false);
++      pages[entry.key] = LikedMaterialsResult(
++        items: filtered,
++        pagination: MaterialDiscoveryPagination(
++          page: entry.value.pagination.page,
++          limit: entry.value.pagination.limit,
++          total: entry.value.pagination.total > 0
++              ? entry.value.pagination.total - 1
++              : 0,
++          totalPages: entry.value.pagination.totalPages,
++        ),
++      );
++    }
++    return MaterialEngagement(materialId: id, likesCount: 0, isLiked: false);
++  }
++}
++
++LikedMaterialsResult _result(
++  List<String> ids, {
++  required int page,
++  required int total,
++  required int totalPages,
++}) {
++  return LikedMaterialsResult(
++    items: ids
++        .map(
++          (id) => LikedMaterialItem(
++            likedAt: DateTime.utc(2026, 7, 29),
++            material: MaterialDiscoveryApiMapper.fromJson(_materialJson(id)),
++          ),
++        )
++        .toList(growable: false),
++    pagination: MaterialDiscoveryPagination(
++      page: page,
++      limit: 20,
++      total: total,
++      totalPages: totalPages,
++    ),
++  );
++}
++
++Map<String, dynamic> _materialJson(String id) => {
++  'id': id,
++  'title': 'Reusable sensor $id',
++  'description': 'A reusable sensor for learning projects.',
++  'category': {
++    'id': 'category-1',
++    'nameEn': 'Electronics',
++    'nameAr': 'إلكترونيات',
++  },
++  'condition': 'GOOD',
++  'status': 'AVAILABLE',
++  'quantity': 4,
++  'availableQuantity': 4,
++  'unit': 'piece',
++  'isFree': true,
++  'price': null,
++  'city': 'Nablus',
++  'area': 'Rafidia',
++  'deliveryAvailable': false,
++  'pickupAllowed': true,
++  'imageUrl': null,
++  'supplierName': 'Workshop',
++  'viewsCount': 3,
++  'likesCount': 2,
++  'isLiked': true,
++  'createdAt': '2026-07-28T00:00:00.000Z',
++};
++
++Dio _dioWithHandler(Map<String, dynamic> Function(RequestOptions) handler) {
++  final dio = Dio();
++  dio.interceptors.add(
++    InterceptorsWrapper(
++      onRequest: (options, requestHandler) {
++        requestHandler.resolve(
++          Response<Map<String, dynamic>>(
++            requestOptions: options,
++            statusCode: 200,
++            data: handler(options),
++          ),
++        );
++      },
++    ),
++  );
++  return dio;
++}
+diff --git a/apps/frontend/test/widget_test.dart b/apps/frontend/test/widget_test.dart
+index cfdde131..289dcd8c 100644
+--- a/apps/frontend/test/widget_test.dart
++++ b/apps/frontend/test/widget_test.dart
+@@ -618,6 +618,24 @@ void main() {
+     },
+   );
+ 
++  testWidgets('supplier-only users cannot open liked materials', (tester) async {
++    await tester.binding.setSurfaceSize(const Size(1400, 900));
++    addTearDown(() => tester.binding.setSurfaceSize(null));
++
++    final router = await pumpAuthenticatedRouter(
++      tester,
++      _testUser(roles: const ['SUPPLIER'], activeRole: 'SUPPLIER'),
++    );
++
++    router.go('/materials/liked');
++    await tester.pumpAndSettle();
++
++    expect(
++      router.routeInformationProvider.value.uri.path,
++      '/home',
++    );
++  });
++
+   testWidgets('supplier users are redirected from /login to /supplier', (
+     tester,
+   ) async {
+diff --git a/lp-04a-complete-review.patch b/lp-04a-complete-review.patch
+deleted file mode 100644
+index 83be62711ed7472d603dda49d16df7f27de710c6..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 119904
+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
+znbE%0D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
+LRc=j^RY(6HWNK{2
+

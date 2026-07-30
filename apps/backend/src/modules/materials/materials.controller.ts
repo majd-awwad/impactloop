@@ -12,6 +12,7 @@ import { getRequestAbortSignal } from '../../middlewares/request-context.middlew
 import {
   checkMaterialPrice,
   getListingPolicy,
+  getLikedMaterials,
   likeMaterialById,
   getMaterialById,
   getMaterialViewerState,
@@ -21,6 +22,7 @@ import {
   unlikeMaterialById,
 } from './materials.service.js';
 import type {
+  LikedMaterialsQuery,
   MaterialsQuery,
   PriceCheckInput,
 } from './materials.validation.js';
@@ -51,6 +53,18 @@ export const listMaterials = async (
   );
 
   res.json(successResponse('Materials fetched successfully', materials));
+};
+
+export const listLikedMaterials = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const materials = await getLikedMaterials(
+    req.auth!.sub,
+    readValidatedQuery<LikedMaterialsQuery>(req),
+  );
+
+  res.json(successResponse('Liked materials fetched successfully', materials));
 };
 
 export const getMaterial = async (

@@ -9,6 +9,7 @@ import {
   ACTIVE_RESERVATION_STATUSES,
   COMPLETED_RESERVATION_STATUSES,
 } from '../reservations/reservation-status.js';
+import { countVisibleLikedMaterials as countVisibleMaterialLikes } from '../materials/materials.repository.js';
 
 export type ProfileCompletionContext = {
   displayName: string;
@@ -95,6 +96,9 @@ export const countVisibleFollowedProjects = (userId: string): Promise<number> =>
   prisma.projectFollow.count({
     where: { userId, project: PUBLIC_CONTINUE_PROJECT_WHERE },
   });
+
+export const countVisibleLikedMaterials = (userId: string): Promise<number> =>
+  countVisibleMaterialLikes(userId);
 
 export const countActiveBuilds = (userId: string): Promise<number> =>
   prisma.projectBuild.count({

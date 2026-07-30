@@ -618,6 +618,24 @@ void main() {
     },
   );
 
+  testWidgets('supplier-only users cannot open liked materials', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final router = await pumpAuthenticatedRouter(
+      tester,
+      _testUser(roles: const ['SUPPLIER'], activeRole: 'SUPPLIER'),
+    );
+
+    router.go('/materials/liked');
+    await tester.pumpAndSettle();
+
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/home',
+    );
+  });
+
   testWidgets('supplier users are redirected from /login to /supplier', (
     tester,
   ) async {

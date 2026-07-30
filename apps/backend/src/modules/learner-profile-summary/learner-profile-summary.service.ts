@@ -64,6 +64,7 @@ export type LearnerProfileSummaryRepository = {
   ) => Promise<Awaited<ReturnType<typeof summaryRepository.summarizeLearnerReservationCounts>>>;
   countVisibleSavedProjects: (userId: string) => Promise<number>;
   countVisibleFollowedProjects: (userId: string) => Promise<number>;
+  countVisibleLikedMaterials: (userId: string) => Promise<number>;
   countActiveBuilds: (userId: string) => Promise<number>;
   countCompletedBuilds: (userId: string) => Promise<number>;
   findLatestContinueProject: (
@@ -82,6 +83,7 @@ export const createLearnerProfileSummaryService = (
   const [
     hasSavedLocation,
     reservationCounts,
+    likedMaterialsCount,
     savedProjectsCount,
     followedProjectsCount,
     activeBuildsCount,
@@ -90,6 +92,7 @@ export const createLearnerProfileSummaryService = (
   ] = await Promise.all([
     repository.hasUsableSavedLocation(userId),
     repository.summarizeLearnerReservationCounts(userId),
+    repository.countVisibleLikedMaterials(userId),
     repository.countVisibleSavedProjects(userId),
     repository.countVisibleFollowedProjects(userId),
     repository.countActiveBuilds(userId),
@@ -123,6 +126,7 @@ export const createLearnerProfileSummaryService = (
     profileCompletion: calculateProfileCompletion(context, hasSavedLocation),
     journey: {
       ...reservationCounts,
+      likedMaterialsCount,
       savedProjectsCount,
       followedProjectsCount,
       activeBuildsCount,

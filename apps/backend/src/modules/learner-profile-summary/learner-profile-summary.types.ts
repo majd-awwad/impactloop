@@ -16,6 +16,7 @@ export type LearnerProfileCompletionSummary = {
 export type LearnerJourneySummary = {
   activeReservationsCount: number;
   completedReservationsCount: number;
+  likedMaterialsCount: number;
   savedProjectsCount: number;
   followedProjectsCount: number;
   activeBuildsCount: number;

@@ -14,6 +14,7 @@ const ids = {
   locations: [] as string[],
   categoryId: '',
   materialId: '',
+  hiddenMaterialId: '',
 };
 
 let learnerId = '';
@@ -128,6 +129,28 @@ before(async () => {
     },
   });
   ids.materialId = material.id;
+  await prisma.materialLike.create({
+    data: { materialId: material.id, userId: learner.id },
+  });
+  const hiddenMaterial = await prisma.material.create({
+    data: {
+      ownerId: nonLearner.id,
+      categoryId: category.id,
+      locationId: materialLocation.id,
+      title: `${marker} unavailable material`,
+      description: 'Historical like that must remain private.',
+      materialType: 'Electronics',
+      quantity: 1,
+      unit: 'piece',
+      condition: 'GOOD',
+      sourceType: 'WORKSHOP_SURPLUS',
+      status: 'UNAVAILABLE',
+    },
+  });
+  ids.hiddenMaterialId = hiddenMaterial.id;
+  await prisma.materialLike.create({
+    data: { materialId: hiddenMaterial.id, userId: learner.id },
+  });
 
   const statuses: ReservationStatus[] = [
     'PENDING',
@@ -313,10 +336,18 @@ after(async () => {
     });
   }
   if (ids.materialId) {
+    await prisma.materialLike.deleteMany({
+      where: {
+        materialId: { in: [ids.materialId, ids.hiddenMaterialId] },
+      },
+    });
     await prisma.reservation.deleteMany({
       where: { materialId: ids.materialId },
     });
     await prisma.material.deleteMany({ where: { id: ids.materialId } });
+  }
+  if (ids.hiddenMaterialId) {
+    await prisma.material.deleteMany({ where: { id: ids.hiddenMaterialId } });
   }
   await prisma.userSavedLocation.deleteMany({
     where: { userId: { in: ids.users } },
@@ -359,6 +390,7 @@ describe('GET /api/learner/profile-summary', () => {
     assert.deepEqual(body.data.journey, {
       activeReservationsCount: 5,
       completedReservationsCount: 1,
+      likedMaterialsCount: 1,
       savedProjectsCount: 2,
       followedProjectsCount: 1,
       activeBuildsCount: 2,
@@ -420,11 +452,76 @@ describe('GET /api/learner/profile-summary', () => {
     assert.deepEqual(body.data.journey, {
       activeReservationsCount: 0,
       completedReservationsCount: 0,
+      likedMaterialsCount: 0,
       savedProjectsCount: 0,
       followedProjectsCount: 0,
       activeBuildsCount: 0,
       completedBuildsCount: 0,
     });
     assert.equal(body.data.continueProject, null);
+  });
+});
+
+describe('GET /api/materials/me/liked', () => {
+  test('returns the acting learner collection with private caching', async () => {
+    const response = await fetch(
+      `${serverUrl}/api/materials/me/liked?page=1&limit=20`,
+      {
+        headers: {
+          Authorization: `Bearer ${signAccessToken({
+            sub: learnerId,
+            roles: ['LEARNER', 'SUPPLIER'],
+          })}`,
+        },
+      },
+    );
+    const body = (await response.json()) as {
+      success: boolean;
+      data: Record<string, any>;
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
+    assert.equal(body.success, true);
+    assert.equal(body.data.items.length, 1);
+    assert.equal(body.data.items[0].material.id, ids.materialId);
+    assert.equal(body.data.items[0].material.isLiked, true);
+    assert.deepEqual(body.data.pagination, {
+      page: 1,
+      limit: 20,
+      total: 1,
+      totalPages: 1,
+    });
+  });
+
+  test('rejects signed-out and non-learner callers', async () => {
+    const signedOut = await fetch(`${serverUrl}/api/materials/me/liked`);
+    assert.equal(signedOut.status, 401);
+
+    const nonLearner = await fetch(`${serverUrl}/api/materials/me/liked`, {
+      headers: {
+        Authorization: `Bearer ${signAccessToken({
+          sub: nonLearnerId,
+          roles: ['SUPPLIER'],
+        })}`,
+      },
+    });
+    assert.equal(nonLearner.status, 403);
+  });
+
+  test('does not return another learner collection', async () => {
+    const response = await fetch(`${serverUrl}/api/materials/me/liked`, {
+      headers: {
+        Authorization: `Bearer ${signAccessToken({
+          sub: emptyLearnerId,
+          roles: ['LEARNER'],
+        })}`,
+      },
+    });
+    const body = (await response.json()) as { data: Record<string, any> };
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.data.items, []);
+    assert.equal(body.data.pagination.total, 0);
   });
 });

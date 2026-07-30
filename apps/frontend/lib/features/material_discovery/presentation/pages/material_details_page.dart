@@ -29,6 +29,7 @@ import '../../../comments/domain/comment_models.dart';
 import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
+import '../../../profile/application/profile_providers.dart';
 import '../../../learning_hub/application/learning_hub_providers.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
@@ -465,6 +466,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
       }
 
       ref.invalidate(homeSuggestedMaterialsProvider);
+      ref.invalidate(learnerProfileSummaryProvider);
       setState(() {
         _materialOverride = optimisticMaterial.copyWith(
           likesCount: engagement.likesCount,

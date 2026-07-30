@@ -59,12 +59,15 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
     this.cardVariant = AppMaterialCardVariant.standard,
     this.onMaterialTap,
     this.showSupplierAttribution = true,
+    this.trailingBuilder,
   });
 
   final List<DiscoveryMaterial> materials;
   final AppMaterialCardVariant cardVariant;
   final ValueChanged<DiscoveryMaterial>? onMaterialTap;
   final bool showSupplierAttribution;
+  final Widget Function(BuildContext context, DiscoveryMaterial material)?
+  trailingBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +161,7 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
           ? materialDiscoverySupplierTapHandler(context, material)
           : null,
       onTap: onMaterialTap == null ? null : () => onMaterialTap!(material),
+      trailing: trailingBuilder?.call(context, material),
     );
   }
 
@@ -200,6 +204,7 @@ class MaterialsDiscoveryResultsGrid extends StatelessWidget {
           ? materialDiscoverySupplierTapHandler(context, material)
           : null,
       onTap: onMaterialTap == null ? null : () => onMaterialTap!(material),
+      trailing: trailingBuilder?.call(context, material),
     );
   }
 }
