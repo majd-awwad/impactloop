@@ -34,11 +34,14 @@ import {
 import { resolveSavedLocationCoordinates } from '../locations/locations.service.js';
 import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 import { normalizeSupplierVerificationStatus } from '../supplier/supplier-verification.status.js';
+<<<<<<< Updated upstream
 import {
   commitRecommendationMaterialView,
   commitRecommendationToggleTransition,
   resolveRecommendationSourceOperationId,
 } from '../recommendation-events/recommendation-events.service.js';
+=======
+>>>>>>> Stashed changes
 import * as publicSuppliersRepository from '../public-suppliers/public-suppliers.repository.js';
 
 import * as materialsRepository from './materials.repository.js';
@@ -920,6 +923,7 @@ export const getMaterialById = async (
   const [materialWithSupplier] = await attachSupplierSummariesToMappedMaterials(
     [material],
     [mappedMaterial],
+<<<<<<< Updated upstream
     undefined,
     { includeFollowersCountForSingle: true },
   );
@@ -931,6 +935,17 @@ export const getMaterialById = async (
 
   if (!viewer) {
     return publicDetail;
+=======
+    viewer,
+    { includeFollowersCountForSingle: true },
+  );
+
+  if (!viewer) {
+    return {
+      ...materialWithSupplier,
+      ...detailFields,
+    };
+>>>>>>> Stashed changes
   }
 
   const viewerState = await getMaterialViewerState(id, viewer);
@@ -989,6 +1004,7 @@ export const getMaterialViewerState = async (
   );
 
   return {
+<<<<<<< Updated upstream
     materialId: material.id,
     isLiked: likedMaterialIds.has(material.id),
     supplierFollowed: material.supplierProfileId
@@ -996,6 +1012,11 @@ export const getMaterialViewerState = async (
       : false,
     ...reserve,
     reservation: reservation ? mapLearnerReservation(reservation) : null,
+=======
+    ...materialWithSupplier,
+    ...detailFields,
+    ...reserveEnrichment,
+>>>>>>> Stashed changes
   };
 };
 

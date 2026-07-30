@@ -322,17 +322,23 @@ void main() {
   });
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   test('maps the optional recommendation impression id', () {
     final material = MaterialDiscoveryApiMapper.fromJson({
       'id': 'mat-recommended',
       'title': 'Recommended material',
       'description': 'Recommendation payload',
 =======
+=======
+>>>>>>> Stashed changes
   test('maps nested supplier summary when present', () {
     final material = MaterialDiscoveryApiMapper.fromJson({
       'id': 'mat-supplier',
       'title': 'Supplier material',
       'description': 'With supplier',
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
       'status': 'AVAILABLE',
       'quantity': 1,
@@ -340,6 +346,7 @@ void main() {
       'condition': 'GOOD',
       'isFree': true,
       'deliveryAvailable': false,
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
       'recommendationImpressionId': 'imp-material-1',
       'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
@@ -354,6 +361,8 @@ void main() {
       'title': 'Plain material',
       'description': 'Normal discovery payload',
 =======
+=======
+>>>>>>> Stashed changes
       'supplierName': 'Legacy Supplier',
       'supplierType': 'WORKSHOP',
       'supplierVerified': true,
@@ -385,6 +394,9 @@ void main() {
       'id': 'mat-flat',
       'title': 'Flat supplier material',
       'description': 'Without nested supplier',
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
       'status': 'AVAILABLE',
       'quantity': 1,
@@ -392,6 +404,7 @@ void main() {
       'condition': 'GOOD',
       'isFree': true,
       'deliveryAvailable': false,
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
       'recommendationImpressionId': '   ',
       'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
@@ -433,6 +446,8 @@ void main() {
       'title': 'Copyable material',
       'description': 'Recommendation payload',
 =======
+=======
+>>>>>>> Stashed changes
       'supplierName': 'Flat Supplier',
       'supplierType': 'INDIVIDUAL_SUPPLIER',
       'supplierVerified': false,
@@ -450,6 +465,9 @@ void main() {
       'id': 'mat-unfollowed',
       'title': 'Unfollowed supplier',
       'description': 'Supplier not followed',
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
       'status': 'AVAILABLE',
       'quantity': 1,
@@ -457,6 +475,7 @@ void main() {
       'condition': 'GOOD',
       'isFree': true,
       'deliveryAvailable': false,
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
       'recommendationImpressionId': 'imp-copy-material',
       'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
@@ -467,6 +486,8 @@ void main() {
       'imp-copy-material',
     );
 =======
+=======
+>>>>>>> Stashed changes
       'supplier': {
         'id': 'sp-2',
         'displayName': 'Supplier Two',
@@ -476,6 +497,9 @@ void main() {
     });
 
     expect(material.supplier?.isFollowedByViewer, isFalse);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
   });
 }

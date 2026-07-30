@@ -279,6 +279,7 @@ class ApiMaterialDiscoveryRepository
   }
 
   @override
+<<<<<<< Updated upstream
   Future<PublicSupplier?> fetchPublicSupplierCore(
     String supplierProfileId, {
     CancelToken? cancelToken,
@@ -329,6 +330,8 @@ class ApiMaterialDiscoveryRepository
   }
 
   @override
+=======
+>>>>>>> Stashed changes
   Future<MaterialDiscoveryResult> fetchSupplierMaterials(
     String supplierProfileId,
     MaterialDiscoveryQuery query,

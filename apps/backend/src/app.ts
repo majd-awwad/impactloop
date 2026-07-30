@@ -97,6 +97,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use(express.json());
   app.use(recommendationActionAttributionMiddleware);
 
+<<<<<<< Updated upstream
   app.use('/health', healthRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/profile', profileRouter);
@@ -121,6 +122,32 @@ export const createApp = (options: CreateAppOptions): Express => {
   app.use('/api/suppliers', publicSuppliersRouter);
   app.use('/api/supplier', supplierRouter);
   app.use('/api/admin', adminRouter);
+=======
+app.use('/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/profile', profileRouter);
+app.use('/api/categories', categoriesRouter);
+app.use('/api/material-types', materialTypesRouter);
+app.use('/api/price-rule-requests', priceRuleRequestsRouter);
+app.use('/api/invitations', invitationsRouter);
+app.use('/api/learning-projects', learningProjectsRouter);
+app.use('/api/materials', materialsRouter);
+app.use('/api/reservations', reservationsRouter);
+app.use('/api/deliveries', deliveriesRouter);
+app.use('/api/driver', driverRouter);
+app.use('/api/uploads', uploadsRouter);
+app.use('/api/locations', locationsRouter);
+app.use(
+  '/api/learner/saved-dropoff-addresses',
+  savedDropoffAddressesRouter,
+);
+app.use('/api/learner', learnerHomeRouter);
+app.use('/api/ai/v1', aiRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/suppliers', publicSuppliersRouter);
+app.use('/api/supplier', supplierRouter);
+app.use('/api/admin', adminRouter);
+>>>>>>> Stashed changes
 
   app.use(notFoundMiddleware);
   app.use(errorMiddleware);
