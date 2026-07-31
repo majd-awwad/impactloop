@@ -30,21 +30,5 @@ abstract class MaterialDiscoveryRepository {
 
   Future<SupplierFollowStatus> followSupplier(String supplierProfileId);
 
-<<<<<<< Updated upstream
-=======
-  Future<MaterialEngagement> likeMaterial(String id);
-
-  Future<MaterialEngagement> unlikeMaterial(String id);
-
-  Future<PublicSupplier?> fetchPublicSupplier(String supplierProfileId);
-
-  Future<MaterialDiscoveryResult> fetchSupplierMaterials(
-    String supplierProfileId,
-    MaterialDiscoveryQuery query,
-  );
-
-  Future<SupplierFollowStatus> followSupplier(String supplierProfileId);
-
->>>>>>> Stashed changes
   Future<SupplierFollowStatus> unfollowSupplier(String supplierProfileId);
 }

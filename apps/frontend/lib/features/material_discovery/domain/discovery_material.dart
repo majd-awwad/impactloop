@@ -8,11 +8,8 @@ import '../../../shared/widgets/materials/material_status_badge.dart';
 import 'material_discovery_constants.dart';
 import 'discovery_material_image.dart';
 
-<<<<<<< Updated upstream
 const _copyWithUnset = Object();
 
-=======
->>>>>>> Stashed changes
 class DiscoveryMaterialSupplierSummary {
   const DiscoveryMaterialSupplierSummary({
     required this.id,
@@ -292,14 +289,10 @@ class PublicSupplier {
   final int followersCount;
   final bool isFollowedByViewer;
 
-<<<<<<< Updated upstream
-  PublicSupplier copyWith({int? followersCount, bool? isFollowedByViewer}) {
-=======
   PublicSupplier copyWith({
     int? followersCount,
     bool? isFollowedByViewer,
   }) {
->>>>>>> Stashed changes
     return PublicSupplier(
       id: id,
       displayName: displayName,
@@ -376,12 +369,8 @@ class SupplierFollowStatus {
   factory SupplierFollowStatus.fromJson(Map<String, dynamic> json) {
     return SupplierFollowStatus(
       supplierProfileId: json['supplierProfileId'] as String? ?? '',
-<<<<<<< Updated upstream
       followersCount:
           PublicSupplier._intFromDynamic(json['followersCount']) ?? 0,
-=======
-      followersCount: PublicSupplier._intFromDynamic(json['followersCount']) ?? 0,
->>>>>>> Stashed changes
       isFollowedByViewer: json['isFollowedByViewer'] == true,
     );
   }

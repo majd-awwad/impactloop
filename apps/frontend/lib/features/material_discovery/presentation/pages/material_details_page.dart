@@ -25,13 +25,8 @@ import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/widgets/supplier/supplier_identity_widgets.dart';
-<<<<<<< Updated upstream
 import '../../../comments/domain/comment_models.dart';
 import '../../../comments/presentation/comments_section.dart';
-=======
-import '../../../deliveries/application/learner_deliveries_provider.dart';
-import '../../../deliveries/data/models/learner_delivery.dart';
->>>>>>> Stashed changes
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../learning_hub/application/learning_hub_providers.dart';
@@ -1415,13 +1410,9 @@ class _SupplierCardState extends ConsumerState<_SupplierCard> {
 
   Future<void> _toggleFollow() async {
     final supplierProfileId = _supplierProfileId;
-<<<<<<< Updated upstream
     if (supplierProfileId == null ||
         supplierProfileId.isEmpty ||
         _isUpdatingFollow) {
-=======
-    if (supplierProfileId == null || supplierProfileId.isEmpty || _isUpdatingFollow) {
->>>>>>> Stashed changes
       return;
     }
 
