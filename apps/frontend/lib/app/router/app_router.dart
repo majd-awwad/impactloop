@@ -35,9 +35,12 @@ import '../../features/landing/presentation/pages/landing_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
+import '../../features/material_discovery/presentation/pages/liked_materials_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
 import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
+import '../../features/profile/presentation/pages/account_settings_page.dart';
+import '../../features/profile/presentation/pages/learning_profile_page.dart';
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/profile/presentation/pages/profile_security_page.dart';
@@ -86,6 +89,7 @@ enum _RouteAccessLevel {
   public,
   authenticated,
   learner,
+  activeLearner,
   supplier,
   driver,
   admin,
@@ -153,6 +157,10 @@ bool _isAuthPage(String path) =>
     path == resetPasswordRoute;
 
 _RouteAccessLevel _routeAccessForPath(String path) {
+  if (path == learningProfileRoute || path == learnerProfileEditRoute) {
+    return _RouteAccessLevel.activeLearner;
+  }
+
   if (path == becomeSupplierRoute || path == '/supplier/onboarding') {
     return _RouteAccessLevel.authenticated;
   }
@@ -188,6 +196,7 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/') ||
       path.startsWith('/home/recommendations/') ||
+      path == '/materials/liked' ||
       path == '/ai/assistant' ||
       path == '/ai/general-learning') {
     return _RouteAccessLevel.learner;
@@ -258,6 +267,11 @@ String? _resolveProtectedRoute(
   if (accessLevel == _RouteAccessLevel.learner &&
       !_userHasLearnerRole(authState)) {
     return homeRoute;
+  }
+
+  if (accessLevel == _RouteAccessLevel.activeLearner) {
+    final user = authState.user!;
+    return activeLearnerProfileRedirect(user);
   }
 
   if (accessLevel == _RouteAccessLevel.driver &&
@@ -351,6 +365,13 @@ String? _resolveActivePortalRedirect(AuthState authState, String path) {
   }
 
   final user = authState.user!;
+
+  if (path == profileRoute) {
+    final target = profileRouteForActiveRole(user);
+    if (target != profileRoute) {
+      return target;
+    }
+  }
 
   if (user.isSupplierMode &&
       _isLearnerPortalHomePath(path) &&
@@ -566,11 +587,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
       GoRoute(
+        path: accountSettingsRoute,
+        builder: (context, state) => const AccountSettingsPage(),
+      ),
+      GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const ProfileEditPage(),
       ),
       GoRoute(
-        path: '/profile/learner/edit',
+        path: learningProfileRoute,
+        builder: (context, state) => const LearningProfilePage(),
+      ),
+      GoRoute(
+        path: learnerProfileEditRoute,
         builder: (context, state) => const LearnerProfileEditPage(),
       ),
       GoRoute(
@@ -708,6 +737,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/materials/liked',
+        builder: (context, state) => const LikedMaterialsPage(),
+      ),
+      GoRoute(
         path: '/materials/:id',
         builder: (context, state) {
           final materialId = state.pathParameters['id']!;
@@ -730,9 +763,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final supplierProfileId = state.pathParameters['supplierProfileId']!;
 
-          return PublicSupplierPage(
-            supplierProfileId: supplierProfileId,
-          );
+          return PublicSupplierPage(supplierProfileId: supplierProfileId);
         },
       ),
       GoRoute(

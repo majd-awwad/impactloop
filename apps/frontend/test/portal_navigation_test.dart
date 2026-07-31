@@ -145,4 +145,88 @@ void main() {
       },
     );
   });
+
+  group('profileRouteForActiveRole', () {
+    test('learner-active account stays on learner profile hub', () {
+      final user = _user(
+        roles: const ['LEARNER', 'SUPPLIER'],
+        activeRole: 'LEARNER',
+        canSwitchToSupplier: true,
+      );
+
+      expect(profileRouteForActiveRole(user), profileRoute);
+    });
+
+    test('supplier-active account targets its supplier profile', () {
+      final user = _user(
+        roles: const ['LEARNER', 'SUPPLIER'],
+        activeRole: 'SUPPLIER',
+        canSwitchToLearner: true,
+        canSwitchToSupplier: true,
+        supplierProfile: const SupplierProfile(
+          supplierType: 'INDIVIDUAL_SUPPLIER',
+          publicName: 'Reuse Lab',
+        ),
+      );
+
+      expect(profileRouteForActiveRole(user), supplierProfileRoute);
+    });
+
+    test('staff active roles use their existing portal targets', () {
+      expect(
+        profileRouteForActiveRole(
+          _user(roles: const ['ADMIN'], activeRole: 'ADMIN'),
+        ),
+        adminPortalRoute,
+      );
+      expect(
+        profileRouteForActiveRole(
+          _user(roles: const ['DRIVER'], activeRole: 'DRIVER'),
+        ),
+        driverPortalRoute,
+      );
+    });
+  });
+
+  group('activeLearnerProfileRedirect', () {
+    test('allows only learner-active accounts', () {
+      expect(activeLearnerProfileRedirect(_user()), isNull);
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['LEARNER', 'SUPPLIER'], activeRole: 'LEARNER'),
+        ),
+        isNull,
+      );
+    });
+
+    test('returns supplier-active accounts to their supplier profile', () {
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['LEARNER', 'SUPPLIER'], activeRole: 'SUPPLIER'),
+        ),
+        supplierProfileRoute,
+      );
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['SUPPLIER'], activeRole: 'SUPPLIER'),
+        ),
+        supplierProfileRoute,
+      );
+    });
+
+    test('returns staff accounts to their active portal', () {
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['ADMIN'], activeRole: 'ADMIN'),
+        ),
+        adminPortalRoute,
+      );
+      expect(
+        activeLearnerProfileRedirect(
+          _user(roles: const ['DRIVER'], activeRole: 'DRIVER'),
+        ),
+        driverPortalRoute,
+      );
+    });
+  });
 }

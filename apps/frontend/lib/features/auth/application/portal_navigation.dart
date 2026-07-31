@@ -46,6 +46,26 @@ String portalRouteForActiveRole(User user) {
   return homeRoute;
 }
 
+String profileRouteForActiveRole(User user) {
+  if (user.isLearnerMode && user.hasRole('LEARNER')) {
+    return profileRoute;
+  }
+
+  if (user.isSupplierMode && user.hasRole('SUPPLIER')) {
+    return supplierEntryRouteForUser(user);
+  }
+
+  return portalRouteForActiveRole(user);
+}
+
+String? activeLearnerProfileRedirect(User user) {
+  if (user.isLearnerMode && user.hasRole('LEARNER')) {
+    return null;
+  }
+
+  return profileRouteForActiveRole(user);
+}
+
 String oppositePortalSwitchRoute(User user, String targetRole) {
   final normalized = targetRole.trim().toUpperCase();
   if (normalized == 'SUPPLIER') {

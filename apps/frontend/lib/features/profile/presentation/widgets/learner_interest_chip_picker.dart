@@ -6,6 +6,9 @@ import '../../../auth/presentation/widgets/auth_form_fields.dart';
 import '../../../auth/presentation/widgets/auth_text_field.dart';
 import '../../data/models/learner_interest_options.dart';
 
+typedef LearnerInterestLabelBuilder =
+    String Function(String key, String fallbackLabel);
+
 class LearnerInterestChipPicker extends StatelessWidget {
   const LearnerInterestChipPicker({
     super.key,
@@ -16,6 +19,9 @@ class LearnerInterestChipPicker extends StatelessWidget {
     this.useAuthFields = false,
     this.label,
     this.errorText,
+    this.interestLabelBuilder,
+    this.customInterestLabel,
+    this.customInterestHint,
   });
 
   final LearnerInterestOptionsResponse options;
@@ -25,6 +31,9 @@ class LearnerInterestChipPicker extends StatelessWidget {
   final bool useAuthFields;
   final String? label;
   final String? errorText;
+  final LearnerInterestLabelBuilder? interestLabelBuilder;
+  final String? customInterestLabel;
+  final String? customInterestHint;
 
   void _toggle(String key) {
     final next = {...selectedKeys};
@@ -77,13 +86,20 @@ class LearnerInterestChipPicker extends StatelessWidget {
           children: [
             for (final item in options.flatItems)
               AuthIntentChip(
-                label: item.label,
+                label:
+                    interestLabelBuilder?.call(item.key, item.label) ??
+                    item.label,
                 isSelected: selectedKeys.contains(item.key),
                 onTap: () => _toggle(item.key),
               ),
             for (final customKey in customKeys)
               AuthIntentChip(
-                label: learnerInterestLabel(customKey),
+                label:
+                    interestLabelBuilder?.call(
+                      customKey,
+                      learnerInterestLabel(customKey),
+                    ) ??
+                    learnerInterestLabel(customKey),
                 isSelected: true,
                 onTap: () => _toggle(customKey),
               ),
@@ -94,8 +110,8 @@ class LearnerInterestChipPicker extends StatelessWidget {
           if (useAuthFields)
             AuthTextField(
               controller: customInterestController!,
-              label: 'Add another interest (optional)',
-              hint: 'Solar energy, CNC, etc.',
+              label: customInterestLabel ?? 'Add another interest (optional)',
+              hint: customInterestHint ?? 'Solar energy, CNC, etc.',
               textInputAction: TextInputAction.done,
               onChanged: (_) {},
               onFieldSubmitted: (_) => _addCustomInterest(),
@@ -103,8 +119,8 @@ class LearnerInterestChipPicker extends StatelessWidget {
           else
             AppTextField(
               controller: customInterestController!,
-              label: 'Add another interest (optional)',
-              hint: 'Solar energy, CNC, etc.',
+              label: customInterestLabel ?? 'Add another interest (optional)',
+              hint: customInterestHint ?? 'Solar energy, CNC, etc.',
               textInputAction: TextInputAction.done,
               onChanged: (_) {},
               onFieldSubmitted: (_) => _addCustomInterest(),

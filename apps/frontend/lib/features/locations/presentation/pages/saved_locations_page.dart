@@ -20,6 +20,7 @@ import '../../application/saved_locations_providers.dart';
 import '../../data/forward_geocode_result.dart';
 import '../../data/reverse_geocode_result.dart';
 import '../../data/saved_location.dart';
+import '../l10n/saved_locations_l10n.dart';
 
 const _palestineFallbackCenter = LatLng(31.9522, 35.2332);
 const _nablusFallbackCenter = LatLng(32.2211, 35.2544);
@@ -44,7 +45,7 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
       return;
     }
 
-    showInfoSnackBar(context, 'Saved location created.');
+    showInfoSnackBar(context, SavedLocationsL10n.of(context).created);
   }
 
   Future<void> _openEditDialog(SavedLocation location) async {
@@ -57,7 +58,7 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
       return;
     }
 
-    showInfoSnackBar(context, 'Saved location updated.');
+    showInfoSnackBar(context, SavedLocationsL10n.of(context).updated);
   }
 
   Future<void> _setDefault(SavedLocation location) async {
@@ -76,14 +77,17 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
         return;
       }
 
-      showInfoSnackBar(context, 'Default location updated.');
+      showInfoSnackBar(context, SavedLocationsL10n.of(context).defaultUpdated);
     } on ApiException catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
       }
     } catch (_) {
       if (mounted) {
-        showErrorSnackBar(context, 'Could not update the default location.');
+        showErrorSnackBar(
+          context,
+          SavedLocationsL10n.of(context).updateDefaultFailed,
+        );
       }
     } finally {
       if (mounted) {
@@ -117,14 +121,17 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
         return;
       }
 
-      showInfoSnackBar(context, 'Saved location deleted.');
+      showInfoSnackBar(context, SavedLocationsL10n.of(context).deleted);
     } on ApiException catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
       }
     } catch (_) {
       if (mounted) {
-        showErrorSnackBar(context, 'Could not delete the saved location.');
+        showErrorSnackBar(
+          context,
+          SavedLocationsL10n.of(context).deleteFailed,
+        );
       }
     } finally {
       if (mounted) {
@@ -135,10 +142,12 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
     final locationsAsync = ref.watch(savedLocationsProvider);
 
     return ProfileSubpageScaffold(
-      title: 'Saved locations',
+      title: l10n.pageTitle,
+      backTooltip: l10n.back,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -184,6 +193,7 @@ class _SavedLocationsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
     if (locations.isEmpty) {
       return _EmptySavedLocations(onCreate: onCreate);
     }
@@ -196,7 +206,7 @@ class _SavedLocationsContent extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: onCreate,
             icon: const Icon(Icons.add_location_alt_outlined),
-            label: const Text('Add location'),
+            label: Text(l10n.addLocation),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -237,6 +247,7 @@ class _SavedLocationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = SavedLocationsL10n.of(context);
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -300,7 +311,7 @@ class _SavedLocationCard extends StatelessWidget {
               ),
             ],
           ),
-          if (_privateDetails(location).isNotEmpty) ...[
+          if (_privateDetails(context, location).isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
               width: double.infinity,
@@ -313,7 +324,7 @@ class _SavedLocationCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Private exact details',
+                    l10n.privateExactDetails,
                     style: AppTextStyles.label(context).copyWith(
                       color: colors.textPrimary,
                       fontWeight: FontWeight.w800,
@@ -321,7 +332,7 @@ class _SavedLocationCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  for (final detail in _privateDetails(location))
+                  for (final detail in _privateDetails(context, location))
                     Padding(
                       padding: const EdgeInsetsDirectional.only(
                         bottom: AppSpacing.xs,
@@ -351,7 +362,7 @@ class _SavedLocationCard extends StatelessWidget {
                   AppStatusTone.neutral,
                 ),
                 icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
-                label: const Text('Edit'),
+                label: Text(l10n.edit),
               ),
               OutlinedButton.icon(
                 onPressed: location.isDefault || _isSettingDefault
@@ -368,7 +379,7 @@ class _SavedLocationCard extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check_circle_outline, size: 18),
-                label: const Text('Set default'),
+                label: Text(l10n.setDefault),
               ),
               TextButton.icon(
                 onPressed: _isDeleting ? null : onDelete,
@@ -379,7 +390,7 @@ class _SavedLocationCard extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.delete_outline, size: 18),
-                label: const Text('Delete'),
+                label: Text(l10n.delete),
                 style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
               ),
             ],
@@ -397,16 +408,22 @@ class _SavedLocationCard extends StatelessWidget {
     ].join(' - ');
   }
 
-  static List<String> _privateDetails(SavedLocation location) {
+  static List<String> _privateDetails(
+    BuildContext context,
+    SavedLocation location,
+  ) {
+    final l10n = SavedLocationsL10n.of(context);
     final details = <String>[];
     final addressLine = location.addressLine?.trim();
     if (addressLine != null && addressLine.isNotEmpty) {
-      details.add('Address: $addressLine');
+      details.add(l10n.address(addressLine));
     }
     if (location.latitude != null && location.longitude != null) {
       details.add(
-        'Coordinates: ${location.latitude!.toStringAsFixed(6)}, '
-        '${location.longitude!.toStringAsFixed(6)}',
+        l10n.coordinates(
+          '${location.latitude!.toStringAsFixed(6)}, '
+          '${location.longitude!.toStringAsFixed(6)}',
+        ),
       );
     }
     return details;
@@ -524,8 +541,9 @@ class _SavedLocationFormDialogState
       }
 
       setState(() {
-        _formError =
-            'Coordinates were selected, but address lookup failed: ${error.displayMessage}';
+        _formError = SavedLocationsL10n.of(
+          context,
+        ).reverseLookupFailed(error.displayMessage);
       });
     } catch (_) {
       if (!mounted) {
@@ -533,8 +551,9 @@ class _SavedLocationFormDialogState
       }
 
       setState(() {
-        _formError =
-            'Coordinates were selected, but address lookup failed. You can save them manually.';
+        _formError = SavedLocationsL10n.of(
+          context,
+        ).reverseLookupFailedFallback;
       });
     } finally {
       if (mounted) {
@@ -551,7 +570,7 @@ class _SavedLocationFormDialogState
     final city = _cityController.text.trim();
     if (city.isEmpty) {
       setState(() {
-        _cityError = 'City is required before looking up coordinates';
+        _cityError = SavedLocationsL10n.of(context).cityRequiredForLookup;
       });
       return;
     }
@@ -587,8 +606,9 @@ class _SavedLocationFormDialogState
       }
 
       setState(() {
-        _formError =
-            'Could not find coordinates for this typed address: ${error.displayMessage}';
+        _formError = SavedLocationsL10n.of(
+          context,
+        ).forwardLookupFailed(error.displayMessage);
       });
     } catch (_) {
       if (!mounted) {
@@ -596,8 +616,9 @@ class _SavedLocationFormDialogState
       }
 
       setState(() {
-        _formError =
-            'Could not find coordinates for this typed address. Try adding area/street details or pick a point on the map.';
+        _formError = SavedLocationsL10n.of(
+          context,
+        ).forwardLookupFailedFallback;
       });
     } finally {
       if (mounted) {
@@ -729,17 +750,17 @@ class _SavedLocationFormDialogState
 
       setState(() {
         _isSubmitting = false;
-        _formError = _isEditing
-            ? 'Could not update this saved location.'
-            : 'Could not create this saved location.';
+        final l10n = SavedLocationsL10n.of(context);
+        _formError = _isEditing ? l10n.updateFailed : l10n.createFailed;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
     return AppDialogShell(
-      title: Text(_isEditing ? 'Edit saved location' : 'Add saved location'),
+      title: Text(_isEditing ? l10n.editLocation : l10n.addLocation),
       maxWidth: 520,
       onClose: () => Navigator.of(context).pop(),
       closeEnabled: !_isSubmitting,
@@ -751,51 +772,51 @@ class _SavedLocationFormDialogState
           children: [
             AppTextField(
               controller: _labelController,
-              label: 'Label',
-              hint: 'Home, Workshop, Campus',
+              label: l10n.label,
+              hint: l10n.labelHint,
               textInputAction: TextInputAction.next,
               errorText: _labelError,
-              validator: _required('Label is required'),
+              validator: _required(l10n.labelRequired),
               onChanged: (_) => _clearServerErrors(),
             ),
             const AppFieldGap(),
             AppTextField(
               controller: _cityController,
-              label: 'City',
+              label: l10n.city,
               textInputAction: TextInputAction.next,
               errorText: _cityError,
-              validator: _required('City is required'),
+              validator: _required(l10n.cityRequired),
               onChanged: (_) => _clearServerErrors(),
             ),
             const AppFieldGap(),
             AppTextField(
               controller: _areaController,
-              label: 'Area',
-              hint: 'Optional',
+              label: l10n.area,
+              hint: l10n.optional,
               textInputAction: TextInputAction.next,
               onChanged: (_) => _clearServerErrors(),
             ),
             const AppFieldGap(),
             AppTextField(
               controller: _addressController,
-              label: 'Exact address',
-              hint: 'Private, optional',
+              label: l10n.exactAddress,
+              hint: l10n.privateOptional,
               textInputAction: TextInputAction.next,
               onChanged: (_) => _clearServerErrors(),
             ),
             const AppFieldGap(),
             AppTextField(
               controller: _countryController,
-              label: 'Country',
+              label: l10n.country,
               textInputAction: TextInputAction.next,
-              validator: _required('Country is required'),
+              validator: _required(l10n.countryRequired),
               onChanged: (_) => _clearServerErrors(),
             ),
             const AppFieldGap(),
             AppTextField(
               controller: _latitudeController,
-              label: 'Latitude',
-              hint: 'Optional exact coordinate',
+              label: l10n.latitude,
+              hint: l10n.optionalExactCoordinate,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
                 signed: true,
@@ -807,7 +828,7 @@ class _SavedLocationFormDialogState
                 min: -90,
                 max: 90,
                 missingPairController: _longitudeController,
-                missingPairMessage: 'Longitude is required with latitude',
+                missingPairMessage: l10n.longitudeRequired,
               ),
               onChanged: (_) {
                 _clearServerErrors();
@@ -817,8 +838,8 @@ class _SavedLocationFormDialogState
             const AppFieldGap(),
             AppTextField(
               controller: _longitudeController,
-              label: 'Longitude',
-              hint: 'Optional exact coordinate',
+              label: l10n.longitude,
+              hint: l10n.optionalExactCoordinate,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
                 signed: true,
@@ -830,7 +851,7 @@ class _SavedLocationFormDialogState
                 min: -180,
                 max: 180,
                 missingPairController: _latitudeController,
-                missingPairMessage: 'Latitude is required with longitude',
+                missingPairMessage: l10n.latitudeRequired,
               ),
               onFieldSubmitted: (_) => _submit(),
               onChanged: (_) {
@@ -854,7 +875,7 @@ class _SavedLocationFormDialogState
               onChanged: (value) {
                 setState(() => _isDefault = value ?? false);
               },
-              title: const Text('Use as default saved location'),
+              title: Text(l10n.useAsDefault),
               controlAffinity: ListTileControlAffinity.leading,
             ),
             if (_formError != null) ...[
@@ -874,7 +895,7 @@ class _SavedLocationFormDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(_isEditing ? 'Save changes' : 'Create location'),
+              : Text(_isEditing ? l10n.saveChanges : l10n.createLocation),
         ),
       ),
     );
@@ -905,10 +926,13 @@ class _SavedLocationFormDialogState
 
     final parsed = double.tryParse(normalized);
     if (parsed == null) {
-      return 'Enter a valid number';
+      return SavedLocationsL10n.of(context).invalidNumber;
     }
     if (parsed < min || parsed > max) {
-      return 'Must be between ${min.toStringAsFixed(0)} and ${max.toStringAsFixed(0)}';
+      return SavedLocationsL10n.of(context).numberRange(
+        min.toStringAsFixed(0),
+        max.toStringAsFixed(0),
+      );
     }
 
     return null;
@@ -944,6 +968,7 @@ class _SavedLocationMapLauncher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = SavedLocationsL10n.of(context);
     final hasCoordinates = latitude != null && longitude != null;
     final isLookingUp = isForwardGeocoding || isReverseGeocoding;
 
@@ -964,7 +989,7 @@ class _SavedLocationMapLauncher extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Map point',
+                  l10n.mapPoint,
                   style: AppTextStyles.label(context).copyWith(
                     color: colors.textPrimary,
                     fontWeight: FontWeight.w800,
@@ -974,12 +999,12 @@ class _SavedLocationMapLauncher extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   isForwardGeocoding
-                      ? 'Finding coordinates from typed address...'
+                      ? l10n.findingTypedAddress
                       : isReverseGeocoding
-                      ? 'Looking up address for selected point...'
+                      ? l10n.lookingUpPoint
                       : hasCoordinates
                       ? '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}'
-                      : 'Type city/area/street to find coordinates, or pick a point on the map.',
+                      : l10n.mapHelp,
                   style: AppTextStyles.label(context).copyWith(
                     color: colors.textSecondary,
                     fontWeight: FontWeight.w600,
@@ -994,7 +1019,7 @@ class _SavedLocationMapLauncher extends StatelessWidget {
                     OutlinedButton.icon(
                       onPressed: isLookingUp ? null : onFindTypedAddress,
                       icon: const Icon(Icons.travel_explore_rounded, size: 18),
-                      label: const Text('Find typed address'),
+                      label: Text(l10n.findTypedAddress),
                     ),
                     OutlinedButton.icon(
                       onPressed: isLookingUp ? null : onPickMap,
@@ -1003,7 +1028,7 @@ class _SavedLocationMapLauncher extends StatelessWidget {
                         size: 18,
                       ),
                       label: Text(
-                        hasCoordinates ? 'Change map point' : 'Pick on map',
+                        hasCoordinates ? l10n.changeMapPoint : l10n.pickOnMap,
                       ),
                     ),
                   ],
@@ -1041,10 +1066,11 @@ class _SavedLocationMapDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = SavedLocationsL10n.of(context);
 
     return AppDialogShell(
       title: Text(
-        'Pick exact point',
+        l10n.pickExactPoint,
         style: AppTextStyles.title(
           context,
         ).copyWith(color: colors.textPrimary, fontSize: 22),
@@ -1055,7 +1081,7 @@ class _SavedLocationMapDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Tap the map to set private exact coordinates. The app will reverse-geocode the point into readable fields when possible.',
+            l10n.mapPrivacyHelp,
             style: AppTextStyles.body(
               context,
             ).copyWith(color: colors.textSecondary),
@@ -1121,7 +1147,7 @@ class _SavedLocationMapPickerState extends State<_SavedLocationMapPicker> {
     return widget.city.trim().toLowerCase() == 'nablus' ? 12 : 8;
   }
 
-  String get _summary {
+  String _summary(BuildContext context) {
     if (widget.hasCoordinates) {
       return '${widget.latitude!.toStringAsFixed(6)}, '
           '${widget.longitude!.toStringAsFixed(6)}';
@@ -1133,7 +1159,7 @@ class _SavedLocationMapPickerState extends State<_SavedLocationMapPicker> {
       if (widget.country.trim().isNotEmpty) widget.country.trim(),
     ];
     return parts.isEmpty
-        ? 'Tap the map to choose exact coordinates.'
+        ? SavedLocationsL10n.of(context).tapMapToChoose
         : parts.join(' - ');
   }
 
@@ -1168,6 +1194,7 @@ class _SavedLocationMapPickerState extends State<_SavedLocationMapPicker> {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = SavedLocationsL10n.of(context);
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.sm),
@@ -1189,7 +1216,7 @@ class _SavedLocationMapPickerState extends State<_SavedLocationMapPicker> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pick exact point on map',
+                      l10n.pickExactPointOnMap,
                       style: AppTextStyles.label(context).copyWith(
                         color: colors.textPrimary,
                         fontWeight: FontWeight.w800,
@@ -1199,8 +1226,8 @@ class _SavedLocationMapPickerState extends State<_SavedLocationMapPicker> {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       widget.isReverseGeocoding
-                          ? 'Looking up address for selected point...'
-                          : _summary,
+                          ? l10n.lookingUpPoint
+                          : _summary(context),
                       style: AppTextStyles.label(context).copyWith(
                         color: colors.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -1268,7 +1295,7 @@ class _SavedLocationMapPickerState extends State<_SavedLocationMapPicker> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Tap the map to set private exact coordinates. The app will reverse-geocode the point into readable fields when possible.',
+            l10n.mapPrivacyHelp,
             style: AppTextStyles.label(context).copyWith(
               color: colors.textMuted,
               fontWeight: FontWeight.w600,
@@ -1326,22 +1353,23 @@ class _DeleteSavedLocationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
     return AlertDialog(
-      title: const Text('Delete saved location?'),
+      title: Text(l10n.deleteTitle),
       content: Text(
         location.isDefault
-            ? 'This is your default saved location. Deleting it may make another saved location the default.'
-            : 'This removes "${location.label}" from your private saved locations.',
+            ? l10n.deleteDefaultBody
+            : l10n.deleteBody(location.label),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-          child: const Text('Delete'),
+          child: Text(l10n.delete),
         ),
       ],
     );
@@ -1352,6 +1380,7 @@ class _PrivacyNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = SavedLocationsL10n.of(context);
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -1366,8 +1395,7 @@ class _PrivacyNotice extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'Exact address and coordinates are private account data. '
-              'Public material browsing uses only safe approximate location fields.',
+              l10n.privacyBody,
               style: AppTextStyles.label(context).copyWith(
                 color: colors.textPrimary,
                 height: 1.35,
@@ -1388,6 +1416,7 @@ class _DefaultBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = SavedLocationsL10n.of(context);
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -1399,7 +1428,7 @@ class _DefaultBadge extends StatelessWidget {
         borderRadius: AppRadius.pillAll,
       ),
       child: Text(
-        'Default',
+        l10n.defaultLabel,
         style: AppTextStyles.label(context).copyWith(
           color: colors.primary,
           fontSize: 11,
@@ -1419,6 +1448,7 @@ class _EmptySavedLocations extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
+    final l10n = SavedLocationsL10n.of(context);
 
     return ProfileEditCard(
       child: Column(
@@ -1430,7 +1460,7 @@ class _EmptySavedLocations extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'No saved locations yet',
+            l10n.emptyTitle,
             style: AppTextStyles.title(
               context,
             ).copyWith(color: colors.textPrimary),
@@ -1438,14 +1468,14 @@ class _EmptySavedLocations extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Add a private location to reuse it when sorting materials by nearest first.',
+            l10n.emptyBody,
             style: AppTextStyles.body(
               context,
             ).copyWith(color: colors.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.lg),
-          AppPrimaryButton(label: 'Add location', onPressed: onCreate),
+          AppPrimaryButton(label: l10n.addLocation, onPressed: onCreate),
         ],
       ),
     );
@@ -1471,6 +1501,7 @@ class _SavedLocationsError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
     return ProfileEditCard(
       child: Column(
         children: [
@@ -1479,7 +1510,7 @@ class _SavedLocationsError extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ],
       ),

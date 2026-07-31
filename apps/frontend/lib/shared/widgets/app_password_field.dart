@@ -15,6 +15,8 @@ class AppPasswordField extends StatefulWidget {
     this.onChanged,
     this.obscureOverride,
     this.onToggleVisibility,
+    this.showPasswordLabel = 'Show password',
+    this.hidePasswordLabel = 'Hide password',
   });
 
   final TextEditingController controller;
@@ -27,6 +29,8 @@ class AppPasswordField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final bool? obscureOverride;
   final VoidCallback? onToggleVisibility;
+  final String showPasswordLabel;
+  final String hidePasswordLabel;
 
   @override
   State<AppPasswordField> createState() => _AppPasswordFieldState();
@@ -38,7 +42,9 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
   @override
   Widget build(BuildContext context) {
     final obscure = widget.obscureOverride ?? _obscure;
-    final tooltip = obscure ? 'Show password' : 'Hide password';
+    final tooltip = obscure
+        ? widget.showPasswordLabel
+        : widget.hidePasswordLabel;
 
     return AppTextField(
       controller: widget.controller,

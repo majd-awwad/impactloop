@@ -43,6 +43,7 @@ import * as publicSuppliersRepository from '../public-suppliers/public-suppliers
 
 import * as materialsRepository from './materials.repository.js';
 import type {
+  LikedMaterialsQuery,
   MaterialsQuery,
   PriceCheckInput,
 } from './materials.validation.js';
@@ -889,6 +890,57 @@ export const getMaterials = async (
     },
   };
 };
+
+export type LikedMaterialsServiceDependencies = {
+  findVisibleLikedMaterials: (
+    userId: string,
+    query: LikedMaterialsQuery,
+  ) => Promise<
+    Awaited<ReturnType<typeof materialsRepository.findVisibleLikedMaterials>>
+  >;
+  countVisibleLikedMaterials: (userId: string) => Promise<number>;
+  getHeldQuantitiesByMaterialIds: (
+    materialIds: string[],
+  ) => Promise<Awaited<ReturnType<typeof getHeldQuantitiesByMaterialIds>>>;
+};
+
+export const createLikedMaterialsService = (
+  dependencies: LikedMaterialsServiceDependencies,
+) => async (userId: string, query: LikedMaterialsQuery) => {
+  const [likes, total] = await Promise.all([
+    dependencies.findVisibleLikedMaterials(userId, query),
+    dependencies.countVisibleLikedMaterials(userId),
+  ]);
+  const materialIds = likes.map((like) => like.materialId);
+  const heldByMaterialId =
+    await dependencies.getHeldQuantitiesByMaterialIds(materialIds);
+
+  return {
+    items: likes.map((like) => ({
+      likedAt: like.createdAt.toISOString(),
+      material: mapMaterial(
+        like.material,
+        heldByMaterialId.get(like.materialId) ?? toDecimal(0),
+        {
+          likesCount: like.material._count.likes,
+          isLiked: true,
+        },
+      ),
+    })),
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      totalPages: total === 0 ? 0 : Math.ceil(total / query.limit),
+    },
+  };
+};
+
+export const getLikedMaterials = createLikedMaterialsService({
+  findVisibleLikedMaterials: materialsRepository.findVisibleLikedMaterials,
+  countVisibleLikedMaterials: materialsRepository.countVisibleLikedMaterials,
+  getHeldQuantitiesByMaterialIds,
+});
 
 export const getMaterialById = async (
   id: string,

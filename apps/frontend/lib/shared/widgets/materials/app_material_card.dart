@@ -290,6 +290,10 @@ class ImpactMaterialCompactCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final includesSupplierAttribution =
         supplierDisplayName != null && supplierDisplayName!.trim().isNotEmpty;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final scaledHeightAdjustment = trailing == null
+        ? 0.0
+        : ((textScale - 1).clamp(0.0, 1.0) * 104);
 
     return Semantics(
       button: onTap != null,
@@ -297,9 +301,11 @@ class ImpactMaterialCompactCard extends StatelessWidget {
           '$title, $category, $conditionLabel, $locationLabel, '
           '$priceLabel, $statusLabel',
       child: SizedBox(
-        height: heightFor(
-          includesSupplierAttribution: includesSupplierAttribution,
-        ),
+        height:
+            heightFor(
+              includesSupplierAttribution: includesSupplierAttribution,
+            ) +
+            scaledHeightAdjustment,
         child: Material(
           color: Colors.transparent,
           child: Ink(
@@ -315,113 +321,130 @@ class ImpactMaterialCompactCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Stack(
               children: [
-                _CompactCardMedia(
-                  imageUrl: imageUrl,
-                  gradientColors: gradientColors,
-                  fallbackIcon: fallbackIcon,
-                ),
-                Expanded(
-                  child: Column(
+                Positioned.fill(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      _CompactCardMedia(
+                        imageUrl: imageUrl,
+                        gradientColors: gradientColors,
+                        fallbackIcon: fallbackIcon,
+                      ),
                       Expanded(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: onTap,
-                            child: Padding(
-                              padding: const EdgeInsetsDirectional.fromSTEB(
-                                AppSpacing.md,
-                                AppSpacing.sm + AppSpacing.xs,
-                                AppSpacing.sm + AppSpacing.xs,
-                                AppSpacing.sm + AppSpacing.xs,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    title,
-                                    style: textTheme.titleMedium?.copyWith(
-                                      color: palette.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                      height: 1.18,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                    maxLines: title.runes.length > 34 ? 2 : 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '$category · $conditionLabel',
-                                    style: textTheme.labelMedium?.copyWith(
-                                      color: palette.textSecondary,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.2,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 5),
-                                  if (locationLabel.isNotEmpty)
-                                    _CompactLocationLine(label: locationLabel)
-                                  else if (quantityLabel.isNotEmpty)
-                                    Text(
-                                      quantityLabel,
-                                      style: textTheme.labelMedium?.copyWith(
-                                        color: palette.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                        height: 1.2,
-                                      ),
-                                      textAlign: TextAlign.start,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  const Spacer(),
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: Align(
-                                          alignment:
-                                              AlignmentDirectional.centerStart,
-                                          child: _CompactPriceBadge(
-                                            label: priceLabel,
-                                            isFree: isFree,
-                                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: onTap,
+                                  child: Padding(
+                                    padding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                          AppSpacing.md,
+                                          AppSpacing.sm + AppSpacing.xs,
+                                          AppSpacing.sm + AppSpacing.xs,
+                                          AppSpacing.sm + AppSpacing.xs,
                                         ),
-                                      ),
-                                      const SizedBox(width: AppSpacing.sm),
-                                      _CompactEngagementBadge(
-                                        viewsCount: viewsCount,
-                                        likesCount: likesCount,
-                                        isLiked: isLiked,
-                                      ),
-                                      const SizedBox(width: AppSpacing.sm),
-                                      _CompactViewAffordance(
-                                        color: palette.mint,
-                                      ),
-                                    ],
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          title,
+                                          style: textTheme.titleMedium
+                                              ?.copyWith(
+                                                color: palette.textPrimary,
+                                                fontWeight: FontWeight.w600,
+                                                height: 1.18,
+                                              ),
+                                          textAlign: TextAlign.start,
+                                          maxLines: title.runes.length > 34
+                                              ? 2
+                                              : 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '$category · $conditionLabel',
+                                          style: textTheme.labelMedium
+                                              ?.copyWith(
+                                                color: palette.textSecondary,
+                                                fontWeight: FontWeight.w500,
+                                                height: 1.2,
+                                              ),
+                                          textAlign: TextAlign.start,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 5),
+                                        if (locationLabel.isNotEmpty)
+                                          _CompactLocationLine(
+                                            label: locationLabel,
+                                          )
+                                        else if (quantityLabel.isNotEmpty)
+                                          Text(
+                                            quantityLabel,
+                                            style: textTheme.labelMedium
+                                                ?.copyWith(
+                                                  color: palette.textSecondary,
+                                                  fontWeight: FontWeight.w500,
+                                                  height: 1.2,
+                                                ),
+                                            textAlign: TextAlign.start,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        const Spacer(),
+                                        Wrap(
+                                          spacing: AppSpacing.sm,
+                                          runSpacing: AppSpacing.xs,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            _CompactPriceBadge(
+                                              label: priceLabel,
+                                              isFree: isFree,
+                                            ),
+                                            _CompactEngagementBadge(
+                                              viewsCount: viewsCount,
+                                              likesCount: likesCount,
+                                              isLiked: isLiked,
+                                            ),
+                                            _CompactViewAffordance(
+                                              color: palette.mint,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
+                            if (includesSupplierAttribution)
+                              _MaterialSupplierAttributionBar(
+                                displayName: supplierDisplayName!,
+                                avatarUrl: supplierAvatarUrl,
+                                isVerified: supplierVerified,
+                                onTap: onSupplierTap,
+                                compact: true,
+                              ),
+                          ],
                         ),
                       ),
-                      if (includesSupplierAttribution)
-                        _MaterialSupplierAttributionBar(
-                          displayName: supplierDisplayName!,
-                          avatarUrl: supplierAvatarUrl,
-                          isVerified: supplierVerified,
-                          onTap: onSupplierTap,
-                          compact: true,
-                        ),
                     ],
                   ),
                 ),
+                if (trailing != null)
+                  PositionedDirectional(
+                    top: AppSpacing.xs,
+                    start: AppSpacing.xs,
+                    child: trailing!,
+                  ),
               ],
             ),
           ),
@@ -655,60 +678,72 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: AppRadius.lgAll,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: widget.onTap,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _GridCardMedia(
-                            category: widget.category,
-                            priceLabel: widget.priceLabel,
-                            isFree: widget.isFree,
-                            imageUrl: widget.imageUrl,
-                            gradientColors: widget.gradientColors,
-                            fallbackIcon: widget.fallbackIcon,
-                            hovered: _hovered,
-                            viewsCount: widget.viewsCount,
-                            likesCount: widget.likesCount,
-                            isLiked: widget.isLiked,
-                          ),
-                          Expanded(
-                            child: _GridCardContent(
-                              title: widget.title,
-                              category: widget.category,
-                              conditionLabel: widget.conditionLabel,
-                              statusLabel: widget.statusLabel,
-                              statusTone: widget.statusTone,
-                              quantityLabel: widget.quantityLabel,
-                              locationLabel: widget.locationLabel,
-                              availabilityLabel: widget.availabilityLabel,
-                              deliveryAvailable: widget.deliveryAvailable,
-                              compact: compact,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: AppRadius.lgAll,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: widget.onTap,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _GridCardMedia(
+                                  category: widget.category,
+                                  priceLabel: widget.priceLabel,
+                                  isFree: widget.isFree,
+                                  imageUrl: widget.imageUrl,
+                                  gradientColors: widget.gradientColors,
+                                  fallbackIcon: widget.fallbackIcon,
+                                  hovered: _hovered,
+                                  viewsCount: widget.viewsCount,
+                                  likesCount: widget.likesCount,
+                                  isLiked: widget.isLiked,
+                                ),
+                                Expanded(
+                                  child: _GridCardContent(
+                                    title: widget.title,
+                                    category: widget.category,
+                                    conditionLabel: widget.conditionLabel,
+                                    statusLabel: widget.statusLabel,
+                                    statusTone: widget.statusTone,
+                                    quantityLabel: widget.quantityLabel,
+                                    locationLabel: widget.locationLabel,
+                                    availabilityLabel: widget.availabilityLabel,
+                                    deliveryAvailable: widget.deliveryAvailable,
+                                    compact: compact,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (_showsSupplierAttribution)
+                        _MaterialSupplierAttributionBar(
+                          displayName: widget.supplierDisplayName!,
+                          avatarUrl: widget.supplierAvatarUrl,
+                          isVerified: widget.supplierVerified,
+                          onTap: widget.onSupplierTap,
+                          compact: compact,
+                        ),
+                    ],
                   ),
                 ),
-                if (_showsSupplierAttribution)
-                  _MaterialSupplierAttributionBar(
-                    displayName: widget.supplierDisplayName!,
-                    avatarUrl: widget.supplierAvatarUrl,
-                    isVerified: widget.supplierVerified,
-                    onTap: widget.onSupplierTap,
-                    compact: compact,
-                  ),
-              ],
-            ),
+              ),
+              if (widget.trailing != null)
+                PositionedDirectional(
+                  top: 52,
+                  end: AppSpacing.sm,
+                  child: widget.trailing!,
+                ),
+            ],
           ),
         ),
       ),
