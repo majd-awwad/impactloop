@@ -52,6 +52,13 @@ before(async () => {
 after(async () => {
   const ids = [adminUserId, learnerUserId].filter(Boolean);
   if (ids.length) {
+    await prisma.userRoleAssignment.deleteMany({
+      where: { userId: { in: ids } },
+    });
+    await prisma.learnerProfile.deleteMany({ where: { userId: { in: ids } } });
+    await prisma.adminActivityLog.deleteMany({
+      where: { actorUserId: { in: ids } },
+    });
     await prisma.user.deleteMany({ where: { id: { in: ids } } });
   }
 });
@@ -64,15 +71,12 @@ const request = async (
   try {
     const address = server.address();
     assert.ok(address && typeof address === 'object');
-    const response = await fetch(
-      `http://127.0.0.1:${address.port}${path}`,
-      {
-        method: options.method ?? 'GET',
-        headers: options.token
-          ? { Authorization: `Bearer ${options.token}` }
-          : undefined,
-      },
-    );
+    const response = await fetch(`http://127.0.0.1:${address.port}${path}`, {
+      method: options.method ?? 'GET',
+      headers: options.token
+        ? { Authorization: `Bearer ${options.token}` }
+        : undefined,
+    });
     const contentType = response.headers.get('content-type') ?? '';
     const body = contentType.includes('application/json')
       ? await response.json()
@@ -98,34 +102,65 @@ describe('admin reservations export HTTP auth', () => {
     assert.equal(result.status, 403);
   });
 
-  test('preflight succeeds for admin', async () => {
-    const result = await request('/api/admin/reservations/export/preflight', {
-      token: adminToken,
-    });
+  test('preflight succeeds for admin and includes pdf eligibility', async () => {
+    const result = await request(
+      `/api/admin/reservations/export/preflight?search=${encodeURIComponent(TEST_MARKER)}`,
+      { token: adminToken },
+    );
     assert.equal(result.status, 200);
     assert.equal((result.body as { success?: boolean }).success, true);
-    const data = (result.body as { data?: { formats?: unknown } }).data;
-    assert.ok(data?.formats);
+    const data = (
+      result.body as {
+        data?: { formats?: Record<string, unknown> };
+      }
+    ).data;
+    assert.ok(data?.formats?.xlsx);
+    assert.ok(data?.formats?.csv);
+    assert.ok(data?.formats?.pdf);
   });
 
   test('export csv succeeds for admin', async () => {
     const result = await request(
-      '/api/admin/reservations/export?format=csv&search=no-such-marker-xyz',
+      `/api/admin/reservations/export?format=csv&search=${encodeURIComponent(`${TEST_MARKER}-none`)}`,
       { token: adminToken },
     );
-    // Zero matching rows still returns empty CSV file with headers
     assert.equal(result.status, 200);
     assert.match(result.contentType, /text\/csv/);
   });
 
-  test('export pdf returns application/pdf for admin', async () => {
+  test('export xlsx succeeds for admin', async () => {
     const result = await request(
-      '/api/admin/reservations/export?format=pdf&search=no-such-marker-xyz',
+      `/api/admin/reservations/export?format=xlsx&search=${encodeURIComponent(`${TEST_MARKER}-none`)}`,
+      { token: adminToken },
+    );
+    assert.equal(result.status, 200);
+    assert.match(
+      result.contentType,
+      /spreadsheetml\.sheet|application\/octet-stream/,
+    );
+    assert.ok(Buffer.isBuffer(result.body));
+    assert.equal((result.body as Buffer).subarray(0, 2).toString('utf8'), 'PK');
+  });
+
+  test('export pdf succeeds for admin when under limit', async () => {
+    const result = await request(
+      `/api/admin/reservations/export?format=pdf&search=${encodeURIComponent(`${TEST_MARKER}-none`)}`,
       { token: adminToken },
     );
     assert.equal(result.status, 200);
     assert.match(result.contentType, /application\/pdf/);
     assert.ok(Buffer.isBuffer(result.body));
-    assert.equal((result.body as Buffer).subarray(0, 5).toString('utf8'), '%PDF-');
+    assert.equal(
+      (result.body as Buffer).subarray(0, 5).toString('utf8'),
+      '%PDF-',
+    );
+  });
+
+  test('invalid reservation status is rejected', async () => {
+    const result = await request(
+      '/api/admin/reservations/export/preflight?status=AWAITING_RESOLUTION',
+      { token: adminToken },
+    );
+    assert.ok(result.status === 400 || result.status === 422);
   });
 });

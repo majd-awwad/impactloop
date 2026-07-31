@@ -307,16 +307,11 @@ class IncidentReportsExportCenterFilters {
 abstract final class AdminExportCenterOptions {
   static const reservationStatuses = <String>[
     'PENDING',
-    'AWAITING_LEARNER_CONFIRMATION',
-    'AWAITING_SUPPLIER_CONFIRMATION',
     'ACCEPTED',
     'REJECTED',
     'CANCELLED',
     'COMPLETED',
     'EXPIRED',
-    'NO_SHOW',
-    'FULFILLMENT_FAILED',
-    'AWAITING_RESOLUTION',
   ];
 
   static const materialStatuses = <String>[

@@ -98,6 +98,23 @@ void main() {
     );
   });
 
+  test('reservation status options match backend export validation', () {
+    expect(AdminExportCenterOptions.reservationStatuses, [
+      'PENDING',
+      'ACCEPTED',
+      'REJECTED',
+      'CANCELLED',
+      'COMPLETED',
+      'EXPIRED',
+    ]);
+    expect(
+      AdminExportCenterOptions.reservationStatuses.contains(
+        'AWAITING_RESOLUTION',
+      ),
+      isFalse,
+    );
+  });
+
   test('adminPageTitle maps /admin/exports', () {
     final l = AdminL10n.forTest('en');
     expect(adminPageTitle(l, '/admin/exports'), 'Export Center');

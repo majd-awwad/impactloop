@@ -15,7 +15,3 @@ export type AdminExportFormat = z.infer<typeof adminExportFormatSchema>;
 export type AdminExportSpreadsheetFormat = z.infer<
   typeof adminExportSpreadsheetFormatSchema
 >;
-
-export const adminExportDownloadQuerySchema = z.object({
-  format: adminExportFormatSchema.default('xlsx'),
-});

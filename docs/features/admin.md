@@ -21,7 +21,8 @@ Admin is an operational support role. It is not available through public registr
 | Backend approvals | **Implemented** | Category request and price request review |
 | Backend material moderation/reports | **Implemented** | List/detail, hide/unavailable/restore, report resolve/reject/hide material |
 | Backend people management | **Implemented** | Summary, list, detail, suspend, reactivate with safety guards |
-| Flutter admin portal | **Partial** | `/admin` shell with overview, users, supplier verification, materials, approvals, invitations, impact, audit logs, incident reports, read-only operations monitors, and learning project moderation |
+| Flutter admin portal | **Partial** | `/admin` shell with overview, users, supplier verification, materials, approvals, invitations, impact, audit logs, incident reports, Export Center, read-only operations monitors, and learning project moderation |
+| Admin data export | **Implemented (MVP)** | Per-page + Export Center downloads for six domains; see [Admin Data Export MVP](#admin-data-export-mvp) |
 | Impact analytics route | **Implemented** | `/admin/impact` uses dashboard impact data; broader analytics remain future work |
 | Audit logs route | **Implemented** | `/admin/audit-logs` reads paginated `admin_activity_logs` with filters/details |
 | Delivery/reservation admin ops | **Partial** | Deliveries has a responsive, server-filtered monitoring overview with six compact server-summary KPIs, primary/secondary filters, a concise six-column operational list, pagination, and a dedicated adaptive detail workspace at `/admin/deliveries/:deliveryId`; reassignment/cancellation operations remain limited to server-authorized detail/incident flows |
@@ -49,8 +50,8 @@ Admin is an operational support role. It is not available through public registr
 | Area | Path |
 |------|------|
 | Feature root | `apps/frontend/lib/features/admin_portal/` |
-| Routes | `/admin`, `/admin/users`, `/admin/supplier-verification`, `/admin/materials`, `/admin/approvals`, `/admin/invitations`, `/admin/impact`, `/admin/audit-logs`, `/admin/no-show-reports`, `/admin/reservations`, `/admin/deliveries`, `/admin/deliveries/:deliveryId`, `/admin/learning-projects` |
-| Data | `data/admin_dashboard_api.dart`, `admin_invitations_api.dart`, `admin_supplier_verification_api.dart`, `admin_approvals_api.dart`, `admin_materials_api.dart`, `admin_people_api.dart`, `admin_learning_projects_api.dart` |
+| Routes | `/admin`, `/admin/users`, `/admin/supplier-verification`, `/admin/materials`, `/admin/approvals`, `/admin/invitations`, `/admin/impact`, `/admin/audit-logs`, `/admin/no-show-reports`, `/admin/reservations`, `/admin/deliveries`, `/admin/deliveries/:deliveryId`, `/admin/learning-projects`, `/admin/exports` (web) |
+| Data | `data/admin_dashboard_api.dart`, `admin_invitations_api.dart`, `admin_supplier_verification_api.dart`, `admin_approvals_api.dart`, `admin_materials_api.dart`, `admin_people_api.dart`, `admin_learning_projects_api.dart`, `admin_export_center_*` |
 | Pages | `presentation/pages/admin_overview_page.dart`, `admin_people_page.dart`, `admin_supplier_verification_page.dart`, `admin_materials_page.dart`, `admin_approvals_page.dart`, `admin_invitations_page.dart`, `admin_learning_projects_page.dart`, analytics/audit/monitoring pages |
 | Shell/widgets | `presentation/widgets/admin_shell.dart`, sidebar/topbar/dashboard widgets |
 
@@ -80,8 +81,30 @@ Mounted at `/api/admin` and guarded by `ADMIN`.
 | Material reports | `GET /material-reports`, `GET /material-reports/:id`, `PATCH /material-reports/:id/resolve|reject|hide-material` |
 | People | `GET /people/summary`, `GET /people`, `GET /people/:id`, `PATCH /people/:id/suspend|reactivate` |
 | Learning projects | `GET /learning-projects`, `GET /learning-projects/:id`, `PATCH /learning-projects/:id/components/:componentId`, `PATCH /learning-projects/:id/approve|request-changes|reject|hide|restore|archive` |
+| Data export | Per domain: `GET …/export/preflight` and `GET …/export?format=` under reservations, materials, material-reports, deliveries, people, no-show-reports |
 
 Full route details: [api-catalog](../backend/api-catalog.md#admin--apiadmin).
+
+## Admin Data Export MVP
+
+Bounded Admin Web downloads. Export Center at `/admin/exports` reuses the same domain endpoints; it does not replace per-page Export actions.
+
+| Domain | Formats | Preflight + download |
+|--------|---------|----------------------|
+| Reservations | xlsx, pdf, csv | `/api/admin/reservations/export*` |
+| Materials | xlsx, csv | `/api/admin/materials/export*` |
+| Material reports | xlsx, csv | `/api/admin/material-reports/export*` |
+| Deliveries | xlsx, csv | `/api/admin/deliveries/export*` |
+| Users (people) | xlsx, csv | `/api/admin/people/export*` |
+| Incident reports | xlsx, csv | `/api/admin/no-show-reports/export*` |
+
+Environment (`apps/backend/env.example`; defaults in `apps/backend/src/config/env.ts`):
+
+- `ADMIN_EXPORT_MAX_ROWS` (default `10000`) — CSV/XLSX
+- `ADMIN_EXPORT_CHUNK_SIZE` (default `500`) — keyset batch size
+- `ADMIN_EXPORT_PDF_MAX_ROWS` (default `500`) — Reservations PDF only
+
+Local verification artifacts under `apps/backend/tmp-exports/` are gitignored. Automated PDF tests are structural only; visual Arabic/English layout remains a manual check.
 
 ## Current boundaries
 
@@ -102,7 +125,8 @@ From the role capability plan:
 - Delivery operations dashboard.
 - Reservation operations dashboard.
 - Deeper impact analytics beyond the current dashboard-backed route.
-- Audit log export/retention policy beyond the current paginated admin UI.
+- Scheduled exports, email delivery, custom columns, export history, and additional PDF domains beyond Reservations.
+- Audit log retention policy beyond the current paginated admin UI.
 - AI usage/log review if learner material matching AI is implemented.
 - Moderator-owned project review or shared moderator/admin review queues.
 
