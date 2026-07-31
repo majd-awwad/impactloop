@@ -247,3 +247,11 @@ export const supplierRelatedProjectsQuerySchema = z.object({
 export type SupplierRelatedProjectsQuery = z.infer<
   typeof supplierRelatedProjectsQuerySchema
 >;
+
+export const supplierCategoryDemandQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(15).default(8),
+});
+
+export type SupplierCategoryDemandQuery = z.infer<
+  typeof supplierCategoryDemandQuerySchema
+>;

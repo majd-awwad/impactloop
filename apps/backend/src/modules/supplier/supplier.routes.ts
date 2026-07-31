@@ -7,6 +7,7 @@ import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   deleteMaterial,
+  getCategoryDemand,
   getDashboard,
   getMaterial,
   getMaterialRelatedProjects,
@@ -23,6 +24,7 @@ import {
 } from './supplier.controller.js';
 import {
   createSupplierMaterialSchema,
+  supplierCategoryDemandQuerySchema,
   supplierMaterialIdParamSchema,
   supplierFollowersQuerySchema,
   supplierMaterialsQuerySchema,
@@ -45,6 +47,14 @@ supplierRouter.get(
   authMiddleware,
   requireRoles('SUPPLIER'),
   asyncHandler(getDashboard),
+);
+
+supplierRouter.get(
+  '/insights/category-demand',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierCategoryDemandQuerySchema, 'query'),
+  asyncHandler(getCategoryDemand),
 );
 
 supplierRouter.get(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/format/nis_price_format.dart';
 import '../../data/models/supplier_action_notification.dart';
+import '../../data/models/supplier_category_demand.dart';
 import '../theme/supplier_locale_scope.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
@@ -21,6 +22,11 @@ class SupplierL10n {
         Localizations.localeOf(context).languageCode;
     return SupplierL10n._(code);
   }
+
+  /// Test helper for localization assertions without a BuildContext.
+  @visibleForTesting
+  static SupplierL10n forLanguage(String languageCode) =>
+      SupplierL10n._(languageCode);
 
   String t(String en, String ar) => isArabic ? ar : en;
 
@@ -575,6 +581,103 @@ class SupplierL10n {
       t('Learner builds helped', 'بناءات متعلمين مساندة');
   String get projectImpactRecentProjects =>
       t('Recent supported projects', 'مشاريع مدعومة حديثاً');
+
+  // —— Category demand (platform learner interest) ——
+  String get categoryDemandTitle =>
+      t('Learner interest by category', 'اهتمام المتعلمين حسب الفئة');
+  String get categoryDemandSubtitle => t(
+    'Recent platform learner activity across material categories.',
+    'نشاط المتعلمين الأخير على مستوى المنصة حسب فئات المواد.',
+  );
+  String get categoryDemandPeriodLabel =>
+      t('Last 30 days', 'آخر 30 يومًا');
+  String get categoryDemandLoadError => t(
+    'Could not load category interest.',
+    'تعذّر تحميل اهتمام الفئات.',
+  );
+  String get categoryDemandRetry => t('Retry', 'إعادة المحاولة');
+  String get categoryDemandNoRecentActivity => t(
+    'There is not enough recent learner activity to identify category trends.',
+    'لا يوجد نشاط متعلمين حديث كافٍ لتحديد اتجاهات الفئات.',
+  );
+  String get categoryDemandNoActiveCategories => t(
+    'No active material categories are currently available.',
+    'لا توجد حالياً فئات مواد نشطة متاحة.',
+  );
+  String get categoryDemandUnknownLevel =>
+      t('Interest level unavailable', 'مستوى الاهتمام غير متاح');
+  String get categoryDemandUnknownReason =>
+      t('Recent learner activity', 'نشاط متعلمين حديث');
+
+  String categoryDemandLevelLabel(SupplierCategoryDemandLevel level) =>
+      switch (level) {
+        SupplierCategoryDemandLevel.high =>
+          t('High interest', 'اهتمام مرتفع'),
+        SupplierCategoryDemandLevel.moderate =>
+          t('Moderate interest', 'اهتمام متوسط'),
+        SupplierCategoryDemandLevel.emerging =>
+          t('Emerging interest', 'اهتمام ناشئ'),
+        SupplierCategoryDemandLevel.unknown => categoryDemandUnknownLevel,
+      };
+
+  String categoryDemandReason(SupplierCategoryDemandReason reason) =>
+      switch (reason) {
+        SupplierCategoryDemandReason.strongReservationActivity => t(
+          'Strong activity from recent reservations',
+          'نشاط قوي من الحجوزات الأخيرة',
+        ),
+        SupplierCategoryDemandReason.balancedEngagement => t(
+          'Consistent activity across views, likes, and reservations',
+          'نشاط متوازن عبر المشاهدات والإعجابات والحجوزات',
+        ),
+        SupplierCategoryDemandReason.likeEngagement => t(
+          'Strong recent like activity',
+          'نشاط إعجابات حديث قوي',
+        ),
+        SupplierCategoryDemandReason.viewEngagement => t(
+          'Strong recent view activity',
+          'نشاط مشاهدات حديث قوي',
+        ),
+        SupplierCategoryDemandReason.limitedRecentActivity => t(
+          'Limited recent activity',
+          'نشاط حديث محدود',
+        ),
+        SupplierCategoryDemandReason.unknown => categoryDemandUnknownReason,
+      };
+
+  String categoryDemandViewsChip(int count) =>
+      t('$count views', '$count مشاهدة');
+  String categoryDemandLikesChip(int count) =>
+      t('$count likes', '$count إعجاب');
+  String categoryDemandReservationsChip(int count) =>
+      t('$count reservations', '$count حجز');
+
+  String categoryDemandSummary(List<String> categoryNames) {
+    final names = categoryNames
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .take(3)
+        .toList(growable: false);
+    if (names.isEmpty) {
+      return categoryDemandNoRecentActivity;
+    }
+    if (isArabic) {
+      if (names.length == 1) {
+        return 'تحظى فئة ${names[0]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
+      }
+      if (names.length == 2) {
+        return 'تحظى فئتا ${names[0]} و${names[1]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
+      }
+      return 'تحظى فئات ${names[0]} و${names[1]} و${names[2]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
+    }
+    if (names.length == 1) {
+      return '${names[0]} is receiving the strongest learner interest during the last 30 days.';
+    }
+    if (names.length == 2) {
+      return '${names[0]} and ${names[1]} are receiving the strongest learner interest during the last 30 days.';
+    }
+    return '${names[0]}, ${names[1]}, and ${names[2]} are receiving the strongest learner interest during the last 30 days.';
+  }
 
   // —— Related projects (prospective matching) ——
   String get relatedProjectsTitle => t('Related Projects', 'المشاريع ذات الصلة');

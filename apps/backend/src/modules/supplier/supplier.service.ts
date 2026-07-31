@@ -17,6 +17,7 @@ import {
 } from "./dto/supplier-dashboard.dto.js";
 import { getSupplierProjectSupportSummary } from "./supplier-project-impact.js";
 import { getRelatedProjectsForOwnedMaterial } from "./supplier-related-projects.js";
+import { getSupplierCategoryDemand } from "./supplier.category-demand.js";
 import {
   buildSupplierManagementVerification,
   calculateSupplierEssentialsCompletion,
@@ -2258,6 +2259,16 @@ export const getSupplierMaterialRelatedProjects = async (
   }
 
   return getRelatedProjectsForOwnedMaterial(material, limit);
+};
+
+export const getSupplierCategoryDemandInsights = async (
+  userId: string,
+  limit: number,
+) => {
+  // Auth/role already enforced by middleware; resolve context for supplier session validity.
+  // Aggregation is intentionally platform-wide and does not use supplier identity.
+  await resolveSupplierContext(userId);
+  return getSupplierCategoryDemand(limit);
 };
 
 export const updateSupplierMaterial = async (
