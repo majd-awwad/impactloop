@@ -92,13 +92,17 @@ import {
 } from '../admin-materials/admin-materials.validation.js';
 
 import {
+  exportAdminPeopleHandler,
   getAdminPerson,
   getAdminPeopleSummary,
   listAdminPeople,
+  preflightAdminPeopleExportHandler,
   reactivateAdminPerson,
   suspendAdminPerson,
 } from '../admin-people/admin-people.controller.js';
 import {
+  adminPeopleExportDownloadQuerySchema,
+  adminPeopleExportFiltersSchema,
   adminPeopleListQuerySchema,
   adminPeopleUserIdParamSchema,
   suspendUserSchema,
@@ -483,6 +487,22 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminPeopleListQuerySchema, 'query'),
   asyncHandler(listAdminPeople),
+);
+
+adminRouter.get(
+  '/people/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminPeopleExportHandler),
+);
+
+adminRouter.get(
+  '/people/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminPeopleHandler),
 );
 
 adminRouter.get(

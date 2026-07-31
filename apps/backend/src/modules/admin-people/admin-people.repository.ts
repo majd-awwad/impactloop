@@ -2,7 +2,10 @@ import type { AccountStatus, Prisma, UserRole } from '../../generated/prisma/ind
 import { prisma } from '../../database/prisma.js';
 import { STRIKE_ELIGIBLE_TARGET_ROLES } from '../reservations/account-suspension.js';
 
-import type { AdminPeopleListQuery } from './admin-people.validation.js';
+import type {
+  AdminPeopleExportFilters,
+  AdminPeopleListQuery,
+} from './admin-people.validation.js';
 
 const elevatedRoles: UserRole[] = ['SUPPLIER', 'DRIVER', 'MODERATOR', 'ADMIN'];
 
@@ -186,6 +189,30 @@ const buildTabWhere = (tab: AdminPeopleListQuery['tab']): Prisma.UserWhereInput 
 };
 
 export const listUsersForAdmin = async (query: AdminPeopleListQuery) => {
+  const where = buildAdminPeopleWhere(query);
+
+  const skip = (query.page - 1) * query.limit;
+
+  const [total, items] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      include: userListInclude,
+      orderBy: [{ createdAt: 'desc' }],
+      skip,
+      take: query.limit,
+    }),
+  ]);
+
+  return { total, items };
+};
+
+/**
+ * Same predicate as listUsersForAdmin — export filters omit page/limit only.
+ */
+export const buildAdminPeopleWhere = (
+  query: Pick<AdminPeopleListQuery, 'tab' | 'search' | 'status'>,
+): Prisma.UserWhereInput => {
   const where: Prisma.UserWhereInput = buildTabWhere(query.tab);
 
   if (query.search?.trim()) {
@@ -205,20 +232,106 @@ export const listUsersForAdmin = async (query: AdminPeopleListQuery) => {
     where.accountStatus = query.status;
   }
 
-  const skip = (query.page - 1) * query.limit;
+  return where;
+};
 
-  const [total, items] = await Promise.all([
-    prisma.user.count({ where }),
-    prisma.user.findMany({
-      where,
-      include: userListInclude,
-      orderBy: [{ createdAt: 'desc' }],
-      skip,
-      take: query.limit,
-    }),
-  ]);
+/** Trimmed include for export — list-shaped, no moderator actor embeds. */
+const userExportInclude = {
+  roles: {
+    select: {
+      role: true,
+      isPrimary: true,
+    },
+    orderBy: {
+      createdAt: 'asc' as const,
+    },
+  },
+  supplierProfile: {
+    select: {
+      publicName: true,
+      supplierType: true,
+      verificationStatus: true,
+      organizationProfile: {
+        select: {
+          businessLocation: {
+            select: locationCityAreaSelect,
+          },
+        },
+      },
+      defaultPickupLocation: {
+        select: locationCityAreaSelect,
+      },
+    },
+  },
+  driverProfile: {
+    select: {
+      id: true,
+      status: true,
+      city: true,
+      area: true,
+    },
+  },
+  savedLocations: {
+    select: {
+      location: {
+        select: locationCityAreaSelect,
+      },
+    },
+    orderBy: {
+      createdAt: 'asc' as const,
+    },
+    take: 2,
+  },
+} satisfies Prisma.UserInclude;
 
-  return { total, items };
+export type AdminPeopleExportKeysetCursor = {
+  createdAt: Date;
+  id: string;
+};
+
+export type AdminPeopleExportUserRecord = Prisma.UserGetPayload<{
+  include: typeof userExportInclude;
+}>;
+
+export const countAdminPeopleForExport = async (
+  query: AdminPeopleExportFilters,
+) => prisma.user.count({ where: buildAdminPeopleWhere(query) });
+
+/**
+ * Keyset pagination: createdAt DESC, id DESC.
+ * Predicate: createdAt < cursor.createdAt OR (createdAt = cursor.createdAt AND id < cursor.id)
+ */
+export const listAdminPeopleExportBatch = async (input: {
+  query: AdminPeopleExportFilters;
+  cursor?: AdminPeopleExportKeysetCursor;
+  take: number;
+}): Promise<AdminPeopleExportUserRecord[]> => {
+  const baseWhere = buildAdminPeopleWhere(input.query);
+  const where: Prisma.UserWhereInput = input.cursor
+    ? {
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { createdAt: { lt: input.cursor.createdAt } },
+              {
+                AND: [
+                  { createdAt: input.cursor.createdAt },
+                  { id: { lt: input.cursor.id } },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
+
+  return prisma.user.findMany({
+    where,
+    include: userExportInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: input.take,
+  });
 };
 
 const toCountMap = <T extends string>(
