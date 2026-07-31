@@ -323,6 +323,9 @@ class SupplierL10n {
       return editMaterialTitle;
     }
     if (location.startsWith('/supplier/materials')) return navMyMaterials;
+    if (location.startsWith('/supplier/material-requests')) {
+      return navLearnerMaterialRequests;
+    }
     return navPortalFallback;
   }
 
@@ -348,6 +351,9 @@ class SupplierL10n {
     if (location.endsWith('/edit') &&
         location.startsWith('/supplier/materials/')) {
       return editMaterialSubtitle;
+    }
+    if (location.startsWith('/supplier/material-requests')) {
+      return learnerMaterialRequestsSubtitle;
     }
     return subtitleDefault;
   }
@@ -1887,4 +1893,80 @@ class SupplierL10n {
   );
   String get goToHome => t('Go to home', 'الذهاب للرئيسية');
   String get signIn => t('Sign in', 'تسجيل الدخول');
+
+  // —— Learner material requests (supplier feed) ——
+  String get navLearnerMaterialRequests =>
+      t('Learner Material Requests', 'طلبات المواد من المتعلمين');
+  String get learnerMaterialRequestsTitle => navLearnerMaterialRequests;
+  String get learnerMaterialRequestsSubtitle => t(
+    'Browse what learners are looking for and suggest a matching material.',
+    'تصفح ما يبحث عنه المتعلمون واقترح مادة مطابقة.',
+  );
+  String get materialRequestsLoadError => t(
+    'We could not load material requests.',
+    'تعذّر تحميل طلبات المواد.',
+  );
+  String get materialRequestsEmptyTitle =>
+      t('No material requests right now', 'لا توجد طلبات مواد حالياً');
+  String get materialRequestsEmptySubtitle => t(
+    'When learners ask for materials you might have, they will show up here.',
+    'عندما يطلب المتعلمون مواداً قد تمتلكها، ستظهر هنا.',
+  );
+  String get materialRequestsFilteredEmptyTitle => t(
+    'No requests match your filters',
+    'لا توجد طلبات تطابق عوامل التصفية',
+  );
+  String get filterUnansweredByMe =>
+      t('Not answered by me', 'لم أرد عليها بعد');
+  String get filterAllCities => t('All cities', 'كل المدن');
+  String get learnerMaterialRequestsInsightTitle =>
+      t('Learner material requests', 'طلبات مواد من المتعلمين');
+  String learnerMaterialRequestsInsightMessage(int count) => t(
+    'You have $count unanswered learner material request${count == 1 ? '' : 's'}.',
+    count == 1
+        ? 'لديك طلب مادة واحد من متعلم لم ترد عليه.'
+        : 'لديك $count طلبات مواد من متعلمين لم ترد عليها.',
+  );
+  String get reviewLearnerMaterialRequests =>
+      t('Review requests', 'مراجعة الطلبات');
+  String get respondedBadge => t('You suggested a material', 'اقترحت مادة');
+  String materialRequestSuggestionsCount(int count) => t(
+    '$count supplier${count == 1 ? '' : 's'} responded',
+    count == 1 ? 'استجاب مورد واحد' : 'استجاب $count موردين',
+  );
+  String get materialRequestDetailsTitle => t('Request details', 'تفاصيل الطلب');
+  String get materialRequestLoadError =>
+      t('Could not load this material request.', 'تعذّر تحميل طلب المادة هذا.');
+  String get materialRequestPrivacyNote => t(
+    'You can only see the item, category, quantity, and general area for this request — never the learner\'s exact address or contact details.',
+    'يمكنك رؤية العنصر والفئة والكمية والمنطقة العامة فقط لهذا الطلب — ولن ترى عنوان المتعلم الدقيق أو بيانات التواصل أبداً.',
+  );
+  String get candidateMaterialsTitle =>
+      t('Your matching materials', 'موادك المطابقة');
+  String get candidateMaterialsEmpty => t(
+    'None of your listed materials match this request yet.',
+    'لا توجد أي من موادك المدرجة تطابق هذا الطلب حتى الآن.',
+  );
+  String get publishMatchingMaterial =>
+      t('Publish matching material', 'نشر مادة مطابقة');
+  String get suggestThisMaterial => t('Suggest this material', 'اقتراح هذه المادة');
+  String get suggestionSent => t('Suggestion sent to the learner.', 'تم إرسال الاقتراح إلى المتعلم.');
+  String get suggestionFailed => t(
+    'Could not send this suggestion. Please try again.',
+    'تعذّر إرسال هذا الاقتراح. يرجى المحاولة مرة أخرى.',
+  );
+  String get weakMatchTitle => t('Weak match', 'تطابق ضعيف');
+  String get weakMatchMessage => t(
+    'This material is only a weak match for the request. Suggest it anyway?',
+    'هذه المادة تطابق الطلب بشكل ضعيف فقط. هل تريد اقتراحها على أي حال؟',
+  );
+  String get suggestAnyway => t('Suggest anyway', 'اقتراح على أي حال');
+  String get alreadySuggestedLabel => t('Already suggested', 'تم اقتراحها بالفعل');
+  String get weakMatchBadge => t('Weak match', 'تطابق ضعيف');
+  String get requestNoLongerOpen => t(
+    'This request is no longer open.',
+    'هذا الطلب لم يعد مفتوحاً.',
+  );
+  String get alternativesAllowedBadge =>
+      t('Alternatives allowed', 'البدائل مسموحة');
 }
