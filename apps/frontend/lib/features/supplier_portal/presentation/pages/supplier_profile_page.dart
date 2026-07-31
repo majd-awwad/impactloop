@@ -18,6 +18,7 @@ import '../../data/supplier_profile_image_helper.dart';
 import '../../data/supplier_profile_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_profile_providers.dart';
+import '../../../../l10n/l10n.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_location_input_mode.dart';
@@ -39,7 +40,7 @@ class SupplierProfilePage extends ConsumerWidget {
       loading: () => const _SupplierProfileLoading(),
       error: (error, _) => _SupplierProfileError(
         message: error is ApiException
-            ? error.message
+            ? localizedApiErrorMessage(error, context.l10n)
             : context.s.profileLoadError,
       ),
     );
@@ -370,7 +371,7 @@ class _SupplierProfileContentState
         _restoreManualAddressFromProfile();
       });
       _markDirty();
-      showSupplierErrorSnackBar(context, error.message);
+      showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
     } catch (_) {
       if (!mounted) {
         return;
@@ -507,12 +508,12 @@ class _SupplierProfileContentState
       showSupplierInfoSnackBar(
         context,
         kind == SupplierProfileImageKind.avatar
-            ? 'Profile photo updated'
-            : 'Cover image updated',
+            ? context.l10n.supplierProfilePhotoUpdated
+            : context.l10n.supplierCoverImageUpdated,
       );
     } on ApiException catch (error) {
       if (mounted) {
-        showSupplierErrorSnackBar(context, error.message);
+        showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
       }
     } catch (_) {
       if (mounted) {
@@ -677,17 +678,12 @@ class _SupplierProfileContentState
     final shouldDiscard = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(context.s.t('Discard changes?', 'تجاهل التغييرات؟')),
-        content: Text(
-          context.s.t(
-            'Your unsaved edits will be lost.',
-            'ستفقد التعديلات غير المحفوظة.',
-          ),
-        ),
+        title: Text(context.l10n.supplierDiscardChangesQuestion),
+        content: Text(context.l10n.supplierUnsavedEditsWillBeLost),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.s.t('Keep editing', 'متابعة التعديل')),
+            child: Text(context.l10n.supplierKeepEditing),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -761,7 +757,7 @@ class _SupplierProfileContentState
       showSupplierInfoSnackBar(context, context.s.profileUpdated);
     } on ApiException catch (error) {
       if (mounted) {
-        _showSaveError(error.message);
+        _showSaveError(localizedApiErrorMessage(error, context.l10n));
       }
     } catch (_) {
       if (mounted) {
@@ -949,7 +945,7 @@ class _SupplierProfileError extends ConsumerWidget {
               Icon(Icons.error_outline, color: colors.error, size: 40),
               const SizedBox(height: AppSpacing.md),
               Text(
-                l.t('Couldn’t load supplier profile', 'تعذّر تحميل ملف المورد'),
+                context.l10n.supplierCouldNotLoadSupplierProfile,
                 style: context.supplierTitle(),
               ),
               const SizedBox(height: AppSpacing.sm),

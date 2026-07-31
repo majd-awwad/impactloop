@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_dark_form_field.dart';
 import 'supplier_location_input_mode.dart';
@@ -142,11 +143,8 @@ class SupplierProfileForm extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _SupplierFormSection(
-            title: l.t('Public profile', 'الملف العام'),
-            subtitle: l.t(
-              'These details appear on your public supplier profile.',
-              'تظهر هذه التفاصيل في ملف المورد العام.',
-            ),
+            title: context.l10n.supplierPublicProfileSection,
+            subtitle: l.publicDetailsSubtitle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -185,7 +183,7 @@ class SupplierProfileForm extends StatelessWidget {
           ),
           const SupplierSectionGap(),
           _SupplierFormSection(
-            title: l.t('Pickup location & privacy', 'موقع الاستلام والخصوصية'),
+            title: context.l10n.supplierPickupLocationAndPrivacy,
             subtitle: l.locationPrivacySubtitle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -392,7 +390,7 @@ class SupplierProfileForm extends StatelessWidget {
           if (showOrganization) ...[
             const SupplierSectionGap(),
             _SupplierFormSection(
-              title: l.t('Organization & availability', 'المؤسسة والتوفر'),
+              title: context.l10n.supplierOrganizationAvailabilitySection,
               subtitle: l.organizationSubtitle,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -421,16 +419,13 @@ class SupplierProfileForm extends StatelessWidget {
                   )) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      l.t(
-                        'Organization name identifies the organization; it may match the public supplier name.',
-                        'اسم المؤسسة يحدد المؤسسة، وقد يطابق اسم المورد العام.',
-                      ),
+                      context.l10n.supplierOrganizationNameHelp,
                       style: context.supplierBody(),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
                   _LightSubsectionHeading(
-                    title: l.t('Working availability', 'التوفر وساعات العمل'),
+                    title: l.workingAvailability,
                   ),
                   SupplierFormLabel(label: l.workingDays),
                   const SizedBox(height: AppSpacing.sm),
@@ -461,18 +456,12 @@ class SupplierProfileForm extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    l.t(
-                      'Availability is informational and helps learners plan pickup.',
-                      'التوفر للمعلومات ويساعد المتعلمين على التخطيط للاستلام.',
-                    ),
+                    context.l10n.supplierAvailabilityInformationalHelp,
                     style: context.supplierBody(),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _LightSubsectionHeading(
-                    title: l.t(
-                      'Separate organization address',
-                      'عنوان المؤسسة المنفصل',
-                    ),
+                    title: context.l10n.supplierSeparateOrganizationAddress,
                   ),
                   SupplierDarkSwitchTile(
                     title: l.separateBusinessLocation,
@@ -739,26 +728,11 @@ class _PrivacyExplanation extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
     final copy = switch (visibility) {
-      'PUBLIC' when isApproximate => l.t(
-        'Learners see the general area. The exact pickup address is shared after the reservation is accepted.',
-        'يرى المتعلمون المنطقة العامة. يُشارك عنوان الاستلام الدقيق بعد قبول الحجز.',
-      ),
-      'PUBLIC' => l.t(
-        'Learners can see the saved pickup location according to your public visibility settings.',
-        'يمكن للمتعلمين رؤية موقع الاستلام المحفوظ وفق إعدادات الظهور العامة.',
-      ),
-      'ORDER_ONLY' => l.t(
-        'Learners see the exact pickup address only after the reservation is accepted.',
-        'يرى المتعلمون عنوان الاستلام الدقيق فقط بعد قبول الحجز.',
-      ),
-      'PRIVATE' => l.t(
-        'The pickup location remains private.',
-        'يبقى موقع الاستلام خاصاً.',
-      ),
-      _ => l.t(
-        'Location visibility details are unavailable.',
-        'تفاصيل ظهور الموقع غير متاحة.',
-      ),
+      'PUBLIC' when isApproximate => context.l10n.supplierVisibilityPublicApproximate,
+      'PUBLIC' => context.l10n.supplierVisibilityPublicExact,
+      'ORDER_ONLY' => context.l10n.supplierVisibilityOrderOnly,
+      'PRIVATE' => context.l10n.supplierVisibilityPrivate,
+      _ => context.l10n.supplierVisibilityUnavailable,
     };
     return Semantics(
       label: copy,
@@ -776,16 +750,19 @@ class _WorkingDaySelector extends StatelessWidget {
   final List<String> selectedDays;
   final ValueChanged<List<String>> onChanged;
 
-  String _label(BuildContext context, String value) => switch (value) {
-    'SUNDAY' => context.s.t('Sun', 'أحد'),
-    'MONDAY' => context.s.t('Mon', 'إثن'),
-    'TUESDAY' => context.s.t('Tue', 'ثلا'),
-    'WEDNESDAY' => context.s.t('Wed', 'أرب'),
-    'THURSDAY' => context.s.t('Thu', 'خمي'),
-    'FRIDAY' => context.s.t('Fri', 'جمع'),
-    'SATURDAY' => context.s.t('Sat', 'سبت'),
-    _ => '',
-  };
+  String _label(BuildContext context, String value) {
+    final l10n = context.l10n;
+    return switch (value) {
+      'SUNDAY' => l10n.supplierDaySun,
+      'MONDAY' => l10n.supplierDayMon,
+      'TUESDAY' => l10n.supplierDayTue,
+      'WEDNESDAY' => l10n.supplierDayWed,
+      'THURSDAY' => l10n.supplierDayThu,
+      'FRIDAY' => l10n.supplierDayFri,
+      'SATURDAY' => l10n.supplierDaySat,
+      _ => '',
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -881,13 +858,12 @@ class _TimePickerField extends StatelessWidget {
       validator: validator,
       builder: (state) {
         final parsed = _parse(controller.text);
+        final chooseTime = context.l10n.supplierChooseTime;
         final display =
             parsed?.format(context) ??
-            (controller.text.trim().isEmpty
-                ? context.s.t('Choose time', 'اختر الوقت')
-                : controller.text);
+            (controller.text.trim().isEmpty ? chooseTime : controller.text);
         final decoration = context.supplierDecorations
-            .formFieldDecoration(hint: context.s.t('Choose time', 'اختر الوقت'))
+            .formFieldDecoration(hint: chooseTime)
             .copyWith(errorText: state.errorText);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -970,7 +946,7 @@ String? _timeValidator(String? value, SupplierL10n l) {
   final hour = parts.length == 2 ? int.tryParse(parts[0]) : null;
   final minute = parts.length == 2 ? int.tryParse(parts[1]) : null;
   if (hour == null || minute == null || hour > 23 || minute > 59) {
-    return l.t('Choose a valid time.', 'اختر وقتاً صالحاً.');
+    return l.chooseValidTime;
   }
   return null;
 }

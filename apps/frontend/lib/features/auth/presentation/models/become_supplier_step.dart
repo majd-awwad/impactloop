@@ -1,3 +1,5 @@
+import '../../../../l10n/app_localizations.dart';
+
 enum BecomeSupplierStep {
   supplierType,
   profile,
@@ -8,28 +10,25 @@ enum BecomeSupplierStep {
 }
 
 extension BecomeSupplierStepLabels on BecomeSupplierStep {
-  String get title => switch (this) {
-    BecomeSupplierStep.supplierType => 'Supplier type',
-    BecomeSupplierStep.profile => 'Supplier profile',
-    BecomeSupplierStep.location => 'Pickup area',
-    BecomeSupplierStep.pickupDetails => 'Pickup details',
-    BecomeSupplierStep.verification => 'Verification',
-    BecomeSupplierStep.review => 'Review',
+  String title(AppLocalizations l10n) => switch (this) {
+    BecomeSupplierStep.supplierType => l10n.supplierSupplierType,
+    BecomeSupplierStep.profile => l10n.supplierProfile,
+    BecomeSupplierStep.location => l10n.pickupArea,
+    BecomeSupplierStep.pickupDetails => l10n.supplierPickupDetails,
+    BecomeSupplierStep.verification => l10n.supplierVerification,
+    BecomeSupplierStep.review => l10n.review,
   };
 
-  String get subtitle => switch (this) {
+  String subtitle(AppLocalizations l10n) => switch (this) {
     BecomeSupplierStep.supplierType =>
-      'Choose how you will share materials as a supplier.',
-    BecomeSupplierStep.profile =>
-      'Tell others who you are and what you usually share.',
-    BecomeSupplierStep.location =>
-      'Set the city and area where pickup usually happens.',
+      l10n.becomeSupplierStepSupplierTypeSubtitle,
+    BecomeSupplierStep.profile => l10n.becomeSupplierStepProfileSubtitle,
+    BecomeSupplierStep.location => l10n.becomeSupplierStepLocationSubtitle,
     BecomeSupplierStep.pickupDetails =>
-      'Add optional pickup hours and notes for learners.',
+      l10n.becomeSupplierStepPickupDetailsSubtitle,
     BecomeSupplierStep.verification =>
-      'Upload proof of your organization for admin review.',
-    BecomeSupplierStep.review =>
-      'Review your supplier details, then open the Supplier Portal.',
+      l10n.becomeSupplierStepVerificationSubtitle,
+    BecomeSupplierStep.review => l10n.becomeSupplierStepReviewSubtitle,
   };
 }
 

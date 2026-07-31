@@ -1,0 +1,3248 @@
+{
+  "appTitle": "ImpactLoop",
+  "unknownStatus": "حالة غير معروفة",
+  "somethingWentWrong": "حدث خطأ ما. يُرجى المحاولة مرة أخرى.",
+  "networkError": "تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.",
+  "timeoutError": "استغرق الخادم وقتًا طويلًا للاستجابة. يُرجى المحاولة مرة أخرى.",
+  "serverError": "حدثت مشكلة في الخادم. يُرجى المحاولة بعد قليل.",
+  "sessionExpired": "انتهت صلاحية جلستك. يُرجى تسجيل الدخول مرة أخرى.",
+  "forbiddenError": "ليست لديك صلاحية لإكمال هذا الإجراء.",
+  "conflictError": "يتعارض هذا الطلب مع الحالة الحالية. حدّث الصفحة وحاول مرة أخرى.",
+  "validationError": "تحقّق من المعلومات المحددة وحاول مرة أخرى.",
+  "accountSuspended": "تم تعليق حسابك. تواصل مع مسؤول النظام.",
+  "pickupWindowRequired": "اختر وقت بدء وانتهاء جديدًا للاستلام قبل إرسال طلب إعادة الجدولة.",
+  "invalidPickupWindow": "موعد الاستلام غير صالح. اختر موعدًا آخر.",
+  "invalidValue": "قيمة غير صالحة",
+  "completeRequiredDetail": "أكمل هذا الحقل المطلوب قبل المتابعة.",
+  "currencyNis": "{amount} شيكل",
+  "@currencyNis": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "distanceKilometers": "{distance} كم",
+  "@distanceKilometers": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "quantityWithUnit": "{quantity} {unit}",
+  "@quantityWithUnit": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationFallbackTitle": "إشعار",
+  "notificationFallbackBody": "لديك تحديث جديد.",
+  "material": "مادة",
+  "materials": "المواد",
+  "supplier": "المورّد",
+  "learner": "المتعلّم",
+  "learningHub": "مركز التعلّم",
+  "learningProject": "مشروع تعليمي",
+  "requiredComponent": "مكوّن مطلوب",
+  "reservation": "حجز",
+  "reservationRequest": "طلب حجز",
+  "pickup": "الاستلام من المورّد",
+  "delivery": "التوصيل",
+  "driver": "السائق",
+  "available": "متاح",
+  "reserved": "محجوز",
+  "reused": "أُعيد استخدامها",
+  "free": "مجاني",
+  "paid": "مدفوع",
+  "materialCondition": "حالة المادة",
+  "sourceType": "نوع المصدر",
+  "save": "حفظ",
+  "saved": "محفوظ",
+  "follow": "متابعة",
+  "following": "تتم متابعته",
+  "like": "إعجاب",
+  "buildProject": "تنفيذ المشروع",
+  "buildChecklist": "قائمة تنفيذ المشروع",
+  "submission": "مشروع مُرسَل للمراجعة",
+  "changesRequested": "مطلوب إجراء تعديلات",
+  "pendingReview": "قيد المراجعة",
+  "pickupMissed": "فات موعد الاستلام",
+  "filterAll": "الكل",
+  "filterActive": "نشط",
+  "filterNeedsAction": "يتطلب إجراءً",
+  "filterPending": "قيد الانتظار",
+  "filterAccepted": "مقبول",
+  "filterCompleted": "مكتمل",
+  "filterClosed": "مغلق",
+  "statusPendingSupplier": "بانتظار رد المورّد",
+  "statusNeedsConfirmation": "يتطلب تأكيدك",
+  "statusWaitingSupplier": "بانتظار رد المورّد",
+  "statusWaitingSupplierWindow": "بانتظار أن يختار المورّد موعد استلام جديدًا",
+  "statusAcceptedPickup": "مقبول / جاهز للاستلام",
+  "statusAccepted": "مقبول",
+  "statusRejected": "مرفوض",
+  "statusCompleted": "مكتمل",
+  "statusCancelled": "ملغى",
+  "statusClosedMissedPickup": "أُغلق بعد فوات موعد الاستلام",
+  "statusCancelledNoDriver": "ملغى — لا يتوفر سائق",
+  "statusCancelledUnresolvedPickup": "ألغاه المسؤول لعدم معالجة مشكلة الاستلام",
+  "statusExpiredNoResponse": "منتهي الصلاحية — لم يصل رد",
+  "statusExpired": "منتهي الصلاحية",
+  "statusFulfillmentFailed": "تعذّر إتمام الطلب",
+  "statusPendingAdminReview": "بانتظار مراجعة المسؤول",
+  "statusReportVerified": "تم التحقق من البلاغ",
+  "statusReportDismissed": "تم رفض البلاغ",
+  "statusResolvedNoStrike": "تم الحل دون تسجيل مخالفة",
+  "statusWaitingDriver": "بانتظار السائق",
+  "statusDriverAssigned": "تم تعيين سائق",
+  "statusDriverAtPickup": "وصل السائق إلى موقع الاستلام",
+  "statusPickedUp": "تم الاستلام",
+  "statusOnTheWay": "في الطريق",
+  "statusArrivedDropoff": "وصل إلى موقع التسليم",
+  "statusDelivered": "تم التوصيل",
+  "statusDeliveryCancelled": "تم إلغاء التوصيل",
+  "statusPickupFailed": "تعذّر الاستلام",
+  "statusDeliveryFailed": "تعذّر التوصيل",
+  "statusDriverNoShow": "لم يحضر السائق",
+  "statusLearnerNoShow": "لم يحضر المتعلّم",
+  "statusNeedsAdminReview": "يتطلب مراجعة المسؤول",
+  "statusInDelivery": "قيد التوصيل",
+  "statusNoDriverAvailable": "لا يتوفر سائق",
+  "statusDriverPickupOverdue": "تأخر السائق عن الاستلام",
+  "statusDeliveryIssueReported": "تم الإبلاغ عن مشكلة في التوصيل",
+  "statusDriverNotAssignedInTime": "لم يتم تعيين سائق في الوقت المحدد",
+  "statusPickupNotCompleted": "لم يكتمل الاستلام",
+  "statusAtSupplierPickup": "في موقع استلام المورّد",
+  "statusPickupWindowPassed": "فات موعد الاستلام",
+  "preferredDelivery": "التوصيل المفضّل",
+  "requestedPickup": "الاستلام المطلوب",
+  "additionalWindows": "+{count} أخرى",
+  "@additionalWindows": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deliveryAddressLabel": "عنوان التوصيل: {address}",
+  "@deliveryAddressLabel": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "safeDropoffAllowed": "يُسمح بالتسليم في مكان آمن",
+  "safeDropoffNotAllowed": "لا يُسمح بالتسليم في مكان آمن",
+  "justNow": "الآن",
+  "minutesAgo": "قبل {count, plural, =1{دقيقة واحدة} =2{دقيقتين} few{{count} دقائق} many{{count} دقيقة} other{{count} دقيقة}}",
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "hoursAgo": "قبل {count, plural, =1{ساعة واحدة} =2{ساعتين} few{{count} ساعات} many{{count} ساعة} other{{count} ساعة}}",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "daysAgo": "قبل {count, plural, =1{يوم واحد} =2{يومين} few{{count} أيام} many{{count} يومًا} other{{count} يوم}}",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsTitle": "الإشعارات",
+  "notificationsSubtitle": "تحديثات الحجوزات والتوصيل والمشاريع والحساب.",
+  "notificationsLoading": "جارٍ تحميل الإشعارات…",
+  "notificationsLoadingSubtitle": "جارٍ جلب أحدث التحديثات.",
+  "notificationsLoadError": "تعذّر تحميل الإشعارات.",
+  "tryAgain": "يُرجى المحاولة مرة أخرى.",
+  "retry": "إعادة المحاولة",
+  "refresh": "تحديث",
+  "markAllRead": "تحديد الكل كمقروء",
+  "filterUnread": "غير مقروءة",
+  "filterRead": "مقروءة",
+  "noUnreadNotifications": "لا توجد إشعارات غير مقروءة.",
+  "allCaughtUp": "اطّلعت على جميع التحديثات حتى الآن.",
+  "noReadNotifications": "لا توجد إشعارات مقروءة بعد.",
+  "openedNotificationsAppearHere": "ستظهر الإشعارات التي فتحتها هنا.",
+  "noNotifications": "لا توجد إشعارات بعد.",
+  "notificationsAppearHere": "ستظهر تحديثاتك هنا.",
+  "loadMore": "تحميل المزيد",
+  "notificationCount": "يتم عرض {visible} من أصل {total} إشعارًا.",
+  "@notificationCount": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationChipJob": "مهمة",
+  "notificationChipReminder": "تذكير",
+  "notificationChipDelivery": "تحديث التوصيل",
+  "notificationChipAccount": "الحساب",
+  "notificationChipUpdate": "تحديث",
+  "viewJobs": "عرض المهام",
+  "viewDetails": "عرض التفاصيل",
+  "viewDelivery": "عرض التوصيل",
+  "viewReservation": "عرض الحجز",
+  "viewSubmission": "عرض المشروع المُرسَل",
+  "open": "فتح",
+  "reservationAcceptedTitle": "تم قبول الحجز",
+  "reservationAcceptedBody": "تم قبول طلب {materialTitle}. تحقّق من تفاصيل الاستلام أو التوصيل.",
+  "@reservationAcceptedBody": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "reservationProposalTitle": "اقترح المورّد موعدًا جديدًا",
+  "reservationProposalBody": "راجع اقتراح المورّد بشأن {materialTitle}.",
+  "@reservationProposalBody": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "reservationDeclinedTitle": "تم رفض الحجز",
+  "reservationDeclinedBody": "تم رفض طلبك بشأن {materialTitle}.",
+  "@reservationDeclinedBody": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "reservationExpiredTitle": "انتهت صلاحية الحجز",
+  "reservationExpiredBody": "انتهت صلاحية طلبك بشأن {materialTitle} قبل أن يرد المورّد.",
+  "@reservationExpiredBody": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationReservationRequestedTitle": "طلب حجز جديد",
+  "notificationReservationRequestedBody": "طلب {learnerName} {materialTitle}.",
+  "@notificationReservationRequestedBody": {
+    "placeholders": {
+      "learnerName": {
+        "type": "String"
+      },
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationReservationCancelledSupplierTitle": "تم إلغاء الحجز",
+  "notificationReservationCancelledSupplierBody": "ألغى {learnerName} طلب {materialTitle}.",
+  "@notificationReservationCancelledSupplierBody": {
+    "placeholders": {
+      "learnerName": {
+        "type": "String"
+      },
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationReservationExpiredSupplierTitle": "انتهت صلاحية الحجز",
+  "notificationReservationExpiredSupplierBody": "انتهت صلاحية الطلب المعلّق لـ {materialTitle}.",
+  "@notificationReservationExpiredSupplierBody": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationChoosePickupWindowTitle": "اختر موعد استلام جديد",
+  "notificationChoosePickupWindowBody": "اختر موعد استلام جديد لـ {materialTitle}.",
+  "@notificationChoosePickupWindowBody": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationNewPickupWindowNeededTitle": "يلزم موعد استلام جديد",
+  "notificationNewPickupWindowNeededBody": "يلزم تحديد موعد استلام جديد لـ {materialTitle}.",
+  "@notificationNewPickupWindowNeededBody": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationCategoryRequestUpdateTitle": "تحديث طلب الفئة",
+  "notificationCategoryRequestUpdateBody": "هناك تحديث على طلب الفئة الخاص بك.",
+  "notificationPriceRequestUpdateTitle": "تحديث مراجعة السعر",
+  "notificationPriceRequestUpdateBody": "هناك تحديث على طلب مراجعة السعر الخاص بك.",
+  "notificationMaterialModerationUpdateTitle": "تحديث مراجعة المادة",
+  "notificationMaterialModerationUpdateBody": "هناك تحديث على إدراج المادة الخاص بك.",
+  "notificationSupplierVerificationUpdateTitle": "تحديث التحقق",
+  "notificationSupplierVerificationUpdateBody": "هناك تحديث على التحقق من حساب المورّد الخاص بك.",
+  "reservationAlreadyAccepted": "تم قبول هذا الحجز مسبقًا.",
+  "reservationAlreadyDeclined": "تم رفض هذا الحجز مسبقًا.",
+  "reservationExpiredError": "انتهت صلاحية هذا الحجز قبل إمكانية تحديثه.",
+  "reservationCancelledError": "تم إلغاء هذا الحجز ولا يمكن تحديثه.",
+  "reservationNotPending": "يمكن تنفيذ هذا الإجراء على الحجوزات قيد الانتظار فقط.",
+  "projectModerationTitle": "تم تحديث مراجعة المشروع",
+  "projectModerationBody": "تم تحديث حالة مراجعة {projectTitle}.",
+  "@projectModerationBody": {
+    "placeholders": {
+      "projectTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "projectApprovedTitle": "تم اعتماد المشروع التعليمي",
+  "projectApprovedBody": "تم اعتماد {projectTitle} ونشره الآن في مركز التعلّم.",
+  "@projectApprovedBody": {
+    "placeholders": {
+      "projectTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "projectChangesRequestedTitle": "مطلوب إجراء تعديلات على مشروعك",
+  "projectChangesRequestedBody": "يحتاج {projectTitle} إلى تعديلات قبل نشره.",
+  "@projectChangesRequestedBody": {
+    "placeholders": {
+      "projectTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "projectRejectedTitle": "تم رفض المشروع التعليمي",
+  "projectRejectedBody": "لم تتم الموافقة على {projectTitle}.",
+  "@projectRejectedBody": {
+    "placeholders": {
+      "projectTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "projectHiddenTitle": "تم إلغاء نشر المشروع التعليمي",
+  "projectHiddenBody": "تم إخفاء {projectTitle} من مركز التعلّم.",
+  "@projectHiddenBody": {
+    "placeholders": {
+      "projectTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "projectRestoredTitle": "تمت استعادة المشروع التعليمي",
+  "projectRestoredBody": "أُعيد نشر {projectTitle} في مركز التعلّم.",
+  "@projectRestoredBody": {
+    "placeholders": {
+      "projectTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "projectArchivedTitle": "تمت أرشفة المشروع التعليمي",
+  "projectArchivedBody": "تمت أرشفة {projectTitle} وإزالته من مركز التعلّم.",
+  "@projectArchivedBody": {
+    "placeholders": {
+      "projectTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "projectModerationFeedback": "{summary} ملاحظات المراجع: {feedback}",
+  "@projectModerationFeedback": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      },
+      "feedback": {
+        "type": "String"
+      }
+    }
+  },
+  "addDraftPhoneTitle": "إضافة مشروع",
+  "draftCategoryLoadError": "تعذّر تحميل الفئات",
+  "draftCategoryLoading": "جارٍ تحميل الفئات…",
+  "draftSelectCategory": "اختر فئة",
+  "draftProjectTitleLabel": "عنوان المشروع",
+  "draftProjectTitleHint": "محطة طقس صفية تعمل بالطاقة الشمسية",
+  "draftCategoryLabel": "الفئة",
+  "draftShortDescriptionLabel": "وصف قصير",
+  "draftShortDescriptionHint": "لخّص ما سينفّذه المتعلّم.",
+  "draftFullDescriptionLabel": "الوصف الكامل (اختياري)",
+  "draftFullDescriptionHint": "اشرح هدف المشروع والنتيجة المتوقعة.",
+  "draftStepsLabel": "خطوات التنفيذ",
+  "draftStepsHint": "اكتب خطوة واحدة في كل سطر. لا حاجة إلى كتابة الخطوة 1.\nصِل المستشعر باللوحة.\nثبّت المكوّنات.\nاختبر القراءات.",
+  "draftLinksLabel": "روابط مفيدة",
+  "draftLinksHint": "https://example.com/reference-guide",
+  "draftSaving": "جارٍ حفظ المسودة…",
+  "draftSave": "حفظ المسودة",
+  "draftSavedMessage": "تم حفظ المسودة. يمكنك إضافة الصور وإرسالها للمراجعة عندما تصبح جاهزة.",
+  "draftSelectAvailableCategoryBeforeSave": "اختر فئة مشروع متاحة قبل الحفظ.",
+  "draftMinimumContentBeforeSave": "أضف 10 أحرف على الأقل من محتوى المشروع قبل الحفظ.",
+  "draftComponentRequired": "أضف مكوّنًا واحدًا على الأقل مع اسمه.",
+  "draftComponentLimit": "استخدم 50 مكوّنًا أو أقل.",
+  "draftComponentUnique": "يجب أن يكون لكل مكوّن اسم فريد.",
+  "draftFullDescriptionMinimum": "استخدم 10 أحرف على الأقل عند إضافة وصف كامل.",
+  "draftFullDescriptionMaximum": "اجعل الوصف الكامل أقل من 10000 حرف.",
+  "draftTitleRequired": "عنوان المشروع مطلوب.",
+  "draftMinimumThreeCharacters": "استخدم 3 أحرف على الأقل.",
+  "draftTitleMaximum": "اجعل العنوان أقل من 200 حرف.",
+  "draftSummaryRequired": "الوصف القصير مطلوب.",
+  "draftMinimumTenCharacters": "استخدم 10 أحرف على الأقل.",
+  "draftSummaryMaximum": "اجعل الوصف القصير أقل من 500 حرف.",
+  "draftCategoriesCouldNotLoad": "تعذّر تحميل فئات المشاريع.",
+  "draftCategoriesUnavailable": "فئات المشاريع غير متاحة بعد.",
+  "draftSelectAvailableCategory": "اختر فئة متاحة.",
+  "draftStepsMaximum": "استخدم 100 خطوة أو أقل.",
+  "draftStepMaximum": "اجعل كل خطوة أقل من 5000 حرف.",
+  "draftLinksMaximum": "استخدم 20 رابطًا أو أقل.",
+  "draftLinksInvalid": "استخدم روابط http أو https صالحة، رابطًا واحدًا في كل سطر.",
+  "draftComponentNameRequired": "اسم المكوّن مطلوب.",
+  "draftComponentNameMaximum": "اجعل اسم كل مكوّن أقل من 200 حرف.",
+  "draftQuantityPositive": "يجب أن تكون الكمية أكبر من صفر.",
+  "draftValidUnit": "اختر وحدة صالحة.",
+  "draftNotesMaximum": "اجعل الملاحظات أقل من 1000 حرف.",
+  "draftKeywordsMaximum": "استخدم ما يصل إلى 5 كلمات مفتاحية لكل مكوّن.",
+  "draftKeywordMaximum": "اجعل كل كلمة مفتاحية أقل من 80 حرفًا.",
+  "draftValidMaterialCategory": "اختر فئة مواد صالحة أو اتركها بلا تحديد.",
+  "pickupWindowNotSet": "لم يُحدّد موعد الاستلام",
+  "yourPreferredPickupWindow": "موعد الاستلام المفضّل لديك: {window}",
+  "@yourPreferredPickupWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierProposedPickupWindow": "موعد الاستلام الذي اقترحه المورّد: {window}",
+  "@supplierProposedPickupWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierDriverPickupWindow": "موعد استلام سائق المورّد: {window}",
+  "@supplierDriverPickupWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "earliestPossibleDelivery": "أقرب موعد توصيل ممكن: {dateTime}",
+  "@earliestPossibleDelivery": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierProposedDeliveryWindow": "موعد التوصيل الذي اقترحه المورّد: {window}",
+  "@supplierProposedDeliveryWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmedDeliveryWindow": "موعد التوصيل المؤكّد: {window}",
+  "@confirmedDeliveryWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierPickupWindow": "موعد الاستلام من المورّد: {window}",
+  "@supplierPickupWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "previousPreferredDeliveryWindow": "موعد التوصيل المفضّل السابق لديك: {window}",
+  "@previousPreferredDeliveryWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmedPickupWindow": "موعد الاستلام المؤكّد: {window}",
+  "@confirmedPickupWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "selectedDeliveryWindow": "موعد التوصيل المحدّد: {window}",
+  "@selectedDeliveryWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "learnerAccountRequired": "يلزم حساب متعلّم",
+  "learnerAccountRequiredReservations": "استخدم حساب متعلّم لعرض حجوزات المواد.",
+  "myReservations": "حجوزاتي",
+  "reservationsSubtitle": "تابع الطلبات ومواعيد الاستلام وتحديثات التوصيل.",
+  "loadingReservations": "جارٍ تحميل الحجوزات",
+  "loadingReservationsSubtitle": "جارٍ التحقق من أحدث نشاط للحجوزات.",
+  "reservationsLoadError": "تعذّر تحميل الحجوزات",
+  "noReservations": "لا توجد حجوزات بعد",
+  "noReservationsSubtitle": "احجز مادة متاحة وستظهر تحديثات المورّد هنا.",
+  "browseMaterials": "تصفّح المواد",
+  "noMatchingReservations": "لا توجد حجوزات مطابقة",
+  "noMatchingReservationsSubtitle": "جرّب مرشحًا آخر أو تصفّح المواد لبدء طلب جديد.",
+  "deliveryUpdatesUnavailable": "تحديثات التوصيل غير متاحة مؤقتًا.",
+  "tryAgainAction": "حاول مرة أخرى",
+  "fulfillmentMethod": "طريقة استلام الطلب",
+  "supplierIssueReportedAdmin": "تم إبلاغ الإدارة بمشكلة المورّد.",
+  "noDriverReportedAdmin": "تم إبلاغ الإدارة بعدم توفر سائق.",
+  "supplierPickupCodeInstructions": "أعطِ هذا الرمز للمورّد عند استلام المادة.",
+  "pickupAddressValue": "عنوان الاستلام: {address}",
+  "@pickupAddressValue": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "pickupWindowPassedFollowup": "فات موعد الاستلام. تواصل مع المورّد أو انتظر المتابعة.",
+  "viewMaterial": "عرض المادة",
+  "cancelRequest": "إلغاء الطلب",
+  "reservationCancelledFeedback": "تم إلغاء الحجز.",
+  "keepRequest": "الاحتفاظ بالطلب",
+  "cancelReservationQuestion": "هل تريد إلغاء الحجز؟",
+  "close": "إغلاق",
+  "cancelReleasesQuantity": "ستُعاد الكمية المطلوبة إلى المادة المعروضة.",
+  "requestedQuantityLabel": "الكمية المطلوبة: {quantity}",
+  "@requestedQuantityLabel": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "yourRescheduleRequest": "طلبك لتغيير الموعد: {reason}",
+  "@yourRescheduleRequest": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "requestReschedule": "طلب تغيير الموعد",
+  "reasonRequired": "السبب (مطلوب)",
+  "noteOptional": "ملاحظة (اختيارية)",
+  "noteRequired": "ملاحظة (مطلوبة)",
+  "pickProposedStart": "اختيار بداية الموعد المقترح",
+  "proposedStart": "البداية: {dateTime}",
+  "@proposedStart": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "pickProposedEnd": "اختيار نهاية الموعد المقترح",
+  "proposedEnd": "النهاية: {dateTime}",
+  "@proposedEnd": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "rescheduleReasonWindowRequired": "أدخل سببًا واختر موعد الاستلام.",
+  "endAfterStart": "يجب أن يكون وقت النهاية بعد وقت البداية.",
+  "pickupWindowTooClose": "اختر موعد استلام يتيح وقتًا كافيًا لإتمام التسليم.",
+  "sendRequest": "إرسال الطلب",
+  "rescheduleSent": "تم إرسال طلب تغيير الموعد إلى المورّد.",
+  "supplierUnavailable": "المورّد غير متاح",
+  "materialNotReady": "المادة غير جاهزة",
+  "wrongPickupInformation": "معلومات الاستلام غير صحيحة",
+  "other": "أخرى",
+  "reportSupplierIssue": "الإبلاغ عن مشكلة مع المورّد",
+  "reportSupplierDescription": "أبلغ الإدارة بمشكلة مع المورّد. سيُغلق الحجز مؤقتًا بانتظار المراجعة.",
+  "reason": "السبب",
+  "describeWhatHappened": "صف ما حدث",
+  "submitReport": "إرسال البلاغ",
+  "reportNoDriverAvailable": "الإبلاغ عن عدم توفر سائق",
+  "reportNoDriverDescription": "لم يقبل أي سائق طلب التوصيل. أرسل بلاغًا لمراجعة الإدارة.",
+  "actionRequired": "إجراء مطلوب",
+  "pickupTimeAccepted": "تم قبول موعد الاستلام.",
+  "deliveryWindowAfterEarliest": "يجب أن ينتهي الموعد المحدد بعد أقرب وقت ممكن للتوصيل.",
+  "deliveryWindowSubmitted": "تم إرسال موعد التوصيل.",
+  "cancelReservation": "إلغاء الحجز",
+  "acceptProposedTime": "قبول الموعد المقترح",
+  "newDeliveryWindow": "موعد توصيل جديد",
+  "submitNewDeliveryWindow": "إرسال موعد التوصيل الجديد",
+  "pickupIncompleteAdminReview": "لم يكتمل الاستلام قبل نهاية موعد المورّد. قد تراجع الإدارة الحالة إذا لم يبلّغ أحد عن المشكلة.",
+  "driverPickupIncompleteAdminReview": "لم يُكمل السائق المعيّن الاستلام من المورّد قبل نهاية الموعد. قد تراجع الإدارة الحالة إذا لم يبلّغ أحد عن المشكلة.",
+  "schedulingConflict": "تعارض في الموعد: {reason}",
+  "@schedulingConflict": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "reservationWaitingSupplierMessage": "بانتظار رد المورّد.",
+  "reservationScheduleNeedsConfirmation": "اقترح المورّد موعدًا يحتاج إلى تأكيدك.",
+  "reservationRescheduleWaitingSupplier": "طلبت موعد استلام جديدًا. بانتظار رد المورّد.",
+  "reservationReportedAwaitingAdmin": "تم الإبلاغ عن هذا الحجز وهو بانتظار مراجعة الإدارة.",
+  "reservationReportVerifiedMessage": "تحققت الإدارة من صحة بلاغك.",
+  "reservationReportDismissedMessage": "راجعت الإدارة بلاغك ورفضته.",
+  "reservationIncidentResolvedMessage": "حُلّت هذه المشكلة دون تسجيل مخالفة.",
+  "reservationAcceptedPickupMessage": "تم قبول الحجز. اتبع موعد الاستلام الذي حدده المورّد.",
+  "reservationRejectedSupplierMessage": "رفض المورّد طلب الحجز.",
+  "reservationCompletedMessage": "اكتمل هذا الحجز.",
+  "reservationCancelledMessage": "تم إلغاء هذا الحجز.",
+  "reservationMissedPickupExpiredMessage": "انتهت صلاحية الحجز بعد فوات موعد الاستلام دون متابعة. أنشئ حجزًا جديدًا إذا كنت لا تزال بحاجة إلى المادة.",
+  "reservationSupplierNoResponseExpired": "انتهت صلاحية الطلب لأن المورّد لم يرد في الوقت المحدد.",
+  "reservationExpiredMessage": "انتهت صلاحية هذا الحجز.",
+  "supplierQuantityLine": "المورّد: {supplier} · المطلوب: {quantity}",
+  "@supplierQuantityLine": {
+    "placeholders": {
+      "supplier": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryInProgress": "التوصيل قيد التنفيذ",
+  "deliveryScheduled": "تمت جدولة التوصيل",
+  "deliveryReservation": "حجز مع التوصيل",
+  "deliverySelectedAtReservation": "تم اختيار التوصيل عند الحجز",
+  "deliveryRequestedStatus": "تم طلب التوصيل",
+  "deliveryAvailable": "التوصيل متاح",
+  "pickupOnly": "الاستلام من المورّد فقط",
+  "combinedDelivery": "توصيل مجمّع",
+  "combinedDeliveryItems": "{count} عناصر في هذه المجموعة",
+  "@combinedDeliveryItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "combinedDeliveryTotal": "إجمالي المجموعة {currency} {amount}",
+  "@combinedDeliveryTotal": {
+    "placeholders": {
+      "currency": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "combinedDeliveryFeeOnce": "تُحتسب رسوم التوصيل مرة واحدة للمجموعة",
+  "welcomeBack": "مرحبًا بعودتك",
+  "loginSubtitle": "سجّل الدخول لمتابعة اكتشاف المواد وتنفيذ المشاريع بنفايات أقل.",
+  "email": "البريد الإلكتروني",
+  "emailHint": "you@example.com",
+  "password": "كلمة المرور",
+  "emailRequired": "البريد الإلكتروني مطلوب",
+  "validEmailRequired": "أدخل عنوان بريد إلكتروني صالحًا",
+  "passwordRequired": "كلمة المرور مطلوبة",
+  "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+  "forgotPasswordQuestion": "هل نسيت كلمة المرور؟",
+  "signIn": "تسجيل الدخول",
+  "newToImpactLoop": "جديد في ImpactLoop؟",
+  "createAccount": "إنشاء حساب",
+  "resetYourPassword": "إعادة تعيين كلمة المرور",
+  "forgotPasswordSubtitle": "أدخل البريد الإلكتروني لحسابك وسنرسل تعليمات إعادة التعيين إذا كان الحساب موجودًا.",
+  "forgotPasswordSuccess": "إذا كان هناك حساب مرتبط بهذا البريد، فقد تم إرسال تعليمات إعادة التعيين.",
+  "backToSignIn": "العودة إلى تسجيل الدخول",
+  "sendResetInstructions": "إرسال تعليمات إعادة التعيين",
+  "createNewPassword": "إنشاء كلمة مرور جديدة",
+  "resetPasswordSubtitle": "اختر كلمة مرور جديدة لحسابك. لا يمكن استخدام رابط إعادة التعيين إلا مرة واحدة.",
+  "resetLinkInvalid": "رابط إعادة التعيين مفقود أو غير صالح.",
+  "passwordUpdated": "تم تحديث كلمة المرور. سجّل الدخول باستخدام كلمة المرور الجديدة.",
+  "goToSignIn": "الانتقال إلى تسجيل الدخول",
+  "newPassword": "كلمة المرور الجديدة",
+  "confirmPassword": "تأكيد كلمة المرور",
+  "newPasswordRequired": "كلمة المرور الجديدة مطلوبة",
+  "passwordMinLength": "يجب ألا تقل كلمة المرور عن 8 أحرف",
+  "confirmNewPassword": "أكّد كلمة المرور الجديدة",
+  "passwordsDoNotMatch": "كلمتا المرور غير متطابقتين",
+  "resetPasswordAction": "إعادة تعيين كلمة المرور",
+  "showPassword": "إظهار كلمة المرور",
+  "hidePassword": "إخفاء كلمة المرور",
+  "createYourAccount": "أنشئ حسابك",
+  "registerSubtitle": "حدّد كيف تريد استخدام ImpactLoop وأكمل ملفك الشخصي في خطوة واحدة.",
+  "alreadyHaveAccount": "لديك حساب بالفعل؟",
+  "home": "الرئيسية",
+  "learning": "التعلّم",
+  "reservations": "الحجوزات",
+  "profile": "الملف الشخصي",
+  "settings": "الإعدادات",
+  "menu": "القائمة",
+  "account": "الحساب",
+  "logout": "تسجيل الخروج",
+  "loggingOut": "جارٍ تسجيل الخروج…",
+  "signedOutOffline": "تم تسجيل خروجك محليًا، لكن تعذّر الاتصال بالخادم.",
+  "learnReuseBuild": "تعلّم. أعد الاستخدام. نفّذ.",
+  "themeSystem": "النظام",
+  "themeLight": "فاتح",
+  "themeDark": "داكن",
+  "homeGreeting": "مرحبًا بعودتك، {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "homeHeroTitle": "هل أنت مستعد لتنفيذ مشروع اليوم؟",
+  "homeHeroSubtitle": "اعثر على مواد قابلة لإعادة الاستخدام، واستكشف أفكار المشاريع، وتابع الحجوزات والتوصيل من مكان واحد.",
+  "browseMaterialsAction": "تصفّح المواد",
+  "exploreLearningHub": "استكشف مركز التعلّم",
+  "quickActions": "إجراءات سريعة",
+  "quickActionsSubtitle": "ابدأ بالخدمات المتاحة اليوم.",
+  "browseAll": "عرض الكل",
+  "browseProjects": "تصفّح المشاريع",
+  "openMaterials": "فتح المواد",
+  "openLearningHub": "فتح مركز التعلّم",
+  "backToHome": "العودة إلى الرئيسية",
+  "recommendationsLoadError": "تعذّر تحميل التوصيات",
+  "recommendationsLoadErrorSubtitle": "حاول مرة أخرى بعد قليل أو ارجع إلى الصفحة الرئيسية.",
+  "showUpTo": "عرض حتى",
+  "addInterestsPrompt": "أضف اهتماماتك لتحسين التوصيات.",
+  "editLearnerProfile": "تعديل ملف المتعلّم",
+  "sectionSuggestedMaterialsTitle": "مواد مقترحة لك",
+  "sectionSuggestedMaterialsSubtitle": "مخصّصة وفق اهتماماتك ومشاريعك المحفوظة ونشاطك الأخير.",
+  "sectionSuggestedMaterialsEmpty": "اختر اهتماماتك لتحسين الاقتراحات.",
+  "sectionSavedProjectMaterialsTitle": "مواد لمشاريعك المحفوظة",
+  "sectionSavedProjectMaterialsSubtitle": "مواد تطابق مكوّنات مشاريعك التعليمية المحفوظة.",
+  "sectionSavedProjectMaterialsEmpty": "احفظ مشروعًا تعليميًا لرؤية المواد المطابقة.",
+  "sectionSuggestedProjectsTitle": "مشاريع قد تعجبك",
+  "sectionSuggestedProjectsSubtitle": "مقترحة وفق اهتماماتك والمواد المطابقة المتاحة.",
+  "sectionSuggestedProjectsEmpty": "اختر اهتماماتك لرؤية توصيات المشاريع.",
+  "sectionContinueProjectsTitle": "تابع مشاريعك",
+  "sectionContinueProjectsSubtitle": "تابع تنفيذ المشاريع التي بدأت بها.",
+  "sectionContinueProjectsEmpty": "ابدأ تنفيذ مشروع ليظهر هنا.",
+  "sectionSavedProjectsTitle": "المشاريع المحفوظة",
+  "sectionSavedProjectsSubtitle": "مشاريع حفظتها لوقت لاحق.",
+  "sectionSavedProjectsEmpty": "ستظهر المشاريع المحفوظة هنا.",
+  "sectionFreeMaterialsTitle": "مواد مجانية بالقرب منك",
+  "sectionFreeMaterialsSubtitle": "مواد مجانية متاحة على ImpactLoop.",
+  "sectionFreeMaterialsEmpty": "لم نعثر على مواد مجانية قريبة بعد.",
+  "sectionPopularProjectsTitle": "المشاريع الشائعة",
+  "sectionPopularProjectsSubtitle": "مشاريع تعليمية شائعة على ImpactLoop.",
+  "sectionPopularProjectsEmpty": "لم نعثر على مشاريع شائعة بعد.",
+  "reasonSimilarReserved": "مشابهة لمواد حجزتها",
+  "reasonRecentActivity": "تطابق نشاطك الأخير",
+  "reasonSavedProjects": "مرتبطة بمشاريعك المحفوظة",
+  "reasonLikedProjects": "استنادًا إلى مشاريع أعجبتك",
+  "reasonFollowedProjects": "مرتبطة بمشاريع تتابعها",
+  "reasonMaterialActivity": "مرتبطة بمواد في نشاطك",
+  "reasonNearLocation": "متاحة بالقرب من موقعك المحفوظ",
+  "reasonFreeMaterial": "مادة مجانية",
+  "reasonFreeNearLocation": "مادة مجانية بالقرب من موقعك المحفوظ",
+  "reasonDeliveryAvailable": "التوصيل متاح",
+  "reasonPopularMaterial": "مادة شائعة",
+  "reasonRecentlyAdded": "أضيفت مؤخرًا",
+  "reasonMatchesInterest": "تطابق اهتمامك بـ {interest}",
+  "@reasonMatchesInterest": {
+    "placeholders": {
+      "interest": {
+        "type": "String"
+      }
+    }
+  },
+  "reasonBuildingCategory": "لأنك تنفّذ مشروعًا ضمن فئة {category}",
+  "@reasonBuildingCategory": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "reasonComponentsReady": "{ready} من أصل {total} مكوّنات جاهزة",
+  "@reasonComponentsReady": {
+    "placeholders": {
+      "ready": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reasonRecommended": "مقترح لك",
+  "findReusableMaterials": "اعثر على مواد قابلة لإعادة الاستخدام",
+  "browseItems": "تصفّح العناصر",
+  "materialsActionDescription": "ابحث في المواد التي يعرضها المورّدون حاليًا.",
+  "exploreLearningProjects": "استكشف المشاريع التعليمية",
+  "exploreProjects": "استكشف المشاريع",
+  "learningActionDescription": "افتح دليل المشاريع في مركز التعلّم.",
+  "trackPickups": "تابع الاستلام",
+  "reservationsActionDescription": "تابع ردود المورّدين ومواعيد استلام المواد المطلوبة.",
+  "comingLater": "قريبًا",
+  "comingLaterSubtitle": "إحصاءات الأثر مخطط لها لكنها غير متاحة بعد.",
+  "impactSnapshot": "ملخص الأثر",
+  "impactSnapshotDescription": "سيظهر أثر إعادة الاستخدام هنا بعد إكمال الحجوزات والمشاريع.",
+  "landingFutureBadge": "ابنِ مستقبلًا أفضل",
+  "landingHeroSubtitle": "اكتشف مواد قابلة لإعادة الاستخدام، وشارك الموارد الفائضة، وحوّلها إلى مشاريع ضمن تجربة مجتمعية أكثر استدامة.",
+  "landingCtaNote": "دون بطاقة ائتمان أو ضوضاء. ابدأ التنفيذ فحسب.",
+  "materialsReused": "مواد أُعيد استخدامها",
+  "activeMakers": "صنّاع نشطون",
+  "landingCommunity": "انضم إلى مجتمع متنامٍ من الطلبة والصنّاع والمورّدين الذين ينفّذون مشاريع بنفايات أقل.",
+  "landingFeatureFindTitle": "اعثر على مواد قابلة لإعادة الاستخدام",
+  "landingFeatureFindBody": "تصفّح مجموعة واسعة من المواد التي يشاركها مجتمعك.",
+  "exploreMaterials": "استكشف المواد",
+  "landingFeatureShareTitle": "شارك المواد الفائضة",
+  "landingFeatureShareBody": "اعرض ما لم تعد تحتاج إليه وساعد الآخرين على تنفيذ المزيد.",
+  "shareMaterials": "مشاركة المواد",
+  "landingFeatureBuildTitle": "نفّذ مشاريع بنفايات أقل",
+  "landingFeatureBuildBody": "وفّر المال وقلّل النفايات وحوّل أفكارك الإبداعية إلى واقع.",
+  "startBuilding": "ابدأ التنفيذ",
+  "landingFooter": "خيارات مستدامة. مجتمعات أقوى. مشاريع أذكى.",
+  "requestDelivery": "طلب التوصيل",
+  "requestDeliveryForMaterial": "اختر المكان الذي سيوصل إليه السائق مادة {materialTitle}.",
+  "@requestDeliveryForMaterial": {
+    "placeholders": {
+      "materialTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryRequested": "تم طلب التوصيل.",
+  "deliveryRequestFailed": "تعذّر طلب التوصيل. حاول مرة أخرى.",
+  "savedAddressesLoadFailed": "تعذّر تحميل العناوين المحفوظة.",
+  "noSavedAddresses": "لا توجد عناوين محفوظة بعد. أدخل عنوانًا أدناه.",
+  "newAddress": "عنوان جديد",
+  "savedDropoffAddress": "عنوان التوصيل المحفوظ",
+  "chooseSavedDropoffAddress": "اختر عنوان توصيل محفوظًا.",
+  "country": "الدولة",
+  "city": "المدينة",
+  "area": "المنطقة",
+  "address": "العنوان",
+  "countryAndCityRequired": "الدولة والمدينة مطلوبتان.",
+  "useCurrentLocation": "استخدام الموقع الحالي",
+  "gettingLocation": "جارٍ تحديد الموقع…",
+  "currentLocationCaptured": "تم تحديد الموقع الحالي.",
+  "currentLocationFailed": "تعذّر تحديد موقعك الحالي.",
+  "coordinatesValue": "الإحداثيات: {coordinates}",
+  "@coordinatesValue": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "preciseLocationHelp": "يساعد الموقع الدقيق السائق في الوصول إليك. ويمكنك الاكتفاء بإدخال المدينة والعنوان.",
+  "saveAddressForLater": "حفظ هذا العنوان لاستخدامه لاحقًا",
+  "addressLabel": "اسم العنوان",
+  "addressLabelHint": "المنزل، الجامعة، الورشة…",
+  "addressLabelRequired": "أدخل اسمًا لحفظ هذا العنوان.",
+  "driverNoteOptional": "ملاحظة للسائق (اختياري)",
+  "supplierProfile": "ملف المورّد",
+  "supplierProfileNotFound": "لم يتم العثور على ملف المورّد.",
+  "supplierProfileLoadFailed": "تعذّر تحميل ملف المورّد.",
+  "supplierMaterialsLoadFailed": "تعذّر تحميل مواد المورّد.",
+  "learnerAccountFollowRequired": "استخدم حساب متعلّم لمتابعة المورّدين.",
+  "publicMaterialsCount": "{count, plural, =0{لا توجد مواد عامة} =1{مادة عامة واحدة} =2{مادتان عامتان} few{{count} مواد عامة} many{{count} مادة عامة} other{{count} مادة عامة}}",
+  "@publicMaterialsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noPublicMaterials": "لا توجد مواد عامة متاحة حاليًا.",
+  "retryLoadingMore": "إعادة محاولة تحميل المزيد",
+  "aboutSupplier": "عن هذا المورّد",
+  "aboutSupplierDescription": "تصفّح المواد العامة لهذا المورّد وتابع التحديثات عند نشر مخزون جديد.",
+  "deliveryQuoteFailed": "تعذّر حساب سعر التوصيل. تحقق من موقع التوصيل وحاول مرة أخرى.",
+  "cannotReserveOwnMaterial": "لا يمكنك حجز مادة أدرجتها بنفسك.",
+  "openReservationAlreadyExists": "لديك طلب حجز مفتوح لهذه المادة. راجع حجوزي.",
+  "materialUnavailableForReservation": "لم تعد هذه المادة متاحة للحجوزات الجديدة.",
+  "invalidReservationQuantity": "أدخل كمية أكبر من صفر ولا تتجاوز الكمية المتاحة.",
+  "reservationQuantityUpTo": "هذه الكمية غير متاحة. يمكنك طلب ما يصل إلى {quantity} الآن.",
+  "@reservationQuantityUpTo": {
+    "placeholders": {
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "loadingDelivery": "جارٍ تحميل التوصيل",
+  "checkingDeliveryStatus": "جارٍ التحقق من آخر حالة للتوصيل.",
+  "deliveryLoadFailed": "تعذّر تحميل التوصيل",
+  "deliveryStatusTitle": "حالة التوصيل",
+  "requestedAt": "طُلب في {dateTime}",
+  "@requestedAt": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "assignedDriver": "السائق المعيّن",
+  "pickupWindow": "موعد الاستلام",
+  "pickupArea": "منطقة الاستلام",
+  "dropoff": "موقع التوصيل",
+  "driverNote": "ملاحظة السائق",
+  "failureReason": "سبب التعذّر",
+  "deliveryCodeInstructions": "أعطِ هذا الرمز للسائق عند استلام المادة.",
+  "backToReservations": "العودة إلى الحجوزات",
+  "liveTracking": "التتبع المباشر",
+  "driverLocationUpdated": "تم تحديث موقع السائق مؤخرًا",
+  "trackDelivery": "تتبّع التوصيل",
+  "refreshStatus": "تحديث الحالة",
+  "statusTimeline": "سجل الحالة",
+  "statusTimelineDescription": "تحديثات سير عملية التوصيل.",
+  "loadingTracking": "جارٍ تحميل تتبع التوصيل…",
+  "fetchingTracking": "جارٍ جلب آخر موقع للتوصيل.",
+  "trackingLoadFailed": "تعذّر تحميل التتبع.",
+  "trackingUnavailable": "التتبع غير متاح بعد",
+  "waitingDriverLocation": "بانتظار موقع السائق",
+  "waitingDriverLocationDescription": "استلم السائق مادتك، وسيظهر موقعه عند مشاركته.",
+  "driverLocationStale": "لم يتم تحديث موقع السائق مؤخرًا.",
+  "lastUpdatedAt": "آخر تحديث: {dateTime}",
+  "@lastUpdatedAt": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "autoUpdateHint": "يتم التحديث تلقائيًا ما دامت هذه الصفحة مفتوحة.",
+  "refreshing": "جارٍ التحديث…",
+  "refreshTracking": "تحديث التتبع",
+  "viewDeliveryDetails": "عرض تفاصيل التوصيل",
+  "driverName": "السائق: {name}",
+  "@driverName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deliveryRoute": "الاستلام: {pickup} ← التوصيل: {dropoff}",
+  "@deliveryRoute": {
+    "placeholders": {
+      "pickup": {
+        "type": "String"
+      },
+      "dropoff": {
+        "type": "String"
+      }
+    }
+  },
+  "pickupLocation": "موقع الاستلام",
+  "dropoffLocation": "موقع التوصيل",
+  "waitingForDriver": "بانتظار تعيين سائق.",
+  "driverAssigned": "تم تعيين سائق.",
+  "driverHeadingToPickup": "السائق في طريقه للاستلام من المورّد.",
+  "trackingComplete": "اكتمل التتبع لهذا التوصيل.",
+  "trackingAvailableAfterPickup": "يصبح موقع السائق متاحًا بعد استلام المادة.",
+  "driverLocationNotShared": "لم يشارك السائق موقعه بعد. ستظهر تحديثات الموقع هنا عند مشاركته.",
+  "accuracyMeters": "الدقة: نحو {meters} متر",
+  "@accuracyMeters": {
+    "placeholders": {
+      "meters": {
+        "type": "String"
+      }
+    }
+  },
+  "trackingRefreshFailed": "تعذّر تحديث التتبع. يتم عرض آخر موقع معروف.",
+  "supplierSupplierRole": "دور المورد",
+  "supplierOverview": "نظرة عامة",
+  "supplierMyMaterials": "موادي",
+  "supplierAddMaterial": "إضافة مادة",
+  "supplierAdd": "إضافة",
+  "supplierIncomingRequests": "الطلبات الواردة",
+  "supplierRequests": "الطلبات",
+  "supplierPickupSchedule": "جدول الاستلام",
+  "supplierSupplierPortal": "بوابة المورد",
+  "supplierTheme": "المظهر",
+  "supplierViewSupplierProfile": "عرض ملف المورد",
+  "supplierTrackMaterialsRequestsAndImpact": "تتبع المواد والطلبات والأثر.",
+  "supplierListSurplusMaterialsForReuseBy": "أدرج المواد الفائضة لإعادة استخدامها من قبل المتعلمين والصناع.",
+  "supplierManagePublicSupplierDetailsAndPickup": "إدارة تفاصيل المورد العامة وموقع الاستلام.",
+  "supplierReviewLearnerRequestsAndSchedulePickups": "راجع طلبات المتعلمين وحدد مواعيد الاستلام.",
+  "supplierTrackAcceptedPickupsAndUpcomingHandovers": "تتبع عمليات الاستلام المقبولة والتسليمات القادمة.",
+  "supplierReviewUpdatesAndActionsThatNeed": "راجع التحديثات والإجراءات التي تحتاج انتباهك.",
+  "supplierComingSoonInTheSupplierPortal": "قريباً في بوابة المورد.",
+  "supplierManageYourSupplierActivity": "إدارة نشاطك كمورد.",
+  "supplierManageYourListedSurplusMaterials": "إدارة المواد الفائضة التي أدرجتها.",
+  "supplierSearchYourMaterials": "ابحث في موادك",
+  "supplierTotal": "الإجمالي",
+  "supplierPendingReserved": "قيد الانتظار / محجوزة",
+  "supplierUnavailable2": "غير متاحة",
+  "supplierYouHaveNotListedAnyMaterials": "لم تدرج أي مواد بعد.",
+  "supplierShareSurplusMaterialsWithLearnersAnd": "شارك المواد الفائضة مع المتعلمين والصناع من ورشتك.",
+  "supplierAddYourFirstMaterial": "أضف أول مادة",
+  "supplierWeCouldNotLoadYourMaterials": "تعذّر تحميل موادك.",
+  "supplierNoMaterialsMatchYourFilters": "لا توجد مواد مطابقة للتصفية.",
+  "supplierTryClearingFiltersOrAdjustingYour": "جرّب مسح التصفية أو تعديل البحث.",
+  "supplierLikes": "الإعجابات",
+  "supplierEngagement": "التفاعل",
+  "supplierActiveDemand": "الطلب النشط",
+  "supplierDemandInterestScore": "درجة الطلب / الاهتمام",
+  "supplierReuseHistory": "سجل إعادة الاستخدام",
+  "supplierReservationsForThisMaterial": "حجوزات هذه المادة",
+  "supplierDemandIndicators": "مؤشرات الطلب",
+  "supplierNoReservationsForThisMaterialYet": "لا توجد حجوزات لهذه المادة بعد.",
+  "supplierNoDemandSignalsYet": "لا توجد إشارات طلب بعد.",
+  "supplierNoActiveRequestsRightNowThis": "لا توجد طلبات نشطة حالياً. تمت إعادة استخدام هذه المادة بالفعل.",
+  "supplierThisMaterialHasActiveDemand": "هذه المادة لديها طلب نشط.",
+  "supplierLearnersAreShowingInterestButNo": "المتعلمون يُظهرون اهتماماً، لكن لا توجد حجوزات بعد.",
+  "supplierNoActiveDemandYet": "لا يوجد طلب نشط بعد.",
+  "supplierActiveDemandScore": "درجة الطلب النشط",
+  "supplierOverallDemandScore": "درجة الطلب الإجمالية",
+  "supplierPercent": "{percent}%",
+  "@supplierPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierBasedOnViewsLikesActiveRequests": "بناءً على المشاهدات والإعجابات والطلبات النشطة وعمليات إعادة الاستخدام المكتملة.",
+  "supplierCompletedReservations": "حجوزات مكتملة",
+  "supplierCompletedReuses": "عمليات إعادة استخدام مكتملة",
+  "supplierLastCompleted": "آخر إكمال",
+  "supplierMarkUnavailable": "تعليم كغير متاحة",
+  "supplierRestoreAvailable": "إعادة إلى متاحة",
+  "supplierHighDemand": "طلب مرتفع",
+  "supplierOpenReservation": "فتح الحجز",
+  "supplierPendingReservations": "حجوزات قيد الانتظار",
+  "supplierReservedReservations": "حجوزات مقبولة",
+  "supplierTotalActiveRequests": "إجمالي الطلبات النشطة",
+  "supplierDemandScore": "درجة الطلب",
+  "supplierAllPrices": "كل الأسعار",
+  "supplierStatus": "الحالة",
+  "supplierPrice": "السعر",
+  "supplierAllCategories": "كل الفئات",
+  "supplierManage": "إدارة",
+  "supplierEdit": "تعديل",
+  "supplierEditMaterial": "تعديل المادة",
+  "supplierUpdateSafeListingDetailsPriceAnd": "حدّث تفاصيل الإدراج الآمنة. تغييرات السعر والفئة تتطلب مراجعة.",
+  "supplierPriceCategoryLocationAndImagesAre": "السعر والفئة والموقع والصور غير قابلة للتعديل هنا بعد.",
+  "supplierMaterialUpdatedSuccessfully": "تم تحديث المادة بنجاح.",
+  "supplierCouldNotUpdateMaterialPleaseTry": "تعذر تحديث المادة. يرجى المحاولة مرة أخرى.",
+  "supplierDelete": "حذف",
+  "supplierDeleteMaterial": "حذف المادة؟",
+  "supplierThisWillRemoveTheMaterialFrom": "سيؤدي هذا إلى إزالة المادة من إدراجاتك. لا يمكن التراجع عن هذا الإجراء.",
+  "supplierMaterialDeletedSuccessfully": "تم حذف المادة بنجاح.",
+  "supplierCouldNotDeleteMaterialPleaseTry": "تعذر حذف المادة. يرجى المحاولة مرة أخرى.",
+  "supplierReusedMaterialsCannotBeDeletedBecause": "لا يمكن حذف المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.",
+  "supplierCannotDeleteAMaterialWithActive": "لا يمكن حذف مادة لديها طلبات نشطة.",
+  "supplierThisMaterialCannotBeDeletedRight": "لا يمكن حذف هذه المادة الآن.",
+  "supplierReusedMaterialsCannotBeEditedBecause": "لا يمكن تعديل المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.",
+  "supplierCannotEditAMaterialWithActive": "لا يمكن تعديل مادة لديها طلبات نشطة أو حالة محظورة.",
+  "supplierThisMaterialCannotBeEditedRight": "لا يمكن تعديل هذه المادة الآن.",
+  "supplierEditingNotAvailable": "التعديل غير متاح",
+  "supplierSaveChanges": "حفظ التغييرات",
+  "supplierReadOnly": "للقراءة فقط",
+  "supplierMaterialType": "نوع المادة",
+  "supplierEditingListingsIsComingSoon": "تعديل الإدراجات قريباً.",
+  "supplierPrevious": "السابق",
+  "supplierNext": "التالي",
+  "supplierPagePageOfTotalpages": "صفحة {page} من {totalPages}",
+  "@supplierPagePageOfTotalpages": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "totalPages": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierListedDate": "أُدرج {date}",
+  "@supplierListedDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierMaterialNotFound": "المادة غير موجودة",
+  "supplierThisListingMayHaveBeenRemoved": "ربما أُزيل هذا الإدراج أو لم يعد متاحاً.",
+  "supplierBackToMyMaterials": "العودة إلى موادي",
+  "supplierViews": "المشاهدات",
+  "supplierCreated": "تاريخ الإنشاء",
+  "supplierUpdated": "تاريخ التحديث",
+  "supplierSupplierProfile": "ملف المورد",
+  "supplierCancel": "إلغاء",
+  "supplierBack": "رجوع",
+  "supplierBackToDashboard": "العودة للوحة التحكم",
+  "supplierAccept": "قبول",
+  "supplierDecline": "رفض",
+  "supplierLoading": "جاري التحميل…",
+  "supplierRequired": "مطلوب",
+  "supplierOptional": "اختياري",
+  "supplierComingSoon": "قريباً",
+  "supplierWelcomeBackName": "مرحباً بعودتك، {name}",
+  "@supplierWelcomeBackName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierTrackYourMaterialsRespondToRequests": "تتبع موادك، رد على الطلبات، ونمِّ أثر إعادة الاستخدام.",
+  "supplierAddMaterial2": "إضافة مادة",
+  "supplierViewRequests": "عرض الطلبات",
+  "supplierActiveMaterials": "المواد النشطة",
+  "supplierPendingRequests": "الطلبات المعلقة",
+  "supplierScheduledPickups": "عمليات الاستلام المجدولة",
+  "supplierReusedMaterials": "المواد المعاد استخدامها",
+  "supplierTotalMaterials": "إجمالي المواد",
+  "supplierAvailableMaterials": "المواد المتاحة",
+  "supplierReservedMaterials": "المواد المحجوزة",
+  "supplierTotalMaterialViews": "إجمالي مشاهدات المواد",
+  "supplierTotalMaterialLikes": "إجمالي إعجابات المواد",
+  "supplierFollowers": "المتابعون",
+  "supplierRecentReservationRequests": "طلبات الحجز الأخيرة",
+  "supplierNoReservationRequestsYet": "لا توجد طلبات حجز بعد.",
+  "supplierMostViewedMaterial": "المادة الأكثر مشاهدة",
+  "supplierSupplierEngagement": "تفاعل المورد",
+  "supplierAccountTotals": "إجماليات الحساب",
+  "supplierNoViewedMaterialsYet": "لا توجد مواد بمشاهدات بعد.",
+  "supplierHighDemandMaterials": "مواد ذات طلب مرتفع",
+  "supplierMaterialsWithActiveReservationInterest": "مواد لديها اهتمام حجز نشط.",
+  "supplierNoHighDemandMaterialsYet": "لا توجد مواد ذات طلب مرتفع بعد.",
+  "supplierViewAllRequests": "عرض كل الطلبات",
+  "supplierUnknownLearner": "متعلم غير معروف",
+  "supplierOperationsSnapshot": "لمحة تشغيلية",
+  "supplierRequesterStatusDateQtyQuantity": "{requester} · {status} · {date} · الكمية {quantity}",
+  "@supplierRequesterStatusDateQtyQuantity": {
+    "placeholders": {
+      "requester": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierCountViews": "{count} مشاهدة",
+  "@supplierCountViews": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierSelectMaterialConditionBeforeVerifyingThe": "اختر حالة المادة قبل التحقق من السعر.",
+  "supplierReferenceMaxCurrencysymbolBasemaxConditionConditionlabe": "الحد الأقصى المرجعي: {currencySymbol}{baseMax} · الحالة: {conditionLabel} · الحد المعدّل: {currencySymbol}{adjustedMax}",
+  "@supplierReferenceMaxCurrencysymbolBasemaxConditionConditionlabe": {
+    "placeholders": {
+      "currencySymbol": {
+        "type": "String"
+      },
+      "baseMax": {
+        "type": "String"
+      },
+      "conditionLabel": {
+        "type": "String"
+      },
+      "adjustedMax": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierSomeMaterialsAreGettingStrongDemand": "بعض المواد تحظى بطلب قوي.",
+  "supplierYourMaterialsAreGettingViewsImprove": "موادك تحصل على مشاهدات. حسّن العناوين/الصور لزيادة التفاعل.",
+  "supplierAddYourFirstMaterialToStart": "أضف أول مادة لك لتبدأ في تلقي الطلبات.",
+  "supplierReservationStatus": "حالة الحجوزات",
+  "supplierMaterialsStatus": "حالة المواد",
+  "supplierRecentActivity": "النشاط الأخير",
+  "supplierCuratedHighlightsFromYourLatestOperations": "أبرز ما حدث في عملياتك الأخيرة",
+  "supplierViewAllActivity": "عرض كل النشاط",
+  "supplierActionableInsights": "رؤى قابلة للتنفيذ",
+  "supplierRecommendedNextStepsBasedOnYour": "الخطوات التالية الموصى بها بناءً على نشاطك الحالي.",
+  "supplierRequestsNeedAttention": "الطلبات تحتاج انتباهك",
+  "supplierNoPendingRequestsRightNow": "لا توجد طلبات معلقة حالياً.",
+  "supplierReviewRequests": "مراجعة الطلبات",
+  "supplierPickupReadiness": "جاهزية الاستلام",
+  "supplierPickupLocationIsSetSelfPickup": "موقع الاستلام محدد. الاستلام الذاتي مفعّل.",
+  "supplierAddOrConfirmYourPickupLocation": "أضف أو أكّد موقع الاستلام ليعرف المتعلمون مكان الاستلام.",
+  "supplierCompleteYourSupplierProfileAndPickup": "أكمل ملف المورد وموقع الاستلام لبدء قبول الطلبات.",
+  "supplierUpdateProfile": "تحديث الملف",
+  "supplierGrowReuse": "نمِّ إعادة الاستخدام",
+  "supplierYouHaveActiveListingsReadyFor": "لديك قوائم نشطة جاهزة للمتعلمين. الاستلام المكتمل يزيد أثر إعادة الاستخدام.",
+  "supplierReuseActivityIsStartingKeepMaterials": "بدأ نشاط إعادة الاستخدام. حدّث المواد لتحسين الطلبات.",
+  "supplierListMaterialsToStartBuildingReuse": "أدرج مواد لبدء بناء أثر إعادة الاستخدام عند اكتمال الاستلام.",
+  "supplierViewMaterials": "عرض المواد",
+  "supplierAllCaughtUpNewLearnerRequests": "كل شيء محدّث. ستظهر طلبات المتعلمين وتحديثات الاستلام هنا.",
+  "supplierNoRecentActivityYet": "لا يوجد نشاط حديث بعد.",
+  "supplierCheckNotifications": "تحقق من الإشعارات",
+  "supplierOpenPickupSchedule": "فتح جدول الاستلام",
+  "supplierEditProfile": "تعديل الملف",
+  "supplierSupplierHub": "مركز المورد",
+  "supplierShareUnusedPartsReduceWasteAnd": "شارك القطع غير المستخدمة، قلّل الهدر، وساعد المتعلمين على البناء أسرع.",
+  "supplierPickupCity": "الاستلام: {city}",
+  "@supplierPickupCity": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierPickupCityArea": "الاستلام: {city}، {area}",
+  "@supplierPickupCityArea": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "area": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNoMaterialsListedYet": "لا توجد مواد مدرجة بعد",
+  "supplierStartBySharingUnusedPartsProject": "ابدأ بمشاركة القطع غير المستخدمة أو مخلفات المشاريع أو المكونات الفائضة.",
+  "supplierCompleteYourSupplierProfile": "أكمل ملف المورد",
+  "supplierAddYourPublicSupplierNameAnd": "أضف اسم المورد العام وموقع الاستلام قبل إدراج المواد.",
+  "supplierCompleteProfile": "إكمال الملف",
+  "supplierWeCouldNotLoadYourSupplier": "تعذّر تحميل لوحة تحكم المورد.",
+  "supplierPleaseCheckYourConnectionAndTry": "يرجى التحقق من الاتصال والمحاولة مجدداً.",
+  "supplierReuseImpact": "أثر إعادة الاستخدام",
+  "supplierCountReusedQuantityUnits": "{count} معاد استخدامها · {quantity} وحدة",
+  "@supplierCountReusedQuantityUnits": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierImpactIsCalculatedFromCompletedReuse": "يُحسب الأثر من بيانات إعادة الاستخدام المكتملة.",
+  "supplierProjectImpact": "أثر المشاريع",
+  "supplierYourMaterialsHelpedLearnersCompleteReal": "ساعدت موادك المتعلمين على إكمال مكوّنات مشاريع حقيقية.",
+  "supplierYourCompletedProjectImpactWillAppear": "سيظهر أثر مشاريعك المكتمل هنا عندما ينهي المتعلمون المكوّنات باستخدام موادك.",
+  "supplierProjectsSupported": "مشاريع مدعومة",
+  "supplierComponentsCompleted": "مكوّنات مكتملة",
+  "supplierLearnerBuildsHelped": "بناءات متعلمين مساندة",
+  "supplierRecentSupportedProjects": "مشاريع مدعومة حديثاً",
+  "supplierNoReviewsYet": "لا توجد مراجعات بعد",
+  "supplierRating": "التقييم",
+  "supplierCountReviews": "{count} مراجعة",
+  "@supplierCountReviews": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierMaterialLifecycle": "دورة حياة المادة",
+  "supplierListed": "مدرجة",
+  "supplierActionNeeded": "يتطلب إجراء",
+  "supplierResolved": "تم الحل",
+  "supplierNoFilterlabelNotifications": "لا توجد إشعارات {filterLabel}.",
+  "@supplierNoFilterlabelNotifications": {
+    "placeholders": {
+      "filterLabel": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierWeCouldNotLoadNotifications": "تعذّر تحميل الإشعارات.",
+  "supplierNoActionAvailableForThisItem": "لا يوجد إجراء متاح لهذا العنصر.",
+  "supplierCouldNotOpenListingTryAgain": "تعذّر فتح الإدراج. حاول مجدداً من الإشعارات.",
+  "supplierApproved": "موافق عليه",
+  "supplierMaxFormatnisamountMaxNisUnit": "الحد {max} ₪/{unit}",
+  "@supplierMaxFormatnisamountMaxNisUnit": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierEditListing": "تعديل الإدراج",
+  "supplierEditPrice": "تعديل السعر",
+  "supplierReviewRequest": "مراجعة الطلب",
+  "supplierChoosePickupWindow": "اختر نافذة الاستلام",
+  "supplierOpenMaterial": "فتح المادة",
+  "supplierOpenProfile": "فتح الملف الشخصي",
+  "supplierSupplierActive": "المورد نشط",
+  "supplierPickupEnabled": "الاستلام مفعّل",
+  "supplierNisListings": "إدراجات بالشيكل",
+  "supplierPendingAcceptedAndCompletedRequests": "الطلبات المعلقة والمقبولة والمكتملة",
+  "supplierInventoryBreakdownAcrossLifecycleStates": "تفصيل المخزون عبر حالات دورة الحياة",
+  "supplierAcceptedPickups": "عمليات الاستلام المقبولة",
+  "supplierCompletedReuse": "إعادة الاستخدام المكتملة",
+  "supplierAcceptedHandovers": "التسليمات المقبولة",
+  "supplierReservationActivityWillAppearHereOnce": "سيظهر نشاط الحجوزات هنا عند وصول الطلبات.",
+  "supplierReservedPending": "محجوزة / معلقة",
+  "supplierMaterialStatusBreakdownWillAppearAfter": "سيظهر تفصيل حالة المواد بعد أول إدراج.",
+  "supplierPendingRequestWaiting": "طلب معلق بانتظار الرد",
+  "supplierNextScheduledPickup": "عملية الاستلام المجدولة التالية",
+  "supplierAcceptedPickupWithName": "استلام مقبول مع {name}",
+  "@supplierAcceptedPickupWithName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierLatestCompletedReuse": "أحدث إعادة استخدام مكتملة",
+  "supplierChooseSupplierType": "اختر نوع المورد",
+  "supplierChoosePhotosFromYourDevice": "اختر الصور من جهازك",
+  "supplierMaterialCouldNotBeListed": "تعذّر إدراج المادة.",
+  "supplierChooseACategoryFirst": "اختر فئة أولاً.",
+  "supplierEnterAMaterialNameFirst": "أدخل اسم المادة أولاً.",
+  "supplierEnterAValidQuantityAndPrice": "أدخل كمية وسعراً صالحين.",
+  "supplierPriceReviewRequestFailed": "فشل طلب مراجعة السعر.",
+  "supplierSavedListingDraftWasNotFound": "لم تُعثر على مسودة الإدراج المحفوظة.",
+  "supplierCategoryApprovedContinueYourListing": "تمت الموافقة على الفئة. تابع إدراجك.",
+  "supplierContinueEditingYourSavedListingDraft": "تابع تعديل مسودة الإدراج المحفوظة.",
+  "supplierContinueYourListingFromWhereYou": "تابع إدراجك من حيث توقفت.",
+  "supplierCategoryRequestSubmittedYourListingDraft": "تم إرسال طلب الفئة. حُفظت مسودة الإدراج. يمكنك المتابعة بعد موافقة المسؤول.",
+  "supplierCategoryRequestSubmittedYourListingDraft2": "تم إرسال طلب الفئة. حُفظت مسودة الإدراج.",
+  "supplierPriceReviewSubmittedAGeminiAssisted": "تم إرسال مراجعة السعر. تم إنشاء اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.",
+  "supplierPriceVerificationFailedError": "فشل التحقق من السعر: {error}",
+  "@supplierPriceVerificationFailedError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierSubmitPriceReview": "إرسال مراجعة السعر",
+  "supplierPleaseClarifyTheMaterialName": "يرجى توضيح اسم المادة",
+  "supplierDidYouMeanOneOfThese": "هل تقصد أحد هذه؟",
+  "supplierMatchedPriceReferenceLabel": "مرجع السعر المطابق: {label}",
+  "@supplierMatchedPriceReferenceLabel": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierMaximumAllowedUnitPriceSymbolPrice": "الحد الأقصى لسعر الوحدة: {symbol}{price}",
+  "@supplierMaximumAllowedUnitPriceSymbolPrice": {
+    "placeholders": {
+      "symbol": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierMaximumAllowedUnitPriceSymbolPrice2": "الحد الأقصى لسعر الوحدة: {symbol}{price} لكل {unit}",
+  "@supplierMaximumAllowedUnitPriceSymbolPrice2": {
+    "placeholders": {
+      "symbol": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierApprovedUnitUnit": "الوحدة المعتمدة: {unit}",
+  "@supplierApprovedUnitUnit": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierPriceReviewIsRequiredBeforePaid": "مراجعة السعر مطلوبة قبل النشر المدفوع. سيُنشأ اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.",
+  "supplierPriceIsAboveTheAllowedLimit": "السعر أعلى من الحد المسموح",
+  "supplierPriceBlocked": "السعر محظور",
+  "supplierMyMaterials2": "موادي",
+  "supplierIncomingRequests2": "الطلبات الواردة",
+  "supplierCurrentlyVisibleToLearners": "ظاهرة حالياً للمتعلمين",
+  "supplierWaitingForYourResponse": "بانتظار ردك",
+  "supplierAction": "إجراء",
+  "supplierPickup": "استلام",
+  "supplierListReusableParts": "أدرج قطعاً قابلة لإعادة الاستخدام",
+  "supplierRespondToLearners": "رد على المتعلمين",
+  "supplierUpdatesActions": "التحديثات والإجراءات",
+  "supplierLoadingIncomingRequests": "جاري تحميل الطلبات الواردة…",
+  "supplierWeCouldNotLoadRequests": "تعذّر تحميل الطلبات.",
+  "supplierRequestAccepted": "تم قبول الطلب.",
+  "supplierCouldNotAcceptTheRequest": "تعذّر قبول الطلب.",
+  "supplierRequestDeclined": "تم رفض الطلب.",
+  "supplierCouldNotDeclineTheRequest": "تعذّر رفض الطلب.",
+  "supplierPickupMarkedAsCompleted": "تم تحديد الاستلام كمكتمل.",
+  "supplierCouldNotMarkPickupAsCompleted": "تعذّر تحديد الاستلام كمكتمل.",
+  "supplierNeedsLearnerConfirmation": "بحاجة إلى تأكيد المتعلم",
+  "supplierNeedsLearner": "بحاجة إلى المتعلم",
+  "supplierDeclined": "مرفوض",
+  "supplierNoRequestsYet": "لا توجد طلبات بعد.",
+  "supplierNoRequestsMatchThisFilter": "لا توجد طلبات تطابق هذا الفلتر.",
+  "supplierNoPendingRequests": "لا توجد طلبات معلقة",
+  "supplierNoAcceptedPickupsYet": "لا توجد عمليات استلام مقبولة بعد.",
+  "supplierNoDeclinedRequests": "لا توجد طلبات مرفوضة.",
+  "supplierNoCompletedPickupsYet": "لا توجد عمليات استلام مكتملة بعد.",
+  "supplierNewLearnerRequestsWillAppearHere": "ستظهر طلبات المتعلمين الجديدة هنا.",
+  "supplierAcceptedRequestsWithPickupWindowsWill": "ستظهر الطلبات المقبولة مع مواعيد الاستلام هنا.",
+  "supplierRequestsYouDeclineWillBeListed": "ستُدرج الطلبات التي ترفضها هنا.",
+  "supplierFinishedPickupsWillAppearHere": "ستظهر عمليات الاستلام المنتهية هنا.",
+  "supplierNoLearnerNote": "لا توجد ملاحظة من المتعلم.",
+  "supplierSelfPickup": "استلام ذاتي",
+  "supplierPickupWindow2": "الاستلام: {window}",
+  "@supplierPickupWindow2": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNoRequestsWaitingForLearner": "لا توجد طلبات بانتظار المتعلم",
+  "supplierNoCancelledRequests": "لا توجد طلبات ملغاة",
+  "supplierReservationsAwaitingLearnerConfirmationAppearHere": "تظهر الحجوزات التي تنتظر تأكيد المتعلم هنا.",
+  "supplierCancelledReservationsWillAppearHere": "ستظهر الحجوزات الملغاة هنا.",
+  "supplierWaitingForSupplier": "بانتظار المورد",
+  "supplierLoadingPickupSchedule": "جاري تحميل جدول الاستلام…",
+  "supplierWeCouldNotLoadPickupSchedule": "تعذّر تحميل جدول الاستلام.",
+  "supplierNoPickupsScheduledYet": "لا توجد عمليات استلام مجدولة بعد.",
+  "supplierNoPickupsMatchThisFilter": "لا توجد عمليات استلام تطابق هذا الفلتر.",
+  "supplierMarkCompleted": "تحديد كمكتمل",
+  "supplierUpcoming": "قادمة",
+  "supplierPast": "سابقة",
+  "supplierToday": "اليوم",
+  "supplierDone": "منتهٍ",
+  "supplierNoPickupsScheduledForToday": "لا توجد عمليات استلام مجدولة اليوم.",
+  "supplierNoUpcomingPickups": "لا توجد عمليات استلام قادمة.",
+  "supplierNoPickupScheduleYet": "لا يوجد جدول استلام بعد.",
+  "supplierCreateYourProfile": "أنشئ ملفك",
+  "supplierUpdateYourPublicIdentityAndPickup": "حدّث هويتك العامة وإعدادات الاستلام.",
+  "supplierUpdateHowLearnersDiscoverYouAnd": "حدّث كيف يكتشفك المتعلمون وأين يمكن جمع المواد.",
+  "supplierPublicSupplierDetails": "تفاصيل المورد العامة",
+  "supplierTheseDetailsAppearOnYourPublic": "تظهر هذه التفاصيل في ملف المورد العام.",
+  "supplierPublicSupplierName": "اسم المورد العام",
+  "supplierHowLearnersWillSeeYou": "كيف سيراك المتعلمون",
+  "supplierAboutYourMaterials": "عن موادك",
+  "supplierShareTheMaterialTypesYouUsually": "شارك أنواع المواد التي تقدمها عادة.",
+  "supplierDefaultPickupArea": "منطقة الاستلام الافتراضية",
+  "supplierUseAGeneralPickupAreaExact": "استخدم منطقة استلام عامة. العناوين الدقيقة تبقى مخفية حتى الحاجة.",
+  "supplierChooseManually": "اختيار يدوي",
+  "supplierPickupLocationSelectionMethod": "طريقة تحديد موقع الاستلام",
+  "supplierEnterTheAddressDetailsOrMove": "أدخل تفاصيل العنوان أو حرّك دبوس الخريطة لاختيار موقع الاستلام الدقيق.",
+  "supplierLocationSelected": "تم تحديد الموقع",
+  "supplierFindingAddress": "جاري البحث عن العنوان…",
+  "supplierRefreshCurrentLocation": "تحديث الموقع الحالي",
+  "supplierOptionalAddressDetails": "تفاصيل العنوان (اختياري)",
+  "supplierCoordinatesAreTheSourceOfTruth": "الإحداثيات هي المرجع. هذه الحقول تساعد المتعلمين في العثور عليك.",
+  "supplierPalestine": "فلسطين",
+  "supplierNeighborhoodOrDistrict": "الحي أو المنطقة",
+  "supplierAddressLine": "سطر العنوان",
+  "supplierStreetOrBuildingKeptPrivate": "الشارع أو المبنى (يُحفظ بسرية)",
+  "supplierLocationPrivacy": "خصوصية الموقع",
+  "supplierSetYourExactPickupLocationYour": "حدّد موقع الاستلام الدقيق. تتحكم إعدادات الظهور بما يمكن للمتعلمين رؤيته.",
+  "supplierLocationVisibility": "ظهور الموقع",
+  "supplierPublicArea": "منطقة عامة",
+  "supplierOrderOnly": "للطلبات فقط",
+  "supplierPrivate": "خاص",
+  "supplierShowAsApproximate": "عرض كموقع تقريبي",
+  "supplierLearnersSeeAGeneralAreaNot": "يرى المتعلمون منطقة عامة وليس موقعاً دقيقاً.",
+  "supplierOrganizationDetails": "تفاصيل المؤسسة",
+  "supplierForWorkshopsFactoriesAndEducationalInstitutions": "للورش والمصانع والمؤسسات التعليمية فقط.",
+  "supplierOrganizationName": "اسم المؤسسة",
+  "supplierLegalOrPublicOrganizationName": "الاسم القانوني أو العام للمؤسسة",
+  "supplierContactPerson": "شخص الاتصال",
+  "supplierOptionalContactName": "اسم جهة الاتصال (اختياري)",
+  "supplierSaveProfile": "حفظ الملف",
+  "supplierSaving": "جاري الحفظ…",
+  "supplierDiscardChanges": "تجاهل التغييرات",
+  "supplierKeepYourPublicSupplierDetailsAccurate": "حافظ على تفاصيل موردك العامة دقيقة وموثوقة وسهلة الفهم للمتعلمين.",
+  "supplierCreateYourSupplierProfileSoLearners": "أنشئ ملف المورد ليعرف المتعلمون أين وكيف يجمعون المواد.",
+  "supplierProfileUnavailable": "الملف غير متاح",
+  "supplierProfileCouldNotBeSaved": "تعذّر حفظ الملف.",
+  "supplierSupplierProfileUpdated": "تم تحديث ملف المورد",
+  "supplierPleaseCaptureYourCurrentLocationBefore": "يرجى تحديد موقعك الحالي قبل الحفظ.",
+  "supplierCouldNotGetCurrentLocationPlease": "تعذّر تحديد الموقع الحالي. حاول مجدداً أو أدخله يدوياً.",
+  "supplierCurrentLocation": "الموقع الحالي",
+  "supplierWeFoundThisAddressFromYour": "وجدنا هذا العنوان من موقعك الحالي. راجعه وعدّله إن لزم.",
+  "supplierCurrentLocationCapturedButAddressLookup": "تم تحديد الموقع الحالي، لكن فشل البحث عن العنوان. يمكنك إضافة المدينة أو المنطقة يدوياً.",
+  "supplierCurrentLocationCapturedYouCanOptionally": "تم تحديد الموقع الحالي. يمكنك إضافة المدينة أو المنطقة أو تفاصيل العنوان اختيارياً.",
+  "supplierChooseVisibility": "اختر مستوى الظهور",
+  "supplierWorkingDays": "أيام العمل",
+  "supplierMonTueWed": "الإثنين، الثلاثاء، الأربعاء",
+  "supplierOpenFrom": "يفتح من",
+  "supplierOpenUntil": "يغلق عند",
+  "supplierUseASeparateOrganizationAddress": "استخدام عنوان مؤسسة منفصل",
+  "supplierEnableThisWhenYourOrganizationAddress": "فعّل هذا الخيار عندما يختلف عنوان المؤسسة عن موقع الاستلام الافتراضي.",
+  "supplierBusinessCountry": "بلد العمل",
+  "supplierBusinessCity": "مدينة العمل",
+  "supplierBusinessArea": "منطقة العمل",
+  "supplierBusinessAddressLine": "سطر عنوان العمل",
+  "supplierCountryOptional": "البلد (اختياري)",
+  "supplierCityOptional": "المدينة (اختياري)",
+  "supplierAreaOptional": "المنطقة (اختياري)",
+  "supplierAddressLineOptional": "سطر العنوان (اختياري)",
+  "supplierOptionalNeighborhoodOrDistrict": "الحي أو المنطقة (اختياري)",
+  "supplierOptionalStreetOrBuilding": "الشارع أو المبنى (اختياري)",
+  "supplierCompleteYourSupplierProfileFirst": "أكمل ملف المورد أولاً.",
+  "supplierSupplierDetailsAreRequiredBeforeYou": "تفاصيل المورد مطلوبة قبل نشر المواد القابلة لإعادة الاستخدام.",
+  "supplierGoToSupplierProfile": "الذهاب لملف المورد",
+  "supplierSetYourPickupLocationBeforeListing": "حدد موقع الاستلام قبل إدراج المواد.",
+  "supplierPickupLocationComesFromYourSupplier": "موقع الاستلام يأتي من ملف المورد ويُستخدم لكل مادة في هذه الخطوة.",
+  "supplierEditSupplierProfile": "تعديل ملف المورد",
+  "supplierMaterialCategoriesAreUnavailable": "فئات المواد غير متاحة.",
+  "supplierPleaseTryAgainAfterTheBackend": "يرجى المحاولة مجدداً عند توفر الخادم.",
+  "supplierSupplierProfileCouldNotLoad": "تعذّر تحميل ملف المورد.",
+  "supplierPleaseRefreshOrCompleteYourProfile": "يرجى التحديث أو إكمال ملفك أولاً.",
+  "supplierWhatAreYouListing": "ماذا تدرج؟",
+  "supplierDescribeTheSurplusMaterialClearly": "صف المادة الفائضة بوضوح.",
+  "supplierMaterialTypeName": "نوع/اسم المادة",
+  "supplierWaxMoldsArduinoUnoFabricScraps": "قوالب شمع، Arduino Uno، بقايا قماش...",
+  "supplierUseTheCommonMaterialTypeOr": "استخدم نوع المادة الشائع أو الاسم البديل. نستخدمه للمطابقة والتحقق من الأسعار المدفوعة.",
+  "supplierChooseACategoryFirstToSearch": "اختر فئة أولاً للبحث في أنواع المواد المراجعة.",
+  "supplierNoReviewedMaterialTypesFoundFree": "لم يتم العثور على أنواع مواد مراجعة. يمكن للإدراجات المجانية المتابعة بهذا الاسم.",
+  "supplierReviewedPriceAvailable": "سعر مراجع متاح",
+  "supplierNoReviewedPrice": "لا يوجد سعر مراجع",
+  "supplierPaidListingsNeedAReviewedMaterial": "تحتاج الإدراجات المدفوعة إلى نوع مادة مراجع مع قاعدة سعر نشطة.",
+  "supplierAliasesAliases": "أسماء بديلة: {aliases}",
+  "@supplierAliasesAliases": {
+    "placeholders": {
+      "aliases": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierListingTitle": "عنوان الإدراج",
+  "supplierUsedWaxMolds8Pieces": "قوالب شمع مستعملة - 8 قطع",
+  "supplierDescription": "الوصف",
+  "supplierDescribeConditionQuantityAndWhatIs": "صف الحالة والكمية وما يشمله العرض.",
+  "supplierChooseSource": "اختر المصدر",
+  "supplierCondition": "الحالة",
+  "supplierChooseCondition": "اختر الحالة",
+  "supplierSuggestedUses": "الاستخدامات المقترحة",
+  "supplierCandlesResinCastingCraftProjects": "شموع، صب راتنج، مشاريع حرفية.",
+  "supplierChooseTheClosestBroadCategory": "اختر أقرب فئة عامة.",
+  "supplierBroadCategory": "الفئة العامة",
+  "supplierChooseCategory": "اختر الفئة",
+  "supplierCategoryIsRequired": "الفئة مطلوبة",
+  "supplierPublishMaterial": "نشر المادة",
+  "supplierPublishing": "جاري النشر…",
+  "supplierHideCategoryRequest": "إخفاء طلب الفئة",
+  "supplierCannotFindYourCategory": "لا تجد فئتك؟",
+  "supplierCategoryRequest": "طلب فئة",
+  "supplierSendThisCategoryNameToAdmin": "أرسل اسم الفئة للمسؤول للموافقة. سيُحفظ نموذج الإدراج الحالي لتكمل لاحقاً.",
+  "supplierRequestedCategoryName": "اسم الفئة المطلوبة",
+  "supplierExampleCandleMakingTools": "مثال: أدوات صنع الشموع",
+  "supplierSending": "جاري الإرسال…",
+  "supplierSendCategoryRequest": "إرسال طلب الفئة",
+  "supplierFreeListingsMayUseOtherWhen": "يمكن للإدراجات المجانية استخدام «أخرى» عندما لا تناسب فئة مراجعة.",
+  "supplierPaidListingsCannotUseOtherUse": "لا يمكن للإدراجات المدفوعة استخدام «أخرى». استخدم «لا تجد فئتك؟» لطلب فئة مراجعة أولاً.",
+  "supplierQuantityAndPricing": "الكمية والتسعير",
+  "supplierEnterThePriceForOneUnit": "أدخل سعر الوحدة الواحدة. تُعالج الكمية بشكل منفصل.",
+  "supplierQuantity": "الكمية",
+  "supplierUnit": "الوحدة",
+  "supplierPiece": "قطعة",
+  "supplierPricePerUnit": "السعر لكل وحدة (₪)",
+  "supplierVerifyPrice": "التحقق من السعر",
+  "supplierMaximumAllowedPricePerUnitIs": "الحد الأقصى للسعر لكل {unit} هو {max} ₪.",
+  "@supplierMaximumAllowedPricePerUnitIs": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierPickupLocationComesFromYourSupplier2": "موقع الاستلام يأتي من ملف المورد.",
+  "supplierOrganizationListingsUseYourProfilePickup": "تستخدم إدراجات المؤسسة موقع الاستلام من ملفك.",
+  "supplierThisFixedPickupLocationFromYour": "يُستخدم موقع الاستلام الثابت من ملفك لكل إدراج. حدّثه في ملف المورد إذا تغيّر عنوان الورشة أو المنشأة.",
+  "supplierEditPickupInProfile": "تعديل الاستلام في الملف",
+  "supplierUseProfilePickupLocation": "استخدام موقع الاستلام من الملف",
+  "supplierUseYourDefaultPickupAreaOr": "استخدم منطقة الاستلام الافتراضية، أو حدّد نقطة استلام مختلفة لهذه المادة فقط.",
+  "supplierMaterialPickupLocation": "موقع استلام المادة",
+  "supplierSetWhereLearnersShouldPickUp": "حدد المكان الذي يجب على المتعلمين استلام هذه المادة منه.",
+  "supplierEnterACityOrCaptureYour": "أدخل مدينة أو التقط موقعك الحالي للاستلام.",
+  "supplierPickupAllowed": "الاستلام مسموح",
+  "supplierLearnersCanRequestSelfPickupFor": "يمكن للمتعلمين طلب الاستلام الذاتي لهذه المادة.",
+  "supplierDeliveryAllowed": "التوصيل مسموح",
+  "supplierLearnersCanRequestInternalDeliveryAfter": "يمكن للمتعلمين طلب التوصيل الداخلي بعد قبولك للحجز.",
+  "supplierYes": "نعم",
+  "supplierNo": "لا",
+  "supplierPickupNotes": "ملاحظات الاستلام",
+  "supplierPickupNearCampus": "الاستلام قرب الحرم الجامعي.",
+  "supplierPaidListingsCannotUseOther": "لا يمكن للإدراجات المدفوعة استخدام «أخرى».",
+  "supplierPaidListingsMustPassPriceVerification": "يجب أن تجتاز الإدراجات المدفوعة التحقق من السعر قبل النشر.",
+  "supplierNisOnly": "شيكل فقط",
+  "supplierFreeOtherAllowed": "«أخرى» مجانية مسموحة",
+  "supplierPaidNeedsPriceVerification": "المدفوع يحتاج تحققاً من السعر",
+  "supplierCouldNotRestoreListingDraft": "تعذّر استعادة مسودة الإدراج",
+  "supplierBackToNotifications": "العودة للإشعارات",
+  "supplierMaterialListedSuccessfully": "تم إدراج المادة بنجاح.",
+  "supplierAddAnotherMaterial": "إضافة مادة أخرى",
+  "supplierTitleCategoryPrice": "{title} • {category} • {price}",
+  "@supplierTitleCategoryPrice": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "category": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNew": "جديد",
+  "supplierLikeNew": "كالجديد",
+  "supplierGood": "جيد",
+  "supplierUsed": "مستعمل",
+  "supplierNeedsRepair": "يحتاج إصلاح",
+  "supplierStudentLeftover": "فائض طلابي",
+  "supplierWorkshopSurplus": "فائض ورشة",
+  "supplierFactorySurplus": "فائض مصنع",
+  "supplierEducationalInstitution": "مؤسسة تعليمية",
+  "supplierIndividualSupplier": "مورد فردي",
+  "supplierStudentSupplier": "مورد طالب",
+  "supplierWorkshop": "ورشة",
+  "supplierFactory": "مصنع",
+  "supplierVerified": "موثّق",
+  "supplierPendingVerification": "بانتظار التحقق",
+  "supplierNotRequired": "غير مطلوب",
+  "supplierAdminNote": "ملاحظة المسؤول",
+  "supplierSupplierType": "نوع المورد",
+  "supplierPickupCountryCity": "بلد ومدينة الاستلام",
+  "supplierListingPreview": "معاينة الإدراج",
+  "supplierProfileCompletion": "اكتمال الملف",
+  "supplierSelectedCoordinates": "الإحداثيات المحددة",
+  "supplierLatitudeValue": "خط العرض: {value}",
+  "@supplierLatitudeValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierLongitudeValue": "خط الطول: {value}",
+  "@supplierLongitudeValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierCompleteOfTotalEssentialsComplete": "{complete} من {total} أساسيات مكتملة",
+  "@supplierCompleteOfTotalEssentialsComplete": {
+    "placeholders": {
+      "complete": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierLearnerPreview": "معاينة المتعلم",
+  "supplierHowLearnersMayDiscoverYourSupplier": "كيف قد يكتشف المتعلمون ملف موردك لاحقاً.",
+  "supplierPickupAreaNotSet": "منطقة الاستلام غير محددة",
+  "supplierSharesReusableMaterialsForStudentAnd": "يشارك مواداً قابلة لإعادة الاستخدام لمشاريع الطلاب والصناع.",
+  "supplierLocationVisibilityVisibility": "ظهور الموقع: {visibility}",
+  "@supplierLocationVisibilityVisibility": {
+    "placeholders": {
+      "visibility": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierYourPublicName": "اسمك العام",
+  "supplierCurrentValue": "الحالي: {value}",
+  "@supplierCurrentValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierVerification": "التحقق",
+  "supplierVerificationIsReadOnlyForNow": "التحقق للقراءة فقط حالياً. ستُضاف لاحقاً عمليات رفع المستندات والمراجعة.",
+  "supplierAccountSecurity": "أمان الحساب",
+  "supplierKeepYourAccountProtected": "حافظ على حماية حسابك.",
+  "supplierChangePassword": "تغيير كلمة المرور",
+  "supplierEnterYourCurrentPasswordThenChoose": "أدخل كلمة المرور الحالية، ثم اختر كلمة مرور جديدة.",
+  "supplierCurrentPassword": "كلمة المرور الحالية",
+  "supplierConfirmNewPassword": "تأكيد كلمة المرور الجديدة",
+  "supplierUpdatePassword": "تحديث كلمة المرور",
+  "supplierPasswordUpdatedSuccessfully": "تم تحديث كلمة المرور بنجاح.",
+  "supplierPasswordCouldNotBeUpdatedPlease": "تعذّر تحديث كلمة المرور. يرجى المحاولة مجدداً.",
+  "supplierThisFieldIsRequired": "هذا الحقل مطلوب",
+  "supplierPasswordMustBeAtLeast8": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+  "supplierNewPasswordMustBeDifferentFrom": "يجب أن تختلف كلمة المرور الجديدة عن الحالية.",
+  "supplierPasswordsDoNotMatch": "كلمتا المرور غير متطابقتين.",
+  "supplierUpcomingPickups": "عمليات الاستلام القادمة",
+  "supplierRecentMaterials": "المواد الأخيرة",
+  "supplierMaterialPhotos": "صور المادة",
+  "supplierAdd1To5PhotosJpg": "أضف من صورة إلى 5 صور. JPG أو PNG أو WebP.",
+  "supplierAddAtLeastOneMaterialPhoto": "أضف صورة واحدة على الأقل للمادة قبل النشر.",
+  "supplierSelectedPhotos": "الصور المحددة",
+  "supplierAddImages": "إضافة صور",
+  "supplierUploading": "جاري الرفع...",
+  "supplierCountMaxPhotos": "{count}/{max} صور",
+  "@supplierCountMaxPhotos": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierPickupDetails": "تفاصيل الاستلام",
+  "supplierSendMessage": "إرسال رسالة",
+  "supplierPickupWindowPassedChooseAFollow": "انتهت نافذة الاستلام. اختر إجراء متابعة.",
+  "supplierReschedulePickup": "إعادة جدولة الاستلام",
+  "supplierReportNoShow": "الإبلاغ عن عدم حضور",
+  "supplierNoShowReportAlreadySubmittedFor": "تم إرسال بلاغ عدم الحضور لهذا الحجز بالفعل.",
+  "supplierFollowUpMessages": "رسائل المتابعة",
+  "supplierNoFollowUpMessagesYet": "لا توجد رسائل متابعة بعد.",
+  "supplierWriteAShortFollowUpMessage": "اكتب رسالة متابعة قصيرة…",
+  "supplierCouldNotLoadMessages": "تعذر تحميل الرسائل.",
+  "supplierCouldNotSendMessage": "تعذّر إرسال الرسالة.",
+  "supplierNeedsFollowUp": "يحتاج متابعة",
+  "supplierOverdue": "متأخر",
+  "supplierThisWillCancelTheReservationAnd": "سيؤدي هذا إلى إلغاء الحجز وإتاحة المادة.",
+  "supplierSubmitANoShowReportFor": "أرسل بلاغ عدم حضور لمراجعة المسؤول. هذا لا يؤدي إلى تعليق حساب المتعلم تلقائياً.",
+  "supplierMarkPickupAsCompleted": "تحديد الاستلام كمكتمل؟",
+  "supplierThisWillMoveTheReservationTo": "سينقل هذا الحجز إلى مكتمل ويحدد المادة كمعاد استخدامها.",
+  "supplierAcceptRequest": "قبول الطلب",
+  "supplierChooseAPickupWindowForThe": "اختر نافذة استلام للمتعلم.",
+  "supplierDeclineRequest": "رفض الطلب",
+  "supplierYouCanAddAnOptionalReason": "يمكنك إضافة سبب اختياري للمتعلم.",
+  "supplierReasonOptional": "السبب (اختياري)",
+  "supplierPickupDate": "تاريخ الاستلام",
+  "supplierDriverPickupWindowFromSupplier": "نافذة استلام السائق من المورد",
+  "supplierByAcceptingYouAgreeToHand": "بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.",
+  "supplierWeWillCheckThisAgainstThe": "سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.",
+  "supplierEarliestDeliveryAfterPickupTime": "أقرب توصيل بعد الاستلام: {time}",
+  "@supplierEarliestDeliveryAfterPickupTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierConfirmedLearnerDeliveryWindowWindow": "نافذة التوصيل المؤكدة للمتعلم: {window}",
+  "@supplierConfirmedLearnerDeliveryWindowWindow": {
+    "placeholders": {
+      "window": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNoFeasibleLearnerDeliveryWindowThis": "لا توجد نافذة توصيل مناسبة للمتعلم. سينتظر هذا تأكيد المتعلم.",
+  "supplierThisScheduleCanBeAcceptedDirectly": "يمكن قبول هذا الجدول مباشرة.",
+  "supplierThisDeliveryWindowIsNotFeasible": "نافذة التوصيل هذه غير مناسبة بعد استلام المورد وفترة السفر. سيلزم تأكيد المتعلم.",
+  "supplierSelectedLearnerPreferredWindow": "تم اختيار نافذة الاستلام المفضلة للمتعلم",
+  "supplierCustomProposedWindow": "نافذة مقترحة مخصصة",
+  "supplierLearnerPreferredPickupWindows": "نوافذ الاستلام المفضلة للمتعلم",
+  "supplierLearnerPreferredDeliveryWindows": "نوافذ التوصيل المفضلة للمتعلم",
+  "supplierDeliveryNote": "ملاحظة التوصيل",
+  "supplierSelectedLearnerDeliveryWindowWillBe": "سيتم استخدام نافذة التوصيل المفضلة للمتعلم عندما تكون ممكنة.",
+  "supplierProposeCustomDeliveryWindow": "اقتراح نافذة توصيل مخصصة",
+  "supplierProposedLearnerDeliveryWindow": "نافذة التوصيل المقترحة للمتعلم",
+  "supplierChooseTheProposedDeliveryDateAnd": "اختر تاريخ ووقت التوصيل المقترح.",
+  "supplierProposedPickupTimeWaitingForLearner": "وقت الاستلام المقترح — في انتظار تأكيد المتعلم",
+  "supplierSchedulingConflictWaitingForLearnerConfirmation": "تعارض في الجدولة — في انتظار تأكيد المتعلم",
+  "supplierRequestSubmittedAwaitingLearnerConfirmation": "تم إرسال الطلب — في انتظار تأكيد المتعلم",
+  "supplierStartTime": "وقت البداية",
+  "supplierEndTime": "وقت النهاية",
+  "supplierPickupNoteOptional": "ملاحظة الاستلام (اختياري)",
+  "supplierTapToChoose": "اضغط للاختيار",
+  "supplierPriceVerified": "تم التحقق من السعر",
+  "supplierVerifyPriceBeforePublishing": "تحقق من السعر قبل النشر",
+  "supplierPriceVerificationRequired": "التحقق من السعر مطلوب",
+  "supplierWithinApprovedCapVerifyPriceTo": "ضمن الحد المعتمد — تحقق من السعر للنشر",
+  "supplierCategoryRequests": "طلبات الفئات",
+  "supplierApprovedAsName": "موافق عليه كـ {name}",
+  "@supplierApprovedAsName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierWaitingForAdminApproval": "بانتظار موافقة المسؤول.",
+  "supplierContinueListing": "متابعة الإدراج",
+  "supplierDefaultPickupLocation": "موقع الاستلام الافتراضي",
+  "supplierVisibility": "الظهور",
+  "supplierLocationCaptured": "تم تحديد الموقع",
+  "supplierNoAreaSelectedYet": "لم يُحدد موقع بعد",
+  "supplierVisibilityValue": "الظهور: {value}",
+  "@supplierVisibilityValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierTodayTodayUpcomingUpcomingCompletedCompleted": "اليوم: {today}   قادمة: {upcoming}   مكتملة: {completed}",
+  "@supplierTodayTodayUpcomingUpcomingCompletedCompleted": {
+    "placeholders": {
+      "today": {
+        "type": "String"
+      },
+      "upcoming": {
+        "type": "String"
+      },
+      "completed": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierRequesterName": "مقدم الطلب: {name}",
+  "@supplierRequesterName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierQtyQty": "الكمية: {qty}",
+  "@supplierQtyQty": {
+    "placeholders": {
+      "qty": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierChooseAPickupDateAndTime": "اختر تاريخ استلام ونافذة زمنية.",
+  "supplierSchedulePending": "الجدول معلق",
+  "supplierAcceptedReservationsWithPickupWindowsWill": "ستظهر الحجوزات المقبولة مع نوافذ الاستلام هنا.",
+  "supplierRecentListingsWillAppearHereAfter": "ستظهر الإدراجات الأخيرة هنا بعد إضافة مواد قابلة لإعادة الاستخدام.",
+  "supplierActivityFromReservationsAndNotificationsWill": "سيجتمع هنا النشاط من الحجوزات والإشعارات.",
+  "supplierOrganizationProfile": "ملف المؤسسة",
+  "supplierRingTheWorkshopBellWhenYou": "اضغط جرس الورشة عند وصولك.",
+  "supplierAlreadyReservedForAnotherLearner": "محجوز لمُتعلم آخر.",
+  "supplierMaterialListingFoundationReady": "أساس إدراج المواد جاهز",
+  "supplierCountMaterialCategoriesLoaded": "تم تحميل {count} فئات مواد.",
+  "@supplierCountMaterialCategoriesLoaded": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierLoadingCategories": "جاري تحميل الفئات...",
+  "supplierCategoriesCouldNotBeLoadedYet": "تعذّر تحميل الفئات بعد.",
+  "supplierLoadingListingPolicy": "جاري تحميل سياسة الإدراج...",
+  "supplierListingPolicyUnavailable": "سياسة الإدراج غير متاحة.",
+  "supplierUseYourCurrentLocationOrEnter": "استخدم موقعك الحالي أو أدخل تفاصيل الاستلام يدوياً.",
+  "supplierTapTheMapToPlaceThe": "اضغط على الخريطة لوضع دبوس الاستلام",
+  "supplierPickupPinSelectedOnMap": "تم تحديد دبوس الاستلام على الخريطة",
+  "supplierPickupType": "نوع الاستلام",
+  "supplierDate": "التاريخ",
+  "supplierTime": "الوقت",
+  "supplierMaterialRequest": "المادة والطلب",
+  "supplierPickupWindowRange": "نافذة الاستلام: {range}",
+  "@supplierPickupWindowRange": {
+    "placeholders": {
+      "range": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierInstructions": "التعليمات",
+  "supplierNoPickupInstructions": "لا توجد تعليمات استلام.",
+  "supplierNoDeclineReasonProvided": "لم يُقدَّم سبب للرفض.",
+  "supplierThisRequestExpiredBecauseYouDid": "انتهت صلاحية هذا الطلب لأنك لم تقبل أو ترفض في الوقت المحدد.",
+  "supplierSupplierNote": "ملاحظة المورد",
+  "supplierLearnerMessage": "رسالة المتعلم",
+  "supplierCover": "الغلاف",
+  "supplierDismiss": "إغلاق",
+  "supplierAccountApprovedBanner": "تمت الموافقة على حساب المورد. يمكنك الآن نشر المواد.",
+  "supplierWaitingForAdminApprovalPublish": "حساب المورد بانتظار موافقة الإدارة. يمكنك نشر المواد بعد الموافقة.",
+  "supplierCommonSupplierTasks": "مهام المورد الشائعة",
+  "supplierActivityWillAppearAsLearners": "سيظهر النشاط هنا عندما يطلب المتعلمون موادك ويجمعونها.",
+  "supplierPendingReservationsWaitingResponse": "{count, plural, =1{لديك حجز واحد معلق بانتظار ردك.} =2{لديك حجزان معلقان بانتظار ردك.} few{لديك {count} حجوزات معلقة بانتظار ردك.} many{لديك {count} حجزًا معلقًا بانتظار ردك.} other{لديك {count} حجز معلق بانتظار ردك.}}",
+  "@supplierPendingReservationsWaitingResponse": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "supplierCountRequestsNeedResponse": "{count, plural, =1{طلب واحد يحتاج ردك.} =2{طلبان يحتاجان ردك.} few{{count} طلبات تحتاج ردك.} many{{count} طلبًا يحتاج ردك.} other{{count} طلب يحتاج ردك.}}",
+  "@supplierCountRequestsNeedResponse": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "supplierCountReservationsCompleted": "{count, plural, =1{اكتمل حجز واحد بنجاح.} =2{اكتمل حجزان بنجاح.} few{اكتمل {count} حجوزات بنجاح.} many{اكتمل {count} حجزًا بنجاح.} other{اكتمل {count} حجز بنجاح.}}",
+  "@supplierCountReservationsCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "supplierBasicInformation": "المعلومات الأساسية",
+  "supplierTellLearnersWhatMaterial": "أخبر المتعلمين عن المادة التي تقدمها.",
+  "supplierWhyExistingCategoriesDoNotFit": "لماذا لا تناسب الفئات الحالية",
+  "supplierExplainMaterialKindAndWhy": "اشرح نوع المادة ولماذا لا تناسب أي من الفئات الحالية.",
+  "supplierMaterialTypeSlashName": "نوع / اسم المادة",
+  "supplierSearchOrTypeMaterialName": "ابحث أو اكتب اسم المادة",
+  "supplierClearSpecificTitlesHelp": "العناوين الواضحة والمحددة تساعد المتعلمين على فهم العنصر.",
+  "supplierIncludeDetailsHelpLearners": "أضف تفاصيل تساعد المتعلمين على معرفة ما إذا كانت المادة مناسبة لمشروعهم.",
+  "supplierSetQuantityAndPrice": "حدد الكمية المتاحة والسعر.",
+  "supplierPickupAndDelivery": "الاستلام والتوصيل",
+  "supplierSetHowLearnersReceive": "حدد كيف يمكن للمتعلمين استلام هذه المادة.",
+  "supplierPhotosSectionSubtitle": "أضف صورًا لمساعدة المتعلمين على رؤية المادة بوضوح.",
+  "supplierChecklist": "قائمة التحقق",
+  "supplierReadyToPublish": "جاهز للنشر",
+  "supplierChooseCategoryChecklist": "اختر فئة",
+  "supplierEnterMaterialTypeChecklist": "أدخل نوع/اسم المادة",
+  "supplierEnterListingTitleChecklist": "أدخل عنوان الإعلان",
+  "supplierAddDescriptionChecklist": "أضف وصفًا",
+  "supplierSetConditionChecklist": "حدد الحالة",
+  "supplierAddQuantityUnitChecklist": "أضف الكمية والوحدة",
+  "supplierSelectFreeOrPriceChecklist": "اختر مجاني أو أدخل سعرًا صالحًا",
+  "supplierVerifyPaidPriceChecklist": "تحقق من السعر للمواد المدفوعة",
+  "supplierChooseFulfillmentChecklist": "اختر خيار تسليم واحدًا على الأقل",
+  "supplierAddPhotoChecklist": "أضف صورة واحدة على الأقل",
+  "supplierGeneralCategory": "عام",
+  "supplierImageUploadFailed": "فشل رفع الصورة",
+  "supplierEnterMaterialNameBeforeCategory": "أدخل اسم المادة قبل طلب فئة جديدة.",
+  "supplierDescribeMaterialForCategory": "صف المادة حتى تتمكن الإدارة من مراجعة طلب الفئة.",
+  "supplierEnterRequestedCategoryName": "أدخل اسم الفئة المطلوبة.",
+  "supplierExplainWhyCategoriesDoNotFit": "اشرح لماذا لا تناسب الفئات الحالية.",
+  "supplierEnterValidQuantityForMaterial": "أدخل كمية صالحة لهذه المادة.",
+  "supplierEnterUnitForMaterial": "أدخل وحدة هذه المادة.",
+  "supplierCouldNotUploadImages": "تعذر رفع الصور. يرجى المحاولة مرة أخرى.",
+  "supplierCategoryStillPendingReview": "طلب الفئة ما زال بانتظار مراجعة الإدارة.",
+  "supplierCategoryNoLongerAvailable": "الفئة المحددة غير متاحة الآن. حدّث الفئات واختر مرة أخرى.",
+  "supplierDetailsNotSavedComplete": "لم تُحفظ بعض تفاصيل المادة. يرجى إكمال الحقول الناقصة.",
+  "supplierCouldNotLoadSavedDraft": "تعذر تحميل مسودة الإعلان المحفوظة. يرجى المحاولة مرة أخرى.",
+  "supplierUseForListing": "استخدم {name} لهذا الإعلان.",
+  "@supplierUseForListing": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierCategoryRejectedUseSuggested": "تم رفض طلب الفئة. استخدم {name} لهذا الإعلان.",
+  "@supplierCategoryRejectedUseSuggested": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierCategoryRejectedChooseExisting": "تم رفض طلب الفئة. اختر فئة موجودة وتابع.",
+  "supplierResolveCategoryBeforePriceReview": "أنهِ طلب الفئة قبل إرسال مراجعة السعر.",
+  "supplierSelectValidCategoryBeforePriceReview": "يرجى اختيار فئة صالحة قبل إرسال مراجعة السعر.",
+  "supplierEnterMaterialNameBeforePriceReview": "أدخل اسم المادة قبل إرسال مراجعة السعر.",
+  "supplierEnterDescriptionBeforePriceReview": "أدخل وصف المادة قبل إرسال مراجعة السعر.",
+  "supplierQuantityUnitRequiredBeforePriceReview": "الكمية والوحدة مطلوبتان قبل إرسال مراجعة السعر.",
+  "supplierEnterValidPaidPriceBeforePriceReview": "أدخل سعرًا مدفوعًا صالحًا قبل إرسال مراجعة السعر.",
+  "supplierEnterMaterialNameBeforePriceReview2": "أدخل اسم المادة قبل إرسال مراجعة السعر.",
+  "supplierPriceAcceptedMaxAllowed": "تم قبول السعر. الحد الأقصى المسموح هو {max} شيكل.",
+  "@supplierPriceAcceptedMaxAllowed": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierMaxAllowedPriceEnterLess": "الحد الأقصى المسموح هو {max} شيكل. يرجى إدخال {max} شيكل أو أقل.",
+  "@supplierMaxAllowedPriceEnterLess": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierMaxAllowedPricePerUnitEnterLess": "الحد الأقصى المسموح هو {max} شيكل لكل {unit}. يرجى إدخال {max} شيكل أو أقل.",
+  "@supplierMaxAllowedPricePerUnitEnterLess": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierPaidMaterialNeedsPriceReview": "تحتاج هذه المادة المدفوعة إلى مراجعة سعر من الإدارة قبل النشر.",
+  "supplierMaterialBeingPublished": "جاري نشر هذه المادة. يرجى الانتظار قليلًا.",
+  "supplierPublishAttemptMismatch": "محاولة النشر لا تطابق الطلب المحفوظ. أعد تعيين النموذج أو ابدأ من صفحة إضافة مادة جديدة.",
+  "supplierSelectValidCategoryBeforePublishing": "يرجى اختيار فئة صالحة قبل النشر.",
+  "supplierEnterNumberGreaterThanZero": "أدخل رقمًا أكبر من صفر",
+  "supplierUnitPriceMustBeOrLess": "يجب أن يكون سعر الوحدة {max} شيكل أو أقل.",
+  "@supplierUnitPriceMustBeOrLess": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierListingTitleHintExample": "مثال: مجموعات Breadboard نصف الحجم (دفعة احتياطية)",
+  "supplierInventoryOverview": "نظرة عامة على المخزون",
+  "supplierMonitorMaterialAvailability": "راقب توفر المواد والطلبات وحالة الإعلانات.",
+  "supplierClearSearch": "مسح البحث",
+  "supplierResetFilters": "إعادة ضبط الفلاتر",
+  "supplierReset": "إعادة ضبط",
+  "supplierClearAll": "مسح الكل",
+  "supplierMaterialsSection": "المواد",
+  "supplierShownOfTotal": "يُعرض {shown} من {total}",
+  "@supplierShownOfTotal": {
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "supplierListingPreviewSubtitle": "هكذا ستظهر مادتك للمتعلمين.",
+  "supplierMaterialTitlePlaceholder": "سيظهر عنوان المادة هنا",
+  "supplierShortDescriptionPlaceholder": "سيظهر وصف قصير لمادتك هنا.",
+  "supplierQuantityPlaceholder": "ستظهر الكمية هنا",
+  "supplierPickupLocationPlaceholder": "سيظهر موقع الاستلام هنا",
+  "supplierPickupAvailable": "الاستلام متاح",
+  "supplierPickupUnavailable": "الاستلام غير متاح",
+  "supplierInternalDeliveryAvailable": "التوصيل الداخلي متاح",
+  "supplierDeliveryUnavailable": "التوصيل غير متاح",
+  "supplierNoImageYet": "لا توجد صورة بعد",
+  "supplierAddPhotosToSeePreview": "أضف صورًا لمعاينة الإعلان",
+  "supplierYouCanAddUpToPhotos": "يمكنك إضافة حتى {max} صور.",
+  "@supplierYouCanAddUpToPhotos": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "supplierOnlyMorePhotosCanBeAdded": "{count, plural, =1{يمكن إضافة صورة واحدة فقط.} =2{يمكن إضافة صورتين فقط.} few{يمكن إضافة {count} صور فقط.} many{يمكن إضافة {count} صورة فقط.} other{يمكن إضافة {count} صورة فقط.}}",
+  "@supplierOnlyMorePhotosCanBeAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "supplierCouldNotReadImage": "تعذر قراءة \"{name}\". جرّب صورة أخرى.",
+  "@supplierCouldNotReadImage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierFileLargerThan5Mb": "{name} أكبر من 5 ميجابايت.",
+  "@supplierFileLargerThan5Mb": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierFileMustBeJpgPngWebp": "يجب أن يكون {name} بصيغة JPG أو PNG أو WebP.",
+  "@supplierFileMustBeJpgPngWebp": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierReuseHistoryWillAppear": "سيظهر سجل إعادة الاستخدام هنا بعد اكتمال الحجوزات.",
+  "supplierAvailableOfTotal": "المتاح: {available} من {total} {unit}",
+  "@supplierAvailableOfTotal": {
+    "placeholders": {
+      "available": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierAccessDenied": "الوصول مرفوض",
+  "supplierYouNeedASupplierAccountTo": "تحتاج حساب مورد للوصول إلى هذه المنطقة.",
+  "supplierSupplierAccessRequired": "مطلوب وصول المورد",
+  "supplierYouNeedASupplierRoleTo": "تحتاج دور المورد للوصول إلى بوابة المورد.",
+  "supplierGoToHome": "الذهاب للرئيسية",
+  "supplierDeliveryRequested": "تم طلب التوصيل",
+  "supplierAttentionNeedsYourResponse": "يحتاج ردك",
+  "supplierAttentionWaitingForLearner": "بانتظار المتعلم",
+  "supplierAttentionInProgress": "قيد التنفيذ",
+  "supplierAttentionAdminReview": "مراجعة إدارية",
+  "supplierAttentionNoFurtherAction": "لا إجراء إضافي",
+  "supplierAttentionTerminal": "نهائي",
+  "supplierAttentionNextActor": "{attention} · التالي: {actor}",
+  "@supplierAttentionNextActor": {
+    "placeholders": {
+      "attention": {
+        "type": "String"
+      },
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNextActorAdmin": "المشرف",
+  "supplierNextActorSystem": "النظام",
+  "supplierNextActorNone": "لا جهة فاعلة",
+  "supplierRecoveryNextAdmin": "استعادة · التالي: المشرف",
+  "supplierWorkflowInitialDecision": "قرار أولي",
+  "supplierWorkflowScheduling": "جدولة",
+  "supplierWorkflowSelfPickup": "استلام ذاتي",
+  "supplierWorkflowDelivery": "توصيل",
+  "supplierWorkflowRecovery": "استعادة",
+  "supplierCompletedSuccessfully": "اكتمل بنجاح",
+  "supplierNoResponseBeforeDeadline": "لم يصل رد قبل الموعد النهائي",
+  "supplierCompletedFulfillment": "اكتمل التنفيذ",
+  "supplierCancelledBeforeFulfillment": "أُلغي قبل التنفيذ",
+  "supplierExpiredBeforeFulfillment": "انتهت صلاحيته قبل التنفيذ",
+  "supplierClosedAfterNoShow": "أُغلق بعد عدم حضور المتعلم",
+  "supplierRejectedBeforeFulfillment": "رُفض قبل التنفيذ",
+  "supplierFinalReservationOutcome": "النتيجة النهائية للحجز",
+  "supplierTerminalVerbCancelled": "أُلغي",
+  "supplierTerminalVerbExpired": "انتهت صلاحيته",
+  "supplierTerminalVerbCompleted": "اكتمل",
+  "supplierTerminalVerbClosed": "أُغلق",
+  "supplierActionAcceptLearnerTime": "قبول وقت المتعلم",
+  "supplierActionCompleteSelfPickup": "إكمال الاستلام الذاتي",
+  "supplierProposeNewTime": "اقتراح وقت مختلف",
+  "supplierAcceptNewTime": "قبول وقت جديد",
+  "supplierActionMarkLearnerNoShow": "تسجيل عدم حضور المتعلم",
+  "supplierActionReportIncident": "الإبلاغ عن حادثة",
+  "supplierActionReportNoDriver": "الإبلاغ عن عدم توفر سائق",
+  "supplierActionMarkPickupExpired": "تعليم الاستلام منتهيًا",
+  "supplierActionReportDriverNoShow": "الإبلاغ عن عدم حضور السائق",
+  "supplierActionSubmitRecoveryWindow": "إرسال نافذة استلام للاستعادة",
+  "supplierConfirmPickup": "تأكيد الاستلام",
+  "supplierSubmitPickupWindow": "إرسال نافذة الاستلام",
+  "supplierReviewReschedule": "مراجعة إعادة الجدولة",
+  "supplierReportToAdmin": "الإبلاغ للمشرف",
+  "supplierStatusFilterAwaitingLearner": "بانتظار المتعلم",
+  "supplierStatusFilterAwaitingSupplier": "بانتظار المورد",
+  "supplierStatusFilterAwaitingResolution": "بانتظار الحل",
+  "supplierNoShowReasonLearnerDidNotArrive": "لم يحضر المتعلم",
+  "supplierNoShowReasonRepeatedDelay": "تأخير متكرر",
+  "supplierNoShowReasonWrongInformation": "معلومات خاطئة",
+  "supplierNoShowReasonSafetyConcern": "مخاوف أمان أو ثقة",
+  "supplierNoShowReasonOther": "أخرى",
+  "supplierNotProposed": "غير مقترح",
+  "supplierWindowUntil": "حتى {time}",
+  "@supplierWindowUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierWindowFrom": "من {time}",
+  "@supplierWindowFrom": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierTomorrow": "غدًا",
+  "supplierNeedsAttention": "يحتاج انتباهًا",
+  "supplierOperationalOverview": "نظرة تشغيلية",
+  "supplierAllAttention": "كل حالات الانتباه",
+  "supplierAllFulfillment": "كل طرق التنفيذ",
+  "supplierAllStatuses": "كل الحالات",
+  "supplierMoreFilters": "مزيد من الفلاتر",
+  "supplierFiltersCount": "فلاتر {count}",
+  "@supplierFiltersCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierDateRange": "نطاق التاريخ",
+  "supplierSearchRequestsHint": "ابحث عن مادة أو متعلم أو معرف حجز",
+  "supplierHistoryActive": "نشط",
+  "supplierHistoryTerminal": "السجل",
+  "supplierCompletedCount": "مكتمل {count}",
+  "@supplierCompletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierClosedCount": "مغلق {count}",
+  "@supplierClosedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierShowingRange": "عرض {start}–{end} من {total}",
+  "@supplierShowingRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierShowingRangeRequests": "عرض {start}–{end} من {total} طلب",
+  "@supplierShowingRangeRequests": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierActiveFiltersCount": "{count} فلاتر",
+  "@supplierActiveFiltersCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierColumnRequest": "الطلب",
+  "supplierColumnFulfillmentSchedule": "التنفيذ والجدولة",
+  "supplierColumnStatusAttention": "الحالة والانتباه",
+  "supplierColumnDetails": "التفاصيل",
+  "supplierPerPage": "{count} لكل صفحة",
+  "@supplierPerPage": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierViewRequestDetails": "عرض تفاصيل الطلب",
+  "supplierViewRequestDetailsForMaterial": "عرض تفاصيل طلب {material}",
+  "@supplierViewRequestDetailsForMaterial": {
+    "placeholders": {
+      "material": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNoConfirmedTimeYet": "لا وقت مؤكد بعد",
+  "supplierAdminRecoveryInProgress": "استعادة إدارية قيد التنفيذ",
+  "supplierDeliveryHandledByDriver": "يُدار هذا الحجز عبر التوصيل. السائق سيُعلّمه مكتملًا.",
+  "supplierMessagesWorkspaceNote": "ستبقى رسائل الطلب متاحة في مساحة عمل الطلب.",
+  "supplierNoFurtherActionRequired": "لا يلزم أي إجراء إضافي لهذا الطلب.",
+  "supplierRequestDetails": "تفاصيل الطلب",
+  "supplierBackToIncomingRequests": "العودة إلى الطلبات الواردة",
+  "supplierAvailableActions": "الإجراءات المتاحة",
+  "supplierMore": "المزيد",
+  "supplierMarkLearnerNoShowTitle": "تسجيل عدم حضور المتعلم؟",
+  "supplierMarkLearnerNoShowMessage": "سيُسجّل عدم حضور المتعلم لهذا الحجز.",
+  "supplierMarkLearnerNoShowConfirm": "تسجيل عدم الحضور",
+  "supplierCouldNotUpdateRequest": "تعذّر تحديث هذا الطلب.",
+  "supplierRequestSummary": "ملخص الطلب",
+  "supplierLearnerLine": "المتعلم: {name}",
+  "@supplierLearnerLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierOriginalLearnerNote": "ملاحظة المتعلم الأصلية",
+  "supplierDeliveryAddressLabel": "عنوان التوصيل",
+  "supplierDeliveryAddressPrefix": "عنوان التوصيل: {address}",
+  "@supplierDeliveryAddressPrefix": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierSupplierProposal": "اقتراح المورد",
+  "supplierLearnerProposal": "اقتراح المتعلم",
+  "supplierConfirmedPickupWindow": "نافذة الاستلام المؤكدة",
+  "supplierScheduleNegotiation": "الجدولة والتفاوض",
+  "supplierAdminInitiatedRecovery": "استعادة بدأها المشرف",
+  "supplierPendingReschedule": "إعادة جدولة معلقة",
+  "supplierNoWindowProposed": "لا توجد نافذة استلام أو توصيل مقترحة حاليًا.",
+  "supplierSchedulingContext": "سياق الجدولة",
+  "supplierEarliestFeasibleDelivery": "أقرب توصيل ممكن: {time}",
+  "@supplierEarliestFeasibleDelivery": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNoWindowConfirmedPickup": "لم تُؤكَّد نافذة استلام أو توصيل لهذا الطلب.",
+  "supplierNoWindowConfirmedBeforeTerminal": "لم تُؤكَّد نافذة استلام قبل أن يُ{verb} هذا الطلب.",
+  "@supplierNoWindowConfirmedBeforeTerminal": {
+    "placeholders": {
+      "verb": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierScheduleHistory": "سجل الجدولة",
+  "supplierFulfillmentAndDelivery": "التنفيذ والتوصيل",
+  "supplierHandoverCodeAvailable": "رمز متاح",
+  "supplierFailureRecovery": "فشل / استعادة",
+  "supplierDeliveryNotCreated": "لم يُختَر التوصيل أو يُنشأ لهذا الحجز.",
+  "supplierAttentionTitle": "الانتباه",
+  "supplierAwaitingAdminResolution": "هذا الطلب بانتظار حل إداري. عناصر تحكم المورد للقراءة فقط ما لم يُتاح إجراء.",
+  "supplierIncidentAdminReview": "حادثة / مراجعة إدارية",
+  "supplierReportIdLabel": "معرف البلاغ",
+  "supplierOperationalStateLabel": "الحالة التشغيلية",
+  "supplierSupplierExplanation": "شرح المورد",
+  "supplierAdminReviewNote": "ملاحظة المراجعة الإدارية",
+  "supplierGroupContext": "سياق المجموعة",
+  "supplierItemsInGroup": "عناصر في المجموعة",
+  "supplierGroupedReservationItem": "عنصر حجز مجمّع",
+  "supplierMoreGroupItems": "تتوفر المزيد من العناصر في المجموعة.",
+  "supplierMessagesTitle": "الرسائل",
+  "supplierMessagesTitleWithCount": "الرسائل ({count})",
+  "@supplierMessagesTitleWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "supplierNoMessagesYet": "لا رسائل بعد.",
+  "supplierTypeMessageHint": "اكتب رسالة…",
+  "supplierSendMessageTooltip": "إرسال رسالة",
+  "supplierYou": "أنت",
+  "supplierReservationUpdated": "تم تحديث الحجز",
+  "supplierHistoryStatusChange": "{from} → {to}",
+  "@supplierHistoryStatusChange": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierRequestNotFound": "الطلب غير موجود",
+  "supplierRequestUnavailable": "هذا الطلب غير متاح.",
+  "supplierCouldNotLoadRequestTitle": "تعذّر تحميل الطلب",
+  "supplierCouldNotLoadRequest": "تعذّر تحميل هذا الطلب. حاول مرة أخرى.",
+  "supplierFulfillmentLabel": "التنفيذ",
+  "supplierLearnerEmail": "بريد المتعلّم",
+  "supplierMethodLabel": "الطريقة",
+  "supplierDeliveryStatusLabel": "حالة التوصيل",
+  "supplierGroupLabel": "المجموعة",
+  "supplierHandoverLabel": "التسليم",
+  "supplierOutcomeLabel": "النتيجة",
+  "supplierGroupIdLabel": "معرّف المجموعة",
+  "supplierItemsLabel": "العناصر",
+  "supplierConfirmedDeliveryWindow": "موعد التوصيل المؤكد",
+  "supplierSupplierDeliveryPickupWindow": "موعد استلام المورّد للتوصيل",
+  "supplierNewWindowAwaiting": "موعد جديد بانتظار الرد التالي.",
+  "supplierActorRequestedReschedule": "طلب {actor} إعادة الجدولة",
+  "@supplierActorRequestedReschedule": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierNextActorLine": "الدور التالي: {actor}",
+  "@supplierNextActorLine": {
+    "placeholders": {
+      "actor": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierReservationHistory": "سجل الحجز",
+  "supplierNoHistoryEvents": "لم يتم إرجاع أي أحداث في السجل.",
+  "supplierWorkflowField": "سير العمل",
+  "supplierRescheduleReasonLabel": "السبب",
+  "supplierRescheduleReasonHint": "لماذا تطلب وقتًا جديدًا؟",
+  "supplierSendRequest": "إرسال الطلب",
+  "supplierRescheduleRequestSent": "أُرسل طلب إعادة الجدولة إلى المتعلم.",
+  "supplierChooseNewPickupWindow": "اختر نافذة استلام جديدة",
+  "supplierPickupWindowSubmittedWaiting": "أُرسلت نافذة الاستلام. بانتظار السائق مجددًا.",
+  "supplierNewPickupTimeAccepted": "قُبل وقت الاستلام الجديد.",
+  "supplierReservationClosed": "أُغلق الحجز.",
+  "supplierReportToAdminTitle": "الإبلاغ للمشرف",
+  "supplierReportToAdminMessage": "أرسل بلاغًا للمراجعة الإدارية. سيُغلق الحجز.",
+  "supplierReportAndClose": "الإبلاغ والإغلاق",
+  "supplierDescribeWhatHappened": "صف ما حدث",
+  "supplierNoteRequired": "ملاحظة (مطلوبة)",
+  "supplierSubmitReport": "إرسال البلاغ",
+  "supplierMarkPickupExpiredTitle": "تعليم نافذة الاستلام منتهية",
+  "supplierMarkPickupExpiredMessage": "لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. سيُغلق محاولة التوصيل ويُحال للمراجعة الإدارية.",
+  "supplierMarkExpired": "تعليم منتهيًا",
+  "supplierPickupExpiredAdminReview": "عُلّمت نافذة الاستلام منتهية. المراجعة الإدارية قيد التنفيذ.",
+  "supplierReportNoDriverTitle": "الإبلاغ عن عدم توفر سائق",
+  "supplierReportNoDriverHint": "صف سبب عدم قبول أي سائق لهذا التوصيل",
+  "supplierNoDriverReported": "أُبلغ عن حالة عدم توفر سائق للمشرف.",
+  "supplierReportDriverNoShowTitle": "الإبلاغ عن عدم حضور السائق",
+  "supplierReportDriverNoShowHint": "صف ما حدث عند استلام المورد",
+  "supplierDriverNoShowReported": "أُبلغ عن عدم حضور السائق للمشرف.",
+  "supplierPickupConfirmationCodeLabel": "رمز تأكيد الاستلام",
+  "supplierPickupConfirmationCodeHint": "أدخل رمز تأكيد الاستلام الذي يعطيك إياه المتعلم عند استلام المادة.",
+  "supplierPickupConfirmationCodeError": "أدخل رمز الاستلام المكوّن من 6 أرقام من المتعلم.",
+  "supplierDeliveryWindowMustStartFuture": "يجب أن تبدأ نافذة التوصيل في المستقبل.",
+  "supplierInboxRefreshFailed": "تعذّر تحديث الطلبات الواردة.",
+  "supplierEmptyAllCaughtUp": "أنت على اطلاع بكل شيء",
+  "supplierEmptyNoWaitingLearnerSubtitle": "لا توجد طلبات تحتاج ردك حاليًا.",
+  "supplierEmptyNoWaitingLearner": "لا توجد طلبات بانتظار تأكيد المتعلم.",
+  "supplierEmptyNoActiveFulfillment": "لا استلامات أو توصيلات نشطة.",
+  "supplierEmptyNoAdminReview": "لا توجد طلبات قيد المراجعة الإدارية.",
+  "supplierEmptyNoTerminalHistory": "لم يُعثر على طلبات مكتملة أو مغلقة.",
+  "supplierEmptyNoFilterMatch": "لا توجد طلبات تطابق الفلاتر المحددة.",
+  "supplierIncidentsDriverNotCompletedPickup": "لم يُكمل السائق المعيّن الاستلام من المورد بعد انتهاء النافذة. أبلغ عن عدم حضور السائق لمراجعته من المشرف.",
+  "supplierIncidentsNoDriverBeforeWindow": "لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. أبلغ لمراجعته من المشرف.",
+  "supplierIncidentsNoDriverWaitHint": "لا يوجد سائق بعد. يمكنك الإبلاغ عن عدم توفر سائق بعد 30 دقيقة من انتهاء نافذة الاستلام المجدولة.",
+  "supplierIncidentsReportNoDriver": "الإبلاغ عن عدم توفر سائق",
+  "supplierIncidentsReportDriverNoShow": "الإبلاغ عن عدم حضور السائق",
+  "supplierDriverHandoverCodeInstructions": "أعطِ هذا الرمز للسائق بعد تسليم المادة.",
+  "supplierReportedToAdmin": "أُبلغ للمشرف",
+  "supplierRequestLine": "طلب {id} · {status}",
+  "@supplierRequestLine": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "actionContinue": "متابعة",
+  "checkStatus": "التحقق من الحالة",
+  "about": "نبذة",
+  "review": "مراجعة",
+  "description": "الوصف",
+  "document": "المستند",
+  "submitted": "تاريخ الإرسال",
+  "organization": "المؤسسة",
+  "notSelected": "لم يتم الاختيار",
+  "becomeSupplierTitle": "انضم كمورد",
+  "becomeSupplierSubtitle": "احتفظ بوصولك كمتعلّم وأضف ملف مورد على نفس الحساب.",
+  "becomeSupplierOpenSupplierPortal": "فتح بوابة المورد",
+  "becomeSupplierProgressSemantic": "تقدّم الانضمام كمورد، الخطوة {step} من {total}",
+  "@becomeSupplierProgressSemantic": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "becomeSupplierSupplierTypeRequired": "نوع المورد مطلوب",
+  "becomeSupplierSupplierNameRequired": "اسم المورد مطلوب",
+  "becomeSupplierCityRequired": "المدينة مطلوبة",
+  "becomeSupplierSupplierNameLabel": "اسم المورد",
+  "becomeSupplierSupplierNameHint": "كيف سيراك الآخرون",
+  "becomeSupplierAboutDescriptionOptional": "نبذة / وصف (اختياري)",
+  "becomeSupplierAboutDescriptionHint": "ما أنواع المواد التي تشاركها عادةً؟",
+  "becomeSupplierLocationHelpText": "تساعد المدينة والمنطقة المتعلّمين على فهم مكان الاستلام المعتاد. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم قبول الحجز.",
+  "becomeSupplierPickupLocationNoteOptional": "ملاحظة موقع الاستلام (اختياري)",
+  "becomeSupplierPickupLocationHint": "قرب بوابة الجامعة، مدخل الورشة، إلخ.",
+  "becomeSupplierWorkingHoursOptional": "ساعات العمل (اختياري)",
+  "becomeSupplierWorkingHoursHint": "الإثنين–الجمعة 4م–7م",
+  "becomeSupplierPickupNotesHint": "اتصل قبل الاستلام، أحضر بطاقة الطالب، إلخ.",
+  "becomeSupplierWorkshopsVerificationNote": "الورش والمصانع والمؤسسات تتطلب مسار تحقق منفصل.",
+  "becomeSupplierReviewPickupLocation": "موقع الاستلام: {location}",
+  "@becomeSupplierReviewPickupLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "becomeSupplierReviewWorkingHours": "ساعات العمل: {hours}",
+  "@becomeSupplierReviewWorkingHours": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "becomeSupplierReviewPickupNotes": "ملاحظات الاستلام: {notes}",
+  "@becomeSupplierReviewPickupNotes": {
+    "placeholders": {
+      "notes": {
+        "type": "String"
+      }
+    }
+  },
+  "becomeSupplierStepSupplierTypeSubtitle": "اختر كيف ستشارك المواد كمورد.",
+  "becomeSupplierStepProfileSubtitle": "أخبر الآخرين من أنت وما تشاركه عادةً.",
+  "becomeSupplierStepLocationSubtitle": "حدّد المدينة والمنطقة حيث يحدث الاستلام عادةً.",
+  "becomeSupplierStepPickupDetailsSubtitle": "أضف ساعات استلام وملاحظات اختيارية للمتعلّمين.",
+  "becomeSupplierStepVerificationSubtitle": "ارفع إثبات مؤسستك لمراجعة المسؤول.",
+  "becomeSupplierStepReviewSubtitle": "راجع تفاصيل المورد، ثم افتح بوابة المورد.",
+  "supplierStudentSupplierDescription": "للطلاب الذين يشاركون قطعاً أو مواد إضافية. لا يلزم مستند تحقق.",
+  "supplierIndividualSupplierDescription": "للمواد الفائضة الشخصية. لا يلزم مستند تحقق.",
+  "supplierWorkshopSupplierDescription": "للورش أو المختبرات. يلزم مستند تحقق.",
+  "supplierFactorySupplierDescription": "للمصانع أو الشركات. يلزم مستند تحقق.",
+  "supplierEducationalInstitutionSupplierDescription": "للمدارس أو الجامعات أو المراكز. يلزم مستند تحقق.",
+  "supplierChooseSupplierTypeFallback": "اختر من يملك المواد التي ستشاركها.",
+  "completeSupplierProfileTitle": "أكمل ملف المورد",
+  "completeSupplierProfileSubtitle": "أخبر الآخرين بالمواد التي تشاركها وأين يعمل الاستلام.",
+  "selectYourSupplierType": "اختر نوع المورد",
+  "publicNameRequired": "الاسم العام مطلوب",
+  "pickupAreaRequired": "منطقة الاستلام مطلوبة",
+  "shortDescriptionOptional": "وصف قصير (اختياري)",
+  "pickupAreaLocationLabel": "منطقة / موقع الاستلام",
+  "organizationSupplierVerificationNote": "يُعامل موردو المؤسسات كمؤسسات موردين وقد يحتاجون تحققاً قبل إدراج المواد.",
+  "individualSupplierCanSwitchNote": "يمكن لموردي الطلاب والأفراد العودة إلى وضع المتعلّم بعد الإعداد.",
+  "completeSupplierProfileFooterNote": "يمكنك البدء كفرد وتحديث تفاصيل المورد لاحقاً.",
+  "verificationDocument": "مستند التحقق",
+  "verificationDocumentRequired": "مستند التحقق مطلوب",
+  "verificationFileSizeLimit": "يجب أن يكون الملف 5 ميغابايت أو أصغر",
+  "verificationAllowedFileTypes": "أنواع الملفات المسموحة: PDF وPNG وJPG وJPEG",
+  "verificationDocumentHint": "PDF أو PNG أو JPG أو JPEG (بحد أقصى 5 ميغابايت)",
+  "verificationDocumentUploadHint": "ارفع مستنداً يثبت هوية مؤسستك، مثل رخصة ورشة أو مستند مصنع أو إثبات جامعة/مؤسسة.",
+  "noFileSelected": "لم يتم اختيار ملف",
+  "selectFile": "اختيار ملف",
+  "changeFile": "تغيير الملف",
+  "registrationDetailsIncomplete": "تفاصيل التسجيل غير مكتملة. يرجى البدء من جديد.",
+  "switchToLearner": "التبديل إلى المتعلّم",
+  "switchToSupplier": "التبديل إلى المورد",
+  "becomeLearner": "كن متعلّماً",
+  "organizationSupplierStaysInSupplierMode": "حسابات موردي المؤسسات تبقى في وضع المورد.",
+  "learnerMode": "وضع المتعلّم",
+  "supplierMode": "وضع المورد",
+  "supplierVerifySubmittedTitle": "تم إرسال تحقق المورد",
+  "supplierVerifyLoadStatusFailed": "تعذّر تحميل حالة التحقق.",
+  "supplierVerifyPendingSubtitle": "حساب المورد بانتظار موافقة المسؤول. ستتمكن من نشر المواد بعد الموافقة على حسابك.",
+  "supplierVerifyStillWaitingApproval": "حساب المورد لا يزال بانتظار موافقة المسؤول.",
+  "supplierVerifyRejectedTitle": "تم رفض تحقق المورد",
+  "supplierVerifyChangesRequestedTitle": "طُلبت تعديلات",
+  "supplierVerifyStatusTitle": "حالة تحقق المورد",
+  "supplierVerifyRejectedBody": "تم رفض تحقق المورد. نشر المواد محظور حتى تتم الموافقة على مؤسستك.",
+  "supplierVerifyChangesRequestedBody": "طلب مسؤول تعديلات على طلب التحقق. حدّث المستند وأعد الإرسال للمراجعة.",
+  "supplierVerifyStatusBody": "نشر المواد محظور حتى تتم الموافقة على مؤسستك من قِبل مسؤول.",
+  "supplierVerifyStatusRefreshed": "تم تحديث حالة التحقق.",
+  "supplierVerifySelectDocumentToUpload": "اختر مستند تحقق للرفع.",
+  "resubmitVerification": "إعادة إرسال التحقق",
+  "chooseVerificationDocument": "اختيار مستند التحقق",
+  "supplierProfilePhotoUpdated": "تم تحديث صورة الملف",
+  "supplierCoverImageUpdated": "تم تحديث صورة الغلاف",
+  "supplierDiscardChangesQuestion": "تجاهل التغييرات؟",
+  "supplierUnsavedEditsWillBeLost": "ستفقد التعديلات غير المحفوظة.",
+  "supplierKeepEditing": "متابعة التعديل",
+  "registerSupplierTypeControlsVerification": "يتحكم هذا في متطلبات التحقق وكيف تُعرَض قوائم المواد على الطالبين.",
+  "registerSupplierPublicNameHelp": "يظهر الاسم العام في قوائم المواد ورسائل الحجز. استخدم اسم ورشة أو مؤسسة أو اسماً شخصياً يتعرّف عليه الطالبون.",
+  "registerSupplierDisplayNameOptional": "اسم عرض المورد (اختياري)",
+  "registerSupplierUsesFullNameDefault": "يستخدم اسمك الكامل افتراضياً",
+  "registerSupplierShareMaterialsGoals": "ماذا تريد أن تحقق بمشاركة المواد؟",
+  "registerSupplierBasicsSubtitle": "اختر ملف المورد الذي يطابق من يملك المواد وكيف يظهر علناً.",
+  "registerSupplierVerificationSubtitle": "يحتاج موردو المؤسسات مستنداً ليراجع المسؤول الحساب قبل نشر المواد.",
+  "registerSupplierReviewSupplierSubtitle": "راجع حساب المورد ومنطقة الاستلام قبل إنشائه.",
+  "registerSupplierReviewBothSubtitle": "راجع تفاصيل المتعلّم والمورد قبل إنشاء الحساب.",
+  "registerSupplierLocationBothSubtitle": "حدّد منطقة الاستلام العامة للمواد التي تشاركها. تُعالَج تفاصيل توصيل المتعلّم لاحقاً عند الحاجة.",
+  "registerSupplierLocationSubtitle": "حدّد منطقة الاستلام العامة للمواد التي تشاركها.",
+  "registerSupplierNoVerificationRequired": "لا يلزم مستند تحقق لهذا النوع من الموردين.",
+  "registerSupplierNoVerificationBody": "يمكنك مراجعة تفاصيل حسابك ثم إنشاء الحساب دون رفع ملف.",
+  "registerAccountReadyUploadVerification": "حسابك جاهز. ارفع مستند التحقق للمتابعة.",
+  "registerSupplierSetupDescription": "ستحدّد أهداف المورد ومنطقة الاستلام ونوع المورد والاسم العام والتحقق عند الحاجة.",
+  "registerBothSupplierSetupDescription": "ستحدّد اهتمامات المتعلّم ومستوى التعلّم، إضافةً إلى الاستلام وملف المورد.",
+  "registerSupplierLocationHelperBoth": "هذه منطقة الاستلام العامة للمواد التي تشاركها. لا تكشف عنواناً دقيقاً علناً، وتبقى تفاصيل توصيل المتعلّم منفصلة.",
+  "registerSupplierLocationHelper": "يحتاج الموردون مدينة ومنطقة ليفهم الطالبون جدوى الاستلام. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم ترتيب حجز أو توصيل.",
+  "registerSupplierReviewHelper": "تبقى أهداف المورد في الإعداد فقط. يستقبل الخادم حسابك وملف المورد ومنطقة الاستلام.",
+  "registerBothReviewHelper": "تبقى الأهداف في الإعداد فقط. يستقبل الخادم حسابك وملف المتعلّم وملف المورد ومنطقة الاستلام.",
+  "retryVerification": "إعادة محاولة التحقق",
+  "conditionNew": "جديد",
+  "conditionLikeNew": "كالجديد",
+  "conditionGood": "جيد",
+  "conditionUsed": "مستعمل",
+  "conditionNeedsRepair": "يحتاج إصلاح",
+  "sourceTypeStudentLeftover": "فائض طلابي",
+  "sourceTypeWorkshopSurplus": "فائض ورشة",
+  "sourceTypeFactorySurplus": "فائض مصنع",
+  "sourceTypeEducationalInstitution": "مؤسسة تعليمية",
+  "materialStatusAvailable": "متاح",
+  "materialStatusPendingReservation": "قيد انتظار الحجز",
+  "materialStatusReserved": "محجوز",
+  "materialStatusReused": "أُعيد استخدامها",
+  "materialStatusUnavailable": "غير متاح",
+  "supplierApply": "تطبيق",
+  "supplierSelectScheduleRange": "اختر نطاق الجدول",
+  "supplierActionCouldNotComplete": "تعذّر تنفيذ الإجراء.",
+  "supplierHandovers": "عمليات التسليم",
+  "supplierSearchScheduleHint": "ابحث بالمادة أو المتعلم أو رقم الحجز...",
+  "supplierDeliveryPickup": "استلام للتوصيل",
+  "supplierNoAttention": "لا تحتاج انتباهاً",
+  "supplierScheduleColumnSchedule": "الجدول",
+  "supplierScheduleColumnMaterialLearner": "المادة والمتعلم",
+  "supplierScheduleColumnFulfillment": "التنفيذ",
+  "supplierScheduleColumnWindow": "النافذة",
+  "supplierScheduleColumnNextActor": "الطرف التالي",
+  "supplierScheduleColumnActions": "الإجراءات",
+  "supplierNoConfirmedWindow": "لا توجد نافذة مؤكدة",
+  "supplierGroupReservationsQuantity": "{count} حجوزات · {quantity}",
+  "@supplierGroupReservationsQuantity": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "quantity": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierGroupReservationsCount": "{count} حجوزات",
+  "@supplierGroupReservationsCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierConfirmed": "مؤكد",
+  "supplierSupplierPickup": "استلام المورد",
+  "supplierConfirmedPickup": "استلام مؤكد",
+  "supplierWaitingForDriver": "بانتظار السائق",
+  "supplierDriverAssigned": "تم تعيين السائق",
+  "supplierArrivedAtSupplier": "وصل إلى المورد",
+  "supplierDriverOnTheWay": "السائق في الطريق",
+  "supplierPickedUp": "تم الاستلام",
+  "supplierView": "عرض",
+  "supplierMoreActions": "إجراءات إضافية",
+  "supplierShowingHandoversRange": "عرض {start}–{end} من {total} تسليمات",
+  "@supplierShowingHandoversRange": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierRowsPerPage": "صفوف لكل صفحة",
+  "supplierPickupScheduleLoadFailedTitle": "تعذّر تحميل جدول الاستلام",
+  "supplierPleaseTryAgain": "يرجى المحاولة مرة أخرى.",
+  "supplierNoHandoversMatchFilters": "لا توجد تسليمات تطابق الفلاتر المحددة.",
+  "supplierNoHandoversToday": "لا توجد تسليمات مجدولة اليوم.",
+  "supplierNoHandoversUpcoming": "لا توجد تسليمات قادمة.",
+  "supplierNoHandoversOverdue": "لا توجد تسليمات متأخرة.",
+  "supplierNoHandoversCompletedPeriod": "لا توجد تسليمات مكتملة في هذه الفترة.",
+  "supplierNoHandoversClosedPeriod": "لا توجد تسليمات مغلقة في هذه الفترة.",
+  "supplierNoHandoversScheduled": "لا توجد تسليمات مجدولة بعد.",
+  "supplierResetFiltersToSeeMore": "جرّب إعادة ضبط الفلاتر لرؤية المزيد من التسليمات.",
+  "supplierConfirmedHandoversAppearHere": "ستظهر هنا مواعيد الاستلام الذاتي واستلام السائق المؤكدة.",
+  "supplierOpenIncomingRequests": "فتح الطلبات الواردة",
+  "supplierFiltersTitle": "الفلاتر",
+  "supplierFilterOverdue": "متأخرة",
+  "supplierUnscheduledAction": "إجراء يحتاج جدولة",
+  "supplierNeedsScheduling": "تحتاج جدولة",
+  "supplierAwaitingResolution": "بانتظار الحل",
+  "supplierPastDue": "متأخرة",
+  "supplierScheduled": "مجدولة",
+  "supplierHandoverCompleted": "اكتمل التسليم",
+  "supplierNeedsReview": "تحتاج مراجعة",
+  "supplierExpired": "منتهية",
+  "supplierNoShow": "عدم حضور",
+  "supplierFulfillmentFailed": "فشل التنفيذ",
+  "supplierCancelled": "ملغاة",
+  "supplierAdminReview": "مراجعة الإدارة",
+  "supplierNextActorYou": "أنت",
+  "supplierNextActorLearner": "المتعلم",
+  "supplierNextActorDriver": "السائق",
+  "supplierCompletePickup": "إكمال الاستلام",
+  "supplierReportLearnerNoShow": "الإبلاغ عن عدم حضور المتعلم",
+  "supplierCloseReservation": "إغلاق الحجز",
+  "supplierMessage": "رسالة",
+  "supplierEditCover": "تعديل الغلاف",
+  "supplierEditProfilePhoto": "تعديل صورة ملف المورد",
+  "supplierEssentialsCompleteTitle": "اكتملت الأساسيات",
+  "supplierEditProfileCompletionDetails": "تعديل تفاصيل اكتمال ملف المورد",
+  "supplierProfileCompletionPercent": "اكتمال الملف {percent} بالمئة",
+  "@supplierProfileCompletionPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierMissingFields": "المفقود: {fields}",
+  "@supplierMissingFields": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "supplierBusinessIdentity": "هوية النشاط",
+  "supplierWorkingAvailability": "التوفر للعمل",
+  "supplierWorkingAvailabilityMissing": "لم تتم إضافة أوقات التوفر للعمل.",
+  "supplierWorkingHours": "ساعات العمل",
+  "supplierPickupLocationAndPrivacy": "موقع الاستلام والخصوصية",
+  "supplierCityArea": "المدينة / المنطقة",
+  "supplierPickupAddress": "عنوان الاستلام",
+  "supplierPickupLocationMap": "خريطة موقع الاستلام",
+  "supplierSavedPickupLocation": "موقع الاستلام المحفوظ الخاص بك.",
+  "supplierSubmitForReview": "إرسال للمراجعة",
+  "supplierResubmit": "إعادة الإرسال",
+  "supplierThanksVerificationCommunity": "شكراً لمساعدتك في جعل ImpactLoop موثوقاً وآمناً لمجتمعنا.",
+  "supplierReviewedDate": "تاريخ المراجعة",
+  "supplierSubmittedDate": "تاريخ الإرسال",
+  "supplierAwaitingReview": "بانتظار المراجعة",
+  "supplierChangesRequired": "مطلوب تعديلات",
+  "supplierVerificationNotRequired": "التحقق غير مطلوب",
+  "supplierNotVerified": "غير موثّق",
+  "supplierVerificationUnavailable": "التحقق غير متاح",
+  "supplierProfileVerified": "تم توثيق الملف",
+  "supplierProfileAwaitingReview": "ملفك بانتظار المراجعة.",
+  "supplierChangesRequiredBeforeApproval": "مطلوب إجراء تعديلات قبل الموافقة.",
+  "supplierVerificationRejected": "تم رفض التحقق من ملفك.",
+  "supplierVerificationNotRequiredMessage": "التحقق غير مطلوب.",
+  "supplierProfileNotVerifiedYet": "ملفك غير موثّق بعد.",
+  "supplierVerificationStatusUnavailable": "حالة التحقق غير متاحة.",
+  "supplierPickupLocationLabel": "موقع الاستلام",
+  "supplierPublicAreaApproximateTitle": "منطقة عامة — موقع تقريبي",
+  "supplierPublicAreaApproximateExplanation": "يرى المتعلمون المنطقة العامة قبل القبول. تتم مشاركة عنوان الاستلام الدقيق فقط عندما يسمح مسار العمل بذلك.",
+  "supplierPublicExactLocation": "موقع عام دقيق",
+  "supplierPublicExactLocationExplanation": "موقع الاستلام ظاهر للعامة.",
+  "supplierSharedAfterAcceptanceTitle": "تتم المشاركة بعد قبول الحجز",
+  "supplierSharedAfterAcceptanceExplanation": "لا يرى المتعلمون عنوان الاستلام الدقيق قبل قبول الحجز.",
+  "supplierPrivateLocation": "موقع خاص",
+  "supplierPrivateLocationExplanation": "لا يظهر موقع الاستلام للعامة.",
+  "supplierLocationPrivacyUnavailable": "خصوصية الموقع غير متاحة",
+  "supplierLocationPrivacyUnavailableExplanation": "تفاصيل الظهور غير متاحة حالياً.",
+  "supplierDaySun": "الأحد",
+  "supplierDayMon": "الإثنين",
+  "supplierDayTue": "الثلاثاء",
+  "supplierDayWed": "الأربعاء",
+  "supplierDayThu": "الخميس",
+  "supplierDayFri": "الجمعة",
+  "supplierDaySat": "السبت",
+  "supplierSummaryClosed": "مغلقة",
+  "supplierNotifCategoryMaterialReview": "مراجعة المواد",
+  "supplierNotifCategoryDeliveryRecovery": "معالجة التوصيل",
+  "supplierNotifCategorySystem": "النظام",
+  "supplierNotifStateWaiting": "بانتظار",
+  "supplierChooseTime": "اختر الوقت",
+  "supplierPublicProfileSection": "الملف العام",
+  "supplierOrganizationAvailabilitySection": "المؤسسة والتوفر",
+  "supplierOrganizationNameHelp": "اسم المؤسسة يحدد المؤسسة، وقد يطابق اسم المورد العام.",
+  "supplierAvailabilityInformationalHelp": "التوفر للمعلومات ويساعد المتعلمين على التخطيط للاستلام.",
+  "supplierSeparateOrganizationAddress": "عنوان المؤسسة المنفصل",
+  "supplierVisibilityPublicApproximate": "يرى المتعلمون المنطقة العامة. يُشارك عنوان الاستلام الدقيق بعد قبول الحجز.",
+  "supplierVisibilityPublicExact": "يمكن للمتعلمين رؤية موقع الاستلام المحفوظ وفق إعدادات الظهور العامة.",
+  "supplierVisibilityOrderOnly": "يرى المتعلمون عنوان الاستلام الدقيق فقط بعد قبول الحجز.",
+  "supplierVisibilityPrivate": "يبقى موقع الاستلام خاصاً.",
+  "supplierVisibilityUnavailable": "تفاصيل ظهور الموقع غير متاحة.",
+  "supplierChooseValidTime": "اختر وقتاً صالحاً.",
+  "supplierPickupMapUnavailable": "خريطة الاستلام غير متاحة",
+  "supplierAddPickupLocationForMap": "أضف موقع استلام لعرض الخريطة.",
+  "supplierCouldNotLoadSupplierProfile": "تعذّر تحميل ملف المورد",
+  "supplierMaterialRequestsBadge": "{count, plural, =1{طلب واحد} other{{count} طلبات}}",
+  "@supplierMaterialRequestsBadge": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "supplierMaterialsResultCount": "{count, plural, =1{مادة واحدة معروضة} other{{count} مواد معروضة}}",
+  "@supplierMaterialsResultCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "supplierActiveRequestsLabel": "{count, plural, =1{{count} طلب نشط} other{{count} طلبات نشطة}}",
+  "@supplierActiveRequestsLabel": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "supplierDemandCountLabel": "{demand, plural, =1{{demand} حجز} other{{demand} حجوزات}} · {views, plural, =0{{views} مشاهدة} =1{{views} مشاهدة} other{{views} مشاهدات}}",
+  "@supplierDemandCountLabel": {
+    "placeholders": {
+      "demand": {"type": "int"},
+      "views": {"type": "int"}
+    }
+  },
+  "driverPortal": "بوابة السائق",
+  "driverInternalDelivery": "توصيل داخلي",
+  "driverJobs": "المهام",
+  "driverJobsTitle": "مهام السائق",
+  "driverJobsSubtitle": "تنسيق التوصيل الداخلي الأساسي",
+  "driverActiveDeliveriesCount": "التوصيلات النشطة: {active}/{max}",
+  "@driverActiveDeliveriesCount": {
+    "placeholders": {
+      "active": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "driverAvailableJobsCount": "المهام المتاحة: {count}",
+  "@driverAvailableJobsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableJobsCountLoading": "المهام المتاحة: …",
+  "driverTotalAvailable": "الإجمالي المتاح: {count}",
+  "@driverTotalAvailable": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAreaChip": "المنطقة: {area}",
+  "@driverAreaChip": {
+    "placeholders": {
+      "area": {"type": "String"}
+    }
+  },
+  "driverCouldNotLoadActive": "تعذّر تحميل التوصيلات النشطة",
+  "driverRefreshBeforeAccept": "حدّث الصفحة قبل قبول مهمة جديدة.",
+  "driverMyActiveDeliveries": "توصيلاتي النشطة",
+  "driverLoadingActive": "جارٍ تحميل التوصيلات النشطة…",
+  "driverNoActiveDeliveries": "لا توجد توصيلات نشطة بعد.",
+  "driverNoActiveDeliveriesHint": "يمكنك قبول المهام المتاحة عندما تكون جاهزًا.",
+  "driverAvailableNearbyJobs": "المهام المتاحة القريبة",
+  "driverActiveLimitReached": "وصلت إلى حد التوصيلات النشطة.",
+  "driverActiveLimitHint": "أكمل توصيلًا واحدًا قبل قبول آخر.",
+  "driverCompleteOneFirst": "أكمل توصيلًا واحدًا قبل قبول آخر.",
+  "driverLoadingAvailable": "جارٍ تحميل المهام المتاحة…",
+  "driverLookingForWaiting": "جارٍ البحث عن طلبات توصيل بانتظار السائق.",
+  "driverCouldNotLoadAvailable": "تعذّر تحميل المهام المتاحة.",
+  "driverOpenDelivery": "فتح التوصيل",
+  "driverFindNearbyJobs": "البحث عن مهام قريبة",
+  "driverDistanceToPickupHint": "تُحسب المسافة إلى موقع الاستلام.",
+  "driverAnyDistance": "أي مسافة",
+  "driverWithinKm": "ضمن {km} كم",
+  "@driverWithinKm": {
+    "placeholders": {
+      "km": {"type": "int"}
+    }
+  },
+  "driverNearest": "الأقرب",
+  "driverNewest": "الأحدث",
+  "driverCityLabel": "المدينة:",
+  "driverAllCities": "كل المدن",
+  "driverAreaLabel": "المنطقة:",
+  "driverAllAreas": "كل المناطق",
+  "driverResetFilters": "إعادة تعيين الفلاتر",
+  "driverLocationNeeded": "الموقع مطلوب لفلتر المسافة.",
+  "driverLocationLabel": "الموقع",
+  "driverSort": "الترتيب",
+  "driverAcceptJob": "قبول المهمة",
+  "driverAccepting": "جارٍ القبول…",
+  "driverActiveLimitReachedButton": "تم بلوغ حد التوصيلات النشطة",
+  "driverDeliveryAccepted": "تم قبول التوصيل.",
+  "driverDeliveryNoLongerAvailable": "لم يعد هذا التوصيل متاحًا.",
+  "driverReachedActiveLimit": "لقد وصلت إلى حد التوصيلات النشطة.",
+  "driverDistanceToPickup": "المسافة إلى الاستلام",
+  "driverPickupLabel": "الاستلام",
+  "driverIncreaseRadius": "توسيع نطاق البحث",
+  "driverShowAnyDistance": "عرض أي مسافة",
+  "driverLoadingLocation": "جارٍ تحميل الموقع…",
+  "driverUsingCurrentLocation": "باستخدام موقعك الحالي",
+  "driverUsingProfileArea": "باستخدام منطقة الملف الشخصي: {location}",
+  "@driverUsingProfileArea": {
+    "placeholders": {
+      "location": {"type": "String"}
+    }
+  },
+  "driverLocationUnavailable": "الموقع غير متاح — عرض كل المهام المتاحة",
+  "driverSearchRadiusAny": "نطاق البحث: أي مسافة",
+  "driverSearchRadiusWithin": "نطاق البحث: ضمن {km} كم",
+  "@driverSearchRadiusWithin": {
+    "placeholders": {
+      "km": {"type": "int"}
+    }
+  },
+  "driverPickupDistanceUnavailable": "مسافة الاستلام غير متاحة",
+  "driverKmToPickup": "{distance} كم إلى الاستلام",
+  "@driverKmToPickup": {
+    "placeholders": {
+      "distance": {"type": "String"}
+    }
+  },
+  "driverNoJobsWithinRadius": "لا توجد مهام ضمن {radius} كم.",
+  "@driverNoJobsWithinRadius": {
+    "placeholders": {
+      "radius": {"type": "String"}
+    }
+  },
+  "driverJobsAvailableOutsideRadius": "{count, plural, =1{مهمة واحدة} other{{count} مهام}} متاحة خارج نطاقك الحالي. جرّب توسيع النطاق أو اختيار أي مسافة.",
+  "@driverJobsAvailableOutsideRadius": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverTryIncreaseRadius": "جرّب توسيع النطاق أو اختيار أي مسافة.",
+  "driverNoJobsInArea": "لم تُعثر على مهام في هذه المنطقة.",
+  "driverJobsAvailableBroaderFilters": "{count, plural, =1{مهمة واحدة} other{{count} مهام}} متاحة بفلاتر أوسع. جرّب كل المناطق أو إعادة تعيين الفلاتر.",
+  "@driverJobsAvailableBroaderFilters": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverTryAllAreasOrReset": "جرّب كل المناطق أو إعادة تعيين الفلاتر.",
+  "driverNoJobsNearby": "لا توجد مهام متاحة قريبة منك الآن.",
+  "driverTryChangeFilters": "جرّب تغيير فلتر المدينة أو المنطقة أو المسافة.",
+  "driverCheckingActiveDelivery": "جارٍ التحقق من التوصيل المعيّن النشط.",
+  "driverCouldNotLoadDetails": "تعذّر تحميل تفاصيل التوصيل.",
+  "driverMovedToAdminReview": "نُقل التوصيل إلى مراجعة الإدارة",
+  "driverNoLongerActive": "التوصيل لم يعد نشطًا",
+  "driverNoLongerActiveDefault": "لم يعد هذا التوصيل نشطًا. نُقل إلى مراجعة الإدارة.",
+  "driverBackToJobs": "العودة إلى المهام",
+  "driverNotAssigned": "التوصيل غير نشط أو غير معيّن لك",
+  "driverOpenJobsBoard": "افتح لوحة المهام لعرض التوصيل المعيّن الحالي.",
+  "driverActiveDelivery": "توصيل نشط",
+  "driverLearnerUnavailable": "المتعلّم غير متاح",
+  "driverDeliveryWindow": "موعد التوصيل",
+  "driverLearnerNote": "ملاحظة المتعلّم",
+  "driverNoNextAction": "لا يوجد إجراء تالٍ",
+  "driverCannotAdvance": "لا يمكن تقدّم هذا التوصيل من حالته الحالية.",
+  "driverCannotAdvanceFurther": "لا يمكن تقدّم هذا التوصيل أكثر.",
+  "driverTimingNote": "ملاحظة التوقيت",
+  "driverOptionalNote": "ملاحظة اختيارية للسائق",
+  "driverOptionalNoteHint": "أضف ملاحظة قصيرة لتحديث الحالة",
+  "driverUpdating": "جارٍ التحديث...",
+  "driverReportPickupFailed": "الإبلاغ عن فشل الاستلام",
+  "driverReportDeliveryFailed": "الإبلاغ عن فشل التوصيل",
+  "driverReportDriverIssue": "الإبلاغ عن مشكلة للسائق",
+  "driverSupplierHandoverCode": "رمز تسليم المورّد",
+  "driverSupplierHandoverCodeMessage": "أدخل الرمز الذي يعطيك إياه المورّد بعد تسليم المادة.",
+  "driverMarkPickedUp": "تأكيد الاستلام",
+  "driverLearnerDeliveryCode": "رمز تسليم المتعلّم",
+  "driverLearnerDeliveryCodeMessage": "أدخل الرمز الذي يعطيك إياه المتعلّم عند استلام المادة.",
+  "driverMarkDelivered": "تأكيد التسليم",
+  "driverDeliveryMarkedDelivered": "تم تأكيد التسليم.",
+  "driverStatusUpdated": "تم تحديث حالة التوصيل.",
+  "driverStatusChangedRefresh": "تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.",
+  "driverPickupFailureReported": "تم الإبلاغ عن فشل الاستلام.",
+  "driverDeliveryFailureReported": "تم الإبلاغ عن فشل التوصيل.",
+  "driverNoteRequired": "ملاحظة (مطلوبة)",
+  "driverIssueNoteHint": "صف سبب عدم قدرتك على إكمال التوصيل",
+  "driverSubmitReport": "إرسال البلاغ",
+  "driverReason": "السبب",
+  "driverIssueReported": "تم الإبلاغ عن مشكلة السائق.",
+  "driverLocationSharing": "مشاركة الموقع",
+  "driverLocationSharingBody": "شارك موقعك أثناء نشاط هذا التوصيل. يمكن للمتعلّم تتبّعك فقط بعد استلام المادة.",
+  "driverShareAutomatically": "المشاركة تلقائيًا",
+  "driverSharingEvery45Seconds": "مشاركة كل 45 ثانية طالما هذه الصفحة مفتوحة.",
+  "driverLocationSharingPaused": "مشاركة الموقع متوقفة",
+  "driverSending": "جارٍ الإرسال...",
+  "driverSendMyLocation": "إرسال موقعي",
+  "driverLocationUpdateSent": "تم إرسال تحديث الموقع.",
+  "driverLastShared": "آخر مشاركة: {dateTime}",
+  "@driverLastShared": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "driverCurrentStage": "المرحلة الحالية: {status}",
+  "@driverCurrentStage": {
+    "placeholders": {
+      "status": {"type": "String"}
+    }
+  },
+  "driverNoFurtherSteps": "لا مزيد من الخطوات لهذا التوصيل.",
+  "driverAdvanceTo": "التقدّم إلى: {action}",
+  "@driverAdvanceTo": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "driverNextAction": "التالي: {action}",
+  "@driverNextAction": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "driverSupplierCodeRequired": "رمز تسليم المورّد مطلوب عند تأكيد الاستلام.",
+  "driverLearnerCodeRequired": "رمز تسليم المتعلّم مطلوب عند تأكيد التسليم.",
+  "driverCompleteArriveBeforePickedUp": "أكمل \"الوصول لموقع الاستلام\" قبل تأكيد الاستلام.",
+  "driverMarkPickedUpBeforeDelivery": "أكّد الاستلام قبل بدء التوصيل.",
+  "driverStartDeliveryBeforeArrive": "ابدأ التوصيل قبل الوصول لموقع التسليم.",
+  "driverArriveBeforeDelivered": "صل إلى موقع التسليم قبل تأكيد التسليم.",
+  "driverActionNotAvailable": "هذا الإجراء غير متاح بعد.",
+  "driverNotSet": "غير محدد",
+  "driverApproximateAddress": "عنوان تقريبي — تأكد مع المتعلّم عند الحاجة.",
+  "driverExactCoordinatesMissing": "الإحداثيات الدقيقة غير متوفرة.",
+  "driverAssignedAt": "معيّن {dateTime}",
+  "@driverAssignedAt": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverAvailableInDays": "متاح خلال {count, plural, =1{يوم واحد} other{{count} أيام}}",
+  "@driverAvailableInDays": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableInHoursMinutes": "متاح خلال {hours} س {minutes} د",
+  "@driverAvailableInHoursMinutes": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "driverAvailableInHours": "متاح خلال {count, plural, =1{ساعة واحدة} other{{count} ساعات}}",
+  "@driverAvailableInHours": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableInMinutes": "متاح خلال {count, plural, =1{دقيقة واحدة} other{{count} دقائق}}",
+  "@driverAvailableInMinutes": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableSoon": "متاح قريبًا",
+  "driverPickupNotAvailableYet": "تأكيد الاستلام غير متاح بعد",
+  "driverPickupConfirmFrom": "يمكن تأكيد الاستلام من {time} (قبل 30 دقيقة من موعد المورّد).",
+  "@driverPickupConfirmFrom": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverSupplierPickupWindowPassed": "انتهى موعد استلام المورّد",
+  "driverPickupConfirmationEnded": "انتهت نافذة تأكيد الاستلام المسموحة في {dateTime}.",
+  "@driverPickupConfirmationEnded": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverDeliveryWindowNotSet": "موعد تأكيد التوصيل غير محدد",
+  "driverLearnerMustConfirmWindow": "يجب على المتعلّم تأكيد موعد التوصيل قبل أن تتمكن من تأكيد التسليم.",
+  "driverDeliveryNotAvailableYet": "تأكيد التوصيل غير متاح بعد",
+  "driverDeliveryConfirmFrom": "يمكن تأكيد التوصيل من {time}.",
+  "@driverDeliveryConfirmFrom": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverDeliveryWindowPassed": "انتهى موعد التوصيل",
+  "driverDeliveryConfirmationEnded": "انتهت نافذة تأكيد التوصيل المسموحة في {dateTime}.",
+  "@driverDeliveryConfirmationEnded": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverPickupWindowNotStarted": "موعد الاستلام لم يبدأ بعد",
+  "driverPickupStartsAt": "يبدأ الاستلام في {time}.",
+  "@driverPickupStartsAt": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverSupplierPickupOverdue": "تأخّر موعد استلام المورّد",
+  "driverPickupOverdueBody": "انتهت نافذة تأكيد الاستلام المسموحة في {dateTime}. أبلغ عن فشل الاستلام إذا لم تتمكن من إكماله.",
+  "@driverPickupOverdueBody": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverScheduledPickupEnded": "انتهى موعد الاستلام المجدول",
+  "driverScheduledPickupEndedBody": "انتهى موعد المورّد في {time}. لا يزال بإمكانك إكمال الاستلام إذا كانت المادة جاهزة.",
+  "@driverScheduledPickupEndedBody": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverArriveAtPickup": "الوصول لموقع الاستلام",
+  "driverArriveAtPickupReq1": "توجّه إلى موقع استلام المورّد.",
+  "driverArriveAtPickupReq2": "لا يلزم رمز تأكيد لهذه الخطوة.",
+  "driverMarkPickedUpReq1": "يجب أن تكون في موقع استلام المورّد.",
+  "driverMarkPickedUpReq2": "أدخل رمز تسليم المورّد عند الطلب.",
+  "driverStartDeliveryOnTheWay": "بدء التوصيل / في الطريق",
+  "driverStartDeliveryReq1": "يجب أن تكون المادة قد استُلمت من المورّد.",
+  "driverStartDeliveryReq2": "لا يلزم رمز تأكيد لهذه الخطوة.",
+  "driverArriveAtDropoff": "الوصول لموقع التسليم",
+  "driverArriveAtDropoffReq1": "توجّه إلى موقع تسليم المتعلّم.",
+  "driverArriveAtDropoffReq2": "لا يلزم رمز تأكيد لهذه الخطوة.",
+  "driverMarkDeliveredReq1": "يجب أن تكون في موقع تسليم المتعلّم.",
+  "driverMarkDeliveredReq2": "أدخل رمز تسليم المتعلّم عند الطلب.",
+  "driverFailureSupplierUnavailable": "المورّد غير متاح",
+  "driverFailureMaterialNotReady": "المادة غير جاهزة",
+  "driverFailureLocationIssue": "مشكلة في الموقع",
+  "driverFailureLearnerUnavailable": "المتعلّم غير متاح",
+  "driverFailureAddressIssue": "مشكلة في العنوان",
+  "driverFailureAccessIssue": "مشكلة في الوصول",
+  "driverInactiveMovedToAdminReview": "نُقل إلى مراجعة الإدارة",
+  "driverInactiveNoLongerActive": "لم يعد نشطًا",
+  "driverTransportCar": "سيارة",
+  "driverTransportMotorcycle": "دراجة نارية",
+  "driverTransportBicycle": "دراجة",
+  "driverTransportWalking": "مشيًا",
+  "driverPhoneRequired": "مطلوب للسائقين",
+  "driverTransportationType": "نوع النقل",
+  "driverAddressLineOptional": "سطر العنوان (اختياري)",
+  "driverAvailabilityNoteOptional": "ملاحظة التوفر (اختياري)",
+  "notificationDriverNewJobTitle": "مهمة توصيل جديدة",
+  "notificationDriverNewJobBody": "{materialTitle} جاهزة للتوصيل.",
+  "@notificationDriverNewJobBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupTimeTitle": "موعد الاستلام",
+  "notificationDriverPickupTimeBody": "يبدأ استلام {materialTitle} قريبًا.",
+  "@notificationDriverPickupTimeBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffTimeTitle": "موعد التسليم",
+  "notificationDriverDropoffTimeBody": "يبدأ تسليم {materialTitle} قريبًا.",
+  "@notificationDriverDropoffTimeBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverUnassignedTitle": "تم إلغاء تعيين التوصيل",
+  "notificationDriverUnassignedBody": "أُعيد فتح {materialTitle} لمجموعة السائقين من قِبل الإدارة.",
+  "@notificationDriverUnassignedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverMovedToAdminTitle": "نُقل التوصيل إلى مراجعة الإدارة",
+  "notificationDriverMovedToAdminBody": "نُقل التوصيل إلى مراجعة الإدارة لأن الاستلام لم يُكتمل ضمن موعد الاستلام.",
+  "driverToday": "اليوم",
+  "driverPickupStartsInHours": "يبدأ الاستلام خلال {hours, plural, =1{ساعة واحدة} other{{hours} ساعات}} · {dateLabel} · {timeRange}",
+  "@driverPickupStartsInHours": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupStartsInMinutes": "يبدأ الاستلام خلال {minutes} دقيقة · {dateLabel} · {timeRange}",
+  "@driverPickupStartsInMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"},
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupStartsSoon": "يبدأ الاستلام قريبًا · {dateLabel} · {timeRange}",
+  "@driverPickupStartsSoon": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupWindowEndedSummary": "انتهت نافذة الاستلام · {dateLabel} · {timeRange}",
+  "@driverPickupWindowEndedSummary": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverReadyForPickupNow": "جاهز للاستلام الآن · {dateLabel} · {timeRange}",
+  "@driverReadyForPickupNow": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "inviteAcceptTitle": "أكمل دعوة ImpactLoop",
+  "inviteInvalidLink": "رابط الدعوة غير صالح.",
+  "inviteRegistrationCompleted": "اكتمل التسجيل بنجاح.",
+  "inviteRoleLabel": "الدور: {role}",
+  "@inviteRoleLabel": {
+    "placeholders": {
+      "role": {"type": "String"}
+    }
+  },
+  "inviteInvitedRole": "الدور المدعو: {role}",
+  "@inviteInvitedRole": {
+    "placeholders": {
+      "role": {"type": "String"}
+    }
+  },
+  "inviteExpires": "تنتهي في: {date}",
+  "@inviteExpires": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "inviteInvalidOrExpired": "رابط الدعوة هذا غير صالح أو منتهٍ أو ملغى أو مستخدم بالفعل.",
+  "inviteCompleteRegistration": "إكمال التسجيل",
+  "inviteFullName": "الاسم الكامل",
+  "invitePhone": "الهاتف",
+  "invitePhoneOptional": "الهاتف (اختياري)",
+  "inviteFieldRequired": "مطلوب",
+  "driverLocationUnavailableShort": "الموقع غير متاح",
+  "driverUnknownParty": "غير معروف",
+  "driverGroupedItemsCount": "{count, plural, =1{عنصر واحد} other{{count} عناصر}}",
+  "@driverGroupedItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverCouldNotShareLocation": "تعذّر مشاركة الموقع. حاول مرة أخرى أو استخدم إرسال موقعي.",
+  "driverLocationPermissionDenied": "تم رفض إذن الموقع. فعّل إذن الموقع أو حاول مرة أخرى.",
+  "driverLocationServicesDisabled": "خدمات الموقع معطّلة. شغّل خدمات الموقع وحاول مرة أخرى.",
+  "driverCurrentLocationFailed": "تعذّر الحصول على موقعك الحالي. يُرجى المحاولة مرة أخرى."
+}

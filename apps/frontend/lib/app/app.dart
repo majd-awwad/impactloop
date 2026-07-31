@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 
 import 'application/app_settings_notifier.dart';
 import 'router/app_router.dart';
@@ -10,9 +11,10 @@ import '../features/auth/application/auth_providers.dart';
 class ImpactLoopApp extends ConsumerWidget {
   const ImpactLoopApp({super.key});
 
-  static const supportedLocales = [Locale('en'), Locale('ar')];
+  static const supportedLocales = [Locale('ar'), Locale('en')];
 
   static const localizationsDelegates = [
+    AppLocalizations.delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -25,9 +27,9 @@ class ImpactLoopApp extends ConsumerWidget {
     final settings = ref.watch(appSettingsProvider);
 
     return MaterialApp.router(
-      title: 'ImpactLoop',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+      theme: AppTheme.lightFor(settings.languageCode),
+      darkTheme: AppTheme.darkFor(settings.languageCode),
       themeMode: settings.themeMode,
       locale: Locale(settings.languageCode),
       supportedLocales: supportedLocales,

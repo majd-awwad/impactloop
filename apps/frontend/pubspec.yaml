@@ -67,6 +67,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -76,6 +77,16 @@ flutter:
     - family: MaterialIcons
       fonts:
         - asset: assets/fonts/MaterialIcons-Regular.otf
+    - family: NotoSansArabic
+      fonts:
+        - asset: assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf
+          weight: 600
+        - asset: assets/fonts/NotoSansArabic-VariableFont_wdth,wght.ttf
+          weight: 700
 
   assets:
     - assets/images/landing/

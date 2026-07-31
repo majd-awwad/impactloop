@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
 import 'package:frontend/app/app.dart';
+import 'package:frontend/app/application/app_settings_notifier.dart';
 import 'package:frontend/app/router/app_router.dart';
 import 'package:frontend/core/auth/access_token_holder.dart';
 import 'package:frontend/core/auth/token_storage.dart';
@@ -39,6 +40,9 @@ final _learningHubTestOverride = learningHubRepositoryProvider
     .overrideWithValue(emptyLearningHubRepository);
 
 final _materialDiscoveryTestOverrides = [
+  initialAppSettingsProvider.overrideWithValue(
+    const AppSettings(themeMode: ThemeMode.system, languageCode: 'en'),
+  ),
   materialDiscoveryRepositoryProvider.overrideWithValue(
     const MockMaterialDiscoveryRepository(),
   ),
@@ -323,6 +327,9 @@ void main() {
       ProviderScope(
         overrides: [
           _learningHubTestOverride,
+          initialAppSettingsProvider.overrideWithValue(
+            const AppSettings(themeMode: ThemeMode.system, languageCode: 'en'),
+          ),
           healthStatusProvider.overrideWith(
             (ref) async => HealthStatus(
               status: 'ok',
@@ -618,7 +625,9 @@ void main() {
     },
   );
 
-  testWidgets('supplier-only users cannot open liked materials', (tester) async {
+  testWidgets('supplier-only users cannot open liked materials', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1400, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -630,10 +639,7 @@ void main() {
     router.go('/materials/liked');
     await tester.pumpAndSettle();
 
-    expect(
-      router.routeInformationProvider.value.uri.path,
-      '/home',
-    );
+    expect(router.routeInformationProvider.value.uri.path, '/home');
   });
 
   testWidgets('supplier users are redirected from /login to /supplier', (

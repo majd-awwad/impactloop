@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
@@ -13,6 +14,7 @@ import '../../../auth/presentation/widgets/auth_header.dart';
 import '../../../auth/presentation/widgets/auth_shell.dart';
 import '../../application/supplier_verification_access.dart';
 import '../../data/supplier_verification_api.dart';
+import '../../../../core/errors/api_exception.dart';
 
 class SupplierVerificationPendingPage extends ConsumerStatefulWidget {
   const SupplierVerificationPendingPage({super.key});
@@ -50,15 +52,14 @@ class _SupplierVerificationPendingPageState
       }
 
       setState(() {
-        _statusMessage =
-            'Your supplier account is still waiting for admin approval.';
+        _statusMessage = context.l10n.supplierVerifyStillWaitingApproval;
       });
     } catch (error) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _statusMessage = error.toString();
+        _statusMessage = localizedApiErrorMessage(error, context.l10n);
       });
     } finally {
       if (mounted) {
@@ -69,6 +70,7 @@ class _SupplierVerificationPendingPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final asyncStatus = ref.watch(supplierVerificationStatusProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.authLayoutBreakpoint;
@@ -82,21 +84,21 @@ class _SupplierVerificationPendingPageState
         error: (error, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AuthHeader(
-              title: 'Supplier verification submitted',
-              subtitle: 'We could not load your verification status.',
+            AuthHeader(
+              title: l10n.supplierVerifySubmittedTitle,
+              subtitle: l10n.supplierVerifyLoadStatusFailed,
             ),
             const SizedBox(height: AppSpacing.lg),
             AuthFormCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AppInlineError(message: error.toString()),
+                  AppInlineError(message: localizedApiErrorMessage(error, context.l10n)),
                   const SizedBox(height: AppSpacing.md),
                   FilledButton(
                     onPressed: () =>
                         ref.invalidate(supplierVerificationStatusProvider),
-                    child: const Text('Retry'),
+                    child: Text(l10n.retry),
                   ),
                 ],
               ),
@@ -109,32 +111,34 @@ class _SupplierVerificationPendingPageState
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AuthHeader(
-                title: 'Supplier verification submitted',
-                subtitle:
-                    'Your supplier account is waiting for admin approval. You will be able to publish materials after your account is approved.',
+              AuthHeader(
+                title: l10n.supplierVerifySubmittedTitle,
+                subtitle: l10n.supplierVerifyPendingSubtitle,
               ),
               const SizedBox(height: AppSpacing.lg),
               AuthFormCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _InfoTile(label: 'Status', value: 'Pending review'),
+                    _InfoTile(
+                      label: l10n.supplierStatus,
+                      value: l10n.pendingReview,
+                    ),
                     if (status.organizationName != null)
                       _InfoTile(
-                        label: 'Organization',
+                        label: l10n.organization,
                         value: status.organizationName!,
                       ),
                     if (status.verificationSubmittedAt != null)
                       _InfoTile(
-                        label: 'Submitted',
+                        label: l10n.submitted,
                         value: dateFormat.format(
                           status.verificationSubmittedAt!,
                         ),
                       ),
                     if (status.verificationDocumentName != null)
                       _InfoTile(
-                        label: 'Document',
+                        label: l10n.document,
                         value: status.verificationDocumentName!,
                       ),
                     if (_statusMessage != null) ...[
@@ -153,18 +157,18 @@ class _SupplierVerificationPendingPageState
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Check status'),
+                          : Text(l10n.checkStatus),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     OutlinedButton(
                       onPressed: () => context.go(homeRoute),
-                      child: const Text('Back to home'),
+                      child: Text(l10n.backToHome),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     TextButton(
                       onPressed: () =>
                           ref.read(authControllerProvider.notifier).logout(),
-                      child: const Text('Log out'),
+                      child: Text(l10n.logout),
                     ),
                   ],
                 ),

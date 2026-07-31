@@ -69,7 +69,7 @@ class SupplierDashboardQuickActionsPanel extends StatelessWidget {
           Text(context.s.quickActions, style: context.supplierSectionTitle()),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Common supplier tasks',
+            context.s.commonSupplierTasks,
             style: context.supplierBody().copyWith(
               color: colors.textSecondary,
               fontSize: 13,

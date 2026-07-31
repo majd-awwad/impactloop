@@ -7,6 +7,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/widgets/notification_bell_button.dart';
@@ -81,6 +83,7 @@ class _NotificationsBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final listAsync = ref.watch(notificationsListProvider);
     final selectedFilter = ref.watch(notificationReadFilterProvider);
     final isCompactMobile = MediaQuery.sizeOf(context).width < 820;
@@ -126,21 +129,21 @@ class _NotificationsBody extends ConsumerWidget {
         Expanded(
           child: listAsync.when(
             skipLoadingOnReload: true,
-            loading: () => const Center(
+            loading: () => Center(
               child: _NotificationsStateCard(
                 icon: Icons.hourglass_top_outlined,
-                title: 'Loading notifications…',
-                subtitle: 'Fetching your latest updates.',
+                title: l10n.notificationsLoading,
+                subtitle: l10n.notificationsLoadingSubtitle,
               ),
             ),
             error: (error, _) {
               if (isAuthPendingNotificationError(error) ||
                   isCancelledNotificationError(error)) {
-                return const Center(
+                return Center(
                   child: _NotificationsStateCard(
                     icon: Icons.hourglass_top_outlined,
-                    title: 'Loading notifications…',
-                    subtitle: 'Fetching your latest updates.',
+                    title: l10n.notificationsLoading,
+                    subtitle: l10n.notificationsLoadingSubtitle,
                   ),
                 );
               }
@@ -148,16 +151,18 @@ class _NotificationsBody extends ConsumerWidget {
               return Center(
                 child: _NotificationsStateCard(
                   icon: Icons.cloud_off_outlined,
-                  title: 'Could not load notifications.',
-                  subtitle: kDebugMode ? '$error' : 'Please try again.',
-                  actionLabel: 'Retry',
+                  title: l10n.notificationsLoadError,
+                  subtitle: kDebugMode && l10n.localeName == 'en'
+                      ? '$error'
+                      : l10n.tryAgain,
+                  actionLabel: l10n.retry,
                   onAction: () => refreshNotifications(ref),
                 ),
               );
             },
             data: (state) {
               if (state.items.isEmpty) {
-                final empty = _emptyCopyForFilter(selectedFilter);
+                final empty = _emptyCopyForFilter(selectedFilter, l10n);
                 return Center(
                   child: _NotificationsStateCard(
                     icon: Icons.notifications_none_outlined,
@@ -189,22 +194,20 @@ class _NotificationsBody extends ConsumerWidget {
 
   ({String title, String subtitle}) _emptyCopyForFilter(
     NotificationReadFilter filter,
+    AppLocalizations l10n,
   ) {
     switch (filter) {
       case NotificationReadFilter.unread:
-        return (
-          title: 'No unread notifications.',
-          subtitle: 'You are all caught up for now.',
-        );
+        return (title: l10n.noUnreadNotifications, subtitle: l10n.allCaughtUp);
       case NotificationReadFilter.read:
         return (
-          title: 'No read notifications yet.',
-          subtitle: 'Opened notifications will appear here.',
+          title: l10n.noReadNotifications,
+          subtitle: l10n.openedNotificationsAppearHere,
         );
       case NotificationReadFilter.all:
         return (
-          title: 'No notifications yet.',
-          subtitle: 'Delivery reminders and job updates will appear here.',
+          title: l10n.noNotifications,
+          subtitle: l10n.notificationsAppearHere,
         );
     }
   }
@@ -279,6 +282,7 @@ class _NotificationsListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
     final footerCount = (state.hasMore ? 1 : 0) + (state.total > 0 ? 1 : 0);
 
@@ -325,7 +329,7 @@ class _NotificationsListView extends StatelessWidget {
                         AppStatusTone.neutral,
                       ),
                       icon: const Icon(Icons.expand_more_rounded),
-                      label: const Text('Load more'),
+                      label: Text(l10n.loadMore),
                     ),
             );
           }
@@ -333,7 +337,7 @@ class _NotificationsListView extends StatelessWidget {
         }
 
         return Text(
-          'Showing ${state.items.length} of ${state.total} notifications.',
+          l10n.notificationCount(state.items.length, state.total),
           textAlign: TextAlign.center,
           style: AppTextStyles.label(
             context,
@@ -355,14 +359,21 @@ class _NotificationFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return SegmentedButton<NotificationReadFilter>(
-      segments: const [
-        ButtonSegment(value: NotificationReadFilter.all, label: Text('All')),
+      segments: [
+        ButtonSegment(
+          value: NotificationReadFilter.all,
+          label: Text(l10n.filterAll),
+        ),
         ButtonSegment(
           value: NotificationReadFilter.unread,
-          label: Text('Unread'),
+          label: Text(l10n.filterUnread),
         ),
-        ButtonSegment(value: NotificationReadFilter.read, label: Text('Read')),
+        ButtonSegment(
+          value: NotificationReadFilter.read,
+          label: Text(l10n.filterRead),
+        ),
       ],
       selected: {selected},
       onSelectionChanged: (selection) => onSelected(selection.first),
@@ -383,6 +394,7 @@ class _NotificationsHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
     final unreadCount = listAsync.maybeWhen(
       data: (state) => state.unreadCount,
@@ -396,42 +408,71 @@ class _NotificationsHeaderCard extends StatelessWidget {
         borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderStrong),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Notifications',
-                  style: AppTextStyles.display(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final title = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.notificationsTitle,
+                style: AppTextStyles.display(
+                  context,
+                ).copyWith(color: palette.textPrimary),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                l10n.notificationsSubtitle,
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+            ],
+          );
+          final actions = Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              IconButton(
+                tooltip: l10n.refresh,
+                onPressed: onRefresh,
+                style: AppStatusButtonStyle.text(context, AppStatusTone.info),
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+              if (unreadCount > 0)
+                FilledButton(
+                  onPressed: onMarkAllRead,
+                  style: AppStatusButtonStyle.filled(
                     context,
-                  ).copyWith(color: palette.textPrimary),
+                    AppStatusTone.info,
+                  ),
+                  child: Text(l10n.markAllRead),
                 ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Delivery reminders, job updates, and account alerts.',
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: palette.textSecondary),
+            ],
+          );
+
+          if (constraints.maxWidth < 640) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                title,
+                const SizedBox(height: AppSpacing.md),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: actions,
                 ),
               ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Refresh',
-            onPressed: onRefresh,
-            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-          if (unreadCount > 0)
-            FilledButton(
-              onPressed: onMarkAllRead,
-              style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
-              child: const Text('Mark all read'),
-            ),
-        ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: AppSpacing.md),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }
@@ -509,9 +550,11 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final category = categoryForNotification(notification);
-    final chipLabel = notificationTypeChipLabel(category);
-    final actionLabel = notificationActionLabel(notification);
+    final chipLabel = notificationTypeChipLabel(category, l10n: l10n);
+    final actionLabel = notificationActionLabel(notification, l10n: l10n);
+    final copy = localizedNotificationCopy(notification, l10n);
     final hasTarget = notificationHasNavigationTarget(notification);
     final tone = notificationVisualTone(category);
     final accent = AppStatusStyle.of(context, tone).foreground;
@@ -573,7 +616,7 @@ class _NotificationTile extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      notification.title,
+                      copy.title,
                       style: AppTextStyles.title(context).copyWith(
                         color: palette.textPrimary,
                         fontWeight: notification.isRead
@@ -583,7 +626,7 @@ class _NotificationTile extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      notification.body,
+                      copy.body,
                       style: AppTextStyles.body(
                         context,
                       ).copyWith(color: palette.textSecondary),
@@ -595,7 +638,9 @@ class _NotificationTile extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
-                          _formatTimestamp(notification.createdAt),
+                          LocalizedFormatters(
+                            l10n,
+                          ).relativeTime(notification.createdAt),
                           style: AppTextStyles.label(
                             context,
                           ).copyWith(color: palette.textMuted),
@@ -645,13 +690,5 @@ class _NotificationTile extends StatelessWidget {
       default:
         return Icons.notifications_none_outlined;
     }
-  }
-
-  String _formatTimestamp(DateTime value) {
-    final local = value.toLocal();
-    return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
-        '${local.day.toString().padLeft(2, '0')} '
-        '${local.hour.toString().padLeft(2, '0')}:'
-        '${local.minute.toString().padLeft(2, '0')}';
   }
 }

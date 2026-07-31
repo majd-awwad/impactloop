@@ -316,12 +316,16 @@ describe('notifications module', () => {
       isRead: false,
     });
 
-    assert.ok(
-      learnerNotifications.items.some(
-        (item) =>
-          item.notificationType === 'RESERVATION_ACCEPTED' &&
-          item.relatedEntityId === reservation.id,
-      ),
+    const acceptedNotification = learnerNotifications.items.find(
+      (item) =>
+        item.notificationType === 'RESERVATION_ACCEPTED' &&
+        item.relatedEntityId === reservation.id,
+    );
+    assert.ok(acceptedNotification);
+    assert.equal(acceptedNotification.actionType, 'OPEN_RESERVATION');
+    assert.equal(
+      acceptedNotification.metadata?.materialTitle,
+      reservation.material.title,
     );
   });
 

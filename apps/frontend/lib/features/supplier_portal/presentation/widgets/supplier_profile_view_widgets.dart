@@ -69,10 +69,7 @@ class SupplierProfileHeader extends StatelessWidget {
                 message: context.s.editProfile,
                 child: Semantics(
                   button: true,
-                  label: context.s.t(
-                    'Edit supplier profile',
-                    'تعديل ملف المورد',
-                  ),
+                  label: context.s.editSupplierProfile,
                   child: OutlinedButton.icon(
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit_outlined, size: 17),
@@ -135,7 +132,7 @@ class SupplierProfileHeader extends StatelessWidget {
               message: context.s.editProfile,
               child: Semantics(
                 button: true,
-                label: context.s.t('Edit supplier profile', 'تعديل ملف المورد'),
+                label: context.s.editSupplierProfile,
                 child: OutlinedButton.icon(
                   onPressed: onEdit,
                   icon: const Icon(Icons.edit_outlined, size: 17),
@@ -186,7 +183,7 @@ class SupplierProfileHeader extends StatelessWidget {
                     top: 14,
                     end: 14,
                     child: _ImageEditButton(
-                      label: context.s.t('Edit cover', 'تعديل الغلاف'),
+                      label: context.s.editCover,
                       icon: Icons.photo_camera_outlined,
                       onPressed: onChangeCover!,
                       isLoading: isUploadingCover,
@@ -207,10 +204,7 @@ class SupplierProfileHeader extends StatelessWidget {
                 final compact = constraints.maxWidth < 560;
                 final avatar = Semantics(
                   button: onChangeAvatar != null,
-                  label: context.s.t(
-                    'Edit supplier profile photo',
-                    'تعديل صورة ملف المورد',
-                  ),
+                  label: context.s.editProfilePhoto,
                   child: GestureDetector(
                     onTap: isUploadingAvatar ? null : onChangeAvatar,
                     child: _Avatar(
@@ -411,7 +405,7 @@ class _CompletionCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.s.t('Essentials complete', 'اكتملت الأساسيات'),
+                    context.s.essentialsCompleteTitle,
                     style: context.supplierLabel().copyWith(
                       fontWeight: FontWeight.w800,
                     ),
@@ -456,10 +450,7 @@ class _CompletionCard extends StatelessWidget {
                   message: context.s.editProfile,
                   child: Semantics(
                     button: true,
-                    label: context.s.t(
-                      'Edit supplier profile completion details',
-                      'تعديل تفاصيل اكتمال ملف المورد',
-                    ),
+                    label: context.s.editProfileCompletionDetails,
                     child: OutlinedButton.icon(
                       onPressed: onEdit,
                       icon: const Icon(Icons.edit_outlined, size: 16),
@@ -483,10 +474,7 @@ class _CompletionCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Semantics(
-                  label: context.s.t(
-                    'Profile completion $percentage percent',
-                    'اكتمال الملف $percentage بالمئة',
-                  ),
+                  label: context.s.profileCompletionPercent(percentage),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(999),
                     child: LinearProgressIndicator(
@@ -511,10 +499,7 @@ class _CompletionCard extends StatelessWidget {
           if (missing.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              context.s.t(
-                'Missing: ${missing.join(', ')}',
-                'المفقود: ${missing.join('، ')}',
-              ),
+              context.s.missingFields(missing.join(', ')),
               style: context.supplierBody().copyWith(
                 color: context.supplierColors.textMuted,
               ),
@@ -538,7 +523,7 @@ class _IdentityCard extends StatelessWidget {
     final organizationName = _value(organization?.organizationName);
     final contactPerson = _value(organization?.contactPersonName);
     return _ProfileCard(
-      title: context.s.t('Business identity', 'هوية النشاط'),
+      title: context.s.businessIdentity,
       icon: Icons.business_outlined,
       child: identity == null
           ? _EmptyState(message: context.s.profileIntroNoProfile)
@@ -599,14 +584,11 @@ class _AvailabilityCard extends StatelessWidget {
         hoursLabel != null;
 
     return _ProfileCard(
-      title: context.s.t('Working availability', 'التوفر للعمل'),
+      title: context.s.workingAvailability,
       icon: Icons.schedule_outlined,
       child: !hasSchedule
           ? _EmptyState(
-              message: context.s.t(
-                'Working availability has not been added.',
-                'لم تتم إضافة أوقات التوفر للعمل.',
-              ),
+              message: context.s.workingAvailabilityMissing,
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -633,7 +615,7 @@ class _AvailabilityCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                   _InfoRow(
                     icon: Icons.schedule_outlined,
-                    label: context.s.t('Working hours', 'ساعات العمل'),
+                    label: context.s.workingHours,
                     value: hoursLabel,
                   ),
                 ],
@@ -658,10 +640,7 @@ class _LocationCard extends StatelessWidget {
     final hasCoordinates = location?.hasCoordinates == true;
 
     return _ProfileCard(
-      title: context.s.t(
-        'Pickup location & privacy',
-        'موقع الاستلام والخصوصية',
-      ),
+      title: context.s.pickupLocationAndPrivacy,
       icon: Icons.location_on_outlined,
       child: location == null
           ? _EmptyState(message: context.s.pickupAreaNotSet)
@@ -670,12 +649,12 @@ class _LocationCard extends StatelessWidget {
               children: [
                 _InfoRow(
                   icon: Icons.location_city_outlined,
-                  label: context.s.t('City / area', 'المدينة / المنطقة'),
+                  label: context.s.cityArea,
                   value: cityArea,
                 ),
                 _InfoRow(
                   icon: Icons.place_outlined,
-                  label: context.s.t('Pickup address', 'عنوان الاستلام'),
+                  label: context.s.pickupAddress,
                   value: location.addressLine,
                 ),
                 if (_value(location.country) != null)
@@ -688,10 +667,7 @@ class _LocationCard extends StatelessWidget {
                 _PrivacyBlock(location: location),
                 const SizedBox(height: AppSpacing.md),
                 Semantics(
-                  label: context.s.t(
-                    'Pickup location map',
-                    'خريطة موقع الاستلام',
-                  ),
+                  label: context.s.pickupLocationMap,
                   child: SupplierPickupMap(
                     latitude: location.latitude,
                     longitude: location.longitude,
@@ -702,10 +678,7 @@ class _LocationCard extends StatelessWidget {
                 if (hasCoordinates) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    context.s.t(
-                      'Your saved pickup location.',
-                      'موقع الاستلام المحفوظ الخاص بك.',
-                    ),
+                    context.s.savedPickupLocation,
                     style: context.supplierBody().copyWith(
                       color: context.supplierColors.textSecondary,
                     ),
@@ -782,8 +755,8 @@ class _VerificationCard extends StatelessWidget {
         (status == 'CHANGES_REQUESTED' || status == 'REJECTED') &&
         _value(verification.adminNote) != null;
     final actionLabel = status == 'UNVERIFIED'
-        ? context.s.t('Submit for review', 'إرسال للمراجعة')
-        : context.s.t('Resubmit', 'إعادة الإرسال');
+        ? context.s.submitForReview
+        : context.s.resubmit;
 
     return AppSectionCard(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -823,20 +796,17 @@ class _VerificationCard extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               if (status == 'APPROVED')
                 Text(
-                  context.s.t(
-                    'Thanks for helping make ImpactLoop trusted and safe for our community.',
-                    'شكراً لمساعدتك في جعل ImpactLoop موثوقاً وآمناً لمجتمعنا.',
-                  ),
+                  context.s.thanksVerificationCommunity,
                   style: context.supplierBody(),
                 ),
               if (verification.reviewedAt != null)
                 _VerificationDate(
-                  label: context.s.t('Reviewed date', 'تاريخ المراجعة'),
+                  label: context.s.reviewedDate,
                   date: verification.reviewedAt!,
                 ),
               if (status == 'PENDING' && verification.submittedAt != null)
                 _VerificationDate(
-                  label: context.s.t('Submitted date', 'تاريخ الإرسال'),
+                  label: context.s.submittedDate,
                   date: verification.submittedAt!,
                 ),
               if (showAdminNote) ...[
@@ -959,7 +929,7 @@ class _InfoRow extends StatelessWidget {
     final normalized = _value(value);
     if (normalized == null) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1015,12 +985,12 @@ class _DescriptionBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            context.s.t('Description', 'الوصف'),
+            context.s.description,
             style: context.supplierBody().copyWith(
               fontSize: 12,
               color: context.supplierColors.textSecondary,
@@ -1330,17 +1300,8 @@ String? _hoursLabel(Map<String, String>? hours) {
 }
 
 String? _dayLabel(BuildContext context, String value) {
-  final normalized = value.trim().toUpperCase().replaceAll(' ', '_');
-  return switch (normalized) {
-    'SUNDAY' || 'SUN' => context.s.t('Sun', 'الأحد'),
-    'MONDAY' || 'MON' => context.s.t('Mon', 'الإثنين'),
-    'TUESDAY' || 'TUE' || 'TUES' => context.s.t('Tue', 'الثلاثاء'),
-    'WEDNESDAY' || 'WED' => context.s.t('Wed', 'الأربعاء'),
-    'THURSDAY' || 'THU' || 'THURS' => context.s.t('Thu', 'الخميس'),
-    'FRIDAY' || 'FRI' => context.s.t('Fri', 'الجمعة'),
-    'SATURDAY' || 'SAT' => context.s.t('Sat', 'السبت'),
-    _ => _value(value),
-  };
+  final label = context.s.profileDayLabel(value);
+  return label == value.trim() ? _value(value) : label;
 }
 
 ({String? range, List<String> chips}) _workingDaysPresentation(
@@ -1384,57 +1345,18 @@ int? _dayIndex(String value) {
   };
 }
 
-String _verificationLabel(BuildContext context, String value) {
-  return switch (value.trim().toUpperCase()) {
-    'APPROVED' || 'VERIFIED' => context.s.t('Verified', 'موثّق'),
-    'PENDING' => context.s.t('Awaiting review', 'بانتظار المراجعة'),
-    'CHANGES_REQUESTED' => context.s.t('Changes required', 'مطلوب تعديلات'),
-    'REJECTED' => context.s.t('Rejected', 'مرفوض'),
-    'NOT_REQUIRED' => context.s.t(
-      'Verification not required',
-      'التحقق غير مطلوب',
-    ),
-    'UNVERIFIED' => context.s.t('Not verified', 'غير موثّق'),
-    _ => context.s.t('Verification unavailable', 'التحقق غير متاح'),
-  };
-}
+String _verificationLabel(BuildContext context, String value) =>
+    context.s.profileVerificationBadgeLabel(value);
 
-String _verificationMessage(BuildContext context, String value) {
-  return switch (value) {
-    'APPROVED' => context.s.t('Profile verified', 'تم توثيق الملف'),
-    'PENDING' => context.s.t(
-      'Your profile is awaiting review.',
-      'ملفك بانتظار المراجعة.',
-    ),
-    'CHANGES_REQUESTED' => context.s.t(
-      'Changes are required before approval.',
-      'مطلوب إجراء تعديلات قبل الموافقة.',
-    ),
-    'REJECTED' => context.s.t(
-      'Your verification was rejected.',
-      'تم رفض التحقق من ملفك.',
-    ),
-    'NOT_REQUIRED' => context.s.t(
-      'Verification is not required.',
-      'التحقق غير مطلوب.',
-    ),
-    'UNVERIFIED' => context.s.t(
-      'Your profile is not verified yet.',
-      'ملفك غير موثّق بعد.',
-    ),
-    _ => context.s.t(
-      'Verification status is unavailable.',
-      'حالة التحقق غير متاحة.',
-    ),
-  };
-}
+String _verificationMessage(BuildContext context, String value) =>
+    context.s.profileVerificationMessage(value);
 
 String? _completionLabel(BuildContext context, String value) {
   return switch (value.trim().toUpperCase()) {
     'PUBLIC_NAME' => context.s.publicName,
     'SUPPLIER_TYPE' => context.s.supplierType,
     'DESCRIPTION' => context.s.description,
-    'PICKUP_LOCATION' => context.s.t('Pickup location', 'موقع الاستلام'),
+    'PICKUP_LOCATION' => context.s.pickupLocationLabel,
     'LOCATION_VISIBILITY' => context.s.locationPrivacy,
     _ => null,
   };
@@ -1444,54 +1366,7 @@ String? _completionLabel(BuildContext context, String value) {
   BuildContext context,
   String? visibility,
   bool approximate,
-) {
-  return switch (_normalizeVisibility(visibility)) {
-    'PUBLIC' when approximate => (
-      title: context.s.t(
-        'Public area — approximate location',
-        'منطقة عامة — موقع تقريبي',
-      ),
-      explanation: context.s.t(
-        'Learners see the general area before acceptance. The exact pickup address is shared only when the workflow permits it.',
-        'يرى المتعلمون المنطقة العامة قبل القبول. تتم مشاركة عنوان الاستلام الدقيق فقط عندما يسمح مسار العمل بذلك.',
-      ),
-    ),
-    'PUBLIC' => (
-      title: context.s.t('Public exact location', 'موقع عام دقيق'),
-      explanation: context.s.t(
-        'The pickup location is publicly visible.',
-        'موقع الاستلام ظاهر للعامة.',
-      ),
-    ),
-    'ORDER_ONLY' => (
-      title: context.s.t(
-        'Shared after reservation acceptance',
-        'تتم المشاركة بعد قبول الحجز',
-      ),
-      explanation: context.s.t(
-        'Learners do not see the exact pickup address before the reservation is accepted.',
-        'لا يرى المتعلمون عنوان الاستلام الدقيق قبل قبول الحجز.',
-      ),
-    ),
-    'PRIVATE' => (
-      title: context.s.t('Private location', 'موقع خاص'),
-      explanation: context.s.t(
-        'The pickup location is not shown publicly.',
-        'لا يظهر موقع الاستلام للعامة.',
-      ),
-    ),
-    _ => (
-      title: context.s.t(
-        'Location privacy unavailable',
-        'خصوصية الموقع غير متاحة',
-      ),
-      explanation: context.s.t(
-        'Visibility details are not available right now.',
-        'تفاصيل الظهور غير متاحة حالياً.',
-      ),
-    ),
-  };
-}
+) => context.s.profilePrivacyMeaning(visibility, approximate);
 
 String? _normalizeVisibility(String? value) {
   final normalized = value?.trim().toUpperCase();

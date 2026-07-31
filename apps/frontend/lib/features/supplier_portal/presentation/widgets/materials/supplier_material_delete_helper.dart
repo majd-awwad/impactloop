@@ -11,6 +11,7 @@ import '../../../data/models/supplier_my_materials_models.dart';
 import '../../../data/supplier_my_materials_repository.dart';
 import '../../theme/supplier_theme_extension.dart';
 import '../supplier_feedback.dart';
+import '../../../../../l10n/l10n.dart';
 
 Future<bool> showSupplierDeleteMaterialDialog(
   BuildContext context, {
@@ -101,7 +102,7 @@ Future<void> handleSupplierMaterialDelete({
     if (!context.mounted) {
       return;
     }
-    showSupplierErrorSnackBar(context, error.message);
+    showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
   } catch (_) {
     if (!context.mounted) {
       return;

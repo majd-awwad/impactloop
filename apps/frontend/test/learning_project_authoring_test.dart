@@ -24,6 +24,7 @@ import 'package:frontend/features/learning_hub/presentation/pages/learning_proje
 import 'package:frontend/features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
 import 'package:frontend/shared/utils/content_text_direction.dart';
 import 'package:frontend/features/materials/data/models/category.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/shared/models/localized_text.dart';
 
 class _AuthoringTestRepository implements LearningProjectRepository {
@@ -428,6 +429,7 @@ Widget _wrap(
       locale: locale,
       supportedLocales: const [Locale('en'), Locale('ar')],
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
@@ -500,6 +502,46 @@ void main() {
     while (tester.takeException() != null) {}
     expect(find.text('Add project draft'), findsOneWidget);
   });
+
+  testWidgets(
+    'Arabic add-draft validation and form copy come from the catalog',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(900, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final repository = _AuthoringTestRepository(
+        categories: const [
+          MaterialCategory(
+            id: 'category-1',
+            nameEn: 'Robotics',
+            nameAr: 'الروبوتات',
+            categoryType: 'PROJECT',
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const SizedBox.shrink(),
+          repository: repository,
+          locale: const Locale('ar'),
+          initialLocation: '/learning/add-draft',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('عنوان المشروع'), findsOneWidget);
+      expect(find.text('وصف قصير'), findsOneWidget);
+      expect(find.text('حفظ المسودة'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('حفظ المسودة'));
+      await tester.tap(find.text('حفظ المسودة'));
+      await tester.pump();
+
+      expect(find.text('اختر فئة مشروع متاحة قبل الحفظ.'), findsOneWidget);
+      expect(repository.createCalls, 0);
+    },
+  );
 
   testWidgets('AI choice opens starter form', (tester) async {
     await tester.binding.setSurfaceSize(const Size(900, 900));

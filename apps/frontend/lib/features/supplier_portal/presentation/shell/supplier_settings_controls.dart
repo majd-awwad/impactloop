@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/application/app_settings_notifier.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/nav_pill_menu.dart';
-import '../theme/supplier_theme_extension.dart';
+import '../../../../l10n/l10n.dart';
 
 class SupplierSettingsControls extends ConsumerWidget {
   const SupplierSettingsControls({super.key, this.compact = false});
@@ -16,13 +16,13 @@ class SupplierSettingsControls extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(appSettingsProvider);
-    final l = context.s;
+    final l10n = context.l10n;
 
     String localizedThemeLabel(ThemeMode mode) {
       return switch (mode) {
-        ThemeMode.system => l.themeSystem,
-        ThemeMode.light => l.themeLight,
-        ThemeMode.dark => l.themeDark,
+        ThemeMode.system => l10n.themeSystem,
+        ThemeMode.light => l10n.themeLight,
+        ThemeMode.dark => l10n.themeDark,
       };
     }
 
@@ -44,7 +44,7 @@ class SupplierSettingsControls extends ConsumerWidget {
         NavPillMenu<ThemeMode>(
           icon: themeModeIcon(settings.themeMode),
           label: compact
-              ? l.themeLabel
+              ? l10n.supplierTheme
               : localizedThemeLabel(settings.themeMode),
           items: ThemeMode.values,
           selectedValue: settings.themeMode,

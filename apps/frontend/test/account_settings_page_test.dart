@@ -421,6 +421,9 @@ Future<_Harness> _pumpAccount(
       overrides: [
         authControllerProvider.overrideWith(() => authController),
         appSettingsStorageProvider.overrideWithValue(storage),
+        initialAppSettingsProvider.overrideWithValue(
+          const AppSettings(themeMode: ThemeMode.system, languageCode: 'en'),
+        ),
       ],
       child: _SettingsAwareTestApp(router: router, textScaler: textScaler),
     ),

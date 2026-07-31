@@ -141,8 +141,8 @@ class _AvatarBlock extends StatelessWidget {
                 )
               : _InitialsAvatar(name: displayName),
         ),
-        Positioned(
-          right: -2,
+        PositionedDirectional(
+          end: -2,
           bottom: -2,
           child: Container(
             width: 28,

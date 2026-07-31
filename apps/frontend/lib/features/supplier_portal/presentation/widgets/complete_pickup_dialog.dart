@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_close_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
@@ -35,7 +36,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
     final code = _codeController.text.trim();
     if (!RegExp(r'^\d{6}$').hasMatch(code)) {
       setState(() {
-        _errorText = 'Enter the 6-digit pickup code from the learner.';
+        _errorText = context.l10n.supplierPickupConfirmationCodeError;
       });
       return;
     }
@@ -89,7 +90,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                'Enter the pickup confirmation code the learner gives you when they receive the material.',
+                context.l10n.supplierPickupConfirmationCodeHint,
                 style: context.supplierBody().copyWith(
                   color: colors.textSecondary,
                   fontSize: 14,
@@ -103,7 +104,7 @@ class _CompletePickupDialogState extends State<CompletePickupDialog> {
                 maxLength: 6,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
-                  labelText: 'Pickup confirmation code',
+                  labelText: context.l10n.supplierPickupConfirmationCodeLabel,
                   counterText: '',
                   errorText: _errorText,
                 ),

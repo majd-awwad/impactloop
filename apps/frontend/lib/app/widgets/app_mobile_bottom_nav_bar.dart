@@ -6,6 +6,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme_colors.dart';
+import '../../l10n/l10n.dart';
 import '../../features/ai/application/ai_assistant_shell_provider.dart';
 import '../../features/ai/application/ai_chat_controller.dart';
 import '../../features/ai/presentation/widgets/ai_assistant_launcher.dart';
@@ -44,7 +45,7 @@ class AppMobileBottomNavBar extends ConsumerWidget {
     final user = authState.user;
     final profileRoute = user == null ? '/login' : '/profile';
     final currentPath = _currentPath(context);
-    final labels = _MobileNavigationLabels.of(context);
+    final labels = context.l10n;
     final items = [
       _MobileNavDestination(
         label: labels.home,
@@ -93,8 +94,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         AppSpacing.md,
         AppSpacing.sm,
       ),
-      child: SizedBox(
-        height: 72,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 72, maxHeight: 88),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
@@ -168,7 +169,9 @@ class AppMobileNavigationShell extends ConsumerWidget {
       }
     });
 
-    final shellOpen = ref.watch(aiAssistantShellProvider.select((s) => s.isOpen));
+    final shellOpen = ref.watch(
+      aiAssistantShellProvider.select((s) => s.isOpen),
+    );
     final isWide = MediaQuery.sizeOf(context).width >= 600;
 
     final shellContent = Stack(
@@ -189,25 +192,6 @@ class AppMobileNavigationShell extends ConsumerWidget {
       bottomNavigationBar: shellOpen ? null : const AppMobileBottomNavBar(),
     );
   }
-}
-
-class _MobileNavigationLabels {
-  const _MobileNavigationLabels(this.isArabic);
-
-  factory _MobileNavigationLabels.of(BuildContext context) {
-    return _MobileNavigationLabels(
-      Localizations.localeOf(context).languageCode.toLowerCase() == 'ar',
-    );
-  }
-
-  final bool isArabic;
-
-  String _t(String en, String ar) => isArabic ? ar : en;
-  String get home => _t('Home', 'الرئيسية');
-  String get materials => _t('Materials', 'المواد');
-  String get learning => _t('Learning', 'التعلّم');
-  String get reservations => _t('Reservations', 'الحجوزات');
-  String get profile => _t('Profile', 'الملف الشخصي');
 }
 
 class _MobileNavDestination {
@@ -272,7 +256,7 @@ class _MobileBottomNavItem extends StatelessWidget {
                   letterSpacing: 0,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],

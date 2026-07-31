@@ -7,11 +7,14 @@ import 'app_theme_colors.dart';
 class AppTheme {
   const AppTheme._();
 
-  static ThemeData get light {
+  static ThemeData get light => lightFor('en');
+
+  static ThemeData lightFor(String languageCode) {
     const colors = AppThemeColors.light;
     final colorScheme = _colorScheme(colors, Brightness.light);
 
     return ThemeData(
+      fontFamily: languageCode == 'ar' ? 'NotoSansArabic' : null,
       colorScheme: colorScheme,
       useMaterial3: true,
       extensions: const [colors],
@@ -32,11 +35,14 @@ class AppTheme {
     );
   }
 
-  static ThemeData get dark {
+  static ThemeData get dark => darkFor('en');
+
+  static ThemeData darkFor(String languageCode) {
     const colors = AppThemeColors.dark;
     final colorScheme = _colorScheme(colors, Brightness.dark);
 
     return ThemeData(
+      fontFamily: languageCode == 'ar' ? 'NotoSansArabic' : null,
       colorScheme: colorScheme,
       useMaterial3: true,
       extensions: const [colors],

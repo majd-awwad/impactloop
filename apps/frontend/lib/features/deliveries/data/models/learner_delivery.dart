@@ -1,3 +1,5 @@
+import '../../domain/delivery_status_contract.dart';
+
 class LearnerDeliveryLocation {
   const LearnerDeliveryLocation({
     required this.id,
@@ -360,27 +362,12 @@ class LearnerDelivery {
       learnerDeliveryCode!.trim().isNotEmpty;
 
   bool get isActive {
-    return const {
-      'WAITING_FOR_DRIVER',
-      'DRIVER_ASSIGNED',
-      'ARRIVED_PICKUP',
-      'PICKED_UP',
-      'ON_THE_WAY',
-      'ARRIVED_DROPOFF',
-    }.contains(status);
+    return isActiveLearnerDeliveryStatus(status);
   }
 
   bool get isLearnerLocationVisible => canTrack;
 
   bool get isTerminal {
-    return const {
-      'DELIVERED',
-      'CANCELLED',
-      'FAILED_PICKUP',
-      'FAILED_DELIVERY',
-      'DRIVER_NO_SHOW',
-      'LEARNER_NO_SHOW',
-      'AWAITING_RESOLUTION',
-    }.contains(status);
+    return isTerminalLearnerDeliveryStatus(status);
   }
 }

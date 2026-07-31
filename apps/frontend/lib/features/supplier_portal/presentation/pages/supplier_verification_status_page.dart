@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../../auth/presentation/widgets/auth_form_card.dart';
@@ -11,6 +12,7 @@ import '../../../auth/presentation/widgets/auth_header.dart';
 import '../../../auth/presentation/widgets/auth_shell.dart';
 import '../../application/supplier_verification_access.dart';
 import '../../data/supplier_verification_api.dart';
+import '../../../../core/errors/api_exception.dart';
 
 class SupplierVerificationStatusPage extends ConsumerStatefulWidget {
   const SupplierVerificationStatusPage({super.key});
@@ -75,13 +77,13 @@ class _SupplierVerificationStatusPageState
 
       ref.invalidate(supplierVerificationStatusProvider);
       setState(() {
-        _statusMessage = 'Your verification status has been refreshed.';
+        _statusMessage = context.l10n.supplierVerifyStatusRefreshed;
       });
     } catch (error) {
       if (!mounted) {
         return;
       }
-      setState(() => _error = error.toString());
+      setState(() => _error = localizedApiErrorMessage(error, context.l10n));
     } finally {
       if (mounted) {
         setState(() => _isCheckingStatus = false);
@@ -91,7 +93,7 @@ class _SupplierVerificationStatusPageState
 
   Future<void> _resubmit(SupplierVerificationStatus status) async {
     if (_selectedFile?.bytes == null) {
-      setState(() => _error = 'Select a verification document to upload.');
+      setState(() => _error = context.l10n.supplierVerifySelectDocumentToUpload);
       return;
     }
 
@@ -119,7 +121,7 @@ class _SupplierVerificationStatusPageState
       if (!mounted) return;
       setState(() {
         _isSubmitting = false;
-        _error = error.toString();
+        _error = localizedApiErrorMessage(error, context.l10n);
       });
     }
   }
@@ -132,26 +134,26 @@ class _SupplierVerificationStatusPageState
   }
 
   String _headline(String status) {
+    final l10n = context.l10n;
     return switch (normalizeVerificationStatus(status)) {
-      'REJECTED' => 'Supplier verification rejected',
-      'CHANGES_REQUESTED' => 'Changes requested',
-      _ => 'Supplier verification status',
+      'REJECTED' => l10n.supplierVerifyRejectedTitle,
+      'CHANGES_REQUESTED' => l10n.supplierVerifyChangesRequestedTitle,
+      _ => l10n.supplierVerifyStatusTitle,
     };
   }
 
   String _bodyMessage(String status) {
+    final l10n = context.l10n;
     return switch (normalizeVerificationStatus(status)) {
-      'REJECTED' =>
-        'Your supplier verification was rejected. Publishing materials is blocked until your organization is approved.',
-      'CHANGES_REQUESTED' =>
-        'An admin requested changes to your verification submission. Update your document and resubmit for review.',
-      _ =>
-        'Publishing materials is blocked until your organization is approved by an admin.',
+      'REJECTED' => l10n.supplierVerifyRejectedBody,
+      'CHANGES_REQUESTED' => l10n.supplierVerifyChangesRequestedBody,
+      _ => l10n.supplierVerifyStatusBody,
     };
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final asyncStatus = ref.watch(supplierVerificationStatusProvider);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.authLayoutBreakpoint;
@@ -165,12 +167,12 @@ class _SupplierVerificationStatusPageState
         error: (error, _) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const AuthHeader(
-              title: 'Supplier verification status',
-              subtitle: 'We could not load your verification status.',
+            AuthHeader(
+              title: l10n.supplierVerifyStatusTitle,
+              subtitle: l10n.supplierVerifyLoadStatusFailed,
             ),
             const SizedBox(height: AppSpacing.lg),
-            AuthFormCard(child: Text(error.toString())),
+            AuthFormCard(child: Text(localizedApiErrorMessage(error, context.l10n))),
           ],
         ),
         data: (status) {
@@ -195,7 +197,7 @@ class _SupplierVerificationStatusPageState
                         status.verificationAdminNote != null &&
                         status.verificationAdminNote!.trim().isNotEmpty) ...[
                       Text(
-                        'Reason',
+                        l10n.reason,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 6),
@@ -206,7 +208,7 @@ class _SupplierVerificationStatusPageState
                         status.verificationAdminNote != null &&
                         status.verificationAdminNote!.trim().isNotEmpty) ...[
                       Text(
-                        'Admin note',
+                        l10n.supplierAdminNote,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 6),
@@ -219,7 +221,7 @@ class _SupplierVerificationStatusPageState
                         icon: const Icon(Icons.upload_file_outlined),
                         label: Text(
                           _selectedFile == null
-                              ? 'Choose verification document'
+                              ? l10n.chooseVerificationDocument
                               : _selectedFile!.name,
                         ),
                       ),
@@ -236,7 +238,7 @@ class _SupplierVerificationStatusPageState
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Resubmit verification'),
+                            : Text(l10n.resubmitVerification),
                       ),
                       const SizedBox(height: AppSpacing.md),
                     ],
@@ -261,12 +263,12 @@ class _SupplierVerificationStatusPageState
                               height: 18,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Check status'),
+                          : Text(l10n.checkStatus),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     OutlinedButton(
                       onPressed: () => context.go(homeRoute),
-                      child: const Text('Back to home'),
+                      child: Text(l10n.backToHome),
                     ),
                   ],
                 ),

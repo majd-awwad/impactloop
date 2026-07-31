@@ -58,6 +58,10 @@ export const notifyReservationCreated = async (reservationId: string) =>
       entityType: 'RESERVATION',
       entityId: reservation.id,
       actionType: 'REVIEW_RESERVATION',
+      metadata: {
+        materialTitle: materialLabel(reservation),
+        learnerName: learnerLabel(reservation),
+      },
     });
   });
 
@@ -88,6 +92,7 @@ export const notifyReservationAccepted = async (reservationId: string) =>
       entityType: 'RESERVATION',
       entityId: reservation.id,
       actionType: 'OPEN_RESERVATION',
+      metadata: { materialTitle: materialLabel(reservation) },
     });
   });
 
@@ -108,6 +113,8 @@ export const notifyReservationDeclined = async (reservationId: string) =>
       eventKey: `reservation:declined:${reservation.id}:${reservation.requesterId}`,
       entityType: 'RESERVATION',
       entityId: reservation.id,
+      actionType: 'OPEN_RESERVATION',
+      metadata: { materialTitle: materialLabel(reservation) },
     });
   });
 
@@ -130,6 +137,10 @@ export const notifyReservationCancelledByLearner = async (
       eventKey: `reservation:cancelled:${reservation.id}:${reservation.ownerId}`,
       entityType: 'RESERVATION',
       entityId: reservation.id,
+      metadata: {
+        materialTitle: materialLabel(reservation),
+        learnerName: learnerLabel(reservation),
+      },
     });
   });
 
@@ -156,6 +167,8 @@ export const notifyReservationsExpired = async (reservationIds: string[]) => {
           eventKey: `reservation:expired:${reservation.id}:${reservation.requesterId}`,
           entityType: 'RESERVATION',
           entityId: reservation.id,
+          actionType: 'OPEN_RESERVATION',
+          metadata: { materialTitle: materialLabel(reservation) },
         }),
         createNotification({
           userId: reservation.ownerId,
@@ -167,6 +180,10 @@ export const notifyReservationsExpired = async (reservationIds: string[]) => {
           eventKey: `reservation:expired:${reservation.id}:${reservation.ownerId}`,
           entityType: 'RESERVATION',
           entityId: reservation.id,
+          metadata: {
+            materialTitle: materialLabel(reservation),
+            learnerName: learnerLabel(reservation),
+          },
         }),
       ]),
     );
@@ -200,6 +217,10 @@ export const notifyNoDriverSupplierRescheduleRequested = async (
       entityType: 'RESERVATION',
       entityId: reservation.id,
       actionType: 'CHOOSE_PICKUP_WINDOW',
+      metadata: {
+        materialTitle: materialLabel(reservation),
+        adminNote: adminNote?.trim() || null,
+      },
     });
   });
 
@@ -230,5 +251,9 @@ export const notifyStalePickupSupplierRescheduleRequested = async (
       entityType: 'RESERVATION',
       entityId: reservation.id,
       actionType: 'CHOOSE_PICKUP_WINDOW',
+      metadata: {
+        materialTitle: materialLabel(reservation),
+        adminNote: adminNote?.trim() || null,
+      },
     });
   });

@@ -5,44 +5,45 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/landing_colors.dart';
+import '../../../../l10n/l10n.dart';
 
 class LandingFeatureCards extends StatelessWidget {
   const LandingFeatureCards({super.key});
 
-  static const _features = [
-    (
-      Icons.search,
-      'Find reusable materials',
-      'Browse a wide range of materials donated by your community.',
-      'Explore materials',
-      '/register',
-    ),
-    (
-      Icons.inventory_2_outlined,
-      'Share surplus materials',
-      'List what you no longer need and help others build more.',
-      'Share materials',
-      '/register',
-    ),
-    (
-      Icons.handyman_outlined,
-      'Build with less waste',
-      'Save money, reduce waste, and bring creative projects to life.',
-      'Start building',
-      '/register',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final features = [
+      (
+        Icons.search,
+        l10n.landingFeatureFindTitle,
+        l10n.landingFeatureFindBody,
+        l10n.exploreMaterials,
+        '/register',
+      ),
+      (
+        Icons.inventory_2_outlined,
+        l10n.landingFeatureShareTitle,
+        l10n.landingFeatureShareBody,
+        l10n.shareMaterials,
+        '/register',
+      ),
+      (
+        Icons.handyman_outlined,
+        l10n.landingFeatureBuildTitle,
+        l10n.landingFeatureBuildBody,
+        l10n.startBuilding,
+        '/register',
+      ),
+    ];
     final useColumn = MediaQuery.sizeOf(context).width < 960;
 
     if (useColumn) {
       return Column(
         children: [
-          for (var i = 0; i < _features.length; i++) ...[
+          for (var i = 0; i < features.length; i++) ...[
             if (i > 0) const SizedBox(height: AppSpacing.md),
-            _FeatureCard(feature: _features[i]),
+            _FeatureCard(feature: features[i]),
           ],
         ],
       );
@@ -51,9 +52,9 @@ class LandingFeatureCards extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < _features.length; i++) ...[
+        for (var i = 0; i < features.length; i++) ...[
           if (i > 0) const SizedBox(width: AppSpacing.md),
-          Expanded(child: _FeatureCard(feature: _features[i])),
+          Expanded(child: _FeatureCard(feature: features[i])),
         ],
       ],
     );
@@ -109,13 +110,20 @@ class _FeatureCard extends StatelessWidget {
             padding: EdgeInsets.zero,
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
           ),
-          child: Text(
-            '$linkLabel ->',
-            style: AuthDarkTextStyles.link(
-              context,
-            ).copyWith(color: colors.primary),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                linkLabel,
+                style: AuthDarkTextStyles.link(
+                  context,
+                ).copyWith(color: colors.primary),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              const Icon(Icons.arrow_forward_rounded, size: 16),
+            ],
           ),
         ),
       ],

@@ -2,26 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'accept_incoming_request_dialog.dart';
 import 'supplier_feedback.dart';
-
-const _reportReasons = <String, String>{
-  'LEARNER_DID_NOT_ARRIVE': 'Learner did not arrive',
-  'REPEATED_DELAY': 'Repeated delay',
-  'WRONG_INFORMATION': 'Wrong information',
-  'SAFETY_OR_TRUST_CONCERN': 'Safety or trust concern',
-  'OTHER': 'Other',
-};
 
 Future<String?> _promptReason(
   BuildContext context, {
   required String title,
 }) async {
+  final l = context.l10n;
   final controller = TextEditingController();
   final result = await showDialog<String>(
     context: context,
@@ -30,9 +25,9 @@ Future<String?> _promptReason(
       content: TextField(
         controller: controller,
         maxLength: 500,
-        decoration: const InputDecoration(
-          labelText: 'Reason',
-          hintText: 'Why are you requesting a new time?',
+        decoration: InputDecoration(
+          labelText: l.supplierRescheduleReasonLabel,
+          hintText: l.supplierRescheduleReasonHint,
         ),
       ),
       footer: AppDialogFooter.form(
@@ -42,7 +37,7 @@ Future<String?> _promptReason(
             if (value.isEmpty) return;
             Navigator.of(context).pop(value);
           },
-          child: const Text('Continue'),
+          child: Text(l.actionContinue),
         ),
       ),
     ),
@@ -58,7 +53,11 @@ Future<void> handleRequestReschedulePickup(
   required String materialTitle,
   required String learnerName,
 }) async {
-  final reason = await _promptReason(context, title: 'Request reschedule');
+  final l = context.l10n;
+  final reason = await _promptReason(
+    context,
+    title: l.supplierReschedulePickup,
+  );
   if (reason == null || !context.mounted) return;
 
   final pickupWindow = await AcceptIncomingRequestDialog.show(
@@ -72,8 +71,8 @@ Future<void> handleRequestReschedulePickup(
       status: SupplierIncomingRequestStatus.accepted,
       requestedAt: DateTime.now(),
     ),
-    dialogTitle: 'Request reschedule',
-    submitLabel: 'Send request',
+    dialogTitle: l.supplierReschedulePickup,
+    submitLabel: l.supplierSendRequest,
   );
   if (pickupWindow == null || !context.mounted) return;
 
@@ -87,13 +86,13 @@ Future<void> handleRequestReschedulePickup(
       note: pickupWindow.note,
     );
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(context, 'Reschedule request sent to learner.');
+    showSupplierInfoSnackBar(context, l.supplierRescheduleRequestSent);
   } catch (error) {
     if (!context.mounted) return;
     showSupplierErrorSnackBar(
       context,
       error is ApiException
-          ? error.displayMessage
+          ? localizedApiErrorMessage(error, context.l10n)
           : context.s.pickupCompleteFailed,
     );
   }
@@ -106,6 +105,7 @@ Future<void> handleSubmitNoDriverPickupWindow(
   required String materialTitle,
   required String learnerName,
 }) async {
+  final l = context.l10n;
   final pickupWindow = await AcceptIncomingRequestDialog.show(
     context,
     request: SupplierIncomingRequest(
@@ -117,8 +117,8 @@ Future<void> handleSubmitNoDriverPickupWindow(
       status: SupplierIncomingRequestStatus.awaitingSupplierConfirmation,
       requestedAt: DateTime.now(),
     ),
-    dialogTitle: 'Choose new pickup window',
-    submitLabel: 'Submit pickup window',
+    dialogTitle: l.supplierChooseNewPickupWindow,
+    submitLabel: l.supplierSubmitPickupWindow,
   );
   if (pickupWindow == null || !context.mounted) return;
 
@@ -129,16 +129,13 @@ Future<void> handleSubmitNoDriverPickupWindow(
       pickupWindow: pickupWindow,
     );
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(
-      context,
-      'Pickup window submitted. Waiting for driver again.',
-    );
+    showSupplierInfoSnackBar(context, l.supplierPickupWindowSubmittedWaiting);
   } catch (error) {
     if (!context.mounted) return;
     showSupplierErrorSnackBar(
       context,
       error is ApiException
-          ? error.displayMessage
+          ? localizedApiErrorMessage(error, context.l10n)
           : context.s.pickupCompleteFailed,
     );
   }
@@ -152,13 +149,16 @@ Future<void> handleAcceptLearnerReschedule(
   try {
     await acceptLearnerReschedule(ref, requestId: reservationId);
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(context, 'New pickup time accepted.');
+    showSupplierInfoSnackBar(
+      context,
+      context.l10n.supplierNewPickupTimeAccepted,
+    );
   } catch (error) {
     if (!context.mounted) return;
     showSupplierErrorSnackBar(
       context,
       error is ApiException
-          ? error.displayMessage
+          ? localizedApiErrorMessage(error, context.l10n)
           : context.s.pickupCompleteFailed,
     );
   }
@@ -169,22 +169,21 @@ Future<void> handleCloseOverduePickup(
   WidgetRef ref, {
   required String reservationId,
 }) async {
+  final l = context.l10n;
   final noteController = TextEditingController();
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Close reservation'),
+      title: Text(l.cancelReservation),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Close this pickup reservation? The held quantity will be released.',
-          ),
+          Text(l.supplierThisWillCancelTheReservationAnd),
           const SizedBox(height: 12),
           TextField(
             controller: noteController,
             maxLength: 1000,
-            decoration: const InputDecoration(labelText: 'Note (optional)'),
+            decoration: InputDecoration(labelText: l.supplierReasonOptional),
           ),
         ],
       ),
@@ -195,7 +194,7 @@ Future<void> handleCloseOverduePickup(
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('Close reservation'),
+          child: Text(l.cancelReservation),
         ),
       ],
     ),
@@ -213,7 +212,7 @@ Future<void> handleCloseOverduePickup(
           : noteController.text.trim(),
     );
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(context, 'Reservation closed.');
+    showSupplierInfoSnackBar(context, l.supplierReservationClosed);
   } catch (_) {
     if (!context.mounted) return;
     showSupplierErrorSnackBar(context, context.s.pickupCompleteFailed);
@@ -225,6 +224,8 @@ Future<void> handleReportToAdminAndClose(
   WidgetRef ref, {
   required String reservationId,
 }) async {
+  final l = context.l10n;
+  final ui = SupplierReservationUiHelpers.of(context);
   var selectedReason = 'LEARNER_DID_NOT_ARRIVE';
   final noteController = TextEditingController();
 
@@ -232,20 +233,20 @@ Future<void> handleReportToAdminAndClose(
     context: context,
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => AlertDialog(
-        title: const Text('Report to admin'),
+        title: Text(l.supplierReportToAdminTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Submit a report for admin review. The reservation will be closed.',
-              ),
+              Text(l.supplierReportToAdminMessage),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: selectedReason,
-                decoration: const InputDecoration(labelText: 'Reason'),
-                items: _reportReasons.entries
+                decoration: InputDecoration(
+                  labelText: l.supplierRescheduleReasonLabel,
+                ),
+                items: ui.noShowReasonOptions().entries
                     .map(
                       (entry) => DropdownMenuItem(
                         value: entry.key,
@@ -264,9 +265,9 @@ Future<void> handleReportToAdminAndClose(
                 maxLength: 1000,
                 minLines: 3,
                 maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Note',
-                  hintText: 'Describe what happened',
+                decoration: InputDecoration(
+                  labelText: l.supplierDeliveryNote,
+                  hintText: l.supplierDescribeWhatHappened,
                 ),
               ),
             ],
@@ -282,7 +283,7 @@ Future<void> handleReportToAdminAndClose(
               if (noteController.text.trim().isEmpty) return;
               Navigator.of(context).pop(true);
             },
-            child: const Text('Report and close'),
+            child: Text(l.supplierReportAndClose),
           ),
         ],
       ),
@@ -300,10 +301,10 @@ Future<void> handleReportToAdminAndClose(
       note: noteController.text.trim(),
     );
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(context, 'Reported to admin.');
+    showSupplierInfoSnackBar(context, l.supplierReportedToAdmin);
   } catch (error) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(context, error.toString());
+    showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
   }
 }
 

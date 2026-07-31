@@ -17,6 +17,7 @@ import '../theme/supplier_theme_extension.dart';
 import '../widgets/complete_pickup_dialog.dart';
 import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/supplier_delivery_incident_flow.dart';
+import '../../../../l10n/l10n.dart';
 
 const _contentMaxWidth = 1440.0;
 const _defaultPageSize = 5;
@@ -197,8 +198,8 @@ class _SupplierPickupSchedulePageState
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
       initialDateRange: DateTimeRange(start: _rangeStart, end: _rangeEnd),
-      helpText: context.s.t('Select schedule range', 'اختر نطاق الجدول'),
-      saveText: context.s.t('Apply', 'تطبيق'),
+      helpText: context.s.selectScheduleRange,
+      saveText: context.s.applyLabel,
     );
     if (!mounted || range == null) return;
     setState(() {
@@ -355,11 +356,8 @@ class _SupplierPickupSchedulePageState
 
   void _showActionError(BuildContext context, Object error) {
     final message = error is ApiException
-        ? error.message
-        : context.s.t(
-            'The action could not be completed.',
-            'تعذّر تنفيذ الإجراء.',
-          );
+        ? localizedApiErrorMessage(error, context.l10n)
+        : context.s.actionCouldNotComplete;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
@@ -398,25 +396,25 @@ class _ScheduleControlRow extends StatelessWidget {
           minWidth: compact ? 0 : 216,
         ),
         _TopCategoryButton(
-          label: context.s.t('Today', 'اليوم'),
+          label: context.s.filterToday,
           selected: selectedCategory == 'TODAY',
           tone: AppStatusTone.success,
           onTap: () => onCategory('TODAY'),
         ),
         _TopCategoryButton(
-          label: context.s.t('Upcoming', 'قادمة'),
+          label: context.s.filterUpcoming,
           selected: selectedCategory == 'UPCOMING',
           tone: AppStatusTone.info,
           onTap: () => onCategory('UPCOMING'),
         ),
         _TopCategoryButton(
-          label: context.s.t('Overdue', 'متأخرة'),
+          label: context.s.filterOverdue,
           selected: selectedCategory == 'OVERDUE',
           tone: AppStatusTone.warning,
           onTap: () => onCategory('OVERDUE'),
         ),
         _TopCategoryButton(
-          label: context.s.t('All', 'الكل'),
+          label: context.s.filterAll,
           selected: selectedCategory == null,
           tone: AppStatusTone.neutral,
           onTap: () => onCategory(null),
@@ -434,7 +432,7 @@ class _ScheduleControlRow extends StatelessWidget {
             alignment: AlignmentDirectional.centerEnd,
             child: _OutlinedControl(
               icon: Icons.refresh_rounded,
-              label: context.s.t('Refresh', 'تحديث'),
+              label: context.s.refreshLabel,
               onTap: onRefresh,
             ),
           ),
@@ -449,7 +447,7 @@ class _ScheduleControlRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         _OutlinedControl(
           icon: Icons.refresh_rounded,
-          label: context.s.t('Refresh', 'تحديث'),
+          label: context.s.refreshLabel,
           onTap: onRefresh,
         ),
       ],
@@ -563,7 +561,7 @@ class _SummaryCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  context.s.t(item.label, _summaryArabic(item.label)),
+                  context.s.scheduleSummaryLabel(item.label),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.supplierLabel().copyWith(
@@ -583,7 +581,7 @@ class _SummaryCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  context.s.t('Handovers', 'عمليات التسليم'),
+                  context.s.handovers,
                   style: context.supplierBody().copyWith(
                     color: colors.textMuted,
                     fontSize: 12,
@@ -637,10 +635,7 @@ class _FilterToolbar extends StatelessWidget {
         onChanged: onSearchChanged,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: context.s.t(
-            'Search by material, learner, or reservation ID...',
-            'ابحث بالمادة أو المتعلم أو رقم الحجز...',
-          ),
+          hintText: context.s.searchScheduleHint,
           prefixIcon: const Icon(Icons.search_rounded, size: 20),
           filled: true,
           fillColor: context.supplierColors.surface,
@@ -654,35 +649,35 @@ class _FilterToolbar extends StatelessWidget {
     final fields = [
       _DropdownControl<String?>(
         value: category,
-        hint: context.s.t('All categories', 'كل الفئات'),
+        hint: context.s.filterAllCategories,
         items: _categoryOptions(context),
         onChanged: onCategory,
       ),
       _DropdownControl<String?>(
         value: fulfillmentMethod,
-        hint: context.s.t('All fulfillment', 'كل طرق التسليم'),
+        hint: context.s.allFulfillment,
         items: [
-          _DropdownItem(null, context.s.t('All fulfillment', 'كل طرق التسليم')),
-          _DropdownItem('PICKUP', context.s.t('Self pickup', 'استلام ذاتي')),
+          _DropdownItem(null, context.s.allFulfillment),
+          _DropdownItem('PICKUP', context.s.selfPickup),
           _DropdownItem(
             'DELIVERY',
-            context.s.t('Delivery pickup', 'استلام للتوصيل'),
+            context.s.deliveryPickup,
           ),
         ],
         onChanged: onFulfillment,
       ),
       _DropdownControl<bool?>(
         value: needsAttention,
-        hint: context.s.t('All attention', 'كل حالات الانتباه'),
+        hint: context.s.allAttention,
         items: [
           _DropdownItem(
             null,
-            context.s.t('All attention', 'كل حالات الانتباه'),
+            context.s.allAttention,
           ),
-          _DropdownItem(true, context.s.t('Needs attention', 'تحتاج انتباهاً')),
+          _DropdownItem(true, context.s.needsAttention),
           _DropdownItem(
             false,
-            context.s.t('No attention', 'لا تحتاج انتباهاً'),
+            context.s.noAttention,
           ),
         ],
         onChanged: onAttention,
@@ -793,13 +788,13 @@ class _ScheduleTable extends StatelessWidget {
           _GridRow(
             isHeader: true,
             children: [
-              _HeaderCell(context.s.t('Schedule', 'الجدول')),
-              _HeaderCell(context.s.t('Material & learner', 'المادة والمتعلم')),
-              _HeaderCell(context.s.t('Fulfillment', 'التنفيذ')),
-              _HeaderCell(context.s.t('Window', 'النافذة')),
-              _HeaderCell(context.s.t('Status', 'الحالة')),
-              _HeaderCell(context.s.t('Next actor', 'الطرف التالي')),
-              _HeaderCell(context.s.t('Actions', 'الإجراءات')),
+              _HeaderCell(context.s.scheduleColumnSchedule),
+              _HeaderCell(context.s.scheduleColumnMaterialLearner),
+              _HeaderCell(context.s.scheduleColumnFulfillment),
+              _HeaderCell(context.s.scheduleColumnWindow),
+              _HeaderCell(context.s.statusLabel),
+              _HeaderCell(context.s.scheduleColumnNextActor),
+              _HeaderCell(context.s.scheduleColumnActions),
             ],
           ),
           for (final entry in entries)
@@ -976,7 +971,7 @@ class _ScheduleCell extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 timestamp == null
-                    ? context.s.t('No confirmed window', 'لا توجد نافذة مؤكدة')
+                    ? context.s.noConfirmedWindow
                     : _windowShortLabel(context, entry, timestamp),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -1032,10 +1027,7 @@ class _MaterialCell extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 group?.grouped == true
-                    ? context.s.t(
-                        '${group!.itemCount} reservations · $quantity',
-                        '${group.itemCount} حجوزات · $quantity',
-                      )
+                    ? context.s.groupReservationsQuantity(group!.itemCount, quantity)
                     : '$reservationId · $quantity',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1062,16 +1054,13 @@ class _FulfillmentCell extends StatelessWidget {
     final delivery = entry.fulfillmentMethod.toUpperCase() == 'DELIVERY';
     final grouped = entry.group?.grouped == true;
     final label = delivery
-        ? context.s.t('Delivery pickup', 'استلام للتوصيل')
-        : context.s.t('Self pickup', 'استلام ذاتي');
+        ? context.s.deliveryPickup
+        : context.s.selfPickup;
     final detail = grouped
-        ? context.s.t(
-            '${entry.group!.itemCount} reservations',
-            '${entry.group!.itemCount} حجوزات',
-          )
+        ? context.s.groupReservationsCount(entry.group!.itemCount)
         : delivery
         ? _deliveryLabel(context, entry.delivery?.status)
-        : context.s.t('Confirmed', 'مؤكد');
+        : context.s.confirmedLabel;
     return _LabeledStack(
       title: label,
       detail: detail,
@@ -1090,7 +1079,7 @@ class _WindowCell extends StatelessWidget {
     final window = entry.effectiveWindow;
     if (window == null) {
       return _LabeledStack(
-        title: context.s.t('No confirmed window', 'لا توجد نافذة مؤكدة'),
+        title: context.s.noConfirmedWindow,
         detail: null,
         icon: Icons.event_busy_outlined,
       );
@@ -1180,7 +1169,7 @@ class _ActionCell extends StatelessWidget {
     final view = OutlinedButton.icon(
       onPressed: onView,
       icon: const Icon(Icons.visibility_outlined, size: 17),
-      label: Text(context.s.t('View', 'عرض')),
+      label: Text(context.s.viewLabel),
       style: OutlinedButton.styleFrom(
         minimumSize: Size(fullWidth ? double.infinity : 0, 42),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
@@ -1189,7 +1178,7 @@ class _ActionCell extends StatelessWidget {
     );
     if (actions.isEmpty) return view;
     final menu = PopupMenuButton<SupplierAvailableAction>(
-      tooltip: context.s.t('More actions', 'إجراءات إضافية'),
+      tooltip: context.s.moreActions,
       onSelected: onAction,
       itemBuilder: (context) => [
         for (final action in actions)
@@ -1255,10 +1244,7 @@ class _Pagination extends StatelessWidget {
         spacing: AppSpacing.md,
         children: [
           Text(
-            context.s.t(
-              'Showing $first–$last of $total handovers',
-              'عرض $first–$last من $total تسليمات',
-            ),
+            context.s.showingHandoversRange(first, last, total),
             style: context.supplierBody().copyWith(
               color: context.supplierColors.textMuted,
               fontSize: 12,
@@ -1270,7 +1256,7 @@ class _Pagination extends StatelessWidget {
               children: [
                 _PageButton(
                   icon: Icons.chevron_left_rounded,
-                  tooltip: context.s.t('Previous page', 'الصفحة السابقة'),
+                  tooltip: context.s.previousPage,
                   enabled: pagination.page > 1,
                   onPressed: () => onPage(pagination.page - 1),
                 ),
@@ -1282,7 +1268,7 @@ class _Pagination extends StatelessWidget {
                   ),
                 _PageButton(
                   icon: Icons.chevron_right_rounded,
-                  tooltip: context.s.t('Next page', 'الصفحة التالية'),
+                  tooltip: context.s.nextPage,
                   enabled: pagination.page < pagination.totalPages,
                   onPressed: () => onPage(pagination.page + 1),
                 ),
@@ -1357,7 +1343,7 @@ class _PageSizeSelector extends StatelessWidget {
   Widget build(BuildContext context) => _DropdownControl<int>(
     value: value,
     width: 118,
-    hint: context.s.t('Rows per page', 'صفوف لكل صفحة'),
+    hint: context.s.rowsPerPage,
     items: [
       for (final size in [5, 10, 20, 50]) _DropdownItem(size, '$size'),
     ],
@@ -1419,20 +1405,14 @@ class _ScheduleError extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                context.s.t(
-                  "Couldn't load pickup schedule",
-                  'تعذّر تحميل جدول الاستلام',
-                ),
+                context.s.pickupScheduleLoadFailedTitle,
                 style: context.supplierTitle().copyWith(fontSize: 16),
               ),
               const SizedBox(height: 3),
               Text(
                 error is ApiException
                     ? (error as ApiException).message
-                    : context.s.t(
-                        'Please try again.',
-                        'يرجى المحاولة مرة أخرى.',
-                      ),
+                    : context.s.pleaseTryAgain,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: context.supplierBody().copyWith(
@@ -1445,7 +1425,7 @@ class _ScheduleError extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         OutlinedButton(
           onPressed: onRetry,
-          child: Text(context.s.t('Retry', 'إعادة المحاولة')),
+          child: Text(context.s.tryAgain),
         ),
       ],
     ),
@@ -1468,45 +1448,18 @@ class _ScheduleEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = hasFilters
-        ? context.s.t(
-            'No handovers match the selected filters.',
-            'لا توجد تسليمات تطابق الفلاتر المحددة.',
-          )
+        ? context.s.noHandoversMatchFilters
         : switch (category) {
-            'TODAY' => context.s.t(
-              'No handovers scheduled for today.',
-              'لا توجد تسليمات مجدولة اليوم.',
-            ),
-            'UPCOMING' => context.s.t(
-              'No upcoming handovers.',
-              'لا توجد تسليمات قادمة.',
-            ),
-            'OVERDUE' => context.s.t(
-              'No overdue handovers.',
-              'لا توجد تسليمات متأخرة.',
-            ),
-            'COMPLETED' => context.s.t(
-              'No completed handovers in this period.',
-              'لا توجد تسليمات مكتملة في هذه الفترة.',
-            ),
-            'CLOSED' => context.s.t(
-              'No closed handovers in this period.',
-              'لا توجد تسليمات مغلقة في هذه الفترة.',
-            ),
-            _ => context.s.t(
-              'No scheduled handovers yet.',
-              'لا توجد تسليمات مجدولة بعد.',
-            ),
+            'TODAY' => context.s.noHandoversToday,
+            'UPCOMING' => context.s.noHandoversUpcoming,
+            'OVERDUE' => context.s.noHandoversOverdue,
+            'COMPLETED' => context.s.noHandoversCompletedPeriod,
+            'CLOSED' => context.s.noHandoversClosedPeriod,
+            _ => context.s.noHandoversScheduled,
           };
     final copy = hasFilters
-        ? context.s.t(
-            'Try resetting the filters to see more handovers.',
-            'جرّب إعادة ضبط الفلاتر لرؤية المزيد من التسليمات.',
-          )
-        : context.s.t(
-            'Confirmed self-pickups and driver pickup appointments will appear here.',
-            'ستظهر هنا مواعيد الاستلام الذاتي واستلام السائق المؤكدة.',
-          );
+        ? context.s.resetFiltersToSeeMore
+        : context.s.confirmedHandoversAppearHere;
     return _Surface(
       padding: const EdgeInsets.symmetric(
         vertical: AppSpacing.xl,
@@ -1538,11 +1491,8 @@ class _ScheduleEmpty extends StatelessWidget {
             onPressed: hasFilters ? onReset : onOpenRequests,
             child: Text(
               hasFilters
-                  ? context.s.t('Reset filters', 'إعادة ضبط الفلاتر')
-                  : context.s.t(
-                      'Open Incoming Requests',
-                      'فتح الطلبات الواردة',
-                    ),
+                  ? context.s.resetFilters
+                  : context.s.openIncomingRequests,
             ),
           ),
         ],
@@ -1814,7 +1764,7 @@ class _MoreFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => PopupMenuButton<String>(
-    tooltip: context.s.t('More filters', 'فلاتر إضافية'),
+    tooltip: context.s.moreFilters,
     onSelected: (value) {
       if (value == 'RESET') {
         onReset();
@@ -1825,17 +1775,17 @@ class _MoreFilters extends StatelessWidget {
     itemBuilder: (context) => [
       PopupMenuItem(
         value: 'ACTIVE',
-        child: Text(context.s.t('Active', 'نشطة')),
+        child: Text(context.s.historyActive),
       ),
       PopupMenuItem(
         value: 'HISTORY',
-        child: Text(context.s.t('History', 'السجل')),
+        child: Text(context.s.historyTerminal),
       ),
-      PopupMenuItem(value: 'ALL', child: Text(context.s.t('All', 'الكل'))),
+      PopupMenuItem(value: 'ALL', child: Text(context.s.filterAll)),
       if (activeFilterCount > 0)
         PopupMenuItem(
           value: 'RESET',
-          child: Text(context.s.t('Reset filters', 'إعادة ضبط الفلاتر')),
+          child: Text(context.s.resetFilters),
         ),
     ],
     child: OutlinedButton.icon(
@@ -1843,11 +1793,8 @@ class _MoreFilters extends StatelessWidget {
       icon: const Icon(Icons.tune_rounded, size: 18),
       label: Text(
         activeFilterCount > 0
-            ? context.s.t(
-                'Filters ($activeFilterCount)',
-                'الفلاتر ($activeFilterCount)',
-              )
-            : context.s.t('Filters', 'الفلاتر'),
+            ? context.s.filtersCount(activeFilterCount)
+            : context.s.filtersTitle,
       ),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(112, 44),
@@ -1858,18 +1805,18 @@ class _MoreFilters extends StatelessWidget {
 }
 
 List<_DropdownItem<String?>> _categoryOptions(BuildContext context) => [
-  _DropdownItem(null, context.s.t('All categories', 'كل الفئات')),
-  for (final item in const [
-    ('UNSCHEDULED_ACTION', 'Unscheduled action', 'إجراء يحتاج جدولة'),
-    ('ADMIN_REVIEW', 'Admin review', 'مراجعة الإدارة'),
-    ('OVERDUE', 'Overdue', 'متأخرة'),
-    ('IN_PROGRESS', 'In progress', 'قيد التنفيذ'),
-    ('TODAY', 'Today', 'اليوم'),
-    ('UPCOMING', 'Upcoming', 'قادمة'),
-    ('COMPLETED', 'Completed', 'مكتملة'),
-    ('CLOSED', 'Closed', 'مغلقة'),
+  _DropdownItem(null, context.s.filterAllCategories),
+  for (final code in const [
+    'UNSCHEDULED_ACTION',
+    'ADMIN_REVIEW',
+    'OVERDUE',
+    'IN_PROGRESS',
+    'TODAY',
+    'UPCOMING',
+    'COMPLETED',
+    'CLOSED',
   ])
-    _DropdownItem(item.$1, context.s.t(item.$2, item.$3)),
+    _DropdownItem(code, context.s.scheduleCategoryFilterLabel(code)),
 ];
 
 String _rangeLabel(BuildContext context, DateTime start, DateTime end) =>
@@ -1893,91 +1840,24 @@ String _windowShortLabel(
   return '${_mediumDate(context, timestamp)}\n${_time(context, entry.effectiveWindow!.start)} – ${_time(context, entry.effectiveWindow!.end)}';
 }
 
-String _windowType(BuildContext context, String raw) => switch (raw
-    .toUpperCase()) {
-  'SUPPLIER_DELIVERY_PICKUP' => context.s.t('Supplier pickup', 'استلام المورد'),
-  'CONFIRMED_PICKUP' => context.s.t('Confirmed pickup', 'استلام مؤكد'),
-  _ => context.s.t('Confirmed pickup', 'استلام مؤكد'),
-};
+String _windowType(BuildContext context, String raw) =>
+    context.s.scheduleWindowType(raw);
 
-String _deliveryLabel(BuildContext context, String? raw) => switch (raw
-    ?.toUpperCase()) {
-  'WAITING_FOR_DRIVER' => context.s.t('Waiting for driver', 'بانتظار السائق'),
-  'DRIVER_ASSIGNED' => context.s.t('Driver assigned', 'تم تعيين السائق'),
-  'ARRIVED_PICKUP' => context.s.t('Arrived at supplier', 'وصل إلى المورد'),
-  'ON_THE_WAY' => context.s.t('Driver on the way', 'السائق في الطريق'),
-  'PICKED_UP' => context.s.t('Picked up', 'تم الاستلام'),
-  _ => context.s.t('Supplier pickup', 'استلام المورد'),
-};
+String _deliveryLabel(BuildContext context, String? raw) =>
+    context.s.scheduleDeliveryLabel(raw);
 
 String _operationalLabel(
   BuildContext context,
   SupplierScheduleApiEntry entry,
-) => switch (entry.category.value) {
-  SupplierScheduleCategory.unscheduledAction => context.s.t(
-    'Needs scheduling',
-    'تحتاج جدولة',
-  ),
-  SupplierScheduleCategory.adminReview => context.s.t(
-    'Awaiting resolution',
-    'بانتظار الحل',
-  ),
-  SupplierScheduleCategory.overdue => context.s.t('Past due', 'متأخرة'),
-  SupplierScheduleCategory.inProgress => context.s.t(
-    'In progress',
-    'قيد التنفيذ',
-  ),
-  SupplierScheduleCategory.today => context.s.t('In progress', 'قيد التنفيذ'),
-  SupplierScheduleCategory.upcoming => context.s.t('Scheduled', 'مجدولة'),
-  SupplierScheduleCategory.completed => context.s.t(
-    'Handover completed',
-    'اكتمل التسليم',
-  ),
-  SupplierScheduleCategory.closed => _closedOutcome(
-    context,
-    entry.reservationStatus,
-  ),
-  SupplierScheduleCategory.unknown => context.s.t(
-    'Needs review',
-    'تحتاج مراجعة',
-  ),
-};
-
-String _closedOutcome(BuildContext context, String raw) =>
-    switch (raw.toUpperCase()) {
-      'EXPIRED' => context.s.t('Expired', 'منتهية'),
-      'NO_SHOW' => context.s.t('No-show', 'عدم حضور'),
-      'FULFILLMENT_FAILED' => context.s.t('Fulfillment failed', 'فشل التنفيذ'),
-      'REJECTED' => context.s.t('Rejected', 'مرفوضة'),
-      _ => context.s.t('Cancelled', 'ملغاة'),
-    };
+) => context.s.scheduleOperationalLabel(
+  entry.category.value,
+  entry.reservationStatus,
+);
 
 String _categoryLabel(
   BuildContext context,
   SupplierScheduleCategory category,
-) => switch (category) {
-  SupplierScheduleCategory.unscheduledAction => context.s.t(
-    'Needs scheduling',
-    'تحتاج جدولة',
-  ),
-  SupplierScheduleCategory.adminReview => context.s.t(
-    'Admin review',
-    'مراجعة الإدارة',
-  ),
-  SupplierScheduleCategory.overdue => context.s.t('Overdue', 'متأخرة'),
-  SupplierScheduleCategory.inProgress => context.s.t(
-    'In progress',
-    'قيد التنفيذ',
-  ),
-  SupplierScheduleCategory.today => context.s.t('Today', 'اليوم'),
-  SupplierScheduleCategory.upcoming => context.s.t('Upcoming', 'قادمة'),
-  SupplierScheduleCategory.completed => context.s.t('Completed', 'مكتملة'),
-  SupplierScheduleCategory.closed => context.s.t('Closed', 'مغلقة'),
-  SupplierScheduleCategory.unknown => context.s.t(
-    'Needs review',
-    'تحتاج مراجعة',
-  ),
-};
+) => context.s.scheduleCategoryLabel(category);
 
 _CategorySemantic _categorySemantic(
   BuildContext context,
@@ -2006,62 +1886,10 @@ class _CategorySemantic {
 }
 
 String _nextActorLabel(BuildContext context, String raw) =>
-    switch (raw.toUpperCase()) {
-      'SUPPLIER' => context.s.t('You', 'أنت'),
-      'LEARNER' => context.s.t('Learner', 'المتعلم'),
-      'DRIVER' => context.s.t('Driver', 'السائق'),
-      'ADMIN' => context.s.t('Admin', 'الإدارة'),
-      'SYSTEM' => context.s.t('System', 'النظام'),
-      _ => '—',
-    };
+    context.s.scheduleNextActorLabel(raw);
 
 String _actionLabel(BuildContext context, SupplierReservationAction action) =>
-    switch (action) {
-      SupplierReservationAction.completeSelfPickup => context.s.t(
-        'Complete pickup',
-        'إكمال الاستلام',
-      ),
-      SupplierReservationAction.acceptLearnerReschedule => context.s.t(
-        'Review reschedule',
-        'مراجعة إعادة الجدولة',
-      ),
-      SupplierReservationAction.proposeReschedule => context.s.t(
-        'Submit pickup window',
-        'إرسال نافذة الاستلام',
-      ),
-      SupplierReservationAction.submitRecoveryPickupWindow => context.s.t(
-        'Submit recovery window',
-        'إرسال نافذة التعافي',
-      ),
-      SupplierReservationAction.closeReservation => context.s.t(
-        'Close reservation',
-        'إغلاق الحجز',
-      ),
-      SupplierReservationAction.markLearnerNoShow => context.s.t(
-        'Report learner no-show',
-        'الإبلاغ عن عدم حضور المتعلم',
-      ),
-      SupplierReservationAction.reportIncident => context.s.t(
-        'Report incident',
-        'الإبلاغ عن حادثة',
-      ),
-      SupplierReservationAction.reportNoDriver => context.s.t(
-        'Report no driver',
-        'الإبلاغ عن عدم وجود سائق',
-      ),
-      SupplierReservationAction.markDeliveryPickupExpired => context.s.t(
-        'Mark pickup expired',
-        'تحديد الاستلام كمنتهٍ',
-      ),
-      SupplierReservationAction.reportDriverNoShow => context.s.t(
-        'Report driver no-show',
-        'الإبلاغ عن عدم حضور السائق',
-      ),
-      SupplierReservationAction.accept => context.s.t('Accept', 'قبول'),
-      SupplierReservationAction.decline => context.s.t('Decline', 'رفض'),
-      SupplierReservationAction.sendMessage => context.s.t('Message', 'رسالة'),
-      SupplierReservationAction.unknown => context.s.t('Review', 'مراجعة'),
-    };
+    context.s.scheduleReservationActionLabel(action);
 
 String _quantityLabel(SupplierScheduleQuantity quantity) {
   final value = quantity.value == quantity.value.roundToDouble()
@@ -2085,16 +1913,6 @@ List<int> _pageNumbers(int current, int total) {
       : current - 2;
   return [for (var page = start; page < start + 5; page++) page];
 }
-
-String _summaryArabic(String label) => switch (label) {
-  'Today' => 'اليوم',
-  'Upcoming' => 'قادمة',
-  'Overdue' => 'متأخرة',
-  'Needs attention' => 'تحتاج انتباهاً',
-  'Completed' => 'مكتملة',
-  'Closed' => 'مغلقة',
-  _ => label,
-};
 
 InputBorder _fieldBorder(BuildContext context, {bool focused = false}) =>
     OutlineInputBorder(

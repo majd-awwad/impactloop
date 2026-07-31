@@ -208,8 +208,8 @@ class _InsightShell extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.backgroundElevated.withValues(alpha: 0.32),
         borderRadius: AppRadius.lgAll,
-        border: Border(
-          left: BorderSide(
+        border: BorderDirectional(
+          start: BorderSide(
             color: muted ? colors.border.withValues(alpha: 0.35) : accent,
             width: 3,
           ),

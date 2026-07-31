@@ -22,7 +22,7 @@ class PickupScheduleFilterChips extends ConsumerWidget {
         children: SupplierPickupScheduleFilter.values.map((filter) {
           final isSelected = filter == selected;
           return Padding(
-            padding: const EdgeInsets.only(right: AppSpacing.sm),
+            padding: const EdgeInsetsDirectional.only(end: AppSpacing.sm),
             child: _FilterChip(
               label: l.pickupScheduleFilterLabel(filter),
               style: PickupScheduleStatusStyle.styleForPickupFilter(filter),

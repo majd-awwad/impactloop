@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_section_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/complete_pickup_dialog.dart';
@@ -323,10 +324,9 @@ class _SupplierReservationDetailPageState
           }
         case SupplierReservationAction.markLearnerNoShow:
           final confirmed = await _confirm(
-            title: 'Mark learner as no-show?',
-            message:
-                'This will record the learner no-show for this reservation.',
-            confirmLabel: 'Mark no-show',
+            title: context.l10n.supplierMarkLearnerNoShowTitle,
+            message: context.l10n.supplierMarkLearnerNoShowMessage,
+            confirmLabel: context.l10n.supplierMarkLearnerNoShowConfirm,
           );
           if (confirmed && mounted) {
             await markLearnerNoShowForRequest(ref, requestId: reservation.id);
@@ -341,8 +341,8 @@ class _SupplierReservationDetailPageState
     } catch (error) {
       if (mounted) {
         final message = error is ApiException
-            ? error.displayMessage
-            : 'Could not update this request.';
+            ? localizedApiErrorMessage(error, context.l10n)
+            : context.l10n.supplierCouldNotUpdateRequest;
         setState(() => _actionError = message);
         showSupplierErrorSnackBar(context, message);
       }
@@ -385,8 +385,8 @@ class _SupplierReservationDetailPageState
     } catch (error) {
       if (!mounted) return;
       final message = error is ApiException
-          ? error.displayMessage
-          : 'Could not send the message.';
+          ? localizedApiErrorMessage(error, context.l10n)
+          : context.l10n.supplierCouldNotSendMessage;
       setState(() => _actionError = message);
       showSupplierErrorSnackBar(context, message);
     } finally {
@@ -441,6 +441,8 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final ui = SupplierReservationUiHelpers.of(context);
     final colors = context.supplierColors;
     final image = reservation.materialImageUrl;
     return Column(
@@ -451,25 +453,35 @@ class _HeaderCard extends StatelessWidget {
             final items = [
               IconButton(
                 onPressed: onBack,
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Back to Incoming Requests',
+                icon: const Icon(
+                  Icons.arrow_back,
+                ),
+                tooltip: l.backToIncomingRequests,
               ),
               Text(
-                'Incoming Requests',
+                l.incomingRequestsTitle,
                 style: context.supplierBody().copyWith(
                   color: colors.textSecondary,
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                child: Icon(Icons.chevron_right, color: colors.textMuted),
+                padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: AppSpacing.sm,
+                ),
+                child: Icon(
+                  Icons.chevron_right,
+                  color: colors.textMuted,
+                ),
               ),
-              Text('Request Details', style: context.supplierLabel()),
+              Text(l.requestDetails, style: context.supplierLabel()),
             ];
             final backButton = OutlinedButton.icon(
               onPressed: onBack,
-              icon: const Icon(Icons.arrow_back, size: 17),
-              label: const Text('Back'),
+              icon: const Icon(
+                Icons.arrow_back,
+                size: 17,
+              ),
+              label: Text(l.back),
             );
             if (constraints.maxWidth < 560) {
               return Wrap(
@@ -512,19 +524,19 @@ class _HeaderCard extends StatelessWidget {
                           runSpacing: AppSpacing.xs,
                           children: [
                             AppStatusBadge(
-                              label: reservation.status.label,
+                              label: ui.reservationStatus(reservation),
                               tone: _statusTone(reservation.status),
                             ),
                             if (reservation.workflowPhase != null)
                               AppStatusBadge(
-                                label: _workflowLabel(
+                                label: ui.workflowLabel(
                                   reservation.workflowPhase!.value,
                                 ),
                                 tone: AppStatusTone.info,
                               ),
                             if (reservation.attentionState != null)
                               AppStatusBadge(
-                                label: _attentionLabel(
+                                label: ui.attentionLabel(
                                   reservation.attentionState!.value,
                                 ),
                                 tone: _attentionTone(
@@ -535,7 +547,7 @@ class _HeaderCard extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text(
-                          '${_quantity(reservation.quantityRequested)} ${reservation.unit}  ·  ${_fulfillmentLabel(reservation)}  ·  Created ${_date(reservation.requestedAt)}',
+                          '${_quantity(reservation.quantityRequested)} ${reservation.unit}  ·  ${ui.fulfillmentMethodLabel(reservation)}  ·  ${l.createdLabel} ${ui.formatDateTime(reservation.requestedAt)}',
                           style: context.supplierLabel().copyWith(
                             color: colors.textSecondary,
                           ),
@@ -611,18 +623,18 @@ class _HeaderActions extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.check_circle_outline, size: 17),
-          label: Text(_actionLabel(primary)),
+          label: Text(_actionLabel(context,primary)),
         ),
         if (actions.length > 1)
           PopupMenuButton<SupplierReservationAction>(
-            tooltip: 'Available actions',
+            tooltip: context.l10n.supplierAvailableActions,
             onSelected: busy ? null : onAction,
             itemBuilder: (context) => actions
                 .skip(1)
                 .map(
                   (action) => PopupMenuItem(
                     value: action,
-                    child: Text(_actionLabel(action)),
+                    child: Text(_actionLabel(context,action)),
                   ),
                 )
                 .toList(),
@@ -635,12 +647,12 @@ class _HeaderActions extends StatelessWidget {
                 border: Border.all(color: context.supplierColors.border),
                 borderRadius: AppRadius.mdAll,
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.more_horiz, size: 18),
                   SizedBox(width: AppSpacing.xs),
-                  Text('More'),
+                  Text(context.l10n.supplierMore),
                 ],
               ),
             ),
@@ -659,8 +671,9 @@ class _StateStrip extends StatelessWidget {
     final reservation = detail.reservation;
     final terminal = _isTerminalReservation(detail);
     final facts = terminal
-        ? _terminalStateFacts(detail)
+        ? _terminalStateFacts(context, detail)
         : _activeStateFacts(
+            context,
             detail,
             detail.schedule?.summary ?? reservation.scheduleSummary,
           );
@@ -728,41 +741,67 @@ class _StateFact {
 }
 
 List<_StateFact> _activeStateFacts(
+  BuildContext context,
   SupplierReservationDetail detail,
   SupplierScheduleSummary? summary,
 ) {
+  final l = context.l10n;
+  final ui = SupplierReservationUiHelpers.of(context);
   final reservation = detail.reservation;
   final facts = <_StateFact>[];
-  final workflow = _workflowLabel(reservation.workflowPhase?.value);
-  final attention = _attentionLabel(reservation.attentionState?.value);
+  final workflow = ui.workflowLabel(reservation.workflowPhase?.value);
+  final attention = ui.attentionLabel(reservation.attentionState?.value);
   final actor = reservation.nextActor?.value;
   final schedule = _effectiveScheduleWindow(summary);
+  final emDash = ui.emDash;
 
-  if (workflow != '—') facts.add(_StateFact('Workflow', workflow));
-  if (attention != '—') facts.add(_StateFact('Attention', attention));
+  if (workflow != emDash) {
+    facts.add(_StateFact(l.supplierWorkflowScheduling, workflow));
+  }
+  if (attention != emDash) {
+    facts.add(_StateFact(l.supplierAttentionTitle, attention));
+  }
   if (actor != null &&
       actor != SupplierNextActor.none &&
       actor != SupplierNextActor.unknown) {
-    facts.add(_StateFact('Next actor', _actorLabel(actor)));
+    facts.add(_StateFact(l.supplierStatus, ui.actorLabel(actor)));
   }
-  facts.add(_StateFact('Fulfillment', _stateFulfillmentLabel(reservation)));
+  facts.add(
+    _StateFact(
+      l.supplierFulfillmentAndDelivery,
+      ui.fulfillmentMethodLabel(reservation),
+    ),
+  );
   if (schedule != null) {
-    facts.add(_StateFact('Schedule', _window(schedule)));
+    facts.add(_StateFact(l.pickupWindow, ui.formatScheduleWindow(schedule)));
   }
   return facts;
 }
 
-List<_StateFact> _terminalStateFacts(SupplierReservationDetail detail) {
+List<_StateFact> _terminalStateFacts(
+  BuildContext context,
+  SupplierReservationDetail detail,
+) {
+  final l = context.l10n;
+  final ui = SupplierReservationUiHelpers.of(context);
   final identity = detail.identity;
   final reservation = detail.reservation;
   final facts = <_StateFact>[
-    _StateFact('Outcome', _terminalOutcomeLabel(reservation)),
-    _StateFact('Fulfillment', _stateFulfillmentLabel(reservation)),
+    _StateFact(
+      l.statusCompleted,
+      ui.terminalOutcome(reservation.status) ?? ui.emDash,
+    ),
+    _StateFact(
+      l.supplierFulfillmentAndDelivery,
+      ui.fulfillmentMethodLabel(reservation),
+    ),
   ];
   final created = identity?.createdAt ?? reservation.requestedAt;
   final updated = identity?.updatedAt;
-  facts.add(_StateFact('Created', _date(created)));
-  if (updated != null) facts.add(_StateFact('Updated', _date(updated)));
+  facts.add(_StateFact(l.supplierCreated, ui.formatDateTime(created)));
+  if (updated != null) {
+    facts.add(_StateFact(l.supplierUpdated, ui.formatDateTime(updated)));
+  }
   return facts.take(4).toList(growable: false);
 }
 
@@ -780,12 +819,14 @@ class _ActionPanel extends StatelessWidget {
   final ValueChanged<SupplierReservationAction> onAction;
 
   @override
-  Widget build(BuildContext context) => AppSectionCard(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AppSectionCard(
     tone: AppStatusTone.warning,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Available actions', style: context.supplierSectionTitle()),
+        Text(l.supplierAvailableActions, style: context.supplierSectionTitle()),
         const SizedBox(height: AppSpacing.md),
         ...actions.map(
           (action) => Padding(
@@ -795,7 +836,7 @@ class _ActionPanel extends StatelessWidget {
               icon: Icon(_actionIcon(action), size: 18),
               label: Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: Text(_actionLabel(action)),
+                child: Text(_actionLabel(context,action)),
               ),
             ),
           ),
@@ -810,6 +851,7 @@ class _ActionPanel extends StatelessWidget {
       ],
     ),
   );
+  }
 }
 
 class _RequestSummaryCard extends StatelessWidget {
@@ -825,6 +867,7 @@ class _RequestSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final reservation = detail.reservation;
     final request = detail.request;
     final identity = detail.identity;
@@ -835,7 +878,7 @@ class _RequestSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _TitleRow(icon: Icons.assignment_outlined, title: 'Request summary'),
+          _TitleRow(icon: Icons.assignment_outlined, title: l.supplierRequestSummary),
           const SizedBox(height: AppSpacing.md),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -859,7 +902,7 @@ class _RequestSummaryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Learner: $learnerName',
+                      l.supplierLearnerLine(learnerName),
                       style: context.supplierBody(),
                     ),
                   ],
@@ -871,28 +914,28 @@ class _RequestSummaryCard extends StatelessWidget {
           _InfoGrid(
             rows: [
               (
-                'Quantity',
+                l.supplierQuantity,
                 '${_quantity(identity?.quantityRequested ?? reservation.quantityRequested)} ${reservation.unit}',
               ),
-              ('Fulfillment', _fulfillmentLabel(reservation)),
+              (l.supplierFulfillmentLabel, _fulfillmentLabel(context, reservation)),
               (
-                'Created',
-                _date(identity?.createdAt ?? reservation.requestedAt),
+                l.supplierCreated,
+                _date(context, identity?.createdAt ?? reservation.requestedAt),
               ),
-              ('Updated', _date(identity?.updatedAt)),
+              (l.supplierUpdated, _date(context, identity?.updatedAt)),
               if (_string(learner, 'email') != null)
-                ('Learner email', _string(learner, 'email')!),
+                (l.supplierLearnerEmail, _string(learner, 'email')!),
             ],
           ),
           if (note != null && note.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            _NoteBlock(label: 'Original learner note', text: note),
+            _NoteBlock(label: l.supplierOriginalLearnerNote, text: note),
           ],
           if (request?.deliveryAddressText != null &&
               request!.deliveryAddressText!.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             _NoteBlock(
-              label: 'Delivery address',
+              label: l.supplierDeliveryAddressLabel,
               text: request.deliveryAddressText!,
             ),
           ],
@@ -908,6 +951,7 @@ class _ScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     if (_isTerminalReservation(detail)) {
       return _TerminalScheduleCard(detail: detail);
     }
@@ -935,7 +979,7 @@ class _ScheduleCard extends StatelessWidget {
               ) ==
               true)
         _WindowRow(
-          label: 'Learner preferred pickup windows',
+          label: l.supplierLearnerPreferredPickupWindows,
           windows: detail.request!.learnerPreferredPickupWindows
               .map(
                 (window) => SupplierScheduleWindow(
@@ -952,7 +996,7 @@ class _ScheduleCard extends StatelessWidget {
               ) ==
               true)
         _WindowRow(
-          label: 'Learner preferred delivery windows',
+          label: l.supplierLearnerPreferredDeliveryWindows,
           windows: detail.request!.learnerPreferredDeliveryWindows
               .map(
                 (window) => SupplierScheduleWindow(
@@ -964,28 +1008,29 @@ class _ScheduleCard extends StatelessWidget {
               .toList(),
         ),
       if (supplierProposal != null)
-        _WindowRow(label: 'Supplier proposal', windows: [supplierProposal]),
+        _WindowRow(label: l.supplierSupplierProposal, windows: [supplierProposal]),
       if (learnerProposal != null)
-        _WindowRow(label: 'Learner proposal', windows: [learnerProposal]),
+        _WindowRow(label: l.supplierLearnerProposal, windows: [learnerProposal]),
       if (!delivery && confirmedPickup != null)
         _WindowRow(
-          label: 'Confirmed pickup window',
+          label: l.supplierConfirmedPickupWindow,
           windows: [confirmedPickup],
         ),
       if (delivery && supplierDeliveryPickup != null)
         _WindowRow(
-          label: 'Supplier delivery pickup window',
+          label: l.supplierSupplierDeliveryPickupWindow,
           windows: [supplierDeliveryPickup],
         ),
       if (delivery && confirmedDelivery != null)
         _WindowRow(
-          label: 'Confirmed delivery window',
+          label: l.supplierConfirmedDeliveryWindow,
           windows: [confirmedDelivery],
         ),
       if (pendingReschedule != null && pendingWindow != null)
         _WindowRow(
-          label:
-              '${_actorLabel(pendingReschedule.requestedBy.value)} requested reschedule',
+          label: l.supplierActorRequestedReschedule(
+            _actorLabel(context, pendingReschedule.requestedBy.value),
+          ),
           windows: [pendingWindow],
         ),
     ];
@@ -1007,35 +1052,35 @@ class _ScheduleCard extends StatelessWidget {
         children: [
           _TitleRow(
             icon: Icons.calendar_month_outlined,
-            title: 'Schedule & negotiation',
+            title: l.supplierScheduleNegotiation,
           ),
           const SizedBox(height: AppSpacing.sm),
           if (showRecovery)
             _ContextBanner(
-              label: 'Admin-initiated recovery',
+              label: l.supplierAdminInitiatedRecovery,
               value: _nonEmpty(recovery.note) ?? _nonEmpty(recovery.reason)!,
               tone: AppStatusTone.warning,
             ),
           if (showPending) ...[
             const SizedBox(height: AppSpacing.sm),
             _ContextBanner(
-              label: 'Pending reschedule',
+              label: l.supplierPendingReschedule,
               value:
                   _nonEmpty(pending.note) ??
                   _nonEmpty(pending.reason) ??
-                  'A new window is awaiting the next response.',
+                  l.supplierNewWindowAwaiting,
               tone: AppStatusTone.info,
             ),
           ],
           if (windows.isEmpty)
-            const _EmptyLine(
-              text: 'No pickup or delivery window is currently proposed.',
+            _EmptyLine(
+              text: l.supplierNoWindowProposed,
             ),
           ...windows.map((row) => _WindowSection(row: row)),
           if (_nonEmpty(summary?.schedulingConflictReason) != null) ...[
             const SizedBox(height: AppSpacing.sm),
             _ContextBanner(
-              label: 'Scheduling context',
+              label: l.supplierSchedulingContext,
               value: _nonEmpty(summary!.schedulingConflictReason)!,
               tone: AppStatusTone.warning,
             ),
@@ -1043,7 +1088,9 @@ class _ScheduleCard extends StatelessWidget {
           if (summary?.earliestDeliveryStart != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Earliest feasible delivery: ${_date(summary!.earliestDeliveryStart)}',
+              l.supplierEarliestFeasibleDelivery(
+                _date(context, summary!.earliestDeliveryStart),
+              ),
               style: context.supplierLabel(),
             ),
           ],
@@ -1060,6 +1107,7 @@ class _TerminalScheduleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final schedule = detail.schedule;
     final delivery = detail.reservation.isDeliveryFulfillment;
     final confirmedPickup = _completeWindow(schedule?.confirmedPickupWindow);
@@ -1072,29 +1120,31 @@ class _TerminalScheduleCard extends StatelessWidget {
     final historicalWindows = <_WindowRow>[
       if (!delivery && confirmedPickup != null)
         _WindowRow(
-          label: 'Confirmed pickup window',
+          label: l.supplierConfirmedPickupWindow,
           windows: [confirmedPickup],
         ),
       if (delivery && supplierDeliveryPickup != null)
         _WindowRow(
-          label: 'Supplier delivery pickup window',
+          label: l.supplierSupplierDeliveryPickupWindow,
           windows: [supplierDeliveryPickup],
         ),
       if (delivery && confirmedDelivery != null)
         _WindowRow(
-          label: 'Confirmed delivery window',
+          label: l.supplierConfirmedDeliveryWindow,
           windows: [confirmedDelivery],
         ),
     ];
     final emptyMessage = delivery
-        ? 'No pickup or delivery window was confirmed for this request.'
-        : 'No pickup window was confirmed before this request was ${_terminalVerb(detail.reservation)}.';
+        ? l.supplierNoWindowConfirmedPickup
+        : l.supplierNoWindowConfirmedBeforeTerminal(
+            _terminalVerb(context, detail.reservation),
+          );
 
     return AppSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _TitleRow(icon: Icons.history_outlined, title: 'Schedule history'),
+          _TitleRow(icon: Icons.history_outlined, title: l.supplierScheduleHistory),
           const SizedBox(height: AppSpacing.sm),
           if (historicalWindows.isEmpty)
             _EmptyLine(text: emptyMessage)
@@ -1102,7 +1152,7 @@ class _TerminalScheduleCard extends StatelessWidget {
             ...historicalWindows.map((row) => _WindowSection(row: row)),
             const SizedBox(height: AppSpacing.sm),
             _InfoGrid(
-              rows: [('Outcome', _terminalScheduleOutcome(detail.reservation))],
+              rows: [(l.supplierOutcomeLabel, _terminalScheduleOutcome(context, detail.reservation))],
             ),
           ],
         ],
@@ -1117,6 +1167,7 @@ class _FulfillmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final reservation = detail.reservation;
     final delivery = detail.delivery ?? reservation.deliverySummary;
     final driver = delivery?.driver;
@@ -1128,29 +1179,29 @@ class _FulfillmentCard extends StatelessWidget {
         children: [
           _TitleRow(
             icon: Icons.local_shipping_outlined,
-            title: 'Fulfillment & delivery',
+            title: l.supplierFulfillmentAndDelivery,
           ),
           const SizedBox(height: AppSpacing.md),
           _InfoGrid(
             rows: [
-              ('Method', _fulfillmentLabel(reservation)),
+              (l.supplierMethodLabel, _fulfillmentLabel(context, reservation)),
               (
-                'Delivery status',
+                l.supplierDeliveryStatusLabel,
                 delivery?.status == null
-                    ? 'Not selected'
-                    : _deliveryStatusLabel(delivery!.status!),
+                    ? l.notSelected
+                    : _deliveryStatusLabel(context, delivery!.status!),
               ),
-              if (driver?.displayName != null) ('Driver', driver!.displayName!),
+              if (driver?.displayName != null) (l.driver, driver!.displayName!),
               if (detail.group?.groupId != null)
-                ('Group', _shortId(detail.group!.groupId!)),
+                (l.supplierGroupLabel, _shortId(detail.group!.groupId!)),
               if (reservation.supplierHandoverCode != null)
-                ('Handover', 'Code available'),
+                (l.supplierHandoverLabel, l.supplierHandoverCodeAvailable),
             ],
           ),
           if (delivery?.failureReason != null) ...[
             const SizedBox(height: AppSpacing.md),
             _ContextBanner(
-              label: 'Failure / recovery',
+              label: l.supplierFailureRecovery,
               value: delivery!.failureReason!,
               tone: AppStatusTone.danger,
             ),
@@ -1159,14 +1210,13 @@ class _FulfillmentCard extends StatelessWidget {
               detail.request!.deliveryNote!.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             _NoteBlock(
-              label: 'Delivery note',
+              label: l.supplierDeliveryNote,
               text: detail.request!.deliveryNote!,
             ),
           ],
           if (fulfillment.toUpperCase() == 'DELIVERY' && delivery == null)
             _EmptyLine(
-              text:
-                  'Delivery has not been selected or created for this reservation.',
+              text: l.supplierDeliveryNotCreated,
             ),
         ],
       ),
@@ -1179,20 +1229,24 @@ class _AttentionCard extends StatelessWidget {
   final SupplierIncomingRequest reservation;
 
   @override
-  Widget build(BuildContext context) => AppSectionCard(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AppSectionCard(
     tone: _attentionTone(reservation.attentionState?.value),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TitleRow(icon: Icons.priority_high_outlined, title: 'Attention'),
+        _TitleRow(icon: Icons.priority_high_outlined, title: l.supplierAttentionTitle),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          _attentionLabel(reservation.attentionState?.value),
+          _attentionLabel(context, reservation.attentionState?.value),
           style: context.supplierTitle().copyWith(fontSize: 18),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Next actor: ${_actorLabel(reservation.nextActor?.value)}',
+          l.supplierNextActorLine(
+            _actorLabel(context, reservation.nextActor?.value),
+          ),
           style: context.supplierBody().copyWith(
             color: context.supplierColors.textSecondary,
           ),
@@ -1201,13 +1255,14 @@ class _AttentionCard extends StatelessWidget {
             SupplierAttentionState.adminReviewRequired) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'This request is awaiting admin resolution. Supplier controls are read-only unless an available action is provided.',
+            l.supplierAwaitingAdminResolution,
             style: context.supplierBody(),
           ),
         ],
       ],
     ),
   );
+  }
 }
 
 class _IncidentCard extends StatelessWidget {
@@ -1215,41 +1270,44 @@ class _IncidentCard extends StatelessWidget {
   final SupplierIncidentSummary incident;
 
   @override
-  Widget build(BuildContext context) => AppSectionCard(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AppSectionCard(
     tone: AppStatusTone.info,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _TitleRow(
           icon: Icons.shield_outlined,
-          title: 'Incident / admin review',
+          title: l.supplierIncidentAdminReview,
         ),
         const SizedBox(height: AppSpacing.md),
         _InfoGrid(
           rows: [
-            if (incident.id != null) ('Report ID', _shortId(incident.id!)),
+            if (incident.id != null) (l.supplierReportIdLabel, _shortId(incident.id!)),
             if (incident.reasonCode != null)
-              ('Reason', _reasonLabel(incident.reasonCode!)),
+              (l.reason, _reasonLabel(context, incident.reasonCode!)),
             if (incident.status != null)
-              ('Status', _reasonLabel(incident.status!)),
+              (l.supplierStatus, _reasonLabel(context, incident.status!)),
             if (incident.workflowType != null)
-              ('Workflow', _reasonLabel(incident.workflowType!)),
+              (l.supplierWorkflowField, _reasonLabel(context, incident.workflowType!)),
             if (incident.operationalState != null)
-              ('Operational state', _reasonLabel(incident.operationalState!)),
+              (l.supplierOperationalStateLabel, _reasonLabel(context, incident.operationalState!)),
           ],
         ),
         if (incident.note != null && incident.note!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          _NoteBlock(label: 'Supplier explanation', text: incident.note!),
+          _NoteBlock(label: l.supplierSupplierExplanation, text: incident.note!),
         ],
         if (incident.reviewNote != null &&
             incident.reviewNote!.trim().isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          _NoteBlock(label: 'Admin review note', text: incident.reviewNote!),
+          _NoteBlock(label: l.supplierAdminReviewNote, text: incident.reviewNote!),
         ],
       ],
     ),
   );
+  }
 }
 
 class _GroupCard extends StatelessWidget {
@@ -1257,24 +1315,26 @@ class _GroupCard extends StatelessWidget {
   final SupplierGroupSummary group;
 
   @override
-  Widget build(BuildContext context) => AppSectionCard(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AppSectionCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TitleRow(icon: Icons.account_tree_outlined, title: 'Group context'),
+        _TitleRow(icon: Icons.account_tree_outlined, title: l.supplierGroupContext),
         const SizedBox(height: AppSpacing.md),
         _InfoGrid(
           rows: [
-            if (group.groupId != null) ('Group ID', _shortId(group.groupId!)),
-            if (group.status != null) ('Status', _reasonLabel(group.status!)),
-            if (group.itemCount != null) ('Items', '${group.itemCount}'),
+            if (group.groupId != null) (l.supplierGroupIdLabel, _shortId(group.groupId!)),
+            if (group.status != null) (l.supplierStatus, _reasonLabel(context, group.status!)),
+            if (group.itemCount != null) (l.supplierItemsLabel, '${group.itemCount}'),
             if (group.driver?.displayName != null)
-              ('Driver', group.driver!.displayName!),
+              (l.driver, group.driver!.displayName!),
           ],
         ),
         if (group.items.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
-          Text('Items in group', style: context.supplierLabel()),
+          Text(l.supplierItemsInGroup, style: context.supplierLabel()),
           const SizedBox(height: AppSpacing.xs),
           ...group.items
               .take(3)
@@ -1284,20 +1344,21 @@ class _GroupCard extends StatelessWidget {
                   child: Text(
                     _string(item, 'materialTitle') ??
                         _string(item, 'title') ??
-                        'Grouped reservation item',
+                        l.supplierGroupedReservationItem,
                     style: context.supplierBody(),
                   ),
                 ),
               ),
           if (group.hasMoreItems == true)
             Text(
-              'More items are available in the group.',
+              l.supplierMoreGroupItems,
               style: context.supplierLabel(),
             ),
         ],
       ],
     ),
   );
+  }
 }
 
 class _MessagesCard extends StatelessWidget {
@@ -1322,6 +1383,7 @@ class _MessagesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final original = detail.request?.originalLearnerNote?.trim();
     final messages = [...detail.messages, ...localMessages].where((message) {
       if (original == null ||
@@ -1343,11 +1405,13 @@ class _MessagesCard extends StatelessWidget {
         children: [
           _TitleRow(
             icon: Icons.chat_bubble_outline,
-            title: 'Messages${messages.isEmpty ? '' : ' (${messages.length})'}',
+            title: messages.isEmpty
+                ? l.supplierMessagesTitle
+                : l.supplierMessagesTitleWithCount(messages.length),
           ),
           const SizedBox(height: AppSpacing.md),
           if (messages.isEmpty)
-            _EmptyLine(text: 'No messages yet.')
+            _EmptyLine(text: l.supplierNoMessagesYet)
           else
             ...messages.map(
               (message) =>
@@ -1365,8 +1429,8 @@ class _MessagesCard extends StatelessWidget {
                     maxLines: 3,
                     minLines: 1,
                     maxLength: 1000,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message…',
+                    decoration: InputDecoration(
+                      hintText: l.supplierTypeMessageHint,
                     ),
                     onSubmitted: (_) => onSend(),
                   ),
@@ -1374,7 +1438,7 @@ class _MessagesCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.sm),
                 IconButton.filled(
                   onPressed: sending ? null : onSend,
-                  tooltip: 'Send message',
+                  tooltip: l.supplierSendMessageTooltip,
                   icon: sending
                       ? const SizedBox(
                           width: 18,
@@ -1399,8 +1463,9 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final learner = message.senderRole?.toUpperCase() == 'LEARNER';
-    final sender = learner ? learnerName : 'You';
+    final sender = learner ? learnerName : l.supplierYou;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Container(
@@ -1429,13 +1494,13 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  learner ? 'Learner' : 'Supplier',
+                  learner ? l.learner : l.supplier,
                   style: context.supplierLabel().copyWith(
                     color: context.supplierColors.textSecondary,
                   ),
                 ),
                 Text(
-                  _date(message.createdAt),
+                  _date(context, message.createdAt),
                   style: context.supplierLabel().copyWith(
                     color: context.supplierColors.textMuted,
                   ),
@@ -1456,19 +1521,22 @@ class _HistoryCard extends StatelessWidget {
   final List<SupplierReservationHistoryEntry> history;
 
   @override
-  Widget build(BuildContext context) => AppSectionCard(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AppSectionCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _TitleRow(icon: Icons.history_outlined, title: 'Reservation history'),
+        _TitleRow(icon: Icons.history_outlined, title: l.supplierReservationHistory),
         const SizedBox(height: AppSpacing.md),
         if (history.isEmpty)
-          _EmptyLine(text: 'No history events were returned.')
+          _EmptyLine(text: l.supplierNoHistoryEvents)
         else
           ...history.map((event) => _HistoryEvent(event: event)),
       ],
     ),
   );
+  }
 }
 
 class _HistoryEvent extends StatelessWidget {
@@ -1477,11 +1545,15 @@ class _HistoryEvent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final actor = _string(event.actor, 'displayName') ?? _actorLabel(null);
+    final l = context.l10n;
+    final actor = _string(event.actor, 'displayName') ?? _actorLabel(context, null);
     final role = _string(event.actor, 'role');
     final transition = event.newStatus == null
-        ? 'Reservation updated'
-        : '${_reasonLabel(event.oldStatus ?? 'Request')} → ${_reasonLabel(event.newStatus!)}';
+        ? l.supplierReservationUpdated
+        : l.supplierHistoryStatusChange(
+            _reasonLabel(context, event.oldStatus ?? 'Request'),
+            _reasonLabel(context, event.newStatus!),
+          );
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
@@ -1505,7 +1577,7 @@ class _HistoryEvent extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$actor${role == null ? '' : ' · ${_reasonLabel(role)}'} · ${_date(event.createdAt)}',
+                  '$actor${role == null ? '' : ' · ${_reasonLabel(context, role)}'} · ${_date(context, event.createdAt)}',
                   style: context.supplierLabel().copyWith(
                     color: context.supplierColors.textSecondary,
                   ),
@@ -1675,7 +1747,7 @@ class _WindowSection extends StatelessWidget {
               .map(
                 (window) => Padding(
                   padding: const EdgeInsets.only(bottom: 2),
-                  child: Text(_window(window), style: context.supplierBody()),
+                  child: Text(_window(context, window), style: context.supplierBody()),
                 ),
               ),
         ],
@@ -1788,7 +1860,9 @@ class _DetailError extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onRetry;
   @override
-  Widget build(BuildContext context) => AppSectionCard(
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AppSectionCard(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1799,15 +1873,15 @@ class _DetailError extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          notFound ? 'Request not found' : 'Could not load request',
+          notFound ? l.supplierRequestNotFound : l.supplierCouldNotLoadRequestTitle,
           textAlign: TextAlign.center,
           style: context.supplierTitle(),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           notFound
-              ? 'This request is unavailable.'
-              : 'We could not load this request. Please try again.',
+              ? l.supplierRequestUnavailable
+              : l.supplierCouldNotLoadRequest,
           textAlign: TextAlign.center,
           style: context.supplierBody(),
         ),
@@ -1818,15 +1892,16 @@ class _DetailError extends StatelessWidget {
           children: [
             OutlinedButton(
               onPressed: onBack,
-              child: const Text('Back to Incoming Requests'),
+              child: Text(l.supplierBackToIncomingRequests),
             ),
             if (!notFound)
-              FilledButton(onPressed: onRetry, child: const Text('Retry')),
+              FilledButton(onPressed: onRetry, child: Text(l.retry)),
           ],
         ),
       ],
     ),
   );
+  }
 }
 
 bool _isNotFound(Object error) =>
@@ -1855,32 +1930,58 @@ String _quantity(double value) => value == value.roundToDouble()
     ? value.toInt().toString()
     : value.toStringAsFixed(2);
 
-String _date(DateTime? value) => value == null
-    ? '—'
-    : DateFormat('MMM d, yyyy · HH:mm').format(value.toLocal());
+String _date(BuildContext context, DateTime? value) =>
+    SupplierReservationUiHelpers.of(context).formatDateTime(value);
 
-String _window(SupplierScheduleWindow window) {
-  final start = window.start;
-  final end = window.end;
-  if (start == null && end == null) return 'Not proposed';
-  if (start == null)
-    return 'Until ${DateFormat('MMM d, yyyy · HH:mm').format(end!.toLocal())}';
-  if (end == null)
-    return 'From ${DateFormat('MMM d, yyyy · HH:mm').format(start.toLocal())}';
-  final day = DateFormat('MMM d, yyyy').format(start.toLocal());
-  final sameDay = DateUtils.isSameDay(start, end);
-  return sameDay
-      ? '$day · ${DateFormat('HH:mm').format(start.toLocal())} – ${DateFormat('HH:mm').format(end.toLocal())}'
-      : '${DateFormat('MMM d, yyyy · HH:mm').format(start.toLocal())} – ${DateFormat('MMM d, yyyy · HH:mm').format(end.toLocal())}';
-}
+String _window(BuildContext context, SupplierScheduleWindow window) =>
+    SupplierReservationUiHelpers.of(context).formatScheduleWindow(window);
 
-String _fulfillmentLabel(SupplierIncomingRequest reservation) =>
-    reservation.fulfillmentContract?.label ??
-    reservation.fulfillmentLabel ??
-    (reservation.isDeliveryFulfillment ? 'Delivery' : 'Self pickup');
+String _fulfillmentLabel(
+  BuildContext context,
+  SupplierIncomingRequest reservation,
+) => SupplierReservationUiHelpers.of(context).fulfillmentMethodLabel(
+  reservation,
+);
 
-String _stateFulfillmentLabel(SupplierIncomingRequest reservation) =>
-    reservation.isDeliveryFulfillment ? 'Delivery' : 'Self pickup';
+String _stateFulfillmentLabel(
+  BuildContext context,
+  SupplierIncomingRequest reservation,
+) => SupplierReservationUiHelpers.of(context).fulfillmentMethodLabel(
+  reservation,
+);
+
+String _terminalOutcomeLabel(
+  BuildContext context,
+  SupplierIncomingRequest reservation,
+) => SupplierReservationUiHelpers.of(context).terminalOutcome(reservation.status);
+
+String _terminalScheduleOutcome(
+  BuildContext context,
+  SupplierIncomingRequest reservation,
+) => SupplierReservationUiHelpers.of(context).terminalScheduleOutcome(reservation);
+
+String _terminalVerb(
+  BuildContext context,
+  SupplierIncomingRequest reservation,
+) => SupplierReservationUiHelpers.of(context).terminalVerb(reservation.status);
+
+String _workflowLabel(BuildContext context, SupplierWorkflowPhase? phase) =>
+    SupplierReservationUiHelpers.of(context).workflowLabel(phase);
+
+String _attentionLabel(BuildContext context, SupplierAttentionState? attention) =>
+    SupplierReservationUiHelpers.of(context).attentionLabel(attention);
+
+String _actorLabel(BuildContext context, SupplierNextActor? actor) =>
+    SupplierReservationUiHelpers.of(context).actorLabel(actor);
+
+String _reasonLabel(BuildContext context, String raw) =>
+    SupplierReservationUiHelpers.of(context).reasonCodeLabel(raw);
+
+String _deliveryStatusLabel(BuildContext context, String raw) =>
+    SupplierReservationUiHelpers.of(context).deliveryStatus(raw);
+
+String _actionLabel(BuildContext context, SupplierReservationAction action) =>
+    SupplierReservationUiHelpers.of(context).reservationActionLabel(action);
 
 bool _isTerminalReservation(SupplierReservationDetail detail) {
   final reservation = detail.reservation;
@@ -1908,87 +2009,6 @@ SupplierScheduleWindow? _completeWindow(SupplierScheduleWindow? window) =>
 bool _hasPreferredWindow(dynamic window) =>
     window.start != null && window.end != null;
 
-String _terminalOutcomeLabel(SupplierIncomingRequest reservation) =>
-    switch (reservation.status) {
-      SupplierIncomingRequestStatus.completed => 'Completed successfully',
-      SupplierIncomingRequestStatus.cancelled => 'Cancelled',
-      SupplierIncomingRequestStatus.expired => 'Expired',
-      SupplierIncomingRequestStatus.noShow => 'Learner no-show',
-      SupplierIncomingRequestStatus.declined => 'Declined',
-      SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
-      _ => reservation.status.label,
-    };
-
-String _terminalScheduleOutcome(SupplierIncomingRequest reservation) =>
-    switch (reservation.status) {
-      SupplierIncomingRequestStatus.completed => 'Completed successfully',
-      SupplierIncomingRequestStatus.cancelled => 'Cancelled before fulfillment',
-      SupplierIncomingRequestStatus.expired => 'Expired before fulfillment',
-      SupplierIncomingRequestStatus.noShow => 'Learner no-show',
-      _ => _terminalOutcomeLabel(reservation),
-    };
-
-String _terminalVerb(SupplierIncomingRequest reservation) =>
-    switch (reservation.status) {
-      SupplierIncomingRequestStatus.cancelled => 'cancelled',
-      SupplierIncomingRequestStatus.expired => 'expired',
-      SupplierIncomingRequestStatus.completed => 'completed',
-      _ => 'closed',
-    };
-
-String _workflowLabel(SupplierWorkflowPhase? phase) => switch (phase) {
-  SupplierWorkflowPhase.initialDecision => 'Initial decision',
-  SupplierWorkflowPhase.scheduling => 'Scheduling',
-  SupplierWorkflowPhase.selfPickup => 'Self pickup',
-  SupplierWorkflowPhase.delivery => 'Delivery',
-  SupplierWorkflowPhase.recovery => 'Recovery',
-  SupplierWorkflowPhase.completed => 'Completed',
-  SupplierWorkflowPhase.closed => 'Closed',
-  SupplierWorkflowPhase.unknown || null => '—',
-};
-
-String _attentionLabel(SupplierAttentionState? attention) =>
-    switch (attention) {
-      SupplierAttentionState.supplierActionRequired =>
-        'Supplier action required',
-      SupplierAttentionState.waitingForLearner => 'Waiting for learner',
-      SupplierAttentionState.fulfillmentInProgress => 'Fulfillment in progress',
-      SupplierAttentionState.adminReviewRequired => 'Admin review required',
-      SupplierAttentionState.terminal => 'No further action',
-      SupplierAttentionState.unknown || null => '—',
-    };
-
-String _actorLabel(SupplierNextActor? actor) => switch (actor) {
-  SupplierNextActor.supplier => 'Supplier',
-  SupplierNextActor.learner => 'Learner',
-  SupplierNextActor.driver => 'Driver',
-  SupplierNextActor.admin => 'Admin',
-  SupplierNextActor.system => 'System',
-  SupplierNextActor.none => 'No actor',
-  SupplierNextActor.unknown || null => '—',
-};
-
-String _reasonLabel(String raw) => raw
-    .toLowerCase()
-    .split('_')
-    .where((part) => part.isNotEmpty)
-    .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-    .join(' ');
-
-String _deliveryStatusLabel(String raw) => switch (raw.toUpperCase()) {
-  'WAITING_FOR_DRIVER' => 'Waiting for driver',
-  'DRIVER_ASSIGNED' || 'ARRIVED_PICKUP' => 'Driver assigned',
-  'PICKED_UP' => 'Picked up by driver',
-  'ON_THE_WAY' || 'ARRIVED_DROPOFF' => 'On the way',
-  'DELIVERED' => 'Delivered',
-  'CANCELLED' => 'Delivery cancelled',
-  'FAILED_PICKUP' || 'FAILED_DELIVERY' => 'Delivery failed',
-  'DRIVER_NO_SHOW' => 'Driver no-show',
-  'LEARNER_NO_SHOW' => 'Learner no-show',
-  'AWAITING_RESOLUTION' => 'Needs admin review',
-  _ => 'Delivery requested',
-};
-
 AppStatusTone _statusTone(SupplierIncomingRequestStatus status) =>
     switch (status) {
       SupplierIncomingRequestStatus.completed ||
@@ -2010,24 +2030,6 @@ AppStatusTone _attentionTone(SupplierAttentionState? attention) =>
       SupplierAttentionState.terminal => AppStatusTone.success,
       _ => AppStatusTone.neutral,
     };
-
-String _actionLabel(SupplierReservationAction action) => switch (action) {
-  SupplierReservationAction.accept => 'Accept learner time',
-  SupplierReservationAction.decline => 'Decline request',
-  SupplierReservationAction.sendMessage => 'Send message',
-  SupplierReservationAction.completeSelfPickup => 'Complete self pickup',
-  SupplierReservationAction.proposeReschedule => 'Propose different time',
-  SupplierReservationAction.acceptLearnerReschedule => 'Accept learner time',
-  SupplierReservationAction.closeReservation => 'Close reservation',
-  SupplierReservationAction.markLearnerNoShow => 'Mark learner no-show',
-  SupplierReservationAction.reportIncident => 'Report incident',
-  SupplierReservationAction.reportNoDriver => 'Report no driver',
-  SupplierReservationAction.markDeliveryPickupExpired => 'Mark pickup expired',
-  SupplierReservationAction.reportDriverNoShow => 'Report driver no-show',
-  SupplierReservationAction.submitRecoveryPickupWindow =>
-    'Submit recovery pickup window',
-  SupplierReservationAction.unknown => 'Review request',
-};
 
 IconData _actionIcon(SupplierReservationAction action) => switch (action) {
   SupplierReservationAction.accept ||

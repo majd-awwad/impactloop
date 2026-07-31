@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
-import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../../core/format/localized_formatters.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -11,7 +10,8 @@ import '../../application/supplier_delivery_scheduling_preview.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/reservation_preferred_window.dart';
-import 'incoming_request_card.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+import '../supplier_reservation_ui_helpers.dart';
 import 'supplier_dark_form_field.dart';
 
 class AcceptIncomingRequestDialog extends StatefulWidget {
@@ -120,7 +120,7 @@ class _AcceptIncomingRequestDialogState
         ? widget.request.learnerPreferredDeliveryWindows
         : widget.request.learnerPreferredPickupWindows;
     final deliveryPreview = _deliveryPreview;
-    final timeFormat = DateFormat('MMM d, h:mm a');
+    final formatters = LocalizedFormatters(context.l10n);
 
     return Dialog(
       backgroundColor: colors.surfaceSolid,
@@ -197,7 +197,9 @@ class _AcceptIncomingRequestDialogState
                           true) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Delivery address: ${widget.request.deliveryAddressText!.trim()}',
+                      context.l10n.supplierDeliveryAddressPrefix(
+                        widget.request.deliveryAddressText!.trim(),
+                      ),
                       style: context.supplierBody().copyWith(fontSize: 13),
                     ),
                   ],
@@ -217,7 +219,9 @@ class _AcceptIncomingRequestDialogState
                         for (var i = 0; i < preferredWindows.length; i++)
                           ChoiceChip(
                             label: Text(
-                              formatPickupWindowShort(
+                              SupplierReservationUiHelpers.of(
+                                context,
+                              ).formatPickupWindow(
                                 SupplierPickupWindow(
                                   start: preferredWindows[i].start,
                                   end: preferredWindows[i].end,
@@ -394,7 +398,7 @@ class _AcceptIncomingRequestDialogState
                         children: [
                           Text(
                             context.s.deliveryEarliestAfterPickupLabel(
-                              timeFormat.format(
+                              formatters.dateTime(
                                 deliveryPreview.earliestDeliveryStart.toLocal(),
                               ),
                             ),
@@ -482,19 +486,8 @@ class _AcceptIncomingRequestDialogState
     );
   }
 
-  String _formatPreviewWindow(DateTime start, DateTime end) {
-    final localStart = start.toLocal();
-    final localEnd = end.toLocal();
-    final dateFormat = DateFormat('MMM d, h:mm a');
-
-    if (localStart.year == localEnd.year &&
-        localStart.month == localEnd.month &&
-        localStart.day == localEnd.day) {
-      return '${dateFormat.format(localStart)} – ${DateFormat('h:mm a').format(localEnd)}';
-    }
-
-    return '${dateFormat.format(localStart)} – ${dateFormat.format(localEnd)}';
-  }
+  String _formatPreviewWindow(DateTime start, DateTime end) =>
+      SupplierReservationUiHelpers.of(context).formatPickupWindowShort(start, end);
 
   void _applyPreferredWindow(dynamic window) {
     final start = (window.start as DateTime).toLocal();
@@ -652,8 +645,8 @@ class _AcceptIncomingRequestDialogState
 
         if (!proposedStart.isAfter(now)) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Delivery window must start in the future.'),
+            SnackBar(
+              content: Text(context.l10n.supplierDeliveryWindowMustStartFuture),
             ),
           );
           return;

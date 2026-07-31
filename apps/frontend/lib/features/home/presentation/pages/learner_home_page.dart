@@ -7,6 +7,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -28,8 +29,8 @@ class LearnerHomePage extends ConsumerWidget {
     final user = authState.user;
     final displayName = user?.displayName.trim();
     final greeting = displayName == null || displayName.isEmpty
-        ? 'Welcome back'
-        : 'Welcome back, $displayName';
+        ? context.l10n.welcomeBack
+        : context.l10n.homeGreeting(displayName);
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -112,7 +113,7 @@ class _WelcomeHero extends StatelessWidget {
                 ),
               ),
           icon: const Icon(Icons.search_rounded),
-          label: const Text('Browse Materials'),
+          label: Text(context.l10n.browseMaterialsAction),
         ),
       ),
       _HeroActionButton(
@@ -137,7 +138,7 @@ class _WelcomeHero extends StatelessWidget {
                 ),
               ),
           icon: const Icon(Icons.school_outlined),
-          label: const Text('Explore Learning Hub'),
+          label: Text(context.l10n.exploreLearningHub),
         ),
       ),
     ];
@@ -205,7 +206,7 @@ class _WelcomeHero extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Ready to build something today?',
+                    context.l10n.homeHeroTitle,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       color: palette.textPrimary,
                       fontWeight: FontWeight.w800,
@@ -216,7 +217,7 @@ class _WelcomeHero extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
-                    'Find reusable materials, explore project ideas, and manage reservation and delivery updates from one place.',
+                    context.l10n.homeHeroSubtitle,
                     style: AppTextStyles.subtitle(
                       context,
                     ).copyWith(color: palette.textSecondary, letterSpacing: 0),
@@ -305,9 +306,9 @@ class _QuickActionsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const HomeSectionHeader(
-          title: 'Quick actions',
-          subtitle: 'Start with the areas that are available today.',
+        HomeSectionHeader(
+          title: context.l10n.quickActions,
+          subtitle: context.l10n.quickActionsSubtitle,
         ),
         const SizedBox(height: AppSpacing.md),
         LayoutBuilder(
@@ -328,31 +329,33 @@ class _QuickActionsSection extends ConsumerWidget {
               HomeActionCard(
                 icon: Icons.inventory_2_outlined,
                 title: useCompactActions
-                    ? 'Materials'
-                    : 'Find reusable materials',
+                    ? context.l10n.materials
+                    : context.l10n.findReusableMaterials,
                 description: useCompactActions
-                    ? 'Browse items'
-                    : 'Search currently listed materials from suppliers.',
+                    ? context.l10n.browseItems
+                    : context.l10n.materialsActionDescription,
                 compact: useCompactActions,
                 onPressed: () => context.go('/materials'),
               ),
               HomeActionCard(
                 icon: Icons.school_outlined,
                 title: useCompactActions
-                    ? 'Learning'
-                    : 'Explore learning projects',
+                    ? context.l10n.learning
+                    : context.l10n.exploreLearningProjects,
                 description: useCompactActions
-                    ? 'Explore projects'
-                    : 'Open the Learning Hub project catalog.',
+                    ? context.l10n.exploreProjects
+                    : context.l10n.learningActionDescription,
                 compact: useCompactActions,
                 onPressed: () => context.go('/learning'),
               ),
               HomeActionCard(
                 icon: Icons.assignment_turned_in_outlined,
-                title: useCompactActions ? 'Reservations' : 'My Reservations',
+                title: useCompactActions
+                    ? context.l10n.reservations
+                    : context.l10n.myReservations,
                 description: useCompactActions
-                    ? 'Track pickups'
-                    : 'Track supplier responses and pickup windows for requested materials.',
+                    ? context.l10n.trackPickups
+                    : context.l10n.reservationsActionDescription,
                 compact: useCompactActions,
                 onPressed: () => context.go(learnerReservationsRoute),
               ),
@@ -413,11 +416,13 @@ class _PersonalizedFeedSection extends ConsumerWidget {
           icon: failure.kind == LearnerHomeErrorKind.sessionExpired
               ? Icons.lock_clock_outlined
               : Icons.cloud_off_outlined,
-          title: failure.title,
-          description: failure.description,
+          title: failure.kind == LearnerHomeErrorKind.sessionExpired
+              ? context.l10n.sessionExpired
+              : context.l10n.somethingWentWrong,
+          description: context.l10n.tryAgain,
           actionLabel: failure.kind == LearnerHomeErrorKind.sessionExpired
               ? null
-              : 'Retry',
+              : context.l10n.retry,
           onAction: failure.kind == LearnerHomeErrorKind.sessionExpired
               ? null
               : () => ref.invalidate(learnerHomeFeedProvider),
@@ -434,16 +439,15 @@ class _FutureToolsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const HomeSectionHeader(
-          title: 'Coming later',
-          subtitle: 'Impact insights are planned but not available yet.',
+        HomeSectionHeader(
+          title: context.l10n.comingLater,
+          subtitle: context.l10n.comingLaterSubtitle,
         ),
         const SizedBox(height: AppSpacing.md),
-        const EmptyActivityCard(
+        EmptyActivityCard(
           icon: Icons.eco_outlined,
-          title: 'Impact snapshot',
-          description:
-              'Your reuse impact will appear here after you complete reservations and projects.',
+          title: context.l10n.impactSnapshot,
+          description: context.l10n.impactSnapshotDescription,
         ),
       ],
     );
