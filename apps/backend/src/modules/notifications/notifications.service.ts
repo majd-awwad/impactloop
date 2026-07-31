@@ -64,6 +64,13 @@ const safeCreatedAt = (value: unknown) => {
   return new Date(0).toISOString();
 };
 
+const safeMetadata = (value: unknown): Record<string, unknown> => {
+  if (value == null || Array.isArray(value) || typeof value !== 'object') {
+    return {};
+  }
+  return value as Record<string, unknown>;
+};
+
 const mapNotification = (notification: NotificationRow) => ({
   id: safeString(notification.id, 'unknown-notification'),
   notificationType: safeNotificationType(notification.notificationType),
@@ -71,6 +78,8 @@ const mapNotification = (notification: NotificationRow) => ({
   body: safeString(notification.body, ''),
   relatedEntityType: safeNullableString(notification.relatedEntityType),
   relatedEntityId: safeNullableString(notification.relatedEntityId),
+  actionType: safeNullableString(notification.actionType),
+  metadata: safeMetadata(notification.metadata),
   isRead: notification.isRead === true,
   createdAt: safeCreatedAt(notification.createdAt),
 });

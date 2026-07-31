@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/l10n.dart';
+
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -2136,7 +2138,7 @@ class _LearnerReservationStateCard extends StatelessWidget {
           if (delivery != null) ...[
             const SizedBox(height: AppSpacing.sm),
             AppStatusBadge(
-              label: deliveryStatusLabel(delivery!.status),
+              label: deliveryStatusLabel(delivery!.status, l10n: context.l10n),
               tone: deliveryStatusAppTone(delivery!.status),
             ),
           ],
@@ -2500,7 +2502,10 @@ class _ReportMaterialSection extends ConsumerWidget {
     } on ApiException catch (error) {
       noteController.dispose();
       if (!context.mounted) return;
-      showErrorSnackBar(context, error.displayMessage);
+      showErrorSnackBar(
+        context,
+        localizedApiErrorMessage(error, context.l10n),
+      );
     } catch (_) {
       noteController.dispose();
       if (!context.mounted) return;
@@ -2977,9 +2982,9 @@ class _ReserveMaterialDialogState
       setState(() {
         _quoteLoading = false;
         _quote = null;
-        _quoteError = error.message.toLowerCase().contains('delivery')
-            ? 'Could not calculate delivery price. Please check delivery location.'
-            : error.message;
+        _quoteError = error.code == 'NETWORK_ERROR' || error.code == 'TIMEOUT'
+            ? localizedApiErrorMessage(error, context.l10n)
+            : context.l10n.deliveryQuoteFailed;
       });
     } catch (_) {
       if (!mounted) {
@@ -2989,8 +2994,7 @@ class _ReserveMaterialDialogState
       setState(() {
         _quoteLoading = false;
         _quote = null;
-        _quoteError =
-            'Could not calculate delivery price. Please check delivery location.';
+        _quoteError = context.l10n.deliveryQuoteFailed;
       });
     }
   }
@@ -3229,7 +3233,10 @@ class _ReserveMaterialDialogState
 
         setState(() {
           _isSubmitting = false;
-          _errorMessage = reservationCreateErrorMessage(error);
+          _errorMessage = reservationCreateErrorMessage(
+            error,
+            l10n: context.l10n,
+          );
         });
         return;
       } catch (_) {
@@ -3301,7 +3308,10 @@ class _ReserveMaterialDialogState
 
         setState(() {
           _isSubmitting = false;
-          _errorMessage = reservationCreateErrorMessage(error);
+          _errorMessage = reservationCreateErrorMessage(
+            error,
+            l10n: context.l10n,
+          );
         });
         return;
       } catch (_) {

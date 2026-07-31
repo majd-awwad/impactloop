@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../supplier_portal/application/supplier_verification_access.dart';
@@ -187,7 +188,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           _skillLevelError == null &&
           _supplierTypeError == null &&
           _cityError == null) {
-        _formError = error.displayMessage;
+        _formError = localizedApiErrorMessage(error, context.l10n);
       }
     });
   }

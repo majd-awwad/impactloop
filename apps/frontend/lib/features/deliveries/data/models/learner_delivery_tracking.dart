@@ -1,3 +1,5 @@
+import '../../domain/delivery_status_contract.dart';
+
 class LearnerDeliveryTrackingLocation {
   const LearnerDeliveryTrackingLocation({
     required this.latitude,
@@ -78,20 +80,7 @@ class LearnerDeliveryTracking {
 
   String get routeLabel => 'Pickup: $pickupSummary → Drop-off: $dropoffSummary';
 
-  bool get isTerminal {
-    switch (status) {
-      case 'DELIVERED':
-      case 'CANCELLED':
-      case 'FAILED_PICKUP':
-      case 'FAILED_DELIVERY':
-      case 'DRIVER_NO_SHOW':
-      case 'LEARNER_NO_SHOW':
-      case 'AWAITING_RESOLUTION':
-        return true;
-      default:
-        return false;
-    }
-  }
+  bool get isTerminal => isTerminalLearnerDeliveryStatus(status);
 
   factory LearnerDeliveryTracking.fromJson(Map<String, dynamic> json) {
     final locationJson = json['latestDriverLocation'];

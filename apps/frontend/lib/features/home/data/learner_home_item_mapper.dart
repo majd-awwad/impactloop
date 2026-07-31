@@ -9,6 +9,7 @@ class LearnerHomeItemMapper {
     final type = json['type'] as String? ?? '';
     final score = (json['score'] as num?)?.toInt() ?? 0;
     final reasons = _parseReasons(json['reasons']);
+    final reasonDetails = _parseReasonDetails(json['reasonDetails']);
 
     switch (type) {
       case 'material':
@@ -20,6 +21,7 @@ class LearnerHomeItemMapper {
         return LearnerHomeMaterialRecommendation(
           score: score,
           reasons: reasons,
+          reasonDetails: reasonDetails,
           material: MaterialDiscoveryApiMapper.fromJson(
             Map<String, dynamic>.from(materialJson),
           ),
@@ -33,6 +35,7 @@ class LearnerHomeItemMapper {
         return LearnerHomeProjectRecommendation(
           score: score,
           reasons: reasons,
+          reasonDetails: reasonDetails,
           project: LearningHubApiMapper.fromListItemJson(
             Map<String, dynamic>.from(projectJson),
           ),
@@ -56,6 +59,7 @@ class LearnerHomeItemMapper {
         return LearnerHomeContinueProjectRecommendation(
           score: score,
           reasons: reasons,
+          reasonDetails: reasonDetails,
           projectId:
               build['projectId'] as String? ?? project['id'] as String? ?? '',
           projectTitle: project['title'] as String? ?? 'Project',
@@ -79,6 +83,25 @@ class LearnerHomeItemMapper {
         .whereType<String>()
         .map((reason) => reason.trim())
         .where((reason) => reason.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  static List<LearnerHomeRecommendationReason> _parseReasonDetails(
+    Object? json,
+  ) {
+    if (json is! List) return const [];
+    return json
+        .whereType<Map>()
+        .map((item) {
+          final mapped = Map<String, dynamic>.from(item);
+          final params = mapped['params'];
+          return LearnerHomeRecommendationReason(
+            code: mapped['code']?.toString() ?? 'GENERAL_RECOMMENDATION',
+            params: params is Map
+                ? Map<String, dynamic>.from(params)
+                : const {},
+          );
+        })
         .toList(growable: false);
   }
 }

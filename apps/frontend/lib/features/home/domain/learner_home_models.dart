@@ -52,17 +52,33 @@ enum LearnerHomeSectionKey {
   }
 }
 
+class LearnerHomeRecommendationReason {
+  const LearnerHomeRecommendationReason({
+    required this.code,
+    this.params = const {},
+  });
+
+  final String code;
+  final Map<String, dynamic> params;
+}
+
 sealed class LearnerHomeItem {
-  const LearnerHomeItem({required this.score, required this.reasons});
+  const LearnerHomeItem({
+    required this.score,
+    required this.reasons,
+    this.reasonDetails = const [],
+  });
 
   final int score;
   final List<String> reasons;
+  final List<LearnerHomeRecommendationReason> reasonDetails;
 }
 
 class LearnerHomeMaterialRecommendation extends LearnerHomeItem {
   const LearnerHomeMaterialRecommendation({
     required super.score,
     required super.reasons,
+    super.reasonDetails,
     required this.material,
   });
 
@@ -73,6 +89,7 @@ class LearnerHomeProjectRecommendation extends LearnerHomeItem {
   const LearnerHomeProjectRecommendation({
     required super.score,
     required super.reasons,
+    super.reasonDetails,
     required this.project,
   });
 
@@ -83,6 +100,7 @@ class LearnerHomeContinueProjectRecommendation extends LearnerHomeItem {
   const LearnerHomeContinueProjectRecommendation({
     required super.score,
     required super.reasons,
+    super.reasonDetails,
     required this.projectId,
     required this.projectTitle,
     required this.shortDescription,

@@ -1,4 +1,5 @@
 import '../data/models/app_notification.dart';
+import '../../../l10n/app_localizations.dart';
 
 final RegExp _testTagPattern = RegExp(r'\[test[^\]]*\]', caseSensitive: false);
 
@@ -62,7 +63,20 @@ NotificationVisualCategory categoryForNotification(
   }
 }
 
-String notificationTypeChipLabel(NotificationVisualCategory category) {
+String notificationTypeChipLabel(
+  NotificationVisualCategory category, {
+  AppLocalizations? l10n,
+}) {
+  if (l10n != null) {
+    return switch (category) {
+      NotificationVisualCategory.job => l10n.notificationChipJob,
+      NotificationVisualCategory.reminder => l10n.notificationChipReminder,
+      NotificationVisualCategory.deliveryUpdate =>
+        l10n.notificationChipDelivery,
+      NotificationVisualCategory.account => l10n.notificationChipAccount,
+      NotificationVisualCategory.general => l10n.notificationChipUpdate,
+    };
+  }
   switch (category) {
     case NotificationVisualCategory.job:
       return 'Job';
@@ -77,26 +91,113 @@ String notificationTypeChipLabel(NotificationVisualCategory category) {
   }
 }
 
-String notificationActionLabel(AppNotification notification) {
+String notificationActionLabel(
+  AppNotification notification, {
+  AppLocalizations? l10n,
+}) {
   if (notification.relatedEntityType == 'DELIVERY') {
     if (notification.notificationType == 'DRIVER_NEW_JOB') {
-      return 'View jobs';
+      return l10n?.viewJobs ?? 'View jobs';
     }
     if (notification.notificationType ==
             'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
         notification.notificationType ==
             'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN') {
-      return 'View details';
+      return l10n?.viewDetails ?? 'View details';
     }
-    return 'View delivery';
+    return l10n?.viewDelivery ?? 'View delivery';
   }
   if (notification.relatedEntityType == 'RESERVATION') {
-    return 'View reservation';
+    return l10n?.viewReservation ?? 'View reservation';
   }
   if (notification.relatedEntityType == 'LEARNING_PROJECT') {
-    return 'View submission';
+    return l10n?.viewSubmission ?? 'View submission';
   }
-  return 'Open';
+  return l10n?.open ?? 'Open';
+}
+
+typedef LocalizedNotificationCopy = ({String title, String body});
+
+LocalizedNotificationCopy localizedNotificationCopy(
+  AppNotification notification,
+  AppLocalizations l10n,
+) {
+  final contentTitle =
+      notification.metadata['materialTitle']?.toString().trim() ?? '';
+  final projectTitle =
+      notification.metadata['projectTitle']?.toString().trim() ?? '';
+  final materialTitle = contentTitle.isEmpty ? l10n.material : contentTitle;
+  final safeProjectTitle = projectTitle.isEmpty
+      ? l10n.learningProject
+      : projectTitle;
+  final moderationEvent =
+      notification.metadata['moderationEvent']
+          ?.toString()
+          .trim()
+          .toUpperCase() ??
+      '';
+  final feedback = notification.metadata['feedback']?.toString().trim() ?? '';
+
+  String withFeedback(String summary) => feedback.isEmpty
+      ? summary
+      : l10n.projectModerationFeedback(summary, feedback);
+
+  return switch (notification.notificationType) {
+    'RESERVATION_ACCEPTED' => (
+      title: l10n.reservationAcceptedTitle,
+      body: l10n.reservationAcceptedBody(materialTitle),
+    ),
+    'RESERVATION_SCHEDULING_PROPOSAL' => (
+      title: l10n.reservationProposalTitle,
+      body: l10n.reservationProposalBody(materialTitle),
+    ),
+    'RESERVATION_DECLINED' => (
+      title: l10n.reservationDeclinedTitle,
+      body: l10n.reservationDeclinedBody(materialTitle),
+    ),
+    'RESERVATION_EXPIRED' => (
+      title: l10n.reservationExpiredTitle,
+      body: l10n.reservationExpiredBody(materialTitle),
+    ),
+    'LEARNING_PROJECT_MODERATION' => switch (moderationEvent) {
+      'APPROVED' => (
+        title: l10n.projectApprovedTitle,
+        body: l10n.projectApprovedBody(safeProjectTitle),
+      ),
+      'CHANGES_REQUESTED' => (
+        title: l10n.projectChangesRequestedTitle,
+        body: withFeedback(l10n.projectChangesRequestedBody(safeProjectTitle)),
+      ),
+      'REJECTED' => (
+        title: l10n.projectRejectedTitle,
+        body: withFeedback(l10n.projectRejectedBody(safeProjectTitle)),
+      ),
+      'HIDDEN' => (
+        title: l10n.projectHiddenTitle,
+        body: withFeedback(l10n.projectHiddenBody(safeProjectTitle)),
+      ),
+      'RESTORED' => (
+        title: l10n.projectRestoredTitle,
+        body: l10n.projectRestoredBody(safeProjectTitle),
+      ),
+      'ARCHIVED' => (
+        title: l10n.projectArchivedTitle,
+        body: withFeedback(l10n.projectArchivedBody(safeProjectTitle)),
+      ),
+      _ => (
+        title: l10n.projectModerationTitle,
+        body: l10n.projectModerationBody(safeProjectTitle),
+      ),
+    },
+    _ when l10n.localeName == 'en' && notification.title.trim().isNotEmpty => (
+      title: notification.title,
+      body: notification.body,
+    ),
+    _ => (
+      title: l10n.notificationFallbackTitle,
+      body: l10n.notificationFallbackBody,
+    ),
+  };
 }
 
 bool notificationHasNavigationTarget(AppNotification notification) {

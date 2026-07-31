@@ -1,8 +1,11 @@
 import '../../driver_portal/data/models/driver_delivery.dart';
+import '../../../core/format/localized_formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../data/models/learner_delivery.dart';
 
 String learnerReservationPickupWindowDetail(
   LearnerDeliveryReservation reservation,
+  AppLocalizations l10n,
 ) {
   final start =
       reservation.supplierPickupWindowStart ?? reservation.pickupWindowStart;
@@ -10,14 +13,14 @@ String learnerReservationPickupWindowDetail(
       reservation.supplierPickupWindowEnd ?? reservation.pickupWindowEnd;
 
   if (start == null && end == null) {
-    return 'Pickup window not set';
+    return l10n.pickupWindowNotSet;
   }
 
   if (start != null && end != null) {
-    return '${_formatDateTime(start)} – ${_formatDateTime(end)}';
+    return LocalizedFormatters(l10n).dateTimeRange(start, end);
   }
 
-  return _formatDateTime(start ?? end!);
+  return LocalizedFormatters(l10n).dateTime(start ?? end!);
 }
 
 String driverPickupWindowSummary(DriverDelivery delivery, {DateTime? now}) {

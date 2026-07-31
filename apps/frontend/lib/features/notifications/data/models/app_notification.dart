@@ -8,6 +8,8 @@ class AppNotification {
     required this.createdAt,
     this.relatedEntityType,
     this.relatedEntityId,
+    this.actionType,
+    this.metadata = const {},
   });
 
   final String id;
@@ -18,6 +20,8 @@ class AppNotification {
   final DateTime createdAt;
   final String? relatedEntityType;
   final String? relatedEntityId;
+  final String? actionType;
+  final Map<String, dynamic> metadata;
 
   factory AppNotification.fromJson(Map<String, dynamic> json) {
     return AppNotification(
@@ -31,6 +35,10 @@ class AppNotification {
           DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
       relatedEntityType: json['relatedEntityType'] as String?,
       relatedEntityId: json['relatedEntityId'] as String?,
+      actionType: json['actionType'] as String?,
+      metadata: json['metadata'] is Map
+          ? Map<String, dynamic>.from(json['metadata'] as Map)
+          : const {},
     );
   }
 
@@ -43,6 +51,8 @@ class AppNotification {
     DateTime? createdAt,
     String? relatedEntityType,
     String? relatedEntityId,
+    String? actionType,
+    Map<String, dynamic>? metadata,
   }) {
     return AppNotification(
       id: id ?? this.id,
@@ -53,6 +63,8 @@ class AppNotification {
       createdAt: createdAt ?? this.createdAt,
       relatedEntityType: relatedEntityType ?? this.relatedEntityType,
       relatedEntityId: relatedEntityId ?? this.relatedEntityId,
+      actionType: actionType ?? this.actionType,
+      metadata: metadata ?? this.metadata,
     );
   }
 }

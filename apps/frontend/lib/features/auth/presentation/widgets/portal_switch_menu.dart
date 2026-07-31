@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_route_helpers.dart';
 import '../../application/portal_navigation.dart';
@@ -17,6 +18,7 @@ Future<void> handlePortalRoleSwitch({
 }) async {
   final router = GoRouter.of(context);
   final messenger = ScaffoldMessenger.maybeOf(context);
+  final l10n = context.l10n;
   final authController = ref.read(authControllerProvider.notifier);
 
   onBeforeSwitch?.call();
@@ -32,7 +34,7 @@ Future<void> handlePortalRoleSwitch({
 
     showAppInlineErrorSnackBar(
       messenger,
-      failureMessage ?? error.displayMessage,
+      failureMessage ?? localizedApiErrorMessage(error, l10n),
     );
   }
 }

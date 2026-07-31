@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_navigation.dart';
 import '../../application/auth_providers.dart';
@@ -81,7 +82,12 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
       setState(() {
         _isSubmitting = false;
         _emailError = firstFieldError(apiError, const ['email']);
-        _formError = _emailError == null ? apiError.displayMessage : null;
+        _emailError = _emailError == null
+            ? null
+            : context.l10n.validEmailRequired;
+        _formError = _emailError == null
+            ? localizedApiErrorMessage(apiError, context.l10n)
+            : null;
       });
     }
   }
@@ -89,6 +95,7 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
   @override
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
+    final l10n = context.l10n;
 
     if (_sent) {
       return Column(
@@ -97,7 +104,7 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
           Icon(Icons.mark_email_read_outlined, color: colors.primary, size: 36),
           const SizedBox(height: AppSpacing.md),
           Text(
-            forgotPasswordGenericSuccessMessage,
+            l10n.forgotPasswordSuccess,
             style: TextStyle(
               color: colors.textSecondary,
               height: 1.5,
@@ -106,7 +113,7 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
           ),
           const SizedBox(height: AppSpacing.lg),
           AuthPrimaryButton(
-            label: 'Back to sign in',
+            label: l10n.backToSignIn,
             onPressed: () => context.go(loginRoute),
           ),
         ],
@@ -120,8 +127,8 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
         children: [
           AuthTextField(
             controller: _emailController,
-            label: 'Email',
-            hint: 'you@example.com',
+            label: l10n.email,
+            hint: l10n.emailHint,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.email],
@@ -135,10 +142,10 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
             validator: (value) {
               final trimmed = value?.trim() ?? '';
               if (trimmed.isEmpty) {
-                return 'Email is required';
+                return l10n.emailRequired;
               }
               if (!trimmed.contains('@')) {
-                return 'Enter a valid email address';
+                return l10n.validEmailRequired;
               }
               return null;
             },
@@ -146,13 +153,13 @@ class _ForgotPasswordFormState extends ConsumerState<ForgotPasswordForm> {
           if (_formError != null) AppInlineError(message: _formError!),
           const SizedBox(height: AppSpacing.lg),
           AuthPrimaryButton(
-            label: 'Send reset instructions',
+            label: l10n.sendResetInstructions,
             isLoading: _isSubmitting,
             onPressed: _handleSubmit,
           ),
           const SizedBox(height: AppSpacing.sm),
           AuthOutlinedButton(
-            label: 'Back to sign in',
+            label: l10n.backToSignIn,
             onPressed: _isSubmitting ? null : () => context.go(loginRoute),
           ),
         ],

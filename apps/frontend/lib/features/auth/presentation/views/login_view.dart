@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../widgets/auth_entry_branding_panel.dart';
 import '../widgets/auth_form_card.dart';
 import '../widgets/auth_header.dart';
@@ -23,10 +24,9 @@ class LoginView extends StatelessWidget {
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AuthHeader(
-            title: 'Welcome back',
-            subtitle:
-                'Sign in to continue discovering materials and building with less waste.',
+          AuthHeader(
+            title: context.l10n.welcomeBack,
+            subtitle: context.l10n.loginSubtitle,
           ),
           const SizedBox(height: AppSpacing.md),
           const AuthFormCard(footer: LoginFooter(), child: LoginForm()),

@@ -59,6 +59,7 @@ import type {
   LearnerHomeContinueProjectItem,
   LearnerHomeMaterialItem,
   LearnerHomeProjectItem,
+  LearnerHomeRecommendationReason,
   LearnerHomeResponse,
   LearnerHomeSection,
   LearnerHomeSectionDetails,
@@ -510,6 +511,47 @@ const SECTION_SUBTITLES: Record<LearnerHomeSectionKey, string> = {
   popular_projects: 'Popular learning projects across ImpactLoop.',
 };
 
+const recommendationReasonDetail = (
+  reason: string,
+): LearnerHomeRecommendationReason => {
+  const exactCodes: Record<string, string> = {
+    'Similar to materials you reserved': 'SIMILAR_TO_RESERVED_MATERIALS',
+    'Matches your recent activity': 'MATCHES_RECENT_ACTIVITY',
+    'Related to your saved projects': 'RELATED_TO_SAVED_PROJECTS',
+    'Based on projects you liked': 'BASED_ON_LIKED_PROJECTS',
+    'Related to projects you follow': 'RELATED_TO_FOLLOWED_PROJECTS',
+    'Related to materials in your activity': 'RELATED_TO_MATERIAL_ACTIVITY',
+    'Available near your saved location': 'AVAILABLE_NEAR_SAVED_LOCATION',
+    'Free material': 'FREE_MATERIAL',
+    'Free material near your saved location': 'FREE_NEAR_SAVED_LOCATION',
+    'Delivery available': 'DELIVERY_AVAILABLE',
+    'Popular material': 'POPULAR_MATERIAL',
+    'Recently added': 'RECENTLY_ADDED',
+  };
+  const exactCode = exactCodes[reason];
+  if (exactCode) return { code: exactCode, params: {} };
+
+  const interest = /^Matches your (.+) interest$/i.exec(reason);
+  if (interest) {
+    return { code: 'MATCHES_INTEREST', params: { interest: interest[1]!.trim() } };
+  }
+  const building = /^Because you are building a (.+) project$/i.exec(reason);
+  if (building) {
+    return { code: 'BUILDING_PROJECT_CATEGORY', params: { category: building[1]!.trim() } };
+  }
+  const progress = /^(\d+) of (\d+) components ready$/i.exec(reason);
+  if (progress) {
+    return {
+      code: 'COMPONENTS_READY',
+      params: { ready: Number(progress[1]), total: Number(progress[2]) },
+    };
+  }
+  return { code: 'GENERAL_RECOMMENDATION', params: {} };
+};
+
+const recommendationReasonDetails = (reasons: string[]) =>
+  reasons.map(recommendationReasonDetail);
+
 const isBuildItemReady = (item: {
   status: string;
   linkedReservation: { status: string } | null;
@@ -555,6 +597,12 @@ const mapContinueBuild = (
     reasons:
       totalItems > 0
         ? [`${readyItems.length} of ${totalItems} components ready`]
+        : [],
+    reasonDetails:
+      totalItems > 0
+        ? recommendationReasonDetails([
+            `${readyItems.length} of ${totalItems} components ready`,
+          ])
         : [],
     build: {
       id: build.id,
@@ -1079,7 +1127,10 @@ const toMaterialItem = ({
   hasPrimaryRelevance: _hasPrimaryRelevance,
   fallbackOnly: _fallbackOnly,
   ...item
-}: RankedMaterialEntry): LearnerHomeMaterialItem => item;
+}: RankedMaterialEntry): LearnerHomeMaterialItem => ({
+  ...item,
+  reasonDetails: recommendationReasonDetails(item.reasons),
+});
 
 const rankMaterialsFromPreScored = (
   entries: PreScoredMaterialEntry[],
@@ -1247,6 +1298,7 @@ export const rankProjects = (
         type: 'project' as const,
         score: scored.score,
         reasons: scored.reasons,
+        reasonDetails: recommendationReasonDetails(scored.reasons),
         project: project.mapped,
         tier: scored.tier ?? 99,
       };

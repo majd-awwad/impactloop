@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
@@ -109,7 +110,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
       if (_supplierTypeError == null &&
           _publicNameError == null &&
           _cityError == null) {
-        _formError = error.displayMessage;
+        _formError = localizedApiErrorMessage(error, context.l10n);
       }
     });
   }
