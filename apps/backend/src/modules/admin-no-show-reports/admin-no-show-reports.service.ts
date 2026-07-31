@@ -72,11 +72,7 @@ const throwActionUnavailable = (): never => {
 };
 
 export const listAdminNoShowReports = async (query: AdminNoShowReportsListQuery) => {
-  const result = await repository.listNoShowReportsForAdmin({
-    status: query.status,
-    page: query.page,
-    limit: query.limit,
-  });
+  const result = await repository.listNoShowReportsForAdmin(query);
 
   return {
     items: result.items.map(mapReport),
