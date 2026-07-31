@@ -26,6 +26,11 @@ class ProfileImagePicker extends StatelessWidget {
     required this.isUploading,
     required this.onPickImage,
     required this.onRemoveImage,
+    required this.photoLabel,
+    required this.requirementsLabel,
+    required this.chooseLabel,
+    required this.uploadingLabel,
+    required this.removeLabel,
   });
 
   final String displayInitial;
@@ -34,6 +39,11 @@ class ProfileImagePicker extends StatelessWidget {
   final bool isUploading;
   final VoidCallback onPickImage;
   final VoidCallback onRemoveImage;
+  final String photoLabel;
+  final String requirementsLabel;
+  final String chooseLabel;
+  final String uploadingLabel;
+  final String removeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +83,7 @@ class ProfileImagePicker extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Profile photo',
+                photoLabel,
                 style: AppTextStyles.label(context).copyWith(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w800,
@@ -81,7 +91,7 @@ class ProfileImagePicker extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'JPG, PNG, or WebP up to 5 MB.',
+                requirementsLabel,
                 style: AppTextStyles.label(context).copyWith(
                   color: colors.textSecondary,
                   fontWeight: FontWeight.w600,
@@ -99,7 +109,7 @@ class ProfileImagePicker extends StatelessWidget {
                       AppStatusTone.primary,
                     ),
                     icon: const Icon(Icons.photo_outlined, size: 18),
-                    label: Text(isUploading ? 'Uploading...' : 'Choose photo'),
+                    label: Text(isUploading ? uploadingLabel : chooseLabel),
                   ),
                   if (imageProvider != null)
                     TextButton(
@@ -108,7 +118,7 @@ class ProfileImagePicker extends StatelessWidget {
                         context,
                         AppStatusTone.danger,
                       ),
-                      child: const Text('Remove'),
+                      child: Text(removeLabel),
                     ),
                 ],
               ),
@@ -136,11 +146,17 @@ Future<PendingProfileImage?> pickProfileImageFile() async {
   final bytes = file.bytes;
 
   if (bytes == null || bytes.isEmpty) {
-    throw const ApiException(message: 'Could not read the selected image.');
+    throw const ApiException(
+      message: 'Could not read the selected image.',
+      code: 'PROFILE_IMAGE_READ_FAILED',
+    );
   }
 
   if (bytes.length > _maxBytes) {
-    throw const ApiException(message: 'The image must be 5 MB or smaller.');
+    throw const ApiException(
+      message: 'The image must be 5 MB or smaller.',
+      code: 'PROFILE_IMAGE_TOO_LARGE',
+    );
   }
 
   final extension = (file.extension ?? 'jpg').toLowerCase();

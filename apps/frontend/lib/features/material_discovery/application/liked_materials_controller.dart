@@ -290,7 +290,10 @@ class LikedMaterialsController extends AsyncNotifier<LikedMaterialsState> {
         ),
       );
       ref.invalidate(homeSuggestedMaterialsProvider);
-      invalidateLearnerProfileSummaryProvider(ref);
+      invalidateLearnerProfileSummaryProvider(
+        ref,
+        ref.read(authControllerProvider).user?.id,
+      );
       _reconciliationRequested = true;
     } catch (_) {
       _unlikeInFlight.remove(materialId);

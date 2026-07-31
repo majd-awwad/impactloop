@@ -44,15 +44,16 @@ class AppMobileBottomNavBar extends ConsumerWidget {
     final user = authState.user;
     final profileRoute = user == null ? '/login' : '/profile';
     final currentPath = _currentPath(context);
+    final labels = _MobileNavigationLabels.of(context);
     final items = [
       _MobileNavDestination(
-        label: 'Home',
+        label: labels.home,
         icon: Icons.home_rounded,
         route: '/home',
         selected: currentPath == '/home',
       ),
       _MobileNavDestination(
-        label: 'Materials',
+        label: labels.materials,
         icon: Icons.inventory_2_rounded,
         route: '/materials',
         selected:
@@ -60,14 +61,14 @@ class AppMobileBottomNavBar extends ConsumerWidget {
             currentPath.startsWith('/materials/'),
       ),
       _MobileNavDestination(
-        label: 'Learning',
+        label: labels.learning,
         icon: Icons.school_rounded,
         route: '/learning',
         selected:
             currentPath == '/learning' || currentPath.startsWith('/learning/'),
       ),
       _MobileNavDestination(
-        label: 'Reservations',
+        label: labels.reservations,
         icon: Icons.receipt_long_rounded,
         route: '/learner/reservations',
         selected:
@@ -76,7 +77,7 @@ class AppMobileBottomNavBar extends ConsumerWidget {
             currentPath.startsWith('/learner/deliveries/'),
       ),
       _MobileNavDestination(
-        label: 'Profile',
+        label: labels.profile,
         icon: Icons.person_rounded,
         route: profileRoute,
         selected:
@@ -188,6 +189,25 @@ class AppMobileNavigationShell extends ConsumerWidget {
       bottomNavigationBar: shellOpen ? null : const AppMobileBottomNavBar(),
     );
   }
+}
+
+class _MobileNavigationLabels {
+  const _MobileNavigationLabels(this.isArabic);
+
+  factory _MobileNavigationLabels.of(BuildContext context) {
+    return _MobileNavigationLabels(
+      Localizations.localeOf(context).languageCode.toLowerCase() == 'ar',
+    );
+  }
+
+  final bool isArabic;
+
+  String _t(String en, String ar) => isArabic ? ar : en;
+  String get home => _t('Home', 'الرئيسية');
+  String get materials => _t('Materials', 'المواد');
+  String get learning => _t('Learning', 'التعلّم');
+  String get reservations => _t('Reservations', 'الحجوزات');
+  String get profile => _t('Profile', 'الملف الشخصي');
 }
 
 class _MobileNavDestination {

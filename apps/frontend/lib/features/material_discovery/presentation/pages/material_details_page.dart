@@ -466,7 +466,10 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
       }
 
       ref.invalidate(homeSuggestedMaterialsProvider);
-      ref.invalidate(learnerProfileSummaryProvider);
+      final userId = ref.read(authControllerProvider).user?.id;
+      if (userId != null && userId.trim().isNotEmpty) {
+        ref.invalidate(learnerProfileSummaryProvider(userId));
+      }
       setState(() {
         _materialOverride = optimisticMaterial.copyWith(
           likesCount: engagement.likesCount,

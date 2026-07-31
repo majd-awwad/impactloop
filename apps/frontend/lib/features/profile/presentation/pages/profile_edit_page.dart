@@ -12,6 +12,7 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/profile_providers.dart';
 import '../../data/models/uploaded_profile_image.dart';
+import '../l10n/account_settings_l10n.dart';
 import '../widgets/profile_image_picker.dart';
 
 class ProfileEditPage extends ConsumerStatefulWidget {
@@ -82,6 +83,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
   }
 
   Future<void> _pickImage() async {
+    final l10n = AccountSettingsL10n.of(context);
     try {
       final picked = await pickProfileImageFile();
       if (picked == null) {
@@ -96,7 +98,12 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       if (!mounted) {
         return;
       }
-      showErrorSnackBar(context, error);
+      final message = switch (error.code) {
+        'PROFILE_IMAGE_READ_FAILED' => l10n.imageReadFailed,
+        'PROFILE_IMAGE_TOO_LARGE' => l10n.imageTooLarge,
+        _ => error.displayMessage,
+      };
+      showErrorSnackBar(context, message);
     }
   }
 
@@ -123,6 +130,7 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
     }
 
     setState(() => _isSubmitting = true);
+    final l10n = AccountSettingsL10n.of(context);
 
     try {
       String? profileImageUrl;
@@ -153,13 +161,23 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
           );
 
       ref.read(authControllerProvider.notifier).syncAuthenticatedUser(user);
-      await ref.read(authControllerProvider.notifier).refreshCurrentUser();
+      var accountRefreshFailed = false;
+      try {
+        await ref.read(authControllerProvider.notifier).refreshCurrentUser();
+      } catch (_) {
+        accountRefreshFailed = true;
+      }
 
       if (!mounted) {
         return;
       }
 
-      showInfoSnackBar(context, 'Profile updated.');
+      showInfoSnackBar(
+        context,
+        accountRefreshFailed
+            ? l10n.profileSavedRefreshFailed
+            : l10n.profileUpdated,
+      );
       context.popOrGo('/profile');
     } on ApiException catch (error) {
       if (!mounted) {
@@ -183,19 +201,21 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
       setState(() {
         _isSubmitting = false;
         _isUploading = false;
-        _formError = 'Could not update your profile. Please try again.';
+        _formError = l10n.updateProfileFailed;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AccountSettingsL10n.of(context);
     final previewImageUrl = _removeImage
         ? null
         : (_pendingImage == null ? _currentImageUrl : null);
 
     return ProfileSubpageScaffold(
-      title: 'Edit profile',
+      title: l10n.editProfile,
+      backTooltip: l10n.back,
       child: ProfileEditCard(
         child: Form(
           key: _formKey,
@@ -209,16 +229,21 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
                 isUploading: _isUploading,
                 onPickImage: _pickImage,
                 onRemoveImage: _removeImageSelection,
+                photoLabel: l10n.profilePhoto,
+                requirementsLabel: l10n.profilePhotoRequirements,
+                chooseLabel: l10n.choosePhoto,
+                uploadingLabel: l10n.uploading,
+                removeLabel: l10n.remove,
               ),
               const SizedBox(height: AppSpacing.lg),
               AppTextField(
                 controller: _displayNameController,
-                label: 'Display name',
+                label: l10n.displayName,
                 textInputAction: TextInputAction.next,
                 errorText: _displayNameError,
                 validator: (value) {
                   if (value == null || value.trim().length < 2) {
-                    return 'Display name must be at least 2 characters';
+                    return l10n.displayNameTooShort;
                   }
                   return null;
                 },
@@ -226,24 +251,22 @@ class _ProfileEditPageState extends ConsumerState<ProfileEditPage> {
               const AppFieldGap(),
               AppTextField(
                 controller: _phoneController,
-                label: 'Phone',
-                hint: 'Optional',
+                label: l10n.phone,
+                hint: l10n.optional,
                 keyboardType: TextInputType.phone,
                 textInputAction: TextInputAction.done,
                 errorText: _phoneError,
                 onFieldSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: AppSpacing.sm),
-              const Text(
-                'Saving a new phone number will mark it as not verified.',
-              ),
+              Text(l10n.phoneVerificationReset),
               if (_formError != null) ...[
                 const SizedBox(height: AppSpacing.md),
                 AppInlineError(message: _formError!),
               ],
               const SizedBox(height: AppSpacing.lg),
               AppPrimaryButton(
-                label: _isSubmitting ? 'Saving...' : 'Save changes',
+                label: _isSubmitting ? l10n.saving : l10n.saveChanges,
                 onPressed: _isSubmitting ? null : _submit,
               ),
             ],

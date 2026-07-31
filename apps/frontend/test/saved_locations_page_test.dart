@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,6 +29,42 @@ void main() {
     expect(find.text('No saved locations yet'), findsOneWidget);
     expect(find.text('Add location'), findsOneWidget);
     expect(find.textContaining('private location'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Arabic empty state and actions are localized at 320px', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          savedLocationsProvider.overrideWith((ref) async => const []),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          supportedLocales: [Locale('en'), Locale('ar')],
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: SavedLocationsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('المواقع المحفوظة'), findsOneWidget);
+    expect(find.text('لا توجد مواقع محفوظة بعد'), findsOneWidget);
+    expect(find.text('إضافة موقع'), findsOneWidget);
+    expect(find.textContaining('بيانات حساب خاصة'), findsOneWidget);
+    expect(
+      Directionality.of(tester.element(find.text('المواقع المحفوظة'))),
+      TextDirection.rtl,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -143,9 +180,13 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(2), 'Awarta');
     await tester.enterText(find.byType(TextFormField).at(3), 'Main Street');
 
-    await tester.ensureVisible(find.text('Find typed address'));
+    final findAddressButton = find.widgetWithText(
+      OutlinedButton,
+      'Find typed address',
+    );
+    await tester.ensureVisible(findAddressButton);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Find typed address'));
+    tester.widget<OutlinedButton>(findAddressButton).onPressed!();
     await tester.pumpAndSettle();
 
     expect(api.forwardGeocodeCity, 'Nablus');
@@ -180,10 +221,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Edit'));
+    final editButton = find.widgetWithText(OutlinedButton, 'Edit');
+    tester.widget<OutlinedButton>(editButton).onPressed!();
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Updated');
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
 
     expect(api.updatedPayload, isNull);

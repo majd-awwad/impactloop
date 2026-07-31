@@ -24,6 +24,45 @@ class AccountSettingsL10n {
   String get back => t('Back', 'رجوع');
   String get editPersonalInformation =>
       t('Edit personal information', 'تعديل المعلومات الشخصية');
+  String get editProfile => t('Edit profile', 'تعديل الملف الشخصي');
+  String get profileUpdated =>
+      t('Profile updated.', 'تم تحديث الملف الشخصي.');
+  String get updateProfileFailed => t(
+    'Could not update your profile. Please try again.',
+    'تعذّر تحديث ملفك الشخصي. حاول مرة أخرى.',
+  );
+  String get profileSavedRefreshFailed => t(
+    'Profile saved, but current account details could not be refreshed.',
+    'تم حفظ الملف الشخصي، لكن تعذّر تحديث بيانات الحساب الحالية.',
+  );
+  String get displayName => t('Display name', 'اسم العرض');
+  String get displayNameTooShort => t(
+    'Display name must be at least 2 characters',
+    'يجب ألا يقل اسم العرض عن حرفين',
+  );
+  String get optional => t('Optional', 'اختياري');
+  String get phoneVerificationReset => t(
+    'Saving a new phone number will mark it as not verified.',
+    'سيؤدي حفظ رقم هاتف جديد إلى اعتباره غير موثّق.',
+  );
+  String get saveChanges => t('Save changes', 'حفظ التغييرات');
+  String get saving => t('Saving...', 'جارٍ الحفظ...');
+  String get profilePhoto => t('Profile photo', 'صورة الملف الشخصي');
+  String get profilePhotoRequirements => t(
+    'JPG, PNG, or WebP up to 5 MB.',
+    'JPG أو PNG أو WebP بحجم لا يتجاوز 5 ميجابايت.',
+  );
+  String get choosePhoto => t('Choose photo', 'اختيار صورة');
+  String get uploading => t('Uploading...', 'جارٍ الرفع...');
+  String get remove => t('Remove', 'إزالة');
+  String get imageReadFailed => t(
+    'Could not read the selected image.',
+    'تعذّرت قراءة الصورة المحددة.',
+  );
+  String get imageTooLarge => t(
+    'The image must be 5 MB or smaller.',
+    'يجب ألا يتجاوز حجم الصورة 5 ميجابايت.',
+  );
 
   String get accountDetails => t('Account details', 'تفاصيل الحساب');
   String get accountEssentials => t('Account essentials', 'أساسيات الحساب');
@@ -38,6 +77,37 @@ class AccountSettingsL10n {
   );
   String get security => t('Security', 'الأمان');
   String get securityBody => t('Change your password.', 'غيّر كلمة المرور.');
+  String get changePasswordIntro => t(
+    'Change your password using your current password.',
+    'غيّر كلمة المرور باستخدام كلمة المرور الحالية.',
+  );
+  String get currentPassword => t('Current password', 'كلمة المرور الحالية');
+  String get newPassword => t('New password', 'كلمة المرور الجديدة');
+  String get confirmNewPassword =>
+      t('Confirm new password', 'تأكيد كلمة المرور الجديدة');
+  String get updatePassword => t('Update password', 'تحديث كلمة المرور');
+  String get updating => t('Updating...', 'جارٍ التحديث...');
+  String get passwordUpdated => t(
+    'Password updated successfully.',
+    'تم تحديث كلمة المرور بنجاح.',
+  );
+  String get updatePasswordFailed => t(
+    'Could not update your password. Please try again.',
+    'تعذّر تحديث كلمة المرور. حاول مرة أخرى.',
+  );
+  String get fieldRequired => t('This field is required', 'هذا الحقل مطلوب');
+  String get passwordTooShort => t(
+    'Password must be at least 8 characters',
+    'يجب ألا تقل كلمة المرور عن 8 أحرف',
+  );
+  String get passwordMustDiffer => t(
+    'New password must be different from your current password',
+    'يجب أن تختلف كلمة المرور الجديدة عن الحالية',
+  );
+  String get passwordsDoNotMatch =>
+      t('Passwords do not match', 'كلمتا المرور غير متطابقتين');
+  String get showPassword => t('Show password', 'إظهار كلمة المرور');
+  String get hidePassword => t('Hide password', 'إخفاء كلمة المرور');
 
   String get appPreferences => t('App preferences', 'تفضيلات التطبيق');
   String get localPreferencesNote => t(

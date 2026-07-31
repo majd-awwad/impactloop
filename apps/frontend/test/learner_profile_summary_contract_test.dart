@@ -75,8 +75,9 @@ void main() {
       );
       addTearDown(container.dispose);
       final states = <AsyncValue<LearnerProfileSummary>>[];
+      final provider = learnerProfileSummaryProvider('user-1');
       final subscription = container.listen(
-        learnerProfileSummaryProvider,
+        provider,
         (_, next) => states.add(next),
         fireImmediately: true,
       );
@@ -85,7 +86,7 @@ void main() {
       expect(states.last, isA<AsyncLoading<LearnerProfileSummary>>());
       completer.complete(LearnerProfileSummary.fromJson(_summaryJson()));
       final summary = await container.read(
-        learnerProfileSummaryProvider.future,
+        provider.future,
       );
 
       expect(summary.journey.savedProjectsCount, 7);
@@ -106,29 +107,67 @@ void main() {
         overrides: [profileRepositoryProvider.overrideWithValue(repository)],
       );
       addTearDown(container.dispose);
+      final provider = learnerProfileSummaryProvider('user-1');
       final subscription = container.listen(
-        learnerProfileSummaryProvider,
+        provider,
         (previous, next) {},
         fireImmediately: true,
       );
       addTearDown(subscription.close);
 
       await expectLater(
-        container.read(learnerProfileSummaryProvider.future),
+        container.read(provider.future),
         throwsA(isA<StateError>()),
       );
       expect(repository.calls, 1);
 
       shouldFail = false;
-      container.invalidate(learnerProfileSummaryProvider);
-      final summary = await container.read(
-        learnerProfileSummaryProvider.future,
-      );
+      container.invalidate(provider);
+      final summary = await container.read(provider.future);
 
       expect(summary.profileCompletion.percentage, 67);
       expect(repository.calls, 2);
     },
   );
+
+  test('provider cache is partitioned by authenticated user id', () async {
+    final first = Completer<LearnerProfileSummary>();
+    final second = Completer<LearnerProfileSummary>();
+    var calls = 0;
+    final repository = _FakeProfileRepository(() {
+      calls += 1;
+      return calls == 1 ? first.future : second.future;
+    });
+    final container = ProviderContainer(
+      overrides: [profileRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    final firstFuture = container.read(
+      learnerProfileSummaryProvider('user-a').future,
+    );
+    final secondFuture = container.read(
+      learnerProfileSummaryProvider('user-b').future,
+    );
+    expect(repository.calls, 2);
+
+    final secondJson = _summaryJson();
+    (secondJson['profileCompletion'] as Map<String, dynamic>)['percentage'] =
+        33;
+    second.complete(LearnerProfileSummary.fromJson(secondJson));
+    expect((await secondFuture).profileCompletion.percentage, 33);
+
+    first.complete(LearnerProfileSummary.fromJson(_summaryJson()));
+    expect((await firstFuture).profileCompletion.percentage, 67);
+    expect(
+      container
+          .read(learnerProfileSummaryProvider('user-b'))
+          .requireValue
+          .profileCompletion
+          .percentage,
+      33,
+    );
+  });
 }
 
 Map<String, dynamic> _summaryJson() => {

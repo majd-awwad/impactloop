@@ -358,6 +358,48 @@ void main() {
     expect(find.text('حفظ التغييرات'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Arabic personal editor localizes controls and uses RTL', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(_testUser()),
+          ),
+          profileRepositoryProvider.overrideWithValue(
+            _RecordingProfileRepository(),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          supportedLocales: [Locale('en'), Locale('ar')],
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: ProfileEditPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('تعديل الملف الشخصي'), findsOneWidget);
+    expect(find.text('اسم العرض'), findsOneWidget);
+    expect(find.text('صورة الملف الشخصي'), findsOneWidget);
+    expect(find.text('اختيار صورة'), findsOneWidget);
+    expect(find.text('حفظ التغييرات'), findsOneWidget);
+    expect(
+      Directionality.of(tester.element(find.text('تعديل الملف الشخصي'))),
+      TextDirection.rtl,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 List<String> _itemLabels(DropdownButton<String> dropdown, String label) {

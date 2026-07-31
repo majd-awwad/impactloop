@@ -207,6 +207,73 @@ void main() {
     expect(find.text('Saved locations'), findsOneWidget);
   });
 
+  testWidgets('switching users clears a completed cached summary immediately', (
+    tester,
+  ) async {
+    final secondSummary = Completer<LearnerProfileSummary>();
+    var call = 0;
+    final repository = _FakeProfileRepository(() {
+      call += 1;
+      return call == 1
+          ? Future.value(_summary())
+          : secondSummary.future;
+    });
+    final controller = _TestAuthController(_testUser());
+    await _pumpProfile(
+      tester,
+      repository: repository,
+      controller: controller,
+    );
+    expect(find.text('67%'), findsOneWidget);
+
+    controller.replaceUser(
+      _testUser(id: 'user-2', displayName: 'Second Learner'),
+    );
+    await tester.pump();
+
+    expect(find.text('Second Learner'), findsOneWidget);
+    expect(find.text('67%'), findsNothing);
+    expect(find.byType(LearnerDashboardSkeleton), findsOneWidget);
+
+    secondSummary.complete(
+      _summary(percentage: 33, completedSteps: 2),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('33%'), findsOneWidget);
+  });
+
+  testWidgets('stale first-user completion cannot replace second-user data', (
+    tester,
+  ) async {
+    final firstSummary = Completer<LearnerProfileSummary>();
+    final secondSummary = Completer<LearnerProfileSummary>();
+    var call = 0;
+    final repository = _FakeProfileRepository(() {
+      call += 1;
+      return call == 1 ? firstSummary.future : secondSummary.future;
+    });
+    final controller = _TestAuthController(_testUser());
+    await _pumpProfile(
+      tester,
+      repository: repository,
+      controller: controller,
+      settle: false,
+    );
+
+    controller.replaceUser(
+      _testUser(id: 'user-2', displayName: 'Second Learner'),
+    );
+    await tester.pump();
+    secondSummary.complete(_summary(percentage: 33, completedSteps: 2));
+    await tester.pumpAndSettle();
+    expect(find.text('33%'), findsOneWidget);
+
+    firstSummary.complete(_summary());
+    await tester.pumpAndSettle();
+    expect(find.text('33%'), findsOneWidget);
+    expect(find.text('67%'), findsNothing);
+  });
+
   testWidgets('Arabic dashboard is RTL and stable at increased text scale', (
     tester,
   ) async {
@@ -266,9 +333,10 @@ Future<void> _tapTextSurface(WidgetTester tester, String text) async {
 }
 
 class _ProfileHarness {
-  const _ProfileHarness({required this.router});
+  const _ProfileHarness({required this.router, required this.controller});
 
   final GoRouter router;
+  final _TestAuthController controller;
 }
 
 Future<_ProfileHarness> _pumpProfile(
@@ -279,6 +347,7 @@ Future<_ProfileHarness> _pumpProfile(
   Size size = const Size(430, 932),
   double textScale = 1,
   bool settle = true,
+  _TestAuthController? controller,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -314,11 +383,12 @@ Future<_ProfileHarness> _pumpProfile(
   );
   addTearDown(router.dispose);
 
+  final authController = controller ?? _TestAuthController(user ?? _testUser());
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(
-          () => _TestAuthController(user ?? _testUser()),
+          () => authController,
         ),
         profileRepositoryProvider.overrideWithValue(repository),
       ],
@@ -346,7 +416,7 @@ Future<_ProfileHarness> _pumpProfile(
   } else {
     await tester.pump();
   }
-  return _ProfileHarness(router: router);
+  return _ProfileHarness(router: router, controller: authController);
 }
 
 GoRoute _stubRoute(String path, String label) {
@@ -354,14 +424,14 @@ GoRoute _stubRoute(String path, String label) {
 }
 
 class _TestAuthController extends AuthController {
-  _TestAuthController(this.user);
+  _TestAuthController(this.initialUser);
 
-  final User user;
+  final User initialUser;
 
   @override
   AuthState build() {
     return AuthState(
-      user: user,
+      user: initialUser,
       accessToken: 'test-access',
       hasBootstrapped: true,
     );
@@ -369,6 +439,14 @@ class _TestAuthController extends AuthController {
 
   @override
   Future<void> refreshCurrentUser() async {}
+
+  void replaceUser(User? user) {
+    state = AuthState(
+      user: user,
+      accessToken: user == null ? null : 'test-access',
+      hasBootstrapped: true,
+    );
+  }
 }
 
 class _FakeProfileRepository extends ProfileRepository {
@@ -428,10 +506,10 @@ LearnerProfileSummary _summary({
   );
 }
 
-User _testUser() {
+User _testUser({String id = 'user-1', String displayName = 'Learner User'}) {
   return User(
-    id: 'user-1',
-    displayName: 'Learner User',
+    id: id,
+    displayName: displayName,
     email: 'learner@example.com',
     phone: '+970 599 000 000',
     accountStatus: 'ACTIVE',

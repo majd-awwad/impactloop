@@ -10,6 +10,7 @@ import '../../../../shared/widgets/app_password_field.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../l10n/account_settings_l10n.dart';
 import '../widgets/profile_image_picker.dart';
 
 class ProfileSecurityPage extends ConsumerStatefulWidget {
@@ -47,6 +48,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
       _isSubmitting = true;
       _formError = null;
     });
+    final l10n = AccountSettingsL10n.of(context);
 
     try {
       await ref
@@ -65,7 +67,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
       _newPasswordController.clear();
       _confirmPasswordController.clear();
 
-      showInfoSnackBar(context, 'Password updated successfully.');
+      showInfoSnackBar(context, l10n.passwordUpdated);
       context.popOrGo('/profile');
     } on ApiException catch (error) {
       if (!mounted) {
@@ -83,14 +85,14 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
 
       setState(() {
         _isSubmitting = false;
-        _formError = 'Could not update your password. Please try again.';
+        _formError = l10n.updatePasswordFailed;
       });
     }
   }
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'This field is required';
+      return AccountSettingsL10n.of(context).fieldRequired;
     }
     return null;
   }
@@ -102,11 +104,11 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
     }
 
     if (value!.length < 8) {
-      return 'Password must be at least 8 characters';
+      return AccountSettingsL10n.of(context).passwordTooShort;
     }
 
     if (value == _currentPasswordController.text) {
-      return 'New password must be different from your current password';
+      return AccountSettingsL10n.of(context).passwordMustDiffer;
     }
 
     return null;
@@ -119,7 +121,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
     }
 
     if (value != _newPasswordController.text) {
-      return 'Passwords do not match';
+      return AccountSettingsL10n.of(context).passwordsDoNotMatch;
     }
 
     return null;
@@ -127,19 +129,23 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AccountSettingsL10n.of(context);
     return ProfileSubpageScaffold(
-      title: 'Security',
+      title: l10n.security,
+      backTooltip: l10n.back,
       child: ProfileEditCard(
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Change your password using your current password.'),
+              Text(l10n.changePasswordIntro),
               const SizedBox(height: AppSpacing.lg),
               AppPasswordField(
                 controller: _currentPasswordController,
-                label: 'Current password',
+                label: l10n.currentPassword,
+                showPasswordLabel: l10n.showPassword,
+                hidePasswordLabel: l10n.hidePassword,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.password],
                 validator: _required,
@@ -156,7 +162,9 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
               const AppFieldGap(),
               AppPasswordField(
                 controller: _newPasswordController,
-                label: 'New password',
+                label: l10n.newPassword,
+                showPasswordLabel: l10n.showPassword,
+                hidePasswordLabel: l10n.hidePassword,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.newPassword],
                 validator: _validateNewPassword,
@@ -173,7 +181,9 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
               const AppFieldGap(),
               AppPasswordField(
                 controller: _confirmPasswordController,
-                label: 'Confirm new password',
+                label: l10n.confirmNewPassword,
+                showPasswordLabel: l10n.showPassword,
+                hidePasswordLabel: l10n.hidePassword,
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.newPassword],
                 validator: _validateConfirmPassword,
@@ -194,7 +204,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
               ],
               const SizedBox(height: AppSpacing.lg),
               AppPrimaryButton(
-                label: _isSubmitting ? 'Updating...' : 'Update password',
+                label: _isSubmitting ? l10n.updating : l10n.updatePassword,
                 onPressed: _isSubmitting ? null : _submit,
               ),
             ],

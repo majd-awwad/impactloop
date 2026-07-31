@@ -44,8 +44,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   Future<void> _refreshSummary({bool showFailure = true}) {
     return _coalesceRefresh(() async {
+      final user = ref.read(authControllerProvider).user;
+      if (user == null || !user.isLearnerMode || !user.hasRole('LEARNER')) {
+        return;
+      }
       try {
-        final _ = await ref.refresh(learnerProfileSummaryProvider.future);
+        final _ = await ref.refresh(
+          learnerProfileSummaryProvider(user.id).future,
+        );
       } catch (_) {
         if (showFailure) {
           _showRefreshFailure();
@@ -64,7 +70,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       }
 
       try {
-        final _ = await ref.refresh(learnerProfileSummaryProvider.future);
+        final user = ref.read(authControllerProvider).user;
+        if (user != null &&
+            user.isLearnerMode &&
+            user.hasRole('LEARNER')) {
+          final _ = await ref.refresh(
+            learnerProfileSummaryProvider(user.id).future,
+          );
+        }
       } catch (_) {
         failed = true;
       }
@@ -104,7 +117,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final activeLearner =
         user?.isLearnerMode == true && user?.hasRole('LEARNER') == true;
     final summaryAsync = activeLearner
-        ? ref.watch(learnerProfileSummaryProvider)
+        ? ref.watch(learnerProfileSummaryProvider(user!.id))
         : null;
 
     if (user == null || _lastSummaryUserId != user.id) {
