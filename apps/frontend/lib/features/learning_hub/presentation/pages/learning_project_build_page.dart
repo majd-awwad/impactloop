@@ -182,6 +182,25 @@ class _LearningProjectBuildPageState
     );
   }
 
+  void _requestMaterial(ProjectBuildItem item, ProjectBuild build) {
+    final query = item.component.name.resolve(context).trim();
+    final params = <String, String>{
+      if (query.isNotEmpty) 'q': query,
+      if (item.component.categoryId != null &&
+          item.component.categoryId!.trim().isNotEmpty)
+        'categoryId': item.component.categoryId!.trim(),
+      'projectId': build.projectId,
+      'buildId': build.id,
+      'buildItemId': item.id,
+    };
+    context.push(
+      Uri(
+        path: '/learner/material-requests/new',
+        queryParameters: params,
+      ).toString(),
+    );
+  }
+
   Future<void> _showMaterialCandidates(ProjectBuildItem item) async {
     final repository = ref.read(learningHubRepositoryProvider);
     final build = await ProjectBuildMaterialCandidatesSheet.show(
@@ -566,6 +585,7 @@ class _LearningProjectBuildPageState
       onStatusChanged: _updateItem,
       onEditNote: _editNote,
       onFindMaterials: _findMaterials,
+      onRequestMaterial: (item) => _requestMaterial(item, build),
       onShowMaterialCandidates: _showMaterialCandidates,
       onUnlinkMaterial: _unlinkMaterial,
       onViewLinkedMaterial: _viewLinkedMaterial,
@@ -601,6 +621,7 @@ class _BuildContent extends StatelessWidget {
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
+    required this.onRequestMaterial,
     required this.onShowMaterialCandidates,
     required this.onUnlinkMaterial,
     required this.onViewLinkedMaterial,
@@ -622,6 +643,7 @@ class _BuildContent extends StatelessWidget {
   onStatusChanged;
   final ValueChanged<ProjectBuildItem> onEditNote;
   final ValueChanged<ProjectBuildItem> onFindMaterials;
+  final ValueChanged<ProjectBuildItem> onRequestMaterial;
   final ValueChanged<ProjectBuildItem> onShowMaterialCandidates;
   final ValueChanged<ProjectBuildItem> onUnlinkMaterial;
   final ValueChanged<ProjectBuildItem> onViewLinkedMaterial;
@@ -651,6 +673,7 @@ class _BuildContent extends StatelessWidget {
                 onStatusChanged: onStatusChanged,
                 onEditNote: onEditNote,
                 onFindMaterials: onFindMaterials,
+                onRequestMaterial: onRequestMaterial,
                 onShowMaterialCandidates: onShowMaterialCandidates,
                 onUnlinkMaterial: onUnlinkMaterial,
                 onViewLinkedMaterial: onViewLinkedMaterial,
@@ -824,6 +847,7 @@ class _MaterialsSection extends StatelessWidget {
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
+    required this.onRequestMaterial,
     required this.onShowMaterialCandidates,
     required this.onUnlinkMaterial,
     required this.onViewLinkedMaterial,
@@ -840,6 +864,7 @@ class _MaterialsSection extends StatelessWidget {
   onStatusChanged;
   final ValueChanged<ProjectBuildItem> onEditNote;
   final ValueChanged<ProjectBuildItem> onFindMaterials;
+  final ValueChanged<ProjectBuildItem> onRequestMaterial;
   final ValueChanged<ProjectBuildItem> onShowMaterialCandidates;
   final ValueChanged<ProjectBuildItem> onUnlinkMaterial;
   final ValueChanged<ProjectBuildItem> onViewLinkedMaterial;
@@ -912,6 +937,7 @@ class _MaterialsSection extends StatelessWidget {
                       onStatusChanged(item, status: status),
                   onEditNote: () => onEditNote(item),
                   onFindMaterials: () => onFindMaterials(item),
+                  onRequestMaterial: () => onRequestMaterial(item),
                   onShowMaterialCandidates: () =>
                       onShowMaterialCandidates(item),
                   onUnlinkMaterial: () => onUnlinkMaterial(item),
@@ -1141,6 +1167,7 @@ class _BuildItemCard extends StatelessWidget {
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
+    required this.onRequestMaterial,
     required this.onShowMaterialCandidates,
     required this.onUnlinkMaterial,
     required this.onViewLinkedMaterial,
@@ -1153,6 +1180,7 @@ class _BuildItemCard extends StatelessWidget {
   final ValueChanged<ProjectBuildItemStatus> onStatusChanged;
   final VoidCallback onEditNote;
   final VoidCallback onFindMaterials;
+  final VoidCallback onRequestMaterial;
   final VoidCallback onShowMaterialCandidates;
   final VoidCallback onUnlinkMaterial;
   final VoidCallback onViewLinkedMaterial;
@@ -1324,6 +1352,12 @@ class _BuildItemCard extends StatelessWidget {
                 icon: const Icon(Icons.travel_explore_rounded),
                 label: const Text('Browse all materials'),
               ),
+              if (item.status == ProjectBuildItemStatus.missing)
+                OutlinedButton.icon(
+                  onPressed: isUpdating ? null : onRequestMaterial,
+                  icon: const Icon(Icons.campaign_outlined),
+                  label: const Text('Request this component'),
+                ),
               TextButton.icon(
                 onPressed: isUpdating ? null : onEditNote,
                 icon: const Icon(Icons.edit_note_rounded),

@@ -17,6 +17,7 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import '../../../auth/data/models/user.dart';
+import '../../../notifications/application/notifications_routes.dart';
 import '../../data/models/learner_interest_options.dart';
 
 const _profileDesktopBreakpoint = 600.0;
@@ -289,6 +290,13 @@ class _ProfileContent extends ConsumerWidget {
             subtitle: 'Update learner type, skills, and interests.',
             onTap: () => context.push('/profile/learner/edit'),
           ),
+          _ProfileDivider(),
+          _ProfileActionTile(
+            icon: Icons.inventory_2_outlined,
+            title: 'Material requests',
+            subtitle: 'Ask suppliers for materials you could not find.',
+            onTap: () => context.push('/learner/material-requests'),
+          ),
         ],
         _ProfileDivider(),
         _ProfileActionTile(
@@ -316,6 +324,15 @@ class _ProfileContent extends ConsumerWidget {
           subtitle: 'Track pickups and material requests.',
           onTap: () => context.go(learnerReservationsRoute),
         ),
+        if (_isLearner) ...[
+          _ProfileDivider(),
+          _ProfileActionTile(
+            icon: Icons.notifications_none_outlined,
+            title: 'Notifications',
+            subtitle: 'Suggestions and updates about your material requests.',
+            onTap: () => context.push(notificationsRouteForUser(user)),
+          ),
+        ],
         if (shouldShowBecomeSupplier(user) || _hasSupplierAccess) ...[
           _ProfileDivider(),
           _ProfileActionTile(

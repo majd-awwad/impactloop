@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -103,6 +104,11 @@ class MaterialsDiscoveryView extends StatelessWidget {
     final total = pagination?.total ?? materials.length;
     final showingCount = materials.length;
     final hasMore = pagination?.hasMore ?? false;
+    final resolvedCategoryId =
+        selectedCategoryIndex == 0 ||
+            selectedCategoryIndex - 1 >= categories.length
+        ? null
+        : categories[selectedCategoryIndex - 1].id;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -202,6 +208,8 @@ class MaterialsDiscoveryView extends StatelessWidget {
                 subtitle: hasActiveFilters
                     ? materialDiscoveryEmptySubtitle
                     : materialDiscoveryNoMaterialsSubtitle,
+                searchQuery: searchValue,
+                categoryId: resolvedCategoryId,
               )
             else ...[
               DiscoveryMaterialMap(
@@ -364,15 +372,20 @@ class _EmptyStatePanel extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.searchQuery,
+    this.categoryId,
   });
 
   final IconData icon;
   final LocalizedText title;
   final LocalizedText subtitle;
+  final String? searchQuery;
+  final String? categoryId;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final trimmedQuery = searchQuery?.trim();
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -409,6 +422,25 @@ class _EmptyStatePanel extends StatelessWidget {
               ).copyWith(color: palette.textSecondary),
               textAlign: TextAlign.center,
             ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          OutlinedButton.icon(
+            onPressed: () {
+              final params = <String, String>{
+                if (trimmedQuery != null && trimmedQuery.isNotEmpty)
+                  'q': trimmedQuery,
+                if (categoryId != null && categoryId!.isNotEmpty)
+                  'categoryId': categoryId!,
+              };
+              context.push(
+                Uri(
+                  path: '/learner/material-requests/new',
+                  queryParameters: params.isEmpty ? null : params,
+                ).toString(),
+              );
+            },
+            icon: const Icon(Icons.notifications_active_outlined),
+            label: Text(materialDiscoveryRequestCta.resolve(context)),
           ),
         ],
       ),
