@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/app/widgets/entry_nav_bar.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
+import 'package:frontend/features/notifications/application/notifications_provider.dart';
 import 'package:frontend/shared/widgets/user_avatar.dart';
 
 void main() {
@@ -29,6 +30,9 @@ void main() {
                   createdAt: DateTime(2026),
                 ),
               ),
+            ),
+            myNotificationUnreadCountProvider.overrideWith(
+              () => _ZeroUnreadCountNotifier(),
             ),
           ],
           child: const MaterialApp(
@@ -116,6 +120,9 @@ Future<void> _pumpEntryNavBar(WidgetTester tester, User user) async {
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(() => _TestAuthController(user)),
+        myNotificationUnreadCountProvider.overrideWith(
+          () => _ZeroUnreadCountNotifier(),
+        ),
       ],
       child: const MaterialApp(
         home: Scaffold(
@@ -163,4 +170,9 @@ class _TestAuthController extends AuthController {
       hasBootstrapped: true,
     );
   }
+}
+
+class _ZeroUnreadCountNotifier extends NotificationUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
 }

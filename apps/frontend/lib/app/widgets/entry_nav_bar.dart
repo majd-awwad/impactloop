@@ -12,7 +12,9 @@ import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/presentation/widgets/portal_switch_menu.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../shared/widgets/app_feedback.dart';
+import '../../shared/widgets/notification_bell_button.dart';
 import '../../shared/widgets/user_avatar.dart';
+import '../../features/notifications/application/notifications_routes.dart';
 import 'impact_loop_logo.dart';
 import 'nav_pill_menu.dart';
 
@@ -55,6 +57,13 @@ class EntryNavBar extends ConsumerWidget {
         user != null;
     final effectiveShowSignIn = !isAuthenticated && showSignIn;
     final effectiveShowCreateAccount = !isAuthenticated && showCreateAccount;
+    // EntryNavBar owns the authenticated bell; ignore any caller-provided
+    // NotificationBellButton trailing actions to avoid duplicate bells.
+    final effectiveTrailingActions = isAuthenticated
+        ? trailingActions
+              .where((action) => action is! NotificationBellButton)
+              .toList(growable: false)
+        : trailingActions;
 
     if (isPhone) {
       return Padding(
@@ -131,7 +140,7 @@ class EntryNavBar extends ConsumerWidget {
                       isAuthenticated: isAuthenticated,
                       isAuthLoading: authState.isLoading,
                       ref: ref,
-                      trailingActions: trailingActions,
+                      trailingActions: effectiveTrailingActions,
                     )
                   : _DesktopNavLayout(
                       showSignIn: effectiveShowSignIn,
@@ -145,7 +154,7 @@ class EntryNavBar extends ConsumerWidget {
                       isAuthLoading: authState.isLoading,
                       ref: ref,
                       condensed: useCondensedDesktop,
-                      trailingActions: trailingActions,
+                      trailingActions: effectiveTrailingActions,
                       showPublicNavLinks: showPublicNavLinks,
                     ),
             ),
@@ -208,6 +217,10 @@ class _PhoneAppBarLayout extends StatelessWidget {
           ),
         ],
         const Spacer(),
+        if (isAuthenticated && user != null) ...[
+          const NotificationBellButton(compact: true),
+          const SizedBox(width: AppSpacing.xs),
+        ],
         if (isAuthenticated && user != null && showAccountMenu)
           _AccountMenu(
             user: user!,
@@ -311,6 +324,8 @@ class _DesktopNavLayout extends StatelessWidget {
           ...trailingActions,
         ],
         if (isAuthenticated && user != null) ...[
+          const SizedBox(width: AppSpacing.sm),
+          const NotificationBellButton(compact: true),
           const SizedBox(width: AppSpacing.sm),
           _AccountMenu(
             user: user!,
@@ -497,15 +512,16 @@ class _MobileNavLayout extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               alignment: WrapAlignment.end,
               children: [
-                if (isAuthenticated && user != null)
+                if (isAuthenticated && user != null) ...[
+                  const NotificationBellButton(compact: true),
                   _AccountMenu(
                     user: user!,
                     settings: settings,
                     ref: ref,
                     compact: true,
                     isLoggingOut: isAuthLoading,
-                  )
-                else if (showCompactAction && showCreateAccount)
+                  ),
+                ] else if (showCompactAction && showCreateAccount)
                   _CompactNavLink(
                     label: 'Create account',
                     onPressed: onCreateAccount ?? () => context.go('/register'),
@@ -871,6 +887,15 @@ class _AccountMenu extends StatelessWidget {
                   label: 'Profile',
                   onPressed: () => context.go('/profile'),
                 ),
+                if (_showLearnerActions)
+                  _AccountMenuItem(
+                    icon: Icons.notifications_none_rounded,
+                    label: settings.languageCode == 'ar'
+                        ? 'الإشعارات'
+                        : 'Notifications',
+                    onPressed: () =>
+                        context.push(notificationsRouteForUser(user)),
+                  ),
                 if (_showLearnerActions)
                   _AccountMenuItem(
                     icon: Icons.receipt_long_outlined,

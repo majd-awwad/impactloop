@@ -18,6 +18,7 @@ void main() {
       supplierMobileMoreNavItems.map((item) => item.route).toList(),
       <String>[
         '/supplier/pickup-schedule',
+        '/supplier/material-requests',
         '/supplier/notifications',
         '/supplier/profile',
       ],
@@ -27,6 +28,7 @@ void main() {
   test('selects More for every grouped supplier route', () {
     for (final route in <String>[
       '/supplier/pickup-schedule',
+      '/supplier/material-requests',
       '/supplier/notifications',
       '/supplier/profile',
       '/supplier/profile/edit',
@@ -68,8 +70,18 @@ void main() {
                 ? <String>['الرئيسية', 'المواد', 'إضافة', 'الطلبات', 'المزيد']
                 : <String>['Home', 'Materials', 'Add', 'Requests', 'More'];
             final moreLabels = isArabic
-                ? <String>['جدول الاستلام', 'الإشعارات', 'الملف الشخصي']
-                : <String>['Pickup Schedule', 'Notifications', 'Profile'];
+                ? <String>[
+                    'جدول الاستلام',
+                    'طلبات المواد من المتعلمين',
+                    'الإشعارات',
+                    'الملف الشخصي',
+                  ]
+                : <String>[
+                    'Pickup Schedule',
+                    'Learner Material Requests',
+                    'Notifications',
+                    'Profile',
+                  ];
 
             await tester.binding.setSurfaceSize(Size(width, 800));
             await tester.pumpWidget(

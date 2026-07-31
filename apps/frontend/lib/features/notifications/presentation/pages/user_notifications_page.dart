@@ -9,7 +9,6 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
@@ -50,7 +49,6 @@ class UserNotificationsPage extends ConsumerWidget {
               showCreateAccount: false,
               homeRoute: homeRoute,
               showPublicNavLinks: !hidePublicNav,
-              trailingActions: const [NotificationBellButton(compact: true)],
             ),
             Expanded(child: body),
           ],
@@ -260,6 +258,16 @@ class _NotificationsBody extends ConsumerWidget {
         notification.relatedEntityId != null &&
         notification.relatedEntityId!.isNotEmpty) {
       context.push('/learning/submissions/${notification.relatedEntityId}');
+      return;
+    }
+
+    if (notification.relatedEntityType == 'MATERIAL_REQUEST' &&
+        notification.relatedEntityId != null &&
+        notification.relatedEntityId!.isNotEmpty) {
+      final route = materialRequestNotificationRoute(notification);
+      if (route != null) {
+        context.push(route);
+      }
     }
   }
 }

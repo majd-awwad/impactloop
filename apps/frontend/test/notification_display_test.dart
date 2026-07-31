@@ -20,6 +20,22 @@ AppNotification _deliveryNotification({
   );
 }
 
+AppNotification _materialRequestNotification({
+  required String notificationType,
+  String requestId = 'req-1',
+}) {
+  return AppNotification(
+    id: 'notif-mr-1',
+    notificationType: notificationType,
+    title: 'Material request update',
+    body: 'A supplier suggested a material for your request.',
+    relatedEntityType: 'MATERIAL_REQUEST',
+    relatedEntityId: requestId,
+    isRead: false,
+    createdAt: DateTime.utc(2026),
+  );
+}
+
 void main() {
   group('driver moved-to-admin-review notification display', () {
     test('renders friendly delivery-update category instead of raw enum', () {
@@ -88,6 +104,53 @@ void main() {
       );
       expect(notificationActionLabel(notification), 'Open');
       expect(notificationHasNavigationTarget(notification), isFalse);
+      expect(driverDeliveryNotificationRoute(notification), isNull);
+    });
+  });
+
+  group('learner material request notification display', () {
+    test('suggestion notification routes to request details', () {
+      final notification = _materialRequestNotification(
+        notificationType: 'MATERIAL_REQUEST_SUGGESTION',
+        requestId: 'req-abc',
+      );
+
+      expect(notificationHasNavigationTarget(notification), isTrue);
+      expect(notificationActionLabel(notification), 'View request');
+      expect(
+        materialRequestNotificationRoute(notification),
+        '/learner/material-requests/req-abc',
+      );
+    });
+
+    test('unavailable-match notification routes to the same request details', () {
+      final notification = _materialRequestNotification(
+        notificationType: 'MATERIAL_REQUEST_MATCH_UNAVAILABLE',
+        requestId: 'req-xyz',
+      );
+
+      expect(notificationHasNavigationTarget(notification), isTrue);
+      expect(
+        materialRequestNotificationRoute(notification),
+        '/learner/material-requests/req-xyz',
+      );
+    });
+
+    test('reservation navigation remains unchanged', () {
+      final notification = AppNotification(
+        id: 'notif-res',
+        notificationType: 'RESERVATION_ACCEPTED',
+        title: 'Reservation accepted',
+        body: 'Your reservation was accepted.',
+        relatedEntityType: 'RESERVATION',
+        relatedEntityId: 'res-1',
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(notificationHasNavigationTarget(notification), isTrue);
+      expect(notificationActionLabel(notification), 'View reservation');
+      expect(materialRequestNotificationRoute(notification), isNull);
       expect(driverDeliveryNotificationRoute(notification), isNull);
     });
   });

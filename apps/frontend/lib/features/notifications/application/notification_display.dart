@@ -96,15 +96,30 @@ String notificationActionLabel(AppNotification notification) {
   if (notification.relatedEntityType == 'LEARNING_PROJECT') {
     return 'View submission';
   }
+  if (notification.relatedEntityType == 'MATERIAL_REQUEST') {
+    return 'View request';
+  }
   return 'Open';
 }
 
 bool notificationHasNavigationTarget(AppNotification notification) {
   return (notification.relatedEntityType == 'DELIVERY' ||
           notification.relatedEntityType == 'RESERVATION' ||
-          notification.relatedEntityType == 'LEARNING_PROJECT') &&
+          notification.relatedEntityType == 'LEARNING_PROJECT' ||
+          notification.relatedEntityType == 'MATERIAL_REQUEST') &&
       notification.relatedEntityId != null &&
       notification.relatedEntityId!.isNotEmpty;
+}
+
+/// Learner material-request notifications open the request detail route.
+String? materialRequestNotificationRoute(AppNotification notification) {
+  if (notification.relatedEntityType != 'MATERIAL_REQUEST' ||
+      notification.relatedEntityId == null ||
+      notification.relatedEntityId!.isEmpty) {
+    return null;
+  }
+
+  return '/learner/material-requests/${notification.relatedEntityId}';
 }
 
 /// Driver delivery notifications open the delivery detail route, which shows

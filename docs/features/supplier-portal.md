@@ -19,6 +19,7 @@ Authenticated **SUPPLIER** workspace: dashboard, profile, list/create materials,
 | Delete material | **Implemented** | `DELETE /api/supplier/materials/:id`; same eligibility as edit |
 | Add material | **Implemented** | Create + required image upload + price check + category/price-rule requests |
 | Incoming reservations | **Partial** | Supplier accept/decline/self-pickup complete; delivery reservations complete through driver backend flow; supplier UI shows delivery status instead of manual complete |
+| Learner material requests | **Implemented** | Privacy-safe feed at `/supplier/material-requests`; suggest owned materials or publish-from-request; dashboard insight for unanswered count |
 | Pickup schedule | **Implemented** | API-backed schedule workspace at `GET /api/supplier/reservations/schedule`; server categories, summary counts, effective windows, grouped entries, filters, and pagination are rendered directly, and row actions navigate to Request Details |
 | Mock repositories | **Not used** | `MockSupplier*Repository` files exist; providers wire API impl |
 
