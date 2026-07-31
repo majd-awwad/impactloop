@@ -2822,5 +2822,427 @@
       "demand": {"type": "int"},
       "views": {"type": "int"}
     }
-  }
+  },
+  "driverPortal": "بوابة السائق",
+  "driverInternalDelivery": "توصيل داخلي",
+  "driverJobs": "المهام",
+  "driverJobsTitle": "مهام السائق",
+  "driverJobsSubtitle": "تنسيق التوصيل الداخلي الأساسي",
+  "driverActiveDeliveriesCount": "التوصيلات النشطة: {active}/{max}",
+  "@driverActiveDeliveriesCount": {
+    "placeholders": {
+      "active": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "driverAvailableJobsCount": "المهام المتاحة: {count}",
+  "@driverAvailableJobsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableJobsCountLoading": "المهام المتاحة: …",
+  "driverTotalAvailable": "الإجمالي المتاح: {count}",
+  "@driverTotalAvailable": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAreaChip": "المنطقة: {area}",
+  "@driverAreaChip": {
+    "placeholders": {
+      "area": {"type": "String"}
+    }
+  },
+  "driverCouldNotLoadActive": "تعذّر تحميل التوصيلات النشطة",
+  "driverRefreshBeforeAccept": "حدّث الصفحة قبل قبول مهمة جديدة.",
+  "driverMyActiveDeliveries": "توصيلاتي النشطة",
+  "driverLoadingActive": "جارٍ تحميل التوصيلات النشطة…",
+  "driverNoActiveDeliveries": "لا توجد توصيلات نشطة بعد.",
+  "driverNoActiveDeliveriesHint": "يمكنك قبول المهام المتاحة عندما تكون جاهزًا.",
+  "driverAvailableNearbyJobs": "المهام المتاحة القريبة",
+  "driverActiveLimitReached": "وصلت إلى حد التوصيلات النشطة.",
+  "driverActiveLimitHint": "أكمل توصيلًا واحدًا قبل قبول آخر.",
+  "driverCompleteOneFirst": "أكمل توصيلًا واحدًا قبل قبول آخر.",
+  "driverLoadingAvailable": "جارٍ تحميل المهام المتاحة…",
+  "driverLookingForWaiting": "جارٍ البحث عن طلبات توصيل بانتظار السائق.",
+  "driverCouldNotLoadAvailable": "تعذّر تحميل المهام المتاحة.",
+  "driverOpenDelivery": "فتح التوصيل",
+  "driverFindNearbyJobs": "البحث عن مهام قريبة",
+  "driverDistanceToPickupHint": "تُحسب المسافة إلى موقع الاستلام.",
+  "driverAnyDistance": "أي مسافة",
+  "driverWithinKm": "ضمن {km} كم",
+  "@driverWithinKm": {
+    "placeholders": {
+      "km": {"type": "int"}
+    }
+  },
+  "driverNearest": "الأقرب",
+  "driverNewest": "الأحدث",
+  "driverCityLabel": "المدينة:",
+  "driverAllCities": "كل المدن",
+  "driverAreaLabel": "المنطقة:",
+  "driverAllAreas": "كل المناطق",
+  "driverResetFilters": "إعادة تعيين الفلاتر",
+  "driverLocationNeeded": "الموقع مطلوب لفلتر المسافة.",
+  "driverLocationLabel": "الموقع",
+  "driverSort": "الترتيب",
+  "driverAcceptJob": "قبول المهمة",
+  "driverAccepting": "جارٍ القبول…",
+  "driverActiveLimitReachedButton": "تم بلوغ حد التوصيلات النشطة",
+  "driverDeliveryAccepted": "تم قبول التوصيل.",
+  "driverDeliveryNoLongerAvailable": "لم يعد هذا التوصيل متاحًا.",
+  "driverReachedActiveLimit": "لقد وصلت إلى حد التوصيلات النشطة.",
+  "driverDistanceToPickup": "المسافة إلى الاستلام",
+  "driverPickupLabel": "الاستلام",
+  "driverIncreaseRadius": "توسيع نطاق البحث",
+  "driverShowAnyDistance": "عرض أي مسافة",
+  "driverLoadingLocation": "جارٍ تحميل الموقع…",
+  "driverUsingCurrentLocation": "باستخدام موقعك الحالي",
+  "driverUsingProfileArea": "باستخدام منطقة الملف الشخصي: {location}",
+  "@driverUsingProfileArea": {
+    "placeholders": {
+      "location": {"type": "String"}
+    }
+  },
+  "driverLocationUnavailable": "الموقع غير متاح — عرض كل المهام المتاحة",
+  "driverSearchRadiusAny": "نطاق البحث: أي مسافة",
+  "driverSearchRadiusWithin": "نطاق البحث: ضمن {km} كم",
+  "@driverSearchRadiusWithin": {
+    "placeholders": {
+      "km": {"type": "int"}
+    }
+  },
+  "driverPickupDistanceUnavailable": "مسافة الاستلام غير متاحة",
+  "driverKmToPickup": "{distance} كم إلى الاستلام",
+  "@driverKmToPickup": {
+    "placeholders": {
+      "distance": {"type": "String"}
+    }
+  },
+  "driverNoJobsWithinRadius": "لا توجد مهام ضمن {radius} كم.",
+  "@driverNoJobsWithinRadius": {
+    "placeholders": {
+      "radius": {"type": "String"}
+    }
+  },
+  "driverJobsAvailableOutsideRadius": "{count, plural, =1{مهمة واحدة} other{{count} مهام}} متاحة خارج نطاقك الحالي. جرّب توسيع النطاق أو اختيار أي مسافة.",
+  "@driverJobsAvailableOutsideRadius": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverTryIncreaseRadius": "جرّب توسيع النطاق أو اختيار أي مسافة.",
+  "driverNoJobsInArea": "لم تُعثر على مهام في هذه المنطقة.",
+  "driverJobsAvailableBroaderFilters": "{count, plural, =1{مهمة واحدة} other{{count} مهام}} متاحة بفلاتر أوسع. جرّب كل المناطق أو إعادة تعيين الفلاتر.",
+  "@driverJobsAvailableBroaderFilters": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverTryAllAreasOrReset": "جرّب كل المناطق أو إعادة تعيين الفلاتر.",
+  "driverNoJobsNearby": "لا توجد مهام متاحة قريبة منك الآن.",
+  "driverTryChangeFilters": "جرّب تغيير فلتر المدينة أو المنطقة أو المسافة.",
+  "driverCheckingActiveDelivery": "جارٍ التحقق من التوصيل المعيّن النشط.",
+  "driverCouldNotLoadDetails": "تعذّر تحميل تفاصيل التوصيل.",
+  "driverMovedToAdminReview": "نُقل التوصيل إلى مراجعة الإدارة",
+  "driverNoLongerActive": "التوصيل لم يعد نشطًا",
+  "driverNoLongerActiveDefault": "لم يعد هذا التوصيل نشطًا. نُقل إلى مراجعة الإدارة.",
+  "driverBackToJobs": "العودة إلى المهام",
+  "driverNotAssigned": "التوصيل غير نشط أو غير معيّن لك",
+  "driverOpenJobsBoard": "افتح لوحة المهام لعرض التوصيل المعيّن الحالي.",
+  "driverActiveDelivery": "توصيل نشط",
+  "driverLearnerUnavailable": "المتعلّم غير متاح",
+  "driverDeliveryWindow": "موعد التوصيل",
+  "driverLearnerNote": "ملاحظة المتعلّم",
+  "driverNoNextAction": "لا يوجد إجراء تالٍ",
+  "driverCannotAdvance": "لا يمكن تقدّم هذا التوصيل من حالته الحالية.",
+  "driverCannotAdvanceFurther": "لا يمكن تقدّم هذا التوصيل أكثر.",
+  "driverTimingNote": "ملاحظة التوقيت",
+  "driverOptionalNote": "ملاحظة اختيارية للسائق",
+  "driverOptionalNoteHint": "أضف ملاحظة قصيرة لتحديث الحالة",
+  "driverUpdating": "جارٍ التحديث...",
+  "driverReportPickupFailed": "الإبلاغ عن فشل الاستلام",
+  "driverReportDeliveryFailed": "الإبلاغ عن فشل التوصيل",
+  "driverReportDriverIssue": "الإبلاغ عن مشكلة للسائق",
+  "driverSupplierHandoverCode": "رمز تسليم المورّد",
+  "driverSupplierHandoverCodeMessage": "أدخل الرمز الذي يعطيك إياه المورّد بعد تسليم المادة.",
+  "driverMarkPickedUp": "تأكيد الاستلام",
+  "driverLearnerDeliveryCode": "رمز تسليم المتعلّم",
+  "driverLearnerDeliveryCodeMessage": "أدخل الرمز الذي يعطيك إياه المتعلّم عند استلام المادة.",
+  "driverMarkDelivered": "تأكيد التسليم",
+  "driverDeliveryMarkedDelivered": "تم تأكيد التسليم.",
+  "driverStatusUpdated": "تم تحديث حالة التوصيل.",
+  "driverStatusChangedRefresh": "تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.",
+  "driverPickupFailureReported": "تم الإبلاغ عن فشل الاستلام.",
+  "driverDeliveryFailureReported": "تم الإبلاغ عن فشل التوصيل.",
+  "driverNoteRequired": "ملاحظة (مطلوبة)",
+  "driverIssueNoteHint": "صف سبب عدم قدرتك على إكمال التوصيل",
+  "driverSubmitReport": "إرسال البلاغ",
+  "driverReason": "السبب",
+  "driverIssueReported": "تم الإبلاغ عن مشكلة السائق.",
+  "driverLocationSharing": "مشاركة الموقع",
+  "driverLocationSharingBody": "شارك موقعك أثناء نشاط هذا التوصيل. يمكن للمتعلّم تتبّعك فقط بعد استلام المادة.",
+  "driverShareAutomatically": "المشاركة تلقائيًا",
+  "driverSharingEvery45Seconds": "مشاركة كل 45 ثانية طالما هذه الصفحة مفتوحة.",
+  "driverLocationSharingPaused": "مشاركة الموقع متوقفة",
+  "driverSending": "جارٍ الإرسال...",
+  "driverSendMyLocation": "إرسال موقعي",
+  "driverLocationUpdateSent": "تم إرسال تحديث الموقع.",
+  "driverLastShared": "آخر مشاركة: {dateTime}",
+  "@driverLastShared": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "driverCurrentStage": "المرحلة الحالية: {status}",
+  "@driverCurrentStage": {
+    "placeholders": {
+      "status": {"type": "String"}
+    }
+  },
+  "driverNoFurtherSteps": "لا مزيد من الخطوات لهذا التوصيل.",
+  "driverAdvanceTo": "التقدّم إلى: {action}",
+  "@driverAdvanceTo": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "driverNextAction": "التالي: {action}",
+  "@driverNextAction": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "driverSupplierCodeRequired": "رمز تسليم المورّد مطلوب عند تأكيد الاستلام.",
+  "driverLearnerCodeRequired": "رمز تسليم المتعلّم مطلوب عند تأكيد التسليم.",
+  "driverCompleteArriveBeforePickedUp": "أكمل \"الوصول لموقع الاستلام\" قبل تأكيد الاستلام.",
+  "driverMarkPickedUpBeforeDelivery": "أكّد الاستلام قبل بدء التوصيل.",
+  "driverStartDeliveryBeforeArrive": "ابدأ التوصيل قبل الوصول لموقع التسليم.",
+  "driverArriveBeforeDelivered": "صل إلى موقع التسليم قبل تأكيد التسليم.",
+  "driverActionNotAvailable": "هذا الإجراء غير متاح بعد.",
+  "driverNotSet": "غير محدد",
+  "driverApproximateAddress": "عنوان تقريبي — تأكد مع المتعلّم عند الحاجة.",
+  "driverExactCoordinatesMissing": "الإحداثيات الدقيقة غير متوفرة.",
+  "driverAssignedAt": "معيّن {dateTime}",
+  "@driverAssignedAt": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverAvailableInDays": "متاح خلال {count, plural, =1{يوم واحد} other{{count} أيام}}",
+  "@driverAvailableInDays": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableInHoursMinutes": "متاح خلال {hours} س {minutes} د",
+  "@driverAvailableInHoursMinutes": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "driverAvailableInHours": "متاح خلال {count, plural, =1{ساعة واحدة} other{{count} ساعات}}",
+  "@driverAvailableInHours": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableInMinutes": "متاح خلال {count, plural, =1{دقيقة واحدة} other{{count} دقائق}}",
+  "@driverAvailableInMinutes": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableSoon": "متاح قريبًا",
+  "driverPickupNotAvailableYet": "تأكيد الاستلام غير متاح بعد",
+  "driverPickupConfirmFrom": "يمكن تأكيد الاستلام من {time} (قبل 30 دقيقة من موعد المورّد).",
+  "@driverPickupConfirmFrom": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverSupplierPickupWindowPassed": "انتهى موعد استلام المورّد",
+  "driverPickupConfirmationEnded": "انتهت نافذة تأكيد الاستلام المسموحة في {dateTime}.",
+  "@driverPickupConfirmationEnded": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverDeliveryWindowNotSet": "موعد تأكيد التوصيل غير محدد",
+  "driverLearnerMustConfirmWindow": "يجب على المتعلّم تأكيد موعد التوصيل قبل أن تتمكن من تأكيد التسليم.",
+  "driverDeliveryNotAvailableYet": "تأكيد التوصيل غير متاح بعد",
+  "driverDeliveryConfirmFrom": "يمكن تأكيد التوصيل من {time}.",
+  "@driverDeliveryConfirmFrom": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverDeliveryWindowPassed": "انتهى موعد التوصيل",
+  "driverDeliveryConfirmationEnded": "انتهت نافذة تأكيد التوصيل المسموحة في {dateTime}.",
+  "@driverDeliveryConfirmationEnded": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverPickupWindowNotStarted": "موعد الاستلام لم يبدأ بعد",
+  "driverPickupStartsAt": "يبدأ الاستلام في {time}.",
+  "@driverPickupStartsAt": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverSupplierPickupOverdue": "تأخّر موعد استلام المورّد",
+  "driverPickupOverdueBody": "انتهت نافذة تأكيد الاستلام المسموحة في {dateTime}. أبلغ عن فشل الاستلام إذا لم تتمكن من إكماله.",
+  "@driverPickupOverdueBody": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverScheduledPickupEnded": "انتهى موعد الاستلام المجدول",
+  "driverScheduledPickupEndedBody": "انتهى موعد المورّد في {time}. لا يزال بإمكانك إكمال الاستلام إذا كانت المادة جاهزة.",
+  "@driverScheduledPickupEndedBody": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverArriveAtPickup": "الوصول لموقع الاستلام",
+  "driverArriveAtPickupReq1": "توجّه إلى موقع استلام المورّد.",
+  "driverArriveAtPickupReq2": "لا يلزم رمز تأكيد لهذه الخطوة.",
+  "driverMarkPickedUpReq1": "يجب أن تكون في موقع استلام المورّد.",
+  "driverMarkPickedUpReq2": "أدخل رمز تسليم المورّد عند الطلب.",
+  "driverStartDeliveryOnTheWay": "بدء التوصيل / في الطريق",
+  "driverStartDeliveryReq1": "يجب أن تكون المادة قد استُلمت من المورّد.",
+  "driverStartDeliveryReq2": "لا يلزم رمز تأكيد لهذه الخطوة.",
+  "driverArriveAtDropoff": "الوصول لموقع التسليم",
+  "driverArriveAtDropoffReq1": "توجّه إلى موقع تسليم المتعلّم.",
+  "driverArriveAtDropoffReq2": "لا يلزم رمز تأكيد لهذه الخطوة.",
+  "driverMarkDeliveredReq1": "يجب أن تكون في موقع تسليم المتعلّم.",
+  "driverMarkDeliveredReq2": "أدخل رمز تسليم المتعلّم عند الطلب.",
+  "driverFailureSupplierUnavailable": "المورّد غير متاح",
+  "driverFailureMaterialNotReady": "المادة غير جاهزة",
+  "driverFailureLocationIssue": "مشكلة في الموقع",
+  "driverFailureLearnerUnavailable": "المتعلّم غير متاح",
+  "driverFailureAddressIssue": "مشكلة في العنوان",
+  "driverFailureAccessIssue": "مشكلة في الوصول",
+  "driverInactiveMovedToAdminReview": "نُقل إلى مراجعة الإدارة",
+  "driverInactiveNoLongerActive": "لم يعد نشطًا",
+  "driverTransportCar": "سيارة",
+  "driverTransportMotorcycle": "دراجة نارية",
+  "driverTransportBicycle": "دراجة",
+  "driverTransportWalking": "مشيًا",
+  "driverPhoneRequired": "مطلوب للسائقين",
+  "driverTransportationType": "نوع النقل",
+  "driverAddressLineOptional": "سطر العنوان (اختياري)",
+  "driverAvailabilityNoteOptional": "ملاحظة التوفر (اختياري)",
+  "notificationDriverNewJobTitle": "مهمة توصيل جديدة",
+  "notificationDriverNewJobBody": "{materialTitle} جاهزة للتوصيل.",
+  "@notificationDriverNewJobBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupTimeTitle": "موعد الاستلام",
+  "notificationDriverPickupTimeBody": "يبدأ استلام {materialTitle} قريبًا.",
+  "@notificationDriverPickupTimeBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffTimeTitle": "موعد التسليم",
+  "notificationDriverDropoffTimeBody": "يبدأ تسليم {materialTitle} قريبًا.",
+  "@notificationDriverDropoffTimeBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverUnassignedTitle": "تم إلغاء تعيين التوصيل",
+  "notificationDriverUnassignedBody": "أُعيد فتح {materialTitle} لمجموعة السائقين من قِبل الإدارة.",
+  "@notificationDriverUnassignedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverMovedToAdminTitle": "نُقل التوصيل إلى مراجعة الإدارة",
+  "notificationDriverMovedToAdminBody": "نُقل التوصيل إلى مراجعة الإدارة لأن الاستلام لم يُكتمل ضمن موعد الاستلام.",
+  "driverToday": "اليوم",
+  "driverPickupStartsInHours": "يبدأ الاستلام خلال {hours, plural, =1{ساعة واحدة} other{{hours} ساعات}} · {dateLabel} · {timeRange}",
+  "@driverPickupStartsInHours": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupStartsInMinutes": "يبدأ الاستلام خلال {minutes} دقيقة · {dateLabel} · {timeRange}",
+  "@driverPickupStartsInMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"},
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupStartsSoon": "يبدأ الاستلام قريبًا · {dateLabel} · {timeRange}",
+  "@driverPickupStartsSoon": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupWindowEndedSummary": "انتهت نافذة الاستلام · {dateLabel} · {timeRange}",
+  "@driverPickupWindowEndedSummary": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverReadyForPickupNow": "جاهز للاستلام الآن · {dateLabel} · {timeRange}",
+  "@driverReadyForPickupNow": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "inviteAcceptTitle": "أكمل دعوة ImpactLoop",
+  "inviteInvalidLink": "رابط الدعوة غير صالح.",
+  "inviteRegistrationCompleted": "اكتمل التسجيل بنجاح.",
+  "inviteRoleLabel": "الدور: {role}",
+  "@inviteRoleLabel": {
+    "placeholders": {
+      "role": {"type": "String"}
+    }
+  },
+  "inviteInvitedRole": "الدور المدعو: {role}",
+  "@inviteInvitedRole": {
+    "placeholders": {
+      "role": {"type": "String"}
+    }
+  },
+  "inviteExpires": "تنتهي في: {date}",
+  "@inviteExpires": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "inviteInvalidOrExpired": "رابط الدعوة هذا غير صالح أو منتهٍ أو ملغى أو مستخدم بالفعل.",
+  "inviteCompleteRegistration": "إكمال التسجيل",
+  "inviteFullName": "الاسم الكامل",
+  "invitePhone": "الهاتف",
+  "invitePhoneOptional": "الهاتف (اختياري)",
+  "inviteFieldRequired": "مطلوب",
+  "driverLocationUnavailableShort": "الموقع غير متاح",
+  "driverUnknownParty": "غير معروف",
+  "driverGroupedItemsCount": "{count, plural, =1{عنصر واحد} other{{count} عناصر}}",
+  "@driverGroupedItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverCouldNotShareLocation": "تعذّر مشاركة الموقع. حاول مرة أخرى أو استخدم إرسال موقعي.",
+  "driverLocationPermissionDenied": "تم رفض إذن الموقع. فعّل إذن الموقع أو حاول مرة أخرى.",
+  "driverLocationServicesDisabled": "خدمات الموقع معطّلة. شغّل خدمات الموقع وحاول مرة أخرى.",
+  "driverCurrentLocationFailed": "تعذّر الحصول على موقعك الحالي. يُرجى المحاولة مرة أخرى."
 }

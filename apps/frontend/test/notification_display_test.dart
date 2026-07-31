@@ -295,4 +295,65 @@ void main() {
       expect(copy.body, isNot(contains('Legacy')));
     });
   });
+
+  group('Driver notification localization', () {
+    final ar = AppLocalizationsAr();
+
+    AppNotification _driverNotification({
+      required String notificationType,
+      Map<String, dynamic> metadata = const {},
+    }) {
+      return AppNotification(
+        id: notificationType,
+        notificationType: notificationType,
+        title: 'Legacy English title',
+        body: 'Legacy English body from server',
+        relatedEntityType: 'DELIVERY',
+        relatedEntityId: 'delivery-1',
+        metadata: metadata,
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+    }
+
+    test('localizes every driver notification type in Arabic', () {
+      final expectedTitles = <String, String>{
+        'DRIVER_NEW_JOB': ar.notificationDriverNewJobTitle,
+        'DRIVER_PICKUP_TIME': ar.notificationDriverPickupTimeTitle,
+        'DRIVER_DROPOFF_TIME': ar.notificationDriverDropoffTimeTitle,
+        'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN':
+            ar.notificationDriverUnassignedTitle,
+        'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
+            ar.notificationDriverMovedToAdminTitle,
+      };
+
+      for (final entry in expectedTitles.entries) {
+        final copy = localizedNotificationCopy(
+          _driverNotification(
+            notificationType: entry.key,
+            metadata: const {'materialTitle': 'Arduino Uno'},
+          ),
+          ar,
+        );
+
+        expect(copy.title, entry.value);
+        expect(copy.title, isNot(contains('Legacy')));
+        expect(copy.body, isNot(contains('Legacy English body')));
+        if (entry.key != 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW') {
+          expect(copy.body, contains('Arduino Uno'));
+        }
+      }
+    });
+
+    test('unassigned-by-admin uses deliveryUpdate category', () {
+      final notification = _driverNotification(
+        notificationType: 'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN',
+      );
+
+      expect(
+        categoryForNotification(notification),
+        NotificationVisualCategory.deliveryUpdate,
+      );
+    });
+  });
 }

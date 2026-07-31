@@ -10235,6 +10235,1280 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{demand, plural, =1{1 reservation} other{{demand} reservations}} · {views, plural, =1{1 view} other{{views} views}}'**
   String supplierDemandCountLabel(int demand, int views);
+
+  /// No description provided for @driverPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver portal'**
+  String get driverPortal;
+
+  /// No description provided for @driverInternalDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Internal delivery'**
+  String get driverInternalDelivery;
+
+  /// No description provided for @driverJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Jobs'**
+  String get driverJobs;
+
+  /// No description provided for @driverJobsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver jobs'**
+  String get driverJobsTitle;
+
+  /// No description provided for @driverJobsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic internal delivery coordination'**
+  String get driverJobsSubtitle;
+
+  /// No description provided for @driverActiveDeliveriesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Active deliveries: {active}/{max}'**
+  String driverActiveDeliveriesCount(int active, int max);
+
+  /// No description provided for @driverAvailableJobsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Available jobs: {count}'**
+  String driverAvailableJobsCount(int count);
+
+  /// No description provided for @driverAvailableJobsCountLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Available jobs: …'**
+  String get driverAvailableJobsCountLoading;
+
+  /// No description provided for @driverTotalAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Total available: {count}'**
+  String driverTotalAvailable(int count);
+
+  /// No description provided for @driverAreaChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Area: {area}'**
+  String driverAreaChip(String area);
+
+  /// No description provided for @driverCouldNotLoadActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load active deliveries'**
+  String get driverCouldNotLoadActive;
+
+  /// No description provided for @driverRefreshBeforeAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh before accepting a new job.'**
+  String get driverRefreshBeforeAccept;
+
+  /// No description provided for @driverMyActiveDeliveries.
+  ///
+  /// In en, this message translates to:
+  /// **'My active deliveries'**
+  String get driverMyActiveDeliveries;
+
+  /// No description provided for @driverLoadingActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading active deliveries…'**
+  String get driverLoadingActive;
+
+  /// No description provided for @driverNoActiveDeliveries.
+  ///
+  /// In en, this message translates to:
+  /// **'No active deliveries yet.'**
+  String get driverNoActiveDeliveries;
+
+  /// No description provided for @driverNoActiveDeliveriesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can accept available jobs when you are ready.'**
+  String get driverNoActiveDeliveriesHint;
+
+  /// No description provided for @driverAvailableNearbyJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Available nearby jobs'**
+  String get driverAvailableNearbyJobs;
+
+  /// No description provided for @driverActiveLimitReached.
+  ///
+  /// In en, this message translates to:
+  /// **'You reached the active delivery limit.'**
+  String get driverActiveLimitReached;
+
+  /// No description provided for @driverActiveLimitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete one delivery before accepting another.'**
+  String get driverActiveLimitHint;
+
+  /// No description provided for @driverCompleteOneFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete one delivery before accepting another.'**
+  String get driverCompleteOneFirst;
+
+  /// No description provided for @driverLoadingAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading available jobs…'**
+  String get driverLoadingAvailable;
+
+  /// No description provided for @driverLookingForWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for waiting delivery requests.'**
+  String get driverLookingForWaiting;
+
+  /// No description provided for @driverCouldNotLoadAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load available jobs.'**
+  String get driverCouldNotLoadAvailable;
+
+  /// No description provided for @driverOpenDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Open delivery'**
+  String get driverOpenDelivery;
+
+  /// No description provided for @driverFindNearbyJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Find nearby jobs'**
+  String get driverFindNearbyJobs;
+
+  /// No description provided for @driverDistanceToPickupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance is calculated to the pickup location.'**
+  String get driverDistanceToPickupHint;
+
+  /// No description provided for @driverAnyDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Any distance'**
+  String get driverAnyDistance;
+
+  /// No description provided for @driverWithinKm.
+  ///
+  /// In en, this message translates to:
+  /// **'Within {km} km'**
+  String driverWithinKm(int km);
+
+  /// No description provided for @driverNearest.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearest'**
+  String get driverNearest;
+
+  /// No description provided for @driverNewest.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get driverNewest;
+
+  /// No description provided for @driverCityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'City:'**
+  String get driverCityLabel;
+
+  /// No description provided for @driverAllCities.
+  ///
+  /// In en, this message translates to:
+  /// **'All cities'**
+  String get driverAllCities;
+
+  /// No description provided for @driverAreaLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Area:'**
+  String get driverAreaLabel;
+
+  /// No description provided for @driverAllAreas.
+  ///
+  /// In en, this message translates to:
+  /// **'All areas'**
+  String get driverAllAreas;
+
+  /// No description provided for @driverResetFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset filters'**
+  String get driverResetFilters;
+
+  /// No description provided for @driverLocationNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'Location needed for distance filter.'**
+  String get driverLocationNeeded;
+
+  /// No description provided for @driverLocationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get driverLocationLabel;
+
+  /// No description provided for @driverSort.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get driverSort;
+
+  /// No description provided for @driverAcceptJob.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept job'**
+  String get driverAcceptJob;
+
+  /// No description provided for @driverAccepting.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepting…'**
+  String get driverAccepting;
+
+  /// No description provided for @driverActiveLimitReachedButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Active delivery limit reached'**
+  String get driverActiveLimitReachedButton;
+
+  /// No description provided for @driverDeliveryAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery accepted.'**
+  String get driverDeliveryAccepted;
+
+  /// No description provided for @driverDeliveryNoLongerAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This delivery is no longer available.'**
+  String get driverDeliveryNoLongerAvailable;
+
+  /// No description provided for @driverReachedActiveLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'You have reached the active delivery limit.'**
+  String get driverReachedActiveLimit;
+
+  /// No description provided for @driverDistanceToPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance to pickup'**
+  String get driverDistanceToPickup;
+
+  /// No description provided for @driverPickupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup'**
+  String get driverPickupLabel;
+
+  /// No description provided for @driverIncreaseRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase radius'**
+  String get driverIncreaseRadius;
+
+  /// No description provided for @driverShowAnyDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Show any distance'**
+  String get driverShowAnyDistance;
+
+  /// No description provided for @driverLoadingLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading location…'**
+  String get driverLoadingLocation;
+
+  /// No description provided for @driverUsingCurrentLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Using your current location'**
+  String get driverUsingCurrentLocation;
+
+  /// No description provided for @driverUsingProfileArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Using profile area: {location}'**
+  String driverUsingProfileArea(String location);
+
+  /// No description provided for @driverLocationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Location unavailable — showing all available jobs'**
+  String get driverLocationUnavailable;
+
+  /// No description provided for @driverSearchRadiusAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Search radius: Any distance'**
+  String get driverSearchRadiusAny;
+
+  /// No description provided for @driverSearchRadiusWithin.
+  ///
+  /// In en, this message translates to:
+  /// **'Search radius: Within {km} km'**
+  String driverSearchRadiusWithin(int km);
+
+  /// No description provided for @driverPickupDistanceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup distance unavailable'**
+  String get driverPickupDistanceUnavailable;
+
+  /// No description provided for @driverKmToPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'{distance} km to pickup'**
+  String driverKmToPickup(String distance);
+
+  /// No description provided for @driverNoJobsWithinRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'No jobs within {radius} km.'**
+  String driverNoJobsWithinRadius(String radius);
+
+  /// No description provided for @driverJobsAvailableOutsideRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 job is} other{{count} jobs are}} available outside your current radius. Try increasing the radius or choosing Any distance.'**
+  String driverJobsAvailableOutsideRadius(int count);
+
+  /// No description provided for @driverTryIncreaseRadius.
+  ///
+  /// In en, this message translates to:
+  /// **'Try increasing the radius or choosing Any distance.'**
+  String get driverTryIncreaseRadius;
+
+  /// No description provided for @driverNoJobsInArea.
+  ///
+  /// In en, this message translates to:
+  /// **'No jobs found in this area.'**
+  String get driverNoJobsInArea;
+
+  /// No description provided for @driverJobsAvailableBroaderFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 job is} other{{count} jobs are}} available with broader filters. Try all areas or reset filters.'**
+  String driverJobsAvailableBroaderFilters(int count);
+
+  /// No description provided for @driverTryAllAreasOrReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Try all areas or reset filters.'**
+  String get driverTryAllAreasOrReset;
+
+  /// No description provided for @driverNoJobsNearby.
+  ///
+  /// In en, this message translates to:
+  /// **'No available jobs near you right now.'**
+  String get driverNoJobsNearby;
+
+  /// No description provided for @driverTryChangeFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing the city, area, or distance filter.'**
+  String get driverTryChangeFilters;
+
+  /// No description provided for @driverCheckingActiveDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking your active assigned delivery.'**
+  String get driverCheckingActiveDelivery;
+
+  /// No description provided for @driverCouldNotLoadDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load delivery details.'**
+  String get driverCouldNotLoadDetails;
+
+  /// No description provided for @driverMovedToAdminReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery moved to admin review'**
+  String get driverMovedToAdminReview;
+
+  /// No description provided for @driverNoLongerActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery no longer active'**
+  String get driverNoLongerActive;
+
+  /// No description provided for @driverNoLongerActiveDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'This delivery is no longer active. It was moved to admin review.'**
+  String get driverNoLongerActiveDefault;
+
+  /// No description provided for @driverBackToJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to jobs'**
+  String get driverBackToJobs;
+
+  /// No description provided for @driverNotAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery not active or not assigned to you'**
+  String get driverNotAssigned;
+
+  /// No description provided for @driverOpenJobsBoard.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the jobs board to view your current assigned delivery.'**
+  String get driverOpenJobsBoard;
+
+  /// No description provided for @driverActiveDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Active delivery'**
+  String get driverActiveDelivery;
+
+  /// No description provided for @driverLearnerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner unavailable'**
+  String get driverLearnerUnavailable;
+
+  /// No description provided for @driverDeliveryWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery window'**
+  String get driverDeliveryWindow;
+
+  /// No description provided for @driverLearnerNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner note'**
+  String get driverLearnerNote;
+
+  /// No description provided for @driverNoNextAction.
+  ///
+  /// In en, this message translates to:
+  /// **'No next action'**
+  String get driverNoNextAction;
+
+  /// No description provided for @driverCannotAdvance.
+  ///
+  /// In en, this message translates to:
+  /// **'This delivery cannot be advanced from its current status.'**
+  String get driverCannotAdvance;
+
+  /// No description provided for @driverCannotAdvanceFurther.
+  ///
+  /// In en, this message translates to:
+  /// **'This delivery cannot be advanced further.'**
+  String get driverCannotAdvanceFurther;
+
+  /// No description provided for @driverTimingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Timing note'**
+  String get driverTimingNote;
+
+  /// No description provided for @driverOptionalNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional driver note'**
+  String get driverOptionalNote;
+
+  /// No description provided for @driverOptionalNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a short note for this status update'**
+  String get driverOptionalNoteHint;
+
+  /// No description provided for @driverUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating...'**
+  String get driverUpdating;
+
+  /// No description provided for @driverReportPickupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Report pickup failed'**
+  String get driverReportPickupFailed;
+
+  /// No description provided for @driverReportDeliveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Report delivery failed'**
+  String get driverReportDeliveryFailed;
+
+  /// No description provided for @driverReportDriverIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Report driver issue'**
+  String get driverReportDriverIssue;
+
+  /// No description provided for @driverSupplierHandoverCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier handover code'**
+  String get driverSupplierHandoverCode;
+
+  /// No description provided for @driverSupplierHandoverCodeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code the supplier gives you after handing over the material.'**
+  String get driverSupplierHandoverCodeMessage;
+
+  /// No description provided for @driverMarkPickedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark picked up'**
+  String get driverMarkPickedUp;
+
+  /// No description provided for @driverLearnerDeliveryCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner delivery code'**
+  String get driverLearnerDeliveryCode;
+
+  /// No description provided for @driverLearnerDeliveryCodeMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code the learner gives you when they receive the material.'**
+  String get driverLearnerDeliveryCodeMessage;
+
+  /// No description provided for @driverMarkDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark delivered'**
+  String get driverMarkDelivered;
+
+  /// No description provided for @driverDeliveryMarkedDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery marked delivered.'**
+  String get driverDeliveryMarkedDelivered;
+
+  /// No description provided for @driverStatusUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery status updated.'**
+  String get driverStatusUpdated;
+
+  /// No description provided for @driverStatusChangedRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery status changed. Refresh and try the next valid action.'**
+  String get driverStatusChangedRefresh;
+
+  /// No description provided for @driverPickupFailureReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup failure reported.'**
+  String get driverPickupFailureReported;
+
+  /// No description provided for @driverDeliveryFailureReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery failure reported.'**
+  String get driverDeliveryFailureReported;
+
+  /// No description provided for @driverNoteRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (required)'**
+  String get driverNoteRequired;
+
+  /// No description provided for @driverIssueNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe why you cannot continue delivery'**
+  String get driverIssueNoteHint;
+
+  /// No description provided for @driverSubmitReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit report'**
+  String get driverSubmitReport;
+
+  /// No description provided for @driverReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get driverReason;
+
+  /// No description provided for @driverIssueReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver issue reported.'**
+  String get driverIssueReported;
+
+  /// No description provided for @driverLocationSharing.
+  ///
+  /// In en, this message translates to:
+  /// **'Location sharing'**
+  String get driverLocationSharing;
+
+  /// No description provided for @driverLocationSharingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your location while this delivery is active. The learner can track you only after the material is picked up.'**
+  String get driverLocationSharingBody;
+
+  /// No description provided for @driverShareAutomatically.
+  ///
+  /// In en, this message translates to:
+  /// **'Share automatically'**
+  String get driverShareAutomatically;
+
+  /// No description provided for @driverSharingEvery45Seconds.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing every 45 seconds while this page is open.'**
+  String get driverSharingEvery45Seconds;
+
+  /// No description provided for @driverLocationSharingPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Location sharing paused'**
+  String get driverLocationSharingPaused;
+
+  /// No description provided for @driverSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending...'**
+  String get driverSending;
+
+  /// No description provided for @driverSendMyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Send my location'**
+  String get driverSendMyLocation;
+
+  /// No description provided for @driverLocationUpdateSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Location update sent.'**
+  String get driverLocationUpdateSent;
+
+  /// No description provided for @driverLastShared.
+  ///
+  /// In en, this message translates to:
+  /// **'Last shared: {dateTime}'**
+  String driverLastShared(String dateTime);
+
+  /// No description provided for @driverCurrentStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Current stage: {status}'**
+  String driverCurrentStage(String status);
+
+  /// No description provided for @driverNoFurtherSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'No further steps for this delivery.'**
+  String get driverNoFurtherSteps;
+
+  /// No description provided for @driverAdvanceTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Advance to: {action}'**
+  String driverAdvanceTo(String action);
+
+  /// No description provided for @driverNextAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {action}'**
+  String driverNextAction(String action);
+
+  /// No description provided for @driverSupplierCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier handover code is required when marking picked up.'**
+  String get driverSupplierCodeRequired;
+
+  /// No description provided for @driverLearnerCodeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner delivery code is required when marking delivered.'**
+  String get driverLearnerCodeRequired;
+
+  /// No description provided for @driverCompleteArriveBeforePickedUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete \"Arrive at pickup\" before marking picked up.'**
+  String get driverCompleteArriveBeforePickedUp;
+
+  /// No description provided for @driverMarkPickedUpBeforeDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark picked up before starting delivery.'**
+  String get driverMarkPickedUpBeforeDelivery;
+
+  /// No description provided for @driverStartDeliveryBeforeArrive.
+  ///
+  /// In en, this message translates to:
+  /// **'Start delivery before arriving at drop-off.'**
+  String get driverStartDeliveryBeforeArrive;
+
+  /// No description provided for @driverArriveBeforeDelivered.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrive at drop-off before marking delivered.'**
+  String get driverArriveBeforeDelivered;
+
+  /// No description provided for @driverActionNotAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is not available yet.'**
+  String get driverActionNotAvailable;
+
+  /// No description provided for @driverNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get driverNotSet;
+
+  /// No description provided for @driverApproximateAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate address — confirm with learner if needed.'**
+  String get driverApproximateAddress;
+
+  /// No description provided for @driverExactCoordinatesMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Exact coordinates are missing.'**
+  String get driverExactCoordinatesMissing;
+
+  /// No description provided for @driverAssignedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned {dateTime}'**
+  String driverAssignedAt(String dateTime);
+
+  /// No description provided for @driverAvailableInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in {count, plural, =1{1 day} other{{count} days}}'**
+  String driverAvailableInDays(int count);
+
+  /// No description provided for @driverAvailableInHoursMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in {hours} h {minutes} min'**
+  String driverAvailableInHoursMinutes(int hours, int minutes);
+
+  /// No description provided for @driverAvailableInHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in {count, plural, =1{1 hour} other{{count} hours}}'**
+  String driverAvailableInHours(int count);
+
+  /// No description provided for @driverAvailableInMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in {count, plural, =1{1 minute} other{{count} minutes}}'**
+  String driverAvailableInMinutes(int count);
+
+  /// No description provided for @driverAvailableSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Available soon'**
+  String get driverAvailableSoon;
+
+  /// No description provided for @driverPickupNotAvailableYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup confirmation is not available yet'**
+  String get driverPickupNotAvailableYet;
+
+  /// No description provided for @driverPickupConfirmFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup can be confirmed from {time} (30 minutes before the supplier window).'**
+  String driverPickupConfirmFrom(String time);
+
+  /// No description provided for @driverSupplierPickupWindowPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier pickup window has passed'**
+  String get driverSupplierPickupWindowPassed;
+
+  /// No description provided for @driverPickupConfirmationEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'The allowed pickup confirmation window ended at {dateTime}.'**
+  String driverPickupConfirmationEnded(String dateTime);
+
+  /// No description provided for @driverDeliveryWindowNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery confirmation window is not set'**
+  String get driverDeliveryWindowNotSet;
+
+  /// No description provided for @driverLearnerMustConfirmWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'The learner must confirm a delivery window before you can mark delivered.'**
+  String get driverLearnerMustConfirmWindow;
+
+  /// No description provided for @driverDeliveryNotAvailableYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery confirmation is not available yet'**
+  String get driverDeliveryNotAvailableYet;
+
+  /// No description provided for @driverDeliveryConfirmFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery can be confirmed from {time}.'**
+  String driverDeliveryConfirmFrom(String time);
+
+  /// No description provided for @driverDeliveryWindowPassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery window has passed'**
+  String get driverDeliveryWindowPassed;
+
+  /// No description provided for @driverDeliveryConfirmationEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'The allowed delivery confirmation window ended at {dateTime}.'**
+  String driverDeliveryConfirmationEnded(String dateTime);
+
+  /// No description provided for @driverPickupWindowNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup window has not started yet'**
+  String get driverPickupWindowNotStarted;
+
+  /// No description provided for @driverPickupStartsAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup starts at {time}.'**
+  String driverPickupStartsAt(String time);
+
+  /// No description provided for @driverSupplierPickupOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier pickup window overdue'**
+  String get driverSupplierPickupOverdue;
+
+  /// No description provided for @driverPickupOverdueBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The allowed pickup confirmation window ended at {dateTime}. Report pickup failed if you cannot complete pickup.'**
+  String driverPickupOverdueBody(String dateTime);
+
+  /// No description provided for @driverScheduledPickupEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled pickup window has ended'**
+  String get driverScheduledPickupEnded;
+
+  /// No description provided for @driverScheduledPickupEndedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The supplier window ended at {time}. You may still complete pickup if the material is ready.'**
+  String driverScheduledPickupEndedBody(String time);
+
+  /// No description provided for @driverArriveAtPickup.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrive at pickup'**
+  String get driverArriveAtPickup;
+
+  /// No description provided for @driverArriveAtPickupReq1.
+  ///
+  /// In en, this message translates to:
+  /// **'Drive to the supplier pickup location.'**
+  String get driverArriveAtPickupReq1;
+
+  /// No description provided for @driverArriveAtPickupReq2.
+  ///
+  /// In en, this message translates to:
+  /// **'No confirmation code is required for this step.'**
+  String get driverArriveAtPickupReq2;
+
+  /// No description provided for @driverMarkPickedUpReq1.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be at the supplier pickup location.'**
+  String get driverMarkPickedUpReq1;
+
+  /// No description provided for @driverMarkPickedUpReq2.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the supplier handover code when prompted.'**
+  String get driverMarkPickedUpReq2;
+
+  /// No description provided for @driverStartDeliveryOnTheWay.
+  ///
+  /// In en, this message translates to:
+  /// **'Start delivery / On the way'**
+  String get driverStartDeliveryOnTheWay;
+
+  /// No description provided for @driverStartDeliveryReq1.
+  ///
+  /// In en, this message translates to:
+  /// **'Material must already be picked up from the supplier.'**
+  String get driverStartDeliveryReq1;
+
+  /// No description provided for @driverStartDeliveryReq2.
+  ///
+  /// In en, this message translates to:
+  /// **'No confirmation code is required for this step.'**
+  String get driverStartDeliveryReq2;
+
+  /// No description provided for @driverArriveAtDropoff.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrive at drop-off'**
+  String get driverArriveAtDropoff;
+
+  /// No description provided for @driverArriveAtDropoffReq1.
+  ///
+  /// In en, this message translates to:
+  /// **'Drive to the learner drop-off location.'**
+  String get driverArriveAtDropoffReq1;
+
+  /// No description provided for @driverArriveAtDropoffReq2.
+  ///
+  /// In en, this message translates to:
+  /// **'No confirmation code is required for this step.'**
+  String get driverArriveAtDropoffReq2;
+
+  /// No description provided for @driverMarkDeliveredReq1.
+  ///
+  /// In en, this message translates to:
+  /// **'You must be at the learner drop-off location.'**
+  String get driverMarkDeliveredReq1;
+
+  /// No description provided for @driverMarkDeliveredReq2.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the learner delivery code when prompted.'**
+  String get driverMarkDeliveredReq2;
+
+  /// No description provided for @driverFailureSupplierUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier unavailable'**
+  String get driverFailureSupplierUnavailable;
+
+  /// No description provided for @driverFailureMaterialNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Material not ready'**
+  String get driverFailureMaterialNotReady;
+
+  /// No description provided for @driverFailureLocationIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Location issue'**
+  String get driverFailureLocationIssue;
+
+  /// No description provided for @driverFailureLearnerUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Learner unavailable'**
+  String get driverFailureLearnerUnavailable;
+
+  /// No description provided for @driverFailureAddressIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Address issue'**
+  String get driverFailureAddressIssue;
+
+  /// No description provided for @driverFailureAccessIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Access issue'**
+  String get driverFailureAccessIssue;
+
+  /// No description provided for @driverInactiveMovedToAdminReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to admin review'**
+  String get driverInactiveMovedToAdminReview;
+
+  /// No description provided for @driverInactiveNoLongerActive.
+  ///
+  /// In en, this message translates to:
+  /// **'No longer active'**
+  String get driverInactiveNoLongerActive;
+
+  /// No description provided for @driverTransportCar.
+  ///
+  /// In en, this message translates to:
+  /// **'Car'**
+  String get driverTransportCar;
+
+  /// No description provided for @driverTransportMotorcycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Motorcycle'**
+  String get driverTransportMotorcycle;
+
+  /// No description provided for @driverTransportBicycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bicycle'**
+  String get driverTransportBicycle;
+
+  /// No description provided for @driverTransportWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get driverTransportWalking;
+
+  /// No description provided for @driverPhoneRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required for drivers'**
+  String get driverPhoneRequired;
+
+  /// No description provided for @driverTransportationType.
+  ///
+  /// In en, this message translates to:
+  /// **'Transportation type'**
+  String get driverTransportationType;
+
+  /// No description provided for @driverAddressLineOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Address line (optional)'**
+  String get driverAddressLineOptional;
+
+  /// No description provided for @driverAvailabilityNoteOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability note (optional)'**
+  String get driverAvailabilityNoteOptional;
+
+  /// No description provided for @notificationDriverNewJobTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New delivery job'**
+  String get notificationDriverNewJobTitle;
+
+  /// No description provided for @notificationDriverNewJobBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{materialTitle} is ready for delivery.'**
+  String notificationDriverNewJobBody(String materialTitle);
+
+  /// No description provided for @notificationDriverPickupTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup time'**
+  String get notificationDriverPickupTimeTitle;
+
+  /// No description provided for @notificationDriverPickupTimeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup for {materialTitle} starts soon.'**
+  String notificationDriverPickupTimeBody(String materialTitle);
+
+  /// No description provided for @notificationDriverDropoffTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off time'**
+  String get notificationDriverDropoffTimeTitle;
+
+  /// No description provided for @notificationDriverDropoffTimeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop-off for {materialTitle} starts soon.'**
+  String notificationDriverDropoffTimeBody(String materialTitle);
+
+  /// No description provided for @notificationDriverUnassignedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery assignment removed'**
+  String get notificationDriverUnassignedTitle;
+
+  /// No description provided for @notificationDriverUnassignedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{materialTitle} was reopened to the driver pool by an admin.'**
+  String notificationDriverUnassignedBody(String materialTitle);
+
+  /// No description provided for @notificationDriverMovedToAdminTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery moved to admin review'**
+  String get notificationDriverMovedToAdminTitle;
+
+  /// No description provided for @notificationDriverMovedToAdminBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery moved to admin review because pickup was not completed within the pickup window.'**
+  String get notificationDriverMovedToAdminBody;
+
+  /// No description provided for @driverToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get driverToday;
+
+  /// No description provided for @driverPickupStartsInHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup starts in {hours, plural, =1{1 hour} other{{hours} hours}} · {dateLabel} · {timeRange}'**
+  String driverPickupStartsInHours(
+    int hours,
+    String dateLabel,
+    String timeRange,
+  );
+
+  /// No description provided for @driverPickupStartsInMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup starts in {minutes} min · {dateLabel} · {timeRange}'**
+  String driverPickupStartsInMinutes(
+    int minutes,
+    String dateLabel,
+    String timeRange,
+  );
+
+  /// No description provided for @driverPickupStartsSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup starts soon · {dateLabel} · {timeRange}'**
+  String driverPickupStartsSoon(String dateLabel, String timeRange);
+
+  /// No description provided for @driverPickupWindowEndedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup window ended · {dateLabel} · {timeRange}'**
+  String driverPickupWindowEndedSummary(String dateLabel, String timeRange);
+
+  /// No description provided for @driverReadyForPickupNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready for pickup now · {dateLabel} · {timeRange}'**
+  String driverReadyForPickupNow(String dateLabel, String timeRange);
+
+  /// No description provided for @inviteAcceptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete your ImpactLoop invitation'**
+  String get inviteAcceptTitle;
+
+  /// No description provided for @inviteInvalidLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid invitation link.'**
+  String get inviteInvalidLink;
+
+  /// No description provided for @inviteRegistrationCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Registration completed successfully.'**
+  String get inviteRegistrationCompleted;
+
+  /// No description provided for @inviteRoleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Role: {role}'**
+  String inviteRoleLabel(String role);
+
+  /// No description provided for @inviteInvitedRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Invited role: {role}'**
+  String inviteInvitedRole(String role);
+
+  /// No description provided for @inviteExpires.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires: {date}'**
+  String inviteExpires(String date);
+
+  /// No description provided for @inviteInvalidOrExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This invitation link is invalid, expired, revoked, or already used.'**
+  String get inviteInvalidOrExpired;
+
+  /// No description provided for @inviteCompleteRegistration.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete registration'**
+  String get inviteCompleteRegistration;
+
+  /// No description provided for @inviteFullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get inviteFullName;
+
+  /// No description provided for @invitePhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get invitePhone;
+
+  /// No description provided for @invitePhoneOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone (optional)'**
+  String get invitePhoneOptional;
+
+  /// No description provided for @inviteFieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get inviteFieldRequired;
+
+  /// No description provided for @driverLocationUnavailableShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Location unavailable'**
+  String get driverLocationUnavailableShort;
+
+  /// No description provided for @driverUnknownParty.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get driverUnknownParty;
+
+  /// No description provided for @driverGroupedItemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item} other{{count} items}}'**
+  String driverGroupedItemsCount(int count);
+
+  /// No description provided for @driverCouldNotShareLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not share location. Try again or use Send my location.'**
+  String get driverCouldNotShareLocation;
+
+  /// No description provided for @driverLocationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission was denied. Enable location permission or try again.'**
+  String get driverLocationPermissionDenied;
+
+  /// No description provided for @driverLocationServicesDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Location services are disabled. Turn on location services and try again.'**
+  String get driverLocationServicesDisabled;
+
+  /// No description provided for @driverCurrentLocationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not get your current location. Please try again.'**
+  String get driverCurrentLocationFailed;
 }
 
 class _AppLocalizationsDelegate

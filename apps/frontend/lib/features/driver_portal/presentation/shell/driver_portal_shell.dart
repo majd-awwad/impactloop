@@ -6,6 +6,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -19,6 +20,7 @@ class DriverPortalShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final user = ref.watch(authControllerProvider).user;
     final path = GoRouterState.of(context).matchedLocation;
 
@@ -37,7 +39,7 @@ class DriverPortalShell extends ConsumerWidget {
                   showSignIn: false,
                   showCreateAccount: false,
                   homeRoute: '/driver/jobs',
-                  phoneTitle: 'Driver',
+                  phoneTitle: l10n.driver,
                   showPublicNavLinks: false,
                   trailingActions: const [
                     NotificationBellButton(compact: true),
@@ -50,7 +52,7 @@ class DriverPortalShell extends ConsumerWidget {
                           children: [
                             _DriverSidebar(
                               currentPath: path,
-                              driverName: user?.displayName ?? 'Driver',
+                              driverName: user?.displayName ?? l10n.driver,
                               email: user?.email ?? '',
                             ),
                             Expanded(child: child),
@@ -84,6 +86,7 @@ class _DriverSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
 
     return Container(
       width: 248,
@@ -103,14 +106,14 @@ class _DriverSidebar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Driver portal',
+            l10n.driverPortal,
             style: AppTextStyles.title(
               context,
             ).copyWith(color: palette.textPrimary),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Internal delivery',
+            l10n.driverInternalDelivery,
             style: AppTextStyles.body(
               context,
             ).copyWith(color: palette.textSecondary),
@@ -118,14 +121,14 @@ class _DriverSidebar extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           _DriverNavButton(
             icon: Icons.local_shipping_outlined,
-            label: 'Jobs',
+            label: l10n.driverJobs,
             route: '/driver/jobs',
             selected: _isJobsPath(currentPath),
           ),
           const SizedBox(height: AppSpacing.xs),
           _DriverNavButton(
             icon: Icons.notifications_none_rounded,
-            label: 'Notifications',
+            label: l10n.notificationsTitle,
             route: driverNotificationsRoute,
             selected: isDriverNotificationsPath(currentPath),
           ),
@@ -145,6 +148,7 @@ class _DriverBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final selectedIndex = isDriverNotificationsPath(currentPath) ? 1 : 0;
 
     return Material(
@@ -161,14 +165,14 @@ class _DriverBottomNav extends StatelessWidget {
               context.go(driverNotificationsRoute);
             }
           },
-          destinations: const [
+          destinations: [
             NavigationDestination(
-              icon: Icon(Icons.local_shipping_outlined),
-              label: 'Jobs',
+              icon: const Icon(Icons.local_shipping_outlined),
+              label: l10n.driverJobs,
             ),
             NavigationDestination(
-              icon: Icon(Icons.notifications_none_rounded),
-              label: 'Notifications',
+              icon: const Icon(Icons.notifications_none_rounded),
+              label: l10n.notificationsTitle,
             ),
           ],
         ),

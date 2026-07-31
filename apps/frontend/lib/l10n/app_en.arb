@@ -2823,5 +2823,427 @@
       "demand": {"type": "int"},
       "views": {"type": "int"}
     }
-  }
+  },
+  "driverPortal": "Driver portal",
+  "driverInternalDelivery": "Internal delivery",
+  "driverJobs": "Jobs",
+  "driverJobsTitle": "Driver jobs",
+  "driverJobsSubtitle": "Basic internal delivery coordination",
+  "driverActiveDeliveriesCount": "Active deliveries: {active}/{max}",
+  "@driverActiveDeliveriesCount": {
+    "placeholders": {
+      "active": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "driverAvailableJobsCount": "Available jobs: {count}",
+  "@driverAvailableJobsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableJobsCountLoading": "Available jobs: …",
+  "driverTotalAvailable": "Total available: {count}",
+  "@driverTotalAvailable": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAreaChip": "Area: {area}",
+  "@driverAreaChip": {
+    "placeholders": {
+      "area": {"type": "String"}
+    }
+  },
+  "driverCouldNotLoadActive": "Could not load active deliveries",
+  "driverRefreshBeforeAccept": "Refresh before accepting a new job.",
+  "driverMyActiveDeliveries": "My active deliveries",
+  "driverLoadingActive": "Loading active deliveries…",
+  "driverNoActiveDeliveries": "No active deliveries yet.",
+  "driverNoActiveDeliveriesHint": "You can accept available jobs when you are ready.",
+  "driverAvailableNearbyJobs": "Available nearby jobs",
+  "driverActiveLimitReached": "You reached the active delivery limit.",
+  "driverActiveLimitHint": "Complete one delivery before accepting another.",
+  "driverCompleteOneFirst": "Complete one delivery before accepting another.",
+  "driverLoadingAvailable": "Loading available jobs…",
+  "driverLookingForWaiting": "Looking for waiting delivery requests.",
+  "driverCouldNotLoadAvailable": "Could not load available jobs.",
+  "driverOpenDelivery": "Open delivery",
+  "driverFindNearbyJobs": "Find nearby jobs",
+  "driverDistanceToPickupHint": "Distance is calculated to the pickup location.",
+  "driverAnyDistance": "Any distance",
+  "driverWithinKm": "Within {km} km",
+  "@driverWithinKm": {
+    "placeholders": {
+      "km": {"type": "int"}
+    }
+  },
+  "driverNearest": "Nearest",
+  "driverNewest": "Newest",
+  "driverCityLabel": "City:",
+  "driverAllCities": "All cities",
+  "driverAreaLabel": "Area:",
+  "driverAllAreas": "All areas",
+  "driverResetFilters": "Reset filters",
+  "driverLocationNeeded": "Location needed for distance filter.",
+  "driverLocationLabel": "Location",
+  "driverSort": "Sort",
+  "driverAcceptJob": "Accept job",
+  "driverAccepting": "Accepting…",
+  "driverActiveLimitReachedButton": "Active delivery limit reached",
+  "driverDeliveryAccepted": "Delivery accepted.",
+  "driverDeliveryNoLongerAvailable": "This delivery is no longer available.",
+  "driverReachedActiveLimit": "You have reached the active delivery limit.",
+  "driverDistanceToPickup": "Distance to pickup",
+  "driverPickupLabel": "Pickup",
+  "driverIncreaseRadius": "Increase radius",
+  "driverShowAnyDistance": "Show any distance",
+  "driverLoadingLocation": "Loading location…",
+  "driverUsingCurrentLocation": "Using your current location",
+  "driverUsingProfileArea": "Using profile area: {location}",
+  "@driverUsingProfileArea": {
+    "placeholders": {
+      "location": {"type": "String"}
+    }
+  },
+  "driverLocationUnavailable": "Location unavailable — showing all available jobs",
+  "driverSearchRadiusAny": "Search radius: Any distance",
+  "driverSearchRadiusWithin": "Search radius: Within {km} km",
+  "@driverSearchRadiusWithin": {
+    "placeholders": {
+      "km": {"type": "int"}
+    }
+  },
+  "driverPickupDistanceUnavailable": "Pickup distance unavailable",
+  "driverKmToPickup": "{distance} km to pickup",
+  "@driverKmToPickup": {
+    "placeholders": {
+      "distance": {"type": "String"}
+    }
+  },
+  "driverNoJobsWithinRadius": "No jobs within {radius} km.",
+  "@driverNoJobsWithinRadius": {
+    "placeholders": {
+      "radius": {"type": "String"}
+    }
+  },
+  "driverJobsAvailableOutsideRadius": "{count, plural, =1{1 job is} other{{count} jobs are}} available outside your current radius. Try increasing the radius or choosing Any distance.",
+  "@driverJobsAvailableOutsideRadius": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverTryIncreaseRadius": "Try increasing the radius or choosing Any distance.",
+  "driverNoJobsInArea": "No jobs found in this area.",
+  "driverJobsAvailableBroaderFilters": "{count, plural, =1{1 job is} other{{count} jobs are}} available with broader filters. Try all areas or reset filters.",
+  "@driverJobsAvailableBroaderFilters": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverTryAllAreasOrReset": "Try all areas or reset filters.",
+  "driverNoJobsNearby": "No available jobs near you right now.",
+  "driverTryChangeFilters": "Try changing the city, area, or distance filter.",
+  "driverCheckingActiveDelivery": "Checking your active assigned delivery.",
+  "driverCouldNotLoadDetails": "Could not load delivery details.",
+  "driverMovedToAdminReview": "Delivery moved to admin review",
+  "driverNoLongerActive": "Delivery no longer active",
+  "driverNoLongerActiveDefault": "This delivery is no longer active. It was moved to admin review.",
+  "driverBackToJobs": "Back to jobs",
+  "driverNotAssigned": "Delivery not active or not assigned to you",
+  "driverOpenJobsBoard": "Open the jobs board to view your current assigned delivery.",
+  "driverActiveDelivery": "Active delivery",
+  "driverLearnerUnavailable": "Learner unavailable",
+  "driverDeliveryWindow": "Delivery window",
+  "driverLearnerNote": "Learner note",
+  "driverNoNextAction": "No next action",
+  "driverCannotAdvance": "This delivery cannot be advanced from its current status.",
+  "driverCannotAdvanceFurther": "This delivery cannot be advanced further.",
+  "driverTimingNote": "Timing note",
+  "driverOptionalNote": "Optional driver note",
+  "driverOptionalNoteHint": "Add a short note for this status update",
+  "driverUpdating": "Updating...",
+  "driverReportPickupFailed": "Report pickup failed",
+  "driverReportDeliveryFailed": "Report delivery failed",
+  "driverReportDriverIssue": "Report driver issue",
+  "driverSupplierHandoverCode": "Supplier handover code",
+  "driverSupplierHandoverCodeMessage": "Enter the code the supplier gives you after handing over the material.",
+  "driverMarkPickedUp": "Mark picked up",
+  "driverLearnerDeliveryCode": "Learner delivery code",
+  "driverLearnerDeliveryCodeMessage": "Enter the code the learner gives you when they receive the material.",
+  "driverMarkDelivered": "Mark delivered",
+  "driverDeliveryMarkedDelivered": "Delivery marked delivered.",
+  "driverStatusUpdated": "Delivery status updated.",
+  "driverStatusChangedRefresh": "Delivery status changed. Refresh and try the next valid action.",
+  "driverPickupFailureReported": "Pickup failure reported.",
+  "driverDeliveryFailureReported": "Delivery failure reported.",
+  "driverNoteRequired": "Note (required)",
+  "driverIssueNoteHint": "Describe why you cannot continue delivery",
+  "driverSubmitReport": "Submit report",
+  "driverReason": "Reason",
+  "driverIssueReported": "Driver issue reported.",
+  "driverLocationSharing": "Location sharing",
+  "driverLocationSharingBody": "Share your location while this delivery is active. The learner can track you only after the material is picked up.",
+  "driverShareAutomatically": "Share automatically",
+  "driverSharingEvery45Seconds": "Sharing every 45 seconds while this page is open.",
+  "driverLocationSharingPaused": "Location sharing paused",
+  "driverSending": "Sending...",
+  "driverSendMyLocation": "Send my location",
+  "driverLocationUpdateSent": "Location update sent.",
+  "driverLastShared": "Last shared: {dateTime}",
+  "@driverLastShared": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
+  "driverCurrentStage": "Current stage: {status}",
+  "@driverCurrentStage": {
+    "placeholders": {
+      "status": {"type": "String"}
+    }
+  },
+  "driverNoFurtherSteps": "No further steps for this delivery.",
+  "driverAdvanceTo": "Advance to: {action}",
+  "@driverAdvanceTo": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "driverNextAction": "Next: {action}",
+  "@driverNextAction": {
+    "placeholders": {
+      "action": {"type": "String"}
+    }
+  },
+  "driverSupplierCodeRequired": "Supplier handover code is required when marking picked up.",
+  "driverLearnerCodeRequired": "Learner delivery code is required when marking delivered.",
+  "driverCompleteArriveBeforePickedUp": "Complete \"Arrive at pickup\" before marking picked up.",
+  "driverMarkPickedUpBeforeDelivery": "Mark picked up before starting delivery.",
+  "driverStartDeliveryBeforeArrive": "Start delivery before arriving at drop-off.",
+  "driverArriveBeforeDelivered": "Arrive at drop-off before marking delivered.",
+  "driverActionNotAvailable": "This action is not available yet.",
+  "driverNotSet": "Not set",
+  "driverApproximateAddress": "Approximate address — confirm with learner if needed.",
+  "driverExactCoordinatesMissing": "Exact coordinates are missing.",
+  "driverAssignedAt": "Assigned {dateTime}",
+  "@driverAssignedAt": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverAvailableInDays": "Available in {count, plural, =1{1 day} other{{count} days}}",
+  "@driverAvailableInDays": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableInHoursMinutes": "Available in {hours} h {minutes} min",
+  "@driverAvailableInHoursMinutes": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "driverAvailableInHours": "Available in {count, plural, =1{1 hour} other{{count} hours}}",
+  "@driverAvailableInHours": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableInMinutes": "Available in {count, plural, =1{1 minute} other{{count} minutes}}",
+  "@driverAvailableInMinutes": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverAvailableSoon": "Available soon",
+  "driverPickupNotAvailableYet": "Pickup confirmation is not available yet",
+  "driverPickupConfirmFrom": "Pickup can be confirmed from {time} (30 minutes before the supplier window).",
+  "@driverPickupConfirmFrom": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverSupplierPickupWindowPassed": "Supplier pickup window has passed",
+  "driverPickupConfirmationEnded": "The allowed pickup confirmation window ended at {dateTime}.",
+  "@driverPickupConfirmationEnded": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverDeliveryWindowNotSet": "Delivery confirmation window is not set",
+  "driverLearnerMustConfirmWindow": "The learner must confirm a delivery window before you can mark delivered.",
+  "driverDeliveryNotAvailableYet": "Delivery confirmation is not available yet",
+  "driverDeliveryConfirmFrom": "Delivery can be confirmed from {time}.",
+  "@driverDeliveryConfirmFrom": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverDeliveryWindowPassed": "Delivery window has passed",
+  "driverDeliveryConfirmationEnded": "The allowed delivery confirmation window ended at {dateTime}.",
+  "@driverDeliveryConfirmationEnded": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverPickupWindowNotStarted": "Pickup window has not started yet",
+  "driverPickupStartsAt": "Pickup starts at {time}.",
+  "@driverPickupStartsAt": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverSupplierPickupOverdue": "Supplier pickup window overdue",
+  "driverPickupOverdueBody": "The allowed pickup confirmation window ended at {dateTime}. Report pickup failed if you cannot complete pickup.",
+  "@driverPickupOverdueBody": {
+    "placeholders": {
+      "dateTime": {"type": "String"}
+    }
+  },
+  "driverScheduledPickupEnded": "Scheduled pickup window has ended",
+  "driverScheduledPickupEndedBody": "The supplier window ended at {time}. You may still complete pickup if the material is ready.",
+  "@driverScheduledPickupEndedBody": {
+    "placeholders": {
+      "time": {"type": "String"}
+    }
+  },
+  "driverArriveAtPickup": "Arrive at pickup",
+  "driverArriveAtPickupReq1": "Drive to the supplier pickup location.",
+  "driverArriveAtPickupReq2": "No confirmation code is required for this step.",
+  "driverMarkPickedUpReq1": "You must be at the supplier pickup location.",
+  "driverMarkPickedUpReq2": "Enter the supplier handover code when prompted.",
+  "driverStartDeliveryOnTheWay": "Start delivery / On the way",
+  "driverStartDeliveryReq1": "Material must already be picked up from the supplier.",
+  "driverStartDeliveryReq2": "No confirmation code is required for this step.",
+  "driverArriveAtDropoff": "Arrive at drop-off",
+  "driverArriveAtDropoffReq1": "Drive to the learner drop-off location.",
+  "driverArriveAtDropoffReq2": "No confirmation code is required for this step.",
+  "driverMarkDeliveredReq1": "You must be at the learner drop-off location.",
+  "driverMarkDeliveredReq2": "Enter the learner delivery code when prompted.",
+  "driverFailureSupplierUnavailable": "Supplier unavailable",
+  "driverFailureMaterialNotReady": "Material not ready",
+  "driverFailureLocationIssue": "Location issue",
+  "driverFailureLearnerUnavailable": "Learner unavailable",
+  "driverFailureAddressIssue": "Address issue",
+  "driverFailureAccessIssue": "Access issue",
+  "driverInactiveMovedToAdminReview": "Moved to admin review",
+  "driverInactiveNoLongerActive": "No longer active",
+  "driverTransportCar": "Car",
+  "driverTransportMotorcycle": "Motorcycle",
+  "driverTransportBicycle": "Bicycle",
+  "driverTransportWalking": "Walking",
+  "driverPhoneRequired": "Required for drivers",
+  "driverTransportationType": "Transportation type",
+  "driverAddressLineOptional": "Address line (optional)",
+  "driverAvailabilityNoteOptional": "Availability note (optional)",
+  "notificationDriverNewJobTitle": "New delivery job",
+  "notificationDriverNewJobBody": "{materialTitle} is ready for delivery.",
+  "@notificationDriverNewJobBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupTimeTitle": "Pickup time",
+  "notificationDriverPickupTimeBody": "Pickup for {materialTitle} starts soon.",
+  "@notificationDriverPickupTimeBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffTimeTitle": "Drop-off time",
+  "notificationDriverDropoffTimeBody": "Drop-off for {materialTitle} starts soon.",
+  "@notificationDriverDropoffTimeBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverUnassignedTitle": "Delivery assignment removed",
+  "notificationDriverUnassignedBody": "{materialTitle} was reopened to the driver pool by an admin.",
+  "@notificationDriverUnassignedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverMovedToAdminTitle": "Delivery moved to admin review",
+  "notificationDriverMovedToAdminBody": "Delivery moved to admin review because pickup was not completed within the pickup window.",
+  "driverToday": "Today",
+  "driverPickupStartsInHours": "Pickup starts in {hours, plural, =1{1 hour} other{{hours} hours}} · {dateLabel} · {timeRange}",
+  "@driverPickupStartsInHours": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupStartsInMinutes": "Pickup starts in {minutes} min · {dateLabel} · {timeRange}",
+  "@driverPickupStartsInMinutes": {
+    "placeholders": {
+      "minutes": {"type": "int"},
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupStartsSoon": "Pickup starts soon · {dateLabel} · {timeRange}",
+  "@driverPickupStartsSoon": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverPickupWindowEndedSummary": "Pickup window ended · {dateLabel} · {timeRange}",
+  "@driverPickupWindowEndedSummary": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "driverReadyForPickupNow": "Ready for pickup now · {dateLabel} · {timeRange}",
+  "@driverReadyForPickupNow": {
+    "placeholders": {
+      "dateLabel": {"type": "String"},
+      "timeRange": {"type": "String"}
+    }
+  },
+  "inviteAcceptTitle": "Complete your ImpactLoop invitation",
+  "inviteInvalidLink": "Invalid invitation link.",
+  "inviteRegistrationCompleted": "Registration completed successfully.",
+  "inviteRoleLabel": "Role: {role}",
+  "@inviteRoleLabel": {
+    "placeholders": {
+      "role": {"type": "String"}
+    }
+  },
+  "inviteInvitedRole": "Invited role: {role}",
+  "@inviteInvitedRole": {
+    "placeholders": {
+      "role": {"type": "String"}
+    }
+  },
+  "inviteExpires": "Expires: {date}",
+  "@inviteExpires": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "inviteInvalidOrExpired": "This invitation link is invalid, expired, revoked, or already used.",
+  "inviteCompleteRegistration": "Complete registration",
+  "inviteFullName": "Full name",
+  "invitePhone": "Phone",
+  "invitePhoneOptional": "Phone (optional)",
+  "inviteFieldRequired": "Required",
+  "driverLocationUnavailableShort": "Location unavailable",
+  "driverUnknownParty": "Unknown",
+  "driverGroupedItemsCount": "{count, plural, =1{1 item} other{{count} items}}",
+  "@driverGroupedItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverCouldNotShareLocation": "Could not share location. Try again or use Send my location.",
+  "driverLocationPermissionDenied": "Location permission was denied. Enable location permission or try again.",
+  "driverLocationServicesDisabled": "Location services are disabled. Turn on location services and try again.",
+  "driverCurrentLocationFailed": "Could not get your current location. Please try again."
 }

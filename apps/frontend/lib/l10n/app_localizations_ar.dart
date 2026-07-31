@@ -5898,4 +5898,797 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0 · $_temp1';
   }
+
+  @override
+  String get driverPortal => 'بوابة السائق';
+
+  @override
+  String get driverInternalDelivery => 'توصيل داخلي';
+
+  @override
+  String get driverJobs => 'المهام';
+
+  @override
+  String get driverJobsTitle => 'مهام السائق';
+
+  @override
+  String get driverJobsSubtitle => 'تنسيق التوصيل الداخلي الأساسي';
+
+  @override
+  String driverActiveDeliveriesCount(int active, int max) {
+    return 'التوصيلات النشطة: $active/$max';
+  }
+
+  @override
+  String driverAvailableJobsCount(int count) {
+    return 'المهام المتاحة: $count';
+  }
+
+  @override
+  String get driverAvailableJobsCountLoading => 'المهام المتاحة: …';
+
+  @override
+  String driverTotalAvailable(int count) {
+    return 'الإجمالي المتاح: $count';
+  }
+
+  @override
+  String driverAreaChip(String area) {
+    return 'المنطقة: $area';
+  }
+
+  @override
+  String get driverCouldNotLoadActive => 'تعذّر تحميل التوصيلات النشطة';
+
+  @override
+  String get driverRefreshBeforeAccept => 'حدّث الصفحة قبل قبول مهمة جديدة.';
+
+  @override
+  String get driverMyActiveDeliveries => 'توصيلاتي النشطة';
+
+  @override
+  String get driverLoadingActive => 'جارٍ تحميل التوصيلات النشطة…';
+
+  @override
+  String get driverNoActiveDeliveries => 'لا توجد توصيلات نشطة بعد.';
+
+  @override
+  String get driverNoActiveDeliveriesHint =>
+      'يمكنك قبول المهام المتاحة عندما تكون جاهزًا.';
+
+  @override
+  String get driverAvailableNearbyJobs => 'المهام المتاحة القريبة';
+
+  @override
+  String get driverActiveLimitReached => 'وصلت إلى حد التوصيلات النشطة.';
+
+  @override
+  String get driverActiveLimitHint => 'أكمل توصيلًا واحدًا قبل قبول آخر.';
+
+  @override
+  String get driverCompleteOneFirst => 'أكمل توصيلًا واحدًا قبل قبول آخر.';
+
+  @override
+  String get driverLoadingAvailable => 'جارٍ تحميل المهام المتاحة…';
+
+  @override
+  String get driverLookingForWaiting =>
+      'جارٍ البحث عن طلبات توصيل بانتظار السائق.';
+
+  @override
+  String get driverCouldNotLoadAvailable => 'تعذّر تحميل المهام المتاحة.';
+
+  @override
+  String get driverOpenDelivery => 'فتح التوصيل';
+
+  @override
+  String get driverFindNearbyJobs => 'البحث عن مهام قريبة';
+
+  @override
+  String get driverDistanceToPickupHint => 'تُحسب المسافة إلى موقع الاستلام.';
+
+  @override
+  String get driverAnyDistance => 'أي مسافة';
+
+  @override
+  String driverWithinKm(int km) {
+    return 'ضمن $km كم';
+  }
+
+  @override
+  String get driverNearest => 'الأقرب';
+
+  @override
+  String get driverNewest => 'الأحدث';
+
+  @override
+  String get driverCityLabel => 'المدينة:';
+
+  @override
+  String get driverAllCities => 'كل المدن';
+
+  @override
+  String get driverAreaLabel => 'المنطقة:';
+
+  @override
+  String get driverAllAreas => 'كل المناطق';
+
+  @override
+  String get driverResetFilters => 'إعادة تعيين الفلاتر';
+
+  @override
+  String get driverLocationNeeded => 'الموقع مطلوب لفلتر المسافة.';
+
+  @override
+  String get driverLocationLabel => 'الموقع';
+
+  @override
+  String get driverSort => 'الترتيب';
+
+  @override
+  String get driverAcceptJob => 'قبول المهمة';
+
+  @override
+  String get driverAccepting => 'جارٍ القبول…';
+
+  @override
+  String get driverActiveLimitReachedButton => 'تم بلوغ حد التوصيلات النشطة';
+
+  @override
+  String get driverDeliveryAccepted => 'تم قبول التوصيل.';
+
+  @override
+  String get driverDeliveryNoLongerAvailable => 'لم يعد هذا التوصيل متاحًا.';
+
+  @override
+  String get driverReachedActiveLimit => 'لقد وصلت إلى حد التوصيلات النشطة.';
+
+  @override
+  String get driverDistanceToPickup => 'المسافة إلى الاستلام';
+
+  @override
+  String get driverPickupLabel => 'الاستلام';
+
+  @override
+  String get driverIncreaseRadius => 'توسيع نطاق البحث';
+
+  @override
+  String get driverShowAnyDistance => 'عرض أي مسافة';
+
+  @override
+  String get driverLoadingLocation => 'جارٍ تحميل الموقع…';
+
+  @override
+  String get driverUsingCurrentLocation => 'باستخدام موقعك الحالي';
+
+  @override
+  String driverUsingProfileArea(String location) {
+    return 'باستخدام منطقة الملف الشخصي: $location';
+  }
+
+  @override
+  String get driverLocationUnavailable =>
+      'الموقع غير متاح — عرض كل المهام المتاحة';
+
+  @override
+  String get driverSearchRadiusAny => 'نطاق البحث: أي مسافة';
+
+  @override
+  String driverSearchRadiusWithin(int km) {
+    return 'نطاق البحث: ضمن $km كم';
+  }
+
+  @override
+  String get driverPickupDistanceUnavailable => 'مسافة الاستلام غير متاحة';
+
+  @override
+  String driverKmToPickup(String distance) {
+    return '$distance كم إلى الاستلام';
+  }
+
+  @override
+  String driverNoJobsWithinRadius(String radius) {
+    return 'لا توجد مهام ضمن $radius كم.';
+  }
+
+  @override
+  String driverJobsAvailableOutsideRadius(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مهام',
+      one: 'مهمة واحدة',
+    );
+    return '$_temp0 متاحة خارج نطاقك الحالي. جرّب توسيع النطاق أو اختيار أي مسافة.';
+  }
+
+  @override
+  String get driverTryIncreaseRadius => 'جرّب توسيع النطاق أو اختيار أي مسافة.';
+
+  @override
+  String get driverNoJobsInArea => 'لم تُعثر على مهام في هذه المنطقة.';
+
+  @override
+  String driverJobsAvailableBroaderFilters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مهام',
+      one: 'مهمة واحدة',
+    );
+    return '$_temp0 متاحة بفلاتر أوسع. جرّب كل المناطق أو إعادة تعيين الفلاتر.';
+  }
+
+  @override
+  String get driverTryAllAreasOrReset =>
+      'جرّب كل المناطق أو إعادة تعيين الفلاتر.';
+
+  @override
+  String get driverNoJobsNearby => 'لا توجد مهام متاحة قريبة منك الآن.';
+
+  @override
+  String get driverTryChangeFilters =>
+      'جرّب تغيير فلتر المدينة أو المنطقة أو المسافة.';
+
+  @override
+  String get driverCheckingActiveDelivery =>
+      'جارٍ التحقق من التوصيل المعيّن النشط.';
+
+  @override
+  String get driverCouldNotLoadDetails => 'تعذّر تحميل تفاصيل التوصيل.';
+
+  @override
+  String get driverMovedToAdminReview => 'نُقل التوصيل إلى مراجعة الإدارة';
+
+  @override
+  String get driverNoLongerActive => 'التوصيل لم يعد نشطًا';
+
+  @override
+  String get driverNoLongerActiveDefault =>
+      'لم يعد هذا التوصيل نشطًا. نُقل إلى مراجعة الإدارة.';
+
+  @override
+  String get driverBackToJobs => 'العودة إلى المهام';
+
+  @override
+  String get driverNotAssigned => 'التوصيل غير نشط أو غير معيّن لك';
+
+  @override
+  String get driverOpenJobsBoard =>
+      'افتح لوحة المهام لعرض التوصيل المعيّن الحالي.';
+
+  @override
+  String get driverActiveDelivery => 'توصيل نشط';
+
+  @override
+  String get driverLearnerUnavailable => 'المتعلّم غير متاح';
+
+  @override
+  String get driverDeliveryWindow => 'موعد التوصيل';
+
+  @override
+  String get driverLearnerNote => 'ملاحظة المتعلّم';
+
+  @override
+  String get driverNoNextAction => 'لا يوجد إجراء تالٍ';
+
+  @override
+  String get driverCannotAdvance =>
+      'لا يمكن تقدّم هذا التوصيل من حالته الحالية.';
+
+  @override
+  String get driverCannotAdvanceFurther => 'لا يمكن تقدّم هذا التوصيل أكثر.';
+
+  @override
+  String get driverTimingNote => 'ملاحظة التوقيت';
+
+  @override
+  String get driverOptionalNote => 'ملاحظة اختيارية للسائق';
+
+  @override
+  String get driverOptionalNoteHint => 'أضف ملاحظة قصيرة لتحديث الحالة';
+
+  @override
+  String get driverUpdating => 'جارٍ التحديث...';
+
+  @override
+  String get driverReportPickupFailed => 'الإبلاغ عن فشل الاستلام';
+
+  @override
+  String get driverReportDeliveryFailed => 'الإبلاغ عن فشل التوصيل';
+
+  @override
+  String get driverReportDriverIssue => 'الإبلاغ عن مشكلة للسائق';
+
+  @override
+  String get driverSupplierHandoverCode => 'رمز تسليم المورّد';
+
+  @override
+  String get driverSupplierHandoverCodeMessage =>
+      'أدخل الرمز الذي يعطيك إياه المورّد بعد تسليم المادة.';
+
+  @override
+  String get driverMarkPickedUp => 'تأكيد الاستلام';
+
+  @override
+  String get driverLearnerDeliveryCode => 'رمز تسليم المتعلّم';
+
+  @override
+  String get driverLearnerDeliveryCodeMessage =>
+      'أدخل الرمز الذي يعطيك إياه المتعلّم عند استلام المادة.';
+
+  @override
+  String get driverMarkDelivered => 'تأكيد التسليم';
+
+  @override
+  String get driverDeliveryMarkedDelivered => 'تم تأكيد التسليم.';
+
+  @override
+  String get driverStatusUpdated => 'تم تحديث حالة التوصيل.';
+
+  @override
+  String get driverStatusChangedRefresh =>
+      'تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.';
+
+  @override
+  String get driverPickupFailureReported => 'تم الإبلاغ عن فشل الاستلام.';
+
+  @override
+  String get driverDeliveryFailureReported => 'تم الإبلاغ عن فشل التوصيل.';
+
+  @override
+  String get driverNoteRequired => 'ملاحظة (مطلوبة)';
+
+  @override
+  String get driverIssueNoteHint => 'صف سبب عدم قدرتك على إكمال التوصيل';
+
+  @override
+  String get driverSubmitReport => 'إرسال البلاغ';
+
+  @override
+  String get driverReason => 'السبب';
+
+  @override
+  String get driverIssueReported => 'تم الإبلاغ عن مشكلة السائق.';
+
+  @override
+  String get driverLocationSharing => 'مشاركة الموقع';
+
+  @override
+  String get driverLocationSharingBody =>
+      'شارك موقعك أثناء نشاط هذا التوصيل. يمكن للمتعلّم تتبّعك فقط بعد استلام المادة.';
+
+  @override
+  String get driverShareAutomatically => 'المشاركة تلقائيًا';
+
+  @override
+  String get driverSharingEvery45Seconds =>
+      'مشاركة كل 45 ثانية طالما هذه الصفحة مفتوحة.';
+
+  @override
+  String get driverLocationSharingPaused => 'مشاركة الموقع متوقفة';
+
+  @override
+  String get driverSending => 'جارٍ الإرسال...';
+
+  @override
+  String get driverSendMyLocation => 'إرسال موقعي';
+
+  @override
+  String get driverLocationUpdateSent => 'تم إرسال تحديث الموقع.';
+
+  @override
+  String driverLastShared(String dateTime) {
+    return 'آخر مشاركة: $dateTime';
+  }
+
+  @override
+  String driverCurrentStage(String status) {
+    return 'المرحلة الحالية: $status';
+  }
+
+  @override
+  String get driverNoFurtherSteps => 'لا مزيد من الخطوات لهذا التوصيل.';
+
+  @override
+  String driverAdvanceTo(String action) {
+    return 'التقدّم إلى: $action';
+  }
+
+  @override
+  String driverNextAction(String action) {
+    return 'التالي: $action';
+  }
+
+  @override
+  String get driverSupplierCodeRequired =>
+      'رمز تسليم المورّد مطلوب عند تأكيد الاستلام.';
+
+  @override
+  String get driverLearnerCodeRequired =>
+      'رمز تسليم المتعلّم مطلوب عند تأكيد التسليم.';
+
+  @override
+  String get driverCompleteArriveBeforePickedUp =>
+      'أكمل \"الوصول لموقع الاستلام\" قبل تأكيد الاستلام.';
+
+  @override
+  String get driverMarkPickedUpBeforeDelivery =>
+      'أكّد الاستلام قبل بدء التوصيل.';
+
+  @override
+  String get driverStartDeliveryBeforeArrive =>
+      'ابدأ التوصيل قبل الوصول لموقع التسليم.';
+
+  @override
+  String get driverArriveBeforeDelivered =>
+      'صل إلى موقع التسليم قبل تأكيد التسليم.';
+
+  @override
+  String get driverActionNotAvailable => 'هذا الإجراء غير متاح بعد.';
+
+  @override
+  String get driverNotSet => 'غير محدد';
+
+  @override
+  String get driverApproximateAddress =>
+      'عنوان تقريبي — تأكد مع المتعلّم عند الحاجة.';
+
+  @override
+  String get driverExactCoordinatesMissing => 'الإحداثيات الدقيقة غير متوفرة.';
+
+  @override
+  String driverAssignedAt(String dateTime) {
+    return 'معيّن $dateTime';
+  }
+
+  @override
+  String driverAvailableInDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count أيام',
+      one: 'يوم واحد',
+    );
+    return 'متاح خلال $_temp0';
+  }
+
+  @override
+  String driverAvailableInHoursMinutes(int hours, int minutes) {
+    return 'متاح خلال $hours س $minutes د';
+  }
+
+  @override
+  String driverAvailableInHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ساعات',
+      one: 'ساعة واحدة',
+    );
+    return 'متاح خلال $_temp0';
+  }
+
+  @override
+  String driverAvailableInMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count دقائق',
+      one: 'دقيقة واحدة',
+    );
+    return 'متاح خلال $_temp0';
+  }
+
+  @override
+  String get driverAvailableSoon => 'متاح قريبًا';
+
+  @override
+  String get driverPickupNotAvailableYet => 'تأكيد الاستلام غير متاح بعد';
+
+  @override
+  String driverPickupConfirmFrom(String time) {
+    return 'يمكن تأكيد الاستلام من $time (قبل 30 دقيقة من موعد المورّد).';
+  }
+
+  @override
+  String get driverSupplierPickupWindowPassed => 'انتهى موعد استلام المورّد';
+
+  @override
+  String driverPickupConfirmationEnded(String dateTime) {
+    return 'انتهت نافذة تأكيد الاستلام المسموحة في $dateTime.';
+  }
+
+  @override
+  String get driverDeliveryWindowNotSet => 'موعد تأكيد التوصيل غير محدد';
+
+  @override
+  String get driverLearnerMustConfirmWindow =>
+      'يجب على المتعلّم تأكيد موعد التوصيل قبل أن تتمكن من تأكيد التسليم.';
+
+  @override
+  String get driverDeliveryNotAvailableYet => 'تأكيد التوصيل غير متاح بعد';
+
+  @override
+  String driverDeliveryConfirmFrom(String time) {
+    return 'يمكن تأكيد التوصيل من $time.';
+  }
+
+  @override
+  String get driverDeliveryWindowPassed => 'انتهى موعد التوصيل';
+
+  @override
+  String driverDeliveryConfirmationEnded(String dateTime) {
+    return 'انتهت نافذة تأكيد التوصيل المسموحة في $dateTime.';
+  }
+
+  @override
+  String get driverPickupWindowNotStarted => 'موعد الاستلام لم يبدأ بعد';
+
+  @override
+  String driverPickupStartsAt(String time) {
+    return 'يبدأ الاستلام في $time.';
+  }
+
+  @override
+  String get driverSupplierPickupOverdue => 'تأخّر موعد استلام المورّد';
+
+  @override
+  String driverPickupOverdueBody(String dateTime) {
+    return 'انتهت نافذة تأكيد الاستلام المسموحة في $dateTime. أبلغ عن فشل الاستلام إذا لم تتمكن من إكماله.';
+  }
+
+  @override
+  String get driverScheduledPickupEnded => 'انتهى موعد الاستلام المجدول';
+
+  @override
+  String driverScheduledPickupEndedBody(String time) {
+    return 'انتهى موعد المورّد في $time. لا يزال بإمكانك إكمال الاستلام إذا كانت المادة جاهزة.';
+  }
+
+  @override
+  String get driverArriveAtPickup => 'الوصول لموقع الاستلام';
+
+  @override
+  String get driverArriveAtPickupReq1 => 'توجّه إلى موقع استلام المورّد.';
+
+  @override
+  String get driverArriveAtPickupReq2 => 'لا يلزم رمز تأكيد لهذه الخطوة.';
+
+  @override
+  String get driverMarkPickedUpReq1 => 'يجب أن تكون في موقع استلام المورّد.';
+
+  @override
+  String get driverMarkPickedUpReq2 => 'أدخل رمز تسليم المورّد عند الطلب.';
+
+  @override
+  String get driverStartDeliveryOnTheWay => 'بدء التوصيل / في الطريق';
+
+  @override
+  String get driverStartDeliveryReq1 =>
+      'يجب أن تكون المادة قد استُلمت من المورّد.';
+
+  @override
+  String get driverStartDeliveryReq2 => 'لا يلزم رمز تأكيد لهذه الخطوة.';
+
+  @override
+  String get driverArriveAtDropoff => 'الوصول لموقع التسليم';
+
+  @override
+  String get driverArriveAtDropoffReq1 => 'توجّه إلى موقع تسليم المتعلّم.';
+
+  @override
+  String get driverArriveAtDropoffReq2 => 'لا يلزم رمز تأكيد لهذه الخطوة.';
+
+  @override
+  String get driverMarkDeliveredReq1 => 'يجب أن تكون في موقع تسليم المتعلّم.';
+
+  @override
+  String get driverMarkDeliveredReq2 => 'أدخل رمز تسليم المتعلّم عند الطلب.';
+
+  @override
+  String get driverFailureSupplierUnavailable => 'المورّد غير متاح';
+
+  @override
+  String get driverFailureMaterialNotReady => 'المادة غير جاهزة';
+
+  @override
+  String get driverFailureLocationIssue => 'مشكلة في الموقع';
+
+  @override
+  String get driverFailureLearnerUnavailable => 'المتعلّم غير متاح';
+
+  @override
+  String get driverFailureAddressIssue => 'مشكلة في العنوان';
+
+  @override
+  String get driverFailureAccessIssue => 'مشكلة في الوصول';
+
+  @override
+  String get driverInactiveMovedToAdminReview => 'نُقل إلى مراجعة الإدارة';
+
+  @override
+  String get driverInactiveNoLongerActive => 'لم يعد نشطًا';
+
+  @override
+  String get driverTransportCar => 'سيارة';
+
+  @override
+  String get driverTransportMotorcycle => 'دراجة نارية';
+
+  @override
+  String get driverTransportBicycle => 'دراجة';
+
+  @override
+  String get driverTransportWalking => 'مشيًا';
+
+  @override
+  String get driverPhoneRequired => 'مطلوب للسائقين';
+
+  @override
+  String get driverTransportationType => 'نوع النقل';
+
+  @override
+  String get driverAddressLineOptional => 'سطر العنوان (اختياري)';
+
+  @override
+  String get driverAvailabilityNoteOptional => 'ملاحظة التوفر (اختياري)';
+
+  @override
+  String get notificationDriverNewJobTitle => 'مهمة توصيل جديدة';
+
+  @override
+  String notificationDriverNewJobBody(String materialTitle) {
+    return '$materialTitle جاهزة للتوصيل.';
+  }
+
+  @override
+  String get notificationDriverPickupTimeTitle => 'موعد الاستلام';
+
+  @override
+  String notificationDriverPickupTimeBody(String materialTitle) {
+    return 'يبدأ استلام $materialTitle قريبًا.';
+  }
+
+  @override
+  String get notificationDriverDropoffTimeTitle => 'موعد التسليم';
+
+  @override
+  String notificationDriverDropoffTimeBody(String materialTitle) {
+    return 'يبدأ تسليم $materialTitle قريبًا.';
+  }
+
+  @override
+  String get notificationDriverUnassignedTitle => 'تم إلغاء تعيين التوصيل';
+
+  @override
+  String notificationDriverUnassignedBody(String materialTitle) {
+    return 'أُعيد فتح $materialTitle لمجموعة السائقين من قِبل الإدارة.';
+  }
+
+  @override
+  String get notificationDriverMovedToAdminTitle =>
+      'نُقل التوصيل إلى مراجعة الإدارة';
+
+  @override
+  String get notificationDriverMovedToAdminBody =>
+      'نُقل التوصيل إلى مراجعة الإدارة لأن الاستلام لم يُكتمل ضمن موعد الاستلام.';
+
+  @override
+  String get driverToday => 'اليوم';
+
+  @override
+  String driverPickupStartsInHours(
+    int hours,
+    String dateLabel,
+    String timeRange,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours ساعات',
+      one: 'ساعة واحدة',
+    );
+    return 'يبدأ الاستلام خلال $_temp0 · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverPickupStartsInMinutes(
+    int minutes,
+    String dateLabel,
+    String timeRange,
+  ) {
+    return 'يبدأ الاستلام خلال $minutes دقيقة · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverPickupStartsSoon(String dateLabel, String timeRange) {
+    return 'يبدأ الاستلام قريبًا · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverPickupWindowEndedSummary(String dateLabel, String timeRange) {
+    return 'انتهت نافذة الاستلام · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverReadyForPickupNow(String dateLabel, String timeRange) {
+    return 'جاهز للاستلام الآن · $dateLabel · $timeRange';
+  }
+
+  @override
+  String get inviteAcceptTitle => 'أكمل دعوة ImpactLoop';
+
+  @override
+  String get inviteInvalidLink => 'رابط الدعوة غير صالح.';
+
+  @override
+  String get inviteRegistrationCompleted => 'اكتمل التسجيل بنجاح.';
+
+  @override
+  String inviteRoleLabel(String role) {
+    return 'الدور: $role';
+  }
+
+  @override
+  String inviteInvitedRole(String role) {
+    return 'الدور المدعو: $role';
+  }
+
+  @override
+  String inviteExpires(String date) {
+    return 'تنتهي في: $date';
+  }
+
+  @override
+  String get inviteInvalidOrExpired =>
+      'رابط الدعوة هذا غير صالح أو منتهٍ أو ملغى أو مستخدم بالفعل.';
+
+  @override
+  String get inviteCompleteRegistration => 'إكمال التسجيل';
+
+  @override
+  String get inviteFullName => 'الاسم الكامل';
+
+  @override
+  String get invitePhone => 'الهاتف';
+
+  @override
+  String get invitePhoneOptional => 'الهاتف (اختياري)';
+
+  @override
+  String get inviteFieldRequired => 'مطلوب';
+
+  @override
+  String get driverLocationUnavailableShort => 'الموقع غير متاح';
+
+  @override
+  String get driverUnknownParty => 'غير معروف';
+
+  @override
+  String driverGroupedItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عناصر',
+      one: 'عنصر واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get driverCouldNotShareLocation =>
+      'تعذّر مشاركة الموقع. حاول مرة أخرى أو استخدم إرسال موقعي.';
+
+  @override
+  String get driverLocationPermissionDenied =>
+      'تم رفض إذن الموقع. فعّل إذن الموقع أو حاول مرة أخرى.';
+
+  @override
+  String get driverLocationServicesDisabled =>
+      'خدمات الموقع معطّلة. شغّل خدمات الموقع وحاول مرة أخرى.';
+
+  @override
+  String get driverCurrentLocationFailed =>
+      'تعذّر الحصول على موقعك الحالي. يُرجى المحاولة مرة أخرى.';
 }

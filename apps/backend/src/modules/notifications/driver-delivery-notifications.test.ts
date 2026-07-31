@@ -327,6 +327,10 @@ describe('driver notification events', () => {
       assert.ok(row);
       assert.equal(row.title, 'New delivery job');
       assert.ok(!row.title.includes('available'));
+      assert.equal(
+        (row.metadata as { materialTitle?: string } | null)?.materialTitle,
+        'LED Pack',
+      );
     }
 
     const sample = await prisma.notification.findFirst({
@@ -457,6 +461,10 @@ describe('driver notification events', () => {
     assert.ok(reminder);
     assert.equal(reminder.title, 'Pickup time');
     assert.match(reminder.body, /Pickup for Soon Pickup Pack starts soon/);
+    assert.equal(
+      (reminder.metadata as { materialTitle?: string } | null)?.materialTitle,
+      'Soon Pickup Pack',
+    );
   });
 
   test('GET notifications list syncs due pickup reminders idempotently', async () => {
@@ -738,6 +746,10 @@ describe('driver notification events', () => {
       },
     });
     assert.ok(soon);
+    assert.equal(
+      (soon.metadata as { materialTitle?: string } | null)?.materialTitle,
+      'Dropoff Window Pack',
+    );
   });
 
   test('drop-off reminders are not created after DELIVERED', async () => {

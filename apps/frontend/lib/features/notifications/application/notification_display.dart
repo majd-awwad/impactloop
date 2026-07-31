@@ -53,6 +53,7 @@ NotificationVisualCategory categoryForNotification(
     case 'DRIVER_DELIVERY_ACCEPTED':
     case 'DRIVER_DELIVERY_NEXT_STEP':
     case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
+    case 'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN':
     case 'DELIVERY_DRIVER_ASSIGNED':
       return NotificationVisualCategory.deliveryUpdate;
     default:
@@ -272,6 +273,26 @@ LocalizedNotificationCopy localizedNotificationCopy(
         body: l10n.projectModerationBody(safeProjectTitle),
       ),
     },
+    'DRIVER_NEW_JOB' => (
+      title: l10n.notificationDriverNewJobTitle,
+      body: l10n.notificationDriverNewJobBody(materialTitle),
+    ),
+    'DRIVER_PICKUP_TIME' => (
+      title: l10n.notificationDriverPickupTimeTitle,
+      body: l10n.notificationDriverPickupTimeBody(materialTitle),
+    ),
+    'DRIVER_DROPOFF_TIME' => (
+      title: l10n.notificationDriverDropoffTimeTitle,
+      body: l10n.notificationDriverDropoffTimeBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN' => (
+      title: l10n.notificationDriverUnassignedTitle,
+      body: l10n.notificationDriverUnassignedBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' => (
+      title: l10n.notificationDriverMovedToAdminTitle,
+      body: l10n.notificationDriverMovedToAdminBody,
+    ),
     _ when l10n.localeName == 'en' && notification.title.trim().isNotEmpty => (
       title: notification.title,
       body: notification.body,

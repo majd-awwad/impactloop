@@ -1,3 +1,5 @@
+import '../../../core/format/localized_formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../data/models/driver_delivery.dart';
 
 /// Matches backend `HANDOVER_EARLY_MINUTES` / `HANDOVER_GRACE_MINUTES`.
@@ -64,39 +66,35 @@ DateTime? resolveSupplierPickupWindowEnd(DriverDelivery delivery) {
   return delivery.supplierPickupWindowEnd ?? delivery.pickupWindowEnd;
 }
 
-String formatDriverTime(DateTime value) {
-  final local = value.toLocal();
-  return '${_two(local.hour)}:${_two(local.minute)}';
+String formatDriverTime(AppLocalizations l10n, DateTime value) {
+  return LocalizedFormatters(l10n).time(value);
 }
 
-String formatDriverDateTime(DateTime value) {
-  final local = value.toLocal();
-  return '${local.year}-${_two(local.month)}-${_two(local.day)} '
-      '${_two(local.hour)}:${_two(local.minute)}';
+String formatDriverDateTime(AppLocalizations l10n, DateTime value) {
+  return LocalizedFormatters(l10n).dateTime(value);
 }
 
-String formatRemainingDuration(Duration duration) {
+String formatRemainingDuration(AppLocalizations l10n, Duration duration) {
   if (duration.inDays >= 1) {
-    final days = duration.inDays;
-    return 'Available in $days ${days == 1 ? 'day' : 'days'}';
+    return l10n.driverAvailableInDays(duration.inDays);
   }
   if (duration.inHours >= 1) {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     if (minutes > 0) {
-      return 'Available in $hours h $minutes min';
+      return l10n.driverAvailableInHoursMinutes(hours, minutes);
     }
-    return 'Available in $hours ${hours == 1 ? 'hour' : 'hours'}';
+    return l10n.driverAvailableInHours(hours);
   }
   if (duration.inMinutes >= 1) {
-    final minutes = duration.inMinutes;
-    return 'Available in $minutes ${minutes == 1 ? 'minute' : 'minutes'}';
+    return l10n.driverAvailableInMinutes(duration.inMinutes);
   }
-  return 'Available soon';
+  return l10n.driverAvailableSoon;
 }
 
 DriverActionTimingGate evaluatePickupHandoverTiming(
   DriverDelivery delivery, {
+  required AppLocalizations l10n,
   DateTime? now,
 }) {
   final reference = now ?? DateTime.now();
@@ -114,22 +112,20 @@ DriverActionTimingGate evaluatePickupHandoverTiming(
     final remaining = allowedStart.difference(reference);
     return DriverActionTimingGate(
       isBlocked: true,
-      title: 'Pickup confirmation is not available yet',
-      body:
-          'Pickup can be confirmed from ${formatDriverTime(allowedStart)} '
-          '(30 minutes before the supplier window).',
+      title: l10n.driverPickupNotAvailableYet,
+      body: l10n.driverPickupConfirmFrom(formatDriverTime(l10n, allowedStart)),
       availableAt: allowedStart,
-      remainingLabel: formatRemainingDuration(remaining),
+      remainingLabel: formatRemainingDuration(l10n, remaining),
     );
   }
 
   if (reference.isAfter(allowedEnd)) {
     return DriverActionTimingGate(
       isBlocked: true,
-      title: 'Supplier pickup window has passed',
-      body:
-          'The allowed pickup confirmation window ended at '
-          '${formatDriverDateTime(allowedEnd)}.',
+      title: l10n.driverSupplierPickupWindowPassed,
+      body: l10n.driverPickupConfirmationEnded(
+        formatDriverDateTime(l10n, allowedEnd),
+      ),
     );
   }
 
@@ -138,6 +134,7 @@ DriverActionTimingGate evaluatePickupHandoverTiming(
 
 DriverActionTimingGate evaluateDeliveryHandoverTiming(
   DriverDelivery delivery, {
+  required AppLocalizations l10n,
   DateTime? now,
 }) {
   final reference = now ?? DateTime.now();
@@ -145,11 +142,10 @@ DriverActionTimingGate evaluateDeliveryHandoverTiming(
   final windowEnd = delivery.confirmedDeliveryWindowEnd;
 
   if (windowStart == null || windowEnd == null) {
-    return const DriverActionTimingGate(
+    return DriverActionTimingGate(
       isBlocked: true,
-      title: 'Delivery confirmation window is not set',
-      body:
-          'The learner must confirm a delivery window before you can mark delivered.',
+      title: l10n.driverDeliveryWindowNotSet,
+      body: l10n.driverLearnerMustConfirmWindow,
     );
   }
 
@@ -160,20 +156,22 @@ DriverActionTimingGate evaluateDeliveryHandoverTiming(
     final remaining = allowedStart.difference(reference);
     return DriverActionTimingGate(
       isBlocked: true,
-      title: 'Delivery confirmation is not available yet',
-      body: 'Delivery can be confirmed from ${formatDriverTime(allowedStart)}.',
+      title: l10n.driverDeliveryNotAvailableYet,
+      body: l10n.driverDeliveryConfirmFrom(
+        formatDriverTime(l10n, allowedStart),
+      ),
       availableAt: allowedStart,
-      remainingLabel: formatRemainingDuration(remaining),
+      remainingLabel: formatRemainingDuration(l10n, remaining),
     );
   }
 
   if (reference.isAfter(allowedEnd)) {
     return DriverActionTimingGate(
       isBlocked: true,
-      title: 'Delivery window has passed',
-      body:
-          'The allowed delivery confirmation window ended at '
-          '${formatDriverDateTime(allowedEnd)}.',
+      title: l10n.driverDeliveryWindowPassed,
+      body: l10n.driverDeliveryConfirmationEnded(
+        formatDriverDateTime(l10n, allowedEnd),
+      ),
     );
   }
 
@@ -182,6 +180,7 @@ DriverActionTimingGate evaluateDeliveryHandoverTiming(
 
 DriverActionTimingGate? evaluateInformationalPickupWindow(
   DriverDelivery delivery, {
+  required AppLocalizations l10n,
   DateTime? now,
 }) {
   final reference = now ?? DateTime.now();
@@ -196,10 +195,10 @@ DriverActionTimingGate? evaluateInformationalPickupWindow(
     final remaining = windowStart.difference(reference);
     return DriverActionTimingGate(
       isBlocked: false,
-      title: 'Pickup window has not started yet',
-      body: 'Pickup starts at ${formatDriverTime(windowStart)}.',
+      title: l10n.driverPickupWindowNotStarted,
+      body: l10n.driverPickupStartsAt(formatDriverTime(l10n, windowStart)),
       availableAt: windowStart,
-      remainingLabel: formatRemainingDuration(remaining),
+      remainingLabel: formatRemainingDuration(l10n, remaining),
     );
   }
 
@@ -208,20 +207,19 @@ DriverActionTimingGate? evaluateInformationalPickupWindow(
     if (reference.isAfter(allowedEnd)) {
       return DriverActionTimingGate(
         isBlocked: false,
-        title: 'Supplier pickup window overdue',
-        body:
-            'The allowed pickup confirmation window ended at '
-            '${formatDriverDateTime(allowedEnd)}. Report pickup failed if you '
-            'cannot complete pickup.',
+        title: l10n.driverSupplierPickupOverdue,
+        body: l10n.driverPickupOverdueBody(
+          formatDriverDateTime(l10n, allowedEnd),
+        ),
       );
     }
 
     return DriverActionTimingGate(
       isBlocked: false,
-      title: 'Scheduled pickup window has ended',
-      body:
-          'The supplier window ended at ${formatDriverTime(windowEnd)}. '
-          'You may still complete pickup if the material is ready.',
+      title: l10n.driverScheduledPickupEnded,
+      body: l10n.driverScheduledPickupEndedBody(
+        formatDriverTime(l10n, windowEnd),
+      ),
     );
   }
 
@@ -230,13 +228,14 @@ DriverActionTimingGate? evaluateInformationalPickupWindow(
 
 DriverNextActionGuidance buildDriverNextActionGuidance(
   DriverDelivery delivery, {
+  required AppLocalizations l10n,
   DateTime? now,
 }) {
   final nextStatus = delivery.nextStatus;
   if (nextStatus == null) {
-    return const DriverNextActionGuidance(
-      actionLabel: 'No next action',
-      requirements: ['This delivery cannot be advanced further.'],
+    return DriverNextActionGuidance(
+      actionLabel: l10n.driverNoNextAction,
+      requirements: [l10n.driverCannotAdvanceFurther],
       isActionEnabled: false,
     );
   }
@@ -244,57 +243,67 @@ DriverNextActionGuidance buildDriverNextActionGuidance(
   switch (nextStatus) {
     case 'ARRIVED_PICKUP':
       return DriverNextActionGuidance(
-        actionLabel: 'Arrive at pickup',
-        requirements: const [
-          'Drive to the supplier pickup location.',
-          'No confirmation code is required for this step.',
+        actionLabel: l10n.driverArriveAtPickup,
+        requirements: [
+          l10n.driverArriveAtPickupReq1,
+          l10n.driverArriveAtPickupReq2,
         ],
-        timingGate: evaluateInformationalPickupWindow(delivery, now: now),
+        timingGate: evaluateInformationalPickupWindow(
+          delivery,
+          l10n: l10n,
+          now: now,
+        ),
       );
     case 'PICKED_UP':
-      final timing = evaluatePickupHandoverTiming(delivery, now: now);
+      final timing = evaluatePickupHandoverTiming(
+        delivery,
+        l10n: l10n,
+        now: now,
+      );
       return DriverNextActionGuidance(
-        actionLabel: 'Mark picked up',
-        requirements: const [
-          'You must be at the supplier pickup location.',
-          'Enter the supplier handover code when prompted.',
+        actionLabel: l10n.driverMarkPickedUp,
+        requirements: [
+          l10n.driverMarkPickedUpReq1,
+          l10n.driverMarkPickedUpReq2,
         ],
         timingGate: timing.isBlocked ? timing : null,
         isActionEnabled: !timing.isBlocked,
       );
     case 'ON_THE_WAY':
-      return const DriverNextActionGuidance(
-        actionLabel: 'Start delivery / On the way',
+      return DriverNextActionGuidance(
+        actionLabel: l10n.driverStartDeliveryOnTheWay,
         requirements: [
-          'Material must already be picked up from the supplier.',
-          'No confirmation code is required for this step.',
+          l10n.driverStartDeliveryReq1,
+          l10n.driverStartDeliveryReq2,
         ],
       );
     case 'ARRIVED_DROPOFF':
-      return const DriverNextActionGuidance(
-        actionLabel: 'Arrive at drop-off',
+      return DriverNextActionGuidance(
+        actionLabel: l10n.driverArriveAtDropoff,
         requirements: [
-          'Drive to the learner drop-off location.',
-          'No confirmation code is required for this step.',
+          l10n.driverArriveAtDropoffReq1,
+          l10n.driverArriveAtDropoffReq2,
         ],
       );
     case 'DELIVERED':
-      final timing = evaluateDeliveryHandoverTiming(delivery, now: now);
+      final timing = evaluateDeliveryHandoverTiming(
+        delivery,
+        l10n: l10n,
+        now: now,
+      );
       return DriverNextActionGuidance(
-        actionLabel: 'Mark delivered',
-        requirements: const [
-          'You must be at the learner drop-off location.',
-          'Enter the learner delivery code when prompted.',
+        actionLabel: l10n.driverMarkDelivered,
+        requirements: [
+          l10n.driverMarkDeliveredReq1,
+          l10n.driverMarkDeliveredReq2,
         ],
         timingGate: timing.isBlocked ? timing : null,
         isActionEnabled: !timing.isBlocked,
       );
     default:
       return DriverNextActionGuidance(
-        actionLabel: nextStatus,
+        actionLabel: l10n.unknownStatus,
         requirements: const [],
       );
   }
 }
-
-String _two(int value) => value.toString().padLeft(2, '0');

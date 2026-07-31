@@ -114,6 +114,49 @@ const placeLabel = (city: string | null, area: string | null) => {
   return parts.length > 0 ? parts.join(', ') : null;
 };
 
+type DriverNotificationMetadata = {
+  materialTitle: string;
+  pickupLabel?: string;
+  dropoffLabel?: string;
+};
+
+const driverNotificationMetadata = (
+  delivery: DeliveryContext,
+  materialTitleOverride?: string | null,
+): DriverNotificationMetadata => {
+  const material =
+    materialTitleOverride?.trim() ||
+    materialLabel(delivery) ||
+    'Material';
+
+  const metadata: DriverNotificationMetadata = { materialTitle: material };
+
+  const pickup = placeLabel(
+    delivery.pickupLocation.city,
+    delivery.pickupLocation.area,
+  );
+  const dropoff = placeLabel(
+    delivery.dropoffLocation.city,
+    delivery.dropoffLocation.area,
+  );
+
+  if (pickup) {
+    metadata.pickupLabel = pickup;
+  }
+  if (dropoff) {
+    metadata.dropoffLabel = dropoff;
+  }
+
+  return metadata;
+};
+
+const driverMaterialMetadata = (
+  materialTitle: string,
+  fallback = 'Material',
+): DriverNotificationMetadata => ({
+  materialTitle: materialTitle.trim() || fallback,
+});
+
 const isTestDelivery = (delivery: DeliveryContext) => {
   const material = delivery.reservation.material.title.trim();
   return isInternalTestLabel(material);
@@ -211,6 +254,7 @@ export const notifyNewDriverJob = async (deliveryId: string) =>
           body,
           relatedEntityType: 'DELIVERY',
           relatedEntityId: delivery.id,
+          metadata: driverNotificationMetadata(delivery, material),
         }),
       ),
     );
@@ -276,6 +320,7 @@ export const notifyDriverPickupTime = async (deliveryId: string) =>
       body: `Pickup for ${material} starts soon.`,
       relatedEntityType: 'DELIVERY',
       relatedEntityId: delivery.id,
+      metadata: driverNotificationMetadata(delivery, material),
     });
   });
 
@@ -315,6 +360,7 @@ export const notifyDriverDropoffTime = async (deliveryId: string) =>
       body: `Drop-off for ${material} starts soon.`,
       relatedEntityType: 'DELIVERY',
       relatedEntityId: delivery.id,
+      metadata: driverNotificationMetadata(delivery, material),
     });
   });
 
@@ -325,6 +371,10 @@ export const notifyDriverDeliveryUnassignedByAdmin = async (input: {
 }) =>
   notifySafely(async () => {
     const material = input.materialTitle.trim() || 'Delivery';
+    const delivery = await loadDeliveryContext(input.deliveryId);
+    const metadata = delivery
+      ? driverNotificationMetadata(delivery, material)
+      : driverMaterialMetadata(material, 'Delivery');
 
     await createNotificationIfMissing({
       userId: input.driverUserId,
@@ -334,6 +384,7 @@ export const notifyDriverDeliveryUnassignedByAdmin = async (input: {
       body: `${material} was reopened to the driver pool by an admin.`,
       relatedEntityType: 'DELIVERY',
       relatedEntityId: input.deliveryId,
+      metadata,
     });
   });
 
@@ -385,6 +436,11 @@ export const notifyDriverDeliveryMovedToAdminReview = async (input: {
   driverUserId: string;
 }) =>
   notifySafely(async () => {
+    const delivery = await loadDeliveryContext(input.deliveryId);
+    const metadata = delivery
+      ? driverNotificationMetadata(delivery)
+      : driverMaterialMetadata('Material');
+
     await createNotificationIfMissing({
       userId: input.driverUserId,
       notificationType:
@@ -393,6 +449,7 @@ export const notifyDriverDeliveryMovedToAdminReview = async (input: {
       body: 'Delivery moved to admin review because pickup was not completed within the pickup window.',
       relatedEntityType: 'DELIVERY',
       relatedEntityId: input.deliveryId,
+      metadata,
     });
   });
 

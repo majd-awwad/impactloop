@@ -21,7 +21,7 @@ class DriverDeliveryItem {
     return DriverDeliveryItem(
       reservationId: json['reservationId'] as String? ?? '',
       materialId: json['materialId'] as String? ?? '',
-      title: json['title'] as String? ?? 'Material',
+      title: json['title'] as String? ?? '',
       quantity: _doubleFromJson(json['quantity']) ?? 0,
       unit: json['unit'] as String? ?? '',
       condition: json['condition'] as String?,
@@ -53,7 +53,7 @@ class DriverDeliveryMaterial {
   factory DriverDeliveryMaterial.fromJson(Map<String, dynamic> json) {
     return DriverDeliveryMaterial(
       id: json['id'] as String? ?? '',
-      title: json['title'] as String? ?? 'Material',
+      title: json['title'] as String? ?? '',
       quantityRequested: _doubleFromJson(json['quantityRequested']) ?? 0,
       unit: json['unit'] as String? ?? '',
     );
@@ -77,7 +77,7 @@ class DriverDeliveryParty {
   factory DriverDeliveryParty.fromJson(Map<String, dynamic> json) {
     return DriverDeliveryParty(
       id: json['id'] as String?,
-      displayName: json['displayName'] as String? ?? 'Unknown',
+      displayName: json['displayName'] as String? ?? '',
       phone: json['phone'] as String?,
     );
   }
@@ -122,7 +122,7 @@ class DriverSafeLocation {
         .where((item) => item != null && item.trim().isNotEmpty)
         .cast<String>()
         .toList(growable: false);
-    return parts.isEmpty ? 'Location unavailable' : parts.join(', ');
+    return parts.isEmpty ? '' : parts.join(', ');
   }
 
   String get exactSummary {
@@ -313,9 +313,6 @@ class DriverDelivery {
   bool get isAutoPingEligible => isDriverAutoPingEligibleStatus(status);
 
   bool get hasGroupedItems => groupedDelivery && items.isNotEmpty;
-
-  String get primarySubtitle =>
-      hasGroupedItems ? '$itemCount items' : material.quantityLabel;
 
   List<String> get groupedItemLines => items
       .map((item) => '${item.title} × ${item.quantityLabel}')

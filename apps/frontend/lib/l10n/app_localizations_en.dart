@@ -5967,4 +5967,820 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0 · $_temp1';
   }
+
+  @override
+  String get driverPortal => 'Driver portal';
+
+  @override
+  String get driverInternalDelivery => 'Internal delivery';
+
+  @override
+  String get driverJobs => 'Jobs';
+
+  @override
+  String get driverJobsTitle => 'Driver jobs';
+
+  @override
+  String get driverJobsSubtitle => 'Basic internal delivery coordination';
+
+  @override
+  String driverActiveDeliveriesCount(int active, int max) {
+    return 'Active deliveries: $active/$max';
+  }
+
+  @override
+  String driverAvailableJobsCount(int count) {
+    return 'Available jobs: $count';
+  }
+
+  @override
+  String get driverAvailableJobsCountLoading => 'Available jobs: …';
+
+  @override
+  String driverTotalAvailable(int count) {
+    return 'Total available: $count';
+  }
+
+  @override
+  String driverAreaChip(String area) {
+    return 'Area: $area';
+  }
+
+  @override
+  String get driverCouldNotLoadActive => 'Could not load active deliveries';
+
+  @override
+  String get driverRefreshBeforeAccept => 'Refresh before accepting a new job.';
+
+  @override
+  String get driverMyActiveDeliveries => 'My active deliveries';
+
+  @override
+  String get driverLoadingActive => 'Loading active deliveries…';
+
+  @override
+  String get driverNoActiveDeliveries => 'No active deliveries yet.';
+
+  @override
+  String get driverNoActiveDeliveriesHint =>
+      'You can accept available jobs when you are ready.';
+
+  @override
+  String get driverAvailableNearbyJobs => 'Available nearby jobs';
+
+  @override
+  String get driverActiveLimitReached =>
+      'You reached the active delivery limit.';
+
+  @override
+  String get driverActiveLimitHint =>
+      'Complete one delivery before accepting another.';
+
+  @override
+  String get driverCompleteOneFirst =>
+      'Complete one delivery before accepting another.';
+
+  @override
+  String get driverLoadingAvailable => 'Loading available jobs…';
+
+  @override
+  String get driverLookingForWaiting =>
+      'Looking for waiting delivery requests.';
+
+  @override
+  String get driverCouldNotLoadAvailable => 'Could not load available jobs.';
+
+  @override
+  String get driverOpenDelivery => 'Open delivery';
+
+  @override
+  String get driverFindNearbyJobs => 'Find nearby jobs';
+
+  @override
+  String get driverDistanceToPickupHint =>
+      'Distance is calculated to the pickup location.';
+
+  @override
+  String get driverAnyDistance => 'Any distance';
+
+  @override
+  String driverWithinKm(int km) {
+    return 'Within $km km';
+  }
+
+  @override
+  String get driverNearest => 'Nearest';
+
+  @override
+  String get driverNewest => 'Newest';
+
+  @override
+  String get driverCityLabel => 'City:';
+
+  @override
+  String get driverAllCities => 'All cities';
+
+  @override
+  String get driverAreaLabel => 'Area:';
+
+  @override
+  String get driverAllAreas => 'All areas';
+
+  @override
+  String get driverResetFilters => 'Reset filters';
+
+  @override
+  String get driverLocationNeeded => 'Location needed for distance filter.';
+
+  @override
+  String get driverLocationLabel => 'Location';
+
+  @override
+  String get driverSort => 'Sort';
+
+  @override
+  String get driverAcceptJob => 'Accept job';
+
+  @override
+  String get driverAccepting => 'Accepting…';
+
+  @override
+  String get driverActiveLimitReachedButton => 'Active delivery limit reached';
+
+  @override
+  String get driverDeliveryAccepted => 'Delivery accepted.';
+
+  @override
+  String get driverDeliveryNoLongerAvailable =>
+      'This delivery is no longer available.';
+
+  @override
+  String get driverReachedActiveLimit =>
+      'You have reached the active delivery limit.';
+
+  @override
+  String get driverDistanceToPickup => 'Distance to pickup';
+
+  @override
+  String get driverPickupLabel => 'Pickup';
+
+  @override
+  String get driverIncreaseRadius => 'Increase radius';
+
+  @override
+  String get driverShowAnyDistance => 'Show any distance';
+
+  @override
+  String get driverLoadingLocation => 'Loading location…';
+
+  @override
+  String get driverUsingCurrentLocation => 'Using your current location';
+
+  @override
+  String driverUsingProfileArea(String location) {
+    return 'Using profile area: $location';
+  }
+
+  @override
+  String get driverLocationUnavailable =>
+      'Location unavailable — showing all available jobs';
+
+  @override
+  String get driverSearchRadiusAny => 'Search radius: Any distance';
+
+  @override
+  String driverSearchRadiusWithin(int km) {
+    return 'Search radius: Within $km km';
+  }
+
+  @override
+  String get driverPickupDistanceUnavailable => 'Pickup distance unavailable';
+
+  @override
+  String driverKmToPickup(String distance) {
+    return '$distance km to pickup';
+  }
+
+  @override
+  String driverNoJobsWithinRadius(String radius) {
+    return 'No jobs within $radius km.';
+  }
+
+  @override
+  String driverJobsAvailableOutsideRadius(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs are',
+      one: '1 job is',
+    );
+    return '$_temp0 available outside your current radius. Try increasing the radius or choosing Any distance.';
+  }
+
+  @override
+  String get driverTryIncreaseRadius =>
+      'Try increasing the radius or choosing Any distance.';
+
+  @override
+  String get driverNoJobsInArea => 'No jobs found in this area.';
+
+  @override
+  String driverJobsAvailableBroaderFilters(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs are',
+      one: '1 job is',
+    );
+    return '$_temp0 available with broader filters. Try all areas or reset filters.';
+  }
+
+  @override
+  String get driverTryAllAreasOrReset => 'Try all areas or reset filters.';
+
+  @override
+  String get driverNoJobsNearby => 'No available jobs near you right now.';
+
+  @override
+  String get driverTryChangeFilters =>
+      'Try changing the city, area, or distance filter.';
+
+  @override
+  String get driverCheckingActiveDelivery =>
+      'Checking your active assigned delivery.';
+
+  @override
+  String get driverCouldNotLoadDetails => 'Could not load delivery details.';
+
+  @override
+  String get driverMovedToAdminReview => 'Delivery moved to admin review';
+
+  @override
+  String get driverNoLongerActive => 'Delivery no longer active';
+
+  @override
+  String get driverNoLongerActiveDefault =>
+      'This delivery is no longer active. It was moved to admin review.';
+
+  @override
+  String get driverBackToJobs => 'Back to jobs';
+
+  @override
+  String get driverNotAssigned => 'Delivery not active or not assigned to you';
+
+  @override
+  String get driverOpenJobsBoard =>
+      'Open the jobs board to view your current assigned delivery.';
+
+  @override
+  String get driverActiveDelivery => 'Active delivery';
+
+  @override
+  String get driverLearnerUnavailable => 'Learner unavailable';
+
+  @override
+  String get driverDeliveryWindow => 'Delivery window';
+
+  @override
+  String get driverLearnerNote => 'Learner note';
+
+  @override
+  String get driverNoNextAction => 'No next action';
+
+  @override
+  String get driverCannotAdvance =>
+      'This delivery cannot be advanced from its current status.';
+
+  @override
+  String get driverCannotAdvanceFurther =>
+      'This delivery cannot be advanced further.';
+
+  @override
+  String get driverTimingNote => 'Timing note';
+
+  @override
+  String get driverOptionalNote => 'Optional driver note';
+
+  @override
+  String get driverOptionalNoteHint =>
+      'Add a short note for this status update';
+
+  @override
+  String get driverUpdating => 'Updating...';
+
+  @override
+  String get driverReportPickupFailed => 'Report pickup failed';
+
+  @override
+  String get driverReportDeliveryFailed => 'Report delivery failed';
+
+  @override
+  String get driverReportDriverIssue => 'Report driver issue';
+
+  @override
+  String get driverSupplierHandoverCode => 'Supplier handover code';
+
+  @override
+  String get driverSupplierHandoverCodeMessage =>
+      'Enter the code the supplier gives you after handing over the material.';
+
+  @override
+  String get driverMarkPickedUp => 'Mark picked up';
+
+  @override
+  String get driverLearnerDeliveryCode => 'Learner delivery code';
+
+  @override
+  String get driverLearnerDeliveryCodeMessage =>
+      'Enter the code the learner gives you when they receive the material.';
+
+  @override
+  String get driverMarkDelivered => 'Mark delivered';
+
+  @override
+  String get driverDeliveryMarkedDelivered => 'Delivery marked delivered.';
+
+  @override
+  String get driverStatusUpdated => 'Delivery status updated.';
+
+  @override
+  String get driverStatusChangedRefresh =>
+      'Delivery status changed. Refresh and try the next valid action.';
+
+  @override
+  String get driverPickupFailureReported => 'Pickup failure reported.';
+
+  @override
+  String get driverDeliveryFailureReported => 'Delivery failure reported.';
+
+  @override
+  String get driverNoteRequired => 'Note (required)';
+
+  @override
+  String get driverIssueNoteHint => 'Describe why you cannot continue delivery';
+
+  @override
+  String get driverSubmitReport => 'Submit report';
+
+  @override
+  String get driverReason => 'Reason';
+
+  @override
+  String get driverIssueReported => 'Driver issue reported.';
+
+  @override
+  String get driverLocationSharing => 'Location sharing';
+
+  @override
+  String get driverLocationSharingBody =>
+      'Share your location while this delivery is active. The learner can track you only after the material is picked up.';
+
+  @override
+  String get driverShareAutomatically => 'Share automatically';
+
+  @override
+  String get driverSharingEvery45Seconds =>
+      'Sharing every 45 seconds while this page is open.';
+
+  @override
+  String get driverLocationSharingPaused => 'Location sharing paused';
+
+  @override
+  String get driverSending => 'Sending...';
+
+  @override
+  String get driverSendMyLocation => 'Send my location';
+
+  @override
+  String get driverLocationUpdateSent => 'Location update sent.';
+
+  @override
+  String driverLastShared(String dateTime) {
+    return 'Last shared: $dateTime';
+  }
+
+  @override
+  String driverCurrentStage(String status) {
+    return 'Current stage: $status';
+  }
+
+  @override
+  String get driverNoFurtherSteps => 'No further steps for this delivery.';
+
+  @override
+  String driverAdvanceTo(String action) {
+    return 'Advance to: $action';
+  }
+
+  @override
+  String driverNextAction(String action) {
+    return 'Next: $action';
+  }
+
+  @override
+  String get driverSupplierCodeRequired =>
+      'Supplier handover code is required when marking picked up.';
+
+  @override
+  String get driverLearnerCodeRequired =>
+      'Learner delivery code is required when marking delivered.';
+
+  @override
+  String get driverCompleteArriveBeforePickedUp =>
+      'Complete \"Arrive at pickup\" before marking picked up.';
+
+  @override
+  String get driverMarkPickedUpBeforeDelivery =>
+      'Mark picked up before starting delivery.';
+
+  @override
+  String get driverStartDeliveryBeforeArrive =>
+      'Start delivery before arriving at drop-off.';
+
+  @override
+  String get driverArriveBeforeDelivered =>
+      'Arrive at drop-off before marking delivered.';
+
+  @override
+  String get driverActionNotAvailable => 'This action is not available yet.';
+
+  @override
+  String get driverNotSet => 'Not set';
+
+  @override
+  String get driverApproximateAddress =>
+      'Approximate address — confirm with learner if needed.';
+
+  @override
+  String get driverExactCoordinatesMissing => 'Exact coordinates are missing.';
+
+  @override
+  String driverAssignedAt(String dateTime) {
+    return 'Assigned $dateTime';
+  }
+
+  @override
+  String driverAvailableInDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return 'Available in $_temp0';
+  }
+
+  @override
+  String driverAvailableInHoursMinutes(int hours, int minutes) {
+    return 'Available in $hours h $minutes min';
+  }
+
+  @override
+  String driverAvailableInHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours',
+      one: '1 hour',
+    );
+    return 'Available in $_temp0';
+  }
+
+  @override
+  String driverAvailableInMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
+    );
+    return 'Available in $_temp0';
+  }
+
+  @override
+  String get driverAvailableSoon => 'Available soon';
+
+  @override
+  String get driverPickupNotAvailableYet =>
+      'Pickup confirmation is not available yet';
+
+  @override
+  String driverPickupConfirmFrom(String time) {
+    return 'Pickup can be confirmed from $time (30 minutes before the supplier window).';
+  }
+
+  @override
+  String get driverSupplierPickupWindowPassed =>
+      'Supplier pickup window has passed';
+
+  @override
+  String driverPickupConfirmationEnded(String dateTime) {
+    return 'The allowed pickup confirmation window ended at $dateTime.';
+  }
+
+  @override
+  String get driverDeliveryWindowNotSet =>
+      'Delivery confirmation window is not set';
+
+  @override
+  String get driverLearnerMustConfirmWindow =>
+      'The learner must confirm a delivery window before you can mark delivered.';
+
+  @override
+  String get driverDeliveryNotAvailableYet =>
+      'Delivery confirmation is not available yet';
+
+  @override
+  String driverDeliveryConfirmFrom(String time) {
+    return 'Delivery can be confirmed from $time.';
+  }
+
+  @override
+  String get driverDeliveryWindowPassed => 'Delivery window has passed';
+
+  @override
+  String driverDeliveryConfirmationEnded(String dateTime) {
+    return 'The allowed delivery confirmation window ended at $dateTime.';
+  }
+
+  @override
+  String get driverPickupWindowNotStarted =>
+      'Pickup window has not started yet';
+
+  @override
+  String driverPickupStartsAt(String time) {
+    return 'Pickup starts at $time.';
+  }
+
+  @override
+  String get driverSupplierPickupOverdue => 'Supplier pickup window overdue';
+
+  @override
+  String driverPickupOverdueBody(String dateTime) {
+    return 'The allowed pickup confirmation window ended at $dateTime. Report pickup failed if you cannot complete pickup.';
+  }
+
+  @override
+  String get driverScheduledPickupEnded => 'Scheduled pickup window has ended';
+
+  @override
+  String driverScheduledPickupEndedBody(String time) {
+    return 'The supplier window ended at $time. You may still complete pickup if the material is ready.';
+  }
+
+  @override
+  String get driverArriveAtPickup => 'Arrive at pickup';
+
+  @override
+  String get driverArriveAtPickupReq1 =>
+      'Drive to the supplier pickup location.';
+
+  @override
+  String get driverArriveAtPickupReq2 =>
+      'No confirmation code is required for this step.';
+
+  @override
+  String get driverMarkPickedUpReq1 =>
+      'You must be at the supplier pickup location.';
+
+  @override
+  String get driverMarkPickedUpReq2 =>
+      'Enter the supplier handover code when prompted.';
+
+  @override
+  String get driverStartDeliveryOnTheWay => 'Start delivery / On the way';
+
+  @override
+  String get driverStartDeliveryReq1 =>
+      'Material must already be picked up from the supplier.';
+
+  @override
+  String get driverStartDeliveryReq2 =>
+      'No confirmation code is required for this step.';
+
+  @override
+  String get driverArriveAtDropoff => 'Arrive at drop-off';
+
+  @override
+  String get driverArriveAtDropoffReq1 =>
+      'Drive to the learner drop-off location.';
+
+  @override
+  String get driverArriveAtDropoffReq2 =>
+      'No confirmation code is required for this step.';
+
+  @override
+  String get driverMarkDeliveredReq1 =>
+      'You must be at the learner drop-off location.';
+
+  @override
+  String get driverMarkDeliveredReq2 =>
+      'Enter the learner delivery code when prompted.';
+
+  @override
+  String get driverFailureSupplierUnavailable => 'Supplier unavailable';
+
+  @override
+  String get driverFailureMaterialNotReady => 'Material not ready';
+
+  @override
+  String get driverFailureLocationIssue => 'Location issue';
+
+  @override
+  String get driverFailureLearnerUnavailable => 'Learner unavailable';
+
+  @override
+  String get driverFailureAddressIssue => 'Address issue';
+
+  @override
+  String get driverFailureAccessIssue => 'Access issue';
+
+  @override
+  String get driverInactiveMovedToAdminReview => 'Moved to admin review';
+
+  @override
+  String get driverInactiveNoLongerActive => 'No longer active';
+
+  @override
+  String get driverTransportCar => 'Car';
+
+  @override
+  String get driverTransportMotorcycle => 'Motorcycle';
+
+  @override
+  String get driverTransportBicycle => 'Bicycle';
+
+  @override
+  String get driverTransportWalking => 'Walking';
+
+  @override
+  String get driverPhoneRequired => 'Required for drivers';
+
+  @override
+  String get driverTransportationType => 'Transportation type';
+
+  @override
+  String get driverAddressLineOptional => 'Address line (optional)';
+
+  @override
+  String get driverAvailabilityNoteOptional => 'Availability note (optional)';
+
+  @override
+  String get notificationDriverNewJobTitle => 'New delivery job';
+
+  @override
+  String notificationDriverNewJobBody(String materialTitle) {
+    return '$materialTitle is ready for delivery.';
+  }
+
+  @override
+  String get notificationDriverPickupTimeTitle => 'Pickup time';
+
+  @override
+  String notificationDriverPickupTimeBody(String materialTitle) {
+    return 'Pickup for $materialTitle starts soon.';
+  }
+
+  @override
+  String get notificationDriverDropoffTimeTitle => 'Drop-off time';
+
+  @override
+  String notificationDriverDropoffTimeBody(String materialTitle) {
+    return 'Drop-off for $materialTitle starts soon.';
+  }
+
+  @override
+  String get notificationDriverUnassignedTitle => 'Delivery assignment removed';
+
+  @override
+  String notificationDriverUnassignedBody(String materialTitle) {
+    return '$materialTitle was reopened to the driver pool by an admin.';
+  }
+
+  @override
+  String get notificationDriverMovedToAdminTitle =>
+      'Delivery moved to admin review';
+
+  @override
+  String get notificationDriverMovedToAdminBody =>
+      'Delivery moved to admin review because pickup was not completed within the pickup window.';
+
+  @override
+  String get driverToday => 'Today';
+
+  @override
+  String driverPickupStartsInHours(
+    int hours,
+    String dateLabel,
+    String timeRange,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return 'Pickup starts in $_temp0 · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverPickupStartsInMinutes(
+    int minutes,
+    String dateLabel,
+    String timeRange,
+  ) {
+    return 'Pickup starts in $minutes min · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverPickupStartsSoon(String dateLabel, String timeRange) {
+    return 'Pickup starts soon · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverPickupWindowEndedSummary(String dateLabel, String timeRange) {
+    return 'Pickup window ended · $dateLabel · $timeRange';
+  }
+
+  @override
+  String driverReadyForPickupNow(String dateLabel, String timeRange) {
+    return 'Ready for pickup now · $dateLabel · $timeRange';
+  }
+
+  @override
+  String get inviteAcceptTitle => 'Complete your ImpactLoop invitation';
+
+  @override
+  String get inviteInvalidLink => 'Invalid invitation link.';
+
+  @override
+  String get inviteRegistrationCompleted =>
+      'Registration completed successfully.';
+
+  @override
+  String inviteRoleLabel(String role) {
+    return 'Role: $role';
+  }
+
+  @override
+  String inviteInvitedRole(String role) {
+    return 'Invited role: $role';
+  }
+
+  @override
+  String inviteExpires(String date) {
+    return 'Expires: $date';
+  }
+
+  @override
+  String get inviteInvalidOrExpired =>
+      'This invitation link is invalid, expired, revoked, or already used.';
+
+  @override
+  String get inviteCompleteRegistration => 'Complete registration';
+
+  @override
+  String get inviteFullName => 'Full name';
+
+  @override
+  String get invitePhone => 'Phone';
+
+  @override
+  String get invitePhoneOptional => 'Phone (optional)';
+
+  @override
+  String get inviteFieldRequired => 'Required';
+
+  @override
+  String get driverLocationUnavailableShort => 'Location unavailable';
+
+  @override
+  String get driverUnknownParty => 'Unknown';
+
+  @override
+  String driverGroupedItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get driverCouldNotShareLocation =>
+      'Could not share location. Try again or use Send my location.';
+
+  @override
+  String get driverLocationPermissionDenied =>
+      'Location permission was denied. Enable location permission or try again.';
+
+  @override
+  String get driverLocationServicesDisabled =>
+      'Location services are disabled. Turn on location services and try again.';
+
+  @override
+  String get driverCurrentLocationFailed =>
+      'Could not get your current location. Please try again.';
 }
