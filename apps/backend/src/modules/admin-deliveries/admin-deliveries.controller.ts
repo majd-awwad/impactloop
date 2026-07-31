@@ -7,11 +7,17 @@ import {
 import { successResponse } from '../../utils/api-response.js';
 
 import {
+  preflightAdminDeliveriesExport,
+  streamAdminDeliveriesExport,
+} from './admin-deliveries.export.js';
+import {
   getAdminDeliveryById,
   listAdminDeliveries,
   reopenAdminDeliveryDriverAssignment,
 } from './admin-deliveries.service.js';
 import type {
+  AdminDeliveriesExportDownloadQuery,
+  AdminDeliveriesExportFilters,
   AdminDeliveriesListQuery,
   AdminDeliveryIdParams,
 } from './admin-deliveries.validation.js';
@@ -23,6 +29,27 @@ export const listAdminDeliveriesHandler = async (
   const query = readValidatedQuery<AdminDeliveriesListQuery>(req);
   const result = await listAdminDeliveries(query);
   res.json(successResponse('Admin deliveries loaded', result));
+};
+
+export const preflightAdminDeliveriesExportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const filters = readValidatedQuery<AdminDeliveriesExportFilters>(req);
+  const result = await preflightAdminDeliveriesExport(filters);
+  res.json(successResponse('Deliveries export preflight loaded.', result));
+};
+
+export const exportAdminDeliveriesHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = readValidatedQuery<AdminDeliveriesExportDownloadQuery>(req);
+  await streamAdminDeliveriesExport({
+    res,
+    filters: query,
+    actorUserId: req.auth!.sub,
+  });
 };
 
 export const getAdminDeliveryHandler = async (

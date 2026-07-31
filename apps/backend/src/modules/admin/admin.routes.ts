@@ -116,11 +116,15 @@ import {
   adminReservationsListQuerySchema,
 } from '../admin-reservations/admin-reservations.validation.js';
 import {
+  exportAdminDeliveriesHandler,
   getAdminDeliveryHandler,
   listAdminDeliveriesHandler,
+  preflightAdminDeliveriesExportHandler,
   reopenAdminDeliveryDriverAssignmentHandler,
 } from '../admin-deliveries/admin-deliveries.controller.js';
 import {
+  adminDeliveriesExportDownloadQuerySchema,
+  adminDeliveriesExportFiltersSchema,
   adminDeliveriesListQuerySchema,
   adminDeliveryIdParamSchema,
 } from '../admin-deliveries/admin-deliveries.validation.js';
@@ -544,6 +548,22 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminDeliveriesListQuerySchema, 'query'),
   asyncHandler(listAdminDeliveriesHandler),
+);
+
+adminRouter.get(
+  '/deliveries/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminDeliveriesExportHandler),
+);
+
+adminRouter.get(
+  '/deliveries/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminDeliveriesHandler),
 );
 
 adminRouter.post(

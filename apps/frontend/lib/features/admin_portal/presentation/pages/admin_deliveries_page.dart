@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/admin_deliveries_api.dart';
+import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
 import '../../data/models/admin_deliveries_models.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../theme/admin_decoration_set.dart';
@@ -186,6 +188,8 @@ class AdminDeliveriesPage extends ConsumerStatefulWidget {
 class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
   final _searchController = TextEditingController();
   var _initialOpenHandled = false;
+  var _isPreflightLoading = false;
+  var _isDialogOpen = false;
 
   @override
   void initState() {
@@ -216,6 +220,146 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
 
   void _showDetails(AdminDeliveryListItem item) =>
       context.push('/admin/deliveries/${Uri.encodeComponent(item.id)}');
+
+  String _activeFilterSummary(_DeliveryFilters filters) {
+    final parts = <String>[];
+    if (filters.search.trim().isNotEmpty) {
+      parts.add('Search: ${filters.search.trim()}');
+    }
+    if (filters.status != 'ALL') {
+      parts.add('Status: ${filters.status}');
+    }
+    if (filters.scope != 'ALL') {
+      parts.add('Scope: ${filters.scope}');
+    }
+    if (filters.assignment != 'ALL') {
+      parts.add('Assignment: ${filters.assignment}');
+    }
+    if (filters.incidentState != 'ALL') {
+      parts.add('Incident: ${filters.incidentState}');
+    }
+    if (filters.timeRange != kTimeRangeAll) {
+      final resolved = resolveDateRange(
+        timeRange: filters.timeRange,
+        customDateFrom: filters.customDateFrom,
+        customDateTo: filters.customDateTo,
+      );
+      if (resolved.dateFrom != null || resolved.dateTo != null) {
+        parts.add(
+          'Dates: ${resolved.dateFrom ?? '…'} → ${resolved.dateTo ?? '…'}',
+        );
+      } else {
+        parts.add('Time range: ${filters.timeRange}');
+      }
+    }
+    return parts.isEmpty ? 'No filters (all deliveries)' : parts.join(' · ');
+  }
+
+  Future<void> _exportDeliveries() async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export is available on Admin Web only.'),
+        ),
+      );
+      return;
+    }
+    if (_isPreflightLoading || _isDialogOpen) return;
+
+    final filters = ref.read(_deliveryFiltersProvider);
+    final resolved = resolveDateRange(
+      timeRange: filters.timeRange,
+      customDateFrom: filters.customDateFrom,
+      customDateTo: filters.customDateTo,
+    );
+    if (filters.timeRange == kTimeRangeCustom && resolved.error != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resolved.error!)),
+      );
+      return;
+    }
+
+    setState(() => _isPreflightLoading = true);
+    final api = ref.read(adminDeliveriesApiProvider);
+
+    try {
+      final preflight = await api.preflightExport(
+        search: filters.search,
+        status: filters.status,
+        assignment: filters.assignment,
+        scope: filters.scope,
+        incidentState: filters.incidentState,
+        dateFrom: resolved.dateFrom,
+        dateTo: resolved.dateTo,
+      );
+
+      if (!mounted) return;
+
+      if (preflight.count == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No deliveries match the current filters.'),
+          ),
+        );
+        return;
+      }
+
+      _isDialogOpen = true;
+      final selectedFormat = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AdminDeliveriesExportDialog(
+          count: preflight.count,
+          filterSummary: _activeFilterSummary(filters),
+          formats: preflight.formats,
+          onDownload: (format) => api.downloadExport(
+            format: format,
+            search: filters.search,
+            status: filters.status,
+            assignment: filters.assignment,
+            scope: filters.scope,
+            incidentState: filters.incidentState,
+            dateFrom: resolved.dateFrom,
+            dateTo: resolved.dateTo,
+          ),
+        ),
+      );
+      _isDialogOpen = false;
+
+      if (!mounted) return;
+      if (selectedFormat == null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Deliveries ${selectedFormat.toUpperCase()} export downloaded.',
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreflightLoading = false;
+          _isDialogOpen = false;
+        });
+      } else {
+        _isPreflightLoading = false;
+        _isDialogOpen = false;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -286,6 +430,8 @@ class _AdminDeliveriesPageState extends ConsumerState<AdminDeliveriesPage> {
                       _searchController.clear();
                       ref.read(_deliveryFiltersProvider.notifier).reset();
                     },
+                    onExport: kIsWeb ? _exportDeliveries : null,
+                    exportLoading: _isPreflightLoading,
                   ),
                   const SizedBox(height: 16),
                   _ResultsHeader(total: data.pagination.total),
@@ -487,6 +633,8 @@ class _FiltersPanel extends StatefulWidget {
     required this.onCustomDateFromChanged,
     required this.onCustomDateToChanged,
     required this.onReset,
+    this.onExport,
+    this.exportLoading = false,
     this.dateRangeError,
   });
 
@@ -503,6 +651,8 @@ class _FiltersPanel extends StatefulWidget {
   final ValueChanged<String?> onCustomDateFromChanged;
   final ValueChanged<String?> onCustomDateToChanged;
   final VoidCallback onReset;
+  final VoidCallback? onExport;
+  final bool exportLoading;
   @override
   State<_FiltersPanel> createState() => _FiltersPanelState();
 }
@@ -650,6 +800,20 @@ class _FiltersPanelState extends State<_FiltersPanel> {
       icon: const Icon(Icons.filter_alt_off, size: 19),
       tooltip: 'Reset filters',
     );
+    final exportButton = widget.onExport == null
+        ? null
+        : OutlinedButton.icon(
+            onPressed: widget.exportLoading ? null : widget.onExport,
+            style: AppStatusButtonStyle.outlined(context, AppStatusTone.neutral),
+            icon: widget.exportLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_outlined, size: 18),
+            label: Text(widget.exportLoading ? 'Preparing…' : 'Export'),
+          );
     final secondaryCount = [
       widget.filters.scope != 'ALL',
       widget.filters.assignment != 'ALL',
@@ -683,7 +847,17 @@ class _FiltersPanelState extends State<_FiltersPanel> {
             const SizedBox(height: 10),
             timeFilter,
             const SizedBox(height: 10),
-            Row(children: [moreButton, const SizedBox(width: 4), resetButton]),
+            Row(
+              children: [
+                moreButton,
+                const SizedBox(width: 4),
+                if (exportButton != null) ...[
+                  exportButton,
+                  const SizedBox(width: 4),
+                ],
+                resetButton,
+              ],
+            ),
           ] else
             Row(
               children: [
@@ -697,6 +871,10 @@ class _FiltersPanelState extends State<_FiltersPanel> {
                 const SizedBox(width: 10),
                 moreButton,
                 const SizedBox(width: 4),
+                if (exportButton != null) ...[
+                  exportButton,
+                  const SizedBox(width: 4),
+                ],
                 resetButton,
               ],
             ),
@@ -1855,6 +2033,154 @@ class _PaginationRow extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class AdminDeliveriesExportDialog extends StatefulWidget {
+  const AdminDeliveriesExportDialog({
+    super.key,
+    required this.count,
+    required this.filterSummary,
+    required this.formats,
+    required this.onDownload,
+  });
+
+  final int count;
+  final String filterSummary;
+  final Map<String, AdminExportFormatEligibility> formats;
+  final Future<void> Function(String format) onDownload;
+
+  @override
+  State<AdminDeliveriesExportDialog> createState() =>
+      _AdminDeliveriesExportDialogState();
+}
+
+class _AdminDeliveriesExportDialogState
+    extends State<AdminDeliveriesExportDialog> {
+  String _selectedFormat = 'xlsx';
+  bool _isDownloading = false;
+  String? _error;
+
+  AdminExportFormatEligibility? get _selectedEligibility =>
+      widget.formats[_selectedFormat];
+
+  bool get _canExport =>
+      !_isDownloading && (_selectedEligibility?.allowed ?? false);
+
+  String get _formatDescription {
+    switch (_selectedFormat) {
+      case 'csv':
+        return 'Raw data';
+      case 'xlsx':
+      default:
+        return 'Detailed editable data';
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (!_canExport) return;
+    setState(() {
+      _isDownloading = true;
+      _error = null;
+    });
+    try {
+      await widget.onDownload(_selectedFormat);
+      if (!mounted) return;
+      Navigator.of(context).pop(_selectedFormat);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.displayMessage;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
+        ? 'This export matches ${widget.count} deliveries, which exceeds the '
+              'limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow your '
+              'filters and try again.'
+        : null;
+
+    return AppDialogShell(
+      title: const Text('Export deliveries'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Export all ${widget.count} matching deliveries, including results '
+            'from all pages.',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.filterSummary,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          const Text('Format'),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'xlsx', label: Text('Excel')),
+              ButtonSegment(value: 'csv', label: Text('CSV')),
+            ],
+            selected: {_selectedFormat},
+            onSelectionChanged: _isDownloading
+                ? null
+                : (values) {
+                    if (values.isEmpty) return;
+                    setState(() => _selectedFormat = values.first);
+                  },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (limitMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              limitMessage,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: _isDownloading
+              ? null
+              : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: _canExport ? _confirm : null,
+          child: _isDownloading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Export'),
+        ),
+      ),
     );
   }
 }

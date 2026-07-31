@@ -49,6 +49,55 @@ describe('admin-export.xlsx', () => {
     assert.ok(buffer.length > 0);
     assert.equal(buffer.subarray(0, 2).toString('utf8'), 'PK');
   });
+
+  test('nullable and empty cells stay blank (never shared-string index dates)', async () => {
+    const ExcelJS = (await import('exceljs')).default;
+    const stamp = new Date('2026-07-28T12:00:00.000Z');
+    const buffer = await buildXlsxBuffer({
+      sheetName: 'Deliveries',
+      headers: [
+        'Status',
+        'Driver name',
+        'Incident',
+        'Requested At',
+        'Assigned At',
+        'Delivered At',
+      ],
+      rows: [
+        ['WAITING_FOR_DRIVER', '', null, stamp, null, ''],
+        ['DELIVERED', 'Driver', 'PENDING_REVIEW', stamp, stamp, stamp],
+      ],
+      dateColumnIndexes: [4, 5, 6],
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as never);
+    const sheet = workbook.getWorksheet('Deliveries');
+    assert.ok(sheet);
+
+    const blankRow = sheet.getRow(2);
+    assert.equal(blankRow.getCell(1).value, 'WAITING_FOR_DRIVER');
+    assert.equal(blankRow.getCell(2).value, null);
+    assert.equal(blankRow.getCell(3).value, null);
+    assert.ok(blankRow.getCell(4).value instanceof Date);
+    assert.equal(blankRow.getCell(5).value, null);
+    assert.equal(blankRow.getCell(6).value, null);
+
+    for (const column of [2, 3, 5, 6]) {
+      const value = blankRow.getCell(column).value;
+      assert.notEqual(value, 34);
+      assert.notEqual(value, '');
+      if (value instanceof Date) {
+        assert.notEqual(value.toISOString().slice(0, 10), '1900-02-03');
+      }
+    }
+
+    const filledRow = sheet.getRow(3);
+    assert.equal(filledRow.getCell(2).value, 'Driver');
+    assert.equal(filledRow.getCell(3).value, 'PENDING_REVIEW');
+    assert.ok(filledRow.getCell(5).value instanceof Date);
+    assert.ok(filledRow.getCell(6).value instanceof Date);
+  });
 });
 
 describe('admin-export.csv', () => {

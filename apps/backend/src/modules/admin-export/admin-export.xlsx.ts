@@ -2,11 +2,19 @@ import ExcelJS from 'exceljs';
 
 const FORMULA_PREFIX_PATTERN = /^[=+\-@\t]/;
 
+/**
+ * Convert export cell values for ExcelJS.
+ *
+ * Empty/missing values MUST be `null` (not `''`). Writing an empty string
+ * creates a shared-string entry whose index is stored in `<v>`. When that
+ * cell also has a date number format, Excel treats the shared-string index
+ * as a date serial (e.g. index 34 → 1900-02-03).
+ */
 const guardCellValue = (
   value: unknown,
 ): string | number | boolean | Date | null => {
   if (value == null) {
-    return '';
+    return null;
   }
 
   if (typeof value === 'number' || typeof value === 'boolean' || value instanceof Date) {
@@ -14,6 +22,10 @@ const guardCellValue = (
   }
 
   const text = String(value);
+  if (text.length === 0) {
+    return null;
+  }
+
   if (FORMULA_PREFIX_PATTERN.test(text)) {
     return `'${text}`;
   }
