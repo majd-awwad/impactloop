@@ -575,6 +575,47 @@ class SupplierL10n {
       t('Learner builds helped', 'بناءات متعلمين مساندة');
   String get projectImpactRecentProjects =>
       t('Recent supported projects', 'مشاريع مدعومة حديثاً');
+
+  // —— Related projects (prospective matching) ——
+  String get relatedProjectsTitle => t('Related Projects', 'المشاريع ذات الصلة');
+  String get relatedProjectsSubtitle => t(
+    'Learning Hub projects that could use this material based on required components — not past handovers.',
+    'مشاريع مركز التعلم التي يمكن أن تستخدم هذه المادة حسب المكوّنات المطلوبة — وليست عمليات التسليم السابقة.',
+  );
+  String relatedProjectsCountSummary(int count) {
+    if (count == 1) {
+      return t(
+        'This material can be used in 1 project.',
+        'يمكن استخدام هذه المادة في مشروع واحد.',
+      );
+    }
+    return t(
+      'This material can be used in $count projects.',
+      'يمكن استخدام هذه المادة في $count مشاريع.',
+    );
+  }
+
+  String get relatedProjectsEmpty => t(
+    'No Learning Hub projects currently match this material.',
+    'لا توجد حالياً مشاريع في مركز التعلم تطابق هذه المادة.',
+  );
+  String get relatedProjectsLoadError => t(
+    'Could not load related projects.',
+    'تعذّر تحميل المشاريع ذات الصلة.',
+  );
+  String get relatedProjectsRetry => t('Retry', 'إعادة المحاولة');
+  String get relatedProjectsMatchedComponent =>
+      t('Matched component', 'المكوّن المطابق');
+  String relatedProjectsMatchReason(String code) => switch (code) {
+    'EXACT_NAME' => t('Exact name match', 'تطابق تام للاسم'),
+    'NAME_MATCH' => t('Name match', 'تطابق في الاسم'),
+    'STRONG_MATCH' => t('Strong match', 'تطابق قوي'),
+    'MATERIAL_TYPE_MATCH' => t('Material type match', 'تطابق نوع المادة'),
+    'CATEGORY_MATCH' => t('Category match', 'تطابق الفئة'),
+    'KEYWORD_MATCH' => t('Keyword match', 'تطابق بالكلمات المفتاحية'),
+    _ => t('Related match', 'تطابق ذو صلة'),
+  };
+
   String get noReviewsYet => t('No reviews yet', 'لا توجد مراجعات بعد');
   String get ratingLabel => t('Rating', 'التقييم');
   String reviewsCount(int count) => t('$count reviews', '$count مراجعة');

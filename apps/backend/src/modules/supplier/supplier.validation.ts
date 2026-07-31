@@ -239,3 +239,11 @@ export type UpdateSupplierMaterialInput = z.infer<
 >;
 
 export type SupplierFollowersQuery = z.infer<typeof supplierFollowersQuerySchema>;
+
+export const supplierRelatedProjectsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(12).default(6),
+});
+
+export type SupplierRelatedProjectsQuery = z.infer<
+  typeof supplierRelatedProjectsQuerySchema
+>;

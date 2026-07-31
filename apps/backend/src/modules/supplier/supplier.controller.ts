@@ -8,6 +8,7 @@ import {
   deleteSupplierMaterial,
   getSupplierDashboard,
   getSupplierMaterial,
+  getSupplierMaterialRelatedProjects,
   getSupplierMaterials,
   getSupplierProfile,
   getSupplierProfileManagement,
@@ -24,6 +25,7 @@ import type {
   CreateSupplierMaterialInput,
   SupplierMaterialsQuery,
   SupplierFollowersQuery,
+  SupplierRelatedProjectsQuery,
   UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
   UpdateSupplierProfileImagesInput,
@@ -118,6 +120,23 @@ export const getMaterial = async (
   );
 
   res.json(successResponse("Supplier material loaded", material));
+};
+
+export const getMaterialRelatedProjects = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  setSupplierPrivateCacheHeaders(res);
+  const query = readValidatedQuery<SupplierRelatedProjectsQuery>(req);
+  const relatedProjects = await getSupplierMaterialRelatedProjects(
+    req.auth!.sub,
+    req.params.id as string,
+    query.limit,
+  );
+
+  res.json(
+    successResponse("Supplier material related projects loaded", relatedProjects),
+  );
 };
 
 export const patchMaterial = async (

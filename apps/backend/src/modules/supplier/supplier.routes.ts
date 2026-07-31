@@ -9,6 +9,7 @@ import {
   deleteMaterial,
   getDashboard,
   getMaterial,
+  getMaterialRelatedProjects,
   getMaterials,
   getProfile,
   getProfileManagement,
@@ -25,6 +26,7 @@ import {
   supplierMaterialIdParamSchema,
   supplierFollowersQuerySchema,
   supplierMaterialsQuerySchema,
+  supplierRelatedProjectsQuerySchema,
   updateSupplierMaterialSchema,
   updateSupplierProfileSchema,
   updateSupplierProfileImagesSchema,
@@ -105,6 +107,15 @@ supplierRouter.get(
   requireRoles('SUPPLIER'),
   validate(supplierMaterialIdParamSchema, 'params'),
   asyncHandler(getMaterial),
+);
+
+supplierRouter.get(
+  '/materials/:id/related-projects',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(supplierMaterialIdParamSchema, 'params'),
+  validate(supplierRelatedProjectsQuerySchema, 'query'),
+  asyncHandler(getMaterialRelatedProjects),
 );
 
 supplierRouter.patch(

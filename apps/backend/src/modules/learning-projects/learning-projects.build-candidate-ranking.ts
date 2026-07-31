@@ -91,7 +91,25 @@ const hasStrongTokenOverlap = (left: string, right: string) => {
   return shorter.every((token) => longer.includes(token));
 };
 
-const scoreRelevance = (
+export type MaterialComponentMatchReasonCode =
+  | 'EXACT_NAME'
+  | 'NAME_MATCH'
+  | 'STRONG_MATCH'
+  | 'MATERIAL_TYPE_MATCH'
+  | 'CATEGORY_MATCH'
+  | 'KEYWORD_MATCH';
+
+const MATCH_REASON_PRIORITY: readonly MaterialComponentMatchReasonCode[] = [
+  'EXACT_NAME',
+  'NAME_MATCH',
+  'STRONG_MATCH',
+  'MATERIAL_TYPE_MATCH',
+  'CATEGORY_MATCH',
+  'KEYWORD_MATCH',
+] as const;
+
+/** Shared material↔component relevance used by learner candidates and supplier related-projects. */
+export const scoreMaterialComponentRelevance = (
   material: BuildCandidateMaterialInput,
   component: BuildCandidateComponentInput,
 ) => {
@@ -163,6 +181,68 @@ const scoreRelevance = (
 
   return score;
 };
+
+export const deriveMaterialComponentMatchReasonCodes = (input: {
+  material: BuildCandidateMaterialInput;
+  component: BuildCandidateComponentInput;
+  relevance: number;
+}): MaterialComponentMatchReasonCode[] => {
+  const codes = new Set<MaterialComponentMatchReasonCode>();
+  const normalizedName = normalizeText(input.component.componentName);
+  const normalizedTitle = normalizeText(input.material.title);
+  const haystack = haystackForMaterial(input.material);
+
+  if (normalizedName.length > 0) {
+    if (normalizedTitle === normalizedName) {
+      codes.add('EXACT_NAME');
+    } else if (normalizedTitle.includes(normalizedName)) {
+      codes.add('NAME_MATCH');
+    } else if (hasStrongTokenOverlap(normalizedName, normalizedTitle)) {
+      codes.add('STRONG_MATCH');
+    }
+  }
+
+  if (
+    !codes.has('EXACT_NAME') &&
+    !codes.has('NAME_MATCH') &&
+    !codes.has('STRONG_MATCH') &&
+    input.relevance >= 280
+  ) {
+    codes.add('STRONG_MATCH');
+  }
+
+  if (
+    input.component.categoryId &&
+    input.material.categoryId === input.component.categoryId
+  ) {
+    codes.add('CATEGORY_MATCH');
+  }
+
+  const componentType = normalizeText(input.component.materialType);
+  const materialType = normalizeText(input.material.materialType);
+  if (
+    !isGeneralMaterialType(input.component.materialType) &&
+    (materialType.includes(componentType) || componentType.includes(materialType))
+  ) {
+    codes.add('MATERIAL_TYPE_MATCH');
+  }
+
+  const keywords = [
+    ...input.component.searchKeywords,
+    ...input.component.alternativeKeywords,
+  ];
+  if (
+    keywords.some((keyword) => haystack.includes(normalizeText(keyword)))
+  ) {
+    codes.add('KEYWORD_MATCH');
+  }
+
+  return MATCH_REASON_PRIORITY.filter((code) => codes.has(code));
+};
+
+export const primaryMaterialComponentMatchReasonCode = (
+  codes: readonly MaterialComponentMatchReasonCode[],
+): MaterialComponentMatchReasonCode | null => codes[0] ?? null;
 
 const scoreConvenience = (
   material: BuildCandidateMaterialInput,
@@ -244,7 +324,7 @@ export const scoreBuildMaterialCandidate = (
   component: BuildCandidateComponentInput,
   learner: BuildCandidateLearnerContext,
 ): BuildCandidateScoreBreakdown => ({
-  relevance: scoreRelevance(material, component),
+  relevance: scoreMaterialComponentRelevance(material, component),
   convenience: scoreConvenience(material, learner),
   cost: scoreCost(material),
   condition: scoreCondition(material.condition),

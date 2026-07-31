@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/api_response.dart';
 import 'models/supplier_my_materials_models.dart';
+import 'models/supplier_related_projects.dart';
 
 class SupplierMyMaterialsApi {
   const SupplierMyMaterialsApi(this._client);
@@ -35,6 +36,19 @@ class SupplierMyMaterialsApi {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>('/api/supplier/materials/$materialId'),
       SupplierMyMaterial.fromJson,
+    );
+  }
+
+  Future<SupplierRelatedProjectsResult> getRelatedProjects(
+    String materialId, {
+    int limit = 6,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/supplier/materials/$materialId/related-projects',
+        queryParameters: {'limit': limit},
+      ),
+      SupplierRelatedProjectsResult.fromJson,
     );
   }
 
