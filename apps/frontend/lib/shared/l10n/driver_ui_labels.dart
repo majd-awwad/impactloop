@@ -51,7 +51,10 @@ class DriverUiLabels {
       l10n.driverLocationPermissionDenied,
     CurrentLocationFailure.serviceDisabled =>
       l10n.driverLocationServicesDisabled,
-    CurrentLocationFailure.unavailable => l10n.driverCurrentLocationFailed,
+    CurrentLocationFailure.timeout ||
+    CurrentLocationFailure.unsupported ||
+    CurrentLocationFailure.unavailable =>
+      l10n.driverCurrentLocationFailed,
   };
 
   String locationError(Object error) {

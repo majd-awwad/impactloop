@@ -8,6 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/location/current_location_service.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
@@ -15,7 +16,8 @@ import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_field.dart';
-import '../../../profile/presentation/widgets/profile_image_picker.dart';
+import '../../../auth/application/auth_route_helpers.dart';
+import '../../../profile/presentation/widgets/profile_family_page_widgets.dart';
 import '../../application/saved_locations_providers.dart';
 import '../../data/forward_geocode_result.dart';
 import '../../data/reverse_geocode_result.dart';
@@ -24,6 +26,24 @@ import '../l10n/saved_locations_l10n.dart';
 
 const _palestineFallbackCenter = LatLng(31.9522, 35.2332);
 const _nablusFallbackCenter = LatLng(32.2211, 35.2544);
+
+class _SavedLocationFormPrefill {
+  const _SavedLocationFormPrefill({
+    this.country,
+    this.city,
+    this.area,
+    this.addressLine,
+    this.latitude,
+    this.longitude,
+  });
+
+  final String? country;
+  final String? city;
+  final String? area;
+  final String? addressLine;
+  final double? latitude;
+  final double? longitude;
+}
 
 class SavedLocationsPage extends ConsumerStatefulWidget {
   const SavedLocationsPage({super.key});
@@ -34,11 +54,12 @@ class SavedLocationsPage extends ConsumerStatefulWidget {
 
 class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
   String? _busyLocationId;
+  bool _capturingCurrentLocation = false;
 
-  Future<void> _openCreateDialog() async {
+  Future<void> _openCreateDialog({_SavedLocationFormPrefill? prefill}) async {
     final saved = await showDialog<bool>(
       context: context,
-      builder: (context) => const _SavedLocationFormDialog(),
+      builder: (context) => _SavedLocationFormDialog(prefill: prefill),
     );
 
     if (!mounted || saved != true) {
@@ -140,24 +161,141 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
     }
   }
 
+  String _currentLocationErrorMessage(CurrentLocationFailure failure) {
+    final l10n = SavedLocationsL10n.of(context);
+    return switch (failure) {
+      CurrentLocationFailure.serviceDisabled => l10n.locationServicesDisabled,
+      CurrentLocationFailure.permissionDenied => l10n.locationPermissionDenied,
+      CurrentLocationFailure.permissionDeniedForever =>
+        l10n.locationPermissionDeniedForever,
+      CurrentLocationFailure.timeout => l10n.locationTimeout,
+      CurrentLocationFailure.unsupported => l10n.locationUnsupported,
+      CurrentLocationFailure.unavailable => l10n.locationUnavailable,
+    };
+  }
+
+  Future<void> _useCurrentLocation() async {
+    if (_capturingCurrentLocation) {
+      return;
+    }
+
+    setState(() => _capturingCurrentLocation = true);
+    final l10n = SavedLocationsL10n.of(context);
+
+    try {
+      final capture = await ref
+          .read(currentLocationServiceProvider)
+          .captureCurrentLocation();
+
+      if (!mounted) {
+        return;
+      }
+
+      String? country;
+      String? city;
+      String? area;
+      String? addressLine;
+      var reverseFailed = false;
+
+      try {
+        final reverse = await ref
+            .read(savedLocationsApiProvider)
+            .reverseGeocode(
+              latitude: capture.latitude,
+              longitude: capture.longitude,
+            );
+        country = reverse.country;
+        city = reverse.city;
+        area = reverse.area;
+        addressLine = reverse.addressLine;
+      } catch (_) {
+        reverseFailed = true;
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      if (reverseFailed) {
+        showInfoSnackBar(context, l10n.reverseGeocodePartialFailure);
+      }
+
+      await _openCreateDialog(
+        prefill: _SavedLocationFormPrefill(
+          country: country,
+          city: city,
+          area: area,
+          addressLine: addressLine,
+          latitude: capture.latitude,
+          longitude: capture.longitude,
+        ),
+      );
+    } on CurrentLocationException catch (error) {
+      if (mounted) {
+        showInfoSnackBar(context, _currentLocationErrorMessage(error.failure));
+      }
+    } catch (_) {
+      if (mounted) {
+        showInfoSnackBar(context, l10n.locationGenericFailure);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _capturingCurrentLocation = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = SavedLocationsL10n.of(context);
     final locationsAsync = ref.watch(savedLocationsProvider);
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width >= profileFamilyWideBreakpoint;
 
-    return ProfileSubpageScaffold(
+    return ProfileFamilyPageScaffold(
       title: l10n.pageTitle,
       backTooltip: l10n.back,
+      backFallbackRoute: profileRoute,
+      headerAction: isWide
+          ? _AddLocationHeaderAction(
+              label: l10n.addNewLocation,
+              tooltip: l10n.addNewLocation,
+              onPressed: () => _openCreateDialog(),
+            )
+          : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PrivacyNotice(),
+          Text(
+            l10n.pageSubtitle,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.body(context).copyWith(
+              color: AppThemeColors.of(context).textSecondary,
+              height: 1.45,
+            ),
+          ),
+          if (!isWide) ...[
+            const SizedBox(height: AppSpacing.md),
+            Semantics(
+              button: true,
+              label: l10n.addNewLocation,
+              child: OutlinedButton.icon(
+                onPressed: () => _openCreateDialog(),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text(l10n.addNewLocation),
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
+          const _PrivacyNotice(),
+          const SizedBox(height: AppSpacing.lg),
           locationsAsync.when(
-            data: (locations) => _SavedLocationsContent(
+            data: (locations) => _SavedLocationsLayout(
               locations: locations,
               busyLocationId: _busyLocationId,
-              onCreate: _openCreateDialog,
+              capturingCurrentLocation: _capturingCurrentLocation,
+              onCreate: () => _openCreateDialog(),
+              onUseCurrentLocation: _useCurrentLocation,
               onEdit: _openEditDialog,
               onDelete: _deleteLocation,
               onSetDefault: _setDefault,
@@ -174,11 +312,44 @@ class _SavedLocationsPageState extends ConsumerState<SavedLocationsPage> {
   }
 }
 
-class _SavedLocationsContent extends StatelessWidget {
-  const _SavedLocationsContent({
+class _AddLocationHeaderAction extends StatelessWidget {
+  const _AddLocationHeaderAction({
+    required this.label,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final String label;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Semantics(
+        button: true,
+        label: tooltip,
+        child: OutlinedButton.icon(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsetsDirectional.symmetric(horizontal: 14),
+          ),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: Text(label),
+        ),
+      ),
+    );
+  }
+}
+
+class _SavedLocationsLayout extends StatelessWidget {
+  const _SavedLocationsLayout({
     required this.locations,
     required this.busyLocationId,
+    required this.capturingCurrentLocation,
     required this.onCreate,
+    required this.onUseCurrentLocation,
     required this.onEdit,
     required this.onDelete,
     required this.onSetDefault,
@@ -186,7 +357,61 @@ class _SavedLocationsContent extends StatelessWidget {
 
   final List<SavedLocation> locations;
   final String? busyLocationId;
+  final bool capturingCurrentLocation;
   final VoidCallback onCreate;
+  final VoidCallback onUseCurrentLocation;
+  final ValueChanged<SavedLocation> onEdit;
+  final ValueChanged<SavedLocation> onDelete;
+  final ValueChanged<SavedLocation> onSetDefault;
+
+  @override
+  Widget build(BuildContext context) {
+    final isWide =
+        MediaQuery.sizeOf(context).width >= profileFamilyWideBreakpoint;
+
+    final mainColumn = _SavedLocationsMainColumn(
+      locations: locations,
+      busyLocationId: busyLocationId,
+      capturingCurrentLocation: capturingCurrentLocation,
+      onCreate: onCreate,
+      onUseCurrentLocation: onUseCurrentLocation,
+      onEdit: onEdit,
+      onDelete: onDelete,
+      onSetDefault: onSetDefault,
+    );
+
+    if (!isWide) {
+      return mainColumn;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 7, child: mainColumn),
+        const SizedBox(width: AppSpacing.lg),
+        const Expanded(flex: 3, child: _SavedLocationsSidePanel()),
+      ],
+    );
+  }
+}
+
+class _SavedLocationsMainColumn extends StatelessWidget {
+  const _SavedLocationsMainColumn({
+    required this.locations,
+    required this.busyLocationId,
+    required this.capturingCurrentLocation,
+    required this.onCreate,
+    required this.onUseCurrentLocation,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onSetDefault,
+  });
+
+  final List<SavedLocation> locations;
+  final String? busyLocationId;
+  final bool capturingCurrentLocation;
+  final VoidCallback onCreate;
+  final VoidCallback onUseCurrentLocation;
   final ValueChanged<SavedLocation> onEdit;
   final ValueChanged<SavedLocation> onDelete;
   final ValueChanged<SavedLocation> onSetDefault;
@@ -194,20 +419,64 @@ class _SavedLocationsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = SavedLocationsL10n.of(context);
+    final colors = AppThemeColors.of(context);
+
     if (locations.isEmpty) {
-      return _EmptySavedLocations(onCreate: onCreate);
+      return _EmptySavedLocations(
+        onCreate: onCreate,
+        onUseCurrentLocation: onUseCurrentLocation,
+        capturingCurrentLocation: capturingCurrentLocation,
+      );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: FilledButton.icon(
-            onPressed: onCreate,
-            icon: const Icon(Icons.add_location_alt_outlined),
-            label: Text(l10n.addLocation),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                l10n.mySavedLocations,
+                style: AppTextStyles.title(context).copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Semantics(
+              label: l10n.locationCountLabel(locations.length),
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 8),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Color.lerp(
+                    colors.cardSurface,
+                    colors.primarySoft,
+                    0.7,
+                  ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Color.lerp(
+                      colors.borderSubtle,
+                      colors.primary,
+                      0.28,
+                    )!,
+                  ),
+                ),
+                child: Text(
+                  l10n.locationCount(locations.length),
+                  style: AppTextStyles.label(context).copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.md),
         for (final location in locations) ...[
@@ -220,7 +489,234 @@ class _SavedLocationsContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
+        const SizedBox(height: AppSpacing.md),
+        _CurrentLocationCta(
+          capturing: capturingCurrentLocation,
+          onPressed: onUseCurrentLocation,
+        ),
       ],
+    );
+  }
+}
+
+class _SavedLocationsSidePanel extends StatelessWidget {
+  const _SavedLocationsSidePanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
+    final colors = AppThemeColors.of(context);
+
+    return ProfileFamilySurface(
+      tone: ProfileFamilyTone.neutral,
+      showShadow: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: ProfileFamilyIconContainer(
+              icon: Icons.map_outlined,
+              tone: ProfileFamilyTone.mint,
+              size: 56,
+              iconSize: 28,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            l10n.sidePanelTitle,
+            style: AppTextStyles.title(context).copyWith(
+              color: colors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _SideInfoRow(
+            icon: Icons.home_outlined,
+            title: l10n.sideFasterAccessTitle,
+            body: l10n.sideFasterAccessBody,
+            tone: ProfileFamilyTone.mint,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _SideInfoRow(
+            icon: Icons.shield_outlined,
+            title: l10n.sidePrivacyFirstTitle,
+            body: l10n.sidePrivacyFirstBody,
+            tone: ProfileFamilyTone.primary,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _SideInfoRow(
+            icon: Icons.tune_rounded,
+            title: l10n.sideFullControlTitle,
+            body: l10n.sideFullControlBody,
+            tone: ProfileFamilyTone.blue,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SideInfoRow extends StatelessWidget {
+  const _SideInfoRow({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.tone,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final ProfileFamilyTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ProfileFamilyIconContainer(icon: icon, tone: tone, size: 36, iconSize: 18),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.label(context).copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                body,
+                style: AppTextStyles.body(context).copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CurrentLocationCta extends StatelessWidget {
+  const _CurrentLocationCta({
+    required this.capturing,
+    required this.onPressed,
+  });
+
+  final bool capturing;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
+    final colors = AppThemeColors.of(context);
+    final mint = ProfileFamilyToneStyle.of(context, ProfileFamilyTone.mint);
+    final isWide =
+        MediaQuery.sizeOf(context).width >= profileFamilyWideBreakpoint;
+
+    final details = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ProfileFamilyIconContainer(
+          icon: Icons.my_location_rounded,
+          tone: ProfileFamilyTone.mint,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.useCurrentLocation,
+                style: AppTextStyles.title(context).copyWith(
+                  color: colors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                capturing
+                    ? l10n.useCurrentLocationLoading
+                    : l10n.useCurrentLocationDescription,
+                style: AppTextStyles.body(context).copyWith(
+                  color: colors.textSecondary,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final action = Semantics(
+      button: true,
+      enabled: !capturing,
+      label: capturing
+          ? l10n.useCurrentLocationLoading
+          : l10n.useCurrentLocation,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: OutlinedButton.icon(
+          onPressed: capturing ? null : onPressed,
+          icon: capturing
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.gps_fixed_rounded, size: 18),
+          label: Text(
+            capturing
+                ? l10n.useCurrentLocationLoading
+                : l10n.useCurrentLocation,
+          ),
+        ),
+      ),
+    );
+
+    return Semantics(
+      container: true,
+      label: l10n.useCurrentLocation,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: Color.lerp(colors.cardSurface, mint.surface, 0.55),
+          borderRadius: AppRadius.xlAll,
+          border: Border.all(color: mint.border, width: 1.4),
+        ),
+        child: isWide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(child: details),
+                  const SizedBox(width: AppSpacing.md),
+                  action,
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  details,
+                  const SizedBox(height: AppSpacing.md),
+                  action,
+                ],
+              ),
+      ),
     );
   }
 }
@@ -248,192 +744,316 @@ class _SavedLocationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final l10n = SavedLocationsL10n.of(context);
+    final isWide =
+        MediaQuery.sizeOf(context).width >= profileFamilyWideBreakpoint;
+    final summary = _locationSummary(location);
+    final coords = _coordinatesText(location);
+    final iconTone = _iconToneForLabel(location.label);
+    final icon = _iconForLabel(location.label);
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.cardSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(
-          color: location.isDefault ? colors.primary : colors.borderSubtle,
-        ),
+    return Semantics(
+      container: true,
+      label: l10n.locationCardSemantics(
+        label: location.label,
+        summary: summary,
+        isDefault: location.isDefault,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: colors.primarySoft,
-                  borderRadius: AppRadius.mdAll,
-                ),
-                child: Icon(
-                  location.isDefault
-                      ? Icons.home_outlined
-                      : Icons.location_on_outlined,
-                  color: colors.primary,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          location.label,
-                          style: AppTextStyles.title(context).copyWith(
-                            color: colors.textPrimary,
-                            fontSize: 18,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                        if (location.isDefault) const _DefaultBadge(),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      _locationSummary(location),
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: colors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (_privateDetails(context, location).isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: colors.surfaceMuted,
-                borderRadius: AppRadius.mdAll,
-              ),
+      child: ProfileFamilySurface(
+        tone: location.isDefault
+            ? ProfileFamilyTone.mint
+            : ProfileFamilyTone.neutral,
+        showShadow: false,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProfileFamilyIconContainer(icon: icon, tone: iconTone),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    l10n.privateExactDetails,
-                    style: AppTextStyles.label(context).copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  for (final detail in _privateDetails(context, location))
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        bottom: AppSpacing.xs,
-                      ),
-                      child: Text(
-                        detail,
-                        style: AppTextStyles.label(context).copyWith(
-                          color: colors.textSecondary,
-                          fontWeight: FontWeight.w600,
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ProfileFamilyDirectionalText(
+                        location.label,
+                        style: AppTextStyles.title(context).copyWith(
+                          color: colors.textPrimary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
                           letterSpacing: 0,
                         ),
                       ),
+                      if (location.isDefault) const _DefaultBadge(),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  ProfileFamilyDirectionalText(
+                    summary,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 13,
+                      height: 1.35,
                     ),
+                  ),
+                  if (coords != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          coords,
+                          style: AppTextStyles.label(context).copyWith(
+                            color: colors.textMuted,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
+            const SizedBox(width: AppSpacing.sm),
+            if (_isDeleting || _isSettingDefault)
+              const Padding(
+                padding: EdgeInsetsDirectional.only(top: 8),
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else if (isWide)
+              _DesktopLocationActions(
+                isDefault: location.isDefault,
+                onEdit: onEdit,
+                onSetDefault: onSetDefault,
+                onDelete: onDelete,
+              )
+            else
+              _MobileLocationActions(
+                isDefault: location.isDefault,
+                onEdit: onEdit,
+                onSetDefault: onSetDefault,
+                onDelete: onDelete,
+              ),
           ],
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: [
-              OutlinedButton.icon(
-                onPressed: onEdit,
-                style: AppStatusButtonStyle.outlined(
-                  context,
-                  AppStatusTone.neutral,
-                ),
-                icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
-                label: Text(l10n.edit),
-              ),
-              OutlinedButton.icon(
-                onPressed: location.isDefault || _isSettingDefault
-                    ? null
-                    : onSetDefault,
-                style: AppStatusButtonStyle.outlined(
-                  context,
-                  AppStatusTone.primary,
-                ),
-                icon: _isSettingDefault
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check_circle_outline, size: 18),
-                label: Text(l10n.setDefault),
-              ),
-              TextButton.icon(
-                onPressed: _isDeleting ? null : onDelete,
-                icon: _isDeleting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.delete_outline, size: 18),
-                label: Text(l10n.delete),
-                style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
   static String _locationSummary(SavedLocation location) {
+    final address = location.addressLine?.trim();
+    if (address != null && address.isNotEmpty) {
+      return address;
+    }
     return [
       location.city,
-      if (location.area != null && location.area!.isNotEmpty) location.area!,
+      if (location.area != null && location.area!.trim().isNotEmpty)
+        location.area!,
       location.country,
     ].join(' - ');
   }
 
-  static List<String> _privateDetails(
-    BuildContext context,
-    SavedLocation location,
-  ) {
-    final l10n = SavedLocationsL10n.of(context);
-    final details = <String>[];
-    final addressLine = location.addressLine?.trim();
-    if (addressLine != null && addressLine.isNotEmpty) {
-      details.add(l10n.address(addressLine));
+  static String? _coordinatesText(SavedLocation location) {
+    if (location.latitude == null || location.longitude == null) {
+      return null;
     }
-    if (location.latitude != null && location.longitude != null) {
-      details.add(
-        l10n.coordinates(
-          '${location.latitude!.toStringAsFixed(6)}, '
-          '${location.longitude!.toStringAsFixed(6)}',
-        ),
-      );
+    return '${location.latitude!.toStringAsFixed(6)}, '
+        '${location.longitude!.toStringAsFixed(6)}';
+  }
+
+  static IconData _iconForLabel(String label) {
+    final normalized = label.trim().toLowerCase();
+    if (normalized.contains('home') ||
+        normalized.contains('منزل') ||
+        normalized.contains('بيت')) {
+      return Icons.home_outlined;
     }
-    return details;
+    if (normalized.contains('work') ||
+        normalized.contains('office') ||
+        normalized.contains('عمل') ||
+        normalized.contains('مكتب')) {
+      return Icons.work_outline_rounded;
+    }
+    if (normalized.contains('friend') ||
+        normalized.contains('صديق') ||
+        normalized.contains('person')) {
+      return Icons.person_outline_rounded;
+    }
+    return Icons.location_on_outlined;
+  }
+
+  static ProfileFamilyTone _iconToneForLabel(String label) {
+    final normalized = label.trim().toLowerCase();
+    if (normalized.contains('home') ||
+        normalized.contains('منزل') ||
+        normalized.contains('بيت')) {
+      return ProfileFamilyTone.mint;
+    }
+    if (normalized.contains('work') ||
+        normalized.contains('office') ||
+        normalized.contains('عمل') ||
+        normalized.contains('مكتب')) {
+      return ProfileFamilyTone.blue;
+    }
+    if (normalized.contains('friend') ||
+        normalized.contains('صديق') ||
+        normalized.contains('person')) {
+      return ProfileFamilyTone.amber;
+    }
+    return ProfileFamilyTone.primary;
   }
 }
 
+class _DesktopLocationActions extends StatelessWidget {
+  const _DesktopLocationActions({
+    required this.isDefault,
+    required this.onEdit,
+    required this.onSetDefault,
+    required this.onDelete,
+  });
+
+  final bool isDefault;
+  final VoidCallback onEdit;
+  final VoidCallback onSetDefault;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
+    final colors = AppThemeColors.of(context);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: l10n.editLocationAction,
+          onPressed: onEdit,
+          icon: Icon(Icons.edit_outlined, color: colors.textSecondary),
+        ),
+        if (!isDefault)
+          IconButton(
+            tooltip: l10n.setAsDefault,
+            onPressed: onSetDefault,
+            icon: Icon(Icons.star_outline_rounded, color: colors.primary),
+          ),
+        IconButton(
+          tooltip: l10n.deleteLocationAction,
+          onPressed: onDelete,
+          icon: Icon(Icons.delete_outline, color: colors.danger),
+        ),
+      ],
+    );
+  }
+}
+
+class _MobileLocationActions extends StatelessWidget {
+  const _MobileLocationActions({
+    required this.isDefault,
+    required this.onEdit,
+    required this.onSetDefault,
+    required this.onDelete,
+  });
+
+  final bool isDefault;
+  final VoidCallback onEdit;
+  final VoidCallback onSetDefault;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return _LocationOverflowMenu(
+      isDefault: isDefault,
+      onEdit: onEdit,
+      onSetDefault: onSetDefault,
+      onDelete: onDelete,
+    );
+  }
+}
+
+class _LocationOverflowMenu extends StatelessWidget {
+  const _LocationOverflowMenu({
+    required this.isDefault,
+    required this.onEdit,
+    required this.onSetDefault,
+    required this.onDelete,
+  });
+
+  final bool isDefault;
+  final VoidCallback onEdit;
+  final VoidCallback onSetDefault;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = SavedLocationsL10n.of(context);
+    final colors = AppThemeColors.of(context);
+
+    return PopupMenuButton<_LocationMenuAction>(
+      tooltip: l10n.edit,
+      icon: Icon(Icons.more_vert_rounded, color: colors.textSecondary),
+      onSelected: (action) {
+        switch (action) {
+          case _LocationMenuAction.edit:
+            onEdit();
+          case _LocationMenuAction.setDefault:
+            onSetDefault();
+          case _LocationMenuAction.delete:
+            onDelete();
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: _LocationMenuAction.edit,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.edit_outlined),
+            title: Text(l10n.editLocationAction),
+          ),
+        ),
+        if (!isDefault)
+          PopupMenuItem(
+            value: _LocationMenuAction.setDefault,
+            child: ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.star_outline_rounded),
+              title: Text(l10n.setAsDefault),
+            ),
+          ),
+        PopupMenuItem(
+          value: _LocationMenuAction.delete,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.delete_outline, color: colors.danger),
+            title: Text(
+              l10n.deleteLocationAction,
+              style: TextStyle(color: colors.danger),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+enum _LocationMenuAction { edit, setDefault, delete }
+
 class _SavedLocationFormDialog extends ConsumerStatefulWidget {
-  const _SavedLocationFormDialog({this.location});
+  const _SavedLocationFormDialog({this.location, this.prefill});
 
   final SavedLocation? location;
+  final _SavedLocationFormPrefill? prefill;
 
   @override
   ConsumerState<_SavedLocationFormDialog> createState() =>
@@ -467,20 +1087,29 @@ class _SavedLocationFormDialogState
   void initState() {
     super.initState();
     final location = widget.location;
+    final prefill = widget.prefill;
     _labelController = TextEditingController(text: location?.label ?? '');
     _countryController = TextEditingController(
-      text: location?.country ?? 'Palestine',
+      text: location?.country ?? prefill?.country ?? 'Palestine',
     );
-    _cityController = TextEditingController(text: location?.city ?? '');
-    _areaController = TextEditingController(text: location?.area ?? '');
+    _cityController = TextEditingController(
+      text: location?.city ?? prefill?.city ?? '',
+    );
+    _areaController = TextEditingController(
+      text: location?.area ?? prefill?.area ?? '',
+    );
     _addressController = TextEditingController(
-      text: location?.addressLine ?? '',
+      text: location?.addressLine ?? prefill?.addressLine ?? '',
     );
     _latitudeController = TextEditingController(
-      text: location?.latitude?.toString() ?? '',
+      text: location?.latitude?.toString() ??
+          prefill?.latitude?.toStringAsFixed(6) ??
+          '',
     );
     _longitudeController = TextEditingController(
-      text: location?.longitude?.toString() ?? '',
+      text: location?.longitude?.toString() ??
+          prefill?.longitude?.toStringAsFixed(6) ??
+          '',
     );
     _isDefault = location?.isDefault ?? false;
   }
@@ -1377,34 +2006,60 @@ class _DeleteSavedLocationDialog extends StatelessWidget {
 }
 
 class _PrivacyNotice extends StatelessWidget {
+  const _PrivacyNotice();
+
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final l10n = SavedLocationsL10n.of(context);
+    final mint = ProfileFamilyToneStyle.of(context, ProfileFamilyTone.mint);
 
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.primarySoft,
-        borderRadius: AppRadius.lgAll,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.privacy_tip_outlined, color: colors.primary),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              l10n.privacyBody,
-              style: AppTextStyles.label(context).copyWith(
-                color: colors.textPrimary,
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+    return Semantics(
+      container: true,
+      label: '${l10n.privacyTitle}. ${l10n.privacyBody}',
+      child: Container(
+        padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: Color.lerp(colors.cardSurface, mint.surface, 0.72),
+          borderRadius: AppRadius.xlAll,
+          border: Border.all(color: mint.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProfileFamilyIconContainer(
+              icon: Icons.verified_user_outlined,
+              tone: ProfileFamilyTone.mint,
+              size: 40,
+              iconSize: 20,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.privacyTitle,
+                    style: AppTextStyles.label(context).copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.privacyBody,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: colors.textSecondary,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1418,22 +2073,35 @@ class _DefaultBadge extends StatelessWidget {
     final colors = AppThemeColors.of(context);
     final l10n = SavedLocationsL10n.of(context);
 
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: colors.primarySoft,
-        borderRadius: AppRadius.pillAll,
-      ),
-      child: Text(
-        l10n.defaultLabel,
-        style: AppTextStyles.label(context).copyWith(
-          color: colors.primary,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
+    return Semantics(
+      label: l10n.defaultLabel,
+      child: Container(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: colors.primarySoft,
+          borderRadius: AppRadius.pillAll,
+          border: Border.all(
+            color: Color.lerp(colors.borderSubtle, colors.primary, 0.35)!,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, size: 14, color: colors.primary),
+            const SizedBox(width: 4),
+            Text(
+              l10n.defaultLabel,
+              style: AppTextStyles.label(context).copyWith(
+                color: colors.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1441,29 +2109,39 @@ class _DefaultBadge extends StatelessWidget {
 }
 
 class _EmptySavedLocations extends StatelessWidget {
-  const _EmptySavedLocations({required this.onCreate});
+  const _EmptySavedLocations({
+    required this.onCreate,
+    required this.onUseCurrentLocation,
+    required this.capturingCurrentLocation,
+  });
 
   final VoidCallback onCreate;
+  final VoidCallback onUseCurrentLocation;
+  final bool capturingCurrentLocation;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppThemeColors.of(context);
     final l10n = SavedLocationsL10n.of(context);
 
-    return ProfileEditCard(
+    return ProfileFamilySurface(
+      tone: ProfileFamilyTone.mint,
+      showShadow: false,
       child: Column(
         children: [
-          Icon(
-            Icons.add_location_alt_outlined,
-            size: 42,
-            color: colors.primary,
+          ProfileFamilyIconContainer(
+            icon: Icons.add_location_alt_outlined,
+            tone: ProfileFamilyTone.mint,
+            size: 56,
+            iconSize: 28,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             l10n.emptyTitle,
-            style: AppTextStyles.title(
-              context,
-            ).copyWith(color: colors.textPrimary),
+            style: AppTextStyles.title(context).copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w800,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -1471,11 +2149,30 @@ class _EmptySavedLocations extends StatelessWidget {
             l10n.emptyBody,
             style: AppTextStyles.body(
               context,
-            ).copyWith(color: colors.textSecondary),
+            ).copyWith(color: colors.textSecondary, height: 1.45),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.lg),
           AppPrimaryButton(label: l10n.addLocation, onPressed: onCreate),
+          const SizedBox(height: AppSpacing.sm),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: OutlinedButton.icon(
+              onPressed: capturingCurrentLocation ? null : onUseCurrentLocation,
+              icon: capturingCurrentLocation
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.gps_fixed_rounded, size: 18),
+              label: Text(
+                capturingCurrentLocation
+                    ? l10n.useCurrentLocationLoading
+                    : l10n.useCurrentLocation,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1487,8 +2184,31 @@ class _SavedLocationsLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ProfileEditCard(
-      child: Center(child: CircularProgressIndicator()),
+    final l10n = SavedLocationsL10n.of(context);
+    final colors = AppThemeColors.of(context);
+
+    return ProfileFamilySurface(
+      showShadow: false,
+      child: Semantics(
+        liveRegion: true,
+        label: l10n.loadingLocations,
+        child: Column(
+          children: [
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              l10n.loadingLocations,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: colors.textSecondary),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1502,10 +2222,12 @@ class _SavedLocationsError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = SavedLocationsL10n.of(context);
-    return ProfileEditCard(
+    return ProfileFamilySurface(
+      tone: ProfileFamilyTone.danger,
+      showShadow: false,
       child: Column(
         children: [
-          AppInlineError(message: message),
+          AppInlineError(message: message.isEmpty ? l10n.loadFailed : message),
           const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
             onPressed: onRetry,

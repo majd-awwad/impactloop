@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -6,6 +8,8 @@ enum CurrentLocationFailure {
   permissionDeniedForever,
   serviceDisabled,
   unavailable,
+  timeout,
+  unsupported,
 }
 
 class CurrentLocationException implements Exception {
@@ -15,11 +19,16 @@ class CurrentLocationException implements Exception {
 
   String get message {
     return switch (failure) {
-      CurrentLocationFailure.permissionDenied ||
-      CurrentLocationFailure.permissionDeniedForever =>
+      CurrentLocationFailure.permissionDenied =>
         'Location permission was denied. Enable location permission or try again.',
+      CurrentLocationFailure.permissionDeniedForever =>
+        'Location permission is permanently denied. Enable it in settings.',
       CurrentLocationFailure.serviceDisabled =>
         'Location services are disabled. Turn on location services and try again.',
+      CurrentLocationFailure.timeout =>
+        'Getting your location timed out. Please try again.',
+      CurrentLocationFailure.unsupported =>
+        'Current location is not supported on this device or browser.',
       CurrentLocationFailure.unavailable =>
         'Could not get your current location. Please try again.',
     };
@@ -76,6 +85,12 @@ class CurrentLocationService {
         );
       }
 
+      if (permission == LocationPermission.unableToDetermine) {
+        throw const CurrentLocationException(
+          CurrentLocationFailure.unsupported,
+        );
+      }
+
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.best,
@@ -93,6 +108,8 @@ class CurrentLocationService {
       );
     } on CurrentLocationException {
       rethrow;
+    } on TimeoutException {
+      throw const CurrentLocationException(CurrentLocationFailure.timeout);
     } on LocationServiceDisabledException {
       throw const CurrentLocationException(
         CurrentLocationFailure.serviceDisabled,
