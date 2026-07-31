@@ -366,7 +366,9 @@ class AdminReservationStatusHistoryItem {
   final String? note;
   final String createdAt;
 
-  factory AdminReservationStatusHistoryItem.fromJson(Map<String, dynamic> json) {
+  factory AdminReservationStatusHistoryItem.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return AdminReservationStatusHistoryItem(
       id: json['id'] as String? ?? '',
       statusGroup: json['statusGroup'] as String? ?? '',

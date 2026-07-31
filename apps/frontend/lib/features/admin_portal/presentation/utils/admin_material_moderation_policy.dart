@@ -46,11 +46,14 @@ class AdminMaterialModerationPolicy {
     return AdminMaterialModerationActions(
       canHide: json['canHide'] as bool? ?? canHide(fallbackStatus),
       canMarkUnavailable:
-          json['canMarkUnavailable'] as bool? ?? canMarkUnavailable(fallbackStatus),
+          json['canMarkUnavailable'] as bool? ??
+          canMarkUnavailable(fallbackStatus),
       canRestore: json['canRestore'] as bool? ?? canRestore(fallbackStatus),
       isModerationLocked:
-          json['isModerationLocked'] as bool? ?? isModerationLocked(fallbackStatus),
-      listLockNote: json['listLockNote'] as String? ?? listLockNote(fallbackStatus),
+          json['isModerationLocked'] as bool? ??
+          isModerationLocked(fallbackStatus),
+      listLockNote:
+          json['listLockNote'] as String? ?? listLockNote(fallbackStatus),
       detailLockMessage:
           json['lockReason'] as String? ?? detailLockMessage(fallbackStatus),
     );

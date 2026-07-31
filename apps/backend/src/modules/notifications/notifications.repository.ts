@@ -20,19 +20,44 @@ export type CreateNotificationInput = {  userId: string;
   body: string;
   relatedEntityType?: string | null;
   relatedEntityId?: string | null;
+  eventKey?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
+  actionType?: string | null;
+  metadata?: Prisma.InputJsonValue | null;
+  resolvedAt?: Date | null;
+  actorId?: string | null;
 };
 
-export const createNotification = async (input: CreateNotificationInput) =>
-  prisma.notification.create({
-    data: {
-      userId: input.userId,
-      notificationType: input.notificationType,
-      title: input.title,
-      body: input.body,
-      relatedEntityType: input.relatedEntityType ?? null,
-      relatedEntityId: input.relatedEntityId ?? null,
-    },
-  });
+const notificationCreateData = (input: CreateNotificationInput) => ({
+  userId: input.userId,
+  notificationType: input.notificationType,
+  title: input.title,
+  body: input.body,
+  relatedEntityType: input.relatedEntityType ?? input.entityType ?? null,
+  relatedEntityId: input.relatedEntityId ?? input.entityId ?? null,
+  eventKey: input.eventKey ?? null,
+  entityType: input.entityType ?? input.relatedEntityType ?? null,
+  entityId: input.entityId ?? input.relatedEntityId ?? null,
+  actionType: input.actionType ?? null,
+  metadata: input.metadata ?? undefined,
+  resolvedAt: input.resolvedAt ?? null,
+  actorId: input.actorId ?? null,
+});
+
+export const createNotification = async (input: CreateNotificationInput) => {
+  const data = notificationCreateData(input);
+
+  if (input.eventKey) {
+    return prisma.notification.upsert({
+      where: { eventKey: input.eventKey },
+      create: data,
+      update: {},
+    });
+  }
+
+  return prisma.notification.create({ data });
+};
 
 export const findNotificationForUser = async (input: {
   userId: string;
@@ -52,8 +77,17 @@ export const findNotificationForUser = async (input: {
 
 export const createNotificationIfMissing = async (
   input: CreateNotificationInput,
-) =>
-  prisma.$transaction(async (tx) => {
+) => {
+  if (input.eventKey) {
+    const row = await prisma.notification.upsert({
+      where: { eventKey: input.eventKey },
+      create: notificationCreateData(input),
+      update: {},
+    });
+    return row;
+  }
+
+  return prisma.$transaction(async (tx) => {
     const existing = await tx.notification.findFirst({
       where: {
         userId: input.userId,
@@ -68,17 +102,9 @@ export const createNotificationIfMissing = async (
       return null;
     }
 
-    return tx.notification.create({
-      data: {
-        userId: input.userId,
-        notificationType: input.notificationType,
-        title: input.title,
-        body: input.body,
-        relatedEntityType: input.relatedEntityType ?? null,
-        relatedEntityId: input.relatedEntityId ?? null,
-      },
-    });
+    return tx.notification.create({ data: notificationCreateData(input) });
   });
+};
 export const findNotificationsForUser = async (input: {
   userId: string;
   isRead?: boolean;
@@ -134,7 +160,7 @@ export const markNotificationReadForUser = async (input: {
 
   const notification = await prisma.notification.update({
     where: { id: existing.id },
-    data: { isRead: true },
+    data: { isRead: true, readAt: new Date() },
   });
 
   return { outcome: 'UPDATED' as const, notification };
@@ -143,7 +169,7 @@ export const markNotificationReadForUser = async (input: {
 export const markAllNotificationsReadForUser = async (userId: string) => {
   const result = await prisma.notification.updateMany({
     where: { userId, isRead: false },
-    data: { isRead: true },
+    data: { isRead: true, readAt: new Date() },
   });
 
   return result.count;

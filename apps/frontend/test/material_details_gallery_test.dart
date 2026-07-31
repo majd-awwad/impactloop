@@ -12,7 +12,10 @@ void main() {
         home: Scaffold(
           body: MaterialDetailsGallery(
             images: const [],
-            imageAltText: const LocalizedText(en: 'Wood panels', ar: 'Wood panels'),
+            imageAltText: const LocalizedText(
+              en: 'Wood panels',
+              ar: 'Wood panels',
+            ),
             fallbackIcon: Icons.inventory_2_outlined,
             gradientColors: const [Color(0xFF20504D), Color(0xFF152724)],
           ),
@@ -37,7 +40,10 @@ void main() {
                 isPrimary: true,
               ),
             ],
-            imageAltText: const LocalizedText(en: 'Arduino board', ar: 'Arduino board'),
+            imageAltText: const LocalizedText(
+              en: 'Arduino board',
+              ar: 'Arduino board',
+            ),
             fallbackIcon: Icons.memory_rounded,
             gradientColors: const [Color(0xFF1C3F66), Color(0xFF121E2D)],
           ),
@@ -66,7 +72,10 @@ void main() {
                 url: 'https://example.com/secondary.jpg',
               ),
             ],
-            imageAltText: const LocalizedText(en: 'Motor driver', ar: 'Motor driver'),
+            imageAltText: const LocalizedText(
+              en: 'Motor driver',
+              ar: 'Motor driver',
+            ),
             fallbackIcon: Icons.memory_rounded,
             gradientColors: const [Color(0xFF1C3F66), Color(0xFF121E2D)],
           ),

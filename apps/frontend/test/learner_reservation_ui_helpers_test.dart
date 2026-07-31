@@ -3,41 +3,61 @@ import 'package:frontend/features/reservations/data/models/learner_reservation.d
 import 'package:frontend/features/reservations/presentation/learner_reservation_ui_helpers.dart';
 
 void main() {
-  test('reservationMatchesStatusFilter includes overdue accepted in needs action', () {
-    final overdueAccepted = LearnerReservation.fromJson({
-      'id': 'res-overdue',
-      'status': 'ACCEPTED',
+  LearnerReservation reservationWithStatus(String status) {
+    return LearnerReservation.fromJson({
+      'id': 'res-$status',
+      'status': status,
       'quantityRequested': 1,
-      'isOverdue': true,
-      'needsFollowUp': true,
-      'pickupWindowStart': '2026-01-01T08:00:00.000Z',
-      'pickupWindowEnd': '2026-01-01T10:00:00.000Z',
       'createdAt': '2026-01-01T00:00:00.000Z',
       'updatedAt': '2026-01-01T00:00:00.000Z',
       'material': {
         'id': 'mat-1',
         'title': 'Wood panels',
         'materialType': 'Wood',
-        'status': 'RESERVED',
+        'status': 'AVAILABLE',
       },
       'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
     });
+  }
 
-    expect(
-      reservationMatchesStatusFilter(
-        overdueAccepted,
-        LearnerReservationStatusFilter.needsAction,
-      ),
-      isTrue,
-    );
-    expect(
-      reservationMatchesStatusFilter(
-        overdueAccepted,
-        LearnerReservationStatusFilter.accepted,
-      ),
-      isTrue,
-    );
-  });
+  test(
+    'reservationMatchesStatusFilter includes overdue accepted in needs action',
+    () {
+      final overdueAccepted = LearnerReservation.fromJson({
+        'id': 'res-overdue',
+        'status': 'ACCEPTED',
+        'quantityRequested': 1,
+        'isOverdue': true,
+        'needsFollowUp': true,
+        'pickupWindowStart': '2026-01-01T08:00:00.000Z',
+        'pickupWindowEnd': '2026-01-01T10:00:00.000Z',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'updatedAt': '2026-01-01T00:00:00.000Z',
+        'material': {
+          'id': 'mat-1',
+          'title': 'Wood panels',
+          'materialType': 'Wood',
+          'status': 'RESERVED',
+        },
+        'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+      });
+
+      expect(
+        reservationMatchesStatusFilter(
+          overdueAccepted,
+          LearnerReservationStatusFilter.needsAction,
+        ),
+        isTrue,
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          overdueAccepted,
+          LearnerReservationStatusFilter.accepted,
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test('formatPickupWindow renders readable same-day window', () {
     final reservation = LearnerReservation.fromJson({
@@ -118,36 +138,114 @@ void main() {
     expect(summary, contains('Requested pickup'));
   });
 
-  test('reservationMatchesStatusFilter groups cancelled terminal states', () {
-    final cancelled = LearnerReservation.fromJson({
-      'id': 'res-1',
-      'status': 'CANCELLED',
-      'quantityRequested': 1,
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-      'material': {
-        'id': 'mat-1',
-        'title': 'Wood panels',
-        'materialType': 'Wood',
-        'status': 'AVAILABLE',
-      },
-      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
-    });
+  test('reservation filters cover active and closed lifecycle statuses', () {
+    for (final status in const [
+      'PENDING',
+      'AWAITING_LEARNER_CONFIRMATION',
+      'AWAITING_SUPPLIER_CONFIRMATION',
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    ]) {
+      expect(
+        reservationMatchesStatusFilter(
+          reservationWithStatus(status),
+          LearnerReservationStatusFilter.active,
+        ),
+        isTrue,
+        reason: '$status should be active.',
+      );
+    }
 
-    expect(
-      reservationMatchesStatusFilter(
-        cancelled,
-        LearnerReservationStatusFilter.cancelled,
-      ),
-      isTrue,
-    );
-    expect(
-      reservationMatchesStatusFilter(
-        cancelled,
-        LearnerReservationStatusFilter.active,
-      ),
-      isFalse,
-    );
+    for (final status in const [
+      'CANCELLED',
+      'REJECTED',
+      'EXPIRED',
+      'NO_SHOW',
+      'FULFILLMENT_FAILED',
+    ]) {
+      final reservation = reservationWithStatus(status);
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.closed,
+        ),
+        isTrue,
+        reason: '$status should be closed.',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.active,
+        ),
+        isFalse,
+        reason: '$status should not be active.',
+      );
+    }
+  });
+
+  test('each status has the expected tab coverage', () {
+    const activeStatuses = {
+      'PENDING',
+      'AWAITING_LEARNER_CONFIRMATION',
+      'AWAITING_SUPPLIER_CONFIRMATION',
+      'ACCEPTED',
+      'AWAITING_RESOLUTION',
+    };
+    const closedStatuses = {
+      'CANCELLED',
+      'REJECTED',
+      'EXPIRED',
+      'NO_SHOW',
+      'FULFILLMENT_FAILED',
+    };
+    const statuses = {...activeStatuses, ...closedStatuses, 'COMPLETED'};
+
+    for (final status in statuses) {
+      final reservation = reservationWithStatus(status);
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.all,
+        ),
+        isTrue,
+        reason: 'All should include $status.',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.active,
+        ),
+        activeStatuses.contains(status),
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.pending,
+        ),
+        status == 'PENDING' || status == 'AWAITING_SUPPLIER_CONFIRMATION',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.accepted,
+        ),
+        status == 'ACCEPTED',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.completed,
+        ),
+        status == 'COMPLETED',
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          reservation,
+          LearnerReservationStatusFilter.closed,
+        ),
+        closedStatuses.contains(status),
+      );
+    }
   });
 
   test('reservationStatusLabel maps missed pickup expiry', () {
@@ -162,16 +260,10 @@ void main() {
       reservationStatusLabel('EXPIRED', rejectionReason: 'OTHER'),
       'Expired',
     );
-    expect(
-      reservationStatusLabel('EXPIRED'),
-      'Expired — no response',
-    );
+    expect(reservationStatusLabel('EXPIRED'), 'Expired — no response');
     expect(reservationStatusLabel('REJECTED'), 'Rejected');
     expect(
-      reservationStatusLabel(
-        'EXPIRED',
-        rejectionReason: noDriverCancelReason,
-      ),
+      reservationStatusLabel('EXPIRED', rejectionReason: noDriverCancelReason),
       'Cancelled — no driver available',
     );
   });
@@ -277,86 +369,95 @@ void main() {
     );
   });
 
-  test('reservationStatusLabel maps stale pickup admin reconfirm and cancel', () {
-    expect(
-      reservationStatusLabel(
-        'AWAITING_SUPPLIER_CONFIRMATION',
-        fulfillmentMethod: 'DELIVERY',
-        pendingRescheduleReason: 'STALE_PICKUP_ADMIN_REQUEST',
-      ),
-      'Waiting for supplier to choose a new pickup window',
-    );
-    expect(
-      reservationStatusLabel(
-        'EXPIRED',
-        fulfillmentMethod: 'DELIVERY',
-        rejectionReason: 'PICKUP_NOT_COMPLETED',
-      ),
-      'Admin cancelled due to unresolved pickup',
-    );
-  });
+  test(
+    'reservationStatusLabel maps stale pickup admin reconfirm and cancel',
+    () {
+      expect(
+        reservationStatusLabel(
+          'AWAITING_SUPPLIER_CONFIRMATION',
+          fulfillmentMethod: 'DELIVERY',
+          pendingRescheduleReason: 'STALE_PICKUP_ADMIN_REQUEST',
+        ),
+        'Waiting for supplier to choose a new pickup window',
+      );
+      expect(
+        reservationStatusLabel(
+          'EXPIRED',
+          fulfillmentMethod: 'DELIVERY',
+          rejectionReason: 'PICKUP_NOT_COMPLETED',
+        ),
+        'Admin cancelled due to unresolved pickup',
+      );
+    },
+  );
 
-  test('learnerReservationStatusChipLabels avoids duplicate admin review chips', () {
-    final reservation = LearnerReservation.fromJson({
-      'id': 'res-no-driver',
-      'status': 'AWAITING_RESOLUTION',
-      'fulfillmentMethod': 'DELIVERY',
-      'incidentReviewStatus': 'PENDING_REVIEW',
-      'pendingIncidentReasonCode': 'NO_DRIVER_AVAILABLE',
-      'quantityRequested': 1,
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-      'activeDelivery': {'id': 'del-1', 'status': 'AWAITING_RESOLUTION'},
-      'material': {
-        'id': 'mat-1',
-        'title': 'Panels',
-        'materialType': 'Wood',
-        'status': 'RESERVED',
-      },
-      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
-    });
+  test(
+    'learnerReservationStatusChipLabels avoids duplicate admin review chips',
+    () {
+      final reservation = LearnerReservation.fromJson({
+        'id': 'res-no-driver',
+        'status': 'AWAITING_RESOLUTION',
+        'fulfillmentMethod': 'DELIVERY',
+        'incidentReviewStatus': 'PENDING_REVIEW',
+        'pendingIncidentReasonCode': 'NO_DRIVER_AVAILABLE',
+        'quantityRequested': 1,
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'updatedAt': '2026-01-01T00:00:00.000Z',
+        'activeDelivery': {'id': 'del-1', 'status': 'AWAITING_RESOLUTION'},
+        'material': {
+          'id': 'mat-1',
+          'title': 'Panels',
+          'materialType': 'Wood',
+          'status': 'RESERVED',
+        },
+        'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+      });
 
-    final chips = learnerReservationStatusChipLabels(reservation);
-    expect(chips.primary, 'Pending admin review');
-    expect(chips.secondary, 'No driver available');
-  });
+      final chips = learnerReservationStatusChipLabels(reservation);
+      expect(chips.primary, 'Pending admin review');
+      expect(chips.secondary, 'No driver available');
+    },
+  );
 
-  test('reservationMatchesStatusFilter includes awaiting confirmation in active', () {
-    final awaiting = LearnerReservation.fromJson({
-      'id': 'res-awaiting',
-      'status': 'AWAITING_LEARNER_CONFIRMATION',
-      'quantityRequested': 1,
-      'createdAt': '2026-01-01T00:00:00.000Z',
-      'updatedAt': '2026-01-01T00:00:00.000Z',
-      'material': {
-        'id': 'mat-1',
-        'title': 'Wood panels',
-        'materialType': 'Wood',
-        'status': 'AVAILABLE',
-      },
-      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
-    });
+  test(
+    'reservationMatchesStatusFilter includes awaiting confirmation in active',
+    () {
+      final awaiting = LearnerReservation.fromJson({
+        'id': 'res-awaiting',
+        'status': 'AWAITING_LEARNER_CONFIRMATION',
+        'quantityRequested': 1,
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'updatedAt': '2026-01-01T00:00:00.000Z',
+        'material': {
+          'id': 'mat-1',
+          'title': 'Wood panels',
+          'materialType': 'Wood',
+          'status': 'AVAILABLE',
+        },
+        'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+      });
 
-    expect(
-      reservationMatchesStatusFilter(
-        awaiting,
-        LearnerReservationStatusFilter.active,
-      ),
-      isTrue,
-    );
-    expect(
-      reservationMatchesStatusFilter(
-        awaiting,
-        LearnerReservationStatusFilter.needsAction,
-      ),
-      isTrue,
-    );
-    expect(
-      reservationMatchesStatusFilter(
-        awaiting,
-        LearnerReservationStatusFilter.all,
-      ),
-      isTrue,
-    );
-  });
+      expect(
+        reservationMatchesStatusFilter(
+          awaiting,
+          LearnerReservationStatusFilter.active,
+        ),
+        isTrue,
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          awaiting,
+          LearnerReservationStatusFilter.needsAction,
+        ),
+        isTrue,
+      );
+      expect(
+        reservationMatchesStatusFilter(
+          awaiting,
+          LearnerReservationStatusFilter.all,
+        ),
+        isTrue,
+      );
+    },
+  );
 }

@@ -20,10 +20,7 @@ String learnerReservationPickupWindowDetail(
   return _formatDateTime(start ?? end!);
 }
 
-String driverPickupWindowSummary(
-  DriverDelivery delivery, {
-  DateTime? now,
-}) {
+String driverPickupWindowSummary(DriverDelivery delivery, {DateTime? now}) {
   final reference = now ?? DateTime.now();
   final start =
       delivery.supplierPickupWindowStart ?? delivery.pickupWindowStart;

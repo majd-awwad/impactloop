@@ -7,6 +7,7 @@ import { AppError } from '../../utils/app-error.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import { hashPassword } from '../../utils/password.js';
 import { acceptDelivery, updateDriverDeliveryStatus } from '../driver/driver.service.js';
+import type { UpdateDriverDeliveryStatusInput } from '../driver/driver.validation.js';
 import { createReservation } from '../reservations/reservations.service.js';
 import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 import type { CreateReservationInput } from '../reservations/reservations.validation.js';
@@ -22,6 +23,25 @@ import {
 import { createLearnerReservationMessage } from '../reservations/reservations.service.js';
 
 const TEST_MARKER = '[test-supplier-phase-fix]';
+
+const DRIVER_DELIVERY_PROGRESS_STATUSES = [
+  'ARRIVED_PICKUP',
+  'PICKED_UP',
+  'ON_THE_WAY',
+  'ARRIVED_DROPOFF',
+  'DELIVERED',
+] as const satisfies readonly UpdateDriverDeliveryStatusInput['status'][];
+
+const DELIVERY_PROGRESS_STATUSES = [
+  'DRIVER_ASSIGNED',
+  ...DRIVER_DELIVERY_PROGRESS_STATUSES,
+] as const satisfies readonly DeliveryStatus[];
+
+async function requireMaterialQuantityState(materialId: string) {
+  const state = await getMaterialQuantityState(prisma, materialId);
+  assert.ok(state, 'Expected material quantity state to exist');
+  return state;
+}
 
 function futurePreferredWindow(hoursFromNow = 24, durationHours = 2) {
   const start = new Date(Date.now() + hoursFromNow * 3_600_000);
@@ -166,35 +186,25 @@ async function progressDeliveryTo(
   ctx: TestContext,
   deliveryId: string,
   driverId: string,
-  targetStatus: DeliveryStatus,
+  targetStatus: (typeof DELIVERY_PROGRESS_STATUSES)[number],
 ) {
-  const transitions: DeliveryStatus[] = [
-    'DRIVER_ASSIGNED',
-    'ARRIVED_PICKUP',
-    'PICKED_UP',
-    'ON_THE_WAY',
-    'ARRIVED_DROPOFF',
-    'DELIVERED',
-  ];
-
   const delivery = await prisma.delivery.findUniqueOrThrow({
     where: { id: deliveryId },
     include: { reservation: true },
   });
 
-  const startIndex = transitions.indexOf(delivery.status);
-  const targetIndex = transitions.indexOf(targetStatus);
+  const startIndex = DELIVERY_PROGRESS_STATUSES.indexOf(
+    delivery.status as (typeof DELIVERY_PROGRESS_STATUSES)[number],
+  );
+  const targetIndex = DELIVERY_PROGRESS_STATUSES.indexOf(targetStatus);
   assert.ok(startIndex >= 0 && targetIndex >= 0);
 
   if (delivery.status === 'WAITING_FOR_DRIVER') {
     await acceptDelivery(driverId, deliveryId);
   }
 
-  for (const status of transitions.slice(1, targetIndex + 1)) {
-    const input: {
-      status: DeliveryStatus;
-      confirmationCode?: string;
-    } = { status };
+  for (const status of DRIVER_DELIVERY_PROGRESS_STATUSES.slice(0, targetIndex)) {
+    const input: UpdateDriverDeliveryStatusInput = { status };
 
     if (status === 'PICKED_UP') {
       input.confirmationCode = deriveHandoverCode('supplier-handover', deliveryId);
@@ -447,7 +457,7 @@ describe('supplier reservations phase fix', () => {
     } satisfies CreateReservationInput);
     ctx.createdReservationIds.push(reservation.id);
 
-    const pendingState = await getMaterialQuantityState(prisma, material.id);
+    const pendingState = await requireMaterialQuantityState(material.id);
     assert.equal(Number(pendingState.heldQuantity), 3);
     assert.equal(Number(pendingState.availableQuantity), 7);
 
@@ -455,7 +465,7 @@ describe('supplier reservations phase fix', () => {
       reason: 'Unavailable',
     });
 
-    const declinedState = await getMaterialQuantityState(prisma, material.id);
+    const declinedState = await requireMaterialQuantityState(material.id);
     assert.equal(Number(declinedState.heldQuantity), 0);
     assert.equal(Number(declinedState.availableQuantity), 10);
   });
@@ -730,7 +740,7 @@ describe('supplier reservations phase fix', () => {
       end,
     );
 
-    const beforeClose = await getMaterialQuantityState(prisma, material.id);
+    const beforeClose = await requireMaterialQuantityState(material.id);
     assert.equal(Number(beforeClose.heldQuantity), 1);
 
     const closed = await cancelSupplierAcceptedReservation(
@@ -743,7 +753,7 @@ describe('supplier reservations phase fix', () => {
     assert.equal(closed.canSupplierCloseOverduePickup, false);
     assert.equal(closed.canSupplierReportAndCloseOverduePickup, false);
 
-    const afterClose = await getMaterialQuantityState(prisma, material.id);
+    const afterClose = await requireMaterialQuantityState(material.id);
     assert.equal(Number(afterClose.heldQuantity), 0);
     assert.equal(Number(afterClose.availableQuantity), 5);
 
@@ -773,7 +783,7 @@ describe('supplier reservations phase fix', () => {
     assert.equal(reported.canSupplierReportAndCloseOverduePickup, false);
     assert.ok(reported.noShowReport);
 
-    const afterReport = await getMaterialQuantityState(prisma, material.id);
+    const afterReport = await requireMaterialQuantityState(material.id);
     assert.equal(Number(afterReport.heldQuantity), 0);
 
     const updatedMaterial = await prisma.material.findUnique({
@@ -812,7 +822,7 @@ describe('supplier reservations phase fix', () => {
     );
     assert.equal(rescheduled.pendingReschedule?.requestedBy, 'SUPPLIER');
 
-    const holdState = await getMaterialQuantityState(prisma, material.id);
+    const holdState = await requireMaterialQuantityState(material.id);
     assert.equal(Number(holdState.heldQuantity), 1);
 
     const updatedMaterial = await prisma.material.findUnique({

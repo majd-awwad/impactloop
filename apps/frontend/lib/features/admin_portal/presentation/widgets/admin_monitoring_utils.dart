@@ -46,9 +46,7 @@ ResolvedDateRange resolveDateRange({
       final from = customDateFrom?.trim();
       final to = customDateTo?.trim();
       if (from == null || from.isEmpty || to == null || to.isEmpty) {
-        return const ResolvedDateRange(
-          error: 'Select both From and To dates.',
-        );
+        return const ResolvedDateRange(error: 'Select both From and To dates.');
       }
       if (from.compareTo(to) > 0) {
         return const ResolvedDateRange(
@@ -165,8 +163,6 @@ String monitoringStatusLabel(String status) {
       return 'Disabled';
     case 'PENDING_REVIEW':
       return 'Pending review';
-    case 'VERIFIED':
-      return 'Verified';
     default:
       final label = humanizeEnum(status);
       if (label.isEmpty) return status;

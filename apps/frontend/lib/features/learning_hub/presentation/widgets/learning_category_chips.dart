@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
-import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 import 'learning_hub_text.dart';
@@ -58,14 +56,12 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = selected ? palette.lime : palette.cardSurface;
-    final border = selected ? palette.lime : palette.borderSubtle;
-    final foreground = selected
-        ? AppColorTokens.emeraldDeep
-        : isDark
-        ? palette.textSecondary
-        : palette.textPrimary;
+    final textTheme = Theme.of(context).textTheme;
+    final background = selected ? palette.limeSoft : palette.cardSurface;
+    final border = selected
+        ? palette.lime.withValues(alpha: 0.34)
+        : palette.borderSubtle;
+    final foreground = selected ? palette.lime : palette.textSecondary;
 
     return Material(
       color: Colors.transparent,
@@ -86,11 +82,9 @@ class _CategoryChip extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: AppTextStyles.label(context).copyWith(
+              style: textTheme.labelMedium?.copyWith(
                 color: foreground,
-                fontSize: 13,
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
-                letterSpacing: 0,
               ),
             ),
           ),

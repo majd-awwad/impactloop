@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../../app/theme/app_theme_colors.dart';
+import '../../../shared/widgets/app_status_badge.dart';
+import '../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../deliveries/presentation/delivery_status_presentation.dart';
 import '../data/models/learner_reservation.dart';
 import '../data/models/reservation_preferred_window.dart';
@@ -13,7 +14,7 @@ enum LearnerReservationStatusFilter {
   pending,
   accepted,
   completed,
-  cancelled,
+  closed,
 }
 
 extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
@@ -31,8 +32,8 @@ extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
         return 'Accepted';
       case LearnerReservationStatusFilter.completed:
         return 'Completed';
-      case LearnerReservationStatusFilter.cancelled:
-        return 'Cancelled';
+      case LearnerReservationStatusFilter.closed:
+        return 'Closed';
     }
   }
 }
@@ -75,103 +76,79 @@ bool reservationMatchesStatusFilter(
       return reservation.isPending ||
           reservation.isAccepted ||
           reservation.isAwaitingConfirmation ||
+          reservation.isAwaitingSupplierConfirmation ||
           reservation.status == 'AWAITING_RESOLUTION';
     case LearnerReservationStatusFilter.needsAction:
       return learnerReservationNeedsAction(reservation);
     case LearnerReservationStatusFilter.pending:
-      return reservation.isPending;
+      return reservation.isPending ||
+          reservation.isAwaitingSupplierConfirmation;
     case LearnerReservationStatusFilter.accepted:
       return reservation.isAccepted;
     case LearnerReservationStatusFilter.completed:
       return reservation.isCompleted;
-    case LearnerReservationStatusFilter.cancelled:
+    case LearnerReservationStatusFilter.closed:
       return reservation.isCancelled ||
           reservation.isRejected ||
-          reservation.isExpired;
+          reservation.isExpired ||
+          reservation.status == 'NO_SHOW' ||
+          reservation.status == 'FULFILLMENT_FAILED';
   }
 }
 
 class LearnerReservationStatusStyle {
   const LearnerReservationStatusStyle({
     required this.accentColor,
-    required this.chipBackground,
-    required this.chipForeground,
-    required this.chipBorder,
+    required this.tone,
   });
 
   final Color accentColor;
-  final Color chipBackground;
-  final Color chipForeground;
-  final Color chipBorder;
+  final AppStatusTone tone;
 
   static LearnerReservationStatusStyle forStatus(
     BuildContext context,
-    String status,
-  ) {
-    final colors = AppThemeColors.of(context);
+    String status, {
+    String? incidentReviewStatus,
+  }) {
+    final tone = learnerReservationStatusTone(
+      status,
+      incidentReviewStatus: incidentReviewStatus,
+    );
+    final style = AppStatusStyle.of(context, tone);
 
-    switch (status) {
-      case 'PENDING':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.warning.withValues(alpha: 0.85),
-          chipBackground: colors.warningSoft,
-          chipForeground: colors.warningText,
-          chipBorder: colors.warningBorder,
-        );
-      case 'AWAITING_LEARNER_CONFIRMATION':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.primary.withValues(alpha: 0.85),
-          chipBackground: colors.primarySoft,
-          chipForeground: colors.primary,
-          chipBorder: colors.primary.withValues(alpha: 0.35),
-        );
-      case 'AWAITING_SUPPLIER_CONFIRMATION':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.primary.withValues(alpha: 0.85),
-          chipBackground: colors.primarySoft,
-          chipForeground: colors.primary,
-          chipBorder: colors.primary.withValues(alpha: 0.35),
-        );
-      case 'ACCEPTED':
-      case 'COMPLETED':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.success.withValues(alpha: 0.85),
-          chipBackground: colors.successSoft,
-          chipForeground: colors.success,
-          chipBorder: colors.success.withValues(alpha: 0.35),
-        );
-      case 'REJECTED':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.danger.withValues(alpha: 0.75),
-          chipBackground: colors.dangerSoft,
-          chipForeground: colors.danger,
-          chipBorder: colors.danger.withValues(alpha: 0.35),
-        );
-      case 'CANCELLED':
-      case 'EXPIRED':
-      case 'NO_SHOW':
-      case 'FULFILLMENT_FAILED':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.borderStrong.withValues(alpha: 0.55),
-          chipBackground: colors.cardSurfaceAlt,
-          chipForeground: colors.textSecondary,
-          chipBorder: colors.borderSubtle,
-        );
-      case 'AWAITING_RESOLUTION':
-        return LearnerReservationStatusStyle(
-          accentColor: colors.warning.withValues(alpha: 0.85),
-          chipBackground: colors.warningSoft,
-          chipForeground: colors.warningText,
-          chipBorder: colors.warningBorder,
-        );
-      default:
-        return LearnerReservationStatusStyle(
-          accentColor: colors.borderSubtle,
-          chipBackground: colors.cardSurfaceAlt,
-          chipForeground: colors.textMuted,
-          chipBorder: colors.borderSubtle,
-        );
-    }
+    return LearnerReservationStatusStyle(
+      accentColor: style.foreground.withValues(alpha: 0.85),
+      tone: tone,
+    );
+  }
+}
+
+/// Maps booking lifecycle states to the app-wide semantic status contract.
+AppStatusTone learnerReservationStatusTone(
+  String status, {
+  String? incidentReviewStatus,
+}) {
+  switch (status) {
+    case 'PENDING':
+    case 'AWAITING_LEARNER_CONFIRMATION':
+    case 'AWAITING_SUPPLIER_CONFIRMATION':
+      return AppStatusTone.warning;
+    case 'AWAITING_RESOLUTION':
+      if (incidentReviewStatus?.trim().isNotEmpty == true) {
+        return incidentReportStatusTone(incidentReviewStatus);
+      }
+      return AppStatusTone.warning;
+    case 'ACCEPTED':
+    case 'COMPLETED':
+      return AppStatusTone.success;
+    case 'REJECTED':
+    case 'CANCELLED':
+    case 'EXPIRED':
+    case 'NO_SHOW':
+    case 'FULFILLMENT_FAILED':
+      return AppStatusTone.danger;
+    default:
+      return AppStatusTone.neutral;
   }
 }
 
@@ -276,8 +253,7 @@ String reservationStatusLabel(
 String? resolveLearnerChipDeliveryStatus({
   required LearnerReservation reservation,
   String? linkedDeliveryStatus,
-}) =>
-    linkedDeliveryStatus ?? reservation.activeDelivery?.status;
+}) => linkedDeliveryStatus ?? reservation.activeDelivery?.status;
 
 bool learnerNoDriverIncidentAwaitingResolution({
   required String reservationStatus,
@@ -293,8 +269,7 @@ bool learnerNoDriverIncidentAwaitingResolution({
     return false;
   }
 
-  final effectiveStatus =
-      deliveryStatus ?? activeDeliveryStatus;
+  final effectiveStatus = deliveryStatus ?? activeDeliveryStatus;
   return effectiveStatus?.toUpperCase() == 'AWAITING_RESOLUTION';
 }
 
@@ -383,8 +358,8 @@ String? learnerDeliverySecondaryStatusLabel({
     return null;
   }
 
-  final normalizedDeliveryStatus =
-      (deliveryStatus ?? activeDeliveryStatus)?.toUpperCase();
+  final normalizedDeliveryStatus = (deliveryStatus ?? activeDeliveryStatus)
+      ?.toUpperCase();
 
   if (reservationStatus == 'COMPLETED' ||
       normalizedDeliveryStatus == 'DELIVERED') {
@@ -489,15 +464,17 @@ String? formatPreferredWindowsSummary(LearnerReservation reservation) {
     return null;
   }
 
-  final prefix =
-      reservation.isDeliveryFulfillment ? 'Preferred delivery' : 'Requested pickup';
+  final prefix = reservation.isDeliveryFulfillment
+      ? 'Preferred delivery'
+      : 'Requested pickup';
   final dateFormat = DateFormat('MMM d');
   final timeFormat = DateFormat('h:mm a');
 
   String formatWindow(ReservationPreferredWindow window) {
     final start = window.start.toLocal();
     final end = window.end.toLocal();
-    final sameDay = start.year == end.year &&
+    final sameDay =
+        start.year == end.year &&
         start.month == end.month &&
         start.day == end.day;
 
@@ -532,7 +509,8 @@ String? formatDeliveryAddressSummary(LearnerReservation reservation) {
 }
 
 String? formatSafeDropoffSummary(LearnerReservation reservation) {
-  if (!reservation.isDeliveryFulfillment || reservation.safeDropoffAllowed == null) {
+  if (!reservation.isDeliveryFulfillment ||
+      reservation.safeDropoffAllowed == null) {
     return null;
   }
 
@@ -553,15 +531,16 @@ String formatPreferredWindowRange(
   final timeFormat = DateFormat('h:mm a');
   final start = window.start.toLocal();
   final end = window.end.toLocal();
-  final sameDay = start.year == end.year &&
+  final sameDay =
+      start.year == end.year &&
       start.month == end.month &&
       start.day == end.day;
 
   final range = sameDay
       ? '${dateFormat.format(start)}, '
-          '${timeFormat.format(start)} – ${timeFormat.format(end)}'
+            '${timeFormat.format(start)} – ${timeFormat.format(end)}'
       : '${dateFormat.format(start)}, ${timeFormat.format(start)} – '
-          '${dateFormat.format(end)}, ${timeFormat.format(end)}';
+            '${dateFormat.format(end)}, ${timeFormat.format(end)}';
 
   if (prefix.isEmpty) {
     return range;
@@ -709,7 +688,8 @@ String? formatPickupWindow(LearnerReservation reservation) {
     return 'Confirmed pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)}';
   }
 
-  final sameDay = start.year == end.year &&
+  final sameDay =
+      start.year == end.year &&
       start.month == end.month &&
       start.day == end.day;
 
@@ -824,7 +804,8 @@ String formatDeliveryAvailability(
         : 'Delivery reservation';
   }
 
-  if (reservation.activeDelivery != null && !reservation.isDeliveryFulfillment) {
+  if (reservation.activeDelivery != null &&
+      !reservation.isDeliveryFulfillment) {
     return 'Delivery requested';
   }
 
@@ -845,8 +826,7 @@ String combinedDeliverySummary(LearnerReservation reservation) {
       '${reservation.groupItemCount} items in this group',
     if (reservation.groupTotal != null)
       'Group total ${reservation.currency ?? 'NIS'} ${reservation.groupTotal!.toStringAsFixed(2)}',
-    if (reservation.deliveryFee == 0)
-      'Delivery fee charged once for the group',
+    if (reservation.deliveryFee == 0) 'Delivery fee charged once for the group',
   ];
 
   return parts.join(' · ');

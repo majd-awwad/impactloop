@@ -6,6 +6,7 @@ import type {
 } from "../../generated/prisma/client.js";
 
 import { prisma } from "../../database/prisma.js";
+import { AppError } from "../../utils/app-error.js";
 import type { UpdateSupplierProfileInput } from "./supplier.validation.js";
 import {
   buildSupplierMaterialWhere,
@@ -20,6 +21,34 @@ import {
   type MaterialReservationStatusCounts,
 } from "./supplier.material-demand-metrics.js";
 type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
+
+const CONCEPT_WRITE_INTERNAL_MESSAGE =
+  "Material concept assignment failed due to an internal error.";
+
+/** Structural create-assignment contract: 1–2 nonblank unique concept IDs. */
+const assertMaterialConceptWriteContract = (conceptIds?: string[]): string[] => {
+  if (!conceptIds || conceptIds.length < 1 || conceptIds.length > 2) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_CARDINALITY",
+    });
+  }
+  if (
+    conceptIds.some(
+      (conceptId) =>
+        typeof conceptId !== "string" || conceptId.trim().length === 0,
+    )
+  ) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_BLANK",
+    });
+  }
+  if (new Set(conceptIds).size !== conceptIds.length) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_DUPLICATE",
+    });
+  }
+  return conceptIds;
+};
 
 const decimalToNumber = (value: { toNumber(): number } | number): number => {
   if (typeof value === "number") {
@@ -76,6 +105,48 @@ export const findSupplierProfileDetailsByUserId = async (userId: string) => {
               businessLocation: true,
             },
           },
+        },
+      },
+    },
+  });
+};
+
+export const findSupplierProfileManagementByUserId = async (userId: string) => {
+  return prisma.supplierProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      publicName: true,
+      supplierType: true,
+      description: true,
+      avatarImageUrl: true,
+      coverImageUrl: true,
+      verificationStatus: true,
+      verificationSubmittedAt: true,
+      verificationReviewedAt: true,
+      verificationAdminNote: true,
+      defaultPickupLocation: {
+        select: {
+          id: true,
+          country: true,
+          city: true,
+          area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          visibility: true,
+          isApproximate: true,
+          locationType: true,
+        },
+      },
+      organizationProfile: {
+        select: {
+          id: true,
+          organizationName: true,
+          organizationType: true,
+          contactPersonName: true,
+          workingDays: true,
+          workingHours: true,
         },
       },
     },
@@ -617,6 +688,31 @@ const supplierMaterialListInclude = {
   },
 } satisfies Prisma.MaterialInclude;
 
+const supplierMaterialMutationSelect = {
+  id: true,
+  title: true,
+  description: true,
+  quantity: true,
+  unit: true,
+  condition: true,
+  pickupAllowed: true,
+  deliveryAllowed: true,
+  pickupNotes: true,
+  suggestedUses: true,
+  materialType: true,
+  status: true,
+  isFree: true,
+  price: true,
+  currency: true,
+  viewsCount: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
+export type SupplierOwnedMaterialListRecord = Prisma.MaterialGetPayload<{
+  include: typeof supplierMaterialListInclude;
+}>;
+
 const buildSupplierMaterialsWhere = (
   scope: SupplierMaterialScope,
   query: {
@@ -833,37 +929,98 @@ export const countBlockingReservationsForMaterial = async (
   });
 };
 
-export const updateSupplierOwnedMaterial = async (
-  scope: SupplierMaterialScope,
-  materialId: string,
-  data: {
-    title: string;
-    description: string;
-    quantity: number;
-    unit: string;
-    condition: MaterialCondition;
-    pickupAllowed: boolean;
-    deliveryAllowed: boolean;
-    pickupNotes: string | null;
-    suggestedUses: string | null;
-  },
-) => {
-  const existing = await prisma.material.findFirst({
+export type SupplierMaterialScalarUpdateData = {
+  title: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  condition: MaterialCondition;
+  pickupAllowed: boolean;
+  deliveryAllowed: boolean;
+  pickupNotes: string | null;
+  suggestedUses: string | null;
+};
+
+export type UpdateSupplierMaterialWithConceptsResult =
+  | {
+      status: "ok";
+      material: Prisma.MaterialGetPayload<{
+        select: typeof supplierMaterialMutationSelect;
+      }>;
+    }
+  | { status: "stale" }
+  | { status: "not_found" };
+
+/**
+ * Conditional owned-material update with optional exact MaterialConcept sync.
+ * `replaceConceptIds: undefined` preserves all concept rows.
+ * Caller must provide the transaction client; all queries run sequentially.
+ */
+export const updateSupplierMaterialWithConcepts = async (input: {
+  client: Prisma.TransactionClient;
+  scope: SupplierMaterialScope;
+  materialId: string;
+  expectedUpdatedAt: Date;
+  updateData: SupplierMaterialScalarUpdateData;
+  replaceConceptIds?: readonly string[];
+}): Promise<UpdateSupplierMaterialWithConceptsResult> => {
+  const replaceConceptIds =
+    input.replaceConceptIds === undefined
+      ? undefined
+      : assertMaterialConceptWriteContract([...input.replaceConceptIds]);
+
+  const updated = await input.client.material.updateMany({
     where: {
-      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+      AND: [
+        { id: input.materialId },
+        buildSupplierMaterialWhere(input.scope),
+        { updatedAt: input.expectedUpdatedAt },
+      ],
     },
-    select: { id: true },
+    data: input.updateData,
   });
 
-  if (!existing) {
-    return null;
+  if (updated.count === 0) {
+    const owned = await input.client.material.findFirst({
+      where: {
+        AND: [{ id: input.materialId }, buildSupplierMaterialWhere(input.scope)],
+      },
+      select: { id: true },
+    });
+    return owned ? { status: "stale" } : { status: "not_found" };
   }
 
-  return prisma.material.update({
-    where: { id: materialId },
-    data,
-    include: supplierMaterialListInclude,
+  if (replaceConceptIds !== undefined) {
+    const currentRows = await input.client.materialConcept.findMany({
+      where: { materialId: input.materialId },
+      select: { conceptId: true },
+    });
+    const currentIds = currentRows.map((row) => row.conceptId);
+    const currentSet = new Set(currentIds);
+    const desiredSet = new Set(replaceConceptIds);
+    const setsEqual =
+      currentSet.size === desiredSet.size &&
+      replaceConceptIds.every((conceptId) => currentSet.has(conceptId));
+
+    if (!setsEqual) {
+      await input.client.materialConcept.deleteMany({
+        where: { materialId: input.materialId },
+      });
+      await input.client.materialConcept.createMany({
+        data: replaceConceptIds.map((conceptId) => ({
+          materialId: input.materialId,
+          conceptId,
+        })),
+      });
+    }
+  }
+
+  const material = await input.client.material.findUniqueOrThrow({
+    where: { id: input.materialId },
+    select: supplierMaterialMutationSelect,
   });
+
+  return { status: "ok", material };
 };
 
 export const deleteSupplierOwnedMaterial = async (materialId: string) => {
@@ -1048,10 +1205,14 @@ export const createSupplierMaterial = async (input: {
   priceCheckedAt?: Date | null;
   maxAllowedPriceAtCheck?: number | null;
   imageUrls: string[];
+  /** Exactly 1–2 ordered concept IDs (family, optional form). Required for all creates. */
+  conceptIds: string[];
   client?: PrismaClientLike;
 }) => {
-  const createMaterial = (client: PrismaClientLike) =>
-    client.material.create({
+  const conceptIds = assertMaterialConceptWriteContract(input.conceptIds);
+
+  const createMaterial = async (client: PrismaClientLike) => {
+    const material = await client.material.create({
       data: {
         ownerId: input.ownerId,
         supplierProfileId: input.supplierProfileId,
@@ -1101,6 +1262,16 @@ export const createSupplierMaterial = async (input: {
         },
       },
     });
+
+    await client.materialConcept.createMany({
+      data: conceptIds.map((conceptId) => ({
+        materialId: material.id,
+        conceptId,
+      })),
+    });
+
+    return material;
+  };
 
   if (input.client) {
     return createMaterial(input.client);
@@ -1259,6 +1430,12 @@ export const findReservationsForSupplierMaterial = async (
   });
 };
 
+const supplierMaterialStatusMutationSelect = {
+  id: true,
+  status: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
 export const updateSupplierOwnedMaterialStatus = async (
   scope: SupplierMaterialScope,
   materialId: string,
@@ -1287,7 +1464,7 @@ export const updateSupplierOwnedMaterialStatus = async (
           }
         : {}),
     },
-    include: supplierMaterialListInclude,
+    select: supplierMaterialStatusMutationSelect,
   });
 };
 

@@ -3,87 +3,92 @@ import type {
   MaterialSourceType,
   PrismaClient,
   ReservationStatus,
-} from '../../src/generated/prisma/client.js';
+} from "../../src/generated/prisma/client.js";
 
-export const SEED_RESERVATION_PREFIX = '[seed]';
-export const SEED_SUPPLIER_EMAIL = 'seed-supplier@impactloop.test';
-export const SEED_PASSWORD = 'SeedPassword123!';
+export const SEED_RESERVATION_PREFIX = "[seed]";
+export const SEED_SUPPLIER_EMAIL = "seed-supplier@impactloop.test";
+export const SEED_PASSWORD = "SeedPassword123!";
 
 export const SEED_LEARNERS = [
-  { email: 'seed-learner-ahmad@impactloop.test', displayName: 'Ahmad' },
-  { email: 'seed-learner-sara@impactloop.test', displayName: 'Sara' },
-  { email: 'seed-learner-omar@impactloop.test', displayName: 'Omar' },
-  { email: 'seed-learner-lina@impactloop.test', displayName: 'Lina' },
-  { email: 'seed-learner-yousef@impactloop.test', displayName: 'Yousef' },
+  { email: "seed-learner-ahmad@impactloop.test", displayName: "Ahmad" },
+  { email: "seed-learner-sara@impactloop.test", displayName: "Sara" },
+  { email: "seed-learner-omar@impactloop.test", displayName: "Omar" },
+  { email: "seed-learner-lina@impactloop.test", displayName: "Lina" },
+  { email: "seed-learner-yousef@impactloop.test", displayName: "Yousef" },
 ] as const;
 
 export const SEED_MATERIALS = [
   {
-    key: 'arduino-uno',
-    title: 'Arduino Uno',
-    description: 'Seed material for reservation testing.',
-    materialType: 'Microcontroller board',
-    unit: 'piece',
+    key: "arduino-uno",
+    title: "Arduino Uno",
+    description: "Seed material for reservation testing.",
+    categoryNameEn: "Electronics",
+    materialType: "Microcontroller board",
+    unit: "piece",
     quantity: 5,
-    condition: 'GOOD' as MaterialCondition,
-    sourceType: 'WORKSHOP_SURPLUS' as MaterialSourceType,
+    condition: "GOOD" as MaterialCondition,
+    sourceType: "WORKSHOP_SURPLUS" as MaterialSourceType,
     imageUrl:
-      'https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&w=1200&q=80',
+      "https://images.unsplash.com/photo-1553406830-ef2513450d76?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    key: 'cotton-fabric',
-    title: 'Cotton fabric scraps',
-    description: 'Seed fabric scraps for pickup schedule testing.',
-    materialType: 'Fabric',
-    unit: 'kg',
+    key: "cotton-fabric",
+    title: "Cotton fabric scraps",
+    description: "Seed fabric scraps for pickup schedule testing.",
+    categoryNameEn: "Fabric & Textile",
+    materialType: "Fabric",
+    unit: "kg",
     quantity: 12,
-    condition: 'USED' as MaterialCondition,
-    sourceType: 'WORKSHOP_SURPLUS' as MaterialSourceType,
+    condition: "USED" as MaterialCondition,
+    sourceType: "WORKSHOP_SURPLUS" as MaterialSourceType,
     imageUrl:
-      'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80',
+      "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    key: 'wood-scraps',
-    title: 'Wood scraps',
-    description: 'Seed wood offcuts for upcoming pickup tests.',
-    materialType: 'Wood',
-    unit: 'kg',
+    key: "wood-scraps",
+    title: "Wood scraps",
+    description: "Seed wood offcuts for upcoming pickup tests.",
+    categoryNameEn: "Wood & Timber",
+    materialType: "Wood",
+    unit: "kg",
     quantity: 20,
-    condition: 'GOOD' as MaterialCondition,
-    sourceType: 'WORKSHOP_SURPLUS' as MaterialSourceType,
+    condition: "GOOD" as MaterialCondition,
+    sourceType: "WORKSHOP_SURPLUS" as MaterialSourceType,
     imageUrl:
-      'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80',
+      "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    key: 'cardboard-boxes',
-    title: 'Cardboard boxes',
-    description: 'Seed cardboard boxes for completed pickup tests.',
-    materialType: 'Packaging',
-    unit: 'boxes',
+    key: "cardboard-boxes",
+    title: "Cardboard boxes",
+    description: "Seed cardboard boxes for completed pickup tests.",
+    categoryNameEn: "Packaging",
+    materialType: "Packaging",
+    unit: "boxes",
     quantity: 10,
-    condition: 'LIKE_NEW' as MaterialCondition,
-    sourceType: 'FACTORY_SURPLUS' as MaterialSourceType,
+    condition: "LIKE_NEW" as MaterialCondition,
+    sourceType: "FACTORY_SURPLUS" as MaterialSourceType,
     imageUrl:
-      'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80',
+      "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    key: 'epoxy-resin',
-    title: 'Epoxy resin bottles',
-    description: 'Seed resin bottles for mixed reservation tests.',
-    materialType: 'Chemicals',
-    unit: 'bottle',
+    key: "epoxy-resin",
+    title: "Epoxy resin bottles",
+    description: "Seed resin bottles for mixed reservation tests.",
+    categoryNameEn: "Art, Craft & Molding",
+    materialType: "Chemicals",
+    unit: "bottle",
     quantity: 4,
-    condition: 'NEW' as MaterialCondition,
-    sourceType: 'EDUCATIONAL_INSTITUTION' as MaterialSourceType,
+    condition: "NEW" as MaterialCondition,
+    sourceType: "EDUCATIONAL_INSTITUTION" as MaterialSourceType,
     imageUrl:
-      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80',
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1200&q=80",
   },
 ] as const;
 
 export type SeedReservationSpec = {
   key: string;
-  materialKey: (typeof SEED_MATERIALS)[number]['key'];
-  learnerEmail: (typeof SEED_LEARNERS)[number]['email'];
+  materialKey: (typeof SEED_MATERIALS)[number]["key"];
+  learnerEmail: (typeof SEED_LEARNERS)[number]["email"];
   status: ReservationStatus;
   quantityRequested: number;
   learnerMessage: string;
@@ -101,37 +106,37 @@ export type SeedReservationSpec = {
 
 export const SEED_RESERVATIONS: SeedReservationSpec[] = [
   {
-    key: 'pending-arduino',
-    materialKey: 'arduino-uno',
-    learnerEmail: 'seed-learner-ahmad@impactloop.test',
-    status: 'PENDING',
+    key: "pending-arduino",
+    materialKey: "arduino-uno",
+    learnerEmail: "seed-learner-ahmad@impactloop.test",
+    status: "PENDING",
     quantityRequested: 1,
-    learnerMessage: 'I need it for a robotics project.',
+    learnerMessage: "I need it for a robotics project.",
   },
   {
-    key: 'pending-fabric',
-    materialKey: 'cotton-fabric',
-    learnerEmail: 'seed-learner-sara@impactloop.test',
-    status: 'PENDING',
+    key: "pending-fabric",
+    materialKey: "cotton-fabric",
+    learnerEmail: "seed-learner-sara@impactloop.test",
+    status: "PENDING",
     quantityRequested: 2,
-    learnerMessage: 'Need fabric for a sewing workshop.',
+    learnerMessage: "Need fabric for a sewing workshop.",
   },
   {
-    key: 'pending-wood',
-    materialKey: 'wood-scraps',
-    learnerEmail: 'seed-learner-omar@impactloop.test',
-    status: 'PENDING',
+    key: "pending-wood",
+    materialKey: "wood-scraps",
+    learnerEmail: "seed-learner-omar@impactloop.test",
+    status: "PENDING",
     quantityRequested: 3,
-    learnerMessage: 'Building a small shelf.',
+    learnerMessage: "Building a small shelf.",
   },
   {
-    key: 'accepted-today-morning',
-    materialKey: 'arduino-uno',
-    learnerEmail: 'seed-learner-ahmad@impactloop.test',
-    status: 'ACCEPTED',
+    key: "accepted-today-morning",
+    materialKey: "arduino-uno",
+    learnerEmail: "seed-learner-ahmad@impactloop.test",
+    status: "ACCEPTED",
     quantityRequested: 1,
-    learnerMessage: 'Accepted pickup today morning.',
-    supplierNote: 'Pickup near main gate.',
+    learnerMessage: "Accepted pickup today morning.",
+    supplierNote: "Pickup near main gate.",
     pickupWindow: {
       startOffsetDays: 0,
       startHour: 10,
@@ -139,13 +144,13 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     },
   },
   {
-    key: 'accepted-today-afternoon',
-    materialKey: 'epoxy-resin',
-    learnerEmail: 'seed-learner-yousef@impactloop.test',
-    status: 'ACCEPTED',
+    key: "accepted-today-afternoon",
+    materialKey: "epoxy-resin",
+    learnerEmail: "seed-learner-yousef@impactloop.test",
+    status: "ACCEPTED",
     quantityRequested: 1,
-    learnerMessage: 'Accepted pickup today afternoon.',
-    supplierNote: 'Ring the workshop bell.',
+    learnerMessage: "Accepted pickup today afternoon.",
+    supplierNote: "Ring the workshop bell.",
     pickupWindow: {
       startOffsetDays: 0,
       startHour: 15,
@@ -153,13 +158,13 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     },
   },
   {
-    key: 'accepted-tomorrow-fabric',
-    materialKey: 'cotton-fabric',
-    learnerEmail: 'seed-learner-sara@impactloop.test',
-    status: 'ACCEPTED',
+    key: "accepted-tomorrow-fabric",
+    materialKey: "cotton-fabric",
+    learnerEmail: "seed-learner-sara@impactloop.test",
+    status: "ACCEPTED",
     quantityRequested: 3,
-    learnerMessage: 'Accepted pickup tomorrow.',
-    supplierNote: 'Call when you arrive.',
+    learnerMessage: "Accepted pickup tomorrow.",
+    supplierNote: "Call when you arrive.",
     pickupWindow: {
       startOffsetDays: 1,
       startHour: 13,
@@ -167,12 +172,12 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     },
   },
   {
-    key: 'accepted-tomorrow-wood',
-    materialKey: 'wood-scraps',
-    learnerEmail: 'seed-learner-omar@impactloop.test',
-    status: 'ACCEPTED',
+    key: "accepted-tomorrow-wood",
+    materialKey: "wood-scraps",
+    learnerEmail: "seed-learner-omar@impactloop.test",
+    status: "ACCEPTED",
     quantityRequested: 5,
-    learnerMessage: 'Tomorrow wood pickup.',
+    learnerMessage: "Tomorrow wood pickup.",
     pickupWindow: {
       startOffsetDays: 1,
       startHour: 9,
@@ -180,12 +185,12 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     },
   },
   {
-    key: 'accepted-future-wood',
-    materialKey: 'wood-scraps',
-    learnerEmail: 'seed-learner-omar@impactloop.test',
-    status: 'ACCEPTED',
+    key: "accepted-future-wood",
+    materialKey: "wood-scraps",
+    learnerEmail: "seed-learner-omar@impactloop.test",
+    status: "ACCEPTED",
     quantityRequested: 5,
-    learnerMessage: 'Future wood pickup.',
+    learnerMessage: "Future wood pickup.",
     pickupWindow: {
       startOffsetDays: 5,
       startHour: 9,
@@ -193,13 +198,13 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     },
   },
   {
-    key: 'accepted-future-resin',
-    materialKey: 'epoxy-resin',
-    learnerEmail: 'seed-learner-lina@impactloop.test',
-    status: 'ACCEPTED',
+    key: "accepted-future-resin",
+    materialKey: "epoxy-resin",
+    learnerEmail: "seed-learner-lina@impactloop.test",
+    status: "ACCEPTED",
     quantityRequested: 2,
-    learnerMessage: 'Future resin pickup.',
-    supplierNote: 'Bring gloves.',
+    learnerMessage: "Future resin pickup.",
+    supplierNote: "Bring gloves.",
     pickupWindow: {
       startOffsetDays: 7,
       startHour: 14,
@@ -207,31 +212,31 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     },
   },
   {
-    key: 'declined-arduino',
-    materialKey: 'arduino-uno',
-    learnerEmail: 'seed-learner-lina@impactloop.test',
-    status: 'REJECTED',
+    key: "declined-arduino",
+    materialKey: "arduino-uno",
+    learnerEmail: "seed-learner-lina@impactloop.test",
+    status: "REJECTED",
     quantityRequested: 1,
-    learnerMessage: 'Declined request sample.',
-    rejectionReason: 'Already reserved for another learner.',
+    learnerMessage: "Declined request sample.",
+    rejectionReason: "Already reserved for another learner.",
   },
   {
-    key: 'declined-fabric',
-    materialKey: 'cotton-fabric',
-    learnerEmail: 'seed-learner-yousef@impactloop.test',
-    status: 'REJECTED',
+    key: "declined-fabric",
+    materialKey: "cotton-fabric",
+    learnerEmail: "seed-learner-yousef@impactloop.test",
+    status: "REJECTED",
     quantityRequested: 1,
-    learnerMessage: 'Declined fabric request.',
-    rejectionReason: 'Insufficient quantity available.',
+    learnerMessage: "Declined fabric request.",
+    rejectionReason: "Insufficient quantity available.",
   },
   {
-    key: 'completed-cardboard',
-    materialKey: 'cardboard-boxes',
-    learnerEmail: 'seed-learner-lina@impactloop.test',
-    status: 'COMPLETED',
+    key: "completed-cardboard",
+    materialKey: "cardboard-boxes",
+    learnerEmail: "seed-learner-lina@impactloop.test",
+    status: "COMPLETED",
     quantityRequested: 6,
-    learnerMessage: 'Completed cardboard pickup.',
-    supplierNote: 'Handed over at side entrance.',
+    learnerMessage: "Completed cardboard pickup.",
+    supplierNote: "Handed over at side entrance.",
     pickupWindow: {
       startOffsetDays: -1,
       startHour: 11,
@@ -240,12 +245,12 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     completedOffsetDays: -1,
   },
   {
-    key: 'completed-resin',
-    materialKey: 'epoxy-resin',
-    learnerEmail: 'seed-learner-yousef@impactloop.test',
-    status: 'COMPLETED',
+    key: "completed-resin",
+    materialKey: "epoxy-resin",
+    learnerEmail: "seed-learner-yousef@impactloop.test",
+    status: "COMPLETED",
     quantityRequested: 1,
-    learnerMessage: 'Completed resin pickup.',
+    learnerMessage: "Completed resin pickup.",
     pickupWindow: {
       startOffsetDays: -3,
       startHour: 10,
@@ -254,12 +259,12 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
     completedOffsetDays: -3,
   },
   {
-    key: 'completed-arduino',
-    materialKey: 'arduino-uno',
-    learnerEmail: 'seed-learner-ahmad@impactloop.test',
-    status: 'COMPLETED',
+    key: "completed-arduino",
+    materialKey: "arduino-uno",
+    learnerEmail: "seed-learner-ahmad@impactloop.test",
+    status: "COMPLETED",
     quantityRequested: 1,
-    learnerMessage: 'Completed arduino pickup.',
+    learnerMessage: "Completed arduino pickup.",
     pickupWindow: {
       startOffsetDays: -5,
       startHour: 9,
@@ -272,14 +277,13 @@ export const SEED_RESERVATIONS: SeedReservationSpec[] = [
 export type SeedContext = {
   supplierUserId: string;
   supplierProfileId: string;
-  categoryId: string;
   locationId: string;
   learnerIds: Map<string, string>;
   materialIds: Map<string, string>;
 };
 
 export const buildPickupWindow = (
-  spec: NonNullable<SeedReservationSpec['pickupWindow']>,
+  spec: NonNullable<SeedReservationSpec["pickupWindow"]>,
 ): { start: Date; end: Date } => {
   const base = new Date();
   base.setHours(0, 0, 0, 0);
@@ -300,7 +304,9 @@ export const reservationSeedMessage = (key: string, learnerMessage: string) =>
 export const reservationSeedMessagePrefix = (key: string) =>
   `${SEED_RESERVATION_PREFIX} ${key}:`;
 
-export async function countSeedReservations(prisma: PrismaClient): Promise<number> {
+export async function countSeedReservations(
+  prisma: PrismaClient,
+): Promise<number> {
   return prisma.reservation.count({
     where: { message: { startsWith: SEED_RESERVATION_PREFIX } },
   });

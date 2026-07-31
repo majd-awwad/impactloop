@@ -2,6 +2,15 @@ import type { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  defaultComponentConceptLifecycleDeps,
+  type ComponentConceptLifecycleDeps,
+} from '../taxonomy/component-concept-assignment.repository.js';
+import {
+  defaultProjectTopicLifecycleDeps,
+  type ProjectTopicLifecycleDeps,
+} from '../taxonomy/project-concept-assignment.repository.js';
 import type {
   LearningProjectsQuery,
   MyLearningProjectsQuery,
@@ -11,6 +20,7 @@ import {
   setBuildItemLinkedReservationId,
   validateBuildItemForReservationLink,
 } from './learning-projects.build-reservation-linking.js';
+import { resolveBuildItemStepUnlockReadiness } from './learning-projects.build-material-linking.js';
 import {
   mapNormalizedComponentToCreateData,
   type NormalizedSubmitComponent,
@@ -20,6 +30,8 @@ const clientOrPrisma = (client?: Prisma.TransactionClient) => client ?? prisma;
 
 const publicProjectWhere: Prisma.LearningProjectWhereInput = {
   status: 'PUBLISHED',
+  hiddenAt: null,
+  archivedAt: null,
   category: {
     isActive: true,
     categoryType: {
@@ -248,6 +260,31 @@ const projectBuildInclude = {
       title: true,
       shortDescription: true,
       coverImageUrl: true,
+      steps: {
+        select: {
+          id: true,
+          stepNumber: true,
+          title: true,
+          description: true,
+          imageUrl: true,
+        },
+        orderBy: {
+          stepNumber: 'asc' as const,
+        },
+      },
+    },
+  },
+  stepProgress: {
+    select: {
+      id: true,
+      projectStepId: true,
+      startedAt: true,
+      completedAt: true,
+    },
+    orderBy: {
+      projectStep: {
+        stepNumber: 'asc' as const,
+      },
     },
   },
   items: {
@@ -325,6 +362,7 @@ const projectBuildInclude = {
           canBeSubstituted: true,
           notes: true,
           searchKeywords: true,
+          alternativeKeywords: true,
           category: {
             select: {
               id: true,
@@ -502,11 +540,38 @@ export const findProjectBuild = async (
   });
 };
 
+export const findOwnedProjectBuildByBuildId = async (
+  buildId: string,
+  learnerId: string,
+) => {
+  return prisma.projectBuild.findFirst({
+    where: {
+      id: buildId,
+      learnerId,
+    },
+    include: projectBuildInclude,
+  });
+};
+
+export const findActiveProjectBuildsForLearner = async (learnerId: string) => {
+  return prisma.projectBuild.findMany({
+    where: {
+      learnerId,
+      status: 'IN_PROGRESS',
+    },
+    include: projectBuildInclude,
+    orderBy: {
+      updatedAt: 'desc',
+    },
+    take: 10,
+  });
+};
+
 export const startProjectBuild = async (
   projectId: string,
   learnerId: string,
 ) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const project = await tx.learningProject.findFirst({
       where: {
         id: projectId,
@@ -563,13 +628,15 @@ export const startProjectBuild = async (
       });
     }
 
-    return tx.projectBuild.findUnique({
-      where: {
-        id: build.id,
-      },
-      include: projectBuildInclude,
-    });
+    return build;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.id },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const updateProjectBuildItem = async (input: {
@@ -579,7 +646,7 @@ export const updateProjectBuildItem = async (input: {
   status: UpdateProjectBuildItemInput['status'];
   learnerNote?: string | null;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const item = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -611,13 +678,15 @@ export const updateProjectBuildItem = async (input: {
       },
     });
 
-    return tx.projectBuild.findUnique({
-      where: {
-        id: item.buildId,
-      },
-      include: projectBuildInclude,
-    });
+    return item;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.buildId },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const findLearnerBuildItem = async (input: {
@@ -663,7 +732,7 @@ export const linkBuildItemMaterial = async (input: {
   itemId: string;
   materialId: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const item = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -694,11 +763,15 @@ export const linkBuildItemMaterial = async (input: {
       },
     });
 
-    return tx.projectBuild.findUnique({
-      where: { id: item.buildId },
-      include: projectBuildInclude,
-    });
+    return item;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.buildId },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const unlinkBuildItemMaterial = async (input: {
@@ -707,7 +780,7 @@ export const unlinkBuildItemMaterial = async (input: {
   itemId: string;
   clearReservationLink: boolean;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const item = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -740,11 +813,15 @@ export const unlinkBuildItemMaterial = async (input: {
       },
     });
 
-    return tx.projectBuild.findUnique({
-      where: { id: item.buildId },
-      include: projectBuildInclude,
-    });
+    return item;
   });
+
+  return build
+    ? prisma.projectBuild.findUniqueOrThrow({
+        where: { id: build.buildId },
+        include: projectBuildInclude,
+      })
+    : null;
 };
 
 export const linkBuildItemReservation = async (input: {
@@ -753,7 +830,7 @@ export const linkBuildItemReservation = async (input: {
   itemId: string;
   reservationId: string;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const build = await prisma.$transaction(async (tx) => {
     const buildItem = await tx.projectBuildItem.findFirst({
       where: {
         id: input.itemId,
@@ -807,10 +884,7 @@ export const linkBuildItemReservation = async (input: {
       buildItem.linkedReservationId &&
       buildItem.linkedReservationId === reservation.id
     ) {
-      return tx.projectBuild.findUnique({
-        where: { id: buildItem.buildId },
-        include: projectBuildInclude,
-      });
+      return { id: buildItem.buildId };
     }
 
     const validation = await validateBuildItemForReservationLink(tx, {
@@ -847,10 +921,12 @@ export const linkBuildItemReservation = async (input: {
 
     await setBuildItemLinkedReservationId(tx, buildItem.id, reservation.id);
 
-    return tx.projectBuild.findUnique({
-      where: { id: buildItem.buildId },
-      include: projectBuildInclude,
-    });
+    return { id: buildItem.buildId };
+  });
+
+  return prisma.projectBuild.findUniqueOrThrow({
+    where: { id: build.id },
+    include: projectBuildInclude,
   });
 };
 
@@ -945,29 +1021,30 @@ export const findFollowedProjectIds = async (
   return new Set(follows.map((follow) => follow.projectId));
 };
 
-export const setProjectLiked = async (projectId: string, userId: string) => {
-  await prisma.projectLike.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectLiked = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectLike.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetProjectLiked = async (projectId: string, userId: string) => {
-  await prisma.projectLike.deleteMany({
+export const unsetProjectLiked = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectLike.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countLikesForProject = async (projectId: string) => {
@@ -976,57 +1053,56 @@ export const countLikesForProject = async (projectId: string) => {
   });
 };
 
-export const setProjectSaved = async (projectId: string, userId: string) => {
-  await prisma.projectSave.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectSaved = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectSave.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
-export const unsetProjectSaved = async (projectId: string, userId: string) => {
-  await prisma.projectSave.deleteMany({
+export const unsetProjectSaved = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectSave.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
-export const setProjectFollowed = async (projectId: string, userId: string) => {
-  await prisma.projectFollow.upsert({
-    where: {
-      projectId_userId: {
-        projectId,
-        userId,
-      },
-    },
-    create: {
-      projectId,
-      userId,
-    },
-    update: {},
+export const setProjectFollowed = async (
+  projectId: string,
+  userId: string,
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectFollow.createMany({
+    data: [{ projectId, userId }],
+    skipDuplicates: true,
   });
+  return result.count > 0;
 };
 
 export const unsetProjectFollowed = async (
   projectId: string,
   userId: string,
-) => {
-  await prisma.projectFollow.deleteMany({
+  client?: Prisma.TransactionClient,
+): Promise<boolean> => {
+  const result = await clientOrPrisma(client).projectFollow.deleteMany({
     where: {
       projectId,
       userId,
     },
   });
+  return result.count > 0;
 };
 
 export const countFollowsForProject = async (projectId: string) => {
@@ -1185,11 +1261,17 @@ export const createLearningProjectForReview = async (input: {
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
   client?: Prisma.TransactionClient;
+  topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
   const now = new Date();
   const client = clientOrPrisma(input.client);
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
 
-  return client.learningProject.create({
+  const project = await client.learningProject.create({
     data: {
       categoryId: input.categoryId,
       createdBy: input.createdBy,
@@ -1229,21 +1311,40 @@ export const createLearningProjectForReview = async (input: {
     },
     select: {
       id: true,
+      categoryId: true,
       title: true,
       status: true,
       submittedAt: true,
     },
   });
+
+  await topicLifecycleDeps.reconcileLearningProjectTopics(
+    client,
+    project.id,
+    project.categoryId,
+  );
+
+  await componentLifecycleDeps.reconcileLearningProjectComponents(
+    client,
+    project.id,
+  );
+
+  return {
+    id: project.id,
+    title: project.title,
+    status: project.status,
+    submittedAt: project.submittedAt,
+  };
 };
 
 export const updateMyLearningProjectSubmission = async (input: {
   id: string;
   userId: string;
-  categoryId: string;
-  title: string;
-  shortDescription: string;
-  description: string;
-  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  categoryId?: string;
+  title?: string;
+  shortDescription?: string;
+  description?: string;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
   estimatedDurationMinutes?: number;
   coverImageUrl?: string | null;
   requiredComponents?: Array<{
@@ -1252,8 +1353,15 @@ export const updateMyLearningProjectSubmission = async (input: {
   }>;
   steps?: { title: string; description: string }[];
   links?: { url: string; title?: string }[];
+  topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
+
+  const updated = await runSerializableTransaction(async (tx) => {
     const existing = await tx.learningProject.findFirst({
       where: {
         id: input.id,
@@ -1282,15 +1390,26 @@ export const updateMyLearningProjectSubmission = async (input: {
       return null;
     }
 
-    const projectUpdateData: Prisma.LearningProjectUpdateManyMutationInput = {
-      categoryId: input.categoryId,
-      title: input.title,
-      shortDescription: input.shortDescription,
-      description: input.description,
-      difficulty: input.difficulty,
-      estimatedDurationMinutes: input.estimatedDurationMinutes,
-      coverImageUrl: input.coverImageUrl ?? null,
-    };
+    const projectUpdateData: Prisma.LearningProjectUpdateManyMutationInput = {};
+
+    if (input.title !== undefined) {
+      projectUpdateData.title = input.title;
+    }
+    if (input.shortDescription !== undefined) {
+      projectUpdateData.shortDescription = input.shortDescription;
+    }
+    if (input.description !== undefined) {
+      projectUpdateData.description = input.description;
+    }
+    if (input.difficulty !== undefined) {
+      projectUpdateData.difficulty = input.difficulty;
+    }
+    if (input.estimatedDurationMinutes !== undefined) {
+      projectUpdateData.estimatedDurationMinutes = input.estimatedDurationMinutes;
+    }
+    if (input.coverImageUrl !== undefined) {
+      projectUpdateData.coverImageUrl = input.coverImageUrl;
+    }
 
     if (existing.status === 'PENDING_REVIEW') {
       projectUpdateData.reviewNote = null;
@@ -1310,6 +1429,24 @@ export const updateMyLearningProjectSubmission = async (input: {
     if (projectUpdate.count === 0) {
       return null;
     }
+
+    if (input.categoryId !== undefined) {
+      await tx.learningProject.update({
+        where: { id: input.id },
+        data: { categoryId: input.categoryId },
+      });
+    }
+
+    const committed = await tx.learningProject.findUniqueOrThrow({
+      where: { id: input.id },
+      select: { categoryId: true },
+    });
+
+    await topicLifecycleDeps.reconcileLearningProjectTopics(
+      tx,
+      input.id,
+      committed.categoryId,
+    );
 
     if (input.requiredComponents !== undefined) {
       const existingIds = new Set(
@@ -1372,6 +1509,11 @@ export const updateMyLearningProjectSubmission = async (input: {
           },
         });
       }
+
+      await componentLifecycleDeps.reconcileLearningProjectComponents(
+        tx,
+        input.id,
+      );
     }
 
     if (input.steps !== undefined) {
@@ -1402,14 +1544,51 @@ export const updateMyLearningProjectSubmission = async (input: {
       }
     }
 
-    return tx.learningProject.findFirst({
-      where: {
-        id: input.id,
-        createdBy: input.userId,
-      },
-      include: myLearningProjectDetailInclude,
-    });
+    return { id: input.id };
   });
+
+  return updated
+    ? prisma.learningProject.findFirst({
+        where: {
+          id: updated.id,
+          createdBy: input.userId,
+        },
+        include: myLearningProjectDetailInclude,
+      })
+    : null;
+};
+
+export const applyReviewedAuthoringProposalToMyDraft = async (input: {
+  id: string;
+  userId: string;
+  expectedUpdatedAt: Date;
+  categoryId: string;
+  title: string;
+  shortDescription: string;
+  description: string;
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  estimatedDurationMinutes?: number;
+  coverImageUrl?: string | null;
+  requiredComponents: Array<{ component: NormalizedSubmitComponent }>;
+  steps: { title: string; description: string }[];
+  links?: { url: string; title?: string }[];
+}) => {
+  const current = await prisma.learningProject.findFirst({
+    where: {
+      id: input.id,
+      createdBy: input.userId,
+      status: 'DRAFT',
+      updatedAt: input.expectedUpdatedAt,
+    },
+    select: { id: true },
+  });
+
+  if (!current) {
+    return null;
+  }
+
+  const { expectedUpdatedAt: _expectedUpdatedAt, ...updateInput } = input;
+  return updateMyLearningProjectSubmission(updateInput);
 };
 
 export const resubmitMyLearningProjectSubmission = async (
@@ -1431,6 +1610,42 @@ export const resubmitMyLearningProjectSubmission = async (
       changesRequestedReason: null,
       rejectionReason: null,
     },
+  });
+};
+
+export const submitMyLearningProjectDraft = async (input: {
+  id: string;
+  userId: string;
+  client?: Prisma.TransactionClient;
+}) => {
+  const db = input.client ?? prisma;
+  const updated = await db.learningProject.updateMany({
+    where: {
+      id: input.id,
+      createdBy: input.userId,
+      status: 'DRAFT',
+    },
+    data: {
+      status: 'PENDING_REVIEW',
+      submittedAt: new Date(),
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewNote: null,
+      changesRequestedReason: null,
+      rejectionReason: null,
+    },
+  });
+
+  if (updated.count === 0) {
+    return null;
+  }
+
+  return db.learningProject.findFirst({
+    where: {
+      id: input.id,
+      createdBy: input.userId,
+    },
+    include: myLearningProjectDetailInclude,
   });
 };
 
@@ -1458,3 +1673,306 @@ export const findMaterialCategoriesForSubmit = async (categoryIds: string[]) => 
     select: { id: true },
   });
 };
+
+export const completeProjectBuildStep = async (input: {
+  projectId: string;
+  learnerId: string;
+  stepId: string;
+}): Promise<{ buildId: string; noOp: boolean }> => {
+  return prisma.$transaction(async (tx) => {
+    const build = await tx.projectBuild.findUnique({
+      where: {
+        projectId_learnerId: {
+          projectId: input.projectId,
+          learnerId: input.learnerId,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
+        items: {
+          select: {
+            status: true,
+            linkedMaterialId: true,
+            linkedReservation: {
+              select: {
+                id: true,
+                materialId: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!build) {
+      throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+    }
+
+    const projectSteps = await tx.projectStep.findMany({
+      where: { projectId: input.projectId },
+      orderBy: { stepNumber: 'asc' },
+      select: { id: true, stepNumber: true },
+    });
+
+    const targetStep = projectSteps.find((step) => step.id === input.stepId);
+    if (!targetStep) {
+      throw new AppError('Project step not found.', 404, 'NOT_FOUND');
+    }
+
+    const progressRows = await tx.projectBuildStepProgress.findMany({
+      where: { buildId: build.id },
+      select: {
+        projectStepId: true,
+        completedAt: true,
+      },
+    });
+
+    const completedStepIds = new Set(
+      progressRows
+        .filter((row) => row.completedAt != null)
+        .map((row) => row.projectStepId),
+    );
+
+    if (completedStepIds.has(input.stepId)) {
+      return { buildId: build.id, noOp: true };
+    }
+
+    const allMaterialsReady = build.items.every((item) =>
+      resolveBuildItemStepUnlockReadiness({
+        status: item.status,
+        linkedReservation: item.linkedReservation,
+      }).isReadyForStepUnlock,
+    );
+
+    if (!allMaterialsReady) {
+      throw new AppError(
+        'All required materials must be ready before completing build steps.',
+        409,
+        'BUILD_MATERIALS_NOT_READY',
+      );
+    }
+
+    const firstIncompleteStep = projectSteps.find(
+      (step) => !completedStepIds.has(step.id),
+    );
+
+    if (!firstIncompleteStep || firstIncompleteStep.id !== input.stepId) {
+      throw new AppError(
+        'Only the current build step can be completed.',
+        409,
+        'BUILD_STEP_LOCKED',
+      );
+    }
+
+    const completedAt = new Date();
+    await tx.projectBuildStepProgress.upsert({
+      where: {
+        buildId_projectStepId: {
+          buildId: build.id,
+          projectStepId: input.stepId,
+        },
+      },
+      create: {
+        buildId: build.id,
+        projectStepId: input.stepId,
+        startedAt: completedAt,
+        completedAt,
+      },
+      update: {
+        completedAt,
+      },
+    });
+
+    const completedAfter = new Set([...completedStepIds, input.stepId]);
+    const allStepsCompleted =
+      projectSteps.length > 0 &&
+      projectSteps.every((step) => completedAfter.has(step.id));
+
+    if (allStepsCompleted) {
+      await tx.projectBuild.update({
+        where: { id: build.id },
+        data: {
+          status: 'COMPLETED',
+          completedAt,
+        },
+      });
+    }
+
+    return { buildId: build.id, noOp: false };
+  });
+};
+
+export const updateOwnedProjectBuildItemsStatusBatch = async (input: {
+  projectId: string;
+  buildId: string;
+  learnerId: string;
+  targetStatus: 'ALREADY_OWNED' | 'MISSING';
+  items: Array<{
+    buildItemId: string;
+    previousStatus: string;
+  }>;
+}) => {
+  if (input.items.length === 0) {
+    throw new AppError('No build items selected for update.', 400, 'VALIDATION_ERROR');
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const build = await tx.projectBuild.findFirst({
+      where: {
+        id: input.buildId,
+        learnerId: input.learnerId,
+        projectId: input.projectId,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!build) {
+      throw new AppError('Project build not found.', 404, 'BUILD_NOT_FOUND');
+    }
+
+    if (build.status === 'ARCHIVED') {
+      throw new AppError('Project build is not editable.', 409, 'BUILD_NOT_EDITABLE');
+    }
+
+    const itemIds = [...new Set(input.items.map((item) => item.buildItemId))];
+    const existingItems = await tx.projectBuildItem.findMany({
+      where: {
+        buildId: input.buildId,
+        id: { in: itemIds },
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (existingItems.length !== itemIds.length) {
+      throw new AppError(
+        'One or more build items are no longer part of this build.',
+        409,
+        'AI_ACTION_CONFLICT',
+      );
+    }
+
+    const existingById = new Map(existingItems.map((item) => [item.id, item]));
+
+    for (const item of input.items) {
+      const current = existingById.get(item.buildItemId);
+      if (!current) {
+        throw new AppError(
+          'One or more build items are no longer part of this build.',
+          409,
+          'AI_ACTION_CONFLICT',
+        );
+      }
+
+      if (current.status !== item.previousStatus) {
+        throw new AppError(
+          'Build item state changed before the action could be confirmed.',
+          409,
+          'AI_ACTION_CONFLICT',
+        );
+      }
+
+      if (current.status === input.targetStatus) {
+        continue;
+      }
+
+      await tx.projectBuildItem.update({
+        where: { id: item.buildItemId },
+        data: { status: input.targetStatus },
+      });
+    }
+
+    return { buildId: build.id };
+  });
+};
+
+export const findGuideConversationIdForBuild = async (
+  userId: string,
+  buildId: string,
+) =>
+  prisma.aiConversation.findFirst({
+    where: {
+      userId,
+      projectBuildId: buildId,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+export const insertLearnerAuthoringDraft = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    createdBy: string;
+    categoryId: string;
+    difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+    title: string;
+    shortDescription: string;
+    description: string;
+  },
+) =>
+  tx.learningProject.create({
+    data: {
+      createdBy: input.createdBy,
+      categoryId: input.categoryId,
+      title: input.title,
+      shortDescription: input.shortDescription,
+      description: input.description,
+      difficulty: input.difficulty,
+      status: 'DRAFT',
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+
+export const findOwnedDraftProjectForAuthoring = async (
+  projectId: string,
+  userId: string,
+) =>
+  prisma.learningProject.findFirst({
+    where: {
+      id: projectId,
+      createdBy: userId,
+      status: 'DRAFT',
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+
+export const createAuthoringConversationForDraft = async (input: {
+  userId: string;
+  learningProjectId: string;
+  locale: string;
+  title: string | null;
+}) =>
+  prisma.aiConversation.create({
+    data: {
+      userId: input.userId,
+      mode: 'PROJECT_AUTHORING',
+      locale: input.locale,
+      title: input.title,
+      projectBuildId: null,
+      learningProjectId: input.learningProjectId,
+    },
+    select: {
+      id: true,
+      mode: true,
+      learningProjectId: true,
+      updatedAt: true,
+    },
+  });

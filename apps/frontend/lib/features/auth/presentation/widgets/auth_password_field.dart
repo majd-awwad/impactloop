@@ -47,6 +47,7 @@ class _AuthPasswordFieldState extends State<AuthPasswordField> {
       errorText: widget.errorText,
       onChanged: widget.onChanged,
       suffixIcon: IconButton(
+        tooltip: _obscure ? 'Show password' : 'Hide password',
         icon: Icon(
           _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
           color: colors.textMuted,

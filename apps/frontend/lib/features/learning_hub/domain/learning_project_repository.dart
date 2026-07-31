@@ -1,6 +1,11 @@
 import 'learning_projects_result.dart';
 import 'models/learning_project.dart';
-import 'models/learning_project_submission.dart';
+import 'models/learning_project_submission.dart'
+    show
+        LearningProjectAuthoringSession,
+        LearningProjectSubmission,
+        LearningProjectSubmissionsQuery,
+        LearningProjectSubmissionsResult;
 import 'models/project_build.dart';
 import 'project_engagement.dart';
 import 'project_follow_status.dart';
@@ -35,15 +40,24 @@ abstract class LearningProjectRepository {
     String id,
   );
 
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  });
+
   Future<ProjectBuild?> fetchMyBuild(String projectId);
 
-  Future<ProjectBuild> startBuild(String projectId);
+  Future<ProjectBuild> startBuild(
+    String projectId, {
+    String? recommendationImpressionId,
+  });
 
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
     required ProjectBuildItemStatus status,
     String? learnerNote,
+    String? recommendationImpressionId,
   });
 
   Future<BuildMaterialCandidatesResult> fetchMaterialCandidates(
@@ -59,21 +73,45 @@ abstract class LearningProjectRepository {
 
   Future<ProjectBuild> unlinkMaterial(String projectId, String itemId);
 
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId);
+
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  );
+
   Future<List<MaterialCategory>> fetchProjectCategories();
 
   Future<List<MaterialCategory>> fetchMaterialCategories();
 
-  Future<ProjectEngagement> likeProject(String id);
+  Future<ProjectEngagement> likeProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectEngagement> unlikeProject(String id);
+  Future<ProjectEngagement> unlikeProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectSaveStatus> saveProject(String id);
+  Future<ProjectSaveStatus> saveProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectSaveStatus> unsaveProject(String id);
+  Future<ProjectSaveStatus> unsaveProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectFollowStatus> followProject(String id);
+  Future<ProjectFollowStatus> followProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
-  Future<ProjectFollowStatus> unfollowProject(String id);
+  Future<ProjectFollowStatus> unfollowProject(
+    String id, {
+    String? recommendationImpressionId,
+  });
 
   Future<void> reviewProject(String id, {required int rating, String? comment});
 
@@ -90,5 +128,18 @@ abstract class LearningProjectRepository {
     List<Map<String, dynamic>>? requiredComponents,
     List<Map<String, dynamic>>? steps,
     List<Map<String, dynamic>>? links,
+  });
+
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  });
+
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
   });
 }

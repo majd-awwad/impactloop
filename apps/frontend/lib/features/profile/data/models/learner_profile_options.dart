@@ -8,10 +8,5 @@ class LearnerProfileOptions {
     'Maker / hobbyist',
   ];
 
-  static const skillLevels = [
-    'Beginner',
-    'Intermediate',
-    'Advanced',
-    'Expert',
-  ];
+  static const skillLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
 }

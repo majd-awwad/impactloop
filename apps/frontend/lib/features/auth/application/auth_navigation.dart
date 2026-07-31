@@ -7,11 +7,13 @@ export 'auth_route_helpers.dart';
 export 'portal_navigation.dart';
 
 String postAuthRouteForUser(User user) {
-  if (userHasAdminRole(user) && user.activeRole.trim().toUpperCase() == 'ADMIN') {
+  if (userHasAdminRole(user) &&
+      user.activeRole.trim().toUpperCase() == 'ADMIN') {
     return adminPortalRoute;
   }
 
-  if (userHasDriverRole(user) && user.activeRole.trim().toUpperCase() == 'DRIVER') {
+  if (userHasDriverRole(user) &&
+      user.activeRole.trim().toUpperCase() == 'DRIVER') {
     return driverPortalRoute;
   }
 

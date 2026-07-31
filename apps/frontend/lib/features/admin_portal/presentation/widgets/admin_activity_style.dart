@@ -10,7 +10,10 @@ class AdminActivityVisual {
   final Color accent;
 }
 
-AdminActivityVisual activityVisualForAction(String action, AdminPalette palette) {
+AdminActivityVisual activityVisualForAction(
+  String action,
+  AdminPalette palette,
+) {
   final normalized = action.toUpperCase();
 
   if (normalized.contains('SUSPEND') ||
@@ -38,10 +41,16 @@ AdminActivityVisual activityVisualForAction(String action, AdminPalette palette)
     );
   }
   if (normalized.contains('REPORT')) {
-    return AdminActivityVisual(icon: Icons.flag_outlined, accent: palette.amber);
+    return AdminActivityVisual(
+      icon: Icons.flag_outlined,
+      accent: palette.amber,
+    );
   }
   if (normalized.contains('USER') || normalized.contains('PEOPLE')) {
-    return AdminActivityVisual(icon: Icons.person_outline, accent: palette.blue);
+    return AdminActivityVisual(
+      icon: Icons.person_outline,
+      accent: palette.blue,
+    );
   }
 
   return AdminActivityVisual(icon: Icons.history, accent: palette.purple);

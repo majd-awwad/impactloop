@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../app/router/navigation_extensions.dart';
 import '../../../../../core/errors/api_exception.dart';
+import '../../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../../shared/widgets/app_status_badge.dart';
 import '../../../application/supplier_my_materials_providers.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../../data/supplier_my_materials_repository.dart';
@@ -18,29 +21,25 @@ Future<bool> showSupplierDeleteMaterialDialog(
 }) async {
   final result = await showDialog<bool>(
     context: context,
-    builder: (dialogContext) {
-      final colors = dialogContext.supplierColors;
-
-      return AlertDialog(
-        backgroundColor: colors.surfaceSolid,
-        title: Text(title, style: dialogContext.supplierSectionTitle()),
-        content: Text(body, style: dialogContext.supplierBody()),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(cancelLabel),
+    builder: (dialogContext) => AppDialogShell(
+      title: Text(title),
+      content: Text(body),
+      onClose: () => Navigator.of(dialogContext).pop(false),
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(cancelLabel),
+        ),
+        primaryAction: FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          style: AppStatusButtonStyle.filled(
+            dialogContext,
+            AppStatusTone.danger,
           ),
-          OutlinedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colors.error,
-              side: BorderSide(color: colors.error),
-            ),
-            child: Text(confirmLabel),
-          ),
-        ],
-      );
-    },
+          child: Text(confirmLabel),
+        ),
+      ),
+    ),
   );
 
   return result == true;

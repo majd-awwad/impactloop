@@ -38,6 +38,10 @@ import {
 import { resolveIncidentReviewStatus } from './incident-review-status.js';
 import { resolveLearnerConfirmation as resolveLearnerConfirmationInRepository } from './reservations.learner-confirmation.repository.js';
 import {
+  invalidateAllLearnerHomeResponseCaches,
+  invalidateLearnerHomeForReservationTransition,
+} from '../learner-home/learner-home.service.js';
+import {
   expireStalePendingReservationsByIds,
   expireStalePendingReservationsForMaterialIds,
 } from './reservations.pending-expiry.repository.js';
@@ -186,31 +190,17 @@ const resolveReservationOperationalDelivery = (
   reservation: reservationsRepository.LearnerReservationListRecord,
 ) => {
   const directDelivery = reservation.deliveries[0] ?? null;
-  const groupDelivery = reservation.deliveryGroup?.delivery ?? null;
-  const effectiveDelivery = directDelivery ?? groupDelivery;
 
   return {
-    effectiveDelivery,
-    deliveryCount: effectiveDelivery ? 1 : 0,
-    groupItemCount: reservation.deliveryGroup?.reservations.length ?? 0,
-    groupDeliveryFee:
-      reservation.deliveryGroup?.deliveryFee != null
-        ? Number(reservation.deliveryGroup.deliveryFee)
-        : null,
-    groupTotal:
-      reservation.deliveryGroup != null
-        ? Number(
-            reservation.deliveryGroup.reservations.reduce(
-              (sum, item) =>
-                sum + Number(item.materialSubtotal ?? 0),
-              Number(reservation.deliveryGroup!.deliveryFee),
-            ),
-          )
-        : null,
+    effectiveDelivery: directDelivery,
+    deliveryCount: directDelivery ? 1 : 0,
+    groupItemCount: 0,
+    groupDeliveryFee: null,
+    groupTotal: null,
   };
 };
 
-const mapLearnerReservation = (
+export const mapLearnerReservation = (
   reservation: reservationsRepository.LearnerReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
@@ -561,6 +551,13 @@ export const createReservation = async (
     combineWithDeliveryGroupId: input.combineWithDeliveryGroupId,
   });
 
+  if (
+    result.outcome === 'CREATED' ||
+    ('availabilityChanged' in result && result.availabilityChanged)
+  ) {
+    invalidateAllLearnerHomeResponseCaches();
+  }
+
   switch (result.outcome) {
     case 'CREATED':
       void notifyReservationCreated(result.reservation.id);
@@ -727,6 +724,7 @@ export const cancelReservation = async (
 
   switch (result.outcome) {
     case 'CANCELLED':
+      invalidateLearnerHomeForReservationTransition(null, 'CANCELLED');
       void notifyReservationCancelledByLearner(result.reservation.id);
       return mapCancelledReservation(result.reservation);
     case 'NOT_FOUND':
@@ -918,6 +916,11 @@ export const resolveLearnerConfirmation = async (
   switch (result.outcome) {
     case 'ACCEPTED':
     case 'CANCELLED': {
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_LEARNER_CONFIRMATION',
+        result.outcome === 'ACCEPTED' ? 'ACCEPTED' : 'CANCELLED',
+      );
+
       if (result.outcome === 'ACCEPTED') {
         await notifyNewJobForReservationWaitingDelivery(reservationId);
       }

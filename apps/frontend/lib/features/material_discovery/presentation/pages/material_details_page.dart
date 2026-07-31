@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +13,10 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -20,12 +24,12 @@ import '../../../materials/data/material_reports_api.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../deliveries/application/learner_deliveries_provider.dart';
-import '../../../deliveries/data/models/learner_delivery.dart';
+import '../../../../shared/widgets/supplier/supplier_identity_widgets.dart';
+import '../../../comments/domain/comment_models.dart';
+import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../learning_hub/application/learning_hub_providers.dart';
-import '../../../reservations/application/my_reservations_provider.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
@@ -38,8 +42,9 @@ import '../../../reservations/presentation/reservation_create_error_message.dart
 import '../../../reservations/presentation/widgets/reservation_price_breakdown.dart';
 import '../../application/material_discovery_providers.dart';
 import '../../domain/discovery_material.dart';
-import '../../domain/material_discovery_query.dart';
 import '../../domain/material_discovery_repository.dart';
+import '../../domain/material_performance_models.dart';
+import '../../domain/material_view_operation_key.dart';
 import '../material_reserve_eligibility.dart';
 import '../material_discovery_content.dart';
 import '../widgets/material_details_gallery.dart';
@@ -68,6 +73,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
     this.buildItemId,
     this.returnTo,
     this.componentName,
+    this.recommendationImpressionId,
   });
 
   final String materialId;
@@ -76,14 +82,24 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
   final String? buildItemId;
   final String? returnTo;
   final String? componentName;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<MaterialDetailsPage> createState() =>
       _MaterialDetailsPageState();
 }
 
-class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
-  static const _reservationRefreshInterval = Duration(seconds: 10);
+class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
+    with WidgetsBindingObserver {
+  static const _reservationRefreshInterval = Duration(seconds: 30);
+  static const _transitionalDeliveryStatuses = {
+    'WAITING_FOR_DRIVER',
+    'DRIVER_ASSIGNED',
+    'ARRIVED_PICKUP',
+    'PICKED_UP',
+    'ON_THE_WAY',
+    'ARRIVED_DROPOFF',
+  };
 
   late final MaterialDiscoveryRepository _defaultRepository;
   late MaterialDiscoveryRepository _activeRepository;
@@ -91,40 +107,173 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
   DiscoveryMaterial? _materialOverride;
   bool _showReservationStatusCta = false;
   bool _isLikeUpdating = false;
+  MaterialViewerState? _viewerState;
+  bool _viewerStateLoading = false;
+  CancelToken? _materialCancelToken;
+  CancelToken? _viewerCancelToken;
+  late String _viewOperationKey;
+  bool _viewRecorded = false;
   Timer? _reservationRefreshTimer;
+  int _likeMutationGeneration = 0;
+  bool _observingLifecycle = false;
+  bool _isActive = true;
 
   @override
   void initState() {
     super.initState();
+    _startObservingLifecycle();
     _defaultRepository = ref.read(materialDiscoveryRepositoryProvider);
     _activeRepository = widget.repository ?? _defaultRepository;
-    _materialFuture = _activeRepository.getMaterialById(widget.materialId);
-    _startReservationPolling();
+    _viewOperationKey = createMaterialViewOperationKey(widget.materialId);
+    _materialFuture = _loadPublicMaterial();
+    Future.microtask(_loadViewerStateIfAuthenticated);
   }
 
-  void _startReservationPolling() {
-    _reservationRefreshTimer?.cancel();
-    _reservationRefreshTimer = Timer.periodic(
-      _reservationRefreshInterval,
-      (_) {
-        if (!mounted) {
-          return;
-        }
+  void _startObservingLifecycle() {
+    if (_observingLifecycle) return;
+    WidgetsBinding.instance.addObserver(this);
+    _observingLifecycle = true;
+  }
 
-        final authState = ref.read(authControllerProvider);
-        if (authState.status != AuthStatus.authenticated ||
-            authState.user?.hasRole('LEARNER') != true) {
-          return;
-        }
+  void _stopObservingLifecycle() {
+    if (!_observingLifecycle) return;
+    WidgetsBinding.instance.removeObserver(this);
+    _observingLifecycle = false;
+  }
 
-        ref.invalidate(myReservationsProvider);
-      },
+  @override
+  void activate() {
+    super.activate();
+    _isActive = true;
+    _startObservingLifecycle();
+  }
+
+  @override
+  void deactivate() {
+    _isActive = false;
+    _stopObservingLifecycle();
+    super.deactivate();
+  }
+
+  Future<DiscoveryMaterial?> _loadPublicMaterial() {
+    _materialCancelToken?.cancel('Material request replaced');
+    final cancelToken = CancelToken();
+    _materialCancelToken = cancelToken;
+    final repository = _activeRepository;
+    if (repository is MaterialDetailsPerformanceRepository) {
+      final performanceRepository =
+          repository as MaterialDetailsPerformanceRepository;
+      return performanceRepository
+          .getPublicMaterialById(widget.materialId, cancelToken: cancelToken)
+          .then((material) {
+            if (material != null) _recordViewOnce(performanceRepository);
+            return material;
+          });
+    }
+    return repository.getMaterialById(
+      widget.materialId,
+      recommendationImpressionId: widget.recommendationImpressionId,
+    );
+  }
+
+  void _recordViewOnce(MaterialDetailsPerformanceRepository repository) {
+    if (_viewRecorded) return;
+    _viewRecorded = true;
+    unawaited(
+      repository
+          .recordMaterialView(
+            widget.materialId,
+            operationKey: _viewOperationKey,
+            recommendationImpressionId: widget.recommendationImpressionId,
+          )
+          .catchError((_) {}),
     );
   }
 
   @override
-  void dispose() {
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (mounted && _isActive && state == AppLifecycleState.resumed) {
+      unawaited(_loadViewerStateIfAuthenticated());
+    }
+  }
+
+  Future<void> _loadViewerStateIfAuthenticated() async {
+    // `mounted` remains true while a state is deactivated. Avoid reading a
+    // provider from a page that has already left the active element tree.
+    if (!mounted || !_isActive) return;
+    final authState = ref.read(authControllerProvider);
+    final repository = _activeRepository;
+    if (authState.status != AuthStatus.authenticated ||
+        repository is! MaterialDetailsPerformanceRepository) {
+      _viewerCancelToken?.cancel('Viewer is not authenticated');
+      if (mounted) {
+        setState(() {
+          _viewerState = null;
+          _viewerStateLoading = false;
+        });
+      }
+      _reservationRefreshTimer?.cancel();
+      return;
+    }
+
+    _viewerCancelToken?.cancel('Viewer-state request replaced');
+    final cancelToken = CancelToken();
+    _viewerCancelToken = cancelToken;
+    if (mounted) setState(() => _viewerStateLoading = true);
+    try {
+      final state = await (repository as MaterialDetailsPerformanceRepository)
+          .getMaterialViewerState(widget.materialId, cancelToken: cancelToken);
+      if (!mounted || !_isActive || cancelToken.isCancelled) return;
+      setState(() {
+        _viewerState = state;
+        _viewerStateLoading = false;
+      });
+      _syncReservationPolling();
+    } on DioException catch (error) {
+      if (CancelToken.isCancel(error)) return;
+      if (!cancelToken.isCancelled && mounted && _isActive) {
+        setState(() => _viewerStateLoading = false);
+      }
+    } catch (_) {
+      if (!cancelToken.isCancelled && mounted && _isActive) {
+        setState(() => _viewerStateLoading = false);
+      }
+    }
+  }
+
+  void _syncReservationPolling() {
     _reservationRefreshTimer?.cancel();
+    final reservation = _viewerState?.reservation;
+    if (reservation == null || !_shouldPollReservation(reservation)) {
+      return;
+    }
+    _reservationRefreshTimer = Timer.periodic(_reservationRefreshInterval, (_) {
+      if (!mounted) {
+        return;
+      }
+      unawaited(_loadViewerStateIfAuthenticated());
+    });
+  }
+
+  bool _shouldPollReservation(LearnerReservation reservation) {
+    if (reservation.isPending ||
+        reservation.isAwaitingConfirmation ||
+        reservation.isAwaitingSupplierConfirmation) {
+      return true;
+    }
+
+    final deliveryStatus = reservation.activeDelivery?.status.toUpperCase();
+    return deliveryStatus != null &&
+        _transitionalDeliveryStatuses.contains(deliveryStatus);
+  }
+
+  @override
+  void dispose() {
+    _isActive = false;
+    _stopObservingLifecycle();
+    _reservationRefreshTimer?.cancel();
+    _materialCancelToken?.cancel('Material details disposed');
+    _viewerCancelToken?.cancel('Material details disposed');
     super.dispose();
   }
 
@@ -132,7 +281,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     setState(() {
       _materialOverride = null;
       _showReservationStatusCta = false;
-      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+      _materialFuture = _loadPublicMaterial();
     });
   }
 
@@ -142,11 +291,19 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
     final nextRepository = widget.repository ?? _defaultRepository;
     if (oldWidget.materialId != widget.materialId ||
         oldWidget.repository != widget.repository ||
+        oldWidget.recommendationImpressionId !=
+            widget.recommendationImpressionId ||
         _activeRepository != nextRepository) {
       _activeRepository = nextRepository;
+      _likeMutationGeneration += 1;
+      _isLikeUpdating = false;
       _showReservationStatusCta = false;
       _materialOverride = null;
-      _materialFuture = _activeRepository.getMaterialById(widget.materialId);
+      _viewerState = null;
+      _viewRecorded = false;
+      _viewOperationKey = createMaterialViewOperationKey(widget.materialId);
+      _materialFuture = _loadPublicMaterial();
+      Future.microtask(_loadViewerStateIfAuthenticated);
     }
   }
 
@@ -158,11 +315,12 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       final previousUserId = previous?.user?.id;
       final nextUserId = next.user?.id;
       if (previous?.status != next.status || previousUserId != nextUserId) {
-        setState(() {
+        if (previousUserId != nextUserId) {
+          _likeMutationGeneration += 1;
           _materialOverride = null;
-          _materialFuture =
-              _activeRepository.getMaterialById(widget.materialId);
-        });
+          _isLikeUpdating = false;
+        }
+        unawaited(_loadViewerStateIfAuthenticated());
       }
     });
 
@@ -207,7 +365,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
           );
         }
 
-        final material = _materialOverride ?? snapshot.data;
+        var material = _materialOverride ?? snapshot.data;
         if (material == null) {
           return _SimpleStateScaffold(
             child: _MaterialDetailsStatePanel(
@@ -225,19 +383,34 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
                 ar: 'العودة إلى المواد',
               ),
               primaryActionIcon: Icons.arrow_back_rounded,
+              primaryActionTone: AppStatusTone.neutral,
+              primaryActionProminent: false,
               onPrimaryAction: () => context.go('/materials'),
             ),
           );
         }
 
+        final viewerState = _viewerState;
+        if (viewerState != null) {
+          material = material.copyWith(
+            isLiked: _materialOverride?.isLiked ?? viewerState.isLiked,
+            isOwnMaterial: viewerState.isOwnMaterial,
+            canReserve: viewerState.canReserve,
+            reserveBlockReason: viewerState.reserveBlockReason,
+          );
+        }
+
+        final loadedMaterial = material;
         return _MaterialDetailsLoadedContent(
-          material: material,
+          material: loadedMaterial,
+          learnerReservation: viewerState?.reservation,
+          isLoadingReservation: _viewerStateLoading,
           buildItemId: widget.buildItemId,
           componentName: widget.componentName,
           showReservationStatusCta: _showReservationStatusCta,
           isLikeUpdating: _isLikeUpdating,
-          onReserve: () => _handleReserve(material),
-          onToggleLike: () => _handleToggleLike(material),
+          onReserve: () => _handleReserve(loadedMaterial),
+          onToggleLike: () => _handleToggleLike(loadedMaterial),
         );
       },
     );
@@ -269,6 +442,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       likesCount: optimisticLikes,
       isLiked: shouldLike,
     );
+    final mutationGeneration = ++_likeMutationGeneration;
 
     setState(() {
       _isLikeUpdating = true;
@@ -277,10 +451,16 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
     try {
       final engagement = shouldLike
-          ? await _activeRepository.likeMaterial(material.id)
-          : await _activeRepository.unlikeMaterial(material.id);
+          ? await _activeRepository.likeMaterial(
+              material.id,
+              recommendationImpressionId: widget.recommendationImpressionId,
+            )
+          : await _activeRepository.unlikeMaterial(
+              material.id,
+              recommendationImpressionId: widget.recommendationImpressionId,
+            );
 
-      if (!mounted) {
+      if (!mounted || mutationGeneration != _likeMutationGeneration) {
         return;
       }
 
@@ -292,7 +472,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
         );
       });
     } catch (error) {
-      if (!mounted) {
+      if (!mounted || mutationGeneration != _likeMutationGeneration) {
         return;
       }
 
@@ -301,7 +481,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
       });
       showErrorSnackBar(context, error);
     } finally {
-      if (mounted) {
+      if (mounted && mutationGeneration == _likeMutationGeneration) {
         setState(() {
           _isLikeUpdating = false;
         });
@@ -357,14 +537,17 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
     await ref
         .read(reservationCreateControllerProvider.notifier)
-        .create(enrichedRequest);
+        .create(
+          enrichedRequest,
+          recommendationImpressionId: widget.recommendationImpressionId,
+        );
 
     if (!mounted) {
       return;
     }
 
-    ref.invalidate(myReservationsProvider);
     ref.invalidate(homeSuggestedMaterialsProvider);
+    unawaited(_loadViewerStateIfAuthenticated());
 
     final projectId = widget.projectId?.trim();
     if (projectId != null && projectId.isNotEmpty) {
@@ -373,10 +556,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 
     final returnTo = widget.returnTo?.trim();
     if (returnTo != null && returnTo.isNotEmpty) {
-      showInfoSnackBar(
-        context,
-        'Reservation linked to your build checklist.',
-      );
+      showInfoSnackBar(context, 'Reservation linked to your build checklist.');
       context.go(Uri.decodeComponent(returnTo));
       return;
     }
@@ -391,6 +571,8 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage> {
 class _MaterialDetailsLoadedContent extends ConsumerWidget {
   const _MaterialDetailsLoadedContent({
     required this.material,
+    required this.learnerReservation,
+    required this.isLoadingReservation,
     this.buildItemId,
     this.componentName,
     required this.showReservationStatusCta,
@@ -400,6 +582,8 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   });
 
   final DiscoveryMaterial material;
+  final LearnerReservation? learnerReservation;
+  final bool isLoadingReservation;
   final String? buildItemId;
   final String? componentName;
   final bool showReservationStatusCta;
@@ -411,38 +595,19 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
     final reserveState = ref.watch(reservationCreateControllerProvider);
-    final shouldLoadReservationDetails =
-        authState.status == AuthStatus.authenticated &&
-        authState.user?.hasRole('LEARNER') == true;
-    final myReservationsState = shouldLoadReservationDetails
-        ? ref.watch(myReservationsProvider)
-        : null;
-    final learnerReservation = myReservationsState?.maybeWhen(
-      data: (reservations) => _reservationForMaterial(reservations, material),
-      orElse: () => null,
-    );
-    final myDeliveriesState = learnerReservation != null
-        ? ref.watch(learnerDeliveriesProvider)
-        : null;
-    final learnerDelivery = myDeliveriesState?.maybeWhen(
-      data: (deliveries) =>
-          _deliveryForReservation(deliveries, learnerReservation!.id),
-      orElse: () => null,
-    );
+    final learnerDelivery = learnerReservation?.activeDelivery;
     final reservationUi = MaterialReserveEligibility.resolve(
       material: material,
       authState: authState,
       isSubmitting: reserveState.isLoading,
-      isLoadingReservation: false,
+      isLoadingReservation: isLoadingReservation,
       showReservationStatusCta: showReservationStatusCta,
       learnerReservation: learnerReservation,
     );
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isWide = screenWidth >= 980;
     final showMobileStickyCta =
-        !isWide &&
-        learnerReservation == null &&
-        !showReservationStatusCta;
+        !isWide && learnerReservation == null && !showReservationStatusCta;
 
     final sideColumn = _DetailsSideColumn(
       material: material,
@@ -527,9 +692,20 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               const SizedBox(
                                 height: _materialDetailsRelatedSectionsTopGap,
                               ),
-                              _RelatedMaterialsSections(
-                                material: material,
-                                layout: _RelatedMaterialsLayout.desktop,
+                              _LazyViewportSection(
+                                builder: (_) => _RelatedMaterialsSections(
+                                  material: material,
+                                  layout: _RelatedMaterialsLayout.desktop,
+                                ),
+                              ),
+                              const SizedBox(
+                                height: _materialDetailsSectionGap,
+                              ),
+                              _LazyViewportSection(
+                                builder: (_) => CommentsSection(
+                                  targetType: CommentTargetType.material,
+                                  targetId: material.id,
+                                ),
                               ),
                             ],
                           )
@@ -563,11 +739,20 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
                               const SizedBox(height: AppSpacing.md),
                               _SupplierCard(material: material),
                               const SizedBox(height: AppSpacing.md),
+                              _LazyViewportSection(
+                                builder: (_) => CommentsSection(
+                                  targetType: CommentTargetType.material,
+                                  targetId: material.id,
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
                               const DiscoveryLocationPrivacyPanel(),
                               const SizedBox(height: AppSpacing.md),
-                              _RelatedMaterialsSections(
-                                material: material,
-                                layout: _RelatedMaterialsLayout.mobile,
+                              _LazyViewportSection(
+                                builder: (_) => _RelatedMaterialsSections(
+                                  material: material,
+                                  layout: _RelatedMaterialsLayout.mobile,
+                                ),
                               ),
                               const SizedBox(height: AppSpacing.md),
                               _ReportMaterialSection(materialId: material.id),
@@ -582,44 +767,6 @@ class _MaterialDetailsLoadedContent extends ConsumerWidget {
       ),
     );
   }
-}
-
-LearnerDelivery? _deliveryForReservation(
-  List<LearnerDelivery> deliveries,
-  String reservationId,
-) {
-  LearnerDelivery? latest;
-
-  for (final delivery in deliveries) {
-    if (delivery.reservationId != reservationId) {
-      continue;
-    }
-
-    if (latest == null || delivery.requestedAt.isAfter(latest.requestedAt)) {
-      latest = delivery;
-    }
-  }
-
-  return latest;
-}
-
-LearnerReservation? _reservationForMaterial(
-  List<LearnerReservation> reservations,
-  DiscoveryMaterial material,
-) {
-  for (final reservation in reservations) {
-    if (reservation.material.id != material.id) {
-      continue;
-    }
-
-    if (!reservation.isPending && !reservation.isAccepted) {
-      continue;
-    }
-
-    return reservation;
-  }
-
-  return null;
 }
 
 class _SimpleStateScaffold extends StatelessWidget {
@@ -667,6 +814,8 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
     required this.onPrimaryAction,
     this.secondaryActionLabel,
     this.onSecondaryAction,
+    this.primaryActionTone = AppStatusTone.primary,
+    this.primaryActionProminent = true,
   });
 
   final IconData icon;
@@ -677,6 +826,8 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
   final VoidCallback onPrimaryAction;
   final LocalizedText? secondaryActionLabel;
   final VoidCallback? onSecondaryAction;
+  final AppStatusTone primaryActionTone;
+  final bool primaryActionProminent;
 
   @override
   Widget build(BuildContext context) {
@@ -718,14 +869,33 @@ class _MaterialDetailsStatePanel extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              FilledButton.icon(
-                onPressed: onPrimaryAction,
-                icon: Icon(primaryActionIcon),
-                label: Text(primaryActionLabel.resolve(context)),
-              ),
+              if (primaryActionProminent)
+                FilledButton.icon(
+                  onPressed: onPrimaryAction,
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    primaryActionTone,
+                  ),
+                  icon: Icon(primaryActionIcon),
+                  label: Text(primaryActionLabel.resolve(context)),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: onPrimaryAction,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    primaryActionTone,
+                  ),
+                  icon: Icon(primaryActionIcon),
+                  label: Text(primaryActionLabel.resolve(context)),
+                ),
               if (secondaryActionLabel != null && onSecondaryAction != null)
                 OutlinedButton(
                   onPressed: onSecondaryAction,
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.neutral,
+                  ),
                   child: Text(secondaryActionLabel!.resolve(context)),
                 ),
             ],
@@ -1197,86 +1367,251 @@ class _DetailTextSection extends StatelessWidget {
   }
 }
 
-class _SupplierCard extends StatelessWidget {
+class _SupplierCard extends ConsumerStatefulWidget {
   const _SupplierCard({required this.material});
 
   final DiscoveryMaterial material;
 
   @override
+  ConsumerState<_SupplierCard> createState() => _SupplierCardState();
+}
+
+class _SupplierCardState extends ConsumerState<_SupplierCard> {
+  late bool _isFollowedByViewer;
+  late int _followersCount;
+  bool _isUpdatingFollow = false;
+
+  DiscoveryMaterial get material => widget.material;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromMaterial();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SupplierCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.material.id != material.id ||
+        oldWidget.material.supplier?.isFollowedByViewer !=
+            material.supplier?.isFollowedByViewer ||
+        oldWidget.material.supplier?.followersCount !=
+            material.supplier?.followersCount) {
+      _syncFromMaterial();
+    }
+  }
+
+  void _syncFromMaterial() {
+    _isFollowedByViewer = material.supplier?.isFollowedByViewer ?? false;
+    _followersCount = material.supplier?.followersCount ?? 0;
+  }
+
+  String? get _supplierProfileId => material.supplier?.id.trim();
+
+  Future<void> _toggleFollow() async {
+    final supplierProfileId = _supplierProfileId;
+    if (supplierProfileId == null ||
+        supplierProfileId.isEmpty ||
+        _isUpdatingFollow) {
+      return;
+    }
+
+    final authState = ref.read(authControllerProvider);
+    if (authState.status != AuthStatus.authenticated) {
+      final from = Uri.encodeQueryComponent('/materials/${material.id}');
+      context.go('/login?from=$from');
+      return;
+    }
+
+    if (authState.user?.hasRole('LEARNER') != true) {
+      showInfoSnackBar(context, 'Use a learner account to follow suppliers.');
+      return;
+    }
+
+    final previousFollowing = _isFollowedByViewer;
+    final previousCount = _followersCount;
+    final shouldFollow = !_isFollowedByViewer;
+
+    setState(() {
+      _isUpdatingFollow = true;
+      _isFollowedByViewer = shouldFollow;
+      _followersCount = shouldFollow
+          ? _followersCount + 1
+          : (_followersCount > 0 ? _followersCount - 1 : 0);
+    });
+
+    try {
+      final repository = ref.read(materialDiscoveryRepositoryProvider);
+      final status = shouldFollow
+          ? await repository.followSupplier(supplierProfileId)
+          : await repository.unfollowSupplier(supplierProfileId);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _followersCount = status.followersCount;
+        _isFollowedByViewer = status.isFollowedByViewer;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isFollowedByViewer = previousFollowing;
+        _followersCount = previousCount;
+      });
+      showErrorSnackBar(context, error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingFollow = false;
+        });
+      }
+    }
+  }
+
+  void _openSupplierProfile() {
+    final supplierProfileId = _supplierProfileId;
+    if (supplierProfileId == null || supplierProfileId.isEmpty) {
+      return;
+    }
+
+    context.go('/suppliers/$supplierProfileId');
+  }
+
+  @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final supplier = material.supplier;
+    final displayName =
+        supplier?.displayName ?? material.supplierName.resolve(context);
+    final location = [
+      supplier?.city,
+      supplier?.area,
+    ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
+    final canNavigate = _supplierProfileId != null;
 
     return _Panel(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: palette.mint.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: palette.borderSubtle),
-            ),
-            child: Icon(
-              Icons.storefront_outlined,
-              color: palette.mint,
-              size: 22,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GestureDetector(
+                onTap: canNavigate ? _openSupplierProfile : null,
+                child: SupplierIdentityAvatar(
+                  displayName: displayName,
+                  avatarUrl: supplier?.avatarUrl,
+                  radius: 28,
+                  borderColor: palette.cardSurface,
+                  borderWidth: 2,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: GestureDetector(
+                  onTap: canNavigate ? _openSupplierProfile : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        const LocalizedText(
+                          en: 'Supplier',
+                          ar: 'المورد',
+                        ).resolve(context),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(color: palette.textMuted),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              displayName,
+                              style: AppTextStyles.title(
+                                context,
+                              ).copyWith(color: palette.textPrimary),
+                            ),
+                          ),
+                          if (material.supplierVerified)
+                            Icon(
+                              Icons.verified_rounded,
+                              color: palette.mint,
+                              size: 18,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        material.supplierSubtitle.resolve(context),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
+                      ),
+                      if (location.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          location,
+                          style: AppTextStyles.body(
+                            context,
+                          ).copyWith(color: palette.textSecondary),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (canNavigate) ...[
+            const SizedBox(height: AppSpacing.md),
+            Row(
               children: [
-                Text(
-                  const LocalizedText(
-                    en: 'Supplier',
-                    ar: 'المورد',
-                  ).resolve(context),
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: palette.textMuted),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  material.supplierName.resolve(context),
-                  style: AppTextStyles.title(
-                    context,
-                  ).copyWith(color: palette.textPrimary),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  material.supplierSubtitle.resolve(context),
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: palette.textSecondary),
-                ),
-                if (material.supplierVerified) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: palette.mint.withValues(alpha: 0.1),
-                      borderRadius: AppRadius.pillAll,
-                      border: Border.all(color: palette.borderSubtle),
-                    ),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _isUpdatingFollow ? null : _toggleFollow,
                     child: Text(
-                      const LocalizedText(
-                        en: 'Verified supplier',
-                        ar: 'مورد موثّق',
-                      ).resolve(context),
-                      style: AppTextStyles.label(
-                        context,
-                      ).copyWith(color: palette.textSecondary),
+                      _isFollowedByViewer
+                          ? const LocalizedText(
+                              en: 'Following',
+                              ar: 'متابَع',
+                            ).resolve(context)
+                          : const LocalizedText(
+                              en: 'Follow',
+                              ar: 'متابعة',
+                            ).resolve(context),
                     ),
                   ),
-                ],
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: _openSupplierProfile,
+                  child: Text(
+                    const LocalizedText(
+                      en: 'View profile',
+                      ar: 'عرض الملف',
+                    ).resolve(context),
+                  ),
+                ),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              LocalizedText(
+                en: '$_followersCount followers',
+                ar: '$_followersCount متابع',
+              ).resolve(context),
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
+            ),
+          ],
         ],
       ),
     );
@@ -1361,6 +1696,10 @@ class _MaterialProjectHandoffPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           OutlinedButton.icon(
             onPressed: () => _openLearningHub(context),
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.neutral,
+            ),
             icon: const Icon(Icons.arrow_forward_rounded),
             label: Text(
               const LocalizedText(
@@ -1387,7 +1726,7 @@ class _ReservationPanel extends StatelessWidget {
 
   final DiscoveryMaterial material;
   final MaterialReserveEligibility reservationUi;
-  final LearnerDelivery? learnerDelivery;
+  final LearnerReservationActiveDelivery? learnerDelivery;
   final VoidCallback onReserve;
   final bool showPrimaryReserveButton;
   final bool emphasized;
@@ -1397,8 +1736,7 @@ class _ReservationPanel extends StatelessWidget {
     ar: 'ستختار الكمية في الخطوة التالية.',
   );
 
-  bool get _showQuantityStepHint =>
-      reservationUi.canTapReserve;
+  bool get _showQuantityStepHint => reservationUi.canTapReserve;
 
   @override
   Widget build(BuildContext context) {
@@ -1689,7 +2027,7 @@ class _DetailsSideColumn extends StatelessWidget {
 
   final DiscoveryMaterial material;
   final MaterialReserveEligibility reservationUi;
-  final LearnerDelivery? learnerDelivery;
+  final LearnerReservationActiveDelivery? learnerDelivery;
   final VoidCallback onReserve;
   final bool showPrimaryReserveButton;
 
@@ -1743,6 +2081,7 @@ class _PostReservationStatusCta extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           TextButton.icon(
             onPressed: () => context.go('/learner/reservations'),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.assignment_turned_in_outlined),
             label: const Text('View all reservations'),
           ),
@@ -1760,14 +2099,17 @@ class _LearnerReservationStateCard extends StatelessWidget {
   });
 
   final LearnerReservation reservation;
-  final LearnerDelivery? delivery;
+  final LearnerReservationActiveDelivery? delivery;
   final bool deliveryAvailable;
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final detail = _reservationDetailText(reservation);
-    final activeDelivery = delivery?.isActive == true ? delivery : null;
+    final activeDelivery =
+        delivery != null && _isActiveDelivery(delivery!.status)
+        ? delivery
+        : null;
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -1779,15 +2121,18 @@ class _LearnerReservationStateCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          MaterialStatusBadge(
+          AppStatusBadge(
             label: _reservationStatusLabel(reservation.status),
-            tone: _reservationStatusTone(reservation.status),
+            tone: learnerReservationStatusTone(
+              reservation.status,
+              incidentReviewStatus: reservation.incidentReviewStatus,
+            ),
           ),
           if (delivery != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            MaterialStatusBadge(
+            AppStatusBadge(
               label: deliveryStatusLabel(delivery!.status),
-              tone: deliveryStatusTone(delivery!.status),
+              tone: deliveryStatusAppTone(delivery!.status),
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
@@ -1807,6 +2152,7 @@ class _LearnerReservationStateCard extends StatelessWidget {
             TextButton.icon(
               onPressed: () =>
                   context.push('/learner/deliveries/${activeDelivery.id}'),
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               icon: const Icon(Icons.local_shipping_outlined),
               label: const Text('View delivery status'),
             )
@@ -1814,6 +2160,7 @@ class _LearnerReservationStateCard extends StatelessWidget {
             TextButton.icon(
               onPressed: () =>
                   context.push('/learner/reservations/${reservation.id}'),
+              style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
               icon: const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
                 reservation.isAccepted && deliveryAvailable
@@ -1829,11 +2176,11 @@ class _LearnerReservationStateCard extends StatelessWidget {
 
 String _materialDetailReservationText({
   required LearnerReservation reservation,
-  required LearnerDelivery? delivery,
+  required LearnerReservationActiveDelivery? delivery,
   required bool deliveryAvailable,
   required String fallback,
 }) {
-  if (delivery != null && delivery.isActive) {
+  if (delivery != null && _isActiveDelivery(delivery.status)) {
     return 'Delivery status: ${deliveryStatusLabel(delivery.status)}.';
   }
 
@@ -1847,6 +2194,15 @@ String _materialDetailReservationText({
 
   return fallback;
 }
+
+bool _isActiveDelivery(String status) => !const {
+  'DELIVERED',
+  'CANCELLED',
+  'FAILED_PICKUP',
+  'FAILED_DELIVERY',
+  'DRIVER_NO_SHOW',
+  'LEARNER_NO_SHOW',
+}.contains(status);
 
 String _reservationActionLabel(String status) {
   switch (status) {
@@ -1863,21 +2219,6 @@ String _reservationActionLabel(String status) {
 }
 
 String _reservationStatusLabel(String status) => reservationStatusLabel(status);
-
-MaterialStatusBadgeTone _reservationStatusTone(String status) {
-  switch (status) {
-    case 'PENDING':
-    case 'ACCEPTED':
-      return MaterialStatusBadgeTone.reserved;
-    case 'COMPLETED':
-      return MaterialStatusBadgeTone.reused;
-    case 'REJECTED':
-    case 'CANCELLED':
-    case 'EXPIRED':
-    default:
-      return MaterialStatusBadgeTone.draft;
-  }
-}
 
 String _reservationDetailText(LearnerReservation reservation) {
   if (reservation.isPending) {
@@ -2072,64 +2413,63 @@ class _ReportMaterialSection extends ConsumerWidget {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
+            return AppDialogShell(
               title: Text(
                 const LocalizedText(
                   en: 'Report material',
                   ar: 'الإبلاغ عن المادة',
                 ).resolve(context),
               ),
-              content: SizedBox(
-                width: 420,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedReason,
-                      decoration: const InputDecoration(labelText: 'Reason'),
-                      items: _reasons.entries
-                          .map(
-                            (entry) => DropdownMenuItem(
-                              value: entry.key,
-                              child: Text(entry.value),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => selectedReason = value);
-                      },
+              maxWidth: 420,
+              onClose: () => Navigator.of(dialogContext).pop(false),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedReason,
+                    decoration: const InputDecoration(labelText: 'Reason'),
+                    items: _reasons.entries
+                        .map(
+                          (entry) => DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => selectedReason = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: selectedReason == 'OTHER'
+                          ? 'Describe the issue (required)'
+                          : 'Additional note (optional)',
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: noteController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        labelText: selectedReason == 'OTHER'
-                            ? 'Describe the issue (required)'
-                            : 'Additional note (optional)',
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
+              footer: AppDialogFooter.form(
+                primaryAction: FilledButton(
                   onPressed: () {
                     if (selectedReason == 'OTHER' &&
                         noteController.text.trim().isEmpty) {
                       return;
                     }
-                    Navigator.pop(dialogContext, true);
+                    Navigator.of(dialogContext).pop(true);
                   },
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.danger,
+                  ),
                   child: const Text('Submit report'),
                 ),
-              ],
+              ),
             );
           },
         );
@@ -2171,29 +2511,82 @@ class _ReportMaterialSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = MaterialsUiPalette.of(context);
     return Align(
       alignment: AlignmentDirectional.centerStart,
       child: TextButton.icon(
         onPressed: () => _openReportDialog(context, ref),
-        icon: Icon(Icons.flag_outlined, color: palette.textSecondary, size: 18),
+        style: AppStatusButtonStyle.text(context, AppStatusTone.danger),
+        icon: const Icon(Icons.flag_outlined, size: 18),
         label: Text(
           const LocalizedText(
             en: 'Report material',
             ar: 'الإبلاغ عن المادة',
           ).resolve(context),
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(color: palette.textSecondary),
+          style: AppTextStyles.label(context),
         ),
       ),
     );
   }
 }
 
+class _LazyViewportSection extends StatefulWidget {
+  const _LazyViewportSection({required this.builder});
+
+  final WidgetBuilder builder;
+
+  @override
+  State<_LazyViewportSection> createState() => _LazyViewportSectionState();
+}
+
+class _LazyViewportSectionState extends State<_LazyViewportSection> {
+  ScrollPosition? _position;
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bindAndCheck());
+  }
+
+  void _bindAndCheck() {
+    if (!mounted || _visible) return;
+    final next = Scrollable.maybeOf(context)?.position;
+    if (!identical(next, _position)) {
+      _position?.removeListener(_check);
+      _position = next;
+      _position?.addListener(_check);
+    }
+    _check();
+  }
+
+  void _check() {
+    if (!mounted || _visible) return;
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final top = box.localToGlobal(Offset.zero).dy;
+    if (top <= MediaQuery.sizeOf(context).height + 400) {
+      _position?.removeListener(_check);
+      setState(() => _visible = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _position?.removeListener(_check);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_visible) return widget.builder(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bindAndCheck());
+    return const SizedBox(height: 1);
+  }
+}
+
 enum _RelatedMaterialsLayout { desktop, mobile }
 
-class _RelatedMaterialsSections extends ConsumerWidget {
+class _RelatedMaterialsSections extends ConsumerStatefulWidget {
   const _RelatedMaterialsSections({
     required this.material,
     required this.layout,
@@ -2203,57 +2596,107 @@ class _RelatedMaterialsSections extends ConsumerWidget {
   final _RelatedMaterialsLayout layout;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final categoryId = material.categoryId?.trim();
-    final city = material.city?.trim();
-    final strips = <Widget>[];
+  ConsumerState<_RelatedMaterialsSections> createState() =>
+      _RelatedMaterialsSectionsState();
+}
 
-    if (categoryId != null && categoryId.isNotEmpty) {
-      strips.add(
-        _RelatedMaterialsStrip(
-          excludeMaterialId: material.id,
-          layout: layout,
-          query: MaterialDiscoveryQuery(
-            categoryId: categoryId,
-            status: 'AVAILABLE',
-            limit: 5,
-          ),
-          title: LocalizedText(
-            en: 'More in ${material.category.en}',
-            ar: 'المزيد في ${material.category.ar}',
-          ),
+class _RelatedMaterialsSectionsState
+    extends ConsumerState<_RelatedMaterialsSections> {
+  RelatedMaterialsResult? _result;
+  CancelToken? _cancelToken;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RelatedMaterialsSections oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.material.id != widget.material.id) {
+      _load();
+    }
+  }
+
+  @override
+  void dispose() {
+    _cancelToken?.cancel('Related section disposed');
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    _cancelToken?.cancel('Related request replaced');
+    final repository = ref.read(materialDiscoveryRepositoryProvider);
+    if (repository is! MaterialDetailsPerformanceRepository) {
+      return;
+    }
+    final performanceRepository =
+        repository as MaterialDetailsPerformanceRepository;
+    final token = CancelToken();
+    _cancelToken = token;
+    if (mounted) {
+      setState(() {
+        _result = null;
+        _error = null;
+      });
+    }
+    try {
+      final result = await performanceRepository.fetchRelatedMaterials(
+        widget.material.id,
+        cancelToken: token,
+      );
+      if (mounted && !token.isCancelled) {
+        setState(() => _result = result);
+      }
+    } on DioException catch (error) {
+      if (!CancelToken.isCancel(error) && mounted) {
+        setState(() => _error = error);
+      }
+    } catch (error) {
+      if (error is ApiException && error.isCancellation) {
+        return;
+      }
+      if (mounted) setState(() => _error = error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final result = _result;
+    if (result == null) {
+      if (_error == null) return const SizedBox.shrink();
+      return Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TextButton.icon(
+          onPressed: _load,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Retry related materials'),
         ),
       );
     }
-
-    if (city != null && city.isNotEmpty) {
-      final area = material.area?.trim();
-      final locationLabel = area != null && area.isNotEmpty
-          ? '$city, $area'
-          : city;
-
-      strips.add(
+    final strips = <Widget>[
+      if (result.category.isNotEmpty)
         _RelatedMaterialsStrip(
-          excludeMaterialId: material.id,
-          layout: layout,
-          query: MaterialDiscoveryQuery(
-            city: city,
-            area: area?.isNotEmpty == true ? area : null,
-            status: 'AVAILABLE',
-            limit: 5,
-          ),
+          layout: widget.layout,
+          materials: result.category,
           title: LocalizedText(
-            en: 'More in $locationLabel',
-            ar: 'المزيد في $locationLabel',
+            en: 'More in ${widget.material.category.en}',
+            ar: 'المزيد في ${widget.material.category.ar}',
           ),
         ),
-      );
-    }
-
-    if (strips.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
+      if (result.nearby.isNotEmpty)
+        _RelatedMaterialsStrip(
+          layout: widget.layout,
+          materials: result.nearby,
+          title: const LocalizedText(
+            en: 'More nearby',
+            ar: 'المزيد بالقرب منك',
+          ),
+        ),
+    ];
+    if (strips.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -2266,102 +2709,39 @@ class _RelatedMaterialsSections extends ConsumerWidget {
   }
 }
 
-class _RelatedMaterialsStrip extends ConsumerStatefulWidget {
+class _RelatedMaterialsStrip extends StatelessWidget {
   const _RelatedMaterialsStrip({
-    required this.excludeMaterialId,
     required this.layout,
-    required this.query,
+    required this.materials,
     required this.title,
   });
 
-  final String excludeMaterialId;
   final _RelatedMaterialsLayout layout;
-  final MaterialDiscoveryQuery query;
+  final List<DiscoveryMaterial> materials;
   final LocalizedText title;
 
   @override
-  ConsumerState<_RelatedMaterialsStrip> createState() =>
-      _RelatedMaterialsStripState();
-}
-
-class _RelatedMaterialsStripState
-    extends ConsumerState<_RelatedMaterialsStrip> {
-  List<DiscoveryMaterial> _materials = const [];
-  var _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMaterials();
-  }
-
-  @override
-  void didUpdateWidget(covariant _RelatedMaterialsStrip oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.excludeMaterialId != widget.excludeMaterialId ||
-        oldWidget.query != widget.query) {
-      _loaded = false;
-      _materials = const [];
-      _loadMaterials();
-    }
-  }
-
-  Future<void> _loadMaterials() async {
-    try {
-      final repository = ref.read(materialDiscoveryRepositoryProvider);
-      final result = await repository.fetchMaterials(widget.query);
-      final materials = result.items
-          .where((item) => item.id != widget.excludeMaterialId)
-          .take(4)
-          .toList(growable: false);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _materials = materials;
-        _loaded = true;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _materials = const [];
-        _loaded = true;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (!_loaded || _materials.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
     final palette = MaterialsUiPalette.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          widget.title.resolve(context),
+          title.resolve(context),
           style: AppTextStyles.title(
             context,
           ).copyWith(color: palette.textPrimary),
         ),
         const SizedBox(height: AppSpacing.md),
-        if (widget.layout == _RelatedMaterialsLayout.desktop)
+        if (layout == _RelatedMaterialsLayout.desktop)
           Wrap(
             spacing: AppSpacing.lg,
             runSpacing: AppSpacing.lg,
-            children: _materials
+            children: materials
                 .map(
                   (related) => SizedBox(
                     width: _relatedCompactCardWidth,
-                    height: ImpactMaterialCompactCard.height,
+                    height: ImpactMaterialCompactCard.baseHeight,
                     child: _RelatedMaterialCompactCard(material: related),
                   ),
                 )
@@ -2369,14 +2749,14 @@ class _RelatedMaterialsStripState
           )
         else
           SizedBox(
-            height: ImpactMaterialCompactCard.height,
+            height: ImpactMaterialCompactCard.baseHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _materials.length,
+              itemCount: materials.length,
               separatorBuilder: (context, index) =>
                   const SizedBox(width: AppSpacing.md),
               itemBuilder: (context, index) {
-                final related = _materials[index];
+                final related = materials[index];
 
                 return SizedBox(
                   width: 320,
@@ -2440,7 +2820,8 @@ class _ReserveMaterialDialog extends ConsumerStatefulWidget {
       _ReserveMaterialDialogState();
 }
 
-class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> {
+class _ReserveMaterialDialogState
+    extends ConsumerState<_ReserveMaterialDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _quantityController;
   final _messageController = TextEditingController();
@@ -2539,16 +2920,6 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
         });
         return;
       }
-
-      final windows = _deliveryWindowsPayload();
-      if (windows.isEmpty) {
-        setState(() {
-          _quote = null;
-          _quoteError = null;
-          _quoteLoading = false;
-        });
-        return;
-      }
     }
 
     setState(() {
@@ -2563,8 +2934,9 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
         quantity: quantity,
         fulfillmentMethod: _fulfillmentMethod!,
         dropoffCity: _isDelivery ? _dropoffCityController.text.trim() : null,
-        learnerPreferredDeliveryWindows:
-            _isDelivery ? _deliveryWindowsPayload() : const [],
+        learnerPreferredDeliveryWindows: _isDelivery
+            ? _deliveryWindowsPayload()
+            : const [],
       );
 
       var quote = await repository.fetchReservationQuote(baseRequest);
@@ -2652,6 +3024,10 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
     final windows = <ReservationPreferredWindow>[];
 
     for (final draft in drafts) {
+      if (draft.isBlank) {
+        continue;
+      }
+
       final error = draft.validationError(
         now: now,
         minimumRemainingTime: minimumRemainingTime,
@@ -2778,10 +3154,6 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
         return false;
       }
 
-      if (_deliveryWindowsPayload().isEmpty) {
-        return false;
-      }
-
       return _quote != null && !_quoteLoading && _quoteError == null;
     }
 
@@ -2795,10 +3167,6 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
 
     if (_isDelivery && _dropoffCityController.text.trim().isEmpty) {
       return 'Enter drop-off city to calculate delivery fee.';
-    }
-
-    if (_isDelivery && _deliveryWindowsPayload().isEmpty) {
-      return 'Add at least one delivery window to calculate delivery fee.';
     }
 
     if (!_quoteLoading && _quote == null && _quoteError == null) {
@@ -2916,8 +3284,7 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
             safeDropoffAllowed: _safeDropoffAllowed,
             deliveryNote: deliveryNote.isEmpty ? null : deliveryNote,
             combineWithDeliveryGroupId:
-                _combineWithGroup &&
-                    _quote?.deliveryGroupCandidate != null
+                _combineWithGroup && _quote?.deliveryGroupCandidate != null
                 ? _quote!.deliveryGroupCandidate!.id
                 : null,
           ),
@@ -3159,7 +3526,7 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
                           PreferredWindowInput(
                             windows: _pickupWindows,
                             enabled: !_isSubmitting,
-                            label: 'Preferred pickup windows',
+                            label: 'Preferred pickup windows (optional)',
                             onChanged: (windows) {
                               setState(
                                 () => _pickupWindows
@@ -3173,7 +3540,7 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
                           PreferredWindowInput(
                             windows: _deliveryWindows,
                             enabled: !_isSubmitting,
-                            label: 'Preferred delivery windows',
+                            label: 'Preferred delivery windows (optional)',
                             onChanged: (windows) {
                               setState(
                                 () => _deliveryWindows
@@ -3401,40 +3768,11 @@ class _ReserveMaterialDialogState extends ConsumerState<_ReserveMaterialDialog> 
                   AppSpacing.md,
                   AppSpacing.md,
                 ),
-                child: isNarrow
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _ReservationDialogSubmitButton(
-                            isSubmitting: _isSubmitting,
-                            onPressed: _canSubmitReservation ? _submit : null,
-                            fullWidth: true,
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          TextButton(
-                            onPressed: _isSubmitting
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: _isSubmitting
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          _ReservationDialogSubmitButton(
-                            isSubmitting: _isSubmitting,
-                            onPressed: _canSubmitReservation ? _submit : null,
-                          ),
-                        ],
-                      ),
+                child: _ReservationDialogSubmitButton(
+                  isSubmitting: _isSubmitting,
+                  onPressed: _canSubmitReservation ? _submit : null,
+                  fullWidth: true,
+                ),
               ),
             ],
           ),
@@ -3668,9 +4006,9 @@ class _BuildChecklistContextBanner extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     componentLabel,
-                    style: AppTextStyles.body(context).copyWith(
-                      color: palette.textSecondary,
-                    ),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
                   ),
                 ],
               ],

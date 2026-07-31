@@ -43,7 +43,9 @@ class SupplierSettingsControls extends ConsumerWidget {
         ),
         NavPillMenu<ThemeMode>(
           icon: themeModeIcon(settings.themeMode),
-          label: compact ? l.themeLabel : localizedThemeLabel(settings.themeMode),
+          label: compact
+              ? l.themeLabel
+              : localizedThemeLabel(settings.themeMode),
           items: ThemeMode.values,
           selectedValue: settings.themeMode,
           itemLabel: localizedThemeLabel,

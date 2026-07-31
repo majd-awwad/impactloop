@@ -16,13 +16,18 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/health/presentation/pages/health_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
+import '../../features/home/presentation/pages/learner_home_recommendations_page.dart';
+import '../../features/home/domain/learner_home_models.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_tracking_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_delivery_detail_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_authoring_pages.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_hub_page.dart';
+import '../../features/learning_hub/domain/models/project_build.dart';
+import '../../features/learning_hub/presentation/pages/learning_project_build_guide_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_build_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
@@ -31,6 +36,7 @@ import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
 import '../../features/material_discovery/presentation/pages/materials_discovery_page.dart';
+import '../../features/material_discovery/presentation/pages/public_supplier_page.dart';
 import '../../features/profile/presentation/pages/learner_profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_edit_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
@@ -48,6 +54,7 @@ import '../../features/supplier_portal/presentation/pages/supplier_edit_material
 import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_owned_material_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_reservation_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_notifications_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedule_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_dashboard_page.dart';
@@ -59,7 +66,10 @@ import '../../features/admin_portal/presentation/pages/admin_overview_page.dart'
 import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_delivery_detail_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_export_center_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_no_show_report_detail_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_no_show_reports_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_reservations_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_impact_page.dart';
@@ -67,6 +77,7 @@ import '../../features/admin_portal/presentation/pages/admin_materials_page.dart
 import '../../features/admin_portal/presentation/pages/admin_people_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_supplier_verification_page.dart';
 import '../../features/admin_portal/presentation/widgets/admin_shell.dart';
+import '../../features/ai/presentation/pages/general_learning_chat_page.dart';
 import '../../features/invitations/presentation/pages/invite_accept_page.dart';
 
 const _supplierAccessDeniedRoute = '/supplier/access-denied';
@@ -127,6 +138,15 @@ bool _isAdminPortalPath(String path) {
 
 bool _isCheckingPath(String path) => path == authCheckingRoute;
 
+String? _recommendationImpressionIdFromExtra(Object? extra) {
+  if (extra is! String) {
+    return null;
+  }
+
+  final normalized = extra.trim();
+  return normalized.isEmpty ? null : normalized;
+}
+
 bool _isAuthPage(String path) =>
     path == loginRoute ||
     path == registerRoute ||
@@ -160,12 +180,17 @@ _RouteAccessLevel _routeAccessForPath(String path) {
   }
 
   if (path == '/learning/add-draft' ||
+      path == '/learning/create-project' ||
+      path.startsWith('/learning/authoring/') ||
       path == '/learning/submissions' ||
       path.startsWith('/learning/submissions/') ||
       (path.startsWith('/learning/') && path.endsWith('/build')) ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
-      path.startsWith('/learner/deliveries/')) {
+      path.startsWith('/learner/deliveries/') ||
+      path.startsWith('/home/recommendations/') ||
+      path == '/ai/assistant' ||
+      path == '/ai/general-learning') {
     return _RouteAccessLevel.learner;
   }
 
@@ -483,6 +508,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 const NoTransitionPage(child: HomePage()),
           ),
           GoRoute(
+            path: '/home/recommendations/:sectionKey',
+            builder: (context, state) {
+              final sectionKey = LearnerHomeSectionKey.fromApiValue(
+                state.pathParameters['sectionKey'],
+              );
+              if (sectionKey == null) {
+                return const HomePage();
+              }
+
+              return LearnerHomeRecommendationsPage(sectionKey: sectionKey);
+            },
+          ),
+          GoRoute(
             path: '/materials',
             pageBuilder: (context, state) {
               final search = state.uri.queryParameters['q']?.trim();
@@ -517,6 +555,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/profile',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: ProfilePage()),
+          ),
+          GoRoute(
+            path: '/ai/assistant',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: AiAssistantRoutePage(
+                conversationId: state.uri.queryParameters['conversationId'],
+              ),
+            ),
           ),
         ],
       ),
@@ -566,8 +612,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/ai/general-learning',
+        redirect: (context, state) {
+          final conversationId = state.uri.queryParameters['conversationId'];
+          if (conversationId == null || conversationId.isEmpty) {
+            return '/ai/assistant';
+          }
+          return '/ai/assistant?conversationId=$conversationId';
+        },
+      ),
+      GoRoute(
         path: authCheckingRoute,
         builder: (context, state) => const AuthCheckingPage(),
+      ),
+      GoRoute(
+        path: '/learning/create-project',
+        builder: (context, state) => const LearningProjectCreateChoicePage(),
+      ),
+      GoRoute(
+        path: '/learning/authoring/new',
+        builder: (context, state) => const LearningProjectAiStarterPage(),
       ),
       GoRoute(
         path: '/learning/add-draft',
@@ -576,6 +640,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/learning/submissions',
         builder: (context, state) => const LearningProjectSubmissionsPage(),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id/author/assistant',
+        builder: (context, state) => LearningProjectAuthoringAssistantPage(
+          projectId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
+        path: '/learning/submissions/:id/author',
+        builder: (context, state) => LearningProjectAuthoringWorkspacePage(
+          projectId: state.pathParameters['id']!,
+        ),
       ),
       GoRoute(
         path: '/learning/submissions/:id/edit',
@@ -590,11 +666,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/learning/:id/build/guide',
+        builder: (context, state) {
+          final projectId = state.pathParameters['id']!;
+          final conversationId =
+              state.uri.queryParameters['conversationId']?.trim() ?? '';
+          final buildContext = state.extra is BuildGuideContext
+              ? state.extra! as BuildGuideContext
+              : null;
+
+          return LearningProjectBuildGuidePage(
+            projectId: projectId,
+            conversationId: conversationId,
+            buildContext: buildContext,
+          );
+        },
+      ),
+      GoRoute(
         path: '/learning/:id/build',
         builder: (context, state) {
           final projectId = state.pathParameters['id']!;
 
-          return LearningProjectBuildPage(projectId: projectId);
+          return LearningProjectBuildPage(
+            projectId: projectId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
+          );
         },
       ),
       GoRoute(
@@ -602,7 +700,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final projectId = state.pathParameters['id']!;
 
-          return LearningProjectDetailsPage(projectId: projectId);
+          return LearningProjectDetailsPage(
+            projectId: projectId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
+          );
         },
       ),
       GoRoute(
@@ -613,10 +716,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
           return MaterialDetailsPage(
             materialId: materialId,
+            recommendationImpressionId: _recommendationImpressionIdFromExtra(
+              state.extra,
+            ),
             projectId: query['projectId'],
             buildItemId: query['buildItemId'],
             returnTo: query['returnTo'],
             componentName: query['componentName'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/suppliers/:supplierProfileId',
+        builder: (context, state) {
+          final supplierProfileId = state.pathParameters['supplierProfileId']!;
+
+          return PublicSupplierPage(
+            supplierProfileId: supplierProfileId,
           );
         },
       ),
@@ -770,6 +886,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/supplier/reservations/:reservationId',
+            builder: (context, state) => SupplierReservationDetailPage(
+              reservationId: state.pathParameters['reservationId']!,
+            ),
+          ),
+          GoRoute(
             path: '/supplier/pickup-schedule',
             builder: (context, state) => const SupplierPickupSchedulePage(),
           ),
@@ -842,14 +964,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/admin/no-show-reports/:reportId',
+            builder: (context, state) => AdminNoShowReportDetailPage(
+              reportId: state.pathParameters['reportId']!,
+            ),
+          ),
+          GoRoute(
             path: '/admin/deliveries',
             builder: (context, state) => AdminDeliveriesPage(
               initialOpenDeliveryId: state.uri.queryParameters['open'],
             ),
           ),
           GoRoute(
+            path: '/admin/deliveries/:deliveryId',
+            builder: (context, state) => AdminDeliveryDetailPage(
+              deliveryId: state.pathParameters['deliveryId']!,
+            ),
+          ),
+          GoRoute(
             path: '/admin/learning-projects',
             builder: (context, state) => const AdminLearningProjectsPage(),
+          ),
+          GoRoute(
+            path: '/admin/exports',
+            builder: (context, state) => const AdminExportCenterPage(),
           ),
         ],
       ),

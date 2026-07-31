@@ -93,16 +93,18 @@ class AuthRepository {
     return result.user;
   }
 
-  Future<void> changePassword({
+  Future<User> changePassword({
     required String currentPassword,
     required String newPassword,
     required String confirmNewPassword,
-  }) {
-    return _api.changePassword(
+  }) async {
+    final result = await _api.changePassword(
       currentPassword: currentPassword,
       newPassword: newPassword,
       confirmNewPassword: confirmNewPassword,
     );
+    await _persistSession(result.tokens, result.user);
+    return result.user;
   }
 
   Future<void> forgotPassword({required String email}) {

@@ -1,0 +1,573 @@
+import { env, isAiChatProviderOperational } from '../../config/env.js';
+import type {
+  AiConversation,
+  AiMessage,
+  AiScopeClassification,
+} from '../../generated/prisma/client.js';
+import { AppError } from '../../utils/app-error.js';
+import { logger } from '../../observability/logger.js';
+
+import {
+  buildBoundedConversationHistory,
+  deriveConversationPreview,
+  deriveConversationTitle,
+  parseStoredContentBlocks,
+} from './ai-context-builder.js';
+import type { AiContentBlock } from './ai.content-blocks.js';
+import { aiContentBlocksSchema } from './ai.content-blocks.js';
+import {
+  buildConversationalResponseText,
+  detectConversationalIntent,
+  detectResponseLocale,
+} from './ai-conversational-intent.js';
+import {
+  executeLearnerAgentPlatformTurn,
+} from './agent/ai-agent-turn.service.js';
+import {
+  AI_DISABLED_COPY,
+  CLARIFICATION_COPY,
+  GENERAL_LEARNING_POLICY_VERSION,
+  REFUSAL_COPY,
+} from './ai.policy.js';
+import { DANGEROUS_SAFETY_COPY } from './agent/ai-agent-safety-guard.service.js';
+import {
+  classifyScopeDeterministic,
+  mergeClassifierResult,
+  shouldSkipAnswerProvider,
+  shouldUseAnswerProvider,
+} from './ai-scope-guard.js';
+import {
+  acquireConversationProcessingLock,
+  createAssistantMessage,
+  createUserMessage,
+  deleteAssistantMessage,
+  findAssistantReplyToUserMessage,
+  findUserMessageByClientId,
+  loadRecentConversationMessages,
+  releaseConversationProcessingLock,
+  touchConversationActivity,
+} from './ai.repository.js';
+import { getAiChatProvider } from './providers/ai-chat-provider.factory.js';
+import type { AiLocale, AiTurnResponse, BoundedHistoryMessage } from './ai.types.js';
+
+const textBlock = (
+  text: string,
+  purpose: 'answer' | 'refusal' | 'clarification' | 'safety' = 'answer',
+): AiContentBlock => ({
+  type: 'text',
+  text,
+  purpose,
+});
+
+const errorBlock = (
+  code: string,
+  message: string,
+  retryable: boolean,
+): AiContentBlock => ({
+  type: 'error',
+  code,
+  message,
+  retryable,
+});
+
+const assertProviderOperational = (responseLocale: AiLocale): void => {
+  if (!isAiChatProviderOperational()) {
+    throw new AppError(
+      AI_DISABLED_COPY[responseLocale],
+      503,
+      'AI_DISABLED',
+    );
+  }
+};
+
+const resolveScope = async (
+  userMessage: string,
+  responseLocale: AiLocale,
+): Promise<{
+  classification: AiScopeClassification;
+  confidence: number;
+  usedClassifier: boolean;
+}> => {
+  const deterministic = classifyScopeDeterministic(userMessage);
+
+  if (
+    deterministic.confidence >= 0.85 &&
+    deterministic.classification !== 'UNCLEAR'
+  ) {
+    return {
+      classification: deterministic.classification,
+      confidence: deterministic.confidence,
+      usedClassifier: false,
+    };
+  }
+
+  if (!isAiChatProviderOperational()) {
+    return {
+      classification: deterministic.classification,
+      confidence: deterministic.confidence,
+      usedClassifier: false,
+    };
+  }
+
+  const provider = getAiChatProvider();
+  const classified = await provider.classifyScope({
+    locale: responseLocale,
+    userMessage,
+  });
+
+  const merged = mergeClassifierResult(
+    deterministic,
+    classified.data,
+    env.aiChatClassifierConfidenceThreshold,
+  );
+
+  return {
+    classification: merged.classification,
+    confidence: merged.confidence,
+    usedClassifier: merged.usedClassifier,
+  };
+};
+
+const mapTurnResponse = (input: {
+  conversation: AiConversation;
+  userMessage: AiMessage;
+  assistantMessage: AiMessage | null;
+  blocks: AiContentBlock[];
+  classification: AiScopeClassification;
+  locale: AiLocale;
+}): AiTurnResponse => ({
+  conversationId: input.conversation.id,
+  userMessageId: input.userMessage.id,
+  assistantMessageId: input.assistantMessage?.id ?? null,
+  mode: 'LEARNER_ASSISTANT',
+  locale: input.locale,
+  contentBlocks: input.blocks,
+  meta: {
+    provider: input.assistantMessage?.provider ?? 'system',
+    model: input.assistantMessage?.model ?? null,
+    policyVersion:
+      input.assistantMessage?.policyVersion ?? GENERAL_LEARNING_POLICY_VERSION,
+    scopeClassification: input.classification,
+    latencyMs: input.assistantMessage?.latencyMs ?? null,
+    usage: {
+      inputTokens: input.assistantMessage?.inputTokens ?? null,
+      outputTokens: input.assistantMessage?.outputTokens ?? null,
+    },
+  },
+});
+
+export const processGeneralLearningTurn = async (input: {
+  conversation: AiConversation;
+  text: string;
+  locale: AiLocale;
+  clientMessageId: string;
+}): Promise<AiTurnResponse> => {
+  if (input.conversation.mode !== 'GENERAL_LEARNING') {
+    throw new AppError('Unsupported conversation mode.', 400, 'VALIDATION_ERROR');
+  }
+
+  if (input.conversation.status !== 'ACTIVE') {
+    throw new AppError(
+      'This conversation is archived.',
+      409,
+      'AI_CONVERSATION_NOT_FOUND',
+    );
+  }
+
+  const existingUserMessage = await findUserMessageByClientId({
+    conversationId: input.conversation.id,
+    clientMessageId: input.clientMessageId,
+  });
+
+  if (existingUserMessage) {
+    const existingAssistant = await findAssistantReplyToUserMessage(
+      existingUserMessage.id,
+    );
+
+    if (
+      existingAssistant &&
+      ['COMPLETED', 'REFUSED'].includes(existingAssistant.status)
+    ) {
+      return mapTurnResponse({
+        conversation: input.conversation,
+        userMessage: existingUserMessage,
+        assistantMessage: existingAssistant,
+        blocks: parseStoredContentBlocks(existingAssistant.contentBlocks),
+        classification:
+          existingAssistant.scopeClassification ?? 'DOMAIN_KNOWLEDGE',
+        locale: input.locale,
+      });
+    }
+
+    if (
+      existingAssistant?.status !== 'FAILED' &&
+      (existingAssistant?.status === 'PROCESSING' ||
+        input.conversation.processingState === 'PROCESSING')
+    ) {
+      throw new AppError(
+        'This conversation is already processing a message.',
+        409,
+        'AI_CONVERSATION_BUSY',
+      );
+    }
+  }
+
+  const staleBefore = new Date(Date.now() - env.aiChatProcessingStaleMs);
+  const lockAcquired = await acquireConversationProcessingLock({
+    conversationId: input.conversation.id,
+    staleBefore,
+  });
+
+  if (!lockAcquired) {
+    throw new AppError(
+      'This conversation is already processing a message.',
+      409,
+      'AI_CONVERSATION_BUSY',
+    );
+  }
+
+  let userMessage = existingUserMessage;
+
+  try {
+    if (existingUserMessage) {
+      const failedAssistant = await findAssistantReplyToUserMessage(
+        existingUserMessage.id,
+      );
+      if (failedAssistant?.status === 'FAILED') {
+        await deleteAssistantMessage(failedAssistant.id);
+      }
+    }
+
+    if (!userMessage) {
+      userMessage = await createUserMessage({
+        conversationId: input.conversation.id,
+        contentText: input.text,
+        clientMessageId: input.clientMessageId,
+        locale: input.locale,
+      });
+    }
+
+    const responseLocale = detectResponseLocale(input.text, input.locale);
+
+    let blocks: AiContentBlock[] = [];
+    let assistantStatus: 'COMPLETED' | 'REFUSED' = 'COMPLETED';
+    let scopeClassification: AiScopeClassification = 'DOMAIN_KNOWLEDGE';
+    let providerName = 'system';
+    let model: string | null = null;
+    let latencyMs: number | null = null;
+    let inputTokens: number | null = null;
+    let outputTokens: number | null = null;
+
+    const history = buildBoundedConversationHistory(
+      await loadRecentConversationMessages({
+        conversationId: input.conversation.id,
+        limit: env.aiChatMaxHistoryMessages,
+      }),
+      env.aiChatMaxHistoryMessages,
+    );
+
+    const agentResult = await executeLearnerAgentPlatformTurn({
+      userMessage: input.text,
+      locale: responseLocale,
+      conversationId: input.conversation.id,
+      authenticatedUserId: input.conversation.userId,
+      clientMessageId: input.clientMessageId,
+      requestId: null,
+      history,
+    });
+
+    if (agentResult?.semanticRoute === 'GENERAL_LEARNING') {
+      assertProviderOperational(responseLocale);
+
+      const provider = getAiChatProvider();
+      const answer = await provider.generateGeneralLearningAnswer({
+        locale: responseLocale,
+        userMessage: input.text,
+        history,
+        scopeClassification: 'DOMAIN_KNOWLEDGE',
+      });
+
+      blocks = answer.data.blocks;
+      providerName = answer.provider;
+      model = answer.model;
+      latencyMs = answer.latencyMs;
+      inputTokens = answer.usage.inputTokens;
+      outputTokens = answer.usage.outputTokens;
+      scopeClassification = 'DOMAIN_KNOWLEDGE';
+    } else if (agentResult) {
+      blocks = agentResult.blocks;
+      providerName = agentResult.providerName;
+      model = agentResult.model;
+      latencyMs = agentResult.latencyMs;
+      inputTokens = agentResult.inputTokens;
+      outputTokens = agentResult.outputTokens;
+      if (agentResult.route === 'OUT_OF_SCOPE') {
+        scopeClassification = 'OUT_OF_SCOPE';
+        assistantStatus = 'REFUSED';
+      } else if (agentResult.route === 'DANGEROUS_REQUEST') {
+        scopeClassification = 'DANGEROUS_REQUEST';
+        assistantStatus = 'REFUSED';
+      } else {
+        scopeClassification = 'DOMAIN_KNOWLEDGE';
+      }
+    } else {
+      blocks = [textBlock(CLARIFICATION_COPY[responseLocale])];
+      scopeClassification = 'UNCLEAR';
+    }
+
+    const validatedBlocks = aiContentBlocksSchema.parse(blocks);
+
+    const assistantMessage = await createAssistantMessage({
+      conversationId: input.conversation.id,
+      inReplyToMessageId: userMessage.id,
+      status: assistantStatus,
+      contentBlocks: validatedBlocks,
+      scopeClassification,
+      locale: responseLocale,
+      provider: providerName,
+      model,
+      policyVersion: GENERAL_LEARNING_POLICY_VERSION,
+      latencyMs,
+      inputTokens,
+      outputTokens,
+    });
+
+    const title =
+      input.conversation.title ??
+      deriveConversationTitle(input.text);
+
+    await touchConversationActivity({
+      conversationId: input.conversation.id,
+      locale: input.locale,
+      title,
+    });
+
+    logger.info(
+      {
+        conversationId: input.conversation.id,
+        userMessageId: userMessage.id,
+        assistantMessageId: assistantMessage.id,
+        scopeClassification,
+        provider: providerName,
+        model,
+        latencyMs,
+      },
+      'general learning turn completed',
+    );
+
+    return mapTurnResponse({
+      conversation: input.conversation,
+      userMessage,
+      assistantMessage,
+      blocks: validatedBlocks,
+      classification: scopeClassification,
+      locale: responseLocale,
+    });
+  } catch (error) {
+    const responseLocale = detectResponseLocale(input.text, input.locale);
+
+    if (error instanceof AppError) {
+      const failureDetails =
+        typeof error.details === 'object' && error.details !== null
+          ? (error.details as {
+              model?: string;
+              retryDelayMs?: number;
+              quotaMetric?: string;
+              quotaId?: string;
+              quotaValue?: string;
+            })
+          : undefined;
+
+      if (
+        error.code === 'AI_PROVIDER_QUOTA_EXCEEDED' ||
+        failureDetails?.retryDelayMs
+      ) {
+        logger.warn(
+          {
+            conversationId: input.conversation.id,
+            errorCode: error.code,
+            model: failureDetails?.model,
+            quotaMetric: failureDetails?.quotaMetric,
+            quotaId: failureDetails?.quotaId,
+            quotaValue: failureDetails?.quotaValue,
+            retryDelayMs: failureDetails?.retryDelayMs,
+          },
+          'AI chat provider quota or rate limit reached; user may retry later',
+        );
+      }
+    }
+
+    if (userMessage) {
+      const existingAssistant = await findAssistantReplyToUserMessage(
+        userMessage.id,
+      );
+
+      if (!existingAssistant) {
+        const message =
+          error instanceof AppError
+            ? error.message
+            : 'The learning assistant failed to respond.';
+
+        const code =
+          error instanceof AppError ? error.code : 'AI_PROVIDER_ERROR';
+
+        await createAssistantMessage({
+          conversationId: input.conversation.id,
+          inReplyToMessageId: userMessage.id,
+          status: 'FAILED',
+          contentBlocks: [
+            errorBlock(
+              code,
+              message,
+              code === 'AI_PROVIDER_TIMEOUT' ||
+                code === 'AI_PROVIDER_ERROR' ||
+                code === 'AI_PROVIDER_QUOTA_EXCEEDED' ||
+                code === 'AI_RESPONSE_INVALID',
+            ),
+          ],
+          scopeClassification: 'UNCLEAR',
+          locale: responseLocale,
+          provider: 'system',
+          model: null,
+          policyVersion: GENERAL_LEARNING_POLICY_VERSION,
+          latencyMs: null,
+          inputTokens: null,
+          outputTokens: null,
+          errorCode: code,
+        });
+      }
+    }
+
+    throw error;
+  } finally {
+    await releaseConversationProcessingLock(input.conversation.id);
+  }
+};
+
+export const buildMessagePreviewFromBlocks = deriveConversationPreview;
+
+export const MANUAL_DRAFT_COPILOT_POLICY_VERSION = 'MANUAL_DRAFT_COPILOT_V1';
+
+const MANUAL_DRAFT_REFUSAL_COPY = {
+  en: 'I can help you document and improve this learning project, but I cannot answer unrelated questions here.',
+  ar: 'يمكنني مساعدتك في توثيق مشروع التعلّم وتحسينه، لكن لا أستطيع الإجابة عن أسئلة غير مرتبطة هنا.',
+} as const;
+
+const MANUAL_DRAFT_COPILOT_INSTRUCTIONS = [
+  'You are the ImpactLoop manual project writing assistant.',
+  'The learner is documenting a learning project they already built or substantially planned on a manual draft form.',
+  'Your job is to help them write clear project content through conversation only.',
+  'You must never claim the learner used, tested, built, or completed anything they did not mention.',
+  'When information is missing or uncertain, ask focused follow-up questions instead of inventing facts.',
+  'Ask one or a small group of closely related questions at a time, not a long questionnaire.',
+  'When suggesting optional improvements, label them clearly as "Optional suggestion" or "Confirm whether you used this".',
+  'Do not silently mix optional future improvements into factual descriptions of what was already built.',
+  'Use separate sections with headings when helpful:',
+  '### Suggested title',
+  '### Suggested short description',
+  '### Suggested full description',
+  '### Suggested components',
+  '### Suggested steps',
+  '### Suggested difficulty',
+  '### Suggested duration',
+  '### Missing information',
+  'When reviewing the draft, identify missing required fields, unclear text, inconsistent difficulty/duration, missing image before submission, and steps referencing unlisted components.',
+  'Explain that a project image is required before submission and that submission goes to admin moderation.',
+  'Stay within learning-project documentation scope. Refuse unrelated topics such as weather, news, sports, recipes, or poetry.',
+  'Match the learner language.',
+  'Return strict JSON only with shape: {"blocks":[{"type":"text","text":"...","purpose":"answer|refusal|clarification|safety"}]}',
+].join('\n');
+
+const buildManualDraftCopilotUserMessage = (input: {
+  draftContext: Record<string, unknown>;
+  text: string;
+}) =>
+  [
+    '[MANUAL_DRAFT_WRITING_ASSISTANT]',
+    MANUAL_DRAFT_COPILOT_INSTRUCTIONS,
+    'Current manual draft snapshot (read-only context; fields may be empty):',
+    JSON.stringify(input.draftContext),
+    `Latest learner message: ${JSON.stringify(input.text)}`,
+  ].join('\n\n');
+
+export type ManualDraftCopilotResponse = {
+  locale: AiLocale;
+  contentBlocks: AiContentBlock[];
+  meta: {
+    provider: string;
+    model: string | null;
+    policyVersion: string;
+    scopeClassification: AiScopeClassification;
+    latencyMs: number | null;
+    usage: {
+      inputTokens: number | null;
+      outputTokens: number | null;
+    };
+  };
+};
+
+export const processManualDraftCopilotTurn = async (input: {
+  text: string;
+  locale: AiLocale;
+  draftContext: Record<string, unknown>;
+  history: BoundedHistoryMessage[];
+}): Promise<ManualDraftCopilotResponse> => {
+  const responseLocale = detectResponseLocale(input.text, input.locale);
+  const deterministic = classifyScopeDeterministic(input.text);
+
+  let blocks: AiContentBlock[] = [];
+  let scopeClassification = deterministic.classification;
+  let providerName = 'system';
+  let model: string | null = null;
+  let latencyMs: number | null = null;
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
+
+  if (deterministic.classification === 'OUT_OF_SCOPE') {
+    blocks = [textBlock(MANUAL_DRAFT_REFUSAL_COPY[responseLocale], 'refusal')];
+    scopeClassification = 'OUT_OF_SCOPE';
+  } else if (deterministic.classification === 'DANGEROUS_REQUEST') {
+    blocks = [textBlock(DANGEROUS_SAFETY_COPY[responseLocale], 'safety')];
+    scopeClassification = 'DANGEROUS_REQUEST';
+  } else {
+    assertProviderOperational(responseLocale);
+    const provider = getAiChatProvider();
+    const answer = await provider.generateGeneralLearningAnswer({
+      locale: responseLocale,
+      userMessage: buildManualDraftCopilotUserMessage({
+        draftContext: input.draftContext,
+        text: input.text,
+      }),
+      history: input.history.slice(-12),
+      scopeClassification:
+        deterministic.classification === 'MIXED'
+          ? deterministic.classification
+          : 'DOMAIN_KNOWLEDGE',
+    });
+
+    blocks = answer.data.blocks;
+    providerName = answer.provider;
+    model = answer.model;
+    latencyMs = answer.latencyMs;
+    inputTokens = answer.usage.inputTokens;
+    outputTokens = answer.usage.outputTokens;
+  }
+
+  const validatedBlocks = aiContentBlocksSchema.parse(blocks);
+
+  return {
+    locale: responseLocale,
+    contentBlocks: validatedBlocks,
+    meta: {
+      provider: providerName,
+      model,
+      policyVersion: MANUAL_DRAFT_COPILOT_POLICY_VERSION,
+      scopeClassification,
+      latencyMs,
+      usage: {
+        inputTokens,
+        outputTokens,
+      },
+    },
+  };
+};

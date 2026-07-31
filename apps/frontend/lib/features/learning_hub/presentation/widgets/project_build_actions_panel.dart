@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
@@ -12,9 +11,14 @@ import '../../domain/models/learning_project.dart';
 import '../theme/learning_ui_palette.dart';
 
 class ProjectBuildActionsPanel extends ConsumerStatefulWidget {
-  const ProjectBuildActionsPanel({super.key, required this.project});
+  const ProjectBuildActionsPanel({
+    super.key,
+    required this.project,
+    this.recommendationImpressionId,
+  });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<ProjectBuildActionsPanel> createState() =>
@@ -30,7 +34,7 @@ class _ProjectBuildActionsPanelState
     final destination = '/learning/$projectId/build';
 
     if (hasBuild) {
-      context.go(destination);
+      context.go(destination, extra: widget.recommendationImpressionId);
       return;
     }
 
@@ -47,10 +51,15 @@ class _ProjectBuildActionsPanelState
 
     setState(() => _isStarting = true);
     try {
-      await ref.read(learningHubRepositoryProvider).startBuild(projectId);
+      await ref
+          .read(learningHubRepositoryProvider)
+          .startBuild(
+            projectId,
+            recommendationImpressionId: widget.recommendationImpressionId,
+          );
       ref.invalidate(projectBuildProvider(projectId));
       if (mounted) {
-        context.go(destination);
+        context.go(destination, extra: widget.recommendationImpressionId);
       }
     } catch (error) {
       if (mounted) {
@@ -86,11 +95,11 @@ class _ProjectBuildActionsPanelState
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: palette.cardSurface,
-        borderRadius: AppRadius.xlAll,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
         boxShadow: [
           BoxShadow(
-            color: palette.cardShadow,
+            color: palette.cardShadow.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -216,6 +225,7 @@ class _BuildPanelCopy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,18 +234,20 @@ class _BuildPanelCopy extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Text(
           hasBuild ? 'Build checklist' : 'Plan this build',
-          style: AppTextStyles.title(
-            context,
-          ).copyWith(color: palette.textPrimary),
+          style: textTheme.titleLarge?.copyWith(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           hasBuild
               ? 'Continue your saved manual checklist for this project.'
               : 'Start a saved checklist from the required components. You can mark items as available, missing, alternative, already owned, or reserved.',
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: palette.textSecondary, height: 1.45),
+          style: textTheme.bodyMedium?.copyWith(
+            color: palette.textSecondary,
+            height: 1.45,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         Wrap(
@@ -316,6 +328,7 @@ class _BuildMetricChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -323,22 +336,25 @@ class _BuildMetricChip extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: accent
-            ? palette.lime.withValues(alpha: 0.16)
-            : palette.cardSurfaceAlt,
+        color: accent ? palette.limeSoft : palette.cardSurfaceAlt,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.borderSubtle),
+        border: Border.all(
+          color: accent
+              ? palette.lime.withValues(alpha: 0.34)
+              : palette.borderSubtle,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: accent ? palette.limeSoft : palette.lime),
+          Icon(icon, size: 18, color: palette.lime),
           const SizedBox(width: AppSpacing.xs),
           Text(
             label,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: accent ? palette.limeSoft : palette.textPrimary),
+            style: textTheme.labelMedium?.copyWith(
+              color: accent ? palette.lime : palette.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

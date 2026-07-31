@@ -1,6 +1,6 @@
 import 'package:intl/intl.dart';
 
-import '../../../shared/widgets/materials/material_status_badge.dart';
+import '../../../shared/widgets/app_status_badge.dart';
 
 String? formatDeliveryPickupWindow({
   required DateTime? pickupWindowStart,
@@ -66,21 +66,28 @@ String deliveryStatusLabel(String status) {
   }
 }
 
-MaterialStatusBadgeTone deliveryStatusTone(String status) {
+/// Maps delivery lifecycle states to the app-wide semantic status contract.
+AppStatusTone deliveryStatusAppTone(String status) {
   switch (status) {
     case 'WAITING_FOR_DRIVER':
+      return AppStatusTone.warning;
     case 'DRIVER_ASSIGNED':
     case 'ARRIVED_PICKUP':
     case 'PICKED_UP':
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
-      return MaterialStatusBadgeTone.reserved;
+      return AppStatusTone.info;
     case 'DELIVERED':
-      return MaterialStatusBadgeTone.reused;
+      return AppStatusTone.success;
+    case 'AWAITING_RESOLUTION':
+      return AppStatusTone.warning;
     case 'CANCELLED':
     case 'FAILED_PICKUP':
     case 'FAILED_DELIVERY':
+    case 'DRIVER_NO_SHOW':
+    case 'LEARNER_NO_SHOW':
+      return AppStatusTone.danger;
     default:
-      return MaterialStatusBadgeTone.draft;
+      return AppStatusTone.neutral;
   }
 }

@@ -16,19 +16,19 @@ void main() {
               child: StatefulBuilder(
                 builder: (context, setState) {
                   return LearningProjectComponentEditor(
-                  components: components,
-                  materialCategories: const [],
-                  onChanged: (next) => setState(() => components = next),
-                  onAdd: () => setState(
-                    () => components = [
-                      ...components,
-                      LearningProjectDraftComponent.empty(),
-                    ],
-                  ),
-                  onRemove: (index) => setState(() {
-                    final next = [...components]..removeAt(index);
-                    components = next;
-                  }),
+                    components: components,
+                    materialCategories: const [],
+                    onChanged: (next) => setState(() => components = next),
+                    onAdd: () => setState(
+                      () => components = [
+                        ...components,
+                        LearningProjectDraftComponent.empty(),
+                      ],
+                    ),
+                    onRemove: (index) => setState(() {
+                      final next = [...components]..removeAt(index);
+                      components = next;
+                    }),
                   );
                 },
               ),

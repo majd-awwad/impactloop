@@ -14,10 +14,12 @@ export type OrganizationSupplierType =
 
 export const SUPPLIER_VERIFICATION_STATUSES = [
   'NOT_REQUIRED',
+  'UNVERIFIED',
   'PENDING',
   'APPROVED',
   'REJECTED',
   'CHANGES_REQUESTED',
+  'UNKNOWN',
 ] as const;
 
 export type SupplierVerificationStatus =
@@ -48,9 +50,9 @@ export const isIndividualSupplierType = (
 };
 
 export const normalizeSupplierVerificationStatus = (
-  status: string,
+  status: string | null | undefined,
 ): SupplierVerificationStatus => {
-  const normalized = status.trim().toUpperCase();
+  const normalized = status?.trim().toUpperCase() ?? '';
 
   if (normalized === 'VERIFIED') {
     return 'APPROVED';
@@ -58,19 +60,17 @@ export const normalizeSupplierVerificationStatus = (
 
   if (
     normalized === 'NOT_REQUIRED' ||
+    normalized === 'UNVERIFIED' ||
     normalized === 'PENDING' ||
     normalized === 'APPROVED' ||
     normalized === 'REJECTED' ||
-    normalized === 'CHANGES_REQUESTED'
+    normalized === 'CHANGES_REQUESTED' ||
+    normalized === 'UNKNOWN'
   ) {
     return normalized;
   }
 
-  if (normalized === 'UNVERIFIED') {
-    return 'PENDING';
-  }
-
-  return 'PENDING';
+  return 'UNKNOWN';
 };
 
 export const requiresOrganizationVerification = (

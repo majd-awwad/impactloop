@@ -9,6 +9,8 @@ import {
   adminCreateInvitationSchema,
   invitationIdParamSchema,
 } from '../invitations/invitations.validation.js';
+import { moderateCommentHandler } from '../comments/comments.controller.js';
+import { adminCommentIdParamSchema } from '../comments/comments.validation.js';
 
 import {
   createAdminInvitation,
@@ -40,6 +42,8 @@ import {
   approveAdminPriceRequest,
   getAdminApprovalsSummary,
   listAdminCategoryRequests,
+  listAdminMaterialFamilyOptions,
+  listAdminMaterialCategoryOptions,
   listAdminPriceRequests,
   rejectAdminCategoryRequest,
   rejectAdminPriceRequest,
@@ -53,6 +57,8 @@ import {
   rejectPriceRequestSchema,
 } from '../admin-approvals/admin-approvals.validation.js';
 import {
+  exportAdminMaterialReportsHandler,
+  exportAdminMaterialsHandler,
   getAdminMaterial,
   getAdminMaterialReport,
   getAdminMaterialsSummary,
@@ -61,6 +67,8 @@ import {
   listAdminMaterialReports,
   listAdminMaterials,
   markAdminMaterialUnavailable,
+  preflightAdminMaterialReportsExportHandler,
+  preflightAdminMaterialsExportHandler,
   rejectAdminMaterialReport,
   resolveAdminMaterialReport,
   restoreAdminMaterial,
@@ -69,7 +77,11 @@ import {
 import {
   adminMaterialIdParamSchema,
   adminMaterialReportIdParamSchema,
+  adminMaterialReportsExportDownloadQuerySchema,
+  adminMaterialReportsExportFiltersSchema,
   adminMaterialReportsListQuerySchema,
+  adminMaterialsExportDownloadQuerySchema,
+  adminMaterialsExportFiltersSchema,
   adminMaterialsListQuerySchema,
   hideMaterialFromReportSchema,
   hideMaterialSchema,
@@ -80,30 +92,43 @@ import {
 } from '../admin-materials/admin-materials.validation.js';
 
 import {
+  exportAdminPeopleHandler,
   getAdminPerson,
   getAdminPeopleSummary,
   listAdminPeople,
+  preflightAdminPeopleExportHandler,
   reactivateAdminPerson,
   suspendAdminPerson,
 } from '../admin-people/admin-people.controller.js';
 import {
+  adminPeopleExportDownloadQuerySchema,
+  adminPeopleExportFiltersSchema,
   adminPeopleListQuerySchema,
   adminPeopleUserIdParamSchema,
   suspendUserSchema,
 } from '../admin-people/admin-people.validation.js';
 import {
+  exportAdminReservationsHandler,
   getAdminReservationHandler,
   listAdminReservationsHandler,
+  preflightAdminReservationsExportHandler,
 } from '../admin-reservations/admin-reservations.controller.js';
 import {
   adminReservationIdParamSchema,
+  adminReservationsExportDownloadQuerySchema,
+  adminReservationsExportFiltersSchema,
   adminReservationsListQuerySchema,
 } from '../admin-reservations/admin-reservations.validation.js';
 import {
+  exportAdminDeliveriesHandler,
   getAdminDeliveryHandler,
   listAdminDeliveriesHandler,
+  preflightAdminDeliveriesExportHandler,
+  reopenAdminDeliveryDriverAssignmentHandler,
 } from '../admin-deliveries/admin-deliveries.controller.js';
 import {
+  adminDeliveriesExportDownloadQuerySchema,
+  adminDeliveriesExportFiltersSchema,
   adminDeliveriesListQuerySchema,
   adminDeliveryIdParamSchema,
 } from '../admin-deliveries/admin-deliveries.validation.js';
@@ -111,14 +136,17 @@ import {
   approveAdminLearningProjectHandler,
   archiveAdminLearningProjectHandler,
   getAdminLearningProjectHandler,
+  getSavedAdminLearningProjectAiReviewHandler,
   hideAdminLearningProjectHandler,
   listAdminLearningProjectsHandler,
   rejectAdminLearningProjectHandler,
   requestChangesAdminLearningProjectHandler,
   restoreAdminLearningProjectHandler,
+  reviewAdminLearningProjectWithAiHandler,
   updateAdminLearningProjectComponentHandler,
 } from '../admin-learning-projects/admin-learning-projects.controller.js';
 import {
+  adminAiReviewBodySchema,
   adminLearningProjectComponentParamsSchema,
   adminLearningProjectIdParamSchema,
   adminLearningProjectsListQuerySchema,
@@ -128,6 +156,8 @@ import {
 import {
   getAdminNoShowReportHandler,
   listAdminNoShowReportsHandler,
+  preflightAdminNoShowReportsExportHandler,
+  exportAdminNoShowReportsHandler,
   rejectAdminNoShowReportHandler,
   requestSupplierRescheduleAdminNoShowReportHandler,
   cancelReleaseHoldAdminNoShowReportHandler,
@@ -136,6 +166,8 @@ import {
 } from '../admin-no-show-reports/admin-no-show-reports.controller.js';
 import {
   adminNoShowReportIdParamSchema,
+  adminNoShowReportsExportDownloadQuerySchema,
+  adminNoShowReportsExportFiltersSchema,
   adminNoShowReportsListQuerySchema,
   cancelReleaseHoldSchema,
   requestSupplierRescheduleSchema,
@@ -264,6 +296,20 @@ adminRouter.get(
   asyncHandler(listAdminCategoryRequests),
 );
 
+adminRouter.get(
+  '/approvals/material-family-options',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  asyncHandler(listAdminMaterialFamilyOptions),
+);
+
+adminRouter.get(
+  '/approvals/material-category-options',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  asyncHandler(listAdminMaterialCategoryOptions),
+);
+
 adminRouter.patch(
   '/approvals/category-requests/:id/approve',
   authMiddleware,
@@ -313,6 +359,22 @@ adminRouter.get(
   authMiddleware,
   requireRoles('ADMIN'),
   asyncHandler(getAdminMaterialsSummary),
+);
+
+adminRouter.get(
+  '/materials/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminMaterialsExportHandler),
+);
+
+adminRouter.get(
+  '/materials/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminMaterialsHandler),
 );
 
 adminRouter.get(
@@ -366,6 +428,22 @@ adminRouter.get(
 );
 
 adminRouter.get(
+  '/material-reports/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialReportsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminMaterialReportsExportHandler),
+);
+
+adminRouter.get(
+  '/material-reports/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialReportsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminMaterialReportsHandler),
+);
+
+adminRouter.get(
   '/material-reports/:id',
   authMiddleware,
   requireRoles('ADMIN'),
@@ -416,6 +494,22 @@ adminRouter.get(
 );
 
 adminRouter.get(
+  '/people/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminPeopleExportHandler),
+);
+
+adminRouter.get(
+  '/people/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminPeopleHandler),
+);
+
+adminRouter.get(
   '/people/:id',
   authMiddleware,
   requireRoles('ADMIN'),
@@ -438,6 +532,22 @@ adminRouter.patch(
   requireRoles('ADMIN'),
   validate(adminPeopleUserIdParamSchema, 'params'),
   asyncHandler(reactivateAdminPerson),
+);
+
+adminRouter.get(
+  '/reservations/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminReservationsExportHandler),
+);
+
+adminRouter.get(
+  '/reservations/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminReservationsHandler),
 );
 
 adminRouter.get(
@@ -465,6 +575,30 @@ adminRouter.get(
 );
 
 adminRouter.get(
+  '/deliveries/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminDeliveriesExportHandler),
+);
+
+adminRouter.get(
+  '/deliveries/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminDeliveriesHandler),
+);
+
+adminRouter.post(
+  '/deliveries/:id/reopen-driver-assignment',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveryIdParamSchema, 'params'),
+  asyncHandler(reopenAdminDeliveryDriverAssignmentHandler),
+);
+
+adminRouter.get(
   '/deliveries/:id',
   authMiddleware,
   requireRoles('ADMIN'),
@@ -486,6 +620,24 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminLearningProjectIdParamSchema, 'params'),
   asyncHandler(getAdminLearningProjectHandler),
+);
+
+adminRouter.get(
+  '/learning-projects/:id/ai-review',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(adminAiReviewBodySchema, 'query'),
+  asyncHandler(getSavedAdminLearningProjectAiReviewHandler),
+);
+
+adminRouter.post(
+  '/learning-projects/:id/ai-review',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminLearningProjectIdParamSchema, 'params'),
+  validate(adminAiReviewBodySchema),
+  asyncHandler(reviewAdminLearningProjectWithAiHandler),
 );
 
 adminRouter.patch(
@@ -547,6 +699,22 @@ adminRouter.patch(
   validate(adminLearningProjectComponentParamsSchema, 'params'),
   validate(updateAdminLearningProjectComponentSchema),
   asyncHandler(updateAdminLearningProjectComponentHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminNoShowReportsExportHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminNoShowReportsHandler),
 );
 
 adminRouter.get(
@@ -669,4 +837,12 @@ adminRouter.post(
   validate(adminNoShowReportIdParamSchema, 'params'),
   validate(cancelReleaseHoldSchema),
   asyncHandler(cancelReleaseHoldAdminNoShowReportHandler),
+);
+
+adminRouter.delete(
+  '/comments/:id',
+  authMiddleware,
+  requireRoles('ADMIN', 'MODERATOR'),
+  validate(adminCommentIdParamSchema, 'params'),
+  asyncHandler(moderateCommentHandler),
 );

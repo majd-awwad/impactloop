@@ -6,8 +6,14 @@ import {
 } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
+import {
+  preflightAdminPeopleExport,
+  streamAdminPeopleExport,
+} from './admin-people.export.js';
 import * as service from './admin-people.service.js';
 import type {
+  AdminPeopleExportDownloadQuery,
+  AdminPeopleExportFilters,
   AdminPeopleListQuery,
   AdminPeopleUserIdParams,
   SuspendUserInput,
@@ -28,6 +34,27 @@ export const listAdminPeople = async (
   const query = readValidatedQuery<AdminPeopleListQuery>(req);
   const result = await service.listAdminPeople(req.auth!.sub, query);
   res.json(successResponse('People loaded.', result));
+};
+
+export const preflightAdminPeopleExportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const filters = readValidatedQuery<AdminPeopleExportFilters>(req);
+  const result = await preflightAdminPeopleExport(filters);
+  res.json(successResponse('Users export preflight loaded.', result));
+};
+
+export const exportAdminPeopleHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = readValidatedQuery<AdminPeopleExportDownloadQuery>(req);
+  await streamAdminPeopleExport({
+    res,
+    filters: query,
+    actorUserId: req.auth!.sub,
+  });
 };
 
 export const getAdminPerson = async (

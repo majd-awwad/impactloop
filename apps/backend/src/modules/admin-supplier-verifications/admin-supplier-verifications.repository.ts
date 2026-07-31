@@ -1,6 +1,7 @@
 import type { Prisma } from '../../generated/prisma/index.js';
 
 import { prisma } from '../../database/prisma.js';
+import { createNotification } from '../notifications/notifications.repository.js';
 
 import {
   mapAdminVerificationStatusToDb,
@@ -152,7 +153,7 @@ export const updateSupplierVerificationReview = async (input: {
 }) => {
   const reviewedAt = new Date();
 
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     const profile = await tx.supplierProfile.update({
       where: { id: input.supplierProfileId },
       data: {
@@ -161,22 +162,22 @@ export const updateSupplierVerificationReview = async (input: {
         verificationReviewedById: input.adminId,
         verificationAdminNote: input.adminNote,
       },
-      include: organizationSupplierInclude,
+      select: { id: true },
     });
 
-    if (profile.organizationProfile) {
-      await tx.organizationProfile.update({
-        where: { id: profile.organizationProfile.id },
-        data: {
-          verificationDocumentStatus: input.verificationDocumentStatus,
-        },
-      });
-    }
-
-    return tx.supplierProfile.findFirstOrThrow({
-      where: { id: input.supplierProfileId },
-      include: organizationSupplierInclude,
+    await tx.organizationProfile.updateMany({
+      where: { supplierProfileId: profile.id },
+      data: {
+        verificationDocumentStatus: input.verificationDocumentStatus,
+      },
     });
+
+    return profile;
+  });
+
+  return prisma.supplierProfile.findFirstOrThrow({
+    where: { id: updated.id },
+    include: organizationSupplierInclude,
   });
 };
 
@@ -185,15 +186,20 @@ export const createSupplierVerificationNotification = async (input: {
   title: string;
   body: string;
   supplierProfileId: string;
+  eventKey?: string;
+  actorId?: string | null;
 }) => {
-  return prisma.notification.create({
-    data: {
+  return createNotification({
       userId: input.userId,
       notificationType: 'SUPPLIER_VERIFICATION_UPDATE',
       title: input.title,
       body: input.body,
       relatedEntityType: 'SUPPLIER_PROFILE',
       relatedEntityId: input.supplierProfileId,
-    },
+      eventKey: input.eventKey ?? `supplier-verification:${input.supplierProfileId}:${input.title.trim()}`,
+      entityType: 'SUPPLIER_PROFILE',
+      entityId: input.supplierProfileId,
+      actionType: 'OPEN_PROFILE',
+      actorId: input.actorId ?? null,
   });
 };

@@ -1,6 +1,10 @@
+import type { Prisma } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 import { normalizeSearchText } from '../../utils/normalize-search-text.js';
 import { decimalToNumber } from '../../utils/decimal.js';
+
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
 export const findActiveMaterialTypes = async (input: {
   categoryId?: string;
@@ -62,8 +66,11 @@ export const findActiveMaterialTypes = async (input: {
   });
 };
 
-export const findActiveMaterialTypesForMatching = async (categoryId: string) => {
-  return prisma.materialType.findMany({
+export const findActiveMaterialTypesForMatching = async (
+  categoryId: string,
+  client?: PrismaClientLike,
+) => {
+  return (client ?? prisma).materialType.findMany({
     where: {
       isActive: true,
       categoryId,
@@ -86,8 +93,11 @@ export const findActiveMaterialTypesForMatching = async (categoryId: string) => 
   });
 };
 
-export const findMaterialTypeById = async (materialTypeId: string) => {
-  return prisma.materialType.findUnique({
+export const findMaterialTypeById = async (
+  materialTypeId: string,
+  client?: PrismaClientLike,
+) => {
+  return (client ?? prisma).materialType.findUnique({
     where: { id: materialTypeId },
     include: {
       category: {
@@ -104,8 +114,9 @@ export const findMaterialTypeById = async (materialTypeId: string) => {
 export const findActivePriceRuleForMaterialType = async (
   materialTypeId: string,
   unit?: string,
+  client?: PrismaClientLike,
 ) => {
-  return prisma.materialPriceRule.findFirst({
+  return (client ?? prisma).materialPriceRule.findFirst({
     where: {
       materialTypeId,
       isActive: true,

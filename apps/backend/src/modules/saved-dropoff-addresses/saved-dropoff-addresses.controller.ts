@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 
+import { readValidatedParams } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
@@ -36,9 +37,10 @@ export const updateMySavedDropoffAddressHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
   const savedAddress = await updateMySavedDropoffAddress(
     req.auth!.sub,
-    req.params.id,
+    id,
     req.body,
   );
 
@@ -51,7 +53,8 @@ export const deleteMySavedDropoffAddressHandler = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  const data = await deleteMySavedDropoffAddress(req.auth!.sub, req.params.id);
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const data = await deleteMySavedDropoffAddress(req.auth!.sub, id);
 
   res.json(successResponse('Saved dropoff address deleted.', data));
 };

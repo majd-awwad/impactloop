@@ -3,30 +3,48 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_close_button.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../../materials/application/material_listing_providers.dart';
-import '../../../materials/data/models/category.dart';
 import '../../data/admin_approvals_api.dart';
+import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
+import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminTypography;
+import '../widgets/category_request_approval_dialog.dart';
+
+const _kApprovalsPageSize = 10;
 
 class _ApprovalsFilters {
   const _ApprovalsFilters({
     required this.tab,
     required this.status,
     required this.search,
+    required this.page,
   });
 
   final String tab; // CATEGORY | PRICE
   final String status; // PENDING | APPROVED | REJECTED | ALL
   final String search;
+  final int page;
 
-  _ApprovalsFilters copyWith({String? tab, String? status, String? search}) {
+  _ApprovalsFilters copyWith({
+    String? tab,
+    String? status,
+    String? search,
+    int? page,
+  }) {
     return _ApprovalsFilters(
       tab: tab ?? this.tab,
       status: status ?? this.status,
       search: search ?? this.search,
+      page: page ?? this.page,
     );
   }
 }
@@ -34,41 +52,61 @@ class _ApprovalsFilters {
 class _ApprovalsFiltersNotifier extends Notifier<_ApprovalsFilters> {
   @override
   _ApprovalsFilters build() {
-    return const _ApprovalsFilters(tab: 'CATEGORY', status: 'PENDING', search: '');
+    return const _ApprovalsFilters(
+      tab: 'CATEGORY',
+      status: 'PENDING',
+      search: '',
+      page: 1,
+    );
   }
 
-  void setTab(String tab) => state = state.copyWith(tab: tab, search: '');
-  void setStatus(String status) => state = state.copyWith(status: status);
-  void setSearch(String search) => state = state.copyWith(search: search);
-  void reset() => state = const _ApprovalsFilters(tab: 'CATEGORY', status: 'PENDING', search: '');
+  void setTab(String tab) =>
+      state = state.copyWith(tab: tab, search: '', page: 1);
+  void setStatus(String status) =>
+      state = state.copyWith(status: status, page: 1);
+  void setSearch(String search) =>
+      state = state.copyWith(search: search, page: 1);
+  void setPage(int page) => state = state.copyWith(page: page);
+  void reset() => state = const _ApprovalsFilters(
+    tab: 'CATEGORY',
+    status: 'PENDING',
+    search: '',
+    page: 1,
+  );
 }
 
 final _approvalsFiltersProvider =
     NotifierProvider<_ApprovalsFiltersNotifier, _ApprovalsFilters>(
-  _ApprovalsFiltersNotifier.new,
-);
+      _ApprovalsFiltersNotifier.new,
+    );
 
 final adminApprovalsSummaryProvider = FutureProvider.autoDispose((ref) {
   return ref.watch(adminApprovalsApiProvider).fetchSummary();
 });
 
-final adminApprovalsCategoryRequestsProvider = FutureProvider.autoDispose((ref) {
+final adminApprovalsCategoryRequestsProvider = FutureProvider.autoDispose((
+  ref,
+) {
   final filters = ref.watch(_approvalsFiltersProvider);
-  return ref.watch(adminApprovalsApiProvider).fetchCategoryRequests(
+  return ref
+      .watch(adminApprovalsApiProvider)
+      .fetchCategoryRequests(
         status: filters.status,
         search: filters.search,
-        page: 1,
-        limit: 50,
+        page: filters.page,
+        limit: _kApprovalsPageSize,
       );
 });
 
 final adminApprovalsPriceRequestsProvider = FutureProvider.autoDispose((ref) {
   final filters = ref.watch(_approvalsFiltersProvider);
-  return ref.watch(adminApprovalsApiProvider).fetchPriceRequests(
+  return ref
+      .watch(adminApprovalsApiProvider)
+      .fetchPriceRequests(
         status: filters.status,
         search: filters.search,
-        page: 1,
-        limit: 50,
+        page: filters.page,
+        limit: _kApprovalsPageSize,
       );
 });
 
@@ -84,17 +122,14 @@ class AdminApprovalsPage extends ConsumerStatefulWidget {
 class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
   var _appliedInitialStatus = false;
 
-  static const _validStatusFilters = {
-    'PENDING',
-    'APPROVED',
-    'REJECTED',
-    'ALL',
-  };
+  static const _validStatusFilters = {'PENDING', 'APPROVED', 'REJECTED', 'ALL'};
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _applyInitialStatusIfNeeded(),
+    );
   }
 
   @override
@@ -102,7 +137,9 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialStatus != widget.initialStatus) {
       _appliedInitialStatus = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _applyInitialStatusIfNeeded());
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _applyInitialStatusIfNeeded(),
+      );
     }
   }
 
@@ -118,26 +155,33 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final filters = ref.watch(_approvalsFiltersProvider);
 
     return ListView(
       padding: const EdgeInsetsDirectional.only(bottom: 24),
       children: [
-        Text('Approvals', style: AdminTypography.pageTitle(palette)),
+        Text(
+          l.t('Approvals', 'الموافقات'),
+          style: AdminTypography.pageTitle(palette),
+        ),
         const SizedBox(height: 6),
         Text(
-          'Review supplier requests for new categories and price approvals before they affect the marketplace.',
+          l.t(
+            'Review supplier requests for new categories and price approvals before they affect the marketplace.',
+            'راجع طلبات الموردين للفئات الجديدة وموافقات الأسعار قبل أن تؤثر في المنصة.',
+          ),
           style: AdminTypography.pageSubtitle(palette),
         ),
-        const SizedBox(height: 16),
-        _SummaryRow(),
         const SizedBox(height: 18),
-        _TabsRow(selected: filters.tab),
-        const SizedBox(height: 12),
-        _FiltersRow(
+        const _ApprovalsSummaryStrip(),
+        const SizedBox(height: 18),
+        _ApprovalsSegmentedTabs(selected: filters.tab),
+        const SizedBox(height: 14),
+        _ApprovalsFilterBar(
           key: ValueKey('${filters.tab}|${filters.status}|${filters.search}'),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
         if (filters.tab == 'CATEGORY') const _CategoryRequestsPanel(),
         if (filters.tab == 'PRICE') const _PriceRequestsPanel(),
       ],
@@ -145,15 +189,19 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
   }
 }
 
-class _SummaryRow extends ConsumerWidget {
+/// Compact KPI strip — one icon-tile card per approval metric.
+class _ApprovalsSummaryStrip extends ConsumerWidget {
+  const _ApprovalsSummaryStrip();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final asyncSummary = ref.watch(adminApprovalsSummaryProvider);
 
     return asyncSummary.when(
       loading: () => const SizedBox(
-        height: 64,
+        height: 84,
         child: Center(child: CircularProgressIndicator()),
       ),
       error: (error, _) => Container(
@@ -165,7 +213,12 @@ class _SummaryRow extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Expanded(child: Text(error.toString(), style: AdminTypography.pageSubtitle(palette))),
+            Expanded(
+              child: Text(
+                error.toString(),
+                style: AdminTypography.pageSubtitle(palette),
+              ),
+            ),
             const SizedBox(width: 10),
             FilledButton(
               onPressed: () => ref.invalidate(adminApprovalsSummaryProvider),
@@ -175,91 +228,266 @@ class _SummaryRow extends ConsumerWidget {
         ),
       ),
       data: (summary) {
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            _SummaryChip(label: 'Pending', count: summary.pendingTotal, color: palette.amber),
-            _SummaryChip(label: 'Approved', count: summary.approvedTotal, color: palette.primaryTeal),
-            _SummaryChip(label: 'Rejected', count: summary.rejectedTotal, color: palette.red),
-            _SummaryChip(label: 'Category', count: summary.categoryPending, color: palette.blue),
-            _SummaryChip(label: 'Price', count: summary.pricePending, color: palette.purple),
-          ],
+        final tiles = [
+          _ApprovalKpiTile(
+            label: l.t('All pending approvals', 'جميع الموافقات المعلّقة'),
+            value: summary.pendingTotal,
+            icon: Icons.outlined_flag,
+            color: palette.amber,
+          ),
+          _ApprovalKpiTile(
+            label: l.t('Approved', 'تمت الموافقة'),
+            value: summary.approvedTotal,
+            icon: Icons.check_circle_outline,
+            color: palette.green,
+          ),
+          _ApprovalKpiTile(
+            label: l.t('Rejected', 'مرفوضة'),
+            value: summary.rejectedTotal,
+            icon: Icons.cancel_outlined,
+            color: palette.red,
+          ),
+          _ApprovalKpiTile(
+            label: l.t('Pending category requests', 'طلبات الفئات المعلّقة'),
+            value: summary.categoryPending,
+            icon: Icons.sell_outlined,
+            color: palette.blue,
+          ),
+          _ApprovalKpiTile(
+            label: l.t('Pending price requests', 'طلبات الأسعار المعلّقة'),
+            value: summary.pricePending,
+            icon: Icons.attach_money,
+            color: palette.purple,
+          ),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 900
+                ? 5
+                : constraints.maxWidth >= 560
+                ? 3
+                : constraints.maxWidth >= 360
+                ? 2
+                : 1;
+            const spacing = 12.0;
+
+            final rows = <Widget>[];
+            for (var i = 0; i < tiles.length; i += columns) {
+              final chunk = tiles.skip(i).take(columns).toList();
+              rows.add(
+                Padding(
+                  padding: EdgeInsets.only(
+                    bottom: i + columns < tiles.length ? spacing : 0,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var j = 0; j < chunk.length; j++) ...[
+                          if (j > 0) const SizedBox(width: spacing),
+                          Expanded(child: chunk[j]),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rows,
+            );
+          },
         );
       },
     );
   }
 }
 
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({
+class _ApprovalKpiTile extends StatelessWidget {
+  const _ApprovalKpiTile({
     required this.label,
-    required this.count,
+    required this.value,
+    required this.icon,
     required this.color,
   });
 
   final String label;
-  final int count;
+  final int value;
+  final IconData icon;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
+
     return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow,
+            blurRadius: palette.isDark ? 12 : 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: AdminTypography.kpiHelper(palette)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: palette.isDark ? 0.2 : 0.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, size: 19, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$value', style: AdminTypography.kpiValue(palette)),
+                    Text(
+                      l.t('Requests', 'طلبات'),
+                      style: AdminTypography.kpiHelper(palette),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Full-width segmented tab bar with an underline indicator on the active tab.
+class _ApprovalsSegmentedTabs extends ConsumerWidget {
+  const _ApprovalsSegmentedTabs({required this.selected});
+  final String selected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
+
+    void select(String tab) =>
+        ref.read(_approvalsFiltersProvider.notifier).setTab(tab);
+
+    return Container(
       decoration: BoxDecoration(
         color: palette.cardBackground,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: palette.cardBorder),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          Expanded(
+            child: _ApprovalsTabItem(
+              label: l.t('Category requests', 'طلبات الفئات'),
+              icon: Icons.category_outlined,
+              isSelected: selected == 'CATEGORY',
+              onTap: () => select('CATEGORY'),
+            ),
           ),
-          const SizedBox(width: 8),
-          Text('$count', style: AdminTypography.kpiValue(palette).copyWith(fontSize: 18)),
-          const SizedBox(width: 6),
-          Text(label, style: AdminTypography.kpiHelper(palette)),
+          Container(width: 1, height: 26, color: palette.cardBorder),
+          Expanded(
+            child: _ApprovalsTabItem(
+              label: l.t('Price requests', 'طلبات الأسعار'),
+              icon: Icons.price_check_outlined,
+              isSelected: selected == 'PRICE',
+              onTap: () => select('PRICE'),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _TabsRow extends ConsumerWidget {
-  const _TabsRow({required this.selected});
-  final String selected;
+class _ApprovalsTabItem extends StatelessWidget {
+  const _ApprovalsTabItem({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SizedBox(
-      width: double.infinity,
-      child: SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(value: 'CATEGORY', label: Text('Category Requests'), icon: Icon(Icons.category_outlined)),
-          ButtonSegment(value: 'PRICE', label: Text('Price Requests'), icon: Icon(Icons.price_check_outlined)),
-        ],
-        selected: {selected},
-        onSelectionChanged: (value) {
-          ref.read(_approvalsFiltersProvider.notifier).setTab(value.first);
-        },
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final color = isSelected ? palette.textPrimary : palette.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? palette.primaryTeal : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _FiltersRow extends ConsumerStatefulWidget {
-  const _FiltersRow({super.key});
+class _ApprovalsFilterBar extends ConsumerStatefulWidget {
+  const _ApprovalsFilterBar({super.key});
 
   @override
-  ConsumerState<_FiltersRow> createState() => _FiltersRowState();
+  ConsumerState<_ApprovalsFilterBar> createState() =>
+      _ApprovalsFilterBarState();
 }
 
-class _FiltersRowState extends ConsumerState<_FiltersRow> {
+class _ApprovalsFilterBarState extends ConsumerState<_ApprovalsFilterBar> {
   late final TextEditingController _controller;
 
   @override
@@ -279,15 +507,19 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final filters = ref.watch(_approvalsFiltersProvider);
-    final compact = MediaQuery.sizeOf(context).width < 560;
+    final compact = MediaQuery.sizeOf(context).width < 640;
 
     final searchField = TextField(
       controller: _controller,
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.search),
-        hintText: 'Search by supplier, material, category...',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        prefixIcon: const Icon(Icons.search),
+        hintText: l.t(
+          'Search by supplier or material…',
+          'ابحث حسب المورد أو المادة…',
+        ),
+        border: const OutlineInputBorder(),
         isDense: true,
       ),
       onSubmitted: (value) =>
@@ -295,16 +527,26 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
     );
 
     final statusField = DropdownButtonFormField<String>(
+      isExpanded: true,
       initialValue: filters.status,
-      items: const [
-        DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-        DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
-        DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-        DropdownMenuItem(value: 'ALL', child: Text('All')),
+      items: [
+        DropdownMenuItem(
+          value: 'PENDING',
+          child: Text(l.t('Pending', 'معلّق')),
+        ),
+        DropdownMenuItem(
+          value: 'APPROVED',
+          child: Text(l.t('Approved', 'تمت الموافقة')),
+        ),
+        DropdownMenuItem(
+          value: 'REJECTED',
+          child: Text(l.t('Rejected', 'مرفوض')),
+        ),
+        DropdownMenuItem(value: 'ALL', child: Text(l.t('All', 'الكل'))),
       ],
-      decoration: const InputDecoration(
-        labelText: 'Status',
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        labelText: l.status,
+        border: const OutlineInputBorder(),
         isDense: true,
       ),
       onChanged: (value) {
@@ -313,7 +555,7 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
       },
     );
 
-    final resetButton = OutlinedButton(
+    final resetButton = OutlinedButton.icon(
       onPressed: () {
         _controller.clear();
         ref.read(_approvalsFiltersProvider.notifier).reset();
@@ -321,7 +563,9 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
         ref.invalidate(adminApprovalsPriceRequestsProvider);
         context.go('/admin/approvals');
       },
-      child: const Text('Reset'),
+      icon: const Icon(Icons.restart_alt, size: 18),
+      label: Text(l.t('Reset', 'إعادة ضبط')),
+      style: OutlinedButton.styleFrom(foregroundColor: palette.textSecondary),
     );
 
     final refreshButton = OutlinedButton.icon(
@@ -330,8 +574,14 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
         ref.invalidate(adminApprovalsCategoryRequestsProvider);
         ref.invalidate(adminApprovalsPriceRequestsProvider);
       },
-      icon: const Icon(Icons.refresh, size: 18),
-      label: const Text('Refresh'),
+      icon: Icon(Icons.refresh, size: 18, color: palette.primaryTeal),
+      label: Text(
+        l.t('Refresh', 'تحديث'),
+        style: TextStyle(color: palette.primaryTeal),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(color: palette.primaryTeal.withValues(alpha: 0.5)),
+      ),
     );
 
     return Container(
@@ -358,14 +608,15 @@ class _FiltersRowState extends ConsumerState<_FiltersRow> {
                 ),
               ],
             )
-          : Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              crossAxisAlignment: WrapCrossAlignment.center,
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                SizedBox(width: 280, child: searchField),
-                SizedBox(width: 200, child: statusField),
+                Expanded(child: searchField),
+                const SizedBox(width: 12),
+                SizedBox(width: 180, child: statusField),
+                const SizedBox(width: 10),
                 resetButton,
+                const SizedBox(width: 10),
                 refreshButton,
               ],
             ),
@@ -397,7 +648,8 @@ class _CategoryRequestsPanel extends ConsumerWidget {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton(
-              onPressed: () => ref.invalidate(adminApprovalsCategoryRequestsProvider),
+              onPressed: () =>
+                  ref.invalidate(adminApprovalsCategoryRequestsProvider),
               child: const Text('Retry'),
             ),
           ),
@@ -413,6 +665,7 @@ class _CategoryRequestsPanel extends ConsumerWidget {
         }
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final item in response.items)
               _CategoryRequestCard(
@@ -421,6 +674,13 @@ class _CategoryRequestsPanel extends ConsumerWidget {
                 onApprove: () => _quickApproveCategory(context, ref, item),
                 onReject: () => _quickRejectCategory(context, ref, item),
               ),
+            const SizedBox(height: 4),
+            _ApprovalsPaginationBar(
+              itemCount: response.items.length,
+              pagination: response.pagination,
+              onPageChanged: (page) =>
+                  ref.read(_approvalsFiltersProvider.notifier).setPage(page),
+            ),
           ],
         );
       },
@@ -452,7 +712,8 @@ class _PriceRequestsPanel extends ConsumerWidget {
           Align(
             alignment: AlignmentDirectional.centerStart,
             child: OutlinedButton(
-              onPressed: () => ref.invalidate(adminApprovalsPriceRequestsProvider),
+              onPressed: () =>
+                  ref.invalidate(adminApprovalsPriceRequestsProvider),
               child: const Text('Retry'),
             ),
           ),
@@ -468,6 +729,7 @@ class _PriceRequestsPanel extends ConsumerWidget {
         }
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final item in response.items)
               _PriceRequestCard(
@@ -476,9 +738,124 @@ class _PriceRequestsPanel extends ConsumerWidget {
                 onApprove: () => _quickApprovePrice(context, ref, item),
                 onReject: () => _quickRejectPrice(context, ref, item),
               ),
+            const SizedBox(height: 4),
+            _ApprovalsPaginationBar(
+              itemCount: response.items.length,
+              pagination: response.pagination,
+              onPageChanged: (page) =>
+                  ref.read(_approvalsFiltersProvider.notifier).setPage(page),
+            ),
           ],
         );
       },
+    );
+  }
+}
+
+/// "Showing X of Y requests" footer with a compact pager.
+class _ApprovalsPaginationBar extends StatelessWidget {
+  const _ApprovalsPaginationBar({
+    required this.itemCount,
+    required this.pagination,
+    required this.onPageChanged,
+  });
+
+  final int itemCount;
+  final AdminApprovalsPagination pagination;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final total = pagination.total;
+    final totalPages = total == 0 ? 1 : (total / pagination.limit).ceil();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 8,
+        children: [
+          Text(
+            'Showing $itemCount of $total request${total == 1 ? '' : 's'}',
+            style: AdminTypography.kpiHelper(palette),
+          ),
+          if (totalPages > 1)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _PaginationArrow(
+                  icon: Icons.chevron_left,
+                  enabled: pagination.page > 1,
+                  onTap: () => onPageChanged(pagination.page - 1),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 28,
+                  height: 28,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: palette.primaryTeal,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${pagination.page}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _PaginationArrow(
+                  icon: Icons.chevron_right,
+                  enabled: pagination.page < totalPages,
+                  onTap: () => onPageChanged(pagination.page + 1),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaginationArrow extends StatelessWidget {
+  const _PaginationArrow({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: palette.cardBorder),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled
+              ? palette.textPrimary
+              : palette.textMuted.withValues(alpha: 0.4),
+        ),
+      ),
     );
   }
 }
@@ -499,58 +876,52 @@ class _CategoryRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final l = AdminL10n.of(context);
     final dateFormat = DateFormat.yMMMd();
-    final supplierLabel = _supplierLabel(item.supplierOrganization, item.supplierName, item.supplierEmail);
-    final similarHint = item.similarCategories.isEmpty
-        ? 'No suggested existing category'
-        : 'Similar existing categories: ${item.similarCategories.join(', ')}';
+    final supplierLabel = _supplierLabel(
+      item.supplierOrganization,
+      item.supplierName,
+      item.supplierEmail,
+    );
+    final suggested = item.suggestedCategory;
+    final suggestedCategory = suggested == null
+        ? l.noSimilarCategories
+        : (l.isArabic ? suggested.nameAr : suggested.nameEn);
 
-    return _ApprovalCardShell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _ApprovalCardHeader(
-            title: item.requestedName,
-            status: item.status,
-            submittedLabel: dateFormat.format(item.createdAt),
-            typeLabel: 'Category request',
-            typeColor: palette.blue,
-          ),
-          const SizedBox(height: 10),
-          Text(supplierLabel, style: AdminTypography.pageSubtitle(palette)),
-          const SizedBox(height: 12),
-          _InfoBlock(
-            rows: [
-              _InfoRow('Material', item.materialTitle ?? '—'),
-              _InfoRow('Description', _truncate(item.materialDescription, 180)),
-              _InfoRow(
-                'Quantity',
-                item.quantity == null
-                    ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim(),
-              ),
-              _InfoRow('Condition', _formatCondition(item.condition)),
-              _InfoRow('Location', item.locationLabel ?? '—'),
-              _InfoRow('Reason', item.categoryRequestReason ?? '—'),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(similarHint, style: AdminTypography.kpiHelper(palette)),
-          if (item.adminNote?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            Text('Admin note: ${item.adminNote!.trim()}', style: AdminTypography.kpiHelper(palette)),
-          ],
-          const SizedBox(height: 12),
-          _ApprovalActionRow(
-            isPending: item.status.toUpperCase() == 'PENDING',
-            onDetails: onDetails,
-            onReject: onReject,
-            onApprove: onApprove,
-            rejectLabel: 'Reject',
-            approveLabel: 'Approve',
-          ),
-        ],
+    final keyFacts = <Widget>[
+      if (item.materialTitle?.trim().isNotEmpty == true)
+        _ApprovalKeyFact(label: l.material, value: item.materialTitle!),
+      _ApprovalKeyFact(
+        label: l.suggestedExistingCategory,
+        value: suggestedCategory,
+        onTap: suggested == null ? null : onApprove,
+        actionLabel: suggested == null
+            ? l.t('Unavailable', 'غير متاحة')
+            : l.useThisCategory,
       ),
+    ];
+
+    final reason = item.categoryRequestReason?.trim();
+
+    return _ApprovalCard(
+      cardKey: Key('category-request-card-${item.id}'),
+      icon: Icons.category_outlined,
+      iconColor: palette.blue,
+      title: item.requestedName,
+      typeLabel: l.categoryRequest,
+      typeColor: palette.blue,
+      submittedLabel: dateFormat.format(item.createdAt),
+      supplierLabel: supplierLabel,
+      status: item.status,
+      keyFacts: keyFacts,
+      secondaryLine: reason?.isNotEmpty == true
+          ? '${l.reason}: ${_truncate(reason, 140)}'
+          : null,
+      onDetails: onDetails,
+      onApprove: onApprove,
+      onReject: onReject,
+      approveLabel: l.resolveCategoryRequest,
+      rejectLabel: l.reject,
     );
   }
 }
@@ -572,63 +943,205 @@ class _PriceRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
     final dateFormat = DateFormat.yMMMd();
-    final supplierLabel = _supplierLabel(item.supplierOrganization, item.supplierName, item.supplierEmail);
+    final supplierLabel = _supplierLabel(
+      item.supplierOrganization,
+      item.supplierName,
+      item.supplierEmail,
+    );
     final unit = item.unit ?? 'unit';
-    final supplierPrice = item.supplierPriceNis == null
-        ? '—'
-        : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS per $unit';
-    final aiSuggested = item.aiSuggestedMaxUnitPriceNis == null
-        ? 'AI/base suggestion unavailable'
-        : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS max per $unit (base)';
-    final multiplierLabel = item.conditionMultiplier == null
-        ? '—'
-        : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%';
-    final adjustedMax = item.adjustedMaxUnitPriceNis == null
-        ? '—'
-        : '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS max per $unit';
 
-    return _ApprovalCardShell(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final keyFacts = <Widget>[
+      _ApprovalKeyFact(
+        label: 'Requested',
+        value: item.supplierPriceNis == null
+            ? '—'
+            : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS',
+      ),
+      _ApprovalKeyFact(
+        label: 'Suggested',
+        value: item.aiSuggestedMaxUnitPriceNis == null
+            ? '—'
+            : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
+      ),
+      if (item.adjustedMaxUnitPriceNis != null)
+        _ApprovalKeyFact(
+          label: 'Adjusted max',
+          value: '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
+        ),
+      if (item.quantity != null)
+        _ApprovalKeyFact(
+          label: 'Quantity',
+          value: '${_formatQuantity(item.quantity!)} $unit'.trim(),
+        ),
+    ];
+
+    final secondaryParts = <String>[
+      'Condition: ${_formatCondition(item.condition)}',
+      if (item.categoryName?.trim().isNotEmpty == true)
+        'Category: ${item.categoryName!.trim()}',
+    ];
+
+    return _ApprovalCard(
+      icon: Icons.sell_outlined,
+      iconColor: palette.purple,
+      title: item.materialTitle ?? 'Unknown material',
+      typeLabel: 'Price request',
+      typeColor: palette.purple,
+      submittedLabel: dateFormat.format(item.createdAt),
+      supplierLabel: supplierLabel,
+      status: item.status,
+      keyFacts: keyFacts,
+      secondaryLine: secondaryParts.join('  ·  '),
+      onDetails: onDetails,
+      onApprove: onApprove,
+      onReject: onReject,
+      approveLabel: 'Approve price',
+      rejectLabel: 'Reject price',
+    );
+  }
+}
+
+/// Shared horizontal approval card: icon tile + scannable main content
+/// (title, badges, supplier, compact key facts) + status + actions.
+class _ApprovalCard extends StatelessWidget {
+  const _ApprovalCard({
+    this.cardKey,
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.typeLabel,
+    required this.typeColor,
+    required this.submittedLabel,
+    required this.supplierLabel,
+    required this.status,
+    required this.onDetails,
+    required this.onApprove,
+    required this.onReject,
+    required this.approveLabel,
+    required this.rejectLabel,
+    this.keyFacts = const [],
+    this.secondaryLine,
+  });
+
+  final Key? cardKey;
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String typeLabel;
+  final Color typeColor;
+  final String submittedLabel;
+  final String supplierLabel;
+  final String status;
+  final VoidCallback onDetails;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  final String approveLabel;
+  final String rejectLabel;
+  final List<Widget> keyFacts;
+  final String? secondaryLine;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final isPending = status.toUpperCase() == 'PENDING';
+
+    return Container(
+      key: cardKey,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.cardShadow,
+            blurRadius: palette.isDark ? 14 : 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ApprovalCardHeader(
-            title: item.materialTitle ?? 'Unknown material',
-            status: item.status,
-            submittedLabel: dateFormat.format(item.createdAt),
-            typeLabel: 'Price request',
-            typeColor: palette.purple,
+          Container(
+            width: 46,
+            height: 46,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: palette.isDark ? 0.2 : 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 24, color: iconColor),
           ),
-          const SizedBox(height: 10),
-          Text(supplierLabel, style: AdminTypography.pageSubtitle(palette)),
-          const SizedBox(height: 12),
-          _InfoBlock(
-            rows: [
-              _InfoRow('Supplier price', supplierPrice),
-              _InfoRow('AI/base suggested price', aiSuggested),
-              _InfoRow('Condition multiplier', multiplierLabel),
-              _InfoRow('Adjusted suggested/max price', adjustedMax),
-              _InfoRow(
-                'Quantity',
-                item.quantity == null
-                    ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim(),
-              ),
-              _InfoRow('Condition', _formatCondition(item.condition)),
-              _InfoRow('Category', item.categoryName ?? '—'),
-            ],
-          ),
-          if (item.adminNote?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 8),
-            Text('Admin note: ${item.adminNote!.trim()}', style: AdminTypography.kpiHelper(palette)),
-          ],
-          const SizedBox(height: 12),
-          _ApprovalActionRow(
-            isPending: item.status.toUpperCase() == 'PENDING',
-            onDetails: onDetails,
-            onReject: onReject,
-            onApprove: onApprove,
-            rejectLabel: 'Reject price',
-            approveLabel: 'Approve price',
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AdminTypography.pageTitle(
+                          palette,
+                        ).copyWith(fontSize: 16),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    AppStatusBadge(
+                      label: _formatApprovalStatus(status),
+                      tone: reviewStatusTone(status),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _TypeBadge(label: typeLabel, color: typeColor),
+                    Text(
+                      'Submitted $submittedLabel',
+                      style: AdminTypography.kpiHelper(palette),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  supplierLabel,
+                  style: AdminTypography.pageSubtitle(
+                    palette,
+                  ).copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                if (keyFacts.isNotEmpty) ...[
+                  const SizedBox(height: 9),
+                  Wrap(spacing: 8, runSpacing: 8, children: keyFacts),
+                ],
+                if (secondaryLine != null &&
+                    secondaryLine!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    secondaryLine!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                _ApprovalActionRow(
+                  isPending: isPending,
+                  onDetails: onDetails,
+                  onReject: onReject,
+                  onApprove: onApprove,
+                  rejectLabel: rejectLabel,
+                  approveLabel: approveLabel,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -636,76 +1149,63 @@ class _PriceRequestCard extends StatelessWidget {
   }
 }
 
-class _ApprovalCardShell extends StatelessWidget {
-  const _ApprovalCardShell({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: palette.cardBackground,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: palette.cardBorder),
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _ApprovalCardHeader extends StatelessWidget {
-  const _ApprovalCardHeader({
-    required this.title,
-    required this.status,
-    required this.submittedLabel,
-    required this.typeLabel,
-    required this.typeColor,
+/// Small labeled pill used for compact "key facts" (e.g. price, quantity).
+class _ApprovalKeyFact extends StatelessWidget {
+  const _ApprovalKeyFact({
+    required this.label,
+    required this.value,
+    this.onTap,
+    this.actionLabel,
   });
 
-  final String title;
-  final String status;
-  final String submittedLabel;
-  final String typeLabel;
-  final Color typeColor;
+  final String label;
+  final String value;
+  final VoidCallback? onTap;
+  final String? actionLabel;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                title,
-                style: AdminTypography.pageTitle(palette).copyWith(fontSize: 18),
+    final content = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: palette.pageBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$label  ', style: AdminTypography.kpiHelper(palette)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: palette.textPrimary,
+            ),
+          ),
+          if (actionLabel != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              actionLabel!,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: onTap == null ? palette.textMuted : palette.primaryTeal,
               ),
             ),
-            const SizedBox(width: 10),
-            _StatusPill(label: status.toUpperCase(), color: _statusColor(palette, status)),
           ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _TypeBadge(label: typeLabel, color: typeColor),
-            Text('Submitted $submittedLabel', style: AdminTypography.kpiHelper(palette)),
-          ],
-        ),
-      ],
+        ],
+      ),
     );
+    return onTap == null
+        ? content
+        : InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: content,
+          );
   }
 }
 
@@ -727,56 +1227,9 @@ class _TypeBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-class _InfoRow {
-  const _InfoRow(this.label, this.value);
-
-  final String label;
-  final String value;
-}
-
-class _InfoBlock extends StatelessWidget {
-  const _InfoBlock({required this.rows});
-
-  final List<_InfoRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: palette.pageBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Column(
-        children: [
-          for (var i = 0; i < rows.length; i++) ...[
-            if (i > 0) const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 108,
-                  child: Text(rows[i].label, style: AdminTypography.kpiHelper(palette)),
-                ),
-                Expanded(
-                  child: Text(rows[i].value, style: AdminTypography.pageSubtitle(palette)),
-                ),
-              ],
-            ),
-          ],
-        ],
+        style: AdminTypography.kpiHelper(
+          palette,
+        ).copyWith(fontWeight: FontWeight.w700, color: color),
       ),
     );
   }
@@ -801,8 +1254,6 @@ class _ApprovalActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-
     return Align(
       alignment: AlignmentDirectional.centerEnd,
       child: Wrap(
@@ -812,13 +1263,24 @@ class _ApprovalActionRow extends StatelessWidget {
         children: [
           TextButton(onPressed: onDetails, child: const Text('Details')),
           if (isPending) ...[
-            OutlinedButton(onPressed: onReject, child: Text(rejectLabel)),
+            OutlinedButton(
+              onPressed: onReject,
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.danger,
+              ),
+              child: Text(rejectLabel),
+            ),
             FilledButton(
               onPressed: onApprove,
-              style: FilledButton.styleFrom(
-                backgroundColor: palette.primaryTeal,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.success,
                 visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
               child: Text(approveLabel),
             ),
@@ -826,43 +1288,6 @@ class _ApprovalActionRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(10, 6, 10, 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Text(
-        label,
-        style: AdminTypography.kpiHelper(palette).copyWith(
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
-    );
-  }
-}
-
-Color _statusColor(dynamic palette, String status) {
-  switch (status.toUpperCase()) {
-    case 'APPROVED':
-      return palette.primaryTeal;
-    case 'REJECTED':
-      return palette.red;
-    default:
-      return palette.amber;
   }
 }
 
@@ -895,55 +1320,21 @@ String _formatCondition(String? value) {
   return value.replaceAll('_', ' ');
 }
 
+String _formatApprovalStatus(String value) {
+  return value
+      .trim()
+      .toLowerCase()
+      .split('_')
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
+}
+
 Future<void> _quickApproveCategory(
   BuildContext context,
   WidgetRef ref,
   AdminCategoryRequestListItem item,
-) async {
-  final api = ref.read(adminApprovalsApiProvider);
-  final controller = TextEditingController(text: item.requestedName);
-  final finalName = await showDialog<String?>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Approve category'),
-      content: TextField(
-        controller: controller,
-        decoration: const InputDecoration(
-          labelText: 'Final category name',
-          border: OutlineInputBorder(),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Approve')),
-      ],
-    ),
-  );
-  controller.dispose();
-  if (finalName == null || finalName.trim().isEmpty) return;
-
-  try {
-    await api.approveCategoryRequest(id: item.id, finalName: finalName);
-    ref.invalidate(adminApprovalsSummaryProvider);
-    ref.invalidate(adminApprovalsCategoryRequestsProvider);
-    ref.invalidate(materialCategoriesProvider);
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category approved.')));
-    }
-  } on ApiException catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
-      );
-    }
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
-      );
-    }
-  }
-}
+) => _openCategoryDetails(context, ref, item);
 
 Future<void> _quickRejectCategory(
   BuildContext context,
@@ -961,7 +1352,7 @@ Future<void> _quickRejectCategory(
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Reject category'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -989,10 +1380,17 @@ Future<void> _quickRejectCategory(
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
-      ],
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
+          child: const Text('Reject'),
+        ),
+      ),
     ),
   );
 
@@ -1002,11 +1400,15 @@ Future<void> _quickRejectCategory(
   if (confirmed != true) return;
   if (reason.length < 3) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: const Text('Reason is required.'), backgroundColor: Theme.of(context).colorScheme.error),
+      SnackBar(
+        content: const Text('Reason is required.'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
     );
     return;
   }
-  if (categories.isNotEmpty && (suggestedCategoryId == null || suggestedCategoryId!.trim().isEmpty)) {
+  if (categories.isNotEmpty &&
+      (suggestedCategoryId == null || suggestedCategoryId!.trim().isEmpty)) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Select a suggested existing category.'),
@@ -1017,22 +1419,34 @@ Future<void> _quickRejectCategory(
   }
 
   try {
-    await api.rejectCategoryRequest(id: item.id, adminNote: reason, suggestedCategoryId: suggestedCategoryId);
+    await api.rejectCategoryRequest(
+      id: item.id,
+      adminNote: reason,
+      suggestedCategoryId: suggestedCategoryId,
+    );
     ref.invalidate(adminApprovalsSummaryProvider);
     ref.invalidate(adminApprovalsCategoryRequestsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category rejected.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Category rejected.')));
     }
   } on ApiException catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -1046,13 +1460,15 @@ Future<void> _quickApprovePrice(
   final api = ref.read(adminApprovalsApiProvider);
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Approve supplier price'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Supplier price: ${item.supplierPriceNis?.toStringAsFixed(2) ?? '—'} NIS'),
+          Text(
+            'Supplier price: ${item.supplierPriceNis?.toStringAsFixed(2) ?? '—'} NIS',
+          ),
           const SizedBox(height: 6),
           Text(
             item.aiSuggestedMaxUnitPriceNis == null
@@ -1074,10 +1490,17 @@ Future<void> _quickApprovePrice(
           ],
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Approve')),
-      ],
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
+          child: const Text('Approve'),
+        ),
+      ),
     ),
   );
   if (confirmed != true) return;
@@ -1087,18 +1510,26 @@ Future<void> _quickApprovePrice(
     ref.invalidate(adminApprovalsSummaryProvider);
     ref.invalidate(adminApprovalsPriceRequestsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price approved.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price approved.')));
     }
   } on ApiException catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -1115,7 +1546,7 @@ Future<void> _quickRejectPrice(
 
   final confirmed = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Reject price'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1146,10 +1577,17 @@ Future<void> _quickRejectPrice(
           ),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
-      ],
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
+          child: const Text('Reject'),
+        ),
+      ),
     ),
   );
 
@@ -1171,22 +1609,34 @@ Future<void> _quickRejectPrice(
   }
 
   try {
-    await api.rejectPriceRequest(id: item.id, adminNote: reason, maxAllowedPrice: maxAllowed);
+    await api.rejectPriceRequest(
+      id: item.id,
+      adminNote: reason,
+      maxAllowedPrice: maxAllowed,
+    );
     ref.invalidate(adminApprovalsSummaryProvider);
     ref.invalidate(adminApprovalsPriceRequestsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price rejected.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price rejected.')));
     }
   } on ApiException catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error),
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     }
   }
@@ -1198,19 +1648,19 @@ Future<void> _openCategoryDetails(
   AdminCategoryRequestListItem item,
 ) async {
   final api = ref.read(adminApprovalsApiProvider);
-  final categoriesAsync = ref.read(materialCategoriesProvider.future);
 
   await showDialog<void>(
     context: context,
+    barrierDismissible: false,
     builder: (context) {
-      return _CategoryRequestDialog(
+      return CategoryRequestApprovalDialog(
         item: item,
         api: api,
-        categoriesFuture: categoriesAsync,
         onCompleted: () {
           ref.invalidate(adminApprovalsSummaryProvider);
           ref.invalidate(adminApprovalsCategoryRequestsProvider);
           ref.invalidate(materialCategoriesProvider);
+          ref.invalidate(adminMaterialCategoryOptionsProvider);
         },
       );
     },
@@ -1236,234 +1686,212 @@ Future<void> _openPriceDetails(
   );
 }
 
-class _CategoryRequestDialog extends StatefulWidget {
-  const _CategoryRequestDialog({
-    required this.item,
-    required this.api,
-    required this.categoriesFuture,
-    required this.onCompleted,
-  });
+class _MetaDivider extends StatelessWidget {
+  const _MetaDivider({required this.palette});
 
-  final AdminCategoryRequestListItem item;
-  final AdminApprovalsApi api;
-  final Future<List<MaterialCategory>> categoriesFuture;
-  final VoidCallback onCompleted;
+  final AdminPalette palette;
 
   @override
-  State<_CategoryRequestDialog> createState() => _CategoryRequestDialogState();
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Container(width: 1, height: 36, color: palette.cardBorder),
+    );
+  }
 }
 
-class _CategoryRequestDialogState extends State<_CategoryRequestDialog> {
-  bool _submitting = false;
+/// Icon tile + muted label + value used by the metadata strip and the
+/// request summary card.
+class _MetadataItem extends StatelessWidget {
+  const _MetadataItem({
+    required this.icon,
+    required this.tone,
+    required this.label,
+    this.value,
+    this.valueWidget,
+  });
 
-  Future<void> _approve() async {
-    final controller = TextEditingController(text: widget.item.requestedName);
-    final result = await showDialog<String?>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Approve category request'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Final category name',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text.trim()), child: const Text('Approve')),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (result == null || result.trim().isEmpty) return;
-
-    setState(() => _submitting = true);
-    try {
-      await widget.api.approveCategoryRequest(id: widget.item.id, finalName: result);
-      if (!mounted) return;
-      widget.onCompleted();
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category request approved.')));
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
-    }
-  }
-
-  Future<void> _reject() async {
-    final reasonController = TextEditingController();
-    String? selectedCategoryId;
-
-    final categories = await widget.categoriesFuture;
-    if (!mounted) {
-      reasonController.dispose();
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reject category request'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Reason (required)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: selectedCategoryId,
-              items: [
-                for (final c in categories)
-                  DropdownMenuItem(value: c.id, child: Text(c.nameEn)),
-              ],
-              onChanged: (value) => selectedCategoryId = value,
-              decoration: const InputDecoration(
-                labelText: 'Suggested existing category (recommended)',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
-        ],
-      ),
-    );
-
-    final reason = reasonController.text.trim();
-    reasonController.dispose();
-    if (!mounted) return;
-    if (confirmed != true) return;
-    if (reason.length < 3) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('Reason is required.'), backgroundColor: Theme.of(context).colorScheme.error),
-      );
-      return;
-    }
-    if (categories.isNotEmpty && (selectedCategoryId == null || selectedCategoryId!.trim().isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Select a suggested existing category.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _submitting = true);
-    try {
-      await widget.api.rejectCategoryRequest(
-        id: widget.item.id,
-        adminNote: reason,
-        suggestedCategoryId: selectedCategoryId,
-      );
-      if (!mounted) return;
-      widget.onCompleted();
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Category request rejected.')));
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
-    }
-  }
+  final IconData icon;
+  final AppStatusTone tone;
+  final String label;
+  final String? value;
+  final Widget? valueWidget;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final item = widget.item;
-    final supplierLabel = _supplierLabel(
-      item.supplierOrganization,
-      item.supplierName,
-      item.supplierEmail,
-    );
-    final similarHint = item.similarCategories.isEmpty
-        ? 'No suggested existing category'
-        : item.similarCategories.join(', ');
+    final style = AppStatusStyle.of(context, tone);
 
-    return AlertDialog(
-      title: const Text('Category request'),
-      content: SizedBox(
-        width: 620,
-        child: SingleChildScrollView(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: style.background,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 17, color: style.foreground),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(item.requestedName, style: AdminTypography.pageTitle(palette)),
-              const SizedBox(height: 8),
-              Text('Status: ${item.status}', style: AdminTypography.pageSubtitle(palette)),
-              const SizedBox(height: 12),
-              _dialogKv('Supplier', supplierLabel),
-              _dialogKv('Material', item.materialTitle ?? '—'),
-              _dialogKv('Description', item.materialDescription ?? '—'),
-              _dialogKv(
-                'Quantity',
-                item.quantity == null
-                    ? '—'
-                    : '${_formatQuantity(item.quantity!)} ${item.unit ?? ''}'.trim(),
-              ),
-              _dialogKv('Condition', _formatCondition(item.condition)),
-              _dialogKv('Location', item.locationLabel ?? '—'),
-              _dialogKv('Reason', item.categoryRequestReason ?? '—'),
-              _dialogKv('Similar categories', similarHint),
-              if (item.adminNote?.trim().isNotEmpty == true) ...[
-                const SizedBox(height: 8),
-                Text('Admin note', style: AdminTypography.kpiHelper(palette)),
-                const SizedBox(height: 4),
-                Text(item.adminNote!.trim()),
-              ],
+              Text(label, style: AdminTypography.kpiHelper(palette)),
+              const SizedBox(height: 4),
+              valueWidget ??
+                  Text(
+                    value ?? '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                      color: palette.textPrimary,
+                      height: 1.35,
+                    ),
+                  ),
             ],
           ),
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: _submitting ? null : () => Navigator.of(context).pop(), child: const Text('Close')),
-        TextButton(onPressed: _submitting ? null : _reject, child: const Text('Reject')),
-        FilledButton(
-          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING') ? null : _approve,
-          style: FilledButton.styleFrom(
-            backgroundColor: palette.primaryTeal,
-            visualDensity: VisualDensity.compact,
-          ),
-          child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Approve'),
         ),
       ],
     );
   }
+}
 
-  Widget _dialogKv(String label, String value) {
+class _DialogSectionCard extends StatelessWidget {
+  const _DialogSectionCard({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 130, child: Text(label, style: AdminTypography.kpiHelper(palette))),
-          Expanded(child: Text(value, style: AdminTypography.pageSubtitle(palette))),
+          Text(title, style: AdminTypography.sectionTitle(palette)),
+          const SizedBox(height: 14),
+          child,
         ],
       ),
     );
   }
+}
+
+/// Compact label/value row for the Request details card. When [pillTone]
+/// is provided (and the value is not a missing-value dash), the value is
+/// rendered as a small semantic pill instead of plain text.
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.isLast = false,
+    this.pillTone,
+  });
+
+  final String label;
+  final String value;
+  final bool isLast;
+  final AppStatusTone? pillTone;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final showPill = pillTone != null && value.trim() != '—';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: BoxDecoration(
+        border: isLast
+            ? null
+            : Border(
+                bottom: BorderSide(
+                  color: palette.cardBorder.withValues(alpha: 0.6),
+                ),
+              ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: AdminTypography.kpiHelper(palette).copyWith(fontSize: 13),
+          ),
+          const Spacer(),
+          Flexible(
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: showPill
+                  ? _InlinePricePill(label: value, tone: pillTone!)
+                  : Text(
+                      value,
+                      textAlign: TextAlign.right,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Small pill used to highlight important price/condition values inside
+/// label/value rows (e.g. "Used", "22.50 NIS").
+class _InlinePricePill extends StatelessWidget {
+  const _InlinePricePill({required this.label, required this.tone});
+
+  final String label;
+  final AppStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppStatusStyle.of(context, tone);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: style.border),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w800,
+          color: style.foreground,
+        ),
+      ),
+    );
+  }
+}
+
+String _dashOr(String? value) {
+  final trimmed = value?.trim() ?? '';
+  return trimmed.isEmpty ? '—' : trimmed;
 }
 
 class _PriceRequestDialog extends StatefulWidget {
@@ -1491,15 +1919,27 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       if (!mounted) return;
       widget.onCompleted();
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price request approved.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price request approved.')));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -1509,7 +1949,7 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Reject price request'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1535,10 +1975,17 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Reject')),
-        ],
+        footer: AppDialogFooter.decision(
+          secondaryAction: TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          primaryAction: FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
+            child: const Text('Reject'),
+          ),
+        ),
       ),
     );
 
@@ -1570,92 +2017,936 @@ class _PriceRequestDialogState extends State<_PriceRequestDialog> {
       if (!mounted) return;
       widget.onCompleted();
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Price request rejected.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Price request rejected.')));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.displayMessage), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.displayMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Theme.of(context).colorScheme.error));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
+  }
+
+  void _closeDialog() {
+    if (_submitting) return;
+    Navigator.of(context).maybePop();
   }
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
     final item = widget.item;
+    final supplierLabel = _supplierLabel(
+      item.supplierOrganization,
+      item.supplierName,
+      item.supplierEmail,
+    );
+    final screenSize = MediaQuery.sizeOf(context);
+    final maxDialogWidth = (screenSize.width - 48).clamp(280.0, 940.0);
 
-    return AlertDialog(
-      title: const Text('Price request'),
-      content: SizedBox(
-        width: 560,
+    return Dialog(
+      backgroundColor: palette.cardBackground,
+      elevation: 12,
+      shadowColor: colors.shadow,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: palette.cardBorder),
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: maxDialogWidth,
+          maxHeight: screenSize.height * 0.88,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(item.materialTitle ?? 'Unknown material', style: AdminTypography.pageTitle(palette)),
-            const SizedBox(height: 8),
-            Text('Status: ${item.status}', style: AdminTypography.pageSubtitle(palette)),
-            const SizedBox(height: 12),
-            _kv('Supplier price', item.supplierPriceNis == null ? '—' : '${item.supplierPriceNis!.toStringAsFixed(2)} NIS'),
-            _kv(
-              'AI/base suggested price',
-              item.aiSuggestedMaxUnitPriceNis == null
-                  ? 'AI/base suggestion unavailable'
-                  : '${item.aiSuggestedMaxUnitPriceNis!.toStringAsFixed(2)} NIS (max unit)',
+            _PriceDialogHeader(item: item, onClose: _closeDialog),
+            const SizedBox(height: 20),
+            _PriceMetadataStrip(item: item, supplierLabel: supplierLabel),
+            const SizedBox(height: 18),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(32, 0, 32, 4),
+                child: _PriceDialogBody(
+                  item: item,
+                  supplierLabel: supplierLabel,
+                ),
+              ),
             ),
-            _kv('Condition', _formatCondition(item.condition)),
-            _kv(
-              'Condition multiplier',
-              item.conditionMultiplier == null
-                  ? '—'
-                  : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%',
+            const SizedBox(height: 4),
+            _PriceDialogFooter(
+              submitting: _submitting,
+              canDecide: item.status.toUpperCase() == 'PENDING',
+              onClose: _closeDialog,
+              onReject: _reject,
+              onApprove: _approve,
             ),
-            _kv(
-              'Adjusted suggested/max price',
-              item.adjustedMaxUnitPriceNis == null
-                  ? '—'
-                  : '${item.adjustedMaxUnitPriceNis!.toStringAsFixed(2)} NIS',
-            ),
-            if (item.adminNote?.trim().isNotEmpty == true) ...[
-              const SizedBox(height: 12),
-              Text('Admin note', style: AdminTypography.kpiHelper(palette)),
-              const SizedBox(height: 4),
-              Text(item.adminNote!.trim()),
-            ],
           ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: _submitting ? null : () => Navigator.of(context).pop(), child: const Text('Close')),
-        TextButton(onPressed: _submitting ? null : _reject, child: const Text('Reject')),
-        FilledButton(
-          onPressed: (_submitting || item.status.toUpperCase() != 'PENDING') ? null : _approve,
-          style: FilledButton.styleFrom(
-            backgroundColor: palette.primaryTeal,
-            visualDensity: VisualDensity.compact,
-          ),
-          child: _submitting
-              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Approve'),
-        ),
-      ],
     );
   }
+}
 
-  Widget _kv(String label, String value) {
+/// Header: purple price-tag icon tile + "Price request" title + close
+/// button, followed by the material title and its status badge inline.
+class _PriceDialogHeader extends StatelessWidget {
+  const _PriceDialogHeader({required this.item, required this.onClose});
+
+  final AdminPriceRequestListItem item;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
     final palette = context.adminPalette;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(32, 28, 32, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 130, child: Text(label, style: AdminTypography.kpiHelper(palette))),
-          Expanded(child: Text(value, style: AdminTypography.pageSubtitle(palette))),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: palette.purple.withValues(
+                    alpha: palette.isDark ? 0.2 : 0.12,
+                  ),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  Icons.sell_outlined,
+                  size: 24,
+                  color: palette.purple,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'Price request',
+                  style: AdminTypography.sectionTitle(
+                    palette,
+                  ).copyWith(fontSize: 18),
+                ),
+              ),
+              AppCloseButton(onPressed: onClose, tooltip: 'Close'),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 10,
+            runSpacing: 6,
+            children: [
+              Text(
+                item.materialTitle ?? 'Unknown material',
+                style: AdminTypography.pageTitle(
+                  palette,
+                ).copyWith(fontSize: 21),
+              ),
+              AppStatusBadge(
+                label: _formatApprovalStatus(item.status),
+                tone: reviewStatusTone(item.status),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
+/// Horizontal three-section strip: Status | Supplier | Material category.
+class _PriceMetadataStrip extends StatelessWidget {
+  const _PriceMetadataStrip({required this.item, required this.supplierLabel});
+
+  final AdminPriceRequestListItem item;
+  final String supplierLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: palette.cardBackground,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: palette.cardBorder),
+          boxShadow: [
+            BoxShadow(
+              color: palette.cardShadow,
+              blurRadius: palette.isDark ? 12 : 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final items = [
+              _MetadataItem(
+                icon: Icons.access_time_rounded,
+                tone: AppStatusTone.warning,
+                label: 'Status',
+                valueWidget: AppStatusBadge(
+                  label: _formatApprovalStatus(item.status),
+                  tone: reviewStatusTone(item.status),
+                ),
+              ),
+              _MetadataItem(
+                icon: Icons.storefront_outlined,
+                tone: AppStatusTone.info,
+                label: 'Supplier',
+                value: supplierLabel,
+              ),
+              _MetadataItem(
+                icon: Icons.widgets_outlined,
+                tone: AppStatusTone.success,
+                label: 'Material category',
+                value: _dashOr(item.categoryName),
+              ),
+            ];
+
+            if (constraints.maxWidth < 480) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 14),
+                    items[i],
+                  ],
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: items[0]),
+                _MetaDivider(palette: palette),
+                Expanded(child: items[1]),
+                _MetaDivider(palette: palette),
+                Expanded(child: items[2]),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Real-value-only comparison between the supplier's requested price and
+/// the admin-adjusted suggested maximum for this condition.
+class _PriceComparison {
+  const _PriceComparison({this.supplierPrice, this.adjustedMax});
+
+  final double? supplierPrice;
+  final double? adjustedMax;
+
+  factory _PriceComparison.fromItem(AdminPriceRequestListItem item) {
+    return _PriceComparison(
+      supplierPrice: item.supplierPriceNis,
+      adjustedMax: item.adjustedMaxUnitPriceNis,
+    );
+  }
+
+  bool get hasComparison =>
+      supplierPrice != null && adjustedMax != null && adjustedMax! > 0;
+
+  double? get difference =>
+      hasComparison ? supplierPrice! - adjustedMax! : null;
+
+  bool get exceedsMax => hasComparison && difference! > 0;
+
+  double? get percentAboveMax =>
+      hasComparison ? (difference! / adjustedMax!) * 100 : null;
+
+  double? get fillRatio {
+    if (!hasComparison || supplierPrice! <= 0) return null;
+    return (adjustedMax! / supplierPrice!).clamp(0.0, 1.0);
+  }
+}
+
+/// Two-column desktop body: Price details/comparison/guidance on the left,
+/// Request summary/warning/decision risk on the right. Stacks on narrow
+/// widths.
+class _PriceDialogBody extends StatelessWidget {
+  const _PriceDialogBody({required this.item, required this.supplierLabel});
+
+  final AdminPriceRequestListItem item;
+  final String supplierLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final unit = item.unit?.trim();
+    final quantityValue = item.quantity == null
+        ? '—'
+        : '${_formatQuantity(item.quantity!)}${unit != null && unit.isNotEmpty ? ' $unit' : ''}';
+    final comparison = _PriceComparison.fromItem(item);
+
+    final leftColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DialogSectionCard(
+          title: 'Price details',
+          child: Column(
+            children: [
+              _DetailRow(
+                label: 'Supplier price',
+                value: _formatMoney(item.supplierPriceNis),
+                pillTone: AppStatusTone.neutral,
+              ),
+              _DetailRow(
+                label: 'AI / base suggested price',
+                value: item.aiSuggestedMaxUnitPriceNis == null
+                    ? '—'
+                    : '${_formatMoney(item.aiSuggestedMaxUnitPriceNis)} (max unit)',
+              ),
+              _DetailRow(
+                label: 'Condition',
+                value: _formatCondition(item.condition),
+                pillTone: AppStatusTone.neutral,
+              ),
+              _DetailRow(
+                label: 'Condition multiplier',
+                value: item.conditionMultiplier == null
+                    ? '—'
+                    : '${(item.conditionMultiplier! * 100).toStringAsFixed(0)}%',
+              ),
+              _DetailRow(
+                label: 'Adjusted suggested / max price',
+                value: _formatMoney(item.adjustedMaxUnitPriceNis),
+                pillTone: AppStatusTone.success,
+              ),
+              _DetailRow(label: 'Quantity', value: quantityValue, isLast: true),
+              const SizedBox(height: 18),
+              _PriceComparisonSection(comparison: comparison),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        const _PriceAdminGuidanceCard(),
+      ],
+    );
+
+    final rightColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PriceRequestSummaryCard(item: item, supplierLabel: supplierLabel),
+        if (comparison.hasComparison) ...[
+          const SizedBox(height: 16),
+          _PriceWarningCard(comparison: comparison),
+          const SizedBox(height: 16),
+          _DecisionRiskCard(comparison: comparison),
+        ],
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 700) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [leftColumn, const SizedBox(height: 16), rightColumn],
+          );
+        }
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 11, child: leftColumn),
+            const SizedBox(width: 18),
+            Expanded(flex: 10, child: rightColumn),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// "Price comparison (per unit)" block: side-by-side values, a simple
+/// proportional bar, and a difference line — all derived from real values.
+class _PriceComparisonSection extends StatelessWidget {
+  const _PriceComparisonSection({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Price comparison (per unit)',
+          style: AdminTypography.sectionTitle(palette).copyWith(fontSize: 13.5),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Supplier price',
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatMoney(comparison.supplierPrice),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: palette.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('vs.', style: AdminTypography.kpiHelper(palette)),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Suggested max price',
+                    textAlign: TextAlign.right,
+                    style: AdminTypography.kpiHelper(palette),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatMoney(comparison.adjustedMax),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: palette.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _PriceComparisonBar(comparison: comparison),
+        const SizedBox(height: 10),
+        _PriceDifferenceLine(comparison: comparison),
+      ],
+    );
+  }
+}
+
+/// Simple two-tone proportional bar (no chart package): the filled segment
+/// represents the adjusted max as a share of the requested price, with the
+/// remainder highlighted in danger tone when the request exceeds that max.
+class _PriceComparisonBar extends StatelessWidget {
+  const _PriceComparisonBar({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final ratio = comparison.fillRatio;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: SizedBox(
+        height: 8,
+        child: ratio == null
+            ? Container(color: palette.cardBorder)
+            : Row(
+                children: [
+                  Expanded(
+                    flex: (ratio * 1000).round().clamp(1, 1000),
+                    child: Container(color: palette.green),
+                  ),
+                  if (comparison.exceedsMax)
+                    Expanded(
+                      flex: (1000 - (ratio * 1000).round()).clamp(1, 1000),
+                      child: Container(color: palette.red),
+                    ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+/// "Difference: X.XX NIS (Y% higher/lower)" line, danger-toned only when
+/// the requested price exceeds the adjusted maximum.
+class _PriceDifferenceLine extends StatelessWidget {
+  const _PriceDifferenceLine({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+
+    if (!comparison.hasComparison) {
+      return Text('Difference: —', style: AdminTypography.kpiHelper(palette));
+    }
+
+    final diff = comparison.difference!.abs();
+    final percent = comparison.percentAboveMax?.abs();
+    final direction = comparison.exceedsMax ? 'higher' : 'lower';
+    final percentLabel = percent == null
+        ? ''
+        : ' (${percent.toStringAsFixed(0)}% $direction)';
+    final color = comparison.exceedsMax ? palette.red : palette.green;
+
+    return RichText(
+      text: TextSpan(
+        style: AdminTypography.kpiHelper(palette),
+        children: [
+          const TextSpan(text: 'Difference: '),
+          TextSpan(
+            text: '${diff.toStringAsFixed(2)} NIS$percentLabel',
+            style: TextStyle(fontWeight: FontWeight.w800, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Static moderation guidance — compact info-toned card.
+class _PriceAdminGuidanceCard extends StatelessWidget {
+  const _PriceAdminGuidanceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final style = AppStatusStyle.of(context, AppStatusTone.info);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: palette.pageBackground,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.background,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(Icons.info_outline, size: 17, color: style.foreground),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Admin guidance',
+                  style: AdminTypography.sectionTitle(
+                    palette,
+                  ).copyWith(fontSize: 13.5),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Approve if the requested price is justified by condition '
+                  'and market context; reject if it significantly exceeds '
+                  'the adjusted recommendation.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Request summary" card: submitted-by/on plus the two key price values.
+class _PriceRequestSummaryCard extends StatelessWidget {
+  const _PriceRequestSummaryCard({
+    required this.item,
+    required this.supplierLabel,
+  });
+
+  final AdminPriceRequestListItem item;
+  final String supplierLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return _DialogSectionCard(
+      title: 'Request summary',
+      child: Column(
+        children: [
+          _DetailRow(label: 'Submitted by', value: supplierLabel),
+          _DetailRow(
+            label: 'Submitted on',
+            value: DateFormat.yMMMd().add_jm().format(item.createdAt),
+          ),
+          _DetailRow(
+            label: 'Requested price (per unit)',
+            value: _formatMoney(item.supplierPriceNis),
+            pillTone: AppStatusTone.neutral,
+          ),
+          _DetailRow(
+            label: 'Adjusted suggested max',
+            value: _formatMoney(item.adjustedMaxUnitPriceNis),
+            pillTone: AppStatusTone.success,
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact warning (or success, when within range) card summarizing
+/// whether the requested price exceeds the adjusted maximum.
+class _PriceWarningCard extends StatelessWidget {
+  const _PriceWarningCard({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final exceeds = comparison.exceedsMax;
+    final tone = exceeds ? AppStatusTone.warning : AppStatusTone.success;
+    final style = AppStatusStyle.of(context, tone);
+    final diff = comparison.difference!.abs();
+    final percent = comparison.percentAboveMax?.abs();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: style.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.background,
+              shape: BoxShape.circle,
+              border: Border.all(color: style.border),
+            ),
+            child: Icon(
+              exceeds ? Icons.trending_up : Icons.check_circle_outline,
+              size: 17,
+              color: style.foreground,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  exceeds
+                      ? 'Requested price exceeds recommended max'
+                      : 'Requested price is within the recommended range',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: palette.textPrimary,
+                  ),
+                ),
+                if (exceeds && percent != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'by ${diff.toStringAsFixed(2)} NIS (${percent.toStringAsFixed(0)}%)',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: style.foreground,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          AppStatusBadge(
+            label: exceeds ? 'Needs review' : 'Looks good',
+            tone: tone,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact card explaining the approval risk implied by the price
+/// comparison. Text only — omits any non-functional "Learn more" action.
+class _DecisionRiskCard extends StatelessWidget {
+  const _DecisionRiskCard({required this.comparison});
+
+  final _PriceComparison comparison;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final percent = comparison.percentAboveMax;
+    final AppStatusTone tone;
+    final String message;
+
+    if (!comparison.exceedsMax) {
+      tone = AppStatusTone.success;
+      message =
+          'The requested price is within the recommended range, which '
+          'keeps approval risk low.';
+    } else if (percent != null && percent > 20) {
+      tone = AppStatusTone.warning;
+      message =
+          'Approving a price significantly above the adjusted '
+          'recommendation may increase costs and set an unfavorable '
+          'precedent.';
+    } else {
+      tone = AppStatusTone.neutral;
+      message =
+          'The requested price is close to the recommended maximum — '
+          'review the condition and market context before approving.';
+    }
+
+    final style = AppStatusStyle.of(context, tone);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: style.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.background,
+              shape: BoxShape.circle,
+              border: Border.all(color: style.border),
+            ),
+            child: Icon(
+              Icons.shield_outlined,
+              size: 17,
+              color: style.foreground,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Decision risk',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: palette.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.4,
+                    color: palette.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fixed footer: Close, Reject price, and Approve price actions aligned to
+/// the end (stacked on very narrow widths).
+class _PriceDialogFooter extends StatelessWidget {
+  const _PriceDialogFooter({
+    required this.submitting,
+    required this.canDecide,
+    required this.onClose,
+    required this.onReject,
+    required this.onApprove,
+  });
+
+  final bool submitting;
+  final bool canDecide;
+  final VoidCallback onClose;
+  final VoidCallback onReject;
+  final VoidCallback onApprove;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
+    final dangerColor = AppStatusStyle.of(
+      context,
+      AppStatusTone.danger,
+    ).foreground;
+
+    final closeButton = SizedBox(
+      height: 46,
+      child: OutlinedButton(
+        onPressed: submitting ? null : onClose,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.textSecondary,
+          side: BorderSide(color: palette.cardBorder),
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+        child: const Text('Close'),
+      ),
+    );
+
+    final rejectButton = SizedBox(
+      height: 46,
+      child: OutlinedButton.icon(
+        onPressed: (submitting || !canDecide) ? null : onReject,
+        icon: Icon(Icons.close, size: 16, color: dangerColor),
+        label: const Text('Reject price'),
+        style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger)
+            .copyWith(
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+      ),
+    );
+
+    final approveButton = SizedBox(
+      height: 46,
+      child: FilledButton(
+        onPressed: (submitting || !canDecide) ? null : onApprove,
+        style: AppStatusButtonStyle.filled(context, AppStatusTone.success)
+            .copyWith(
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 20),
+              ),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+        child: submitting
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: colors.textOnPrimary,
+                ),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check, size: 16, color: colors.textOnPrimary),
+                  const SizedBox(width: 6),
+                  const Text('Approve price'),
+                ],
+              ),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: palette.cardBorder)),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 520) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                approveButton,
+                const SizedBox(height: 10),
+                rejectButton,
+                const SizedBox(height: 10),
+                closeButton,
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              closeButton,
+              const SizedBox(width: 12),
+              rejectButton,
+              const SizedBox(width: 12),
+              approveButton,
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+String _formatMoney(double? value) {
+  if (value == null) return '—';
+  return '${value.toStringAsFixed(2)} NIS';
+}

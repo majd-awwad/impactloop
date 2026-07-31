@@ -6,6 +6,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../../data/supplier_my_materials_repository.dart';
@@ -415,8 +416,9 @@ class _SupplierEditMaterialPageState
                         const SizedBox(width: AppSpacing.sm),
                         FilledButton(
                           onPressed: _saving ? null : _save,
-                          style: SupplierMyMaterialsColors.manageButtonStyle(
+                          style: AppStatusButtonStyle.filled(
                             context,
+                            AppStatusTone.primary,
                           ),
                           child: _saving
                               ? const SizedBox(

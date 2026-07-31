@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -50,7 +51,7 @@ class AdminSidebar extends ConsumerWidget {
         '/admin/reservations',
       ),
       _NavDef(
-        'No-show reports',
+        'Incident Reports',
         Icons.report_outlined,
         '/admin/no-show-reports',
       ),
@@ -64,6 +65,12 @@ class AdminSidebar extends ConsumerWidget {
         Icons.school_outlined,
         '/admin/learning-projects',
       ),
+      if (kIsWeb)
+        _NavDef(
+          l.navExportCenter,
+          Icons.download_outlined,
+          '/admin/exports',
+        ),
       _NavDef(l.navImpactAnalytics, Icons.insights_outlined, '/admin/impact'),
       _NavDef(l.navAuditLogs, Icons.receipt_long_outlined, '/admin/audit-logs'),
     ];
@@ -82,7 +89,10 @@ class AdminSidebar extends ConsumerWidget {
                 AppSpacing.lg,
                 AppSpacing.md,
               ),
-              child: Text('ImpactLoop', style: AdminTypography.sidebarBrand(palette)),
+              child: Text(
+                'ImpactLoop',
+                style: AdminTypography.sidebarBrand(palette),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -205,10 +215,7 @@ class _NavItem extends StatelessWidget {
 }
 
 class _SidebarProfileCard extends StatelessWidget {
-  const _SidebarProfileCard({
-    required this.name,
-    required this.subtitle,
-  });
+  const _SidebarProfileCard({required this.name, required this.subtitle});
 
   final String name;
   final String subtitle;
@@ -256,9 +263,9 @@ class _SidebarProfileCard extends StatelessWidget {
                   subtitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AdminTypography.kpiHelper(palette).copyWith(
-                    color: palette.sidebarTextSecondary,
-                  ),
+                  style: AdminTypography.kpiHelper(
+                    palette,
+                  ).copyWith(color: palette.sidebarTextSecondary),
                 ),
               ],
             ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../theme/admin_decoration_set.dart';
 import 'admin_settings_controls.dart';
@@ -70,9 +71,9 @@ class AdminProfileButton extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: palette.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: palette.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ],
@@ -107,17 +108,17 @@ class AdminProfileButton extends ConsumerWidget {
                 Text(
                   displayName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: palette.textPrimary,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    color: palette.textPrimary,
+                  ),
                 ),
                 if (email != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     email!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: palette.textSecondary,
-                        ),
+                      color: palette.textSecondary,
+                    ),
                   ),
                 ],
                 if (compact || showSettingsControls) ...[
@@ -132,9 +133,9 @@ class AdminProfileButton extends ConsumerWidget {
                   },
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Logout'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: palette.red.withValues(alpha: 0.16),
-                    foregroundColor: palette.red,
+                  style: AppStatusButtonStyle.filled(
+                    context,
+                    AppStatusTone.danger,
                   ),
                 ),
               ],

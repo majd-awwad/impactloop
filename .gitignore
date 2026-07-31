@@ -20,8 +20,13 @@ apps/frontend/build/
 apps/backend/dist/
 apps/frontend/coverage/
 
+# Local Admin export verification artifacts
+apps/backend/tmp-exports/
+apps/backend/tmp/
+
 # Generated / machine-written
 apps/backend/src/generated/
+apps/backend/generated/
 apps/backend/prisma/generated/
 apps/frontend/lib/generated/
 **/*.g.dart
@@ -29,8 +34,18 @@ apps/frontend/lib/generated/
 **/*.gr.dart
 **/*.mocks.dart
 
+# Offline ML compatibility environments and generated artifacts
+ml/recommendation/.venv/
+ml/recommendation/.venv311/
+ml/recommendation/python311/
+ml/recommendation/conda-env/
+ml/recommendation/conda-env-repro/
+ml/recommendation/miniconda/
+ml/recommendation/generated/
+ml/recommendation/.pytest_cache/
+ml/recommendation/**/__pycache__/
+
 # Usually not useful for agent context unless explicitly needed
-apps/backend/prisma/migrations/
 apps/frontend/pubspec.lock
 apps/backend/package-lock.json
 apps/backend/pnpm-lock.yaml
@@ -51,4 +66,7 @@ apps/backend/pnpm-lock.yaml
 .DS_Store
 Thumbs.db
 .vscode/
-.idea/
+.idea/.cursor/
+AGENTS.md
+.cursor/
+.cursorignore

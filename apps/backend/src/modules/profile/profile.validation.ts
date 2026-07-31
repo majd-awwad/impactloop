@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
 import { profileImageUrlSchema } from '../../utils/profile-image-url.js';
+import { optionalLearnerInterestsFieldSchema } from '../learner-home/learner-interests.validation.js';
 
 const learnerProfileUpdateSchema = z.object({
   learnerType: z.string().trim().min(1).max(100),
   skillLevel: z.string().trim().min(1).max(100),
-  interests: z.array(z.string().trim().min(1).max(100)).optional(),
+  interests: optionalLearnerInterestsFieldSchema,
   bio: z.string().trim().max(2000).optional().nullable(),
 });
 

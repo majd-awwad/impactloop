@@ -75,7 +75,8 @@ AdminLearningProjectDetail _sampleDetail() {
 }
 
 class _CapturingAdminLearningProjectsApi extends AdminLearningProjectsApi {
-  _CapturingAdminLearningProjectsApi() : super(Dio(BaseOptions(baseUrl: 'http://test')));
+  _CapturingAdminLearningProjectsApi()
+    : super(Dio(BaseOptions(baseUrl: 'http://test')));
 
   Map<String, dynamic>? lastUpdateBody;
 
@@ -91,7 +92,8 @@ class _CapturingAdminLearningProjectsApi extends AdminLearningProjectsApi {
 }
 
 class _FailingAdminLearningProjectsApi extends AdminLearningProjectsApi {
-  _FailingAdminLearningProjectsApi() : super(Dio(BaseOptions(baseUrl: 'http://test')));
+  _FailingAdminLearningProjectsApi()
+    : super(Dio(BaseOptions(baseUrl: 'http://test')));
 
   @override
   Future<AdminLearningProjectDetail> updateProjectComponent({
@@ -109,27 +111,30 @@ class _FailingAdminLearningProjectsApi extends AdminLearningProjectsApi {
 
 void main() {
   group('Admin component enrichment helpers', () {
-    test('buildAdminComponentUpdatePayload sends numeric quantity and enum role', () {
-      final body = buildAdminComponentUpdatePayload(
-        componentName: 'Arduino Uno',
-        quantity: 1,
-        unit: 'piece',
-        componentRole: 'REQUIRED_MATERIAL',
-        categoryId: 'clxyz1234567890abcdefghij',
-        materialType: 'Arduino Uno',
-        searchKeywords: const ['arduino, microcontroller'],
-        alternativeKeywords: const [],
-        canBeSubstituted: true,
-        isRequired: true,
-        notes: 'Any board',
-      );
+    test(
+      'buildAdminComponentUpdatePayload sends numeric quantity and enum role',
+      () {
+        final body = buildAdminComponentUpdatePayload(
+          componentName: 'Arduino Uno',
+          quantity: 1,
+          unit: 'piece',
+          componentRole: 'REQUIRED_MATERIAL',
+          categoryId: 'clxyz1234567890abcdefghij',
+          materialType: 'Arduino Uno',
+          searchKeywords: const ['arduino, microcontroller'],
+          alternativeKeywords: const [],
+          canBeSubstituted: true,
+          isRequired: true,
+          notes: 'Any board',
+        );
 
-      expect(body['quantity'], isA<double>());
-      expect(body['quantity'], 1);
-      expect(body['componentRole'], 'REQUIRED_MATERIAL');
-      expect(body['categoryId'], 'clxyz1234567890abcdefghij');
-      expect(body['searchKeywords'], ['arduino', 'microcontroller']);
-    });
+        expect(body['quantity'], isA<double>());
+        expect(body['quantity'], 1);
+        expect(body['componentRole'], 'REQUIRED_MATERIAL');
+        expect(body['categoryId'], 'clxyz1234567890abcdefghij');
+        expect(body['searchKeywords'], ['arduino', 'microcontroller']);
+      },
+    );
 
     test('buildAdminComponentUpdatePayload omits categoryId when null', () {
       final body = buildAdminComponentUpdatePayload(
@@ -172,19 +177,25 @@ void main() {
         ),
       );
 
-      expect(message, contains('Category id must be a valid category identifier.'));
+      expect(
+        message,
+        contains('Category id must be a valid category identifier.'),
+      );
       expect(message, isNot('Validation failed'));
     });
 
-    test('formatAdminComponentSummary includes role, category, and keywords', () {
-      final summary = formatAdminComponentSummary(_sampleComponent());
+    test(
+      'formatAdminComponentSummary includes role, category, and keywords',
+      () {
+        final summary = formatAdminComponentSummary(_sampleComponent());
 
-      expect(summary, contains('2.0 piece'));
-      expect(summary, contains('Required material'));
-      expect(summary, contains('Electronics'));
-      expect(summary, contains('keywords: arduino'));
-      expect(summary, contains('alt keywords: microcontroller'));
-    });
+        expect(summary, contains('2.0 piece'));
+        expect(summary, contains('Required material'));
+        expect(summary, contains('Electronics'));
+        expect(summary, contains('keywords: arduino'));
+        expect(summary, contains('alt keywords: microcontroller'));
+      },
+    );
 
     test('buildAdminComponentQualityChips renders hard and soft messages', () {
       const hard = AdminComponentQualityIssue(
@@ -210,10 +221,7 @@ void main() {
         ),
       );
 
-      expect(
-        widget,
-        isA<MaterialApp>(),
-      );
+      expect(widget, isA<MaterialApp>());
     });
 
     test('approve gating helpers distinguish hard block vs soft confirm', () {
@@ -392,7 +400,10 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Each component must have a unique name.'), findsOneWidget);
+      expect(
+        find.text('Each component must have a unique name.'),
+        findsOneWidget,
+      );
     });
   });
 

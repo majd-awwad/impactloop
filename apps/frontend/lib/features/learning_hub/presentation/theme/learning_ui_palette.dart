@@ -77,11 +77,31 @@ class LearningUiPalette {
   final Color cardShadow;
 
   static LearningUiPalette of(BuildContext context) {
-    if (Theme.of(context).brightness == Brightness.dark) {
-      return dark;
-    }
+    final colors = AppThemeColors.of(context);
 
-    return light;
+    return LearningUiPalette(
+      pageBackground: colors.pageBackground,
+      hintSurface: colors.surfaceElevated,
+      hintBorder: colors.borderSubtle,
+      cardSurface: colors.cardSurface,
+      cardSurfaceAlt: colors.cardSurfaceAlt,
+      darkSurface: colors.surfaceMuted,
+      darkSurfaceSoft: colors.surfaceMuted,
+      heroStart: colors.heroStart,
+      heroAccent: colors.heroMid,
+      heroEnd: colors.heroEnd,
+      lime: colors.primary,
+      limeSoft: colors.primarySoft,
+      mutedChip: colors.surfaceMuted,
+      timelineLine: colors.borderSubtle,
+      disabledPanel: colors.surfaceMuted,
+      disabledPanelBorder: colors.borderSubtle,
+      textPrimary: colors.textPrimary,
+      textSecondary: colors.textSecondary,
+      borderSubtle: colors.borderSubtle,
+      overlayDark: colors.overlay,
+      cardShadow: colors.shadow,
+    );
   }
 
   static const dark = LearningUiPalette(

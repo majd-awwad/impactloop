@@ -113,7 +113,7 @@ LearningProject ──┬── ProjectImage
 Review → Reservation, User (reviewer, reviewedUser)
 ProjectUserReview → LearningProject, User
 MaterialReport → Material, User (reporter, reviewedBy)
-Notification → User (generic table; no REST module in apps/backend/src/modules/)
+Notification → User (persisted canonical inbox/event table; generic and supplier-scoped REST modules)
 ```
 
 ### Supplier requests and AI price lookup
@@ -167,6 +167,7 @@ Tables listed in [03-database.md](../03-database.md) but **absent** from current
 | `20260705140000_add_project_follows` | Learner follows for published learning projects |
 | `20260706100000_add_project_user_reviews` | Learner ratings/reviews for published learning projects |
 | `20260707100000_add_project_build_checklists` | Learner manual build checklists for learning projects |
+| `20260715120000_supplier_notification_contract` | Canonical notification event, read, entity, action, metadata, and resolution fields |
 
 ## Design rules (still valid from code)
 

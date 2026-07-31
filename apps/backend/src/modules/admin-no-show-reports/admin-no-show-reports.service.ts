@@ -5,10 +5,10 @@ import { mapPendingRescheduleSummary } from '../reservations/reservation-resched
 import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 import { prisma } from '../../database/prisma.js';
 import * as repository from './admin-no-show-reports.repository.js';
+import { classifyAdminReportContract } from './admin-no-show-reports.classifier.js';
 import {
   cancelAndReleaseHoldForPickupRecoveryReport,
   requestSupplierRescheduleForPickupRecoveryReport,
-  requiresPickupRecoveryOperationalAction,
 } from './admin-delivery-pickup-recovery.repository.js';
 import type {
   AdminNoShowReportsListQuery,
@@ -19,8 +19,23 @@ import {
   notifyNoDriverSupplierRescheduleRequested,
   notifyStalePickupSupplierRescheduleRequested,
 } from '../notifications/reservation-notifications.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
 const mapReport = (report: repository.AdminNoShowReportRecord) => ({
+  ...classifyAdminReportContract({
+    report: {
+      status: report.status,
+      reasonCode: report.reasonCode,
+      targetRole: report.targetRole,
+      targetUserId: report.targetUserId,
+      deliveryId: report.deliveryId,
+    },
+    reservation: report.reservation,
+    delivery: report.delivery,
+    isGroupedDelivery: report.delivery?.deliveryGroupId != null,
+    // Group-level recovery is intentionally unsupported by the mutation layer.
+    isGroupRecoverySupported: false,
+  }),
   id: report.id,
   reservationId: report.reservationId,
   deliveryId: report.deliveryId,
@@ -48,12 +63,16 @@ const mapReport = (report: repository.AdminNoShowReportRecord) => ({
   },
 });
 
+const throwActionUnavailable = (): never => {
+  throw new AppError(
+    'This report action is not currently available.',
+    409,
+    'REPORT_ACTION_NOT_AVAILABLE',
+  );
+};
+
 export const listAdminNoShowReports = async (query: AdminNoShowReportsListQuery) => {
-  const result = await repository.listNoShowReportsForAdmin({
-    status: query.status,
-    page: query.page,
-    limit: query.limit,
-  });
+  const result = await repository.listNoShowReportsForAdmin(query);
 
   return {
     items: result.items.map(mapReport),
@@ -155,12 +174,8 @@ export const verifyAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
-    throw new AppError(
-      'Only pending no-show reports can be verified.',
-      409,
-      'CONFLICT',
-    );
+  if (!('report' in result)) {
+    return throwActionUnavailable();
   }
 
   return {
@@ -181,22 +196,6 @@ export const resolveAdminNoShowReport = async (
   reportId: string,
   reviewNote?: string,
 ) => {
-  const existing = await repository.findNoShowReportByIdForAdmin(reportId);
-
-  if (
-    existing &&
-    requiresPickupRecoveryOperationalAction({
-      report: existing,
-      reservationStatus: existing.reservation.status,
-    })
-  ) {
-    throw new AppError(
-      'Pickup recovery reports require an operational action: ask the supplier for a new pickup window or cancel and release the hold.',
-      409,
-      'OPERATIONAL_ACTION_REQUIRED',
-    );
-  }
-
   const result = await repository.resolveNoShowReportWithoutStrike({
     reportId,
     adminUserId,
@@ -207,56 +206,35 @@ export const resolveAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
-    throw new AppError(
-      'Only pending reports can be resolved without strike.',
-      409,
-      'CONFLICT',
-    );
+  if (!('report' in result)) {
+    return throwActionUnavailable();
   }
 
   return mapReport(result.report);
 };
 
+type PickupRecoveryResolutionError =
+  | Exclude<
+      Awaited<ReturnType<typeof requestSupplierRescheduleForPickupRecoveryReport>>,
+      { outcome: 'REQUESTED' }
+    >
+  | Exclude<
+      Awaited<ReturnType<typeof cancelAndReleaseHoldForPickupRecoveryReport>>,
+      { outcome: 'CANCELLED' }
+    >;
+
 const mapNoDriverResolutionError = (
-  result: Exclude<
-    Awaited<ReturnType<typeof requestSupplierRescheduleForPickupRecoveryReport>>,
-    { outcome: 'REQUESTED' }
-  >,
-) => {
+  result: PickupRecoveryResolutionError,
+): never => {
   if (result.outcome === 'NOT_FOUND') {
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if (result.outcome === 'NOT_ELIGIBLE') {
-    throw new AppError(
-      'This action is only available for delivery pickup recovery reports.',
-      409,
-      'NOT_ELIGIBLE',
-    );
+  if (result.outcome === 'ACTION_NOT_AVAILABLE') {
+    return throwActionUnavailable();
   }
 
-  if (result.outcome === 'REPORT_NOT_PENDING') {
-    throw new AppError(
-      'Only pending reports can be resolved with this action.',
-      409,
-      'CONFLICT',
-    );
-  }
-
-  if (result.outcome === 'DRIVER_ASSIGNED') {
-    throw new AppError(
-      'Cannot reopen driver search while a driver is still assigned.',
-      409,
-      'DRIVER_ASSIGNED',
-    );
-  }
-
-  throw new AppError(
-    'Reservation or delivery is not in the expected awaiting-resolution state.',
-    409,
-    'INVALID_STATE',
-  );
+  return throwActionUnavailable();
 };
 
 export const requestSupplierRescheduleAdminNoShowReport = async (
@@ -270,23 +248,28 @@ export const requestSupplierRescheduleAdminNoShowReport = async (
     adminNote: input.adminNote,
   });
 
-  if (result.outcome !== 'REQUESTED') {
-    mapNoDriverResolutionError(result);
-  }
+  switch (result.outcome) {
+    case 'REQUESTED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'AWAITING_SUPPLIER_CONFIRMATION',
+      );
+      if (result.recoveryKind === 'NO_DRIVER') {
+        await notifyNoDriverSupplierRescheduleRequested(
+          result.reservationId,
+          input.adminNote,
+        );
+      } else {
+        await notifyStalePickupSupplierRescheduleRequested(
+          result.reservationId,
+          input.adminNote,
+        );
+      }
 
-  if (result.recoveryKind === 'NO_DRIVER') {
-    await notifyNoDriverSupplierRescheduleRequested(
-      result.reservationId,
-      input.adminNote,
-    );
-  } else {
-    await notifyStalePickupSupplierRescheduleRequested(
-      result.reservationId,
-      input.adminNote,
-    );
+      return mapReport(result.report);
+    default:
+      return mapNoDriverResolutionError(result);
   }
-
-  return mapReport(result.report);
 };
 
 export const cancelReleaseHoldAdminNoShowReport = async (
@@ -300,11 +283,16 @@ export const cancelReleaseHoldAdminNoShowReport = async (
     adminNote: input.adminNote,
   });
 
-  if (result.outcome !== 'CANCELLED') {
-    mapNoDriverResolutionError(result);
+  switch (result.outcome) {
+    case 'CANCELLED':
+      invalidateLearnerHomeForReservationTransition(
+        'AWAITING_RESOLUTION',
+        'EXPIRED',
+      );
+      return mapReport(result.report);
+    default:
+      return mapNoDriverResolutionError(result);
   }
-
-  return mapReport(result.report);
 };
 
 export const rejectAdminNoShowReport = async (
@@ -322,12 +310,8 @@ export const rejectAdminNoShowReport = async (
     throw new AppError('No-show report not found.', 404, 'NOT_FOUND');
   }
 
-  if ('conflict' in result && result.conflict) {
-    throw new AppError(
-      'Only pending no-show reports can be rejected.',
-      409,
-      'CONFLICT',
-    );
+  if (!('report' in result)) {
+    return throwActionUnavailable();
   }
 
   return mapReport(result.report);

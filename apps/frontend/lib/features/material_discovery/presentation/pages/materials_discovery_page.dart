@@ -9,6 +9,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../materials/application/material_listing_providers.dart';
 import '../../../materials/data/models/category.dart';
@@ -591,6 +592,7 @@ class _InitialLoadErrorState extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           FilledButton.icon(
             onPressed: onRetry,
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
             icon: const Icon(Icons.refresh_rounded),
             label: Text(
               const LocalizedText(

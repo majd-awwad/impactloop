@@ -6,7 +6,10 @@ import { hashPassword } from '../../utils/password.js';
 import {
   cancelReleaseHoldAdminNoShowReport,
   listAdminNoShowReports,
+  rejectAdminNoShowReport,
   requestSupplierRescheduleAdminNoShowReport,
+  resolveAdminNoShowReport,
+  verifyAdminNoShowReport,
 } from './admin-no-show-reports.service.js';
 import { countVerifiedStrikesForUser } from '../reservations/account-suspension.js';
 import { NO_DRIVER_CANCEL_REASON, NO_DRIVER_SUPPLIER_RECONFIRM_REASON } from '../reservations/reservation-timing-policy.js';
@@ -261,6 +264,32 @@ describe('admin no-driver resolution', () => {
 
     const strikes = await countVerifiedStrikesForUser(ctx.learnerId);
     assert.equal(strikes, 0);
+  });
+
+  test('system recovery rejects direct accountability actions without mutation', async () => {
+    const { reservation, delivery, report } =
+      await createAwaitingResolutionNoDriverCase(ctx);
+
+    for (const action of [
+      () => verifyAdminNoShowReport(ctx.adminId, report.id),
+      () => rejectAdminNoShowReport(ctx.adminId, report.id),
+      () => resolveAdminNoShowReport(ctx.adminId, report.id),
+    ]) {
+      await assert.rejects(action, (error: Error & { code?: string }) => {
+        assert.equal(error.code, 'REPORT_ACTION_NOT_AVAILABLE');
+        return true;
+      });
+    }
+
+    const [unchangedReport, unchangedReservation, unchangedDelivery] =
+      await Promise.all([
+        prisma.noShowReport.findUnique({ where: { id: report.id } }),
+        prisma.reservation.findUnique({ where: { id: reservation.id } }),
+        prisma.delivery.findUnique({ where: { id: delivery.id } }),
+      ]);
+    assert.equal(unchangedReport?.status, 'PENDING_REVIEW');
+    assert.equal(unchangedReservation?.status, 'AWAITING_RESOLUTION');
+    assert.equal(unchangedDelivery?.status, 'AWAITING_RESOLUTION');
   });
 
   test('supplier pickup window submission reopens driver search without strike', async () => {

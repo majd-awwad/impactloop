@@ -8,7 +8,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_feedback.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
+import '../../../../shared/widgets/app_empty_state_card.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../deliveries/presentation/pickup_window_presentation.dart';
@@ -57,10 +58,15 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
     final canAcceptMore =
         activeMeta?.canAcceptMore ?? availableMeta?.canAcceptMore ?? true;
     final activeCount =
-        activeMeta?.activeDeliveryCount ?? availableMeta?.activeDeliveryCount ?? 0;
+        activeMeta?.activeDeliveryCount ??
+        availableMeta?.activeDeliveryCount ??
+        0;
     final maxActive =
-        activeMeta?.maxActiveDeliveries ?? availableMeta?.maxActiveDeliveries ?? 3;
-    final nearbyCount = availableMeta?.nearbyAvailableCount ??
+        activeMeta?.maxActiveDeliveries ??
+        availableMeta?.maxActiveDeliveries ??
+        3;
+    final nearbyCount =
+        availableMeta?.nearbyAvailableCount ??
         availableAsync.value?.deliveries.length;
     final totalAvailableCount =
         availableMeta?.totalAvailableCount ?? nearbyCount;
@@ -151,17 +157,23 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
                       copy: emptyCopy,
                       onIncreaseRadius: emptyCopy.showIncreaseRadius
                           ? () => ref
-                                .read(driverAvailableJobsFilterProvider.notifier)
+                                .read(
+                                  driverAvailableJobsFilterProvider.notifier,
+                                )
                                 .increaseRadius()
                           : null,
                       onShowAnyDistance: emptyCopy.showAnyDistance
                           ? () => ref
-                                .read(driverAvailableJobsFilterProvider.notifier)
+                                .read(
+                                  driverAvailableJobsFilterProvider.notifier,
+                                )
                                 .setAnyDistance()
                           : null,
                       onReset: emptyCopy.showReset && headerMeta != null
                           ? () => ref
-                                .read(driverAvailableJobsFilterProvider.notifier)
+                                .read(
+                                  driverAvailableJobsFilterProvider.notifier,
+                                )
                                 .resetToProfileDefaults(headerMeta)
                           : null,
                     );
@@ -453,9 +465,9 @@ class _ActiveDeliveryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              MaterialStatusBadge(
+              AppStatusBadge(
                 label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusTone(delivery.status),
+                tone: deliveryStatusAppTone(delivery.status),
               ),
             ],
           ),
@@ -467,15 +479,9 @@ class _ActiveDeliveryCard extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _RouteEndpoint(
-                      icon: Icons.trip_origin,
-                      label: pickup,
-                    ),
+                    _RouteEndpoint(icon: Icons.trip_origin, label: pickup),
                     const SizedBox(height: AppSpacing.xs),
-                    _RouteEndpoint(
-                      icon: Icons.place_outlined,
-                      label: dropoff,
-                    ),
+                    _RouteEndpoint(icon: Icons.place_outlined, label: dropoff),
                   ],
                 );
               }
@@ -489,7 +495,11 @@ class _ActiveDeliveryCard extends StatelessWidget {
                   ),
                   Icon(Icons.arrow_forward, size: 16, color: palette.textMuted),
                   const SizedBox(width: AppSpacing.xs),
-                  Icon(Icons.place_outlined, size: 16, color: palette.textMuted),
+                  Icon(
+                    Icons.place_outlined,
+                    size: 16,
+                    color: palette.textMuted,
+                  ),
                   const SizedBox(width: AppSpacing.xs),
                   Expanded(
                     child: Text(dropoff, style: AppTextStyles.body(context)),
@@ -501,6 +511,7 @@ class _ActiveDeliveryCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
             onPressed: () => context.push('/driver/deliveries/${delivery.id}'),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
             icon: const Icon(Icons.route_outlined),
             label: const Text('Open delivery'),
           ),
@@ -568,16 +579,19 @@ class _AvailableJobsFilters extends ConsumerWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 'Distance is calculated to the pickup location.',
-                style: AppTextStyles.body(context).copyWith(
-                  color: palette.textSecondary,
-                  fontSize: 12,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textSecondary, fontSize: 12),
               ),
               SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   trackHeight: 3,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 7,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(
+                    overlayRadius: 14,
+                  ),
                   inactiveTrackColor: anyDistance
                       ? palette.borderSubtle.withValues(alpha: 0.5)
                       : null,
@@ -687,15 +701,18 @@ class _AvailableJobsFilters extends ConsumerWidget {
                 onPressed: meta == null
                     ? null
                     : () => notifier.resetToProfileDefaults(meta!),
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
                 child: const Text('Reset filters'),
               ),
               if (!radiusEnabled)
                 Text(
                   'Location needed for distance filter.',
-                  style: AppTextStyles.body(context).copyWith(
-                    color: palette.textSecondary,
-                    fontSize: 12,
-                  ),
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary, fontSize: 12),
                 ),
             ],
           );
@@ -704,15 +721,16 @@ class _AvailableJobsFilters extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Find nearby jobs',
-                  style: AppTextStyles.title(context),
-                ),
+                Text('Find nearby jobs', style: AppTextStyles.title(context)),
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.my_location_outlined, size: 18, color: palette.mint),
+                    Icon(
+                      Icons.my_location_outlined,
+                      size: 18,
+                      color: palette.mint,
+                    ),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Column(
@@ -767,15 +785,16 @@ class _AvailableJobsFilters extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Find nearby jobs',
-                style: AppTextStyles.title(context),
-              ),
+              Text('Find nearby jobs', style: AppTextStyles.title(context)),
               const SizedBox(height: AppSpacing.md),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.my_location_outlined, size: 18, color: palette.mint),
+                  Icon(
+                    Icons.my_location_outlined,
+                    size: 18,
+                    color: palette.mint,
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
@@ -846,7 +865,9 @@ class _RadiusMarks extends StatelessWidget {
                   ? palette.mint
                   : palette.textSecondary,
               fontSize: 11,
-              fontWeight: activeIndex == index ? FontWeight.w700 : FontWeight.w500,
+              fontWeight: activeIndex == index
+                  ? FontWeight.w700
+                  : FontWeight.w500,
             ),
           ),
         ],
@@ -891,7 +912,7 @@ class _AvailableJobsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _StatePanel(
+    return AppEmptyStateCard(
       icon: Icons.local_shipping_outlined,
       title: copy.title,
       subtitle: copy.subtitle,
@@ -900,15 +921,24 @@ class _AvailableJobsEmptyState extends StatelessWidget {
         if (onIncreaseRadius != null)
           FilledButton(
             onPressed: onIncreaseRadius,
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
             child: const Text('Increase radius'),
           ),
         if (onShowAnyDistance != null)
-          FilledButton.tonal(
+          OutlinedButton(
             onPressed: onShowAnyDistance,
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.neutral,
+            ),
             child: const Text('Show any distance'),
           ),
         if (onReset != null)
-          TextButton(onPressed: onReset, child: const Text('Reset filters')),
+          TextButton(
+            onPressed: onReset,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
+            child: const Text('Reset filters'),
+          ),
       ],
     );
   }
@@ -986,9 +1016,9 @@ class _AvailableJobCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              MaterialStatusBadge(
+              AppStatusBadge(
                 label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusTone(delivery.status),
+                tone: deliveryStatusAppTone(delivery.status),
               ),
             ],
           ),
@@ -1008,6 +1038,10 @@ class _AvailableJobCard extends ConsumerWidget {
               onPressed: acceptDisabled || isSubmitting
                   ? null
                   : () => _acceptDelivery(context, ref),
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.success,
+              ),
               icon: isSubmitting
                   ? const SizedBox(
                       width: 18,
@@ -1117,7 +1151,6 @@ class _StatePanel extends StatelessWidget {
     required this.subtitle,
     this.actionLabel,
     this.onAction,
-    this.actions = const [],
     this.compact = false,
   });
 
@@ -1126,7 +1159,6 @@ class _StatePanel extends StatelessWidget {
   final String subtitle;
   final String? actionLabel;
   final VoidCallback? onAction;
-  final List<Widget> actions;
   final bool compact;
 
   @override
@@ -1154,14 +1186,13 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
-          ],
-          if (actions.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: actions,
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
             ),
           ],
         ],

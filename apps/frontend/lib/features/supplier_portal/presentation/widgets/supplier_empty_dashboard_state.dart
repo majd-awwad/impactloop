@@ -132,33 +132,106 @@ class SupplierDashboardLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final decorations = context.supplierDecorations;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact =
+            constraints.maxWidth < AppSpacing.supplierLayoutBreakpoint;
+        final wide = constraints.maxWidth >= 1180;
+        final kpiColumns = wide
+            ? 4
+            : constraints.maxWidth >= 520
+            ? 2
+            : 1;
+        final kpiWidth =
+            (constraints.maxWidth - (AppSpacing.md * (kpiColumns - 1))) /
+            kpiColumns;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 140,
-            width: double.infinity,
-            decoration: decorations.dashboardCard,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: List.generate(
-              6,
-              (_) => Container(
-                width: 140,
-                height: 80,
-                decoration: decorations.statCard,
+        return SingleChildScrollView(
+          padding: context.supplierDecorations.pagePadding(compact: compact),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _DashboardSkeletonCard(height: 204),
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: List.generate(
+                  4,
+                  (_) => SizedBox(
+                    width: kpiWidth,
+                    child: const _DashboardSkeletonCard(height: 112),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: AppSpacing.sm),
+              const _DashboardSkeletonCard(height: 70),
+              const SizedBox(height: AppSpacing.md),
+              if (wide)
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _DashboardSkeletonCard(height: 270),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      flex: 2,
+                      child: _DashboardSkeletonCard(height: 270),
+                    ),
+                  ],
+                )
+              else ...[
+                const _DashboardSkeletonCard(height: 270),
+                const SizedBox(height: AppSpacing.md),
+                const _DashboardSkeletonCard(height: 190),
+              ],
+              const SizedBox(height: AppSpacing.md),
+              if (wide)
+                const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: _DashboardSkeletonCard(height: 220),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      flex: 2,
+                      child: _DashboardSkeletonCard(height: 220),
+                    ),
+                    SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      flex: 3,
+                      child: _DashboardSkeletonCard(height: 220),
+                    ),
+                  ],
+                )
+              else ...[
+                const _DashboardSkeletonCard(height: 200),
+                const SizedBox(height: AppSpacing.md),
+                const _DashboardSkeletonCard(height: 200),
+              ],
+            ],
           ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+}
+
+class _DashboardSkeletonCard extends StatelessWidget {
+  const _DashboardSkeletonCard({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: context.supplierDecorations.dashboardCard,
     );
   }
 }

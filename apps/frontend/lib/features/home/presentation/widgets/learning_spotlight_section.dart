@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../learning_hub/application/learning_hub_providers.dart';
 import '../../../learning_hub/domain/learning_projects_result.dart';
@@ -148,12 +149,9 @@ class _LearningSpotlightError extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 OutlinedButton(
                   onPressed: onRetry,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: palette.mint,
-                    side: BorderSide(color: palette.borderStrong),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppRadius.pillAll,
-                    ),
+                  style: AppStatusButtonStyle.outlined(
+                    context,
+                    AppStatusTone.primary,
                   ),
                   child: const Text('Retry'),
                 ),
@@ -173,6 +171,23 @@ class _LearningSpotlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return HomeLearningProjectCard(project: project);
+  }
+}
+
+/// Vertical learning project card used on the learner home feed.
+class HomeLearningProjectCard extends StatelessWidget {
+  const HomeLearningProjectCard({
+    super.key,
+    required this.project,
+    this.reason,
+  });
+
+  final LearningProject project;
+  final String? reason;
+
+  @override
+  Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasImage =
@@ -181,7 +196,10 @@ class _LearningSpotlightCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push('/learning/${project.id}'),
+        onTap: () => context.push(
+          '/learning/${project.id}',
+          extra: project.recommendationImpressionId,
+        ),
         borderRadius: AppRadius.lgAll,
         child: SizedBox(
           height: 374,
@@ -349,8 +367,23 @@ class _LearningSpotlightCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: AppSpacing.sm),
+                        if (reason != null && reason!.trim().isNotEmpty) ...[
+                          Text(
+                            reason!.trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.label(context).copyWith(
+                              color: palette.mint,
+                              fontSize: 12,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                        ],
                         ProjectEngagementStrip(
                           project: project,
+                          recommendationImpressionId:
+                              project.recommendationImpressionId,
                           density: ProjectEngagementDensity.compact,
                         ),
                       ],

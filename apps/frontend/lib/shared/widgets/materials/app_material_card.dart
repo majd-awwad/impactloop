@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../app/theme/app_text_styles.dart';
-import '../../../app/theme/app_theme_colors.dart';
 import 'material_condition_badge.dart';
 import 'material_price_badge.dart';
 import 'material_status_badge.dart';
 import 'materials_ui_palette.dart';
+import '../supplier/supplier_identity_widgets.dart';
 
 enum AppMaterialCardVariant { standard, compact }
 
@@ -39,6 +38,10 @@ class AppMaterialCard extends StatelessWidget {
     this.variant = AppMaterialCardVariant.standard,
     this.fallbackIcon = Icons.inventory_2_outlined,
     this.mediaHeightOverride,
+    this.supplierDisplayName,
+    this.supplierAvatarUrl,
+    this.supplierVerified = false,
+    this.onSupplierTap,
   });
 
   final String title;
@@ -66,6 +69,10 @@ class AppMaterialCard extends StatelessWidget {
   final AppMaterialCardVariant variant;
   final IconData fallbackIcon;
   final double? mediaHeightOverride;
+  final String? supplierDisplayName;
+  final String? supplierAvatarUrl;
+  final bool supplierVerified;
+  final VoidCallback? onSupplierTap;
 
   @override
   Widget build(BuildContext context) {
@@ -75,8 +82,16 @@ class AppMaterialCard extends StatelessWidget {
             ? constraints.maxWidth
             : 320.0;
 
+        final includesSupplierAttribution =
+            supplierDisplayName != null &&
+            supplierDisplayName!.trim().isNotEmpty;
+
         return SizedBox(
-          height: ImpactMaterialGridCard.heightForWidth(width, variant: variant),
+          height: ImpactMaterialGridCard.heightForWidth(
+            width,
+            variant: variant,
+            includesSupplierAttribution: includesSupplierAttribution,
+          ),
           child: ImpactMaterialGridCard(
             title: title,
             description: description,
@@ -103,6 +118,10 @@ class AppMaterialCard extends StatelessWidget {
             variant: variant,
             fallbackIcon: fallbackIcon,
             mediaHeightOverride: mediaHeightOverride,
+            supplierDisplayName: supplierDisplayName,
+            supplierAvatarUrl: supplierAvatarUrl,
+            supplierVerified: supplierVerified,
+            onSupplierTap: onSupplierTap,
           ),
         );
       },
@@ -138,6 +157,10 @@ class ImpactMaterialGridCard extends StatefulWidget {
     this.variant = AppMaterialCardVariant.standard,
     this.fallbackIcon = Icons.inventory_2_outlined,
     this.mediaHeightOverride,
+    this.supplierDisplayName,
+    this.supplierAvatarUrl,
+    this.supplierVerified = false,
+    this.onSupplierTap,
   });
 
   final String title;
@@ -165,16 +188,28 @@ class ImpactMaterialGridCard extends StatefulWidget {
   final AppMaterialCardVariant variant;
   final IconData fallbackIcon;
   final double? mediaHeightOverride;
+  final String? supplierDisplayName;
+  final String? supplierAvatarUrl;
+  final bool supplierVerified;
+  final VoidCallback? onSupplierTap;
+
+  static const supplierAttributionBandHeight = 38.0;
 
   static double heightForWidth(
     double width, {
     AppMaterialCardVariant variant = AppMaterialCardVariant.standard,
+    bool includesSupplierAttribution = false,
   }) {
     final imageHeight = width * 0.75;
     final compact = variant == AppMaterialCardVariant.compact || width < 260;
-    final contentHeight = compact ? 178.0 : 190.0;
-    return imageHeight + contentHeight;
+    final contentHeight = compact ? 188.0 : 190.0;
+    final supplierBand = includesSupplierAttribution
+        ? supplierAttributionBandHeight
+        : 0.0;
+    return imageHeight + contentHeight + supplierBand;
   }
+
+  static double recommendationReasonBandHeight = AppSpacing.xs + 16;
 
   @override
   State<ImpactMaterialGridCard> createState() => _ImpactMaterialGridCardState();
@@ -206,6 +241,10 @@ class ImpactMaterialCompactCard extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.fallbackIcon = Icons.inventory_2_outlined,
+    this.supplierDisplayName,
+    this.supplierAvatarUrl,
+    this.supplierVerified = false,
+    this.onSupplierTap,
   });
 
   final String title;
@@ -231,118 +270,159 @@ class ImpactMaterialCompactCard extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? trailing;
   final IconData fallbackIcon;
+  final String? supplierDisplayName;
+  final String? supplierAvatarUrl;
+  final bool supplierVerified;
+  final VoidCallback? onSupplierTap;
 
-  static const height = 136.0;
+  static const baseHeight = 136.0;
+
+  static double heightFor({bool includesSupplierAttribution = false}) {
+    return baseHeight +
+        (includesSupplierAttribution
+            ? ImpactMaterialGridCard.supplierAttributionBandHeight
+            : 0);
+  }
 
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final includesSupplierAttribution =
+        supplierDisplayName != null && supplierDisplayName!.trim().isNotEmpty;
 
     return Semantics(
       button: onTap != null,
-      label: '$title, $category, $conditionLabel, $locationLabel, '
+      label:
+          '$title, $category, $conditionLabel, $locationLabel, '
           '$priceLabel, $statusLabel',
       child: SizedBox(
-        height: height,
+        height: heightFor(
+          includesSupplierAttribution: includesSupplierAttribution,
+        ),
         child: Material(
           color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: AppRadius.lgAll,
-            child: Ink(
+          child: Ink(
             decoration: BoxDecoration(
               color: palette.cardSurface,
               borderRadius: AppRadius.lgAll,
-              border: Border.all(color: palette.borderStrong),
+              border: Border.all(color: palette.borderSubtle),
               boxShadow: [
                 BoxShadow(
-                  color: palette.cardShadow.withValues(alpha: 0.10),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
+                  color: palette.cardShadow.withValues(alpha: 0.08),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _CompactCardMedia(
-                    imageUrl: imageUrl,
-                    gradientColors: gradientColors,
-                    fallbackIcon: fallbackIcon,
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(
-                        15,
-                        12,
-                        12,
-                        12,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: AppTextStyles.title(context).copyWith(
-                              color: palette.textPrimary,
-                              fontSize: 15.5,
-                              fontWeight: FontWeight.w600,
-                              height: 1.12,
-                              letterSpacing: 0,
-                            ),
-                            textAlign: TextAlign.start,
-                            maxLines: title.runes.length > 34 ? 2 : 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$category · $conditionLabel',
-                            style: AppTextStyles.label(context).copyWith(
-                              color: palette.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              height: 1.16,
-                              letterSpacing: 0,
-                            ),
-                            textAlign: TextAlign.start,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 5),
-                          _CompactLocationLine(
-                            label: locationLabel.isNotEmpty
-                                ? locationLabel
-                                : quantityLabel,
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Align(
-                                  alignment:
-                                      AlignmentDirectional.centerStart,
-                                  child: _CompactPriceBadge(
-                                    label: priceLabel,
-                                    isFree: isFree,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _CompactCardMedia(
+                  imageUrl: imageUrl,
+                  gradientColors: gradientColors,
+                  fallbackIcon: fallbackIcon,
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: onTap,
+                            child: Padding(
+                              padding: const EdgeInsetsDirectional.fromSTEB(
+                                AppSpacing.md,
+                                AppSpacing.sm + AppSpacing.xs,
+                                AppSpacing.sm + AppSpacing.xs,
+                                AppSpacing.sm + AppSpacing.xs,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: textTheme.titleMedium?.copyWith(
+                                      color: palette.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.18,
+                                    ),
+                                    textAlign: TextAlign.start,
+                                    maxLines: title.runes.length > 34 ? 2 : 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$category · $conditionLabel',
+                                    style: textTheme.labelMedium?.copyWith(
+                                      color: palette.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.2,
+                                    ),
+                                    textAlign: TextAlign.start,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 5),
+                                  if (locationLabel.isNotEmpty)
+                                    _CompactLocationLine(label: locationLabel)
+                                  else if (quantityLabel.isNotEmpty)
+                                    Text(
+                                      quantityLabel,
+                                      style: textTheme.labelMedium?.copyWith(
+                                        color: palette.textSecondary,
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.2,
+                                      ),
+                                      textAlign: TextAlign.start,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  const Spacer(),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Align(
+                                          alignment:
+                                              AlignmentDirectional.centerStart,
+                                          child: _CompactPriceBadge(
+                                            label: priceLabel,
+                                            isFree: isFree,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      _CompactEngagementBadge(
+                                        viewsCount: viewsCount,
+                                        likesCount: likesCount,
+                                        isLiked: isLiked,
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      _CompactViewAffordance(
+                                        color: palette.mint,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: AppSpacing.sm),
-                              _CompactEngagementBadge(
-                                viewsCount: viewsCount,
-                                likesCount: likesCount,
-                                isLiked: isLiked,
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              _CompactViewAffordance(color: palette.mint),
-                            ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      if (includesSupplierAttribution)
+                        _MaterialSupplierAttributionBar(
+                          displayName: supplierDisplayName!,
+                          avatarUrl: supplierAvatarUrl,
+                          isVerified: supplierVerified,
+                          onTap: onSupplierTap,
+                          compact: true,
+                        ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -415,6 +495,13 @@ class _CompactCardMediaState extends State<_CompactCardMedia> {
                 Image.network(
                   widget.imageUrl!.trim(),
                   fit: BoxFit.cover,
+                  cacheWidth: 480,
+                  filterQuality: FilterQuality.low,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                   errorBuilder: (context, error, stackTrace) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && !_imageFailed) {
@@ -466,43 +553,7 @@ class _CompactPriceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = AppThemeColors.of(context);
-    final background = isFree
-        ? (isDark ? materialPriceFreeBackground : colors.successSoft)
-        : (isDark ? materialPricePaidBackground : colors.cardSurfaceAlt);
-    final border = isFree
-        ? (isDark ? materialPriceFreeBorder : colors.borderStrong)
-        : (isDark ? materialPricePaidBorder : colors.borderSubtle);
-    final foreground = isFree
-        ? (isDark ? materialPriceFreeForeground : colors.success)
-        : (isDark ? materialPricePaidForeground : colors.textSecondary);
-
-    return Container(
-      constraints: const BoxConstraints(minHeight: 22),
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: 7,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(context).copyWith(
-          color: foreground,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          height: 1,
-          letterSpacing: 0,
-        ),
-        textAlign: TextAlign.start,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
+    return MaterialPriceBadge(label: label, isFree: isFree, dense: true);
   }
 }
 
@@ -514,6 +565,7 @@ class _CompactLocationLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Row(
       children: [
@@ -522,12 +574,10 @@ class _CompactLocationLine extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.label(context).copyWith(
+            style: textTheme.labelMedium?.copyWith(
               color: palette.textSecondary,
-              fontSize: 12,
               fontWeight: FontWeight.w500,
-              height: 1.16,
-              letterSpacing: 0,
+              height: 1.2,
             ),
             textAlign: TextAlign.start,
             maxLines: 1,
@@ -546,17 +596,17 @@ class _CompactViewAffordance extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           'View',
-          style: AppTextStyles.label(context).copyWith(
+          style: textTheme.labelSmall?.copyWith(
             color: color,
-            fontSize: 11.5,
             fontWeight: FontWeight.w800,
             height: 1,
-            letterSpacing: 0,
           ),
         ),
         const SizedBox(width: 2),
@@ -569,13 +619,17 @@ class _CompactViewAffordance extends StatelessWidget {
 class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
   bool _hovered = false;
 
+  bool get _showsSupplierAttribution =>
+      widget.supplierDisplayName != null &&
+      widget.supplierDisplayName!.trim().isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final compact = widget.variant == AppMaterialCardVariant.compact;
     final borderColor = _hovered
-        ? palette.mint.withValues(alpha: 0.58)
-        : palette.borderStrong;
+        ? palette.mint.withValues(alpha: 0.46)
+        : palette.borderSubtle;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -594,52 +648,66 @@ class _ImpactMaterialGridCardState extends State<ImpactMaterialGridCard> {
             boxShadow: [
               BoxShadow(
                 color: palette.cardShadow.withValues(
-                  alpha: _hovered ? 0.24 : 0.14,
+                  alpha: _hovered ? 0.18 : 0.08,
                 ),
-                blurRadius: _hovered ? 24 : 16,
+                blurRadius: _hovered ? 24 : 18,
                 offset: Offset(0, _hovered ? 12 : 8),
               ),
             ],
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.onTap,
-              borderRadius: AppRadius.lgAll,
-              child: ClipRRect(
-                borderRadius: AppRadius.lgAll,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _GridCardMedia(
-                      category: widget.category,
-                      priceLabel: widget.priceLabel,
-                      isFree: widget.isFree,
-                      imageUrl: widget.imageUrl,
-                      gradientColors: widget.gradientColors,
-                      fallbackIcon: widget.fallbackIcon,
-                      hovered: _hovered,
-                      viewsCount: widget.viewsCount,
-                      likesCount: widget.likesCount,
-                      isLiked: widget.isLiked,
-                    ),
-                    Expanded(
-                      child: _GridCardContent(
-                        title: widget.title,
-                        category: widget.category,
-                        conditionLabel: widget.conditionLabel,
-                        statusLabel: widget.statusLabel,
-                        statusTone: widget.statusTone,
-                        quantityLabel: widget.quantityLabel,
-                        locationLabel: widget.locationLabel,
-                        availabilityLabel: widget.availabilityLabel,
-                        deliveryAvailable: widget.deliveryAvailable,
-                        compact: compact,
+          child: ClipRRect(
+            borderRadius: AppRadius.lgAll,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: widget.onTap,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _GridCardMedia(
+                            category: widget.category,
+                            priceLabel: widget.priceLabel,
+                            isFree: widget.isFree,
+                            imageUrl: widget.imageUrl,
+                            gradientColors: widget.gradientColors,
+                            fallbackIcon: widget.fallbackIcon,
+                            hovered: _hovered,
+                            viewsCount: widget.viewsCount,
+                            likesCount: widget.likesCount,
+                            isLiked: widget.isLiked,
+                          ),
+                          Expanded(
+                            child: _GridCardContent(
+                              title: widget.title,
+                              category: widget.category,
+                              conditionLabel: widget.conditionLabel,
+                              statusLabel: widget.statusLabel,
+                              statusTone: widget.statusTone,
+                              quantityLabel: widget.quantityLabel,
+                              locationLabel: widget.locationLabel,
+                              availabilityLabel: widget.availabilityLabel,
+                              deliveryAvailable: widget.deliveryAvailable,
+                              compact: compact,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                if (_showsSupplierAttribution)
+                  _MaterialSupplierAttributionBar(
+                    displayName: widget.supplierDisplayName!,
+                    avatarUrl: widget.supplierAvatarUrl,
+                    isVerified: widget.supplierVerified,
+                    onTap: widget.onSupplierTap,
+                    compact: compact,
+                  ),
+              ],
             ),
           ),
         ),
@@ -725,6 +793,13 @@ class _GridCardMediaState extends State<_GridCardMedia> {
                 child: Image.network(
                   widget.imageUrl!.trim(),
                   fit: BoxFit.cover,
+                  cacheWidth: 720,
+                  filterQuality: FilterQuality.low,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                   errorBuilder: (context, error, stackTrace) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       if (mounted && !_imageFailed) {
@@ -747,7 +822,11 @@ class _GridCardMediaState extends State<_GridCardMedia> {
                     borderRadius: AppRadius.lgAll,
                     border: Border.all(color: palette.borderSubtle),
                   ),
-                  child: Icon(widget.fallbackIcon, color: palette.mint, size: 30),
+                  child: Icon(
+                    widget.fallbackIcon,
+                    color: palette.mint,
+                    size: 30,
+                  ),
                 ),
               ),
             DecoratedBox(
@@ -818,7 +897,8 @@ class _GridCardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final padding = compact ? AppSpacing.sm : AppSpacing.md;
+    final textTheme = Theme.of(context).textTheme;
+    final padding = compact ? AppSpacing.sm + AppSpacing.xs : AppSpacing.md;
 
     return Padding(
       padding: EdgeInsetsDirectional.fromSTEB(
@@ -832,11 +912,11 @@ class _GridCardContent extends StatelessWidget {
         children: [
           Text(
             title,
-            style: AppTextStyles.title(context).copyWith(
+            style: textTheme.titleMedium?.copyWith(
               color: palette.textPrimary,
-              fontSize: compact ? 15 : 16.5,
+              fontSize: compact ? 15 : null,
+              fontWeight: FontWeight.w700,
               height: 1.16,
-              letterSpacing: 0,
             ),
             textAlign: TextAlign.start,
             maxLines: 2,
@@ -844,33 +924,39 @@ class _GridCardContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '$category + $conditionLabel',
-            style: AppTextStyles.label(context).copyWith(
+            '$category - $conditionLabel',
+            style: textTheme.labelMedium?.copyWith(
               color: palette.textSecondary,
               fontSize: compact ? 11.5 : 12.5,
               fontWeight: FontWeight.w600,
               height: 1.2,
-              letterSpacing: 0,
             ),
             textAlign: TextAlign.start,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: AppSpacing.sm),
-          _PlainMetaLine(
-            icon: Icons.location_on_outlined,
-            label: locationLabel,
-            compact: compact,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSpacing.sm),
+                _PlainMetaLine(
+                  icon: Icons.location_on_outlined,
+                  label: locationLabel,
+                  compact: compact,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                _PlainMetaLine(
+                  icon: deliveryAvailable
+                      ? Icons.local_shipping_outlined
+                      : Icons.storefront_outlined,
+                  label: '$quantityLabel - $availabilityLabel',
+                  compact: compact,
+                ),
+                const Spacer(),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          _PlainMetaLine(
-            icon: deliveryAvailable
-                ? Icons.local_shipping_outlined
-                : Icons.storefront_outlined,
-            label: '$quantityLabel - $availabilityLabel',
-            compact: compact,
-          ),
-          const Spacer(),
           Row(
             children: [
               Flexible(
@@ -889,11 +975,10 @@ class _GridCardContent extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Text(
                 'Details',
-                style: AppTextStyles.label(context).copyWith(
+                style: textTheme.labelMedium?.copyWith(
                   color: palette.mint,
                   fontSize: compact ? 12 : 13,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(width: AppSpacing.xs),
@@ -924,6 +1009,7 @@ class _PlainMetaLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return Row(
       children: [
@@ -932,12 +1018,11 @@ class _PlainMetaLine extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: AppTextStyles.label(context).copyWith(
+            style: textTheme.labelMedium?.copyWith(
               color: palette.textSecondary,
               fontSize: compact ? 11.5 : 12.5,
               fontWeight: FontWeight.w600,
               height: 1.2,
-              letterSpacing: 0,
             ),
             textAlign: TextAlign.start,
             maxLines: 1,
@@ -958,6 +1043,7 @@ class _OverlayChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -971,12 +1057,10 @@ class _OverlayChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.label(context).copyWith(
+        style: textTheme.labelSmall?.copyWith(
           color: palette.textPrimary,
-          fontSize: 11.5,
           fontWeight: FontWeight.w800,
           height: 1.1,
-          letterSpacing: 0,
         ),
         textAlign: TextAlign.start,
         maxLines: 1,
@@ -1002,6 +1086,7 @@ class _EngagementCountBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final foreground = isLiked ? palette.mint : palette.textMuted;
 
     return Tooltip(
@@ -1018,11 +1103,15 @@ class _EngagementCountBadge extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (viewsCount > 0) ...[
-              Icon(Icons.visibility_outlined, color: palette.textMuted, size: 16),
+              Icon(
+                Icons.visibility_outlined,
+                color: palette.textMuted,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Text(
                 '$viewsCount',
-                style: AppTextStyles.label(context).copyWith(
+                style: textTheme.labelSmall?.copyWith(
                   color: palette.textMuted,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -1040,7 +1129,7 @@ class _EngagementCountBadge extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 '$likesCount',
-                style: AppTextStyles.label(context).copyWith(
+                style: textTheme.labelSmall?.copyWith(
                   color: foreground,
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -1069,6 +1158,7 @@ class _CompactEngagementBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final foreground = isLiked ? palette.mint : palette.textMuted;
 
     return Tooltip(
@@ -1081,7 +1171,7 @@ class _CompactEngagementBadge extends StatelessWidget {
             const SizedBox(width: 3),
             Text(
               '$viewsCount',
-              style: AppTextStyles.label(context).copyWith(
+              style: textTheme.labelSmall?.copyWith(
                 color: palette.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -1099,7 +1189,7 @@ class _CompactEngagementBadge extends StatelessWidget {
             const SizedBox(width: 3),
             Text(
               '$likesCount',
-              style: AppTextStyles.label(context).copyWith(
+              style: textTheme.labelSmall?.copyWith(
                 color: foreground,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -1108,6 +1198,51 @@ class _CompactEngagementBadge extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _MaterialSupplierAttributionBar extends StatelessWidget {
+  const _MaterialSupplierAttributionBar({
+    required this.displayName,
+    required this.compact,
+    this.avatarUrl,
+    this.isVerified = false,
+    this.onTap,
+  });
+
+  final String displayName;
+  final String? avatarUrl;
+  final bool isVerified;
+  final VoidCallback? onTap;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final padding = compact ? AppSpacing.sm + AppSpacing.xs : AppSpacing.md;
+
+    return Material(
+      color: palette.cardSurfaceAlt,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsetsDirectional.fromSTEB(
+            padding,
+            AppSpacing.sm,
+            padding,
+            AppSpacing.sm,
+          ),
+          child: SupplierAttributionRow(
+            displayName: displayName,
+            avatarUrl: avatarUrl,
+            isVerified: isVerified,
+            compact: compact,
+            onTap: null,
+            showChevron: onTap != null,
+          ),
+        ),
       ),
     );
   }

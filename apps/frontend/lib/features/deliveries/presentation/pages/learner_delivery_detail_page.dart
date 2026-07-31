@@ -8,7 +8,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
-import '../../../../shared/widgets/materials/material_status_badge.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_deliveries_provider.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
@@ -161,9 +161,9 @@ class _Header extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              MaterialStatusBadge(
+              AppStatusBadge(
                 label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusTone(delivery.status),
+                tone: deliveryStatusAppTone(delivery.status),
               ),
               Text(
                 'Requested ${_formatDateTime(delivery.requestedAt)}',
@@ -178,9 +178,9 @@ class _Header extends StatelessWidget {
             Text(
               delivery.status.toUpperCase() == 'ARRIVED_PICKUP'
                   ? 'Pickup was not completed before the supplier window ended. '
-                      'An admin may review if no one reports the issue.'
+                        'An admin may review if no one reports the issue.'
                   : 'The assigned driver has not completed supplier pickup before '
-                      'the window ended. An admin may review if no one reports the issue.',
+                        'the window ended. An admin may review if no one reports the issue.',
               style: AppTextStyles.label(context).copyWith(
                 color: colors.warningText,
                 fontWeight: FontWeight.w600,
@@ -252,6 +252,7 @@ class _DeliverySummaryPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.popOrGo('/learner/reservations'),
+            style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.assignment_turned_in_outlined),
             label: const Text('Back to reservations'),
           ),
@@ -289,6 +290,7 @@ class _TrackingStatusCard extends StatelessWidget {
           FilledButton.icon(
             onPressed: () =>
                 context.push('/learner/deliveries/${delivery.id}/track'),
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
             icon: const Icon(Icons.map_outlined),
             label: const Text('Track delivery'),
           ),
@@ -296,12 +298,14 @@ class _TrackingStatusCard extends StatelessWidget {
         if (delivery.canTrack)
           TextButton.icon(
             onPressed: onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_outlined, size: 18),
             label: const Text('Refresh status'),
           )
         else
           TextButton.icon(
             onPressed: onRefresh,
+            style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_outlined, size: 18),
             label: const Text('Refresh status'),
           ),
@@ -559,7 +563,14 @@ class _StatePanel extends StatelessWidget {
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: AppSpacing.lg),
-            FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+            FilledButton(
+              onPressed: onAction,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
+              child: Text(actionLabel!),
+            ),
           ],
         ],
       ),

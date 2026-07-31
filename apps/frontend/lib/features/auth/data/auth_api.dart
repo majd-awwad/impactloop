@@ -59,9 +59,7 @@ class AuthApi {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         '$_authBasePath/me',
-        options: Options(
-          headers: const {'Cache-Control': 'no-cache'},
-        ),
+        options: Options(headers: const {'Cache-Control': 'no-cache'}),
       ),
       (json) => User.fromJson(json['user'] as Map<String, dynamic>),
     );
@@ -94,12 +92,12 @@ class AuthApi {
     );
   }
 
-  Future<void> changePassword({
+  Future<({AuthTokens tokens, User user})> changePassword({
     required String currentPassword,
     required String newPassword,
     required String confirmNewPassword,
   }) {
-    return unwrapApiVoidResponse(
+    return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(
         '$_authBasePath/change-password',
         data: {
@@ -108,6 +106,18 @@ class AuthApi {
           'confirmNewPassword': confirmNewPassword,
         },
       ),
+      (json) {
+        final userJson = json['user'];
+
+        if (userJson is! Map<String, dynamic>) {
+          throw const FormatException('Missing user in auth response');
+        }
+
+        return (
+          tokens: AuthTokens.fromJson(json),
+          user: User.fromJson(userJson),
+        );
+      },
     );
   }
 

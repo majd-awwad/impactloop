@@ -80,6 +80,7 @@ class MaterialDiscoveryApiMapper {
     final imageUrl = galleryImages.isNotEmpty
         ? galleryImages.first.url
         : _resolveImageUrl(json);
+    final supplier = _mapSupplierSummary(json);
 
     return DiscoveryMaterial(
       id: _stringOrFallback(json['id'], fallback: ''),
@@ -125,6 +126,7 @@ class MaterialDiscoveryApiMapper {
           const LocalizedText(en: 'Material supplier', ar: 'مورد مواد'),
       supplierType: supplierType,
       supplierVerified: supplierVerified,
+      supplier: supplier,
       heroIconData: _heroIconForCategory(categoryNameEn),
       cardGradient: _gradientForCategory(categoryNameEn),
       imageUrl: imageUrl,
@@ -144,6 +146,38 @@ class MaterialDiscoveryApiMapper {
       isOwnMaterial: isOwnMaterial,
       canReserve: canReserve,
       reserveBlockReason: reserveBlockReason,
+      recommendationImpressionId: _recommendationImpressionId(
+        json['recommendationImpressionId'],
+      ),
+    );
+  }
+
+  static DiscoveryMaterialSupplierSummary? _mapSupplierSummary(
+    Map<String, dynamic> json,
+  ) {
+    final supplierJson = _asMap(json['supplier']);
+    if (supplierJson == null) {
+      return null;
+    }
+
+    final id = _nullableString(supplierJson['id']);
+    if (id == null) {
+      return null;
+    }
+
+    final avatarUrl = _nullableString(supplierJson['avatarUrl']);
+
+    return DiscoveryMaterialSupplierSummary(
+      id: id,
+      displayName: _stringOrFallback(
+        supplierJson['displayName'],
+        fallback: 'ImpactLoop supplier',
+      ),
+      avatarUrl: avatarUrl == null ? null : ApiConfig.resolveMediaUrl(avatarUrl),
+      city: _nullableString(supplierJson['city']),
+      area: _nullableString(supplierJson['area']),
+      followersCount: _intFromDynamic(supplierJson['followersCount']),
+      isFollowedByViewer: supplierJson['isFollowedByViewer'] == true,
     );
   }
 
@@ -187,6 +221,15 @@ class MaterialDiscoveryApiMapper {
     }
 
     final normalized = value.toString().trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  static String? _recommendationImpressionId(Object? value) {
+    if (value is! String) {
+      return null;
+    }
+
+    final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
   }
 
@@ -468,24 +511,28 @@ class MaterialDiscoveryApiMapper {
             en: 'Pending reservation',
             ar: 'بانتظار الحجز',
           ),
-          tone: MaterialStatusBadgeTone.reserved,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'RESERVED':
         return (
           label: const LocalizedText(en: 'Reserved', ar: 'محجوز'),
-          tone: MaterialStatusBadgeTone.reserved,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'REUSED':
         return (
           label: const LocalizedText(en: 'Reused', ar: 'أعيد استخدامها'),
-          tone: MaterialStatusBadgeTone.reused,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'UNAVAILABLE':
         return (
           label: const LocalizedText(en: 'Unavailable', ar: 'غير متاح'),
-          tone: MaterialStatusBadgeTone.draft,
+          tone: materialLifecycleStatusTone(value),
         );
       case 'AVAILABLE':
+        return (
+          label: const LocalizedText(en: 'Available', ar: 'متاح'),
+          tone: materialLifecycleStatusTone(value),
+        );
       default:
         return (
           label: const LocalizedText(en: 'Available', ar: 'متاح'),

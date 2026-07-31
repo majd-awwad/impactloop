@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../controllers/supplier_requests_providers.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_feedback.dart';
@@ -13,7 +16,7 @@ Future<String?> _promptIncidentNote(
   final controller = TextEditingController();
   final result = await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: Text(title),
       content: TextField(
         controller: controller,
@@ -25,20 +28,17 @@ Future<String?> _promptIncidentNote(
           hintText: hint,
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(context.s.cancel),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: () {
             final value = controller.text.trim();
             if (value.isEmpty) return;
             Navigator.of(context).pop(value);
           },
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
           child: const Text('Submit report'),
         ),
-      ],
+      ),
     ),
   );
   controller.dispose();
@@ -65,6 +65,7 @@ Future<void> handleMarkDeliveryPickupExpired(
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
           child: const Text('Mark expired'),
         ),
       ],
@@ -73,10 +74,7 @@ Future<void> handleMarkDeliveryPickupExpired(
   if (confirmed != true || !context.mounted) return;
 
   try {
-    await markDeliveryPickupExpiredForRequest(
-      ref,
-      requestId: reservationId,
-    );
+    await markDeliveryPickupExpiredForRequest(ref, requestId: reservationId);
     if (!context.mounted) return;
     showSupplierInfoSnackBar(
       context,
@@ -127,11 +125,7 @@ Future<void> handleReportDriverNoShow(
   if (note == null || !context.mounted) return;
 
   try {
-    await markDriverNoShowForDelivery(
-      ref,
-      deliveryId: deliveryId,
-      note: note,
-    );
+    await markDriverNoShowForDelivery(ref, deliveryId: deliveryId, note: note);
     if (!context.mounted) return;
     showSupplierInfoSnackBar(context, 'Driver no-show reported to admin.');
   } catch (error) {

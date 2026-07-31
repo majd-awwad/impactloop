@@ -1,3 +1,5 @@
+import { canLogMockEmailLinks } from '../../../observability/mock-email-log-policy.js';
+import { logger } from '../../../observability/logger.js';
 import type {
   EmailInvitationPayload,
   EmailInvitationProvider,
@@ -55,15 +57,35 @@ export const buildInvitationEmailContent = (payload: EmailInvitationPayload) => 
   };
 };
 
+const recipientDomain = (email: string): string => {
+  const atIndex = email.lastIndexOf('@');
+  return atIndex >= 0 ? email.slice(atIndex + 1) : 'unknown';
+};
+
 export class MockEmailInvitationProvider implements EmailInvitationProvider {
   async sendInvitationEmail(payload: EmailInvitationPayload): Promise<EmailSendResult> {
-    const content = buildInvitationEmailContent(payload);
-
-    console.log('[MockEmailInvitationProvider] Invitation email');
-    console.log(`  to: ${payload.recipientEmail}`);
-    console.log(`  subject: ${content.subject}`);
-    console.log(`  link: ${payload.inviteLink}`);
-    console.log(`  expiresAt: ${payload.expiresAt.toISOString()}`);
+    if (canLogMockEmailLinks()) {
+      logger.info(
+        {
+          operation: 'mock_invitation_email.send',
+          emailType: 'invitation',
+          recipientDomain: recipientDomain(payload.recipientEmail),
+          expiresAt: payload.expiresAt.toISOString(),
+          mockDevLink: payload.inviteLink,
+        },
+        'Mock invitation email generated',
+      );
+    } else {
+      logger.info(
+        {
+          operation: 'mock_invitation_email.send',
+          emailType: 'invitation',
+          recipientDomain: recipientDomain(payload.recipientEmail),
+          expiresAt: payload.expiresAt.toISOString(),
+        },
+        'Mock invitation email generated',
+      );
+    }
 
     return {
       sendStatus: 'SENT',

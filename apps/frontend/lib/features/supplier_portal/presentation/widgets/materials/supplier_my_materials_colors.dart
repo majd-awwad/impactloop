@@ -1,172 +1,128 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_color_tokens.dart';
-import '../../theme/supplier_theme_extension.dart';
+import '../../../../../app/theme/app_radius.dart';
+import '../../../../../app/theme/app_spacing.dart';
+import '../../../../../app/theme/app_theme_colors.dart';
 
 /// Semantic colors for Supplier My Materials page only.
 abstract final class SupplierMyMaterialsColors {
+  // Compatibility for older Supplier preview widgets; active helpers below
+  // derive from AppThemeColors at runtime.
   static const Color lightTeal = AppColorTokens.teal;
-  static const Color lightTealStrong = AppColorTokens.supplierLightAccentMuted;
-  static const Color lightTealDark = AppColorTokens.supplierLightBorderFocused;
-  static const Color lightBlue = AppColorTokens.supplierLightBlue;
-  static const Color lightBlueDark = AppColorTokens.supplierLightBlueDark;
-  static const Color lightAmber = AppColorTokens.supplierLightAmber;
-  static const Color lightAmberDark = AppColorTokens.supplierLightAmberDark;
-  static const Color lightRed = AppColorTokens.supplierLightError;
-  static const Color lightRedDark = AppColorTokens.supplierLightRedDark;
-  static const Color lightGreen = AppColorTokens.forest;
-  static const Color lightGreenDark = AppColorTokens.supplierLightGreenDark;
 
-  static Color statTotal(BuildContext context) =>
-      context.supplierColors.isDark
-          ? AppColorTokens.supplierDashboardAvailable
-          : lightTealDark;
+  static AppThemeColors _colors(BuildContext context) =>
+      AppThemeColors.of(context);
 
-  static Color statAvailable(BuildContext context) =>
-      context.supplierColors.isDark
-          ? AppColorTokens.supplierDashboardCompleted
-          : lightGreen;
+  static Color statTotal(BuildContext context) => _colors(context).primary;
 
-  static Color statPending(BuildContext context) =>
-      context.supplierColors.isDark
-          ? AppColorTokens.supplierDashboardPending
-          : lightAmber;
+  static Color statAvailable(BuildContext context) => _colors(context).primary;
 
-  static Color statReserved(BuildContext context) =>
-      context.supplierColors.isDark
-          ? AppColorTokens.supplierDashboardReserved
-          : lightBlue;
+  static Color statPending(BuildContext context) => _colors(context).primary;
 
-  static Color statReused(BuildContext context) =>
-      context.supplierColors.isDark
-          ? AppColorTokens.supplierDashboardReserved
-          : lightBlue;
+  static Color statReserved(BuildContext context) => _colors(context).primary;
 
-  static Color statUnavailable(BuildContext context) =>
-      context.supplierColors.isDark
-          ? AppColorTokens.supplierDashboardUnavailable
-          : lightRed;
+  static Color statReused(BuildContext context) => _colors(context).primary;
+
+  static Color statUnavailable(BuildContext context) => _colors(context).danger;
 
   static Color statBackground(BuildContext context, Color accent) {
-    return accent.withValues(alpha: context.supplierColors.isDark ? 0.14 : 0.12);
+    final colors = _colors(context);
+    return accent == colors.danger
+        ? colors.danger.withValues(alpha: 0.10)
+        : colors.primarySoft;
   }
 
   static Color statBorder(BuildContext context, Color accent) {
-    return accent.withValues(alpha: context.supplierColors.isDark ? 0.4 : 0.32);
+    final colors = _colors(context);
+    return accent == colors.danger
+        ? colors.danger.withValues(alpha: 0.26)
+        : colors.borderSubtle;
   }
 
   static Color chipUnselectedBackground(BuildContext context, Color accent) {
-    return accent.withValues(alpha: context.supplierColors.isDark ? 0.12 : 0.1);
+    return _colors(context).surfaceMuted;
   }
 
   static Color chipUnselectedBorder(BuildContext context, Color accent) {
-    return accent.withValues(alpha: context.supplierColors.isDark ? 0.45 : 0.55);
+    return _colors(context).borderSubtle;
   }
 
   static Color chipUnselectedText(BuildContext context, Color accent) {
-    return context.supplierColors.isDark ? accent : darkenForLightMode(accent);
+    return _colors(context).textSecondary;
   }
 
   static Color chipSelectedBackground(BuildContext context, Color accent) {
-    return context.supplierColors.isDark
-        ? darkenForDarkMode(accent)
-        : darkenForLightMode(accent);
+    return _colors(context).primarySoft;
   }
 
   static Color chipSelectedBorder(BuildContext context, Color accent) {
-    return chipSelectedBackground(context, accent);
+    return _colors(context).primary.withValues(alpha: 0.34);
   }
 
   static Color chipSelectedText(BuildContext context, Color accent) {
-    return context.supplierColors.textOnAccent;
+    return _colors(context).primary;
   }
 
   static ButtonStyle manageButtonStyle(BuildContext context) {
-    final accent =
-        context.supplierColors.isDark ? context.supplierColors.accent : lightTealDark;
+    final colors = _colors(context);
+    final textTheme = Theme.of(context).textTheme;
 
     return FilledButton.styleFrom(
-      backgroundColor: accent,
-      foregroundColor: context.supplierColors.textOnAccent,
+      backgroundColor: colors.primary,
+      foregroundColor: colors.textOnPrimary,
       minimumSize: const Size(0, 40),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 
-  static ButtonStyle editButtonStyle(BuildContext context, {bool enabled = true}) {
-    final accent =
-        context.supplierColors.isDark ? context.supplierColors.accent : lightTeal;
+  static ButtonStyle editButtonStyle(
+    BuildContext context, {
+    bool enabled = true,
+  }) {
+    final colors = _colors(context);
+    final textTheme = Theme.of(context).textTheme;
+    final accent = colors.primary;
 
     return OutlinedButton.styleFrom(
       foregroundColor: enabled ? accent : accent.withValues(alpha: 0.45),
       minimumSize: const Size(0, 40),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       side: BorderSide(
         color: enabled ? accent : accent.withValues(alpha: 0.35),
-        width: 1.5,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 
-  static ButtonStyle deleteButtonStyle(BuildContext context, {bool enabled = true}) {
-    final accent =
-        context.supplierColors.isDark ? lightRed : lightRedDark;
+  static ButtonStyle deleteButtonStyle(
+    BuildContext context, {
+    bool enabled = true,
+  }) {
+    final colors = _colors(context);
+    final textTheme = Theme.of(context).textTheme;
+    final accent = colors.danger;
 
     return OutlinedButton.styleFrom(
       foregroundColor: enabled ? accent : accent.withValues(alpha: 0.45),
       minimumSize: const Size(0, 40),
-      padding: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       side: BorderSide(
         color: enabled ? accent : accent.withValues(alpha: 0.35),
-        width: 1.5,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+      textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
     );
   }
 
   static Color darkenForLightMode(Color accent) {
-    if (accent == lightBlue || accent == AppColorTokens.supplierDashboardReserved) {
-      return lightBlueDark;
-    }
-    if (accent == lightAmber || accent == AppColorTokens.supplierDashboardPending) {
-      return lightAmberDark;
-    }
-    if (accent == lightRed || accent == AppColorTokens.supplierDashboardUnavailable) {
-      return lightRedDark;
-    }
-    if (accent == lightGreen || accent == AppColorTokens.supplierDashboardCompleted) {
-      return lightGreenDark;
-    }
-    if (accent == lightTealStrong) {
-      return lightTealDark;
-    }
-    return lightTealDark;
+    return accent;
   }
 
   static Color darkenForDarkMode(Color accent) {
-    if (accent == AppColorTokens.supplierDashboardPending) {
-      return AppColorTokens.supplierDarkenAmber;
-    }
-    if (accent == AppColorTokens.supplierDashboardCompleted) {
-      return AppColorTokens.supplierDarkenGreen;
-    }
-    if (accent == AppColorTokens.supplierDashboardReserved) {
-      return AppColorTokens.supplierLightBlue;
-    }
-    if (accent == AppColorTokens.supplierDashboardUnavailable) {
-      return AppColorTokens.supplierDarkenRed;
-    }
-    if (accent == AppColorTokens.supplierDashboardAvailable) {
-      return AppColorTokens.teal;
-    }
-    if (accent == AppColorTokens.supplierDashboardReused) {
-      return AppColorTokens.supplierLightAccentMuted;
-    }
-    return AppColorTokens.teal;
+    return accent;
   }
 }

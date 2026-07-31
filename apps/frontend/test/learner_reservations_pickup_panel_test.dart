@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/auth/application/auth_controller.dart';
@@ -74,10 +73,7 @@ void main() {
           title: 'Wood panels',
           status: 'RESERVED',
         ),
-        supplier: LearnerDeliverySupplier(
-          id: 'sup-1',
-          displayName: 'Supplier',
-        ),
+        supplier: LearnerDeliverySupplier(id: 'sup-1', displayName: 'Supplier'),
       ),
       pickupLocation: const LearnerDeliveryLocation(
         id: 'pickup-1',
@@ -102,12 +98,8 @@ void main() {
       ProviderScope(
         overrides: [
           authControllerProvider.overrideWith(_LearnerAuthController.new),
-          myReservationsProvider.overrideWith(
-            (ref) async => reservations,
-          ),
-          learnerDeliveriesProvider.overrideWith(
-            (ref) async => deliveries,
-          ),
+          myReservationsProvider.overrideWith((ref) async => reservations),
+          learnerDeliveriesProvider.overrideWith((ref) async => deliveries),
         ],
         child: const MaterialApp(home: LearnerReservationsPage()),
       ),

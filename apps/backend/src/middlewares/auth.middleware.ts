@@ -1,10 +1,15 @@
 import type { NextFunction, Request, Response } from 'express';
 import { prisma } from '../database/prisma.js';
+import { updateRequestContext } from '../observability/request-context.js';
 import { AppError } from '../utils/app-error.js';
 import { verifyAccessToken } from '../utils/jwt.js';
 
 const suspendedAccountMessage =
   'Your account has been suspended after repeated verified reports. Contact admin.';
+
+const enrichAuthenticatedRequestContext = (userId: string): void => {
+  updateRequestContext({ userId });
+};
 
 const assertActiveAccount = async (userId: string): Promise<void> => {
   const user = await prisma.user.findUnique({
@@ -42,6 +47,7 @@ export const authMiddleware = async (
 
   try {
     req.auth = verifyAccessToken(token);
+    enrichAuthenticatedRequestContext(req.auth.sub);
     await assertActiveAccount(req.auth.sub);
     next();
   } catch (error) {
@@ -75,9 +81,23 @@ export const optionalAuthMiddleware = (
 
   try {
     req.auth = verifyAccessToken(token);
+    enrichAuthenticatedRequestContext(req.auth.sub);
   } catch {
     // Ignore invalid tokens on public routes; treat the request as anonymous.
   }
 
   next();
+};
+
+export const strictOptionalAuthMiddleware = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  if (!req.headers.authorization) {
+    next();
+    return;
+  }
+
+  await authMiddleware(req, res, next);
 };

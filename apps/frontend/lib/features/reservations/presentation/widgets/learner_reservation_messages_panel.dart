@@ -5,6 +5,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/my_reservations_provider.dart';
@@ -109,10 +110,9 @@ class _LearnerReservationMessagesPanelState
       children: [
         Text(
           'Follow-up messages',
-          style: AppTextStyles.label(context).copyWith(
-            color: palette.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: AppSpacing.sm),
         if (_loading)
@@ -137,7 +137,9 @@ class _LearnerReservationMessagesPanelState
         else if (_messages.isEmpty)
           Text(
             'No follow-up messages yet.',
-            style: AppTextStyles.body(context).copyWith(color: palette.textMuted),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textMuted),
           )
         else
           ..._messages.map(
@@ -156,17 +158,16 @@ class _LearnerReservationMessagesPanelState
                     children: [
                       Text(
                         message.sender.displayName,
-                        style: AppTextStyles.label(context).copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
+                        style: AppTextStyles.label(
+                          context,
+                        ).copyWith(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         message.body,
-                        style: AppTextStyles.body(context).copyWith(
-                          color: palette.textPrimary,
-                        ),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textPrimary),
                       ),
                     ],
                   ),
@@ -189,6 +190,10 @@ class _LearnerReservationMessagesPanelState
             alignment: Alignment.centerRight,
             child: FilledButton(
               onPressed: _sending ? null : _sendMessage,
+              style: AppStatusButtonStyle.filled(
+                context,
+                AppStatusTone.primary,
+              ),
               child: _sending
                   ? const SizedBox(
                       width: 16,

@@ -10,10 +10,10 @@ final savedDropoffAddressesApiProvider = Provider<SavedDropoffAddressesApi>(
 
 final savedDropoffAddressesRepositoryProvider =
     Provider<SavedDropoffAddressesRepository>(
-  (ref) => SavedDropoffAddressesRepository(
-    ref.watch(savedDropoffAddressesApiProvider),
-  ),
-);
+      (ref) => SavedDropoffAddressesRepository(
+        ref.watch(savedDropoffAddressesApiProvider),
+      ),
+    );
 
 class SavedDropoffAddressesRepository {
   const SavedDropoffAddressesRepository(this._api);
@@ -55,7 +55,10 @@ class SavedDropoffAddressesRepository {
   }
 }
 
-final savedDropoffAddressesProvider =
-    FutureProvider<List<SavedDropoffAddress>>((ref) {
-  return ref.watch(savedDropoffAddressesRepositoryProvider).fetchSavedAddresses();
-});
+final savedDropoffAddressesProvider = FutureProvider<List<SavedDropoffAddress>>(
+  (ref) {
+    return ref
+        .watch(savedDropoffAddressesRepositoryProvider)
+        .fetchSavedAddresses();
+  },
+);

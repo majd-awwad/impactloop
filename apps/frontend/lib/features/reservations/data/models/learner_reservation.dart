@@ -4,7 +4,8 @@ import 'reservation_message.dart';
 import 'reservation_preferred_window.dart';
 
 class LearnerReservationPickupLocation {
-  const LearnerReservationPickupLocation({    this.country,
+  const LearnerReservationPickupLocation({
+    this.country,
     required this.city,
     this.area,
     this.addressLine,
@@ -21,9 +22,7 @@ class LearnerReservationPickupLocation {
   final double? longitude;
   final bool isApproximate;
 
-  factory LearnerReservationPickupLocation.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory LearnerReservationPickupLocation.fromJson(Map<String, dynamic> json) {
     return LearnerReservationPickupLocation(
       country: json['country'] as String?,
       city: json['city'] as String? ?? '',
@@ -98,6 +97,7 @@ class LearnerReservationMaterial {
 
     return ApiConfig.resolveMediaUrl(trimmed);
   }
+
   String get locationLabel {
     if (city != null && area != null) {
       return '$city, $area';
@@ -356,8 +356,8 @@ class LearnerReservation {
       canLearnerRequestDelivery: json['canLearnerRequestDelivery'] == true,
       incidentReviewStatus: json['incidentReviewStatus'] as String?,
       pendingIncidentReasonCode: json['pendingIncidentReasonCode'] as String?,
-      unitPriceAtReservation:
-          (json['unitPriceAtReservation'] as num?)?.toDouble(),
+      unitPriceAtReservation: (json['unitPriceAtReservation'] as num?)
+          ?.toDouble(),
       materialSubtotal: (json['materialSubtotal'] as num?)?.toDouble(),
       deliveryFee: (json['deliveryFee'] as num?)?.toDouble(),
       totalAmount: (json['totalAmount'] as num?)?.toDouble(),
@@ -373,8 +373,7 @@ class LearnerReservation {
 
   bool get isPending => status == 'PENDING';
   bool get isAccepted => status == 'ACCEPTED';
-  bool get isAwaitingConfirmation =>
-      status == 'AWAITING_LEARNER_CONFIRMATION';
+  bool get isAwaitingConfirmation => status == 'AWAITING_LEARNER_CONFIRMATION';
   bool get isAwaitingSupplierConfirmation =>
       status == 'AWAITING_SUPPLIER_CONFIRMATION';
   bool get isAwaitingResolution => status == 'AWAITING_RESOLUTION';
@@ -390,23 +389,29 @@ class LearnerReservation {
   bool get isCompleted => status == 'COMPLETED';
   bool get isCancelled => status == 'CANCELLED';
   bool get isExpired => status == 'EXPIRED';
+  bool get isTerminalForNewMaterialReservation =>
+      isRejected || isCancelled || isExpired || isCompleted;
+  bool get blocksNewMaterialReservation => !isTerminalForNewMaterialReservation;
 
   bool get isPickupFulfillment => fulfillmentMethod == 'PICKUP';
   bool get isDeliveryFulfillment => fulfillmentMethod == 'DELIVERY';
 
-  bool get hasDeliveryJob =>
-      isDeliveryFulfillment || activeDelivery != null;
+  bool get hasDeliveryJob => isDeliveryFulfillment || activeDelivery != null;
 
-  static List<ReservationPreferredWindow> _parsePreferredWindows(Object? value) {
+  static List<ReservationPreferredWindow> _parsePreferredWindows(
+    Object? value,
+  ) {
     if (value is! List) {
       return const [];
     }
 
     return value
         .whereType<Map>()
-        .map((entry) => ReservationPreferredWindow.fromJson(
-              Map<String, dynamic>.from(entry),
-            ))
+        .map(
+          (entry) => ReservationPreferredWindow.fromJson(
+            Map<String, dynamic>.from(entry),
+          ),
+        )
         .toList();
   }
 
@@ -416,9 +421,7 @@ class LearnerReservation {
       (isAccepted || isCompleted);
 
   bool shouldShowSelfPickupAddress({required bool hasDeliveryRecord}) =>
-      hasRevealedPickupLocation &&
-      isPickupFulfillment &&
-      !hasDeliveryRecord;
+      hasRevealedPickupLocation && isPickupFulfillment && !hasDeliveryRecord;
 
   bool get shouldShowSelfPickupCode =>
       isAccepted &&

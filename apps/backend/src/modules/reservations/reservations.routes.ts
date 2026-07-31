@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { privateNoStoreMiddleware } from '../../middlewares/cache-control.middleware.js';
 
 import { authMiddleware } from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
@@ -34,6 +35,7 @@ import {
 } from '../deliveries/deliveries.validation.js';
 
 export const reservationsRouter = Router();
+reservationsRouter.use(privateNoStoreMiddleware);
 
 reservationsRouter.get(
   '/my',

@@ -5,12 +5,18 @@ import {
   readValidatedQuery,
 } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
+import { AppError } from '../../utils/app-error.js';
+import { measureRequestStage } from '../../observability/stage-timing.js';
+import { getRequestAbortSignal } from '../../middlewares/request-context.middleware.js';
 
 import {
   checkMaterialPrice,
   getListingPolicy,
   likeMaterialById,
   getMaterialById,
+  getMaterialViewerState,
+  getRelatedMaterials,
+  recordMaterialViewById,
   getMaterials,
   unlikeMaterialById,
 } from './materials.service.js';
@@ -52,9 +58,54 @@ export const getMaterial = async (
   res: Response,
 ): Promise<void> => {
   const { id } = readValidatedParams<{ id: string }>(req);
-  const material = await getMaterialById(id, req.auth);
+  const material = await measureRequestStage('materials.public-detail', () =>
+    getMaterialById(id, undefined, getRequestAbortSignal(res)),
+  );
 
   res.json(successResponse('Material fetched successfully', material));
+};
+
+export const getMaterialViewerStateHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  res.setHeader('Cache-Control', 'private, no-store');
+  const state = await measureRequestStage('materials.viewer-state', () =>
+    getMaterialViewerState(id, req.auth!, getRequestAbortSignal(res)),
+  );
+  res.json(successResponse('Material viewer state fetched successfully', state));
+};
+
+export const recordMaterialViewHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const operationKey = req.header('Idempotency-Key')?.trim();
+  if (!operationKey || operationKey.length > 191) {
+    throw new AppError(
+      'A valid Idempotency-Key header is required.',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+  const result = await measureRequestStage('materials.record-view', () =>
+    recordMaterialViewById(id, operationKey, req.auth),
+  );
+  res.status(202).json(successResponse('Material view recorded', result));
+};
+
+export const getRelatedMaterialsHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<{ id: string }>(req);
+  const { limit } = readValidatedQuery<{ limit: number }>(req);
+  const result = await measureRequestStage('materials.related', () =>
+    getRelatedMaterials(id, limit, req.auth, getRequestAbortSignal(res)),
+  );
+  res.json(successResponse('Related materials fetched successfully', result));
 };
 
 export const likeMaterial = async (

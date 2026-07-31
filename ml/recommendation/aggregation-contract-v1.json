@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "impactloop-local-aggregation-contract-v1",
+  "selectionProtocolVersion": "lm-05-controlled-aggregation-v1",
+  "scope": "LOCAL_APPLICATION_AND_ML_READINESS",
+  "candidateModes": ["weighted-sum", "weighted-mean", "l1", "l2"],
+  "selectedMode": "weighted-sum",
+  "selectionSeed": 1705,
+  "runtimeActivation": "INACTIVE",
+  "portableActivationAllowed": false
+}

@@ -6,7 +6,8 @@ import '../data/models/supplier_my_materials_models.dart';
 import '../data/supplier_my_materials_repository.dart';
 import 'supplier_portal_session.dart';
 
-class SupplierMyMaterialsQueryNotifier extends Notifier<SupplierMyMaterialsQuery> {
+class SupplierMyMaterialsQueryNotifier
+    extends Notifier<SupplierMyMaterialsQuery> {
   @override
   SupplierMyMaterialsQuery build() => const SupplierMyMaterialsQuery();
 
@@ -19,43 +20,45 @@ class SupplierMyMaterialsQueryNotifier extends Notifier<SupplierMyMaterialsQuery
   }
 }
 
-final supplierMyMaterialsQueryProvider = NotifierProvider<
-    SupplierMyMaterialsQueryNotifier, SupplierMyMaterialsQuery>(
-  SupplierMyMaterialsQueryNotifier.new,
-);
+final supplierMyMaterialsQueryProvider =
+    NotifierProvider<
+      SupplierMyMaterialsQueryNotifier,
+      SupplierMyMaterialsQuery
+    >(SupplierMyMaterialsQueryNotifier.new);
 
 final supplierMyMaterialsProvider =
     FutureProvider.autoDispose<SupplierMyMaterialsListResult>((ref) async {
-  watchSupplierPortalSessionFromRef(ref);
-  final auth = ref.watch(authControllerProvider);
+      watchSupplierPortalSessionFromRef(ref);
+      final auth = ref.watch(authControllerProvider);
 
-  if (!auth.isAuthenticated) {
-    throw const ApiException(
-      message: 'Sign in as a supplier to view your materials.',
-      code: 'UNAUTHORIZED',
-    );
-  }
+      if (!auth.isAuthenticated) {
+        throw const ApiException(
+          message: 'Sign in as a supplier to view your materials.',
+          code: 'UNAUTHORIZED',
+        );
+      }
 
-  final query = ref.watch(supplierMyMaterialsQueryProvider);
-  return ref.watch(supplierMyMaterialsRepositoryProvider).listMaterials(query);
-});
+      final query = ref.watch(supplierMyMaterialsQueryProvider);
+      return ref
+          .watch(supplierMyMaterialsRepositoryProvider)
+          .listMaterials(query);
+    });
 
-final supplierMyMaterialByIdProvider =
-    FutureProvider.autoDispose.family<SupplierMyMaterial, String>((
-  ref,
-  materialId,
-) async {
-  final auth = ref.watch(authControllerProvider);
+final supplierMyMaterialByIdProvider = FutureProvider.autoDispose
+    .family<SupplierMyMaterial, String>((ref, materialId) async {
+      final auth = ref.watch(authControllerProvider);
 
-  if (!auth.isAuthenticated) {
-    throw const ApiException(
-      message: 'Sign in as a supplier to view your materials.',
-      code: 'UNAUTHORIZED',
-    );
-  }
+      if (!auth.isAuthenticated) {
+        throw const ApiException(
+          message: 'Sign in as a supplier to view your materials.',
+          code: 'UNAUTHORIZED',
+        );
+      }
 
-  return ref.watch(supplierMyMaterialsRepositoryProvider).getMaterial(materialId);
-});
+      return ref
+          .watch(supplierMyMaterialsRepositoryProvider)
+          .getMaterial(materialId);
+    });
 
 void invalidateSupplierMyMaterials(WidgetRef ref) {
   ref.invalidate(supplierMyMaterialsProvider);

@@ -5,9 +5,10 @@ import type { CategoriesQuery } from './categories.validation.js';
 export const getCategories = async (query: CategoriesQuery) => {
   const categories = await categoriesRepository.findPublicCategories(query);
 
-  const visibleCategories = query.discoveryOnly
-    ? filterPublicDiscoveryCategories(categories)
-    : categories;
+  const visibleCategories =
+    query.discoveryOnly || query.type === 'PROJECT'
+      ? filterPublicDiscoveryCategories(categories)
+      : categories;
 
   return visibleCategories.map((category) => ({
     id: category.id,

@@ -1,6 +1,6 @@
 # Supplier Reservation Flow
 
-**Sources inspected:** `supplier_incoming_requests_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.*`
+**Sources inspected:** `supplier_incoming_requests_page.dart`, `supplier_reservation_detail_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.*`
 
 ## Trigger
 
@@ -14,15 +14,15 @@ Supplier opens **Incoming requests** (`/supplier/reservations`) or arrives via n
 
 ### User path
 
-Switch tabs: pending / accepted / declined / completed (wording per UI). See cards with learner info, material summary, quantity, message.
+Use the Incoming Requests inbox to triage requests. The page shows four server-backed operational metrics (needs supplier response, waiting for learner, fulfillment in progress, and admin review), quieter completed/closed history metrics, and server-side search, attention, fulfillment, status, history, and date-range filters. The structured desktop rows separate request identity, canonical schedule/fulfillment, raw reservation state, backend-classified attention/next actor, and a single state-aware action. At narrower widths the same content becomes vertically ordered cards; no client-side filtering or inferred action ownership is used.
 
 ### Frontend path
 
-`SupplierIncomingRequestsPage` → `supplier_requests_providers.dart` → `SupplierRequestsApi.fetchIncomingRequests(tab)` → `GET /api/supplier/reservations?status=<tab>`.
+`SupplierIncomingRequestsPage` → `supplier_requests_providers.dart` → `SupplierRequestsApi.fetchIncomingRequestsResponse(...)` → `GET /api/supplier/reservations`. Query parameters map directly to the validated API contract: `search`, `attentionState`, `fulfillmentMethod`, `status`, `historyScope`, `dateFrom`, `dateTo`, `page`, and `limit`. Flutter reads the canonical `items`, `pagination`, and `summary` response fields.
 
 ### Backend path
 
-`listSupplierReservations` → map tab to reservation statuses (`accepted` tab → `ACCEPTED` + `AWAITING_LEARNER_CONFIRMATION`; `declined` → `REJECTED`) → `findSupplierReservations(ownerId, statuses)`.
+`listSupplierReservationsPage` maps tabs to reservation statuses: `pending` -> `PENDING`, `needs_learner` -> `AWAITING_LEARNER_CONFIRMATION`, `needs_supplier` -> `AWAITING_SUPPLIER_CONFIRMATION`, `accepted` -> `ACCEPTED`, `declined` -> `REJECTED`, `completed` -> `COMPLETED`, and `cancelled` -> `CANCELLED` + `EXPIRED`. The full raw set is `PENDING`, `AWAITING_LEARNER_CONFIRMATION`, `AWAITING_SUPPLIER_CONFIRMATION`, `ACCEPTED`, `AWAITING_RESOLUTION`, `REJECTED`, `CANCELLED`, `COMPLETED`, `EXPIRED`, `NO_SHOW`, and `FULFILLMENT_FAILED`; `EXPIRED` is distinct from `CANCELLED`. The backend also accepts raw statuses and supports paging, search, fulfillment/history/date/material filters, and computed attention-state filtering. It returns a canonical state (`workflowPhase`, `attentionState`, `nextActor`, `summaryBucket`, `availableActions`) alongside legacy card fields; all filtering precedes paging.
 
 ### Database changes
 
@@ -31,6 +31,12 @@ Read-only.
 ### Success state
 
 List renders `SupplierIncomingRequest` cards. Each reservation DTO includes `fulfillmentMethod`, `fulfillmentLabel`, nullable `activeDelivery` (`id`, `status`), and `canSupplierComplete`. The supplier UI uses `canSupplierComplete` instead of guessing whether the complete action is allowed.
+
+### Detail workspace
+
+The Inbox opens `/supplier/reservations/:reservationId` with `context.push(...)`; the Inbox presentation remains unchanged apart from that navigation callback. `SupplierReservationDetailPage` loads independently through the owner-scoped `GET /api/supplier/reservations/:id` contract, so browser refresh/direct URLs do not depend on Inbox state. It renders one adaptive workspace for all workflow phases: request identity and canonical state strip, request facts, authoritative schedule negotiation, bounded chronological messages, fulfillment/delivery, conditional incident/group context, and bounded status history.
+
+The detail page renders only executable `availableActions`, delegates mutations to the existing Supplier dialogs/flows, prevents duplicate submissions while a mutation is active, invalidates the detail provider after successful API calls, and keeps errors scoped to the workspace. Mobile orders actions before request facts and messages; desktop uses a main/side workspace split. Missing or non-owned requests use a safe not-found state and a back fallback to Incoming Requests.
 
 ### Error states
 
@@ -123,12 +129,13 @@ Supplier marks self-pickup complete (incoming requests or pickup schedule UI). D
 
 ### Frontend path
 
-`complete_pickup_dialog.dart` / providers → `PATCH .../complete` (no body).
+`complete_pickup_dialog.dart` / providers → `PATCH .../complete` with the learner's 6-digit self-pickup confirmation code.
 
 ### Backend path
 
 Transaction:
 
+- Requires an accepted self-pickup reservation and a valid 6-digit learner confirmation code.
 - `reservations.status`: `ACCEPTED` → `COMPLETED`; `completedAt`
 - History: ACCEPTED → COMPLETED
 - `material.quantity` decreases by `quantityRequested`
@@ -150,7 +157,7 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 
 ### Error states
 
-409 if not accepted.
+400/409 if not accepted, if the reservation is delivery-backed, or if the pickup code is invalid, wrong, or expired.
 
 ---
 
@@ -164,20 +171,27 @@ Complete invalidates incoming requests, supplier notifications, supplier dashboa
 
 ## Not implemented
 
-- Automatic `PENDING` reservation expiry — **Implemented (lazy)** on learner/supplier reservation reads and material availability reads; supplier `cancelled` tab includes `EXPIRED`.
-- Supplier **`mark-delivery-pickup-expired` UI** — **Implemented** on incoming request cards.
-- Dedicated learner reservation detail route (`/learner/reservations/:id`).
-- Self-pickup map on learner reservation UI — **Implemented**.
-- Realtime delivery tracking stream / background GPS.
-- Generic persisted notifications on reservation state changes — **Implemented** (`/api/notifications` + `/notifications` Flutter page).
+- Scheduled background expiry cron. Current expiry is lazy on learner/supplier/material read paths.
+- True reservation-create idempotency keys.
+- Terminal-state re-reservation reachability from the main learner material detail CTA needs verification/fix.
+- Realtime delivery tracking stream / background GPS, ETA, delivery cancellation/retry, and payment.
+- Reservation-related reviews after completion.
+- Full persisted notification coverage for every reservation state transition. Generic notifications are implemented for create, supplier accept/proposal, decline, learner cancel, expiry, and admin reschedule requests.
 - QR polish.
 
 ---
 
 ## Open questions
 
-- Notification generation when reservation state changes?
+- Product policy for learner/supplier cancellation after delivery handoff or after an accepted self-pickup window has not yet become overdue.
+- Whether terminal-state re-reservation should be a material-detail action or a reservation-detail action.
 
 ### Files involved
 
 `supplier_incoming_requests_page.dart`, `supplier_requests_api.dart`, `supplier_requests_providers.dart`, `accept_incoming_request_dialog.dart`, `decline_incoming_request_dialog.dart`, `complete_pickup_dialog.dart`, `supplier-reservations.service.ts`, `supplier-reservations.repository.ts`, `pickup_schedule_*`
+
+## Supplier Pickup Schedule read contract
+
+The additive `GET /api/supplier/reservations/schedule` read is separate from Incoming Requests pagination and filtering. It projects Supplier handover entries after DeliveryGroup deduplication, so its `pagination.total` and `summary` describe schedule entries rather than reservations. Active queries must provide absolute ISO `dayStart` and `dayEnd` boundaries; optional ranges use canonical window overlap and are bounded to 31 days.
+
+The schedule selects `CONFIRMED_PICKUP` for self pickup and `SUPPLIER_DELIVERY_PICKUP` for delivery. Pending learner/supplier proposals without a confirmed Supplier window stay out of normal appointments. Supplier-authorized recovery actions without a confirmed window appear as `UNSCHEDULED_ACTION`; unresolved admin-owned recovery appears as `ADMIN_REVIEW`. Category precedence is terminal completion, closed outcome, admin review, unscheduled Supplier action, overdue, in progress, today, and upcoming. `needsAttention` is an overlapping flag, not another category.

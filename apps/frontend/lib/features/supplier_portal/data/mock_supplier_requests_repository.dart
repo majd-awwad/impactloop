@@ -8,37 +8,57 @@ class MockSupplierRequestsRepository implements SupplierRequestsRepository {
   final List<SupplierIncomingRequest> _requests;
 
   @override
-  Future<List<SupplierIncomingRequest>> fetchIncomingRequests(
-    SupplierIncomingRequestTab status,
-  ) async {
+  Future<SupplierReservationListResponse> fetchIncomingRequests({
+    String? status,
+    String? search,
+    String? attentionState,
+    String? fulfillmentMethod,
+    String? historyScope,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    required int page,
+    required int limit,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    return _requests.where((request) => _matchesTab(request, status)).toList()
-      ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    final items =
+        _requests
+            .where(
+              (request) =>
+                  (status == null ||
+                      status == 'all' ||
+                      request.status.apiValue == status) &&
+                  (search == null ||
+                      search.isEmpty ||
+                      request.materialTitle.toLowerCase().contains(
+                        search.toLowerCase(),
+                      ) ||
+                      request.learnerName.toLowerCase().contains(
+                        search.toLowerCase(),
+                      )) &&
+                  (fulfillmentMethod == null ||
+                      request.fulfillmentMethod == fulfillmentMethod),
+            )
+            .toList()
+          ..sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+    final start = (page - 1) * limit;
+    return SupplierReservationListResponse(
+      items: start >= items.length
+          ? const []
+          : items.skip(start).take(limit).toList(),
+      pagination: SupplierReservationPagination(
+        page: page,
+        limit: limit,
+        total: items.length,
+        totalPages: items.isEmpty ? 0 : (items.length / limit).ceil(),
+      ),
+    );
   }
 
-  bool _matchesTab(
-    SupplierIncomingRequest request,
-    SupplierIncomingRequestTab tab,
-  ) {
-    switch (tab) {
-      case SupplierIncomingRequestTab.all:
-        return true;
-      case SupplierIncomingRequestTab.pending:
-        return request.status == SupplierIncomingRequestStatus.pending;
-      case SupplierIncomingRequestTab.needsLearner:
-        return request.status ==
-            SupplierIncomingRequestStatus.awaitingConfirmation;
-      case SupplierIncomingRequestTab.accepted:
-        return request.status == SupplierIncomingRequestStatus.accepted;
-      case SupplierIncomingRequestTab.declined:
-        return request.status == SupplierIncomingRequestStatus.declined;
-      case SupplierIncomingRequestTab.completed:
-        return request.status == SupplierIncomingRequestStatus.completed;
-      case SupplierIncomingRequestTab.cancelled:
-        return request.status == SupplierIncomingRequestStatus.cancelled ||
-            request.status == SupplierIncomingRequestStatus.expired;
-    }
-  }
+  @override
+  Future<SupplierReservationDetail> fetchReservationDetail(
+    String requestId,
+  ) async =>
+      throw UnsupportedError('Mock reservation details are not configured.');
 
   @override
   Future<SupplierIncomingRequest> acceptRequest(
@@ -271,7 +291,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     status: SupplierIncomingRequestStatus.pending,
     requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
     learnerNote: 'I need it for a robotics project.',
-    pickupPreference: 'Self pickup',
   ),
   SupplierIncomingRequest(
     id: 'req-fabric-1',
@@ -283,7 +302,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     unit: 'kg',
     status: SupplierIncomingRequestStatus.pending,
     requestedAt: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
-    pickupPreference: 'Self pickup',
   ),
   SupplierIncomingRequest(
     id: 'req-wax-accepted',
@@ -294,7 +312,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     status: SupplierIncomingRequestStatus.accepted,
     requestedAt: DateTime.now().subtract(const Duration(days: 2)),
     canSupplierComplete: true,
-    pickupPreference: 'Self pickup',
     pickupWindow: SupplierPickupWindow(
       start: DateTime.now().add(const Duration(days: 1, hours: 10)),
       end: DateTime.now().add(const Duration(days: 1, hours: 12)),
@@ -309,7 +326,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     unit: 'sheet',
     status: SupplierIncomingRequestStatus.declined,
     requestedAt: DateTime.now().subtract(const Duration(days: 4)),
-    pickupPreference: 'Self pickup',
     declineReason: 'Already reserved for another learner.',
   ),
   SupplierIncomingRequest(
@@ -320,7 +336,6 @@ final List<SupplierIncomingRequest> _seedRequests = [
     unit: 'bottle',
     status: SupplierIncomingRequestStatus.completed,
     requestedAt: DateTime.now().subtract(const Duration(days: 8)),
-    pickupPreference: 'Self pickup',
     pickupWindow: SupplierPickupWindow(
       start: DateTime.now().subtract(const Duration(days: 6, hours: 2)),
       end: DateTime.now().subtract(const Duration(days: 6)),

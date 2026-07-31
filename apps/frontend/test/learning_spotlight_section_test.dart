@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'support/learning_project_authoring_repository_stubs.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:frontend/features/home/presentation/widgets/learning_spotlight_section.dart';
@@ -75,9 +76,53 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('detail:11111111-1111-1111-1111-111111111111'),
+          find.text('detail:11111111-1111-1111-1111-111111111111:none'),
           findsOneWidget,
         );
+      },
+    );
+
+    testWidgets(
+      'recommended project navigation keeps separate extras across back navigation',
+      (tester) async {
+        final router = _buildRouter(
+          repository: _FakeLearningHubRepository(
+            fetchProjects: () async => LearningProjectsResult(
+              items: [
+                _project(
+                  id: 'project-a',
+                  title: 'Recommended A',
+                  recommendationImpressionId: 'impression-a',
+                ),
+                _project(
+                  id: 'project-b',
+                  title: 'Recommended B',
+                  recommendationImpressionId: 'impression-b',
+                ),
+              ],
+              page: 1,
+              limit: 2,
+              total: 2,
+              totalPages: 1,
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(router);
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Recommended A'));
+        await tester.pumpAndSettle();
+        expect(find.text('detail:project-a:impression-a'), findsOneWidget);
+
+        GoRouter.of(
+          tester.element(find.text('detail:project-a:impression-a')),
+        ).pop();
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Recommended B'));
+        await tester.pumpAndSettle();
+        expect(find.text('detail:project-b:impression-b'), findsOneWidget);
       },
     );
 
@@ -183,7 +228,7 @@ Widget _buildRouter({required LearningProjectRepository repository}) {
         path: '/learning/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return Scaffold(body: Text('detail:$id'));
+          return Scaffold(body: Text('detail:$id:${state.extra ?? 'none'}'));
         },
       ),
       GoRoute(
@@ -217,6 +262,7 @@ LearningProject _project({
   bool isSaved = false,
   int followersCount = 0,
   bool isFollowing = false,
+  String? recommendationImpressionId,
 }) {
   return LearningProject(
     id: id,
@@ -242,6 +288,7 @@ LearningProject _project({
     isSaved: isSaved,
     followersCount: followersCount,
     isFollowing: isFollowing,
+    recommendationImpressionId: recommendationImpressionId,
   );
 }
 
@@ -310,10 +357,21 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<LearningProjectSubmission> submitMyLearningProjectDraft(
+    String id, {
+    required String idempotencyKey,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<ProjectBuild?> fetchMyBuild(String projectId) async => null;
 
   @override
-  Future<ProjectBuild> startBuild(String projectId) async {
+  Future<ProjectBuild> startBuild(
+    String projectId, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectBuild(
       id: 'test-build',
       projectId: projectId,
@@ -324,6 +382,19 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
         shortDescription: '',
       ),
       progress: const ProjectBuildProgress(total: 0, ready: 0, percent: 0),
+      materialReadiness: const ProjectBuildMaterialReadiness(
+        ready: 0,
+        linked: 0,
+        reserved: 0,
+        missing: 0,
+        total: 0,
+      ),
+      stepProgress: const ProjectBuildStepProgress(
+        completed: 0,
+        total: 0,
+        percent: 0,
+        steps: [],
+      ),
       items: const [],
     );
   }
@@ -334,6 +405,7 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
     String itemId, {
     required ProjectBuildItemStatus status,
     String? learnerNote,
+    String? recommendationImpressionId,
   }) async {
     return startBuild(projectId);
   }
@@ -366,27 +438,74 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectEngagement> likeProject(String id) async {
+  Future<ProjectBuild> completeBuildStep(String projectId, String stepId) async {
+    return startBuild(projectId);
+  }
+
+  @override
+  Future<BuildGuideConversationResult> getOrCreateBuildGuideConversation(
+    String projectId,
+  ) async {
+    return BuildGuideConversationResult(
+      conversationId: 'guide-conversation',
+      buildContext: BuildGuideContext(
+        buildId: 'test-build',
+        projectId: projectId,
+        projectTitle: 'Test project',
+        buildStatus: ProjectBuildStatus.inProgress,
+        materialReadiness: const ProjectBuildMaterialReadiness(
+          ready: 0,
+          linked: 0,
+          reserved: 0,
+          missing: 0,
+          total: 0,
+        ),
+        stepProgress: const ProjectBuildStepProgressSummary(
+          completed: 0,
+          total: 0,
+          percent: 0,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<ProjectEngagement> likeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectEngagement(projectId: id, likesCount: 1, isLiked: true);
   }
 
   @override
-  Future<ProjectEngagement> unlikeProject(String id) async {
+  Future<ProjectEngagement> unlikeProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectEngagement(projectId: id, likesCount: 0, isLiked: false);
   }
 
   @override
-  Future<ProjectSaveStatus> saveProject(String id) async {
+  Future<ProjectSaveStatus> saveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectSaveStatus(projectId: id, isSaved: true);
   }
 
   @override
-  Future<ProjectSaveStatus> unsaveProject(String id) async {
+  Future<ProjectSaveStatus> unsaveProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectSaveStatus(projectId: id, isSaved: false);
   }
 
   @override
-  Future<ProjectFollowStatus> followProject(String id) async {
+  Future<ProjectFollowStatus> followProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectFollowStatus(
       projectId: id,
       followersCount: 1,
@@ -395,7 +514,10 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
-  Future<ProjectFollowStatus> unfollowProject(String id) async {
+  Future<ProjectFollowStatus> unfollowProject(
+    String id, {
+    String? recommendationImpressionId,
+  }) async {
     return ProjectFollowStatus(
       projectId: id,
       followersCount: 0,
@@ -438,4 +560,30 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }) async {
     return;
   }
+
+  @override
+  Future<LearningProjectAuthoringSession> createAiAuthoringDraft({
+    required String ideaText,
+    required String categoryId,
+    required String difficulty,
+    required String idempotencyKey,
+    String? locale,
+  }) =>
+      unimplementedCreateAiAuthoringDraft(
+        ideaText: ideaText,
+        categoryId: categoryId,
+        difficulty: difficulty,
+        idempotencyKey: idempotencyKey,
+        locale: locale,
+      );
+
+  @override
+  Future<LearningProjectAuthoringSession> getOrCreateAuthoringConversation({
+    required String projectId,
+    String? locale,
+  }) =>
+      unimplementedGetOrCreateAuthoringConversation(
+        projectId: projectId,
+        locale: locale,
+      );
 }

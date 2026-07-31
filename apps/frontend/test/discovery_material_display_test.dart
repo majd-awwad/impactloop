@@ -16,7 +16,8 @@ void main() {
     });
 
     test('removes standalone key lines', () {
-      const raw = 'key:wood-01-panels\nClean plywood offcuts for student projects.';
+      const raw =
+          'key:wood-01-panels\nClean plywood offcuts for student projects.';
 
       expect(
         DiscoveryMaterialDisplay.sanitizePublicDescription(raw),

@@ -6,6 +6,10 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme_colors.dart';
+import '../../features/ai/application/ai_assistant_shell_provider.dart';
+import '../../features/ai/application/ai_chat_controller.dart';
+import '../../features/ai/presentation/widgets/ai_assistant_launcher.dart';
+import '../../features/ai/presentation/widgets/ai_assistant_shell.dart';
 import '../../features/auth/application/auth_controller.dart';
 
 const appMobileBottomNavReservedHeight = 96.0;
@@ -21,12 +25,7 @@ EdgeInsetsDirectional appMobileAwareScrollPadding(
       ? appMobileBottomNavReservedHeight
       : 0.0;
 
-  return EdgeInsetsDirectional.fromSTEB(
-    start,
-    top,
-    end,
-    bottom + extraBottom,
-  );
+  return EdgeInsetsDirectional.fromSTEB(start, top, end, bottom + extraBottom);
 }
 
 class AppMobileBottomNavBar extends ConsumerWidget {
@@ -56,7 +55,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         label: 'Materials',
         icon: Icons.inventory_2_rounded,
         route: '/materials',
-        selected: currentPath == '/materials' ||
+        selected:
+            currentPath == '/materials' ||
             currentPath.startsWith('/materials/'),
       ),
       _MobileNavDestination(
@@ -70,7 +70,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         label: 'Reservations',
         icon: Icons.receipt_long_rounded,
         route: '/learner/reservations',
-        selected: currentPath == '/learner/reservations' ||
+        selected:
+            currentPath == '/learner/reservations' ||
             currentPath.startsWith('/learner/reservations/') ||
             currentPath.startsWith('/learner/deliveries/'),
       ),
@@ -78,7 +79,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         label: 'Profile',
         icon: Icons.person_rounded,
         route: profileRoute,
-        selected: currentPath == '/profile' || currentPath.startsWith('/profile/'),
+        selected:
+            currentPath == '/profile' || currentPath.startsWith('/profile/'),
       ),
     ];
 
@@ -148,20 +150,42 @@ class AppMobileBottomNavBar extends ConsumerWidget {
   }
 }
 
-class AppMobileNavigationShell extends StatelessWidget {
+class AppMobileNavigationShell extends ConsumerWidget {
   const AppMobileNavigationShell({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.sizeOf(context).width >= 600) {
-      return child;
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(authControllerProvider, (previous, next) {
+      final previousUserId = previous?.user?.id;
+      final nextUserId = next.user?.id;
+      if (previousUserId != nextUserId ||
+          next.status == AuthStatus.unauthenticated) {
+        ref.read(aiAssistantControllerProvider.notifier).resetForSignOut();
+        ref.read(aiAssistantShellProvider.notifier).close();
+      }
+    });
+
+    final shellOpen = ref.watch(aiAssistantShellProvider.select((s) => s.isOpen));
+    final isWide = MediaQuery.sizeOf(context).width >= 600;
+
+    final shellContent = Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        if (shellOpen) const AiAssistantShellOverlay(),
+        if (!shellOpen) const AiAssistantLauncher(),
+      ],
+    );
+
+    if (isWide) {
+      return shellContent;
     }
 
     return Scaffold(
-      body: child,
-      bottomNavigationBar: const AppMobileBottomNavBar(),
+      body: shellContent,
+      bottomNavigationBar: shellOpen ? null : const AppMobileBottomNavBar(),
     );
   }
 }

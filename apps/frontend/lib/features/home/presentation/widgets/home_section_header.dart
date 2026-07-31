@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 
 class HomeSectionHeader extends StatelessWidget {
@@ -116,20 +117,22 @@ class HomeSectionActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
     return FilledButton.icon(
       onPressed: onPressed,
-      style: FilledButton.styleFrom(
-        backgroundColor: palette.mint,
-        foregroundColor: palette.ctaForeground,
-        minimumSize: const Size(0, 48),
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
-      ),
+      style:
+          AppStatusButtonStyle.filled(
+            context,
+            AppStatusTone.primary,
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.sm,
+            ),
+          ).copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
+            ),
+          ),
       icon: icon,
       label: Text(label),
     );

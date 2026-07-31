@@ -3,9 +3,19 @@ import 'models/supplier_incoming_request.dart';
 
 /// API-ready contract for supplier reservation requests.
 abstract class SupplierRequestsRepository {
-  Future<List<SupplierIncomingRequest>> fetchIncomingRequests(
-    SupplierIncomingRequestTab status,
-  );
+  Future<SupplierReservationListResponse> fetchIncomingRequests({
+    String? status,
+    String? search,
+    String? attentionState,
+    String? fulfillmentMethod,
+    String? historyScope,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    required int page,
+    required int limit,
+  });
+
+  Future<SupplierReservationDetail> fetchReservationDetail(String requestId);
 
   Future<SupplierIncomingRequest> acceptRequest(
     String requestId,

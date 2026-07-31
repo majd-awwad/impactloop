@@ -28,10 +28,7 @@ class SupplierRecentActivitySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.s.recentActivity,
-          style: context.supplierSectionTitle(),
-        ),
+        Text(context.s.recentActivity, style: context.supplierSectionTitle()),
         const SizedBox(height: AppSpacing.md),
         if (activity.isEmpty)
           Container(
@@ -61,11 +58,7 @@ class SupplierRecentActivitySection extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    _iconFor(item.type),
-                    color: colors.accent,
-                    size: 20,
-                  ),
+                  Icon(_iconFor(item.type), color: colors.accent, size: 20),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
@@ -79,10 +72,7 @@ class SupplierRecentActivitySection extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          item.body,
-                          style: context.supplierBody(),
-                        ),
+                        Text(item.body, style: context.supplierBody()),
                       ],
                     ),
                   ),

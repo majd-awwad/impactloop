@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../theme/supplier_theme_extension.dart';
-import 'supplier_my_materials_colors.dart';
-import 'supplier_responsive_chip_row.dart';
 
 enum SupplierMaterialStatusFilter {
   all,
@@ -15,86 +13,55 @@ enum SupplierMaterialStatusFilter {
   unavailable,
 }
 
-enum SupplierMaterialPriceFilter {
-  all,
-  free,
-  paid,
-}
+enum SupplierMaterialPriceFilter { all, free, paid }
 
 extension SupplierMaterialStatusFilterX on SupplierMaterialStatusFilter {
   String? get apiValue => switch (this) {
-        SupplierMaterialStatusFilter.available => 'AVAILABLE',
-        SupplierMaterialStatusFilter.pending => 'PENDING_RESERVATION',
-        SupplierMaterialStatusFilter.reserved => 'RESERVED',
-        SupplierMaterialStatusFilter.reused => 'REUSED',
-        SupplierMaterialStatusFilter.unavailable => 'UNAVAILABLE',
-        SupplierMaterialStatusFilter.all => null,
-      };
+    SupplierMaterialStatusFilter.available => 'AVAILABLE',
+    SupplierMaterialStatusFilter.pending => 'PENDING_RESERVATION',
+    SupplierMaterialStatusFilter.reserved => 'RESERVED',
+    SupplierMaterialStatusFilter.reused => 'REUSED',
+    SupplierMaterialStatusFilter.unavailable => 'UNAVAILABLE',
+    SupplierMaterialStatusFilter.all => null,
+  };
 
   String label(SupplierL10n l) => switch (this) {
-        SupplierMaterialStatusFilter.all => l.filterAll,
-        SupplierMaterialStatusFilter.available => l.filterAvailable,
-        SupplierMaterialStatusFilter.pending => l.filterPending,
-        SupplierMaterialStatusFilter.reserved => l.filterReserved,
-        SupplierMaterialStatusFilter.reused => l.filterReused,
-        SupplierMaterialStatusFilter.unavailable => l.filterUnavailable,
-      };
-
-  Color accentColor(BuildContext context) => switch (this) {
-        SupplierMaterialStatusFilter.all =>
-          SupplierMyMaterialsColors.statTotal(context),
-        SupplierMaterialStatusFilter.available =>
-          SupplierMyMaterialsColors.statAvailable(context),
-        SupplierMaterialStatusFilter.pending =>
-          SupplierMyMaterialsColors.statPending(context),
-        SupplierMaterialStatusFilter.reserved =>
-          SupplierMyMaterialsColors.statReserved(context),
-        SupplierMaterialStatusFilter.reused =>
-          SupplierMyMaterialsColors.statReused(context),
-        SupplierMaterialStatusFilter.unavailable =>
-          SupplierMyMaterialsColors.statUnavailable(context),
-      };
+    SupplierMaterialStatusFilter.all => l.filterAll,
+    SupplierMaterialStatusFilter.available => l.filterAvailable,
+    SupplierMaterialStatusFilter.pending => l.filterPending,
+    SupplierMaterialStatusFilter.reserved => l.filterReserved,
+    SupplierMaterialStatusFilter.reused => l.filterReused,
+    SupplierMaterialStatusFilter.unavailable => l.filterUnavailable,
+  };
 }
 
-/// Maps API query status to the status filter chip selection.
-SupplierMaterialStatusFilter statusFilterFromQuery(String? status) {
-  return SupplierMaterialStatusFilter.values.firstWhere(
-    (filter) => filter.apiValue == status,
-    orElse: () => SupplierMaterialStatusFilter.all,
-  );
-}
+SupplierMaterialStatusFilter statusFilterFromQuery(String? status) =>
+    SupplierMaterialStatusFilter.values.firstWhere(
+      (filter) => filter.apiValue == status,
+      orElse: () => SupplierMaterialStatusFilter.all,
+    );
 
-/// Maps API query isFree to the price filter chip selection.
-SupplierMaterialPriceFilter priceFilterFromQuery(bool? isFree) {
-  return SupplierMaterialPriceFilter.values.firstWhere(
-    (filter) => filter.apiValue == isFree,
-    orElse: () => SupplierMaterialPriceFilter.all,
-  );
-}
+SupplierMaterialPriceFilter priceFilterFromQuery(bool? isFree) =>
+    SupplierMaterialPriceFilter.values.firstWhere(
+      (filter) => filter.apiValue == isFree,
+      orElse: () => SupplierMaterialPriceFilter.all,
+    );
 
 extension SupplierMaterialPriceFilterX on SupplierMaterialPriceFilter {
   bool? get apiValue => switch (this) {
-        SupplierMaterialPriceFilter.free => true,
-        SupplierMaterialPriceFilter.paid => false,
-        SupplierMaterialPriceFilter.all => null,
-      };
+    SupplierMaterialPriceFilter.free => true,
+    SupplierMaterialPriceFilter.paid => false,
+    SupplierMaterialPriceFilter.all => null,
+  };
 
   String label(SupplierL10n l) => switch (this) {
-        SupplierMaterialPriceFilter.all => l.filterAllPrices,
-        SupplierMaterialPriceFilter.free => l.free,
-        SupplierMaterialPriceFilter.paid => l.paid,
-      };
-
-  Color accentColor(BuildContext context) => switch (this) {
-        SupplierMaterialPriceFilter.all =>
-          SupplierMyMaterialsColors.statTotal(context),
-        SupplierMaterialPriceFilter.free =>
-          SupplierMyMaterialsColors.statAvailable(context),
-        SupplierMaterialPriceFilter.paid =>
-          SupplierMyMaterialsColors.statReserved(context),
-      };
+    SupplierMaterialPriceFilter.all => l.filterAllPrices,
+    SupplierMaterialPriceFilter.free => l.free,
+    SupplierMaterialPriceFilter.paid => l.paid,
+  };
 }
 
+/// Compact server-backed status and price selectors for the materials toolbar.
 class SupplierMaterialFilterChips extends StatelessWidget {
   const SupplierMaterialFilterChips({
     super.key,
@@ -112,122 +79,93 @@ class SupplierMaterialFilterChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stack = constraints.maxWidth < 330;
+        final status = _FilterDropdown<SupplierMaterialStatusFilter>(
+          label: l.filterStatusLabel,
+          value: statusFilter,
+          items: SupplierMaterialStatusFilter.values,
+          itemLabel: (value) => value.label(l),
+          onChanged: onStatusSelected,
+        );
+        final price = _FilterDropdown<SupplierMaterialPriceFilter>(
+          label: l.filterPriceLabel,
+          value: priceFilter,
+          items: SupplierMaterialPriceFilter.values,
+          itemLabel: (value) => value.label(l),
+          onChanged: onPriceSelected,
+        );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          l.filterStatusLabel,
-          style: context.supplierLabel().copyWith(
-            color: context.supplierColors.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        SupplierResponsiveChipRow(
-          children: SupplierMaterialStatusFilter.values
-              .map(
-                (filter) => _FilterChip(
-                  label: filter.label(l),
-                  selected: statusFilter == filter,
-                  accent: filter.accentColor(context),
-                  onTap: () => onStatusSelected(filter),
-                ),
-              )
-              .toList(),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          l.filterPriceLabel,
-          style: context.supplierLabel().copyWith(
-            color: context.supplierColors.textSecondary,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        SupplierResponsiveChipRow(
-          children: SupplierMaterialPriceFilter.values
-              .map(
-                (filter) => _FilterChip(
-                  label: filter.label(l),
-                  selected: priceFilter == filter,
-                  accent: filter.accentColor(context),
-                  onTap: () => onPriceSelected(filter),
-                ),
-              )
-              .toList(),
-        ),
-      ],
+        if (stack) {
+          return Column(
+            children: [
+              status,
+              const SizedBox(height: AppSpacing.sm),
+              price,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: status),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: price),
+          ],
+        );
+      },
     );
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
     required this.label,
-    required this.selected,
-    required this.accent,
-    required this.onTap,
+    required this.value,
+    required this.items,
+    required this.itemLabel,
+    required this.onChanged,
   });
 
   final String label;
-  final bool selected;
-  final Color accent;
-  final VoidCallback onTap;
+  final T value;
+  final List<T> items;
+  final String Function(T value) itemLabel;
+  final ValueChanged<T> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.pillAll,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: 14,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            color: selected
-                ? SupplierMyMaterialsColors.chipSelectedBackground(
-                    context,
-                    accent,
-                  )
-                : SupplierMyMaterialsColors.chipUnselectedBackground(
-                    context,
-                    accent,
-                  ),
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(
-              color: selected
-                  ? SupplierMyMaterialsColors.chipSelectedBorder(
-                      context,
-                      accent,
-                    )
-                  : SupplierMyMaterialsColors.chipUnselectedBorder(
-                      context,
-                      accent,
-                    ),
-              width: selected ? 1.5 : 1,
-            ),
-          ),
-          child: Text(
-            label,
-            softWrap: false,
-            style: context.supplierBody().copyWith(
-              color: selected
-                  ? SupplierMyMaterialsColors.chipSelectedText(context, accent)
-                  : SupplierMyMaterialsColors.chipUnselectedText(
-                      context,
-                      accent,
-                    ),
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              fontSize: 13,
-            ),
-          ),
+    final colors = context.supplierColors;
+    return DropdownButtonFormField<T>(
+      initialValue: value,
+      isExpanded: true,
+      onChanged: (next) {
+        if (next != null) onChanged(next);
+      },
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: colors.surfaceSolid,
+        contentPadding: const EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.md,
+          12,
+          AppSpacing.sm,
+          12,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: AppRadius.lgAll,
+          borderSide: BorderSide(color: colors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadius.lgAll,
+          borderSide: BorderSide(color: colors.border),
         ),
       ),
+      items: [
+        for (final item in items)
+          DropdownMenuItem(value: item, child: Text(itemLabel(item))),
+      ],
     );
   }
 }

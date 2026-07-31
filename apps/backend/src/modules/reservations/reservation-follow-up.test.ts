@@ -381,6 +381,7 @@ describe('reservation follow-up actions', () => {
       () =>
         submitSupplierNoShowReport(ctx.supplierId, reservation.id, {
           reasonCode: 'LEARNER_DID_NOT_ARRIVE',
+          note: 'Learner did not arrive during the pickup window.',
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);

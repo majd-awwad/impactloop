@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/location/current_location_service.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../reservations/application/learner_reservation_cache.dart';
@@ -221,203 +224,209 @@ class _RequestDeliveryDialogState
   Widget build(BuildContext context) {
     final savedAddressesAsync = ref.watch(savedDropoffAddressesProvider);
 
-    return AlertDialog(
+    return AppDialogShell(
       title: const Text('Request delivery'),
+      maxWidth: 480,
+      onClose: widget.onCancel,
+      closeEnabled: !_submitting,
       content: SizedBox(
         width: 480,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Choose where the driver should deliver ${widget.reservation.material.title}.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Choose where the driver should deliver ${widget.reservation.material.title}.',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            savedAddressesAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: LinearProgressIndicator(),
               ),
-              const SizedBox(height: AppSpacing.md),
-              savedAddressesAsync.when(
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  child: LinearProgressIndicator(),
-                ),
-                error: (_, _) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('Could not load saved addresses.'),
-                    TextButton(
-                      onPressed: () =>
-                          ref.invalidate(savedDropoffAddressesProvider),
-                      child: const Text('Retry'),
+              error: (_, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('Could not load saved addresses.'),
+                  TextButton(
+                    onPressed: () =>
+                        ref.invalidate(savedDropoffAddressesProvider),
+                    style: AppStatusButtonStyle.text(
+                      context,
+                      AppStatusTone.primary,
                     ),
-                  ],
-                ),
-                data: (addresses) {
-                  if (addresses.isEmpty) {
-                    if (_inputMode == _DropoffInputMode.saved) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          setState(() => _inputMode = _DropoffInputMode.manual);
-                        }
-                      });
-                    }
-                    return const Text(
-                      'No saved addresses yet. Enter one below.',
-                    );
-                  }
-
-                  final selectedId =
-                      _selectedSavedAddressId ?? addresses.first.id;
-                  if (_selectedSavedAddressId == null) {
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+              data: (addresses) {
+                if (addresses.isEmpty) {
+                  if (_inputMode == _DropoffInputMode.saved) {
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && _selectedSavedAddressId == null) {
-                        _applySavedAddress(addresses.first);
+                      if (mounted) {
+                        setState(() => _inputMode = _DropoffInputMode.manual);
                       }
                     });
                   }
+                  return const Text('No saved addresses yet. Enter one below.');
+                }
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SegmentedButton<_DropoffInputMode>(
-                        segments: const [
-                          ButtonSegment(
-                            value: _DropoffInputMode.saved,
-                            label: Text('Saved'),
-                          ),
-                          ButtonSegment(
-                            value: _DropoffInputMode.manual,
-                            label: Text('New address'),
-                          ),
-                        ],
-                        selected: {_inputMode},
-                        onSelectionChanged: (selection) {
-                          setState(() => _inputMode = selection.first);
+                final selectedId =
+                    _selectedSavedAddressId ?? addresses.first.id;
+                if (_selectedSavedAddressId == null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && _selectedSavedAddressId == null) {
+                      _applySavedAddress(addresses.first);
+                    }
+                  });
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SegmentedButton<_DropoffInputMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: _DropoffInputMode.saved,
+                          label: Text('Saved'),
+                        ),
+                        ButtonSegment(
+                          value: _DropoffInputMode.manual,
+                          label: Text('New address'),
+                        ),
+                      ],
+                      selected: {_inputMode},
+                      onSelectionChanged: (selection) {
+                        setState(() => _inputMode = selection.first);
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    if (_inputMode == _DropoffInputMode.saved)
+                      DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        initialValue: selectedId,
+                        decoration: const InputDecoration(
+                          labelText: 'Saved dropoff address',
+                        ),
+                        items: addresses
+                            .map(
+                              (address) => DropdownMenuItem(
+                                value: address.id,
+                                child: Text(
+                                  '${address.label} · ${address.location.summary}',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setState(() => _selectedSavedAddressId = value);
+                          final selected = addresses.firstWhere(
+                            (address) => address.id == value,
+                            orElse: () => addresses.first,
+                          );
+                          _applySavedAddress(selected);
                         },
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      if (_inputMode == _DropoffInputMode.saved)
-                        DropdownButtonFormField<String>(
-                          value: selectedId,
-                          decoration: const InputDecoration(
-                            labelText: 'Saved dropoff address',
-                          ),
-                          items: addresses
-                              .map(
-                                (address) => DropdownMenuItem(
-                                  value: address.id,
-                                  child: Text(
-                                    '${address.label} · ${address.location.summary}',
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() => _selectedSavedAddressId = value);
-                            final selected = addresses.firstWhere(
-                              (address) => address.id == value,
-                              orElse: () => addresses.first,
-                            );
-                            _applySavedAddress(selected);
-                          },
-                        ),
-                    ],
-                  );
-                },
-              ),
-              if (_inputMode == _DropoffInputMode.manual ||
-                  savedAddressesAsync.maybeWhen(
-                    data: (addresses) => addresses.isEmpty,
-                    orElse: () => false,
-                  )) ...[
-                const SizedBox(height: AppSpacing.sm),
-                TextField(
-                  controller: _countryController,
-                  decoration: const InputDecoration(labelText: 'Country'),
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                TextField(
-                  controller: _cityController,
-                  decoration: const InputDecoration(labelText: 'City'),
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                TextField(
-                  controller: _areaController,
-                  decoration: const InputDecoration(labelText: 'Area'),
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                TextField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(labelText: 'Address'),
-                  textInputAction: TextInputAction.next,
-                  maxLines: 2,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                OutlinedButton.icon(
-                  onPressed: _capturingLocation ? null : _useCurrentLocation,
-                  icon: _capturingLocation
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.my_location_outlined),
-                  label: Text(
-                    _capturingLocation
-                        ? 'Getting location…'
-                        : 'Use current location',
-                  ),
-                ),
-                if (_latitude != null && _longitude != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'Coordinates: ${_latitude!.toStringAsFixed(5)}, '
-                    '${_longitude!.toStringAsFixed(5)}',
-                  ),
-                ] else ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  const Text(
-                    'Precise location helps drivers find you. You can still submit city and address only.',
-                  ),
-                ],
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _saveForLater,
-                  onChanged: (value) =>
-                      setState(() => _saveForLater = value ?? false),
-                  title: const Text('Save this address for later'),
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-                if (_saveForLater)
-                  TextField(
-                    controller: _saveLabelController,
-                    decoration: const InputDecoration(
-                      labelText: 'Address label',
-                      hintText: 'Home, campus, workshop...',
-                    ),
-                  ),
-              ],
-              const SizedBox(height: AppSpacing.md),
+                  ],
+                );
+              },
+            ),
+            if (_inputMode == _DropoffInputMode.manual ||
+                savedAddressesAsync.maybeWhen(
+                  data: (addresses) => addresses.isEmpty,
+                  orElse: () => false,
+                )) ...[
+              const SizedBox(height: AppSpacing.sm),
               TextField(
-                controller: _learnerNoteController,
-                decoration: const InputDecoration(
-                  labelText: 'Note for driver (optional)',
-                ),
+                controller: _countryController,
+                decoration: const InputDecoration(labelText: 'Country'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                controller: _cityController,
+                decoration: const InputDecoration(labelText: 'City'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                controller: _areaController,
+                decoration: const InputDecoration(labelText: 'Area'),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                controller: _addressController,
+                decoration: const InputDecoration(labelText: 'Address'),
+                textInputAction: TextInputAction.next,
                 maxLines: 2,
               ),
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: _capturingLocation ? null : _useCurrentLocation,
+                style: AppStatusButtonStyle.outlined(
+                  context,
+                  AppStatusTone.info,
+                ),
+                icon: _capturingLocation
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.my_location_outlined),
+                label: Text(
+                  _capturingLocation
+                      ? 'Getting location…'
+                      : 'Use current location',
+                ),
+              ),
+              if (_latitude != null && _longitude != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Coordinates: ${_latitude!.toStringAsFixed(5)}, '
+                  '${_longitude!.toStringAsFixed(5)}',
+                ),
+              ] else ...[
+                const SizedBox(height: AppSpacing.sm),
+                const Text(
+                  'Precise location helps drivers find you. You can still submit city and address only.',
+                ),
+              ],
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _saveForLater,
+                onChanged: (value) =>
+                    setState(() => _saveForLater = value ?? false),
+                title: const Text('Save this address for later'),
+                controlAffinity: ListTileControlAffinity.leading,
+              ),
+              if (_saveForLater)
+                TextField(
+                  controller: _saveLabelController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address label',
+                    hintText: 'Home, campus, workshop...',
+                  ),
+                ),
             ],
-          ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _learnerNoteController,
+              decoration: const InputDecoration(
+                labelText: 'Note for driver (optional)',
+              ),
+              maxLines: 2,
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : widget.onCancel,
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: _submitting ? null : _submit,
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
           child: _submitting
               ? const SizedBox(
                   width: 18,
@@ -426,7 +435,7 @@ class _RequestDeliveryDialogState
                 )
               : const Text('Request delivery'),
         ),
-      ],
+      ),
     );
   }
 }

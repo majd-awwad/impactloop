@@ -45,27 +45,27 @@ class AdminEmptyState extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: palette.textPrimary,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    color: palette.textPrimary,
+                  ),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 3),
                   Text(
                     subtitle!,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: palette.textSecondary,
-                          height: 1.35,
-                        ),
+                      color: palette.textSecondary,
+                      height: 1.35,
+                    ),
                   ),
                 ],
                 if (hint != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     hint!,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: palette.textMuted,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelSmall?.copyWith(color: palette.textMuted),
                   ),
                 ],
               ],

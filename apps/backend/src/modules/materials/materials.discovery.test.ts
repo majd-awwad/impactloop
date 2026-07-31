@@ -4,12 +4,31 @@ import { after, before, describe, test } from 'node:test';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { hashPassword } from '../../utils/password.js';
+import type { AccessTokenPayload } from '../../utils/jwt.js';
+import {
+  getOrBuildMaterialFeaturePool,
+  resetMaterialFeaturePoolCacheForTests,
+} from '../learner-home/learner-home.material-features.js';
+import {
+  getLearnerHome,
+  invalidateAllLearnerHomeResponseCaches,
+  invalidateLearnerHomeCache,
+  invalidateLearnerHomeForReservationTransition,
+} from '../learner-home/learner-home.service.js';
+import type { LearnerHomeMaterialCandidate } from '../learner-home/learner-home.types.js';
+import { runWithRecommendationEventOrigin } from '../recommendation-events/recommendation-event-origin.js';
+import {
+  recommendationToggleDeduplicationKey,
+  runWithRecommendationToggleRequestContext,
+} from '../recommendation-events/recommendation-events.service.js';
 
 import {
   getMaterialById,
+  getMaterialViewerState,
   getMaterials,
   likeMaterialById,
   unlikeMaterialById,
+  recordMaterialViewById,
 } from './materials.service.js';
 import { materialsQuerySchema } from './materials.validation.js';
 
@@ -24,7 +43,28 @@ type TestContext = {
   createdUserIds: string[];
   createdMaterialIds: string[];
   createdLocationIds: string[];
+  createdOutboxDeduplicationKeys: string[];
 };
+
+let toggleOperationSequence = 0;
+
+async function runMaterialToggleOperation<T>(
+  ctx: TestContext,
+  learnerId: string,
+  operation: () => Promise<T>,
+) {
+  const key = `${TEST_MARKER}-toggle-${Date.now()}-${++toggleOperationSequence}`;
+  ctx.createdOutboxDeduplicationKeys.push(
+    recommendationToggleDeduplicationKey(learnerId, key),
+  );
+
+  return runWithRecommendationEventOrigin('TEST', () =>
+    runWithRecommendationToggleRequestContext(
+      { headers: { 'idempotency-key': key } },
+      operation,
+    ),
+  );
+}
 
 async function createSupplierUser(suffix: string) {
   const passwordHash = await hashPassword('TestPassword123!');
@@ -118,6 +158,14 @@ async function createMaterial(
 }
 
 async function cleanup(ctx: TestContext) {
+  if (ctx.createdOutboxDeduplicationKeys.length) {
+    await prisma.recommendationEventOutbox.deleteMany({
+      where: {
+        deduplicationKey: { in: ctx.createdOutboxDeduplicationKeys },
+      },
+    });
+  }
+
   if (ctx.createdMaterialIds.length) {
     await prisma.material.deleteMany({
       where: { id: { in: ctx.createdMaterialIds } },
@@ -147,6 +195,7 @@ describe('public material discovery', () => {
     createdUserIds: [],
     createdMaterialIds: [],
     createdLocationIds: [],
+    createdOutboxDeduplicationKeys: [],
   };
 
   before(async () => {
@@ -425,7 +474,7 @@ describe('public material discovery', () => {
     assert.equal(ids.indexOf(highViews.id) < ids.indexOf(lowViews.id), true);
   });
 
-  test('GET material detail increments viewsCount', async () => {
+  test('GET material detail is pure and explicit views are idempotent', async () => {
     const unique = `${TEST_MARKER}-views-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} views stock`,
@@ -433,10 +482,18 @@ describe('public material discovery', () => {
     });
 
     const first = await getMaterialById(material.id);
-    assert.equal(first.viewsCount, 4);
+    assert.equal(first.viewsCount, 3);
 
     const second = await getMaterialById(material.id);
-    assert.equal(second.viewsCount, 5);
+    assert.equal(second.viewsCount, 3);
+
+    await recordMaterialViewById(material.id, `${unique}-operation-1`);
+    const replay = await recordMaterialViewById(
+      material.id,
+      `${unique}-operation-1`,
+    );
+    assert.equal(replay.recorded, false);
+    await recordMaterialViewById(material.id, `${unique}-operation-2`);
 
     const viewRows = await prisma.materialView.count({
       where: { materialId: material.id },
@@ -444,7 +501,7 @@ describe('public material discovery', () => {
     assert.equal(viewRows, 2);
   });
 
-  test('authenticated material detail records viewer and liked state', async () => {
+  test('viewer state exposes likes and explicit authenticated views deduplicate', async () => {
     const unique = `${TEST_MARKER}-viewer-${Date.now()}`;
     const material = await createMaterial(ctx, {
       title: `${unique} viewer stock`,
@@ -452,28 +509,41 @@ describe('public material discovery', () => {
     const learner = await createLearnerUser(`viewer-${Date.now()}`);
     ctx.createdUserIds.push(learner.id);
 
-    await likeMaterialById(material.id, learner.id);
+    await runMaterialToggleOperation(ctx, learner.id, () =>
+      likeMaterialById(material.id, learner.id),
+    );
 
-    const detail = await getMaterialById(material.id, {
+    const viewer: AccessTokenPayload = {
       sub: learner.id,
       roles: ['LEARNER'],
-    });
+    };
+    const detail = await getMaterialViewerState(material.id, viewer);
 
-    assert.equal(detail.likesCount, 1);
     assert.equal(detail.isLiked, true);
-    assert.equal(detail.viewsCount, 1);
+    await runWithRecommendationEventOrigin('TEST', () =>
+      recordMaterialViewById(material.id, `${unique}-view`, viewer),
+    );
 
-    const repeatDetail = await getMaterialById(material.id, {
-      sub: learner.id,
-      roles: ['LEARNER'],
+    const historicalView = await prisma.materialView.findFirstOrThrow({
+      where: { materialId: material.id, viewerUserId: learner.id },
+      select: { id: true, createdAt: true },
     });
 
-    assert.equal(repeatDetail.viewsCount, 1);
+    const repeat = await runWithRecommendationEventOrigin('TEST', () =>
+      recordMaterialViewById(material.id, `${unique}-view`, viewer),
+    );
+    assert.equal(repeat.recorded, true);
 
     const trackedViews = await prisma.materialView.findMany({
       where: { materialId: material.id, viewerUserId: learner.id },
+      orderBy: { createdAt: 'asc' },
     });
     assert.equal(trackedViews.length, 1);
+    assert.equal(trackedViews[0]?.id, historicalView.id);
+    assert.equal(
+      trackedViews[0]?.createdAt.toISOString(),
+      historicalView.createdAt.toISOString(),
+    );
   });
 
   test('material likes are idempotent and exposed on list/detail', async () => {
@@ -484,8 +554,12 @@ describe('public material discovery', () => {
     const learner = await createLearnerUser(`likes-${Date.now()}`);
     ctx.createdUserIds.push(learner.id);
 
-    const liked = await likeMaterialById(material.id, learner.id);
-    const likedAgain = await likeMaterialById(material.id, learner.id);
+    const liked = await runMaterialToggleOperation(ctx, learner.id, () =>
+      likeMaterialById(material.id, learner.id),
+    );
+    const likedAgain = await runMaterialToggleOperation(ctx, learner.id, () =>
+      likeMaterialById(material.id, learner.id),
+    );
     assert.equal(liked.likesCount, 1);
     assert.equal(likedAgain.likesCount, 1);
     assert.equal(likedAgain.isLiked, true);
@@ -521,12 +595,137 @@ describe('public material discovery', () => {
     assert.equal(publicItem?.likesCount, 1);
     assert.equal(publicItem?.isLiked, false);
 
-    const unliked = await unlikeMaterialById(material.id, learner.id);
-    const unlikedAgain = await unlikeMaterialById(material.id, learner.id);
+    const unliked = await runMaterialToggleOperation(ctx, learner.id, () =>
+      unlikeMaterialById(material.id, learner.id),
+    );
+    const unlikedAgain = await runMaterialToggleOperation(ctx, learner.id, () =>
+      unlikeMaterialById(material.id, learner.id),
+    );
     assert.equal(unliked.likesCount, 0);
     assert.equal(unliked.isLiked, false);
     assert.equal(unlikedAgain.likesCount, 0);
     assert.equal(unlikedAgain.isLiked, false);
+  });
+
+  test('material like and unlike invalidate only the acting learner home cache', async () => {
+    const unique = `${TEST_MARKER}-home-cache-${Date.now()}`;
+    const material = await createMaterial(ctx, {
+      title: `${unique} Arduino Uno`,
+    });
+    const learnerA = await createLearnerUser(`home-cache-a-${Date.now()}`);
+    const learnerB = await createLearnerUser(`home-cache-b-${Date.now()}`);
+    ctx.createdUserIds.push(learnerA.id, learnerB.id);
+
+    const learnerAHome = await getLearnerHome(learnerA.id);
+    const learnerBHome = await getLearnerHome(learnerB.id);
+
+    const featureCandidate: LearnerHomeMaterialCandidate = {
+      id: 'shared-feature-material',
+      ownerId: ctx.supplierId,
+      title: 'Shared feature material',
+      description: 'Shared recommendation feature cache fixture',
+      materialType: 'Electronics component',
+      categoryId: ctx.categoryId,
+      categoryNameEn: 'Electronics',
+      categoryNameAr: 'Electronics',
+      status: 'AVAILABLE',
+      isFree: true,
+      deliveryAllowed: false,
+      pickupAllowed: true,
+      viewsCount: 0,
+      likesCount: 0,
+      city: 'Nablus',
+      area: null,
+      tags: ['arduino'],
+      createdAt: new Date(),
+      availableQuantity: 1,
+      mapped: {},
+    };
+    resetMaterialFeaturePoolCacheForTests();
+    const sharedFeaturesBefore = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    await runMaterialToggleOperation(ctx, learnerA.id, () =>
+      likeMaterialById(material.id, learnerA.id),
+    );
+
+    const sharedFeaturesAfterLike = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    const learnerAAfterLike = await getLearnerHome(learnerA.id);
+    const learnerBAfterLike = await getLearnerHome(learnerB.id);
+
+    assert.notStrictEqual(learnerAAfterLike, learnerAHome);
+    assert.strictEqual(learnerBAfterLike, learnerBHome);
+    assert.strictEqual(
+      sharedFeaturesAfterLike.features,
+      sharedFeaturesBefore.features,
+    );
+
+    resetMaterialFeaturePoolCacheForTests();
+    const sharedFeaturesBeforeUnlike = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+    await runMaterialToggleOperation(ctx, learnerA.id, () =>
+      unlikeMaterialById(material.id, learnerA.id),
+    );
+    const sharedFeaturesAfterUnlike = getOrBuildMaterialFeaturePool([
+      featureCandidate,
+    ]);
+
+    const learnerAAfterUnlike = await getLearnerHome(learnerA.id);
+    const learnerBAfterUnlike = await getLearnerHome(learnerB.id);
+
+    assert.notStrictEqual(learnerAAfterUnlike, learnerAAfterLike);
+    assert.strictEqual(learnerBAfterUnlike, learnerBHome);
+    assert.strictEqual(
+      sharedFeaturesAfterUnlike.features,
+      sharedFeaturesBeforeUnlike.features,
+    );
+    assert.doesNotThrow(() => invalidateLearnerHomeCache('missing-learner'));
+    resetMaterialFeaturePoolCacheForTests();
+  });
+
+  test('failed material like and unlike leave the learner home cache intact', async () => {
+    const learner = await createLearnerUser(`failed-home-cache-${Date.now()}`);
+    ctx.createdUserIds.push(learner.id);
+    const cachedHome = await getLearnerHome(learner.id);
+    const missingMaterialId = `${TEST_MARKER}-missing-like-${Date.now()}`;
+
+    await assert.rejects(() =>
+      runMaterialToggleOperation(ctx, learner.id, () =>
+        likeMaterialById(missingMaterialId, learner.id),
+      ),
+    );
+    assert.strictEqual(await getLearnerHome(learner.id), cachedHome);
+
+    await assert.rejects(() =>
+      runMaterialToggleOperation(ctx, learner.id, () =>
+        unlikeMaterialById(missingMaterialId, learner.id),
+      ),
+    );
+    assert.strictEqual(await getLearnerHome(learner.id), cachedHome);
+  });
+
+  test('availability-changing reservation transitions clear every learner home response cache', async () => {
+    const learnerA = await createLearnerUser(`reservation-cache-a-${Date.now()}`);
+    const learnerB = await createLearnerUser(`reservation-cache-b-${Date.now()}`);
+    ctx.createdUserIds.push(learnerA.id, learnerB.id);
+
+    const learnerAHome = await getLearnerHome(learnerA.id);
+    const learnerBHome = await getLearnerHome(learnerB.id);
+
+    invalidateLearnerHomeForReservationTransition('PENDING', 'ACCEPTED');
+    assert.strictEqual(await getLearnerHome(learnerA.id), learnerAHome);
+    assert.strictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+
+    invalidateLearnerHomeForReservationTransition('PENDING', 'EXPIRED');
+    assert.notStrictEqual(await getLearnerHome(learnerA.id), learnerAHome);
+    assert.notStrictEqual(await getLearnerHome(learnerB.id), learnerBHome);
+
+    assert.doesNotThrow(() => invalidateAllLearnerHomeResponseCaches());
   });
 
   test('missing material detail does not increment viewsCount', async () => {
@@ -845,7 +1044,7 @@ describe('public material discovery', () => {
     const detail = await getMaterialById(material.id, {
       sub: ctx.supplierId,
       roles: ['SUPPLIER'],
-    }) as {
+    }) as unknown as {
       isOwnMaterial: boolean;
       canReserve: boolean;
       reserveBlockReason: string | null;

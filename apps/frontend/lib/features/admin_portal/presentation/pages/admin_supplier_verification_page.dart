@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/theme/app_radius.dart';
+import '../../../../app/theme/app_spacing.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_detail.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_supplier_verifications_api.dart';
 import '../../data/models/admin_supplier_verifications_models.dart';
 import '../l10n/admin_l10n.dart';
 import '../theme/admin_decoration_set.dart';
-import '../theme/admin_palette.dart';
 import '../widgets/admin_empty_state.dart';
-import '../widgets/admin_kpi_card.dart' show AdminTypography;
+import '../widgets/admin_kpi_card.dart' show AdminKpiCard, AdminTypography;
 
 class AdminSupplierVerificationPage extends ConsumerWidget {
   const AdminSupplierVerificationPage({super.key});
@@ -27,10 +34,14 @@ class AdminSupplierVerificationPage extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(error.toString(), style: AdminTypography.pageSubtitle(palette)),
+            Text(
+              error.toString(),
+              style: AdminTypography.pageSubtitle(palette),
+            ),
             const SizedBox(height: 12),
             FilledButton(
-              onPressed: () => ref.invalidate(adminSupplierVerificationsProvider),
+              onPressed: () =>
+                  ref.invalidate(adminSupplierVerificationsProvider),
               child: Text(l.t('Retry', 'إعادة المحاولة')),
             ),
           ],
@@ -74,7 +85,9 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
   }
 
   void _applyFilters() {
-    ref.read(adminSupplierVerificationFiltersProvider.notifier).updateFilters(
+    ref
+        .read(adminSupplierVerificationFiltersProvider.notifier)
+        .updateFilters(
           AdminSupplierVerificationFilters(
             search: _searchController.text,
             status: _statusFilter,
@@ -92,9 +105,9 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
       _statusFilter = 'ALL';
       _typeFilter = 'ALL';
     });
-    ref.read(adminSupplierVerificationFiltersProvider.notifier).updateFilters(
-          const AdminSupplierVerificationFilters(),
-        );
+    ref
+        .read(adminSupplierVerificationFiltersProvider.notifier)
+        .updateFilters(const AdminSupplierVerificationFilters());
   }
 
   Future<void> _openDetails(AdminSupplierVerificationListItem item) async {
@@ -129,10 +142,9 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
 
       final note = await _promptAdminNote(
         context,
-        title: action == 'reject'
-            ? 'Reject verification'
-            : 'Request changes',
+        title: action == 'reject' ? 'Reject verification' : 'Request changes',
         required: true,
+        tone: action == 'reject' ? AppStatusTone.danger : AppStatusTone.warning,
       );
       if (note == null || !mounted) return;
 
@@ -145,10 +157,7 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
         if (!mounted) return;
         _showSnack('Supplier verification rejected.');
       } else {
-        await api.requestChanges(
-          id: item.supplierProfileId,
-          adminNote: note,
-        );
+        await api.requestChanges(id: item.supplierProfileId, adminNote: note);
         if (!mounted) return;
         _showSnack('Changes requested from supplier.');
       }
@@ -173,60 +182,36 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
     );
   }
 
+  void _goToPage(int page) {
+    final current = ref.read(adminSupplierVerificationFiltersProvider);
+    ref
+        .read(adminSupplierVerificationFiltersProvider.notifier)
+        .updateFilters(current.copyWith(page: page));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AdminL10n.of(context);
     final palette = context.adminPalette;
     final items = widget.response.items;
     final summary = widget.response.summary;
+    final pagination = widget.response.pagination;
 
     return ListView(
       padding: const EdgeInsetsDirectional.only(bottom: 24),
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l.navSupplierVerification,
-              style: AdminTypography.pageTitle(palette),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              l.t(
-                'Review official supplier accounts before they publish as verified organizations.',
-                'راجع حسابات الموردين الرسمية قبل نشرها كمؤسسات موثّقة.',
-              ),
-              style: AdminTypography.pageSubtitle(palette),
-            ),
-          ],
+        // The admin top bar already renders the "Supplier Verification"
+        // title for this route — only the descriptive subtitle belongs here
+        // to avoid showing the same heading twice.
+        Text(
+          l.t(
+            'Review official supplier accounts before they publish as verified organizations.',
+            'راجع حسابات الموردين الرسمية قبل نشرها كمؤسسات موثّقة.',
+          ),
+          style: AdminTypography.pageSubtitle(palette),
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            _SummaryChip(
-              label: l.t('Pending', 'قيد الانتظار'),
-              count: summary.pending,
-              color: palette.amber,
-            ),
-            _SummaryChip(
-              label: l.t('Approved', 'موافق عليه'),
-              count: summary.approved,
-              color: palette.green,
-            ),
-            _SummaryChip(
-              label: l.t('Rejected', 'مرفوض'),
-              count: summary.rejected,
-              color: palette.red,
-            ),
-            _SummaryChip(
-              label: l.t('Changes requested', 'طلب تعديلات'),
-              count: summary.changesRequested,
-              color: palette.blue,
-            ),
-          ],
-        ),
+        _VerificationKpiRow(summary: summary, l: l),
         const SizedBox(height: 16),
         _FiltersBar(
           searchController: _searchController,
@@ -238,33 +223,17 @@ class _VerificationBodyState extends ConsumerState<_VerificationBody> {
           onApply: _applyFilters,
           onReset: _resetFilters,
         ),
-        const SizedBox(height: 12),
-        if (items.isEmpty)
-          AdminEmptyState(
-            icon: Icons.verified_user_outlined,
-            title: l.t(
-              'No supplier verification requests yet',
-              'لا توجد طلبات تحقق من الموردين بعد',
-            ),
-            subtitle: l.t(
-              'Official supplier submissions will appear here for review.',
-              'ستظهر طلبات الموردين الرسمية هنا للمراجعة.',
-            ),
-          )
-        else
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _VerificationCard(
-                item: item,
-                onViewDetails: () => _openDetails(item),
-                onApprove: () => _runQuickAction(item: item, action: 'approve'),
-                onReject: () => _runQuickAction(item: item, action: 'reject'),
-                onRequestChanges: () =>
-                    _runQuickAction(item: item, action: 'request-changes'),
-              ),
-            ),
-          ),
+        const SizedBox(height: 16),
+        _SupplierListContainer(
+          items: items,
+          pagination: pagination,
+          onPageChanged: _goToPage,
+          onViewDetails: _openDetails,
+          onApprove: (item) => _runQuickAction(item: item, action: 'approve'),
+          onReject: (item) => _runQuickAction(item: item, action: 'reject'),
+          onRequestChanges: (item) =>
+              _runQuickAction(item: item, action: 'request-changes'),
+        ),
       ],
     );
   }
@@ -319,7 +288,7 @@ class _FiltersBar extends StatelessWidget {
                 const SizedBox(height: 10),
                 field(_cityField(l)),
                 const SizedBox(height: 10),
-                field(_statusField()),
+                field(_statusField(l)),
                 const SizedBox(height: 10),
                 field(_typeField(l)),
                 const SizedBox(height: 10),
@@ -337,10 +306,10 @@ class _FiltersBar extends StatelessWidget {
               runSpacing: 10,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                SizedBox(width: 280, child: _searchField(l)),
-                SizedBox(width: 180, child: _cityField(l)),
-                SizedBox(width: 200, child: _statusField()),
-                SizedBox(width: 220, child: _typeField(l)),
+                SizedBox(width: 320, child: _searchField(l)),
+                SizedBox(width: 170, child: _cityField(l)),
+                SizedBox(width: 170, child: _statusField(l)),
+                SizedBox(width: 190, child: _typeField(l)),
                 _applyButton(l),
                 _resetButton(l),
               ],
@@ -348,155 +317,488 @@ class _FiltersBar extends StatelessWidget {
     );
   }
 
+  static const _fieldBorderRadius = BorderRadius.all(
+    Radius.circular(AppRadius.md),
+  );
+
   Widget _searchField(AdminL10n l) => TextField(
-        controller: searchController,
-        decoration: InputDecoration(
-          isDense: true,
-          labelText: l.t(
-            'Search supplier, owner, or email',
-            'بحث بالمورد أو المالك أو البريد',
-          ),
-          prefixIcon: const Icon(Icons.search),
-          border: const OutlineInputBorder(),
-        ),
-      );
+    controller: searchController,
+    decoration: InputDecoration(
+      isDense: true,
+      hintText: l.t(
+        'Search by supplier, owner, email',
+        'بحث بالمورد أو المالك أو البريد',
+      ),
+      prefixIcon: const Icon(Icons.search, size: 18),
+      border: const OutlineInputBorder(borderRadius: _fieldBorderRadius),
+    ),
+  );
 
   Widget _cityField(AdminL10n l) => TextField(
-        controller: cityController,
-        decoration: InputDecoration(
-          isDense: true,
-          labelText: l.t('City', 'المدينة'),
-          prefixIcon: const Icon(Icons.location_city_outlined),
-          border: const OutlineInputBorder(),
-        ),
-      );
+    controller: cityController,
+    decoration: InputDecoration(
+      isDense: true,
+      hintText: l.t('City or area', 'المدينة أو المنطقة'),
+      prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
+      border: const OutlineInputBorder(borderRadius: _fieldBorderRadius),
+    ),
+  );
 
-  Widget _statusField() => DropdownButtonFormField<String>(
-        key: ValueKey('verification-status-$statusFilter'),
-        initialValue: statusFilter,
-        isExpanded: true,
-        decoration: const InputDecoration(
-          isDense: true,
-          labelText: 'Status',
-          border: OutlineInputBorder(),
-        ),
-        items: const [
-          DropdownMenuItem(value: 'ALL', child: Text('All')),
-          DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-          DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
-          DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
-          DropdownMenuItem(
-            value: 'CHANGES_REQUESTED',
-            child: Text('Changes requested'),
-          ),
-        ],
-        onChanged: (value) {
-          if (value != null) onStatusChanged(value);
-        },
-      );
+  Widget _statusField(AdminL10n l) => DropdownButtonFormField<String>(
+    key: ValueKey('verification-status-$statusFilter'),
+    initialValue: statusFilter,
+    isExpanded: true,
+    decoration: const InputDecoration(
+      isDense: true,
+      border: OutlineInputBorder(borderRadius: _fieldBorderRadius),
+    ),
+    items: [
+      DropdownMenuItem(
+        value: 'ALL',
+        child: Text(l.t('All statuses', 'كل الحالات')),
+      ),
+      DropdownMenuItem(
+        value: 'PENDING',
+        child: Text(l.t('Pending', 'قيد الانتظار')),
+      ),
+      DropdownMenuItem(
+        value: 'APPROVED',
+        child: Text(l.t('Approved', 'موافق عليه')),
+      ),
+      DropdownMenuItem(
+        value: 'REJECTED',
+        child: Text(l.t('Rejected', 'مرفوض')),
+      ),
+      DropdownMenuItem(
+        value: 'CHANGES_REQUESTED',
+        child: Text(l.t('Changes requested', 'طلب تعديلات')),
+      ),
+    ],
+    onChanged: (value) {
+      if (value != null) onStatusChanged(value);
+    },
+  );
 
   Widget _typeField(AdminL10n l) => DropdownButtonFormField<String>(
-        key: ValueKey('verification-type-$typeFilter'),
-        initialValue: typeFilter,
-        isExpanded: true,
-        decoration: InputDecoration(
-          isDense: true,
-          labelText: l.t('Supplier type', 'نوع المورد'),
-          border: const OutlineInputBorder(),
-        ),
-        items: const [
-          DropdownMenuItem(value: 'ALL', child: Text('All')),
-          DropdownMenuItem(value: 'WORKSHOP', child: Text('Workshop')),
-          DropdownMenuItem(value: 'FACTORY', child: Text('Factory')),
-          DropdownMenuItem(
-            value: 'EDUCATIONAL_INSTITUTION',
-            child: Text('Educational institution'),
-          ),
-        ],
-        onChanged: (value) {
-          if (value != null) onTypeChanged(value);
-        },
-      );
+    key: ValueKey('verification-type-$typeFilter'),
+    initialValue: typeFilter,
+    isExpanded: true,
+    decoration: const InputDecoration(
+      isDense: true,
+      border: OutlineInputBorder(borderRadius: _fieldBorderRadius),
+    ),
+    items: [
+      DropdownMenuItem(
+        value: 'ALL',
+        child: Text(l.t('All types', 'كل الأنواع')),
+      ),
+      DropdownMenuItem(value: 'WORKSHOP', child: Text(l.t('Workshop', 'ورشة'))),
+      DropdownMenuItem(value: 'FACTORY', child: Text(l.t('Factory', 'مصنع'))),
+      DropdownMenuItem(
+        value: 'EDUCATIONAL_INSTITUTION',
+        child: Text(l.t('Educational institution', 'مؤسسة تعليمية')),
+      ),
+    ],
+    onChanged: (value) {
+      if (value != null) onTypeChanged(value);
+    },
+  );
 
   Widget _applyButton(AdminL10n l) => FilledButton.icon(
-        onPressed: onApply,
-        icon: const Icon(Icons.filter_alt_outlined),
-        label: Text(l.t('Apply filters', 'تطبيق الفلاتر')),
-      );
+    onPressed: onApply,
+    icon: const Icon(Icons.filter_alt_outlined, size: 18),
+    label: Text(l.t('Apply filters', 'تطبيق الفلاتر')),
+  );
 
   Widget _resetButton(AdminL10n l) => OutlinedButton.icon(
-        onPressed: onReset,
-        icon: const Icon(Icons.restart_alt_outlined),
-        label: Text(l.t('Reset filters', 'إعادة تعيين الفلاتر')),
-      );
+    onPressed: onReset,
+    icon: const Icon(Icons.restart_alt_outlined, size: 18),
+    label: Text(l.t('Reset', 'إعادة تعيين')),
+  );
 }
 
-class _VerificationCard extends StatelessWidget {
-  const _VerificationCard({
-    required this.item,
+/// Balanced KPI summary row — reuses the shared [AdminKpiCard] primitive.
+class _VerificationKpiRow extends StatelessWidget {
+  const _VerificationKpiRow({required this.summary, required this.l});
+
+  final AdminSupplierVerificationSummary summary;
+  final AdminL10n l;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.adminPalette;
+    final total =
+        summary.pending +
+        summary.approved +
+        summary.rejected +
+        summary.changesRequested;
+
+    final cards = <AdminKpiCard>[
+      AdminKpiCard(
+        label: l.t('Pending', 'قيد الانتظار'),
+        value: '${summary.pending}',
+        helper: l.t('Awaiting review', 'في انتظار المراجعة'),
+        icon: Icons.schedule_outlined,
+        accent: palette.amber,
+        helperMaxLines: 1,
+      ),
+      AdminKpiCard(
+        label: l.t('Approved', 'موافق عليه'),
+        value: '${summary.approved}',
+        helper: l.t('Verified suppliers', 'موردون موثّقون'),
+        icon: Icons.verified_outlined,
+        accent: palette.green,
+        helperMaxLines: 1,
+      ),
+      AdminKpiCard(
+        label: l.t('Rejected', 'مرفوض'),
+        value: '${summary.rejected}',
+        helper: l.t('Not approved', 'غير موافق عليه'),
+        icon: Icons.cancel_outlined,
+        accent: palette.red,
+        helperMaxLines: 1,
+      ),
+      AdminKpiCard(
+        label: l.t('Changes requested', 'طلب تعديلات'),
+        value: '${summary.changesRequested}',
+        helper: l.t('Need updates', 'تحتاج إلى تحديث'),
+        icon: Icons.edit_note_outlined,
+        accent: palette.amber,
+        helperMaxLines: 1,
+      ),
+      AdminKpiCard(
+        label: l.t('Total suppliers', 'إجمالي الموردين'),
+        value: '$total',
+        helper: l.t('Across all statuses', 'عبر جميع الحالات'),
+        icon: Icons.apartment_outlined,
+        accent: palette.primaryTeal,
+        helperMaxLines: 1,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = width >= 1180
+            ? 5
+            : width >= 760
+            ? 3
+            : width >= 480
+            ? 2
+            : 1;
+        const spacing = 10.0;
+
+        final rows = <Widget>[];
+        for (var i = 0; i < cards.length; i += columns) {
+          final chunk = cards.skip(i).take(columns).toList();
+          rows.add(
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: i + columns < cards.length ? spacing : 0,
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var j = 0; j < chunk.length; j++) ...[
+                      if (j > 0) const SizedBox(width: spacing),
+                      Expanded(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minHeight: _kKpiCardMinHeight,
+                          ),
+                          child: chunk[j],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows,
+        );
+      },
+    );
+  }
+}
+
+const double _kSupplierActionsWidth = 188;
+const double _kSupplierRowBreakpoint = 900;
+const double _kSupplierRowMinHeight = 100;
+const double _kKpiCardMinHeight = 104;
+
+/// One large rounded container holding the result header, column
+/// header, and every supplier row/card — replaces the old floating cards.
+class _SupplierListContainer extends StatelessWidget {
+  const _SupplierListContainer({
+    required this.items,
+    required this.pagination,
+    required this.onPageChanged,
     required this.onViewDetails,
     required this.onApprove,
     required this.onReject,
     required this.onRequestChanges,
   });
 
-  final AdminSupplierVerificationListItem item;
-  final VoidCallback onViewDetails;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
-  final VoidCallback onRequestChanges;
+  final List<AdminSupplierVerificationListItem> items;
+  final AdminSupplierVerificationPagination pagination;
+  final ValueChanged<int> onPageChanged;
+  final ValueChanged<AdminSupplierVerificationListItem> onViewDetails;
+  final ValueChanged<AdminSupplierVerificationListItem> onApprove;
+  final ValueChanged<AdminSupplierVerificationListItem> onReject;
+  final ValueChanged<AdminSupplierVerificationListItem> onRequestChanges;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AdminL10n.of(context);
+    final palette = context.adminPalette;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.cardBackground,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 16, 14),
+            child: _SupplierListHeaderBar(
+              itemCount: items.length,
+              pagination: pagination,
+              onPageChanged: onPageChanged,
+              l: l,
+            ),
+          ),
+          Divider(height: 1, color: palette.cardBorder),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: AdminEmptyState(
+                icon: Icons.verified_user_outlined,
+                title: l.t(
+                  'No supplier verification requests yet',
+                  'لا توجد طلبات تحقق من الموردين بعد',
+                ),
+                subtitle: l.t(
+                  'Official supplier submissions will appear here for review.',
+                  'ستظهر طلبات الموردين الرسمية هنا للمراجعة.',
+                ),
+              ),
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < _kSupplierRowBreakpoint;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (!compact) const _SupplierColumnHeaderRow(),
+                    for (var i = 0; i < items.length; i++)
+                      _SupplierRow(
+                        item: items[i],
+                        compact: compact,
+                        showDivider: i < items.length - 1,
+                        onViewDetails: () => onViewDetails(items[i]),
+                        onApprove: () => onApprove(items[i]),
+                        onReject: () => onReject(items[i]),
+                        onRequestChanges: () => onRequestChanges(items[i]),
+                      ),
+                  ],
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SupplierListHeaderBar extends StatelessWidget {
+  const _SupplierListHeaderBar({
+    required this.itemCount,
+    required this.pagination,
+    required this.onPageChanged,
+    required this.l,
+  });
+
+  final int itemCount;
+  final AdminSupplierVerificationPagination pagination;
+  final ValueChanged<int> onPageChanged;
+  final AdminL10n l;
 
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
-    final dateFormat = DateFormat.yMMMd();
+    final total = pagination.total;
+    final rangeStart = total == 0
+        ? 0
+        : (pagination.page - 1) * pagination.limit + 1;
+    final rangeEnd = total == 0
+        ? 0
+        : ((pagination.page - 1) * pagination.limit + itemCount).clamp(
+            0,
+            total,
+          );
+    final totalPages = total == 0 ? 1 : (total / pagination.limit).ceil();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  item.organizationName,
-                  style: AdminTypography.pageTitle(palette).copyWith(fontSize: 18),
-                ),
+    final trailing = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (total > 0)
+          Text(
+            '$rangeStart–$rangeEnd ${l.t('of', 'من')} $total',
+            style: AdminTypography.kpiHelper(palette),
+          ),
+        if (totalPages > 1) ...[
+          const SizedBox(width: 12),
+          _PageArrowButton(
+            icon: Icons.chevron_left,
+            tooltip: l.t('Previous page', 'الصفحة السابقة'),
+            onPressed: pagination.page > 1
+                ? () => onPageChanged(pagination.page - 1)
+                : null,
+          ),
+          const SizedBox(width: 6),
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: palette.primaryTeal,
+              borderRadius: AppRadius.smAll,
+            ),
+            child: Text(
+              '${pagination.page}',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
               ),
-              _StatusBadge(status: item.verificationStatus),
-            ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '${_formatSupplierType(item.supplierType)} · ${_locationLabel(item.city, item.area)}',
-            style: AdminTypography.pageSubtitle(palette),
+          const SizedBox(width: 6),
+          _PageArrowButton(
+            icon: Icons.chevron_right,
+            tooltip: l.t('Next page', 'الصفحة التالية'),
+            onPressed: pagination.page < totalPages
+                ? () => onPageChanged(pagination.page + 1)
+                : null,
           ),
-          const SizedBox(height: 4),
-          Text(
-            '${item.ownerName} · ${item.ownerEmail}',
-            style: AdminTypography.kpiHelper(palette),
+        ],
+      ],
+    );
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          total == 1
+              ? l.t('1 supplier', 'مورد واحد')
+              : l.t('$total suppliers', '$total من الموردين'),
+          style: AdminTypography.sectionTitle(palette),
+        ),
+        trailing,
+      ],
+    );
+  }
+}
+
+class _PageArrowButton extends StatelessWidget {
+  const _PageArrowButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: AppRadius.smAll,
+        child: Container(
+          width: 28,
+          height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: AppRadius.smAll,
+            border: Border.all(color: colors.borderSubtle),
           ),
-          const SizedBox(height: 4),
-          Text(
-            item.submittedAt == null
-                ? 'Submitted: —'
-                : 'Submitted: ${dateFormat.format(item.submittedAt!)}',
-            style: AdminTypography.kpiHelper(palette),
+          child: Icon(
+            icon,
+            size: 18,
+            color: onPressed != null
+                ? colors.textPrimary
+                : colors.textMuted.withValues(alpha: 0.4),
           ),
-          const SizedBox(height: 12),
-          _ActionButtons(
-            onView: onViewDetails,
-            onApprove: onApprove,
-            onReject: onReject,
-            onRequestChanges: onRequestChanges,
-            compact: true,
+        ),
+      ),
+    );
+  }
+}
+
+/// Desktop-only column header aligned with [_SupplierRow]'s flex columns.
+class _SupplierColumnHeaderRow extends StatelessWidget {
+  const _SupplierColumnHeaderRow();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final l = AdminL10n.of(context);
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: colors.textMuted,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.2,
+    );
+
+    Widget label(String text) => Text(text, style: labelStyle);
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(flex: 6, child: label(l.t('SUPPLIER', 'المورد'))),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            flex: 4,
+            child: label(l.t('TYPE & LOCATION', 'النوع والموقع')),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(flex: 4, child: label(l.t('CONTACT', 'التواصل'))),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(flex: 3, child: label(l.t('SUBMITTED', 'تاريخ التقديم'))),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(flex: 3, child: label(l.t('REVIEWED', 'تاريخ المراجعة'))),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(flex: 3, child: label(l.t('STATUS', 'الحالة'))),
+          const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: _kSupplierActionsWidth,
+            child: Text(
+              l.t('ACTIONS', 'الإجراءات'),
+              textAlign: TextAlign.end,
+              style: labelStyle,
+            ),
           ),
         ],
       ),
@@ -504,40 +806,468 @@ class _VerificationCard extends StatelessWidget {
   }
 }
 
-class _ActionButtons extends StatelessWidget {
-  const _ActionButtons({
-    required this.onView,
+/// One compact horizontal row on desktop; stacks cleanly on narrow widths.
+class _SupplierRow extends StatefulWidget {
+  const _SupplierRow({
+    required this.item,
+    required this.compact,
+    required this.showDivider,
+    required this.onViewDetails,
     required this.onApprove,
     required this.onReject,
     required this.onRequestChanges,
-    this.compact = false,
   });
 
-  final VoidCallback onView;
+  final AdminSupplierVerificationListItem item;
+  final bool compact;
+  final bool showDivider;
+  final VoidCallback onViewDetails;
   final VoidCallback onApprove;
   final VoidCallback onReject;
   final VoidCallback onRequestChanges;
-  final bool compact;
+
+  @override
+  State<_SupplierRow> createState() => _SupplierRowState();
+}
+
+class _SupplierRowState extends State<_SupplierRow> {
+  var _hovered = false;
 
   @override
   Widget build(BuildContext context) {
-    final children = [
-      TextButton(onPressed: onView, child: const Text('View')),
-      TextButton(onPressed: onApprove, child: const Text('Approve')),
-      TextButton(onPressed: onReject, child: const Text('Reject')),
-      TextButton(
-        onPressed: onRequestChanges,
-        child: Text(compact ? 'Changes' : 'Request changes'),
+    final colors = AppThemeColors.of(context);
+    final item = widget.item;
+
+    final identity = _SupplierIdentityBlock(item: item);
+    final typeLocation = _SupplierTypeLocationBlock(item: item);
+    final contact = _SupplierContactBlock(item: item);
+    final submitted = _SupplierDateBlock(date: item.submittedAt);
+    final reviewed = _SupplierDateBlock(date: item.reviewedAt);
+    final status = _StatusBadge(status: item.verificationStatus);
+    final actions = _SupplierActionArea(
+      status: item.verificationStatus,
+      compact: widget.compact,
+      onViewDetails: widget.onViewDetails,
+      onApprove: widget.onApprove,
+      onReject: widget.onReject,
+      onRequestChanges: widget.onRequestChanges,
+    );
+
+    final content = widget.compact
+        ? Padding(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: identity),
+                    const SizedBox(width: AppSpacing.sm),
+                    status,
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm + 2),
+                typeLocation,
+                const SizedBox(height: AppSpacing.sm),
+                contact,
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    Expanded(child: submitted),
+                    Expanded(child: reviewed),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm + 2),
+                actions,
+              ],
+            ),
+          )
+        : ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: _kSupplierRowMinHeight,
+            ),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(flex: 6, child: identity),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(flex: 4, child: typeLocation),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(flex: 4, child: contact),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(flex: 3, child: submitted),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(flex: 3, child: reviewed),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    flex: 3,
+                    child: Align(
+                      alignment: AlignmentDirectional.center,
+                      child: status,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  SizedBox(width: _kSupplierActionsWidth, child: actions),
+                ],
+              ),
+            ),
+          );
+
+    final row = Container(
+      decoration: BoxDecoration(
+        color: _hovered && !widget.compact
+            ? colors.surfaceMuted.withValues(alpha: 0.5)
+            : Colors.transparent,
+        border: widget.showDivider
+            ? Border(bottom: BorderSide(color: colors.borderSubtle))
+            : null,
       ),
+      child: content,
+    );
+
+    if (widget.compact) return row;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: row,
+    );
+  }
+}
+
+class _SupplierAvatarTile extends StatelessWidget {
+  const _SupplierAvatarTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppStatusStyle.of(context, AppStatusTone.primary);
+
+    return Container(
+      width: 40,
+      height: 40,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Icon(Icons.storefront_outlined, size: 20, color: style.foreground),
+    );
+  }
+}
+
+class _SupplierIdentityBlock extends StatelessWidget {
+  const _SupplierIdentityBlock({required this.item});
+
+  final AdminSupplierVerificationListItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const _SupplierAvatarTile(),
+        const SizedBox(width: AppSpacing.sm + 2),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                item.organizationName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.ownerEmail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textMuted,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SupplierTypeLocationBlock extends StatelessWidget {
+  const _SupplierTypeLocationBlock({required this.item});
+
+  final AdminSupplierVerificationListItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          _formatSupplierType(item.supplierType),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.location_on_outlined, size: 14, color: colors.textMuted),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                _locationLabel(item.city, item.area),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textMuted,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SupplierContactBlock extends StatelessWidget {
+  const _SupplierContactBlock({required this.item});
+
+  final AdminSupplierVerificationListItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final rowStyle = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: colors.textSecondary, height: 1.3);
+
+    Widget line(IconData icon, String text) => Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 14, color: colors.textMuted),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: rowStyle,
+          ),
+        ),
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        line(Icons.person_outline, item.ownerName),
+        const SizedBox(height: 5),
+        line(Icons.mail_outline, item.ownerEmail),
+      ],
+    );
+  }
+}
+
+class _SupplierDateBlock extends StatelessWidget {
+  const _SupplierDateBlock({required this.date});
+
+  final DateTime? date;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
+    if (date == null) {
+      return Text(
+        '—',
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: colors.textMuted),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          DateFormat.yMMMd().format(date!),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: colors.textPrimary,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          DateFormat.jm().format(date!),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.textMuted, height: 1.3),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact "View details" button + overflow menu. Hides the quick action
+/// that matches the item's current status to avoid a redundant re-click;
+/// full moderation controls remain available via the details dialog.
+class _SupplierActionArea extends StatelessWidget {
+  const _SupplierActionArea({
+    required this.status,
+    required this.compact,
+    required this.onViewDetails,
+    required this.onApprove,
+    required this.onReject,
+    required this.onRequestChanges,
+  });
+
+  final String status;
+  final bool compact;
+  final VoidCallback onViewDetails;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+  final VoidCallback onRequestChanges;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = status.toUpperCase();
+
+    final detailsButton = OutlinedButton.icon(
+      onPressed: onViewDetails,
+      icon: const Icon(Icons.visibility_outlined, size: 16),
+      label: const Text('View details'),
+      style: AppStatusButtonStyle.outlined(context, AppStatusTone.primary)
+          .merge(
+            OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              textStyle: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.sm + 2,
+                vertical: AppSpacing.xs,
+              ),
+            ),
+          ),
+    );
+
+    final overflowItems = <PopupMenuEntry<VoidCallback>>[
+      if (normalized != 'APPROVED')
+        PopupMenuItem<VoidCallback>(
+          value: onApprove,
+          child: const _OverflowMenuLabel(
+            icon: Icons.check_circle_outline,
+            label: 'Approve',
+            tone: AppStatusTone.success,
+          ),
+        ),
+      if (normalized != 'CHANGES_REQUESTED')
+        PopupMenuItem<VoidCallback>(
+          value: onRequestChanges,
+          child: const _OverflowMenuLabel(
+            icon: Icons.edit_note_outlined,
+            label: 'Request changes',
+            tone: AppStatusTone.warning,
+          ),
+        ),
+      if (normalized != 'REJECTED')
+        PopupMenuItem<VoidCallback>(
+          value: onReject,
+          child: const _OverflowMenuLabel(
+            icon: Icons.cancel_outlined,
+            label: 'Reject',
+            tone: AppStatusTone.danger,
+          ),
+        ),
     ];
 
-    if (compact) {
-      return Wrap(spacing: 4, runSpacing: 4, children: children);
-    }
+    final overflowButton = PopupMenuButton<VoidCallback>(
+      tooltip: 'More actions',
+      icon: Icon(
+        Icons.more_vert,
+        size: 18,
+        color: AppThemeColors.of(context).textMuted,
+      ),
+      padding: EdgeInsets.zero,
+      onSelected: (action) => action(),
+      itemBuilder: (menuContext) => overflowItems,
+    );
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        compact ? Expanded(child: detailsButton) : detailsButton,
+        const SizedBox(width: AppSpacing.xs + 2),
+        overflowButton,
+      ],
+    );
+  }
+}
+
+class _OverflowMenuLabel extends StatelessWidget {
+  const _OverflowMenuLabel({
+    required this.icon,
+    required this.label,
+    required this.tone,
+  });
+
+  final IconData icon;
+  final String label;
+  final AppStatusTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppStatusStyle.of(context, tone);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: children,
+      children: [
+        Icon(icon, size: 18, color: style.foreground),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: style.foreground,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -548,72 +1278,10 @@ class _StatusBadge extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    final normalized = status.toUpperCase();
-    final color = switch (normalized) {
-      'APPROVED' => palette.green,
-      'REJECTED' => palette.red,
-      'CHANGES_REQUESTED' => palette.blue,
-      _ => palette.amber,
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: Text(
-        _formatStatusLabel(status),
-        style: AdminTypography.kpiHelper(palette).copyWith(color: color),
-      ),
-    );
-  }
-}
-
-class _SummaryChip extends StatelessWidget {
-  const _SummaryChip({
-    required this.label,
-    required this.count,
-    required this.color,
-  });
-
-  final String label;
-  final int count;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: palette.cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.cardBorder),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '$count',
-            style: AdminTypography.kpiValue(palette).copyWith(fontSize: 18),
-          ),
-          const SizedBox(width: 6),
-          Text(label, style: AdminTypography.kpiHelper(palette)),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AppStatusBadge(
+    label: _formatStatusLabel(status),
+    tone: supplierVerificationStatusTone(status),
+  );
 }
 
 class _VerificationDetailsDialog extends ConsumerStatefulWidget {
@@ -649,7 +1317,10 @@ class _VerificationDetailsDialogState
     });
   }
 
-  Future<void> _runAction(Future<void> Function() action, String success) async {
+  Future<void> _runAction(
+    Future<void> Function() action,
+    String success,
+  ) async {
     if (_isSubmitting) return;
 
     setState(() => _isSubmitting = true);
@@ -661,9 +1332,9 @@ class _VerificationDetailsDialogState
       await ref.read(adminSupplierVerificationsProvider.future);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(success)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(success)));
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() => _isSubmitting = false);
@@ -693,6 +1364,7 @@ class _VerificationDetailsDialogState
       context,
       title: 'Approval note (optional)',
       required: false,
+      tone: AppStatusTone.success,
     );
     if (!mounted) return;
 
@@ -711,15 +1383,14 @@ class _VerificationDetailsDialogState
       context,
       title: 'Rejection reason',
       required: true,
+      tone: AppStatusTone.danger,
     );
     if (note == null || !mounted) return;
 
     final api = ref.read(adminSupplierVerificationsApiProvider);
     await _runAction(
-      () => api.rejectVerification(
-        id: widget.supplierProfileId,
-        adminNote: note,
-      ),
+      () =>
+          api.rejectVerification(id: widget.supplierProfileId, adminNote: note),
       'Supplier verification rejected.',
     );
   }
@@ -729,28 +1400,33 @@ class _VerificationDetailsDialogState
       context,
       title: 'Changes requested',
       required: true,
+      tone: AppStatusTone.warning,
     );
     if (note == null || !mounted) return;
 
     final api = ref.read(adminSupplierVerificationsApiProvider);
     await _runAction(
-      () => api.requestChanges(
-        id: widget.supplierProfileId,
-        adminNote: note,
-      ),
+      () => api.requestChanges(id: widget.supplierProfileId, adminNote: note),
       'Changes requested from supplier.',
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
     final dateFormat = DateFormat.yMMMd().add_jm();
 
-    return AlertDialog(
-      title: const Text('Supplier verification details'),
+    return AppDialogShell(
+      title: FutureBuilder<AdminSupplierVerificationDetail>(
+        future: _detailFuture,
+        builder: (context, snapshot) => snapshot.hasData
+            ? _VerificationHeader(detail: snapshot.data!)
+            : const Text('Supplier verification details'),
+      ),
+      maxWidth: 880,
+      maxHeightFactor: 0.9,
+      closeEnabled: !_isSubmitting,
       content: SizedBox(
-        width: 560,
+        width: 840,
         child: FutureBuilder<AdminSupplierVerificationDetail>(
           future: _detailFuture,
           builder: (context, snapshot) {
@@ -776,97 +1452,335 @@ class _VerificationDetailsDialogState
             }
 
             final detail = snapshot.data!;
-            return SingleChildScrollView(
+            final organizationCard = _VerificationSectionCard(
+              title: 'Organization',
+              icon: Icons.storefront_outlined,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _DetailRow('Organization', detail.organizationName),
-                  _DetailRow('Type', _formatSupplierType(detail.supplierType)),
-                  _DetailRow('Owner', detail.owner.displayName),
-                  _DetailRow('Email', detail.owner.email),
-                  if (detail.owner.phone?.isNotEmpty == true)
-                    _DetailRow('Phone', detail.owner.phone!),
-                  _DetailRow(
-                    'Location',
-                    _locationLabel(
-                      detail.location.city,
-                      detail.location.area,
-                      detail.location.addressLine,
+                  Text(
+                    detail.organizationName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppThemeColors.of(context).textPrimary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (detail.description?.isNotEmpty == true)
-                    _DetailRow('Description', detail.description!),
-                  _DetailRow('Status', _formatStatusLabel(detail.verificationStatus)),
-                  if (detail.submittedAt != null)
-                    _DetailRow('Submitted', dateFormat.format(detail.submittedAt!)),
-                  if (detail.reviewedAt != null)
-                    _DetailRow('Reviewed', dateFormat.format(detail.reviewedAt!)),
-                  if (detail.reviewedByName != null)
-                    _DetailRow(
-                      'Reviewed by',
-                      '${detail.reviewedByName} (${detail.reviewedByEmail ?? ''})',
+                  const SizedBox(height: AppSpacing.sm),
+                  AppStatusBadge(
+                    label: _formatSupplierType(detail.supplierType),
+                    tone: AppStatusTone.neutral,
+                  ),
+                  if (detail.description?.trim().isNotEmpty ?? false) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _DetailNote(
+                      title: 'Description',
+                      note: detail.description!,
                     ),
-                  if (detail.adminNote?.isNotEmpty == true)
-                    _DetailRow('Admin note', detail.adminNote!),
-                  if (detail.verificationDocumentUrl?.isNotEmpty == true)
-                    _VerificationDocumentCard(
-                      documentUrl: detail.verificationDocumentUrl!,
-                      documentName: detail.verificationDocumentName,
-                    ),
+                  ],
                 ],
               ),
+            );
+            final contactCard = _VerificationSectionCard(
+              title: 'Owner & contact',
+              icon: Icons.person_outline,
+              child: Column(
+                children: [
+                  _DetailInfoRow(
+                    icon: Icons.person_outline,
+                    label: 'Owner',
+                    value: detail.owner.displayName,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _DetailInfoRow(
+                    icon: Icons.mail_outline,
+                    label: 'Email',
+                    value: detail.owner.email,
+                  ),
+                  if (detail.owner.phone?.trim().isNotEmpty ?? false) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _DetailInfoRow(
+                      icon: Icons.phone_outlined,
+                      label: 'Phone',
+                      value: detail.owner.phone,
+                    ),
+                  ],
+                ],
+              ),
+            );
+            final locationCard = _VerificationSectionCard(
+              title: 'Location',
+              icon: Icons.location_on_outlined,
+              child: _DetailInfoRow(
+                icon: Icons.place_outlined,
+                label: 'Business location',
+                value: _locationLabel(
+                  detail.location.city,
+                  detail.location.area,
+                  detail.location.addressLine,
+                ),
+              ),
+            );
+            final historyCard = _VerificationSectionCard(
+              title: 'Verification history',
+              icon: Icons.verified_user_outlined,
+              child: _VerificationHistory(
+                detail: detail,
+                dateFormat: dateFormat,
+              ),
+            );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _VerificationMetaStrip(detail: detail, dateFormat: dateFormat),
+                const SizedBox(height: AppSpacing.md),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final left = Column(
+                      children: [
+                        organizationCard,
+                        const SizedBox(height: AppSpacing.md),
+                        contactCard,
+                        if (detail.verificationDocumentUrl?.isNotEmpty ??
+                            false) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          _VerificationDocumentCard(
+                            documentUrl: detail.verificationDocumentUrl!,
+                            documentName: detail.verificationDocumentName,
+                          ),
+                        ],
+                      ],
+                    );
+                    final right = Column(
+                      children: [
+                        locationCard,
+                        const SizedBox(height: AppSpacing.md),
+                        historyCard,
+                      ],
+                    );
+
+                    if (constraints.maxWidth < 700) {
+                      return Column(
+                        children: [
+                          left,
+                          const SizedBox(height: AppSpacing.md),
+                          right,
+                        ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: left),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(child: right),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
             );
           },
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        TextButton(
-          onPressed: _isSubmitting ? null : _requestChanges,
-          child: const Text('Request changes'),
-        ),
-        TextButton(
-          onPressed: _isSubmitting ? null : _reject,
-          child: const Text('Reject'),
-        ),
-        FilledButton(
-          onPressed: _isSubmitting ? null : _approve,
-          style: FilledButton.styleFrom(backgroundColor: palette.primaryTeal),
-          child: _isSubmitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Approve'),
-        ),
-      ],
+      footer: AppDialogFooter.actions(
+        actions: [
+          OutlinedButton(
+            onPressed: _isSubmitting ? null : _requestChanges,
+            style: AppStatusButtonStyle.outlined(
+              context,
+              AppStatusTone.warning,
+            ),
+            child: const Text('Request changes'),
+          ),
+          OutlinedButton(
+            onPressed: _isSubmitting ? null : _reject,
+            style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
+            child: const Text('Reject'),
+          ),
+          FilledButton(
+            onPressed: _isSubmitting ? null : _approve,
+            style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Approve'),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow(this.label, this.value);
+class _VerificationHeader extends StatelessWidget {
+  const _VerificationHeader({required this.detail});
 
+  final AdminSupplierVerificationDetail detail;
+
+  @override
+  Widget build(BuildContext context) => AppDialogTitleBlock(
+    icon: Icons.storefront_outlined,
+    title: detail.organizationName,
+    badges: [
+      AppStatusBadge(
+        label: _formatStatusLabel(detail.verificationStatus),
+        tone: supplierVerificationStatusTone(detail.verificationStatus),
+      ),
+      AppStatusBadge(
+        label: _formatSupplierType(detail.supplierType),
+        tone: AppStatusTone.neutral,
+      ),
+    ],
+  );
+}
+
+class _VerificationMetaStrip extends StatelessWidget {
+  const _VerificationMetaStrip({
+    required this.detail,
+    required this.dateFormat,
+  });
+
+  final AdminSupplierVerificationDetail detail;
+  final DateFormat dateFormat;
+
+  @override
+  Widget build(BuildContext context) => AppDialogMetaStrip(
+    items: [
+      _MetaItem(
+        icon: Icons.person_outline,
+        label: 'Owner',
+        value: detail.owner.displayName,
+      ),
+      _MetaItem(
+        icon: Icons.mail_outline,
+        label: 'Email',
+        value: detail.owner.email,
+      ),
+      if (detail.submittedAt != null)
+        _MetaItem(
+          icon: Icons.calendar_today_outlined,
+          label: 'Submitted',
+          value: dateFormat.format(detail.submittedAt!),
+        ),
+      if (detail.reviewedAt != null)
+        _MetaItem(
+          icon: Icons.task_alt_outlined,
+          label: 'Reviewed',
+          value: dateFormat.format(detail.reviewedAt!),
+        ),
+    ],
+  );
+}
+
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
   final String label;
   final String value;
 
   @override
+  Widget build(BuildContext context) =>
+      AppDialogMetaItem(icon: icon, label: label, value: value);
+}
+
+class _VerificationSectionCard extends StatelessWidget {
+  const _VerificationSectionCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+  });
+
+  final String title;
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) =>
+      AppDialogSection(title: title, icon: icon, child: child);
+}
+
+class _DetailInfoRow extends StatelessWidget {
+  const _DetailInfoRow({required this.label, required this.value, this.icon});
+
+  final String label;
+  final String? value;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) => AppDialogInfoRow(
+    label: label,
+    value: value?.trim().isNotEmpty ?? false ? value! : 'Not provided',
+    icon: icon,
+  );
+}
+
+class _DetailNote extends StatelessWidget {
+  const _DetailNote({required this.title, required this.note});
+
+  final String title;
+  final String note;
+
+  @override
+  Widget build(BuildContext context) => AppDialogNote(title: title, note: note);
+}
+
+class _VerificationHistory extends StatelessWidget {
+  const _VerificationHistory({required this.detail, required this.dateFormat});
+
+  final AdminSupplierVerificationDetail detail;
+  final DateFormat dateFormat;
+
+  @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AdminTypography.kpiHelper(palette)),
-          const SizedBox(height: 2),
-          Text(value, style: AdminTypography.pageSubtitle(palette)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DetailInfoRow(
+          label: 'Current status',
+          value: _formatStatusLabel(detail.verificationStatus),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppStatusBadge(
+          label: _formatStatusLabel(detail.verificationStatus),
+          tone: supplierVerificationStatusTone(detail.verificationStatus),
+        ),
+        if (detail.submittedAt != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailInfoRow(
+            label: 'Submitted',
+            value: dateFormat.format(detail.submittedAt!),
+          ),
         ],
-      ),
+        if (detail.reviewedAt != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailInfoRow(
+            label: 'Reviewed',
+            value: dateFormat.format(detail.reviewedAt!),
+          ),
+        ],
+        if (detail.reviewedByName?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailInfoRow(
+            label: 'Reviewer',
+            value: detail.reviewedByEmail?.trim().isNotEmpty ?? false
+                ? '${detail.reviewedByName} · ${detail.reviewedByEmail}'
+                : detail.reviewedByName,
+          ),
+        ],
+        if (detail.adminNote?.trim().isNotEmpty ?? false) ...[
+          const SizedBox(height: AppSpacing.md),
+          _DetailNote(title: 'Review note', note: detail.adminNote!),
+        ],
+      ],
     );
   }
 }
@@ -874,21 +1788,22 @@ class _DetailRow extends StatelessWidget {
 Future<bool> _confirmApprove(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => AppDialogShell(
       title: const Text('Approve supplier verification?'),
       content: const Text(
         'This will mark the organization as verified and notify the supplier owner.',
       ),
-      actions: [
-        TextButton(
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
           onPressed: () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
-        FilledButton(
+        primaryAction: FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
+          style: AppStatusButtonStyle.filled(context, AppStatusTone.success),
           child: const Text('Approve'),
         ),
-      ],
+      ),
     ),
   );
 
@@ -899,13 +1814,12 @@ Future<String?> _promptAdminNote(
   BuildContext context, {
   required String title,
   required bool required,
+  required AppStatusTone tone,
 }) {
   return showDialog<String?>(
     context: context,
-    builder: (dialogContext) => _AdminNoteDialog(
-      title: title,
-      required: required,
-    ),
+    builder: (dialogContext) =>
+        _AdminNoteDialog(title: title, required: required, tone: tone),
   );
 }
 
@@ -913,10 +1827,12 @@ class _AdminNoteDialog extends StatefulWidget {
   const _AdminNoteDialog({
     required this.title,
     required this.required,
+    required this.tone,
   });
 
   final String title;
   final bool required;
+  final AppStatusTone tone;
 
   @override
   State<_AdminNoteDialog> createState() => _AdminNoteDialogState();
@@ -946,7 +1862,7 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return AppDialogShell(
       title: Text(widget.title),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -971,16 +1887,13 @@ class _AdminNoteDialogState extends State<_AdminNoteDialog> {
           ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
+      footer: AppDialogFooter.form(
+        primaryAction: FilledButton(
           onPressed: _submit,
+          style: AppStatusButtonStyle.filled(context, widget.tone),
           child: const Text('Confirm'),
         ),
-      ],
+      ),
     );
   }
 }
@@ -1087,109 +2000,95 @@ class _VerificationDocumentCardState extends State<_VerificationDocumentCard> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = context.adminPalette;
+    final colors = AppThemeColors.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: palette.cardBackground,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: palette.cardBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Verification document',
-              style: AdminTypography.kpiHelper(palette),
-            ),
-            const SizedBox(height: 10),
-            if (_canTryImagePreview)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  _resolvedUrl,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted && !_imagePreviewFailed) {
-                        setState(() => _imagePreviewFailed = true);
-                      }
-                    });
-                    return _DocumentTypePreview(
-                      palette: palette,
-                      icon: _typeIcon,
-                      label: _typeLabel,
-                    );
-                  },
-                ),
-              )
-            else
-              _DocumentTypePreview(
-                palette: palette,
-                icon: _typeIcon,
-                label: _typeLabel,
+    return _VerificationSectionCard(
+      title: 'Verification document',
+      icon: Icons.file_present_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_canTryImagePreview)
+            ClipRRect(
+              borderRadius: AppRadius.mdAll,
+              child: Image.network(
+                _resolvedUrl,
+                height: 140,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && !_imagePreviewFailed) {
+                      setState(() => _imagePreviewFailed = true);
+                    }
+                  });
+                  return _DocumentTypePreview(
+                    icon: _typeIcon,
+                    label: _typeLabel,
+                  );
+                },
               ),
-            const SizedBox(height: 10),
-            Text(
-              _displayName,
-              style: AdminTypography.pageSubtitle(palette),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            )
+          else
+            _DocumentTypePreview(icon: _typeIcon, label: _typeLabel),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _displayName,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: _openDocument,
-                  icon: Icon(
-                    _isPdf ? Icons.open_in_new : Icons.open_in_full_outlined,
-                  ),
-                  label: Text(_isPdf ? 'Open PDF' : 'Open full image'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _openDocument,
+                icon: Icon(
+                  _isPdf ? Icons.open_in_new : Icons.open_in_full_outlined,
                 ),
-              ],
-            ),
-          ],
-        ),
+                label: Text(_isPdf ? 'Open PDF' : 'Open full image'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
 class _DocumentTypePreview extends StatelessWidget {
-  const _DocumentTypePreview({
-    required this.palette,
-    required this.icon,
-    required this.label,
-  });
+  const _DocumentTypePreview({required this.icon, required this.label});
 
-  final AdminPalette palette;
   final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
     return Container(
       height: 120,
       width: double.infinity,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: palette.cardBorder.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
+        color: colors.surfaceMuted,
+        borderRadius: AppRadius.mdAll,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 40, color: palette.primaryTeal),
-          const SizedBox(height: 8),
-          Text(label, style: AdminTypography.pageSubtitle(palette)),
+          Icon(icon, size: 40, color: colors.primary),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.textSecondary),
+          ),
         ],
       ),
     );

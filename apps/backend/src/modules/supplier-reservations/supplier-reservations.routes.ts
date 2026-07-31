@@ -16,6 +16,7 @@ import {
   completeSupplierReservationHandler,
   createSupplierReservationMessageHandler,
   declineSupplierReservationHandler,
+  getSupplierReservationHandler,
   listSupplierReservationMessagesHandler,
   listSupplierReservationsHandler,
   rescheduleSupplierReservationHandler,
@@ -37,6 +38,8 @@ import {
   submitNoDriverPickupWindowSchema,
   submitNoShowReportSchema,
 } from './supplier-reservations.validation.js';
+import { listSupplierScheduleHandler } from './supplier-reservations-schedule.controller.js';
+import { listSupplierScheduleQuerySchema } from './supplier-reservations-schedule.validation.js';
 
 export const supplierReservationsRouter = Router();
 
@@ -46,6 +49,22 @@ supplierReservationsRouter.get(
   requireRoles('SUPPLIER'),
   validate(listSupplierReservationsQuerySchema, 'query'),
   asyncHandler(listSupplierReservationsHandler),
+);
+
+supplierReservationsRouter.get(
+  '/schedule',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(listSupplierScheduleQuerySchema, 'query'),
+  asyncHandler(listSupplierScheduleHandler),
+);
+
+supplierReservationsRouter.get(
+  '/:id',
+  authMiddleware,
+  requireRoles('SUPPLIER'),
+  validate(reservationIdParamsSchema, 'params'),
+  asyncHandler(getSupplierReservationHandler),
 );
 
 supplierReservationsRouter.get(

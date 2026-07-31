@@ -32,7 +32,9 @@ class DriverDeliveriesApi {
     );
   }
 
-  Future<DriverDeliveryInactiveContext> fetchInactiveContext(String deliveryId) {
+  Future<DriverDeliveryInactiveContext> fetchInactiveContext(
+    String deliveryId,
+  ) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         '/api/driver/deliveries/$deliveryId/inactive-context',
@@ -130,7 +132,8 @@ DriverDeliveriesListResult _parseDeliveriesListResult(
       ? deliveries
             .whereType<Map>()
             .map(
-              (item) => DriverDelivery.fromJson(Map<String, dynamic>.from(item)),
+              (item) =>
+                  DriverDelivery.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList(growable: false)
       : const <DriverDelivery>[];

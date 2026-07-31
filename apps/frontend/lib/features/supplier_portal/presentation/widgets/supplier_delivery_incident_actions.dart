@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../theme/supplier_theme_extension.dart';
 
 class SupplierDeliveryIncidentActions extends StatelessWidget {
@@ -37,9 +38,9 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
         Text(
           canReportDriverNoShow && !canReportNoDriverAvailable
               ? 'The assigned driver has not completed supplier pickup after '
-                  'the window ended. Report driver no-show so an admin can review.'
+                    'the window ended. Report driver no-show so an admin can review.'
               : 'No driver accepted this delivery before the supplier pickup window '
-                  'ended. Report it so an admin can review next steps.',
+                    'ended. Report it so an admin can review next steps.',
           style: context.supplierBody().copyWith(
             fontSize: 12,
             color: colors.textSecondary,
@@ -67,6 +68,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
       children.add(
         OutlinedButton(
           onPressed: onReportNoDriverAvailable,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
           child: const Text('Report no driver available'),
         ),
       );
@@ -75,6 +77,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
       children.add(
         OutlinedButton(
           onPressed: onMarkDeliveryPickupExpired,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
           child: const Text('Report no driver available'),
         ),
       );
@@ -84,6 +87,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
       children.add(
         OutlinedButton(
           onPressed: onReportDriverNoShow,
+          style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
           child: const Text('Report driver no-show'),
         ),
       );

@@ -18,10 +18,7 @@ class SupplierRecentMaterialsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          context.s.recentMaterials,
-          style: context.supplierSectionTitle(),
-        ),
+        Text(context.s.recentMaterials, style: context.supplierSectionTitle()),
         const SizedBox(height: AppSpacing.md),
         if (materials.isEmpty)
           Container(
@@ -34,10 +31,7 @@ class SupplierRecentMaterialsSection extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: context.supplierDecorations.materialPlaceholder,
-                  child: Icon(
-                    Icons.inventory_2_outlined,
-                    color: colors.accent,
-                  ),
+                  child: Icon(Icons.inventory_2_outlined, color: colors.accent),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -88,10 +82,7 @@ class _MaterialRow extends StatelessWidget {
                       ),
                     ),
                   )
-                : Icon(
-                    Icons.inventory_2_outlined,
-                    color: colors.accent,
-                  ),
+                : Icon(Icons.inventory_2_outlined, color: colors.accent),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -111,10 +102,7 @@ class _MaterialRow extends StatelessWidget {
                   style: context.supplierBody(),
                 ),
                 if (material.categoryName != null)
-                  Text(
-                    material.categoryName!,
-                    style: context.supplierBody(),
-                  ),
+                  Text(material.categoryName!, style: context.supplierBody()),
               ],
             ),
           ),

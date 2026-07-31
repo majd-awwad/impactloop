@@ -162,25 +162,31 @@ void main() {
     expect(router.routeInformationProvider.value.uri.path, loginRoute);
   });
 
-  test('forgot and reset repository methods do not mutate local auth storage', () async {
-    final api = _RecordingAuthApi();
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'refresh-token');
-    final accessTokenHolder = AccessTokenHolder()..accessToken = 'access-token';
-    final repository = AuthRepository(
-      api: api,
-      tokenStorage: tokenStorage,
-      accessTokenHolder: accessTokenHolder,
-    );
+  test(
+    'forgot and reset repository methods do not mutate local auth storage',
+    () async {
+      final api = _RecordingAuthApi();
+      final tokenStorage = _FakeTokenStorage(
+        initialRefreshToken: 'refresh-token',
+      );
+      final accessTokenHolder = AccessTokenHolder()
+        ..accessToken = 'access-token';
+      final repository = AuthRepository(
+        api: api,
+        tokenStorage: tokenStorage,
+        accessTokenHolder: accessTokenHolder,
+      );
 
-    await repository.forgotPassword(email: 'learner@example.com');
-    await repository.resetPassword(
-      token: 'reset-token',
-      newPassword: 'Password123!',
-    );
+      await repository.forgotPassword(email: 'learner@example.com');
+      await repository.resetPassword(
+        token: 'reset-token',
+        newPassword: 'Password123!',
+      );
 
-    expect(accessTokenHolder.accessToken, 'access-token');
-    expect(await tokenStorage.readRefreshToken(), 'refresh-token');
-  });
+      expect(accessTokenHolder.accessToken, 'access-token');
+      expect(await tokenStorage.readRefreshToken(), 'refresh-token');
+    },
+  );
 }
 
 AuthRepository _repositoryFor(_RecordingAuthApi api) {

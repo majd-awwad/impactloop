@@ -7,6 +7,7 @@ import type {
   SupplierProfileDetailsDto,
   SupplierProfileLocationDto,
   SupplierProfileResponseDto,
+  SupplierProfileManagementResponseDto,
 } from "./dto/supplier-profile.dto.js";
 
 import {
@@ -15,11 +16,18 @@ import {
   normalizeVerificationStatus,
 } from "./dto/supplier-dashboard.dto.js";
 import { getSupplierProjectSupportSummary } from "./supplier-project-impact.js";
+import {
+  buildSupplierManagementVerification,
+  calculateSupplierEssentialsCompletion,
+  normalizeWorkingDays,
+  normalizeWorkingHours,
+} from './supplier-profile-management.js';
 
 import { AppError } from "../../utils/app-error.js";
 import { env } from "../../config/env.js";
 import { prisma } from "../../database/prisma.js";
 import { decimalToNumber } from "../../utils/decimal.js";
+import { createNotification } from "../notifications/notifications.repository.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import * as categoriesRepository from "../categories/categories.repository.js";
 import * as categoryRequestsRepository from "../category-requests/category-requests.repository.js";
@@ -27,6 +35,7 @@ import * as priceRuleRequestsRepository from "../price-rule-requests/price-rule-
 import { evaluateApprovedPriceRuleRequest } from "../price-rule-requests/price-rule-request-pricing.js";
 import {
   checkMaterialPrice,
+  calculateMaxAllowedPrice,
   resolveMaterialReferenceForCreate,
 } from "../materials/materials.service.js";
 import * as materialTypesRepository from "../material-types/material-types.repository.js";
@@ -38,6 +47,12 @@ import {
 import * as supplierRepository from "./supplier.repository.js";
 import { computeMaterialDemandMetrics } from "./supplier.material-demand-metrics.js";
 import { mapReservationFulfillmentLabel } from "../reservations/reservation-delivery.js";
+import { TaxonomyFoundationRepository } from "../taxonomy/taxonomy-foundation.repository.js";
+import {
+  projectLoadedConceptsForAssignment,
+  resolveFreeMaterialConceptIds,
+} from "../taxonomy/material-concept-assignment-publish.js";
+import { applyConditionPriceMultiplier } from "../../constants/material-condition-factors.js";
 import {
   assertCanMarkMaterialUnavailable,
   assertCanRestoreMaterial,
@@ -70,6 +85,9 @@ const MISSING_PICKUP_LOCATION_MESSAGE =
 
 const ORG_PICKUP_OVERRIDE_MESSAGE =
   "Organization suppliers must use the profile pickup location for all listings.";
+
+const SOURCE_REQUEST_CONSUMED_MESSAGE =
+  "This listing was already completed.";
 
 type SupplierProfileForMaterialCreate = NonNullable<
   Awaited<
@@ -222,24 +240,320 @@ const assertSourceRequestPublishable = async (
   }
 };
 
+type SourceRequestSnapshots = {
+  categoryRequest?: {
+    id: string;
+    expectedUpdatedAt: Date;
+    approvedCategoryId: string;
+  };
+  priceRuleRequest?: {
+    id: string;
+    expectedUpdatedAt: Date;
+  };
+};
+
 const markSourceRequestPublished = async (
+  userId: string,
   materialId: string,
-  input: CreateSupplierMaterialInput,
-  tx?: Prisma.TransactionClient,
+  snapshots: SourceRequestSnapshots,
+  tx: Prisma.TransactionClient,
 ) => {
-  if (input.sourceCategoryRequestId) {
-    await categoryRequestsRepository.markCategoryRequestPublished({
-      id: input.sourceCategoryRequestId,
-      materialId,
-      client: tx,
+  if (snapshots.categoryRequest) {
+    const result = await categoryRequestsRepository.markCategoryRequestPublished(
+      {
+        id: snapshots.categoryRequest.id,
+        materialId,
+        requestedByUserId: userId,
+        expectedUpdatedAt: snapshots.categoryRequest.expectedUpdatedAt,
+        expectedApprovedCategoryId: snapshots.categoryRequest.approvedCategoryId,
+        client: tx,
+      },
+    );
+    if (result.count === 0) {
+      throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT");
+    }
+  }
+
+  if (snapshots.priceRuleRequest) {
+    const result =
+      await priceRuleRequestsRepository.markPriceRuleRequestPublished({
+        id: snapshots.priceRuleRequest.id,
+        materialId,
+        requestedByUserId: userId,
+        expectedUpdatedAt: snapshots.priceRuleRequest.expectedUpdatedAt,
+        client: tx,
+      });
+    if (result.count === 0) {
+      throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT");
+    }
+  }
+};
+
+/** Shared DB orchestration for create + semantic title update concept persistence. */
+const loadMaterialConceptIdsForPersistence = async (input: {
+  client: Prisma.TransactionClient;
+  finalCategoryId: string;
+  finalMaterialType: string;
+  finalTitle: string;
+}): Promise<string[]> => {
+  const taxonomyRepository = new TaxonomyFoundationRepository();
+  const ownedCategory =
+    await taxonomyRepository.findCategoryForMaterialConceptAssignment(
+      input.finalCategoryId,
+      input.client,
+    );
+  const loadedConcepts =
+    await taxonomyRepository.loadMaterialConceptAssignmentConcepts(
+      input.client,
+    );
+
+  if (!ownedCategory) {
+    throw new AppError("Category not found", 404, "NOT_FOUND");
+  }
+
+  return resolveFreeMaterialConceptIds({
+    category: {
+      id: ownedCategory.id,
+      categoryType: ownedCategory.categoryType,
+      isActive: ownedCategory.isActive,
+      materialFamilyConceptId: ownedCategory.materialFamilyConceptId,
+      materialFamilyConcept: ownedCategory.materialFamilyConcept
+        ? {
+            id: ownedCategory.materialFamilyConcept.id,
+            canonicalKey: ownedCategory.materialFamilyConcept.canonicalKey,
+            conceptType: ownedCategory.materialFamilyConcept.conceptType,
+            status: ownedCategory.materialFamilyConcept.status,
+          }
+        : null,
+    },
+    materialType: input.finalMaterialType,
+    title: input.finalTitle,
+    concepts: projectLoadedConceptsForAssignment(loadedConcepts),
+  });
+};
+
+const resolvePaidMaterialTypeFromPrr = async (
+  priceRuleRequest: NonNullable<
+    Awaited<
+      ReturnType<typeof priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner>
+    >
+  >,
+  materialName: string,
+  categoryId: string,
+  client: Prisma.TransactionClient,
+) => {
+  let materialType = priceRuleRequest.materialType?.id
+    ? await materialTypesRepository.findMaterialTypeById(
+        priceRuleRequest.materialType.id,
+        client,
+      )
+    : null;
+  if (!materialType?.isActive) {
+    const matchResult = await matchMaterialReference({
+      materialName,
+      categoryId,
+      client,
+    });
+    if (matchResult.status === "MATCHED") {
+      materialType = await materialTypesRepository.findMaterialTypeById(
+        matchResult.materialType.id,
+        client,
+      );
+      if (!materialType?.isActive) {
+        materialType = null;
+      }
+    } else {
+      materialType = null;
+    }
+  }
+  return materialType;
+};
+
+const resolveOrdinaryPaidMaterialTypeInTx = async (input: {
+  client: Prisma.TransactionClient;
+  materialName: string;
+  categoryId: string;
+}) => {
+  const matchResult = await matchMaterialReference({
+    materialName: input.materialName,
+    categoryId: input.categoryId,
+    client: input.client,
+  });
+
+  if (matchResult.status === "AMBIGUOUS") {
+    throw new AppError(
+      "This paid material needs admin price review before publishing.",
+      400,
+      "VALIDATION_ERROR",
+      { reason: "MATERIAL_REVIEW_REQUIRED" },
+    );
+  }
+
+  if (matchResult.status !== "MATCHED") {
+    throw new AppError(
+      "This paid material needs admin price review before publishing.",
+      400,
+      "VALIDATION_ERROR",
+      { reason: "MATERIAL_REVIEW_REQUIRED" },
+    );
+  }
+
+  const materialType = await materialTypesRepository.findMaterialTypeById(
+    matchResult.materialType.id,
+    input.client,
+  );
+
+  if (!materialType?.isActive) {
+    throw new AppError(
+      "This paid material needs admin price review before publishing.",
+      400,
+      "VALIDATION_ERROR",
+      { reason: "MATERIAL_REVIEW_REQUIRED" },
+    );
+  }
+
+  return materialType;
+};
+
+const assertOrdinaryPaidPriceAllowedInTx = async (input: {
+  client: Prisma.TransactionClient;
+  materialType: NonNullable<
+    Awaited<ReturnType<typeof materialTypesRepository.findMaterialTypeById>>
+  >;
+  unit: string;
+  quantity: number;
+  condition: CreateSupplierMaterialInput["condition"];
+  price: number | null | undefined;
+  currency: string | undefined;
+}) => {
+  if (input.currency !== "NIS") {
+    throw new AppError("Paid listings must use NIS.", 400, "VALIDATION_ERROR", {
+      reason: "INVALID_CURRENCY",
     });
   }
 
-  if (input.sourcePriceRuleRequestId) {
-    await priceRuleRequestsRepository.markPriceRuleRequestPublished({
-      id: input.sourcePriceRuleRequestId,
-      materialId,
-      client: tx,
+  if (input.price == null || input.price <= 0) {
+    throw new AppError(
+      "Paid listings must have a price greater than zero.",
+      400,
+      "VALIDATION_ERROR",
+      { reason: "INVALID_PRICE" },
+    );
+  }
+
+  const { materialType } = input;
+  if (!materialType.isActive) {
+    throw new AppError(
+      "This paid material needs admin price review before publishing.",
+      400,
+      "VALIDATION_ERROR",
+      { reason: "MATERIAL_REVIEW_REQUIRED" },
+    );
+  }
+
+  const activeRule =
+    await materialTypesRepository.findActivePriceRuleForMaterialType(
+      materialType.id,
+      input.unit,
+      input.client,
+    );
+
+  if (!activeRule) {
+    const activeRuleForDifferentUnit =
+      await materialTypesRepository.findActivePriceRuleForMaterialType(
+        materialType.id,
+        undefined,
+        input.client,
+      );
+
+    if (activeRuleForDifferentUnit) {
+      throw new AppError(
+        "Please use the approved unit for this material.",
+        400,
+        "VALIDATION_ERROR",
+        {
+          reason: "UNIT_MISMATCH",
+          approvedUnit: activeRuleForDifferentUnit.unit,
+        },
+      );
+    }
+
+    throw new AppError(
+      "This material needs an active price reference before paid listing.",
+      400,
+      "VALIDATION_ERROR",
+      { reason: "PRICE_RULE_REQUIRED" },
+    );
+  }
+
+  const baseMaxPrice = calculateMaxAllowedPrice({
+    maxAllowedUnitPriceNis: decimalToNumber(activeRule.maxAllowedUnitPriceNis),
+    maxAllowedTotalPriceNis: decimalToNumber(activeRule.maxAllowedTotalPriceNis),
+    quantity: input.quantity,
+    condition: "NEW",
+  });
+
+  const maxAllowedPrice =
+    baseMaxPrice == null
+      ? null
+      : applyConditionPriceMultiplier(baseMaxPrice, input.condition);
+
+  if (maxAllowedPrice == null || baseMaxPrice == null) {
+    throw new AppError(
+      "This material has an invalid active price reference.",
+      400,
+      "VALIDATION_ERROR",
+      { reason: "PRICE_RULE_INVALID" },
+    );
+  }
+
+  if (input.price > maxAllowedPrice) {
+    throw new AppError(
+      `The entered price is above the recommended maximum for this condition. Base max: ${baseMaxPrice} NIS, condition: ${input.condition}, adjusted max: ${maxAllowedPrice} NIS.`,
+      400,
+      "VALIDATION_ERROR",
+      {
+        reason: "PRICE_TOO_HIGH",
+        maxAllowedPrice,
+        approvedUnit: activeRule.unit,
+      },
+    );
+  }
+
+  return {
+    materialType,
+    priceRuleId: activeRule.id,
+    maxAllowedPrice,
+  };
+};
+
+const assertCategoryRequestPublishableInTx = (
+  request: {
+    status: string;
+    approvedCategoryId: string | null;
+    publishedMaterialId: string | null;
+  },
+  finalCategoryId: string,
+) => {
+  if (request.publishedMaterialId) {
+    throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT");
+  }
+
+  if (request.status !== "APPROVED") {
+    throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT", {
+      reason: "CATEGORY_REQUEST_NOT_APPROVED",
+    });
+  }
+
+  if (request.approvedCategoryId == null) {
+    throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT", {
+      reason: "CATEGORY_REQUEST_MISSING_APPROVED_CATEGORY",
+    });
+  }
+
+  if (request.approvedCategoryId !== finalCategoryId) {
+    throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT", {
+      reason: "CATEGORY_REQUEST_AUTHORITY_MISMATCH",
     });
   }
 };
@@ -557,12 +871,6 @@ export const createSupplierMaterial = async (
     );
   }
 
-  const materialLocationId = await resolveMaterialPickupLocationId(
-    supplierProfile,
-    input,
-    tx,
-  );
-
   await assertSourceRequestPublishable(userId, input);
   const sourceType = deriveMaterialSourceType(supplierProfile.supplierType);
 
@@ -596,35 +904,96 @@ export const createSupplierMaterial = async (
 
     const matchedType = resolved.materialType;
     const displayMaterialType = matchedType?.nameEn ?? materialName;
+    const finalCategoryId = matchedType?.categoryId ?? input.categoryId;
+    const finalTitle = input.title;
 
-    const material = await supplierRepository.createSupplierMaterial({
-      ownerId: userId,
-      supplierProfileId: supplierProfile.id,
-      categoryId: matchedType?.categoryId ?? input.categoryId,
-      locationId: materialLocationId,
-      title: input.title,
-      description: input.description,
-      materialType: displayMaterialType,
-      materialTypeId: matchedType?.id ?? null,
-      customMaterialType: matchedType ? null : materialName,
-      quantity: input.quantity,
-      unit: input.unit,
-      condition: input.condition,
-      sourceType,
-      isFree: true,
-      price: null,
-      currency: "NIS",
-      pickupAllowed: input.pickupAllowed,
-      deliveryAllowed: input.deliveryAllowed,
-      pickupNotes: input.pickupNotes ?? null,
-      suggestedUses: input.suggestedUses ?? null,
-      imageUrls: input.imageUrls,
-      client: tx,
-    });
+    const persistFreeMaterial = async (client: Prisma.TransactionClient) => {
+      const materialLocationId = await resolveMaterialPickupLocationId(
+        supplierProfile,
+        input,
+        client,
+      );
 
-    await markSourceRequestPublished(material.id, input, tx);
+      const conceptIds = await loadMaterialConceptIdsForPersistence({
+        client,
+        finalCategoryId,
+        finalMaterialType: displayMaterialType,
+        finalTitle,
+      });
 
-    return mapCreatedMaterial(material);
+      const snapshots: SourceRequestSnapshots = {};
+      if (input.sourceCategoryRequestId) {
+        const categoryRequest =
+          await categoryRequestsRepository.findCategoryRequestByIdForOwner(
+            input.sourceCategoryRequestId,
+            userId,
+            client,
+          );
+        if (!categoryRequest) {
+          throw new AppError("Category request not found", 404, "NOT_FOUND");
+        }
+        assertCategoryRequestPublishableInTx(categoryRequest, finalCategoryId);
+        snapshots.categoryRequest = {
+          id: categoryRequest.id,
+          expectedUpdatedAt: categoryRequest.updatedAt,
+          approvedCategoryId: categoryRequest.approvedCategoryId!,
+        };
+      }
+      if (input.sourcePriceRuleRequestId) {
+        const priceRuleRequest =
+          await priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner(
+            input.sourcePriceRuleRequestId,
+            userId,
+            client,
+          );
+        if (!priceRuleRequest) {
+          throw new AppError("Price rule request not found", 404, "NOT_FOUND");
+        }
+        if (priceRuleRequest.publishedMaterialId) {
+          throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT");
+        }
+        snapshots.priceRuleRequest = {
+          id: priceRuleRequest.id,
+          expectedUpdatedAt: priceRuleRequest.updatedAt,
+        };
+      }
+
+      const material = await supplierRepository.createSupplierMaterial({
+        ownerId: userId,
+        supplierProfileId: supplierProfile.id,
+        categoryId: finalCategoryId,
+        locationId: materialLocationId,
+        title: finalTitle,
+        description: input.description,
+        materialType: displayMaterialType,
+        materialTypeId: matchedType?.id ?? null,
+        customMaterialType: matchedType ? null : materialName,
+        quantity: input.quantity,
+        unit: input.unit,
+        condition: input.condition,
+        sourceType,
+        isFree: true,
+        price: null,
+        currency: "NIS",
+        pickupAllowed: input.pickupAllowed,
+        deliveryAllowed: input.deliveryAllowed,
+        pickupNotes: input.pickupNotes ?? null,
+        suggestedUses: input.suggestedUses ?? null,
+        imageUrls: input.imageUrls,
+        conceptIds,
+        client,
+      });
+
+      await markSourceRequestPublished(userId, material.id, snapshots, client);
+
+      return mapCreatedMaterial(material);
+    };
+
+    if (tx) {
+      return persistFreeMaterial(tx);
+    }
+
+    return prisma.$transaction((client) => persistFreeMaterial(client));
   }
 
   if (requestedOtherCategory) {
@@ -636,6 +1005,7 @@ export const createSupplierMaterial = async (
     );
   }
 
+  // Fail-fast only: not the transaction-authoritative branch decision.
   if (input.sourcePriceRuleRequestId && input.price != null) {
     const priceRuleRequest =
       await priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner(
@@ -669,65 +1039,7 @@ export const createSupplierMaterial = async (
           { reason: "UNIT_MISMATCH", approvedUnit },
         );
       }
-
-      let materialType = priceRuleRequest.materialType?.id
-        ? await materialTypesRepository.findMaterialTypeById(
-            priceRuleRequest.materialType.id,
-          )
-        : null;
-      if (!materialType?.isActive) {
-        const matchResult = await matchMaterialReference({
-          materialName,
-          categoryId: input.categoryId,
-        });
-        if (matchResult.status === "MATCHED") {
-          materialType = await materialTypesRepository.findMaterialTypeById(
-            matchResult.materialType.id,
-          );
-          if (!materialType?.isActive) {
-            materialType = null;
-          }
-        } else {
-          materialType = null;
-        }
-      }
-
-      const displayMaterialType = materialType?.nameEn ?? materialName;
-      const material = await supplierRepository.createSupplierMaterial({
-        ownerId: userId,
-        supplierProfileId: supplierProfile.id,
-        categoryId: materialType?.categoryId ?? input.categoryId,
-        locationId: materialLocationId,
-        title: input.title,
-        description: input.description,
-        materialType: displayMaterialType,
-        materialTypeId:
-          materialType?.id ?? priceRuleRequest.materialTypeId ?? null,
-        customMaterialType: materialType ? null : materialName,
-        quantity: input.quantity,
-        unit: input.unit,
-        condition: input.condition,
-        sourceType,
-        isFree: false,
-        price: input.price,
-        currency: "NIS",
-        pickupAllowed: input.pickupAllowed,
-        deliveryAllowed: input.deliveryAllowed,
-        pickupNotes: input.pickupNotes ?? null,
-        suggestedUses: input.suggestedUses ?? null,
-        priceRuleId: null,
-        priceCheckedAt: new Date(),
-        maxAllowedPriceAtCheck: acceptance.maxAllowed,
-        imageUrls: input.imageUrls,
-        client: tx,
-      });
-
-      await markSourceRequestPublished(material.id, input, tx);
-
-      return mapCreatedMaterial(material);
-    }
-
-    if (acceptance.reason === "PRICE_TOO_HIGH") {
+    } else if (acceptance.reason === "PRICE_TOO_HIGH") {
       const unit =
         priceRuleRequest.unit ??
         priceRuleRequest.materialType?.defaultUnit ??
@@ -742,78 +1054,289 @@ export const createSupplierMaterial = async (
           reason: "PRICE_TOO_HIGH",
         },
       );
+    } else if (acceptance.reason === "NO_APPROVED_MAX") {
+      const resolved = await resolveMaterialReferenceForCreate({
+        materialName,
+        categoryId: input.categoryId,
+        isFree: false,
+      });
+      const materialType = resolved.materialType;
+      if (!materialType) {
+        throw new AppError(
+          "This paid material needs admin price review before publishing.",
+          400,
+          "VALIDATION_ERROR",
+          { reason: "MATERIAL_REVIEW_REQUIRED" },
+        );
+      }
+      const priceCheck = await checkMaterialPrice({
+        isFree: false,
+        categoryId: materialType.categoryId,
+        materialName,
+        condition: input.condition,
+        quantity: input.quantity,
+        unit: input.unit,
+        price: input.price,
+        currency: input.currency,
+      });
+      if (!priceCheck.allowed) {
+        throw new AppError(priceCheck.message, 400, "VALIDATION_ERROR", {
+          reason: priceCheck.reason,
+          maxAllowedPrice: priceCheck.maxAllowedPrice,
+          matchedReference: priceCheck.matchedReference,
+          candidates: priceCheck.candidates,
+          approvedUnit: priceCheck.approvedUnit,
+        });
+      }
+    }
+  } else {
+    const resolved = await resolveMaterialReferenceForCreate({
+      materialName,
+      categoryId: input.categoryId,
+      isFree: false,
+    });
+
+    const materialType = resolved.materialType;
+
+    if (!materialType) {
+      throw new AppError(
+        "This paid material needs admin price review before publishing.",
+        400,
+        "VALIDATION_ERROR",
+        { reason: "MATERIAL_REVIEW_REQUIRED" },
+      );
+    }
+
+    const priceCheck = await checkMaterialPrice({
+      isFree: false,
+      categoryId: materialType.categoryId,
+      materialName,
+      condition: input.condition,
+      quantity: input.quantity,
+      unit: input.unit,
+      price: input.price,
+      currency: input.currency,
+    });
+
+    if (!priceCheck.allowed) {
+      throw new AppError(priceCheck.message, 400, "VALIDATION_ERROR", {
+        reason: priceCheck.reason,
+        maxAllowedPrice: priceCheck.maxAllowedPrice,
+        matchedReference: priceCheck.matchedReference,
+        candidates: priceCheck.candidates,
+        approvedUnit: priceCheck.approvedUnit,
+      });
     }
   }
 
-  const resolved = await resolveMaterialReferenceForCreate({
-    materialName,
-    categoryId: input.categoryId,
-    isFree: false,
-  });
+  const persistPaidMaterial = async (client: Prisma.TransactionClient) => {
+    const snapshots: SourceRequestSnapshots = {};
+    let loadedCategoryRequest: NonNullable<
+      Awaited<
+        ReturnType<typeof categoryRequestsRepository.findCategoryRequestByIdForOwner>
+      >
+    > | null = null;
 
-  const materialType = resolved.materialType;
+    if (input.sourceCategoryRequestId) {
+      loadedCategoryRequest =
+        await categoryRequestsRepository.findCategoryRequestByIdForOwner(
+          input.sourceCategoryRequestId,
+          userId,
+          client,
+        );
+      if (!loadedCategoryRequest) {
+        throw new AppError("Category request not found", 404, "NOT_FOUND");
+      }
+    }
 
-  if (!materialType) {
-    throw new AppError(
-      "This paid material needs admin price review before publishing.",
-      400,
-      "VALIDATION_ERROR",
-      { reason: "MATERIAL_REVIEW_REQUIRED" },
+    let finalized: {
+      finalCategoryId: string;
+      finalMaterialType: string;
+      materialTypeId: string | null;
+      customMaterialType: string | null;
+      priceRuleId: string | null;
+      maxAllowedPriceAtCheck: number | null;
+    } | null = null;
+
+    if (input.sourcePriceRuleRequestId && input.price != null) {
+      const priceRuleRequest =
+        await priceRuleRequestsRepository.findPriceRuleRequestByIdForOwner(
+          input.sourcePriceRuleRequestId,
+          userId,
+          client,
+        );
+
+      if (!priceRuleRequest) {
+        throw new AppError("Price rule request not found", 404, "NOT_FOUND");
+      }
+
+      if (priceRuleRequest.publishedMaterialId) {
+        throw new AppError(SOURCE_REQUEST_CONSUMED_MESSAGE, 409, "CONFLICT");
+      }
+
+      snapshots.priceRuleRequest = {
+        id: priceRuleRequest.id,
+        expectedUpdatedAt: priceRuleRequest.updatedAt,
+      };
+
+      const acceptance = evaluateApprovedPriceRuleRequest(
+        priceRuleRequest,
+        input.price,
+        input.condition,
+      );
+
+      if (acceptance.ok) {
+        const approvedUnit =
+          priceRuleRequest.unit ??
+          priceRuleRequest.materialType?.defaultUnit ??
+          null;
+        if (
+          approvedUnit &&
+          input.unit.trim().toLowerCase() !== approvedUnit.trim().toLowerCase()
+        ) {
+          throw new AppError(
+            `Please use the approved unit (${approvedUnit}) for this material.`,
+            400,
+            "VALIDATION_ERROR",
+            { reason: "UNIT_MISMATCH", approvedUnit },
+          );
+        }
+
+        const materialType = await resolvePaidMaterialTypeFromPrr(
+          priceRuleRequest,
+          materialName,
+          input.categoryId,
+          client,
+        );
+
+        finalized = {
+          finalCategoryId: materialType?.categoryId ?? input.categoryId,
+          finalMaterialType: materialType?.nameEn ?? materialName,
+          materialTypeId:
+            materialType?.id ?? priceRuleRequest.materialTypeId ?? null,
+          customMaterialType: materialType ? null : materialName,
+          priceRuleId: null,
+          maxAllowedPriceAtCheck: acceptance.maxAllowed,
+        };
+      } else if (acceptance.reason === "PRICE_TOO_HIGH") {
+        const unit =
+          priceRuleRequest.unit ??
+          priceRuleRequest.materialType?.defaultUnit ??
+          "unit";
+        throw new AppError(
+          `Maximum allowed price is ${acceptance.maxAllowed} NIS per ${unit}.`,
+          400,
+          "VALIDATION_ERROR",
+          {
+            maxAllowedPrice: acceptance.maxAllowed,
+            approvedUnit: unit,
+            reason: "PRICE_TOO_HIGH",
+          },
+        );
+      }
+      // NO_APPROVED_MAX falls through to ordinary branch below.
+    }
+
+    if (!finalized) {
+      const materialType = await resolveOrdinaryPaidMaterialTypeInTx({
+        client,
+        materialName,
+        categoryId: input.categoryId,
+      });
+
+      const authorized = await assertOrdinaryPaidPriceAllowedInTx({
+        client,
+        materialType,
+        unit: input.unit,
+        quantity: input.quantity,
+        condition: input.condition,
+        price: input.price,
+        currency: input.currency,
+      });
+
+      finalized = {
+        finalCategoryId: authorized.materialType.categoryId,
+        finalMaterialType: authorized.materialType.nameEn,
+        materialTypeId: authorized.materialType.id,
+        customMaterialType: null,
+        priceRuleId: authorized.priceRuleId,
+        maxAllowedPriceAtCheck: authorized.maxAllowedPrice,
+      };
+    }
+
+    const {
+      finalCategoryId,
+      finalMaterialType,
+      materialTypeId,
+      customMaterialType,
+      priceRuleId,
+      maxAllowedPriceAtCheck,
+    } = finalized;
+
+    if (loadedCategoryRequest) {
+      assertCategoryRequestPublishableInTx(
+        loadedCategoryRequest,
+        finalCategoryId,
+      );
+      snapshots.categoryRequest = {
+        id: loadedCategoryRequest.id,
+        expectedUpdatedAt: loadedCategoryRequest.updatedAt,
+        approvedCategoryId: loadedCategoryRequest.approvedCategoryId!,
+      };
+    }
+
+    const materialLocationId = await resolveMaterialPickupLocationId(
+      supplierProfile,
+      input,
+      client,
     );
-  }
 
-  const priceCheck = await checkMaterialPrice({
-    isFree: false,
-    categoryId: materialType.categoryId,
-    materialName,
-    condition: input.condition,
-    quantity: input.quantity,
-    unit: input.unit,
-    price: input.price,
-    currency: input.currency,
-  });
-
-  if (!priceCheck.allowed) {
-    throw new AppError(priceCheck.message, 400, "VALIDATION_ERROR", {
-      reason: priceCheck.reason,
-      maxAllowedPrice: priceCheck.maxAllowedPrice,
-      matchedReference: priceCheck.matchedReference,
-      candidates: priceCheck.candidates,
-      approvedUnit: priceCheck.approvedUnit,
+    const conceptIds = await loadMaterialConceptIdsForPersistence({
+      client,
+      finalCategoryId,
+      finalMaterialType,
+      finalTitle: input.title,
     });
+
+    const material = await supplierRepository.createSupplierMaterial({
+      ownerId: userId,
+      supplierProfileId: supplierProfile.id,
+      categoryId: finalCategoryId,
+      locationId: materialLocationId,
+      title: input.title,
+      description: input.description,
+      materialType: finalMaterialType,
+      materialTypeId,
+      customMaterialType,
+      quantity: input.quantity,
+      unit: input.unit,
+      condition: input.condition,
+      sourceType,
+      isFree: false,
+      price: input.price,
+      currency: "NIS",
+      pickupAllowed: input.pickupAllowed,
+      deliveryAllowed: input.deliveryAllowed,
+      pickupNotes: input.pickupNotes ?? null,
+      suggestedUses: input.suggestedUses ?? null,
+      priceRuleId,
+      priceCheckedAt: new Date(),
+      maxAllowedPriceAtCheck,
+      imageUrls: input.imageUrls,
+      conceptIds,
+      client,
+    });
+
+    await markSourceRequestPublished(userId, material.id, snapshots, client);
+
+    return mapCreatedMaterial(material);
+  };
+
+  if (tx) {
+    return persistPaidMaterial(tx);
   }
 
-  const material = await supplierRepository.createSupplierMaterial({
-    ownerId: userId,
-    supplierProfileId: supplierProfile.id,
-    categoryId: materialType.categoryId,
-    locationId: materialLocationId,
-    title: input.title,
-    description: input.description,
-    materialType: materialType.nameEn,
-    materialTypeId: materialType.id,
-    customMaterialType: null,
-    quantity: input.quantity,
-    unit: input.unit,
-    condition: input.condition,
-    sourceType,
-    isFree: false,
-    price: input.price,
-    currency: "NIS",
-    pickupAllowed: input.pickupAllowed,
-    deliveryAllowed: input.deliveryAllowed,
-    pickupNotes: input.pickupNotes ?? null,
-    suggestedUses: input.suggestedUses ?? null,
-    priceRuleId: priceCheck.priceRuleId ?? null,
-    priceCheckedAt: new Date(),
-    maxAllowedPriceAtCheck: priceCheck.maxAllowedPrice ?? null,
-    imageUrls: input.imageUrls,
-    client: tx,
-  });
-
-  await markSourceRequestPublished(material.id, input, tx);
-
-  return mapCreatedMaterial(material);
+  return prisma.$transaction((client) => persistPaidMaterial(client));
 };
 
 export const createSupplierMaterialIdempotent = async (
@@ -821,7 +1344,7 @@ export const createSupplierMaterialIdempotent = async (
   input: CreateSupplierMaterialInput,
   idempotencyKey: string,
 ) => {
-  return runIdempotentOperation<CreatedSupplierMaterialDto>({
+  const created = await runIdempotentOperation<CreatedSupplierMaterialDto>({
     userId,
     scope: SUPPLIER_CREATE_MATERIAL_SCOPE,
     key: idempotencyKey,
@@ -830,6 +1353,48 @@ export const createSupplierMaterialIdempotent = async (
     getResourceId: (material) => material.id,
     handler: (tx) => createSupplierMaterial(userId, input, tx),
   });
+  const createdMaterial = created.response;
+
+  const publishNotifications: Promise<unknown>[] = [];
+  if (input.sourceCategoryRequestId) {
+    publishNotifications.push(
+      createNotification({
+          userId,
+          notificationType: "CATEGORY_REQUEST_UPDATE",
+          title: "Listing published",
+          body: `${createdMaterial.title} was published from the approved category review.`,
+          relatedEntityType: "CATEGORY_REQUEST",
+          relatedEntityId: input.sourceCategoryRequestId,
+          eventKey: `listing-published:category:${input.sourceCategoryRequestId}:${createdMaterial.id}`,
+          entityType: "CATEGORY_REQUEST",
+          entityId: input.sourceCategoryRequestId,
+          actionType: "NONE",
+          resolvedAt: new Date(),
+          metadata: { publishedMaterialId: createdMaterial.id },
+        }),
+    );
+  }
+  if (input.sourcePriceRuleRequestId) {
+    publishNotifications.push(
+      createNotification({
+          userId,
+          notificationType: "PRICE_REQUEST_UPDATE",
+          title: "Listing published",
+          body: `${createdMaterial.title} was published from the approved price review.`,
+          relatedEntityType: "PRICE_RULE_REQUEST",
+          relatedEntityId: input.sourcePriceRuleRequestId,
+          eventKey: `listing-published:price:${input.sourcePriceRuleRequestId}:${createdMaterial.id}`,
+          entityType: "PRICE_RULE_REQUEST",
+          entityId: input.sourcePriceRuleRequestId,
+          actionType: "NONE",
+          resolvedAt: new Date(),
+          metadata: { publishedMaterialId: createdMaterial.id },
+        }),
+    );
+  }
+
+  await Promise.all(publishNotifications);
+  return created;
 };
 
 export const getEmptySupplierDashboard = (): SupplierDashboardDto => ({
@@ -1145,6 +1710,51 @@ export const getSupplierProfile = async (
   });
 };
 
+export const getSupplierProfileManagement = async (
+  userId: string,
+): Promise<SupplierProfileManagementResponseDto> => {
+  const record =
+    await supplierRepository.findSupplierProfileManagementByUserId(userId);
+
+  return {
+    hasSupplierProfile: record !== null,
+    identity: record
+      ? {
+          supplierProfileId: record.id,
+          publicName: record.publicName ?? '',
+          supplierType: record.supplierType ?? '',
+          description: record.description,
+          avatarImageUrl: record.avatarImageUrl,
+          coverImageUrl: record.coverImageUrl,
+        }
+      : null,
+    pickupLocation: record ? mapLocation(record.defaultPickupLocation) : null,
+    organization: record?.organizationProfile
+      ? {
+          id: record.organizationProfile.id,
+          organizationName: record.organizationProfile.organizationName,
+          organizationType: record.organizationProfile.organizationType,
+          contactPersonName: record.organizationProfile.contactPersonName,
+          workingDays: normalizeWorkingDays(record.organizationProfile.workingDays),
+          workingHours: normalizeWorkingHours(record.organizationProfile.workingHours),
+        }
+      : null,
+    verification: buildSupplierManagementVerification({
+      rawStatus: record?.verificationStatus ?? 'NOT_REQUIRED',
+      supplierType: record?.supplierType,
+      adminNote: record?.verificationAdminNote,
+      submittedAt: record?.verificationSubmittedAt,
+      reviewedAt: record?.verificationReviewedAt,
+    }),
+    completion: calculateSupplierEssentialsCompletion({
+      publicName: record?.publicName,
+      supplierType: record?.supplierType,
+      description: record?.description,
+      pickupLocation: record?.defaultPickupLocation,
+    }),
+  };
+};
+
 export const getSupplierProfileFollowers = async (
   userId: string,
   query: SupplierFollowersQuery,
@@ -1236,6 +1846,9 @@ export const EDIT_REUSED_MATERIAL_MESSAGE =
 
 export const EDIT_ACTIVE_REQUESTS_MESSAGE =
   "Cannot edit a material with active requests or blocked status.";
+
+export const STALE_MATERIAL_UPDATE_MESSAGE =
+  "This material was updated elsewhere. Refresh and try again.";
 
 const resolveSupplierMaterialMutationEligibility = (
   status: string,
@@ -1662,28 +2275,51 @@ export const updateSupplierMaterial = async (
     );
   }
 
-  const updated = await supplierRepository.updateSupplierOwnedMaterial(
-    scope,
-    materialId,
-    {
-      title: input.title,
-      description: input.description,
-      quantity: input.quantity,
-      unit: input.unit,
-      condition: input.condition,
-      pickupAllowed: input.pickupAllowed,
-      deliveryAllowed: input.deliveryAllowed,
-      pickupNotes: input.pickupNotes ?? null,
-      suggestedUses: input.suggestedUses ?? null,
-    },
-  );
+  const finalTitle = input.title;
+  const titleChanged = material.title !== finalTitle;
+  const expectedUpdatedAt = material.updatedAt;
+  const updateData = {
+    title: finalTitle,
+    description: input.description,
+    quantity: input.quantity,
+    unit: input.unit,
+    condition: input.condition,
+    pickupAllowed: input.pickupAllowed,
+    deliveryAllowed: input.deliveryAllowed,
+    pickupNotes: input.pickupNotes ?? null,
+    suggestedUses: input.suggestedUses ?? null,
+  };
 
-  if (!updated) {
+  const updateResult = await prisma.$transaction(async (client) => {
+    const replaceConceptIds = titleChanged
+      ? await loadMaterialConceptIdsForPersistence({
+          client,
+          finalCategoryId: material.categoryId,
+          finalMaterialType: material.materialType,
+          finalTitle,
+        })
+      : undefined;
+
+    return supplierRepository.updateSupplierMaterialWithConcepts({
+      client,
+      scope,
+      materialId,
+      expectedUpdatedAt,
+      updateData,
+      replaceConceptIds,
+    });
+  });
+
+  if (updateResult.status === "not_found") {
     throw new AppError("Material not found", 404, "NOT_FOUND");
   }
 
+  if (updateResult.status === "stale") {
+    throw new AppError(STALE_MATERIAL_UPDATE_MESSAGE, 409, "CONFLICT");
+  }
+
   return mapSupplierOwnedMaterial(
-    updated,
+    { ...material, ...updateResult.material },
     blockingReservationCount,
     0,
     {},

@@ -56,12 +56,12 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   String? _formError;
 
   List<BecomeSupplierStep> get _activeSteps => const [
-        BecomeSupplierStep.supplierType,
-        BecomeSupplierStep.profile,
-        BecomeSupplierStep.location,
-        BecomeSupplierStep.pickupDetails,
-        BecomeSupplierStep.review,
-      ];
+    BecomeSupplierStep.supplierType,
+    BecomeSupplierStep.profile,
+    BecomeSupplierStep.location,
+    BecomeSupplierStep.pickupDetails,
+    BecomeSupplierStep.review,
+  ];
 
   BecomeSupplierStep get _currentStep => _activeSteps[_stepIndex];
 
@@ -190,7 +190,9 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
     ].join('\n');
 
     try {
-      await ref.read(authControllerProvider.notifier).becomeSupplier(
+      await ref
+          .read(authControllerProvider.notifier)
+          .becomeSupplier(
             BecomeSupplierRequest(
               supplierType: _supplierType!,
               publicName: _publicNameController.text.trim(),

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
+import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_section_card.dart';
 import '../../data/models/supplier_profile.dart';
 import '../../data/models/supplier_profile_location.dart';
 import 'supplier_type_selector.dart';
@@ -38,9 +40,9 @@ class SupplierProfileIdentityCard extends StatelessWidget {
     final profileImageUrl = profile.user.profileImageUrl;
     final isCompact = MediaQuery.sizeOf(context).width < 720;
 
-    return Container(
-      width: double.infinity,
-      decoration: context.supplierDecorations.profileGlassCard,
+    return AppSectionCard(
+      padding: EdgeInsets.zero,
+      borderRadius: AppRadius.xlAll,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -115,10 +117,7 @@ class SupplierProfileIdentityCard extends StatelessWidget {
 }
 
 class _AvatarBlock extends StatelessWidget {
-  const _AvatarBlock({
-    required this.displayName,
-    this.profileImageUrl,
-  });
+  const _AvatarBlock({required this.displayName, this.profileImageUrl});
 
   final String displayName;
   final String? profileImageUrl;
@@ -251,7 +250,9 @@ class _IdentityDetails extends StatelessWidget {
             child: Text(
               details!.description!,
               style: context.supplierBody().copyWith(
-                color: context.supplierColors.textPrimary.withValues(alpha: 0.88),
+                color: context.supplierColors.textPrimary.withValues(
+                  alpha: 0.88,
+                ),
               ),
             ),
           ),
@@ -303,8 +304,12 @@ class _EditButton extends StatelessWidget {
       label: Text(context.s.editProfileTitle),
       style: OutlinedButton.styleFrom(
         foregroundColor: context.supplierColors.textPrimary,
-        backgroundColor: context.supplierColors.surfaceSolid.withValues(alpha: 0.45),
-        side: BorderSide(color: context.supplierColors.border.withValues(alpha: 0.55)),
+        backgroundColor: context.supplierColors.surfaceSolid.withValues(
+          alpha: 0.45,
+        ),
+        side: BorderSide(
+          color: context.supplierColors.border.withValues(alpha: 0.55),
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,

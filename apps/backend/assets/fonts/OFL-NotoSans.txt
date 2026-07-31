@@ -1,0 +1,11 @@
+Noto Sans
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is available with a FAQ at: https://openfontlicense.org
+
+Font file in this directory:
+  NotoSans-Regular.ttf
+
+Source: Google Fonts / notofonts (hinted TTF distribution).
+Used by ImpactLoop Admin Reservations PDF export for Latin letters, IDs, emails, and numbers.

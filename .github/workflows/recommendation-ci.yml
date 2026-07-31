@@ -1,0 +1,175 @@
+name: Recommendation CI — portable contracts
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recommendation-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recommendation-pure:
+    name: recommendation-pure
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
+      RECOMMENDATION_ML_SHADOW_ENABLED: 'false'
+      RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED: 'false'
+      RECOMMENDATION_ML_PROJECT_SERVING_ENABLED: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w apps/backend
+
+      - name: Focused recommendation TypeScript checks
+        run: npm run typecheck:recommendations:ci -w apps/backend
+
+      # Broad backend typecheck is omitted from this lane: the checkout has
+      # additional pre-existing diagnostics beyond the known admin-people.service.ts:52
+      # TS18049 baseline, so an exact single-diagnostic gate is not yet trustworthy.
+      # Focused recommendation typechecks above remain blocking.
+
+      - name: Portable recommendation pure tests
+        run: npm run test:recommendations:ci:pure -w apps/backend
+
+      - name: Event-aware whitespace check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --check "${{ github.event.pull_request.base.sha }}...${{ github.sha }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              git diff --check "${{ github.sha }}^!"
+            else
+              git diff --check "$BEFORE" "${{ github.sha }}"
+            fi
+          else
+            git fetch origin main
+            git diff --check "origin/main...HEAD"
+          fi
+
+      - name: Repository mutation check
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          git diff --exit-code -- apps/backend/fixtures/recommendation/learner-home-deterministic-baseline.v1.json
+          UNTRACKED="$(git ls-files --others --exclude-standard)"
+          if [ -n "$UNTRACKED" ]; then
+            echo "Unexpected non-ignored untracked files:"
+            printf '%s\n' "$UNTRACKED"
+            exit 1
+          fi
+
+      - name: Deferred contract summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Deferred contract: frozen baseline verification"
+            echo
+            echo "The lane does not run the full frozen-database baseline verification because the accepted RP-00.2 dataset cannot be reconstructed from committed repository inputs."
+            echo
+            echo "The lane does run the baseline command/parser/hash/fingerprint helper contracts."
+            echo
+            echo "## Deferred contract: generated portable-model artifact validation"
+            echo
+            echo "The lane does not run generated portable-model validation because the required model artifacts are ignored and not clean-checkout portable."
+            echo
+            echo "The lane does run the committed recommendation feature-token contract and all other selected portable recommendation contracts."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  recommendation-db:
+    name: recommendation-db
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      IMPACTLOOP_CI_DATABASE: '1'
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      DATABASE_URL: postgresql://impactloop:impactloop@127.0.0.1:5432/impactloop_ci?schema=public
+      RECOMMENDATION_ML_SHADOW_ENABLED: 'false'
+      RECOMMENDATION_ML_MATERIAL_SERVING_ENABLED: 'false'
+      RECOMMENDATION_ML_PROJECT_SERVING_ENABLED: 'false'
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_USER: impactloop
+          POSTGRES_PASSWORD: impactloop
+          POSTGRES_DB: impactloop_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U impactloop -d impactloop_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Database isolation guard
+        run: npm run guard:recommendations:ci:database -w apps/backend
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate -w apps/backend
+
+      - name: Apply Prisma migrations
+        run: npm exec -w apps/backend -- prisma migrate deploy
+
+      - name: Portable recommendation database tests
+        run: npm run test:recommendations:ci:db -w apps/backend
+
+      - name: Repository mutation check
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code
+          git diff --exit-code -- apps/backend/fixtures/recommendation/learner-home-deterministic-baseline.v1.json
+          UNTRACKED="$(git ls-files --others --exclude-standard)"
+          if [ -n "$UNTRACKED" ]; then
+            echo "Unexpected non-ignored untracked files:"
+            printf '%s\n' "$UNTRACKED"
+            exit 1
+          fi

@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/learning_hub_providers.dart';
@@ -18,10 +16,12 @@ class ProjectEngagementStrip extends ConsumerStatefulWidget {
   const ProjectEngagementStrip({
     super.key,
     required this.project,
+    this.recommendationImpressionId,
     this.density = ProjectEngagementDensity.full,
   });
 
   final LearningProject project;
+  final String? recommendationImpressionId;
   final ProjectEngagementDensity density;
 
   @override
@@ -102,10 +102,16 @@ class _ProjectEngagementStripState
       final result = shouldLike
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .likeProject(widget.project.id)
+                .likeProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unlikeProject(widget.project.id);
+                .unlikeProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -152,10 +158,16 @@ class _ProjectEngagementStripState
       final result = shouldSave
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .saveProject(widget.project.id)
+                .saveProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unsaveProject(widget.project.id);
+                .unsaveProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -204,10 +216,16 @@ class _ProjectEngagementStripState
       final result = shouldFollow
           ? await ref
                 .read(learningHubRepositoryProvider)
-                .followProject(widget.project.id)
+                .followProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                )
           : await ref
                 .read(learningHubRepositoryProvider)
-                .unfollowProject(widget.project.id);
+                .unfollowProject(
+                  widget.project.id,
+                  recommendationImpressionId: widget.recommendationImpressionId,
+                );
 
       if (!mounted) {
         return;
@@ -320,15 +338,9 @@ class _EngagementPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = selected
-        ? AppColorTokens.emerald.withValues(alpha: isDark ? 0.24 : 0.10)
-        : palette.mutedChip;
-    final foreground = selected
-        ? isDark
-              ? Colors.white
-              : AppColorTokens.emerald
-        : palette.textSecondary;
+    final textTheme = Theme.of(context).textTheme;
+    final background = selected ? palette.limeSoft : palette.mutedChip;
+    final foreground = selected ? palette.lime : palette.textSecondary;
 
     return Tooltip(
       message: tooltip,
@@ -345,7 +357,9 @@ class _EngagementPill extends StatelessWidget {
             color: background,
             borderRadius: AppRadius.pillAll,
             border: Border.all(
-              color: selected ? AppColorTokens.emerald : palette.borderSubtle,
+              color: selected
+                  ? palette.lime.withValues(alpha: 0.34)
+                  : palette.borderSubtle,
             ),
           ),
           child: Row(
@@ -365,11 +379,8 @@ class _EngagementPill extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Text(
                 label,
-                style:
-                    (compact
-                            ? AppTextStyles.body(context)
-                            : AppTextStyles.label(context))
-                        .copyWith(color: foreground),
+                style: (compact ? textTheme.labelSmall : textTheme.labelMedium)
+                    ?.copyWith(color: foreground, fontWeight: FontWeight.w700),
               ),
             ],
           ),

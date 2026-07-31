@@ -44,7 +44,9 @@ AdminDashboardResponse _sampleDashboard() {
 }
 
 void main() {
-  testWidgets('AdminKpiCard renders value, label, and helper text', (tester) async {
+  testWidgets('AdminKpiCard renders value, label, and helper text', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -65,25 +67,25 @@ void main() {
     expect(find.byIcon(Icons.people_outline), findsOneWidget);
   });
 
-  testWidgets('AdminKpiGrid renders inside ListView without layout exceptions',
-      (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1200, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'AdminKpiGrid renders inside ListView without layout exceptions',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ListView(
-            children: [
-              AdminKpiGrid(dashboard: _sampleDashboard()),
-            ],
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView(
+              children: [AdminKpiGrid(dashboard: _sampleDashboard())],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
-    expect(tester.takeException(), isNull);
-    expect(find.text('10'), findsWidgets);
-  });
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('10'), findsWidgets);
+    },
+  );
 }

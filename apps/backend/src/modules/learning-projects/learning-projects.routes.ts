@@ -11,10 +11,14 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   deleteLearningProjectReview,
   followLearningProject,
+  completeProjectBuildStep,
+  createAiAuthoringDraft,
   getBuildItemMaterialCandidates,
   getLearningProject,
   getMyLearningProjectSubmission,
   getMyProjectBuild,
+  getOrCreateAuthoringConversation,
+  getOrCreateBuildGuideConversation,
   likeLearningProject,
   linkBuildItemMaterial,
   linkBuildItemReservation,
@@ -27,6 +31,7 @@ import {
   saveLearningProject,
   startProjectBuild,
   submitLearningProject,
+  submitMyLearningProjectDraft,
   unlikeLearningProject,
   unfollowLearningProject,
   unlinkBuildItemMaterial,
@@ -40,12 +45,17 @@ import {
   linkBuildItemMaterialSchema,
   linkBuildItemReservationSchema,
   projectBuildItemParamSchema,
+  projectBuildStepParamSchema,
+  buildGuideConversationSchema,
+  createAiAuthoringDraftSchema,
+  authoringConversationSchema,
   projectReviewSchema,
   myLearningProjectsQuerySchema,
   submitLearningProjectSchema,
   updateMyLearningProjectSubmissionSchema,
   updateProjectBuildItemSchema,
 } from './learning-projects.validation.js';
+import { attachCommentRoutes } from '../comments/comments.routes.js';
 
 export const learningProjectsRouter = Router();
 
@@ -88,6 +98,14 @@ learningProjectsRouter.get(
   asyncHandler(listMyLearningProjectSubmissions),
 );
 
+learningProjectsRouter.post(
+  '/mine/ai-authoring-drafts',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(createAiAuthoringDraftSchema),
+  asyncHandler(createAiAuthoringDraft),
+);
+
 learningProjectsRouter.get(
   '/mine/:id',
   authMiddleware,
@@ -106,11 +124,28 @@ learningProjectsRouter.patch(
 );
 
 learningProjectsRouter.post(
+  '/mine/:id/submit',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  asyncHandler(submitMyLearningProjectDraft),
+);
+
+learningProjectsRouter.post(
   '/mine/:id/resubmit',
   authMiddleware,
   requireRoles('LEARNER'),
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(resubmitMyLearningProjectSubmission),
+);
+
+learningProjectsRouter.post(
+  '/mine/:id/authoring-conversation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(authoringConversationSchema),
+  asyncHandler(getOrCreateAuthoringConversation),
 );
 
 learningProjectsRouter.get(
@@ -119,6 +154,23 @@ learningProjectsRouter.get(
   requireRoles('LEARNER'),
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(getMyProjectBuild),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/guide-conversation',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(learningProjectIdParamSchema, 'params'),
+  validate(buildGuideConversationSchema),
+  asyncHandler(getOrCreateBuildGuideConversation),
+);
+
+learningProjectsRouter.post(
+  '/:id/builds/me/steps/:stepId/complete',
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(projectBuildStepParamSchema, 'params'),
+  asyncHandler(completeProjectBuildStep),
 );
 
 learningProjectsRouter.post(
@@ -236,6 +288,8 @@ learningProjectsRouter.delete(
   validate(learningProjectIdParamSchema, 'params'),
   asyncHandler(deleteLearningProjectReview),
 );
+
+attachCommentRoutes(learningProjectsRouter);
 
 learningProjectsRouter.get(
   '/:id',

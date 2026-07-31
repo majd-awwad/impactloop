@@ -1,21 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../theme/supplier_theme_extension.dart';
-import 'supplier_location_input_mode.dart';
-import 'supplier_reverse_geocode_state.dart';
 import 'supplier_dark_form_field.dart';
+import 'supplier_location_input_mode.dart';
 import 'supplier_pickup_map.dart';
-import 'supplier_selected_coordinates_panel.dart';
+import 'supplier_reverse_geocode_state.dart';
 import 'supplier_type_selector.dart';
+
+const supplierWorkingDayValues = [
+  'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+];
 
 class SupplierProfileForm extends StatelessWidget {
   const SupplierProfileForm({
     super.key,
     required this.formKey,
-    required this.isSaving,
-    required this.hasExistingProfile,
     required this.publicNameController,
     required this.descriptionController,
     required this.countryController,
@@ -27,9 +35,9 @@ class SupplierProfileForm extends StatelessWidget {
     required this.isApproximate,
     required this.organizationNameController,
     required this.contactPersonController,
-    required this.workingDaysController,
     required this.workingFromController,
     required this.workingToController,
+    required this.selectedWorkingDays,
     required this.useSeparateBusinessLocation,
     required this.businessCountryController,
     required this.businessCityController,
@@ -39,17 +47,16 @@ class SupplierProfileForm extends StatelessWidget {
     required this.onVisibilityChanged,
     required this.onApproximateChanged,
     required this.onSeparateBusinessLocationChanged,
+    required this.onWorkingDaysChanged,
     required this.onFieldChanged,
-    required this.onSave,
+    required this.onCountryChanged,
     required this.locationInputMode,
     required this.locationCapturedThisSession,
     required this.reverseGeocodeState,
-    this.locationStatusMessage,
     required this.onPickupAddressFieldChanged,
     required this.onLocationInputModeChanged,
-    this.onCancel,
-    this.showMapInForm = true,
-    this.showLocationButton = false,
+    required this.onPinMoved,
+    this.locationStatusMessage,
     this.latitude,
     this.longitude,
     this.locationButtonState = SupplierLocationButtonState.idle,
@@ -57,8 +64,6 @@ class SupplierProfileForm extends StatelessWidget {
   });
 
   final GlobalKey<FormState> formKey;
-  final bool isSaving;
-  final bool hasExistingProfile;
   final TextEditingController publicNameController;
   final TextEditingController descriptionController;
   final TextEditingController countryController;
@@ -70,9 +75,9 @@ class SupplierProfileForm extends StatelessWidget {
   final bool isApproximate;
   final TextEditingController organizationNameController;
   final TextEditingController contactPersonController;
-  final TextEditingController workingDaysController;
   final TextEditingController workingFromController;
   final TextEditingController workingToController;
+  final List<String> selectedWorkingDays;
   final bool useSeparateBusinessLocation;
   final TextEditingController businessCountryController;
   final TextEditingController businessCityController;
@@ -82,17 +87,16 @@ class SupplierProfileForm extends StatelessWidget {
   final ValueChanged<String> onVisibilityChanged;
   final ValueChanged<bool> onApproximateChanged;
   final ValueChanged<bool> onSeparateBusinessLocationChanged;
+  final ValueChanged<List<String>> onWorkingDaysChanged;
   final VoidCallback onFieldChanged;
-  final VoidCallback? onCancel;
-  final VoidCallback onSave;
+  final VoidCallback onCountryChanged;
   final SupplierLocationInputMode locationInputMode;
   final bool locationCapturedThisSession;
   final SupplierReverseGeocodeState reverseGeocodeState;
   final String? locationStatusMessage;
   final VoidCallback onPickupAddressFieldChanged;
   final ValueChanged<SupplierLocationInputMode> onLocationInputModeChanged;
-  final bool showMapInForm;
-  final bool showLocationButton;
+  final ValueChanged<LatLng> onPinMoved;
   final double? latitude;
   final double? longitude;
   final SupplierLocationButtonState locationButtonState;
@@ -101,496 +105,829 @@ class SupplierProfileForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final colors = context.supplierColors;
-    final decorations = context.supplierDecorations;
+    final isCompact = MediaQuery.sizeOf(context).width < 680;
     final showOrganization = isOrganizationSupplierType(supplierType);
-    final isWide = MediaQuery.sizeOf(context).width >= 1024;
     final usingCurrentLocation =
         locationInputMode == SupplierLocationInputMode.currentLocation;
     final hasCoordinates = latitude != null && longitude != null;
     final hasFreshCapture = usingCurrentLocation && locationCapturedThisSession;
-
-    String? cityValidator(String? value) {
-      if (hasFreshCapture && hasCoordinates) {
-        return null;
-      }
-      if (!usingCurrentLocation &&
-          (value == null || value.trim().isEmpty)) {
-        return l.required;
-      }
-      return null;
-    }
+    final hasSelectedLocation =
+        hasCoordinates &&
+        (hasFreshCapture ||
+            !usingCurrentLocation ||
+            locationButtonState == SupplierLocationButtonState.captured);
+    final validVisibility = const {
+      'PUBLIC',
+      'ORDER_ONLY',
+      'PRIVATE',
+    }.contains(visibility);
 
     String? requiredValidator(String? value) {
       return value == null || value.trim().isEmpty ? l.required : null;
     }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: decorations.profileGlassCard,
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              hasExistingProfile ? l.editProfileTitle : l.createProfile,
-              style: context.supplierTitle(),
+    String? cityValidator(String? value) {
+      if (hasFreshCapture && hasCoordinates) {
+        return null;
+      }
+      if (!usingCurrentLocation && (value == null || value.trim().isEmpty)) {
+        return l.required;
+      }
+      return null;
+    }
+
+    return Form(
+      key: formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SupplierFormSection(
+            title: l.t('Public profile', 'الملف العام'),
+            subtitle: l.t(
+              'These details appear on your public supplier profile.',
+              'تظهر هذه التفاصيل في ملف المورد العام.',
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              l.profileIntro,
-              style: context.supplierBody(),
-            ),
-            const SupplierSectionGap(),
-            SupplierFormSectionHeader(
-              icon: Icons.person_outline,
-              title: l.publicDetails,
-              subtitle: l.publicDetailsSubtitle,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            SupplierDarkTextField(
-              controller: publicNameController,
-              label: l.publicName,
-              hint: l.publicNameHint,
-              validator: requiredValidator,
-              onChanged: (_) => onFieldChanged(),
-            ),
-            const SupplierFieldGap(),
-            SupplierTypeSelector(
-              value: supplierType,
-              onChanged: (value) {
-                onSupplierTypeChanged(value);
-                onFieldChanged();
-              },
-            ),
-            const SupplierFieldGap(),
-            SupplierDarkTextArea(
-              controller: descriptionController,
-              label: l.aboutMaterials,
-              hint: l.aboutMaterialsHint,
-              maxLines: 4,
-              onChanged: (_) => onFieldChanged(),
-            ),
-            const SupplierSectionGap(),
-            SupplierFormSectionHeader(
-              icon: Icons.location_on_outlined,
-              title: l.defaultPickupArea,
-              subtitle: l.defaultPickupSubtitle,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SegmentedButton<SupplierLocationInputMode>(
-              segments: [
-                ButtonSegment(
-                  value: SupplierLocationInputMode.currentLocation,
-                  label: Text(l.useCurrentLocation),
-                  icon: const Icon(Icons.my_location_outlined, size: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SupplierDarkTextField(
+                  controller: publicNameController,
+                  label: l.publicName,
+                  hint: l.publicNameHint,
+                  validator: requiredValidator,
+                  onChanged: (_) => onFieldChanged(),
                 ),
-                ButtonSegment(
-                  value: SupplierLocationInputMode.manual,
-                  label: Text(l.enterManually),
-                  icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
+                const _CompactFieldGap(),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: SizedBox(
+                    width: isCompact ? double.infinity : 480,
+                    child: SupplierTypeSelector(
+                      value: supplierType,
+                      onChanged: (value) {
+                        onSupplierTypeChanged(value);
+                        onFieldChanged();
+                      },
+                    ),
+                  ),
+                ),
+                const _CompactFieldGap(),
+                SupplierDarkTextArea(
+                  controller: descriptionController,
+                  label: l.aboutMaterials,
+                  hint: l.aboutMaterialsHint,
+                  minLines: 3,
+                  maxLines: 4,
+                  onChanged: (_) => onFieldChanged(),
                 ),
               ],
-              selected: {locationInputMode},
-              style: SegmentedButton.styleFrom(
-                foregroundColor: colors.textPrimary,
-                selectedForegroundColor: colors.textOnAccent,
-                selectedBackgroundColor: colors.accent,
-                backgroundColor: colors.chipUnselected,
-                disabledForegroundColor: colors.textMuted,
-                side: BorderSide(
-                  color: colors.borderFocused.withValues(alpha: 0.7),
-                ),
-              ),
-              onSelectionChanged: (selection) {
-                onLocationInputModeChanged(selection.first);
-              },
             ),
-            if (usingCurrentLocation) ...[
-              const SizedBox(height: AppSpacing.md),
-              if (locationButtonState == SupplierLocationButtonState.loading)
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(locationStatusMessage ?? l.gettingLocation),
-                  ],
-                )
-              else if (hasFreshCapture && hasCoordinates) ...[
-                SupplierSelectedCoordinatesPanel(
-                  latitude: latitude!,
-                  longitude: longitude!,
-                  helperMessage: locationStatusMessage,
-                ),
-                if (reverseGeocodeState == SupplierReverseGeocodeState.loading)
-                  Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.sm),
-                    child: Row(
-                      children: [
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SupplierSectionGap(),
+          _SupplierFormSection(
+            title: l.t('Pickup location & privacy', 'موقع الاستلام والخصوصية'),
+            subtitle: l.locationPrivacySubtitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  container: true,
+                  label: l.locationModeLabel,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: SizedBox(
+                      key: const ValueKey('location-mode-width'),
+                      width: isCompact ? double.infinity : 480,
+                      child: SegmentedButton<SupplierLocationInputMode>(
+                        segments: [
+                          ButtonSegment(
+                            value: SupplierLocationInputMode.currentLocation,
+                            label: _ModeSegmentLabel(
+                              label: l.useCurrentLocation,
+                              isLoading:
+                                  locationButtonState ==
+                                  SupplierLocationButtonState.loading,
+                            ),
+                            icon: const Icon(
+                              Icons.my_location_outlined,
+                              size: 18,
+                            ),
+                          ),
+                          ButtonSegment(
+                            value: SupplierLocationInputMode.manual,
+                            label: Text(l.enterManually),
+                            icon: const Icon(
+                              Icons.edit_location_alt_outlined,
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                        selected: {locationInputMode},
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(
+                          foregroundColor: context.supplierColors.textPrimary,
+                          selectedForegroundColor:
+                              context.supplierColors.accent,
+                          selectedBackgroundColor: context.supplierColors.accent
+                              .withValues(alpha: 0.14),
+                          backgroundColor:
+                              context.supplierColors.chipUnselected,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.sm,
+                          ),
+                          side: BorderSide(
+                            color: context.supplierColors.border.withValues(
+                              alpha: 0.55,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(l.findingAddress),
+                        onSelectionChanged: (selection) {
+                          onLocationInputModeChanged(selection.first);
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                if (usingCurrentLocation &&
+                    locationButtonState == SupplierLocationButtonState.loading)
+                  _LocationProgress(
+                    message: locationStatusMessage ?? l.gettingLocation,
+                  )
+                else if (usingCurrentLocation && hasSelectedLocation)
+                  _LocationConfirmation(
+                    title: l.locationSelected,
+                    summary: _locationSummary(
+                      cityController,
+                      areaController,
+                      addressLineController,
+                    ),
+                    message: locationStatusMessage,
+                  )
+                else if (!usingCurrentLocation)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Text(
+                      l.manualLocationInstructions,
+                      style: context.supplierBody(),
+                    ),
+                  ),
+                _ResponsiveFieldRow(
+                  children: [
+                    SupplierDarkTextField(
+                      controller: countryController,
+                      label: hasFreshCapture
+                          ? l.countryOptionalLabel
+                          : l.country,
+                      hint: hasFreshCapture ? l.optional : l.country,
+                      onChanged: (_) => onCountryChanged(),
+                    ),
+                    SupplierDarkTextField(
+                      controller: cityController,
+                      label: hasFreshCapture ? l.cityOptionalLabel : l.city,
+                      hint: hasFreshCapture ? l.optional : l.city,
+                      validator: cityValidator,
+                      onChanged: (_) => onPickupAddressFieldChanged(),
+                    ),
+                  ],
+                ),
+                const SupplierFieldGap(),
+                _ResponsiveFieldRow(
+                  children: [
+                    SupplierDarkTextField(
+                      controller: areaController,
+                      label: hasFreshCapture ? l.areaOptionalLabel : l.area,
+                      hint: hasFreshCapture
+                          ? l.optionalNeighborhoodOrDistrict
+                          : l.areaHint,
+                      onChanged: (_) => onPickupAddressFieldChanged(),
+                    ),
+                    SupplierDarkTextField(
+                      controller: addressLineController,
+                      label: hasFreshCapture
+                          ? l.addressLineOptionalLabel
+                          : l.addressLine,
+                      hint: hasFreshCapture
+                          ? l.optionalStreetOrBuilding
+                          : l.addressHint,
+                      onChanged: (_) => onPickupAddressFieldChanged(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SupplierPickupMap(
+                  latitude: latitude,
+                  longitude: longitude,
+                  fallbackCity: cityController.text,
+                  fallbackArea: areaController.text,
+                  fallbackCountry: countryController.text,
+                  visibility: validVisibility ? visibility : null,
+                  showLocationSummary: false,
+                  isEditable: true,
+                  showLocationButton: false,
+                  locationButtonState: locationButtonState,
+                  compact: true,
+                  showCoordinatesAsLabel: false,
+                  allowPinPlacement: !usingCurrentLocation,
+                  onPinMoved: onPinMoved,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _CompactSubsection(
+                  title: l.locationPrivacy,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _ResponsiveFieldRow(
+                        children: [
+                          SupplierDarkDropdownField<String>(
+                            label: l.locationVisibility,
+                            hint: l.chooseVisibility,
+                            value: validVisibility ? visibility : null,
+                            items: [
+                              DropdownMenuItem(
+                                value: 'PUBLIC',
+                                child: Text(l.visibilityPublic),
+                              ),
+                              DropdownMenuItem(
+                                value: 'ORDER_ONLY',
+                                child: Text(l.visibilityOrderOnly),
+                              ),
+                              DropdownMenuItem(
+                                value: 'PRIVATE',
+                                child: Text(l.visibilityPrivate),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                onVisibilityChanged(value);
+                                onFieldChanged();
+                              }
+                            },
+                          ),
+                          SupplierDarkSwitchTile(
+                            title: l.showApproximate,
+                            subtitle: l.showApproximateSubtitle,
+                            value: isApproximate,
+                            onChanged: visibility == 'PUBLIC'
+                                ? (value) {
+                                    onApproximateChanged(value);
+                                    onFieldChanged();
+                                  }
+                                : null,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _PrivacyExplanation(
+                        visibility: visibility,
+                        isApproximate: isApproximate,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (showOrganization) ...[
+            const SupplierSectionGap(),
+            _SupplierFormSection(
+              title: l.t('Organization & availability', 'المؤسسة والتوفر'),
+              subtitle: l.organizationSubtitle,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _LightSubsectionHeading(title: l.organizationDetails),
+                  _ResponsiveFieldRow(
+                    children: [
+                      SupplierDarkTextField(
+                        controller: organizationNameController,
+                        label: l.organizationName,
+                        hint: l.organizationNameHint,
+                        validator: requiredValidator,
+                        onChanged: (_) => onFieldChanged(),
+                      ),
+                      SupplierDarkTextField(
+                        controller: contactPersonController,
+                        label: l.contactPerson,
+                        hint: l.contactPersonHint,
+                        onChanged: (_) => onFieldChanged(),
+                      ),
+                    ],
+                  ),
+                  if (_sameText(
+                    organizationNameController.text,
+                    publicNameController.text,
+                  )) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      l.t(
+                        'Organization name identifies the organization; it may match the public supplier name.',
+                        'اسم المؤسسة يحدد المؤسسة، وقد يطابق اسم المورد العام.',
+                      ),
+                      style: context.supplierBody(),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.lg),
+                  _LightSubsectionHeading(
+                    title: l.t('Working availability', 'التوفر وساعات العمل'),
+                  ),
+                  SupplierFormLabel(label: l.workingDays),
+                  const SizedBox(height: AppSpacing.sm),
+                  _WorkingDaySelector(
+                    selectedDays: selectedWorkingDays,
+                    onChanged: onWorkingDaysChanged,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _ResponsiveFieldRow(
+                    children: [
+                      _TimePickerField(
+                        controller: workingFromController,
+                        label: l.openFrom,
+                        onChanged: onFieldChanged,
+                        validator: (value) => _timeValidator(value, l),
+                      ),
+                      _TimePickerField(
+                        controller: workingToController,
+                        label: l.openUntil,
+                        onChanged: onFieldChanged,
+                        validator: (value) => _endTimeValidator(
+                          value,
+                          workingFromController.text,
+                          l,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    l.t(
+                      'Availability is informational and helps learners plan pickup.',
+                      'التوفر للمعلومات ويساعد المتعلمين على التخطيط للاستلام.',
+                    ),
+                    style: context.supplierBody(),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _LightSubsectionHeading(
+                    title: l.t(
+                      'Separate organization address',
+                      'عنوان المؤسسة المنفصل',
+                    ),
+                  ),
+                  SupplierDarkSwitchTile(
+                    title: l.separateBusinessLocation,
+                    subtitle: l.separateBusinessLocationSubtitle,
+                    value: useSeparateBusinessLocation,
+                    onChanged: (value) {
+                      onSeparateBusinessLocationChanged(value);
+                      onFieldChanged();
+                    },
+                  ),
+                  if (useSeparateBusinessLocation) ...[
+                    const SupplierFieldGap(),
+                    _ResponsiveFieldRow(
+                      children: [
+                        SupplierDarkTextField(
+                          controller: businessCountryController,
+                          label: l.businessCountry,
+                          validator: requiredValidator,
+                          onChanged: (_) => onFieldChanged(),
+                        ),
+                        SupplierDarkTextField(
+                          controller: businessCityController,
+                          label: l.businessCity,
+                          validator: requiredValidator,
+                          onChanged: (_) => onFieldChanged(),
+                        ),
                       ],
                     ),
-                  ),
-                const SizedBox(height: AppSpacing.sm),
-                OutlinedButton.icon(
-                  onPressed:
-                      reverseGeocodeState == SupplierReverseGeocodeState.loading
-                      ? null
-                      : onUseCurrentLocation,
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: Text(l.refreshLocation),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.accent,
-                    side: BorderSide(
-                      color: colors.borderFocused.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ),
-              ] else
-                OutlinedButton.icon(
-                  onPressed: onUseCurrentLocation,
-                  icon: const Icon(Icons.my_location_outlined, size: 18),
-                  label: Text(l.useCurrentLocation),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: colors.textPrimary,
-                    side: BorderSide(
-                      color: colors.borderFocused.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ),
-            ],
-            if (hasFreshCapture) ...[
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                l.optionalAddressDetails,
-                style: context.supplierLabel().copyWith(
-                  color: colors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                l.coordinatesSourceOfTruth,
-                style: context.supplierBody().copyWith(
-                  color: colors.textSecondary,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.lg),
-            _ResponsiveFieldRow(
-              children: [
-                SupplierDarkTextField(
-                  controller: countryController,
-                  label: hasFreshCapture ? l.countryOptionalLabel : l.country,
-                  hint: hasFreshCapture ? l.optional : l.country,
-                  onChanged: (_) => onPickupAddressFieldChanged(),
-                ),
-                SupplierDarkTextField(
-                  controller: cityController,
-                  label: hasFreshCapture ? l.cityOptionalLabel : l.city,
-                  hint: hasFreshCapture ? l.optional : l.city,
-                  validator: cityValidator,
-                  onChanged: (_) => onPickupAddressFieldChanged(),
-                ),
-              ],
-            ),
-            const SupplierFieldGap(),
-            _ResponsiveFieldRow(
-              children: [
-                SupplierDarkTextField(
-                  controller: areaController,
-                  label: hasFreshCapture ? l.areaOptionalLabel : l.area,
-                  hint: hasFreshCapture ? l.optionalNeighborhoodOrDistrict : l.areaHint,
-                  onChanged: (_) => onPickupAddressFieldChanged(),
-                ),
-                SupplierDarkTextField(
-                  controller: addressLineController,
-                  label: hasFreshCapture
-                      ? l.addressLineOptionalLabel
-                      : l.addressLine,
-                  hint: hasFreshCapture
-                      ? l.optionalStreetOrBuilding
-                      : l.addressHint,
-                  onChanged: (_) => onPickupAddressFieldChanged(),
-                ),
-              ],
-            ),
-            if (latitude != null &&
-                longitude != null &&
-                !usingCurrentLocation) ...[
-              const SupplierSectionGap(),
-              SupplierSelectedCoordinatesPanel(
-                latitude: latitude!,
-                longitude: longitude!,
-              ),
-            ],
-            if (showMapInForm) ...[
-              const SupplierSectionGap(),
-              SupplierPickupMap(
-                latitude: latitude,
-                longitude: longitude,
-                fallbackCity: hasFreshCapture && cityController.text.trim().isEmpty
-                    ? ''
-                    : cityController.text,
-                fallbackArea: hasFreshCapture && areaController.text.trim().isEmpty
-                    ? null
-                    : areaController.text,
-                fallbackCountry:
-                    hasFreshCapture && countryController.text.trim().isEmpty
-                    ? ''
-                    : countryController.text,
-                visibility: visibility,
-                isEditable: true,
-                showLocationButton: showLocationButton,
-                locationButtonState: locationButtonState,
-                onUseCurrentLocation: onUseCurrentLocation,
-                compact: true,
-                showCoordinatesAsLabel:
-                    hasFreshCapture &&
-                    hasCoordinates &&
-                    cityController.text.trim().isEmpty &&
-                    areaController.text.trim().isEmpty,
-              ),
-            ],
-            const SupplierSectionGap(),
-            SupplierFormSectionHeader(
-              icon: Icons.privacy_tip_outlined,
-              title: l.locationPrivacy,
-              subtitle: l.locationPrivacySubtitle,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            _ResponsiveFieldRow(
-              children: [
-                SupplierDarkDropdownField<String>(
-                  label: l.locationVisibility,
-                  hint: l.chooseVisibility,
-                  value: visibility,
-                  items: [
-                    DropdownMenuItem(
-                      value: 'PUBLIC',
-                      child: Text(l.visibilityPublic),
-                    ),
-                    DropdownMenuItem(
-                      value: 'ORDER_ONLY',
-                      child: Text(l.visibilityOrderOnly),
-                    ),
-                    DropdownMenuItem(
-                      value: 'PRIVATE',
-                      child: Text(l.visibilityPrivate),
+                    const SupplierFieldGap(),
+                    _ResponsiveFieldRow(
+                      children: [
+                        SupplierDarkTextField(
+                          controller: businessAreaController,
+                          label: l.businessArea,
+                          onChanged: (_) => onFieldChanged(),
+                        ),
+                        SupplierDarkTextField(
+                          controller: businessAddressLineController,
+                          label: l.businessAddressLine,
+                          onChanged: (_) => onFieldChanged(),
+                        ),
+                      ],
                     ),
                   ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      onVisibilityChanged(value);
-                      onFieldChanged();
-                    }
-                  },
-                ),
-                SupplierDarkSwitchTile(
-                  title: l.showApproximate,
-                  subtitle: l.showApproximateSubtitle,
-                  value: isApproximate,
-                  onChanged: (value) {
-                    onApproximateChanged(value);
-                    onFieldChanged();
-                  },
-                ),
-              ],
-            ),
-            if (showOrganization) ...[
-              const SupplierSectionGap(),
-              SupplierFormSectionHeader(
-                icon: Icons.business_outlined,
-                title: l.organizationDetails,
-                subtitle: l.organizationSubtitle,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _ResponsiveFieldRow(
-                children: [
-                  SupplierDarkTextField(
-                    controller: organizationNameController,
-                    label: l.organizationName,
-                    hint: l.organizationNameHint,
-                    validator: requiredValidator,
-                    onChanged: (_) => onFieldChanged(),
-                  ),
-                  SupplierDarkTextField(
-                    controller: contactPersonController,
-                    label: l.contactPerson,
-                    hint: l.contactPersonHint,
-                    onChanged: (_) => onFieldChanged(),
-                  ),
                 ],
               ),
-              const SupplierFieldGap(),
-              _ResponsiveFieldRow(
-                children: [
-                  SupplierDarkTextField(
-                    controller: workingDaysController,
-                    label: l.workingDays,
-                    hint: l.workingDaysHint,
-                    onChanged: (_) => onFieldChanged(),
-                  ),
-                  SupplierDarkTextField(
-                    controller: workingFromController,
-                    label: l.openFrom,
-                    hint: '09:00',
-                    onChanged: (_) => onFieldChanged(),
-                  ),
-                  SupplierDarkTextField(
-                    controller: workingToController,
-                    label: l.openUntil,
-                    hint: '17:00',
-                    onChanged: (_) => onFieldChanged(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              SupplierDarkSwitchTile(
-                title: l.separateBusinessLocation,
-                subtitle: l.separateBusinessLocationSubtitle,
-                value: useSeparateBusinessLocation,
-                onChanged: onSeparateBusinessLocationChanged,
-              ),
-              if (useSeparateBusinessLocation) ...[
-                const SupplierFieldGap(),
-                _ResponsiveFieldRow(
-                  children: [
-                    SupplierDarkTextField(
-                      controller: businessCountryController,
-                      label: l.businessCountry,
-                      validator: requiredValidator,
-                      onChanged: (_) => onFieldChanged(),
-                    ),
-                    SupplierDarkTextField(
-                      controller: businessCityController,
-                      label: l.businessCity,
-                      validator: requiredValidator,
-                      onChanged: (_) => onFieldChanged(),
-                    ),
-                  ],
-                ),
-                const SupplierFieldGap(),
-                _ResponsiveFieldRow(
-                  children: [
-                    SupplierDarkTextField(
-                      controller: businessAreaController,
-                      label: l.businessArea,
-                      onChanged: (_) => onFieldChanged(),
-                    ),
-                    SupplierDarkTextField(
-                      controller: businessAddressLineController,
-                      label: l.businessAddressLine,
-                      onChanged: (_) => onFieldChanged(),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-            const SupplierSectionGap(),
-            _FormActions(
-              isSaving: isSaving,
-              onSave: onSave,
-              onCancel: onCancel,
-              compact: !isWide,
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _FormActions extends StatelessWidget {
-  const _FormActions({
-    required this.isSaving,
-    required this.onSave,
-    required this.compact,
-    this.onCancel,
+class _SupplierFormSection extends StatelessWidget {
+  const _SupplierFormSection({
+    required this.title,
+    required this.subtitle,
+    required this.child,
   });
 
-  final bool isSaving;
-  final VoidCallback onSave;
-  final VoidCallback? onCancel;
-  final bool compact;
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: colors.border.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(title, style: context.supplierSectionTitle()),
+          const SizedBox(height: AppSpacing.xs),
+          Text(subtitle, style: context.supplierBody()),
+          const SizedBox(height: AppSpacing.lg),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactSubsection extends StatelessWidget {
+  const _CompactSubsection({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceSolid.withValues(alpha: 0.42),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.border.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(title, style: context.supplierLabel()),
+          const SizedBox(height: AppSpacing.md),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _LightSubsectionHeading extends StatelessWidget {
+  const _LightSubsectionHeading({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: context.supplierLabel().copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Divider(
+              color: colors.border.withValues(alpha: 0.35),
+              height: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactFieldGap extends StatelessWidget {
+  const _CompactFieldGap();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(height: AppSpacing.sm);
+}
+
+class _ModeSegmentLabel extends StatelessWidget {
+  const _ModeSegmentLabel({required this.label, required this.isLoading});
+
+  final String label;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isLoading) {
+      return Text(label, overflow: TextOverflow.ellipsis);
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+      ],
+    );
+  }
+}
+
+class _LocationProgress extends StatelessWidget {
+  const _LocationProgress({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      label: message,
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: Text(message, style: context.supplierBody())),
+        ],
+      ),
+    );
+  }
+}
+
+class _LocationConfirmation extends StatelessWidget {
+  const _LocationConfirmation({
+    required this.title,
+    required this.summary,
+    this.message,
+  });
+
+  final String title;
+  final String? summary;
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final details = [
+      if (summary != null && summary!.isNotEmpty) summary!,
+      if (message != null && message!.isNotEmpty) message!,
+    ].join(' ');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: colors.accentSoft.withValues(alpha: 0.12),
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: colors.accent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.check_circle_outline, color: colors.accent, size: 18),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              details.isEmpty ? title : '$title · $details',
+              style: context.supplierBody().copyWith(color: colors.accent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrivacyExplanation extends StatelessWidget {
+  const _PrivacyExplanation({
+    required this.visibility,
+    required this.isApproximate,
+  });
+
+  final String visibility;
+  final bool isApproximate;
 
   @override
   Widget build(BuildContext context) {
     final l = context.s;
-    final colors = context.supplierColors;
-    final saveButton = FilledButton.icon(
-      onPressed: isSaving ? null : onSave,
-      icon: isSaving
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.save_outlined, size: 18),
-      label: Text(isSaving ? l.savingProfile : l.saveProfile),
-      style: FilledButton.styleFrom(
-        backgroundColor: colors.accent,
-        foregroundColor: colors.textOnAccent,
-        disabledBackgroundColor: colors.accentSoft,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+    final copy = switch (visibility) {
+      'PUBLIC' when isApproximate => l.t(
+        'Learners see the general area. The exact pickup address is shared after the reservation is accepted.',
+        'يرى المتعلمون المنطقة العامة. يُشارك عنوان الاستلام الدقيق بعد قبول الحجز.',
+      ),
+      'PUBLIC' => l.t(
+        'Learners can see the saved pickup location according to your public visibility settings.',
+        'يمكن للمتعلمين رؤية موقع الاستلام المحفوظ وفق إعدادات الظهور العامة.',
+      ),
+      'ORDER_ONLY' => l.t(
+        'Learners see the exact pickup address only after the reservation is accepted.',
+        'يرى المتعلمون عنوان الاستلام الدقيق فقط بعد قبول الحجز.',
+      ),
+      'PRIVATE' => l.t(
+        'The pickup location remains private.',
+        'يبقى موقع الاستلام خاصاً.',
+      ),
+      _ => l.t(
+        'Location visibility details are unavailable.',
+        'تفاصيل ظهور الموقع غير متاحة.',
+      ),
+    };
+    return Semantics(
+      label: copy,
+      child: Text(copy, style: context.supplierBody()),
+    );
+  }
+}
+
+class _WorkingDaySelector extends StatelessWidget {
+  const _WorkingDaySelector({
+    required this.selectedDays,
+    required this.onChanged,
+  });
+
+  final List<String> selectedDays;
+  final ValueChanged<List<String>> onChanged;
+
+  String _label(BuildContext context, String value) => switch (value) {
+    'SUNDAY' => context.s.t('Sun', 'أحد'),
+    'MONDAY' => context.s.t('Mon', 'إثن'),
+    'TUESDAY' => context.s.t('Tue', 'ثلا'),
+    'WEDNESDAY' => context.s.t('Wed', 'أرب'),
+    'THURSDAY' => context.s.t('Thu', 'خمي'),
+    'FRIDAY' => context.s.t('Fri', 'جمع'),
+    'SATURDAY' => context.s.t('Sat', 'سبت'),
+    _ => '',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: context.s.workingDays,
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          for (final day in supplierWorkingDayValues)
+            Semantics(
+              selected: selectedDays.contains(day),
+              button: true,
+              label: _label(context, day),
+              child: Builder(
+                builder: (context) {
+                  final selected = selectedDays.contains(day);
+                  final colors = context.supplierColors;
+                  return FilterChip(
+                    key: ValueKey('working-day-$day'),
+                    label: Text(_label(context, day)),
+                    selected: selected,
+                    showCheckmark: false,
+                    selectedColor: colors.accent.withValues(alpha: 0.14),
+                    backgroundColor: colors.surfaceSolid.withValues(
+                      alpha: 0.45,
+                    ),
+                    side: BorderSide(
+                      color: selected
+                          ? colors.accent.withValues(alpha: 0.62)
+                          : colors.border.withValues(alpha: 0.45),
+                    ),
+                    labelStyle: context.supplierChip().copyWith(
+                      color: selected ? colors.accent : colors.textSecondary,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: 2,
+                    ),
+                    onSelected: (isSelected) {
+                      final next = [...selectedDays];
+                      if (isSelected) {
+                        if (!next.contains(day)) next.add(day);
+                      } else {
+                        next.remove(day);
+                      }
+                      next.sort(
+                        (a, b) => supplierWorkingDayValues
+                            .indexOf(a)
+                            .compareTo(supplierWorkingDayValues.indexOf(b)),
+                      );
+                      onChanged(next);
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
+  }
+}
 
-    final cancelButton = onCancel == null
-        ? null
-        : OutlinedButton(
-            onPressed: isSaving ? null : onCancel,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colors.textPrimary,
-              side: BorderSide(
-                color: colors.border.withValues(alpha: 0.55),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.md,
-              ),
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-            ),
-            child: Text(l.cancel),
-          );
+class _TimePickerField extends StatelessWidget {
+  const _TimePickerField({
+    required this.controller,
+    required this.label,
+    required this.onChanged,
+    required this.validator,
+  });
 
-    if (compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          saveButton,
-          if (cancelButton != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            cancelButton,
-          ],
-        ],
-      );
+  final TextEditingController controller;
+  final String label;
+  final VoidCallback onChanged;
+  final String? Function(String?) validator;
+
+  TimeOfDay? _parse(String value) {
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour > 23 || minute > 59) {
+      return null;
     }
+    return TimeOfDay(hour: hour, minute: minute);
+  }
 
-    return Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.sm,
-      children: [
-        saveButton,
-        ?cancelButton,
-      ],
+  @override
+  Widget build(BuildContext context) {
+    return FormField<String>(
+      validator: validator,
+      builder: (state) {
+        final parsed = _parse(controller.text);
+        final display =
+            parsed?.format(context) ??
+            (controller.text.trim().isEmpty
+                ? context.s.t('Choose time', 'اختر الوقت')
+                : controller.text);
+        final decoration = context.supplierDecorations
+            .formFieldDecoration(hint: context.s.t('Choose time', 'اختر الوقت'))
+            .copyWith(errorText: state.errorText);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SupplierFormLabel(label: label),
+            const SizedBox(height: AppSpacing.sm),
+            Semantics(
+              button: true,
+              label: label,
+              child: InkWell(
+                borderRadius: AppRadius.mdAll,
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: parsed ?? const TimeOfDay(hour: 9, minute: 0),
+                    helpText: label,
+                  );
+                  if (picked == null) return;
+                  controller.text =
+                      '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                  state.didChange(controller.text);
+                  onChanged();
+                },
+                child: InputDecorator(
+                  decoration: decoration,
+                  isEmpty: parsed == null && controller.text.trim().isEmpty,
+                  child: Text(
+                    display,
+                    style: context.supplierBody().copyWith(
+                      color: parsed == null && controller.text.trim().isEmpty
+                          ? context.supplierColors.textMuted
+                          : context.supplierColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -602,10 +939,10 @@ class _ResponsiveFieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.sizeOf(context).width >= 840;
-
+    final isWide = MediaQuery.sizeOf(context).width >= 680;
     if (!isWide) {
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (var index = 0; index < children.length; index++) ...[
             children[index],
@@ -614,7 +951,6 @@ class _ResponsiveFieldRow extends StatelessWidget {
         ],
       );
     }
-
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -626,4 +962,55 @@ class _ResponsiveFieldRow extends StatelessWidget {
       ],
     );
   }
+}
+
+String? _timeValidator(String? value, SupplierL10n l) {
+  if (value == null || value.trim().isEmpty) return null;
+  final parts = value.split(':');
+  final hour = parts.length == 2 ? int.tryParse(parts[0]) : null;
+  final minute = parts.length == 2 ? int.tryParse(parts[1]) : null;
+  if (hour == null || minute == null || hour > 23 || minute > 59) {
+    return l.t('Choose a valid time.', 'اختر وقتاً صالحاً.');
+  }
+  return null;
+}
+
+String? _endTimeValidator(String? value, String startValue, SupplierL10n l) {
+  final ownError = _timeValidator(value, l);
+  if (ownError != null) return ownError;
+  if (value == null || value.trim().isEmpty || startValue.trim().isEmpty) {
+    return null;
+  }
+  final start = _timeMinutes(startValue);
+  final end = _timeMinutes(value);
+  if (start == null || end == null || end <= start) {
+    return l.endTimeMustBeAfterStart;
+  }
+  return null;
+}
+
+int? _timeMinutes(String value) {
+  final parts = value.split(':');
+  if (parts.length != 2) return null;
+  final hour = int.tryParse(parts[0]);
+  final minute = int.tryParse(parts[1]);
+  if (hour == null || minute == null || hour > 23 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+bool _sameText(String first, String second) =>
+    first.trim().isNotEmpty &&
+    first.trim().toLowerCase() == second.trim().toLowerCase();
+
+String? _locationSummary(
+  TextEditingController city,
+  TextEditingController area,
+  TextEditingController address,
+) {
+  final parts = [
+    if (area.text.trim().isNotEmpty) area.text.trim(),
+    if (city.text.trim().isNotEmpty) city.text.trim(),
+    if (address.text.trim().isNotEmpty) address.text.trim(),
+  ];
+  return parts.isEmpty ? null : parts.join(', ');
 }

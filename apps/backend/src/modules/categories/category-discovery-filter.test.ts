@@ -27,6 +27,8 @@ describe('category discovery filter', () => {
       isPublicDiscoveryCategoryName('[test-admin-approvals] Final Category'),
       false,
     );
+    assert.equal(isPublicDiscoveryCategoryName('[live-conv-1784648863167] cat'), false);
+    assert.equal(isPublicDiscoveryCategoryName('[temp-arabic-authoring-repro] Projects'), false);
     assert.equal(isPublicDiscoveryCategoryName('QA Test Category'), false);
     assert.equal(isPublicDiscoveryCategoryName('Admin Tools'), false);
     assert.equal(isPublicDiscoveryCategoryName('Electronics'), true);

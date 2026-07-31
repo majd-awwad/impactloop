@@ -228,6 +228,27 @@ class LearningProjectSubmissionsResult {
   final int totalPages;
 }
 
+class LearningProjectAuthoringSession {
+  const LearningProjectAuthoringSession({
+    required this.learningProjectId,
+    required this.conversationId,
+    required this.status,
+    required this.mode,
+    required this.title,
+    required this.updatedAt,
+  });
+
+  final String learningProjectId;
+  final String conversationId;
+  final String status;
+  final String mode;
+  final String title;
+  final DateTime updatedAt;
+
+  bool get isTrustedDraftAuthoring =>
+      status == 'DRAFT' && mode == 'PROJECT_AUTHORING';
+}
+
 class LearningProjectSubmissionsQuery {
   const LearningProjectSubmissionsQuery({
     this.page = 1,

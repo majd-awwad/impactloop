@@ -38,7 +38,8 @@ class MaterialReserveEligibility {
     required bool showReservationStatusCta,
     required LearnerReservation? learnerReservation,
   }) {
-    final isAvailable = material.availableQuantity > 0 &&
+    final isAvailable =
+        material.availableQuantity > 0 &&
         material.status != 'REUSED' &&
         material.status != 'UNAVAILABLE';
     final hasFulfillmentOption =
@@ -52,11 +53,17 @@ class MaterialReserveEligibility {
     final isOwnMaterial = material.isOwnMaterial == true;
     final backendBlocksReserve =
         isAuthenticated && material.canReserve == false;
+    final blockingReservation =
+        learnerReservation?.blocksNewMaterialReservation == true
+        ? learnerReservation
+        : null;
+    final hasBlockingReservation =
+        showReservationStatusCta || blockingReservation != null;
 
-    final canTapReserve = isAvailable &&
+    final canTapReserve =
+        isAvailable &&
         hasFulfillmentOption &&
-        learnerReservation == null &&
-        !showReservationStatusCta &&
+        !hasBlockingReservation &&
         !isAuthenticatedNonLearner &&
         !isSubmitting &&
         !isOwnMaterial &&
@@ -71,13 +78,14 @@ class MaterialReserveEligibility {
             isOwnMaterial: isOwnMaterial,
             isAuthenticatedNonLearner: isAuthenticatedNonLearner,
             backendBlocksReserve: backendBlocksReserve,
-            learnerReservation: learnerReservation,
+            learnerReservation: blockingReservation,
             showReservationStatusCta: showReservationStatusCta,
             isSubmitting: isSubmitting,
           )
         : null;
 
-    final helperText = disabledReason ??
+    final helperText =
+        disabledReason ??
         (authState.status == AuthStatus.unauthenticated
             ? const LocalizedText(
                 en: 'Sign in as a learner to request this material.',
@@ -91,24 +99,18 @@ class MaterialReserveEligibility {
     final buttonLabel = isSubmitting
         ? const LocalizedText(en: 'Requesting...', ar: 'جارٍ الطلب...')
         : isOwnMaterial
-            ? const LocalizedText(en: 'Your listing', ar: 'مادتك')
-            : !isAvailable
-                ? const LocalizedText(en: 'Not available', ar: 'غير متاح')
-                : !hasFulfillmentOption
-                    ? const LocalizedText(
-                        en: 'Reservation unavailable',
-                        ar: 'الحجز غير متاح',
-                      )
-                    : isAuthenticatedLearner ||
-                            authState.status == AuthStatus.unauthenticated
-                        ? const LocalizedText(
-                            en: 'Reserve Material',
-                            ar: 'احجز المادة',
-                          )
-                        : const LocalizedText(
-                            en: 'Sign in to Reserve',
-                            ar: 'سجل الدخول للحجز',
-                          );
+        ? const LocalizedText(en: 'Your listing', ar: 'مادتك')
+        : !isAvailable
+        ? const LocalizedText(en: 'Not available', ar: 'غير متاح')
+        : !hasFulfillmentOption
+        ? const LocalizedText(
+            en: 'Reservation unavailable',
+            ar: 'الحجز غير متاح',
+          )
+        : isAuthenticatedLearner ||
+              authState.status == AuthStatus.unauthenticated
+        ? const LocalizedText(en: 'Reserve Material', ar: 'احجز المادة')
+        : const LocalizedText(en: 'Sign in to Reserve', ar: 'سجل الدخول للحجز');
 
     return MaterialReserveEligibility(
       canTapReserve: canTapReserve,
@@ -120,7 +122,7 @@ class MaterialReserveEligibility {
       isLoadingReservation: isLoadingReservation,
       buttonLabel: buttonLabel,
       showReservationStatusCta: showReservationStatusCta,
-      learnerReservation: learnerReservation,
+      learnerReservation: blockingReservation,
       isSubmitting: isSubmitting,
     );
   }
@@ -186,25 +188,25 @@ class MaterialReserveEligibility {
     if (backendBlocksReserve) {
       return switch (material.reserveBlockReason) {
         'OPEN_RESERVATION_EXISTS' => const LocalizedText(
-            en: 'You already have an open reservation for this material.',
-            ar: 'لديك بالفعل حجزاً مفتوحاً لهذه المادة.',
-          ),
+          en: 'You already have an open reservation for this material.',
+          ar: 'لديك بالفعل حجزاً مفتوحاً لهذه المادة.',
+        ),
         'UNAVAILABLE' => const LocalizedText(
-            en: 'This material is not available.',
-            ar: 'هذه المادة غير متاحة.',
-          ),
+          en: 'This material is not available.',
+          ar: 'هذه المادة غير متاحة.',
+        ),
         'OWN_MATERIAL' => const LocalizedText(
-            en: 'You cannot reserve your own material.',
-            ar: 'لا يمكنك حجز مادتك الخاصة.',
-          ),
+          en: 'You cannot reserve your own material.',
+          ar: 'لا يمكنك حجز مادتك الخاصة.',
+        ),
         'NOT_LEARNER' => const LocalizedText(
-            en: 'Become a learner to reserve materials.',
-            ar: 'كن متعلماً لحجز المواد.',
-          ),
+          en: 'Become a learner to reserve materials.',
+          ar: 'كن متعلماً لحجز المواد.',
+        ),
         _ => const LocalizedText(
-            en: 'Reservation is not available for this material.',
-            ar: 'الحجز غير متاح لهذه المادة.',
-          ),
+          en: 'Reservation is not available for this material.',
+          ar: 'الحجز غير متاح لهذه المادة.',
+        ),
       };
     }
 

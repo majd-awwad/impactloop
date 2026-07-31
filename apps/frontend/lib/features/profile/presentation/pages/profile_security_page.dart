@@ -9,7 +9,7 @@ import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_password_field.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_field.dart';
-import '../../../auth/application/auth_providers.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../widgets/profile_image_picker.dart';
 
 class ProfileSecurityPage extends ConsumerStatefulWidget {
@@ -50,7 +50,7 @@ class _ProfileSecurityPageState extends ConsumerState<ProfileSecurityPage> {
 
     try {
       await ref
-          .read(authRepositoryProvider)
+          .read(authControllerProvider.notifier)
           .changePassword(
             currentPassword: _currentPasswordController.text,
             newPassword: _newPasswordController.text,

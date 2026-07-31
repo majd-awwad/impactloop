@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/theme/app_color_tokens.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../ai/application/ai_assistant_shell_provider.dart';
+import '../../../ai/application/ai_chat_controller.dart';
+import '../../../ai/presentation/widgets/ai_assistant_shell.dart';
 import '../../application/learning_hub_providers.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_build.dart';
@@ -16,9 +22,14 @@ import '../theme/learning_ui_palette.dart';
 import '../widgets/project_build_material_linking.dart';
 
 class LearningProjectBuildPage extends ConsumerStatefulWidget {
-  const LearningProjectBuildPage({super.key, required this.projectId});
+  const LearningProjectBuildPage({
+    super.key,
+    required this.projectId,
+    this.recommendationImpressionId,
+  });
 
   final String projectId;
+  final String? recommendationImpressionId;
 
   @override
   ConsumerState<LearningProjectBuildPage> createState() =>
@@ -27,18 +38,51 @@ class LearningProjectBuildPage extends ConsumerStatefulWidget {
 
 class _LearningProjectBuildPageState
     extends ConsumerState<LearningProjectBuildPage> {
-  ProjectBuild? _buildOverride;
+  static const double _buildGuideLayoutBreakpoint = 840;
+  static const double _buildGuidePanelMinWidth = 380;
+  static const double _buildGuidePanelMaxWidth = 460;
+  static const double _buildGuidePanelMaxWidthFraction = 0.42;
+
+  static final Map<String, Future<void>> _guideOpenRequests =
+      <String, Future<void>>{};
+
   bool _isStarting = false;
+  bool _openingGuide = false;
+  bool _redirectedNarrowGuide = false;
+  String? _activeGuideConversationId;
+  Future<void>? _guideRestoreRequest;
   final Set<String> _updatingItemIds = <String>{};
+  final Set<String> _completingStepIds = <String>{};
+
+  void _refreshBuild() {
+    ref.invalidate(projectBuildProvider(widget.projectId));
+  }
+
+  @override
+  void didUpdateWidget(covariant LearningProjectBuildPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId ||
+        oldWidget.recommendationImpressionId !=
+            widget.recommendationImpressionId) {
+      _refreshBuild();
+      _isStarting = false;
+      _updatingItemIds.clear();
+      _completingStepIds.clear();
+      _activeGuideConversationId = null;
+      _guideRestoreRequest = null;
+      _redirectedNarrowGuide = false;
+      _refreshBuild();
+    }
+  }
 
   Future<void> _startBuild() async {
     setState(() => _isStarting = true);
     try {
-      final build = await ref
-          .read(learningHubRepositoryProvider)
-          .startBuild(widget.projectId);
-      setState(() => _buildOverride = build);
-      ref.invalidate(projectBuildProvider(widget.projectId));
+      await ref.read(learningHubRepositoryProvider).startBuild(
+        widget.projectId,
+        recommendationImpressionId: widget.recommendationImpressionId,
+      );
+      _refreshBuild();
     } catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
@@ -58,15 +102,16 @@ class _LearningProjectBuildPageState
   }) async {
     setState(() => _updatingItemIds.add(item.id));
     try {
-      final build = await ref
+      await ref
           .read(learningHubRepositoryProvider)
           .updateBuildItem(
             widget.projectId,
             item.id,
             status: status,
             learnerNote: updateLearnerNote ? learnerNote : item.learnerNote,
+            recommendationImpressionId: widget.recommendationImpressionId,
           );
-      setState(() => _buildOverride = build);
+      _refreshBuild();
     } catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
@@ -82,8 +127,9 @@ class _LearningProjectBuildPageState
     final controller = TextEditingController(text: item.learnerNote ?? '');
     final note = await showDialog<String?>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => AppDialogShell(
         title: const Text('Checklist note'),
+        onClose: () => Navigator.of(context).pop(),
         content: TextField(
           controller: controller,
           maxLines: 4,
@@ -93,18 +139,14 @@ class _LearningProjectBuildPageState
             hintText: 'Example: ask supplier for this size',
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
+        footer: AppDialogFooter.form(
+          primaryAction: FilledButton(
             onPressed: () {
               Navigator.of(context).pop(controller.text.trim());
             },
             child: const Text('Save note'),
           ),
-        ],
+        ),
       ),
     );
     controller.dispose();
@@ -159,18 +201,16 @@ class _LearningProjectBuildPageState
       return;
     }
 
-    setState(() => _buildOverride = build);
-    ref.invalidate(projectBuildProvider(widget.projectId));
+    _refreshBuild();
   }
 
   Future<void> _unlinkMaterial(ProjectBuildItem item) async {
     setState(() => _updatingItemIds.add(item.id));
     try {
-      final build = await ref
+      await ref
           .read(learningHubRepositoryProvider)
           .unlinkMaterial(widget.projectId, item.id);
-      setState(() => _buildOverride = build);
-      ref.invalidate(projectBuildProvider(widget.projectId));
+      _refreshBuild();
     } catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
@@ -214,6 +254,246 @@ class _LearningProjectBuildPageState
     );
   }
 
+  Future<void> _completeCurrentStep(ProjectBuild build) async {
+    final currentStep = build.stepProgress.currentStep;
+    if (currentStep == null) {
+      return;
+    }
+
+    setState(() => _completingStepIds.add(currentStep.stepId));
+    try {
+      await ref.read(learningHubRepositoryProvider).completeBuildStep(
+            widget.projectId,
+            currentStep.stepId,
+          );
+      _refreshBuild();
+    } catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _completingStepIds.remove(currentStep.stepId));
+      }
+    }
+  }
+
+  Future<void> _openBuildGuide(ProjectBuild build) {
+    if (_isBuildGuidePanelOpen(context)) {
+      return Future.value();
+    }
+
+    return _guideOpenRequests.putIfAbsent(widget.projectId, () {
+      _openingGuide = true;
+      if (mounted) {
+        setState(() {});
+      }
+
+      final request = _openBuildGuideInternal(build);
+      return request.whenComplete(() {
+        _guideOpenRequests.remove(widget.projectId);
+        if (mounted) {
+          setState(() => _openingGuide = false);
+        }
+      });
+    });
+  }
+
+  Future<void> _openBuildGuideInternal(ProjectBuild build) async {
+    try {
+      final result = await ref
+          .read(learningHubRepositoryProvider)
+          .getOrCreateBuildGuideConversation(widget.projectId);
+      if (!mounted) {
+        return;
+      }
+
+      final conversationId = result.conversationId.trim();
+      if (conversationId.isEmpty) {
+        showErrorSnackBar(
+          context,
+          const ApiException(
+            message: 'Unable to open the build assistant.',
+            code: 'BUILD_GUIDE_CONVERSATION_MISSING',
+          ),
+        );
+        return;
+      }
+
+      _refreshBuild();
+
+      if (_isWideBuildLayout(context)) {
+        _activeGuideConversationId = conversationId;
+        ref.read(aiAssistantShellProvider.notifier).open(
+              conversationId: conversationId,
+              buildGuideContext: result.buildContext,
+            );
+        _setGuideQueryParams(conversationId);
+        return;
+      }
+
+      context.push(
+        '/learning/${widget.projectId}/build/guide?conversationId=${Uri.encodeComponent(conversationId)}',
+        extra: result.buildContext,
+      );
+    } catch (error) {
+      if (mounted) {
+        showErrorSnackBar(context, error);
+      }
+    }
+  }
+
+  bool _isWideBuildLayout(BuildContext context) {
+    return MediaQuery.sizeOf(context).width >= _buildGuideLayoutBreakpoint;
+  }
+
+  bool _isBuildGuidePanelOpen(BuildContext context) {
+    if (!_isWideBuildLayout(context)) {
+      return false;
+    }
+
+    return _guideQueryIsOpen(context);
+  }
+
+  bool _guideQueryIsOpen(BuildContext context) {
+    final params = GoRouterState.of(context).uri.queryParameters;
+    return params['guide'] == '1' &&
+        (params['conversationId']?.trim().isNotEmpty ?? false);
+  }
+
+  void _setGuideQueryParams(String conversationId) {
+    final uri = GoRouterState.of(context).uri;
+    context.go(
+      uri
+          .replace(
+            queryParameters: {
+              ...uri.queryParameters,
+              'guide': '1',
+              'conversationId': conversationId,
+            },
+          )
+          .toString(),
+    );
+  }
+
+  void _closeGuidePanel({String? errorMessage}) {
+    _activeGuideConversationId = null;
+    final uri = GoRouterState.of(context).uri;
+    final params = Map<String, String>.from(uri.queryParameters)
+      ..remove('guide')
+      ..remove('conversationId');
+    final nextUri = uri.replace(queryParameters: params);
+    if (nextUri.toString() != uri.toString()) {
+      context.go(nextUri.toString());
+    }
+
+    if (errorMessage != null && mounted) {
+      showErrorSnackBar(
+        context,
+        ApiException(message: errorMessage, code: 'BUILD_GUIDE_INVALID'),
+      );
+    }
+  }
+
+  double _guidePanelWidth(BuildContext context) {
+    final totalWidth = MediaQuery.sizeOf(context).width;
+    final maxByFraction = totalWidth * _buildGuidePanelMaxWidthFraction;
+    return maxByFraction.clamp(_buildGuidePanelMinWidth, _buildGuidePanelMaxWidth);
+  }
+
+  void _maybeRedirectNarrowGuideRoute() {
+    if (_redirectedNarrowGuide || _isWideBuildLayout(context)) {
+      return;
+    }
+
+    if (!_guideQueryIsOpen(context)) {
+      return;
+    }
+
+    final conversationId =
+        GoRouterState.of(context).uri.queryParameters['conversationId']?.trim() ??
+        '';
+    if (conversationId.isEmpty) {
+      return;
+    }
+
+    _redirectedNarrowGuide = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      context.replace(
+        '/learning/${widget.projectId}/build/guide?conversationId=${Uri.encodeComponent(conversationId)}',
+      );
+    });
+  }
+
+  Future<void> _ensureGuideRestored(ProjectBuild build) async {
+    if (!_isWideBuildLayout(context) || !_guideQueryIsOpen(context)) {
+      return;
+    }
+
+    final conversationId =
+        GoRouterState.of(context).uri.queryParameters['conversationId']!.trim();
+
+    if (_activeGuideConversationId == conversationId &&
+        ref.read(aiAssistantControllerProvider).conversationId ==
+            conversationId) {
+      return;
+    }
+
+    _guideRestoreRequest ??= _restoreGuideFromUrl(build, conversationId);
+    await _guideRestoreRequest;
+    _guideRestoreRequest = null;
+  }
+
+  Future<void> _restoreGuideFromUrl(
+    ProjectBuild build,
+    String conversationId,
+  ) async {
+    if (build.guideConversationId != null &&
+        build.guideConversationId != conversationId) {
+      _closeGuidePanel(
+        errorMessage: 'Unable to open the build assistant.',
+      );
+      return;
+    }
+
+    try {
+      final result = await ref
+          .read(learningHubRepositoryProvider)
+          .getOrCreateBuildGuideConversation(widget.projectId);
+      if (!mounted) {
+        return;
+      }
+
+      if (result.conversationId != conversationId) {
+        _closeGuidePanel(
+          errorMessage: 'Unable to open the build assistant.',
+        );
+        return;
+      }
+
+      _activeGuideConversationId = conversationId;
+      ref.read(aiAssistantShellProvider.notifier).open(
+            conversationId: conversationId,
+            buildGuideContext: result.buildContext,
+          );
+    } catch (error) {
+      if (mounted) {
+        _closeGuidePanel();
+        showErrorSnackBar(context, error);
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _maybeRedirectNarrowGuideRoute();
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
@@ -228,20 +508,7 @@ class _LearningProjectBuildPageState
             const EntryNavBar(homeRoute: '/home'),
             Expanded(
               child: buildAsync.when(
-                loading: () => _buildOverride == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : _BuildContent(
-                        projectId: widget.projectId,
-                        buildRecord: _buildOverride!,
-                        updatingItemIds: _updatingItemIds,
-                        onStatusChanged: _updateItem,
-                        onEditNote: _editNote,
-                        onFindMaterials: _findMaterials,
-                        onShowMaterialCandidates: _showMaterialCandidates,
-                        onUnlinkMaterial: _unlinkMaterial,
-                        onViewLinkedMaterial: _viewLinkedMaterial,
-                        onReserveLinkedMaterial: _reserveLinkedMaterial,
-                      ),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stackTrace) => _BuildStatePanel(
                   icon: Icons.cloud_off_outlined,
                   title: 'Unable to load checklist',
@@ -251,8 +518,7 @@ class _LearningProjectBuildPageState
                   onAction: () =>
                       ref.invalidate(projectBuildProvider(widget.projectId)),
                 ),
-                data: (serverBuild) {
-                  final build = _buildOverride ?? serverBuild;
+                data: (build) {
                   if (build == null) {
                     return _BuildStatePanel(
                       icon: Icons.playlist_add_check_rounded,
@@ -264,17 +530,9 @@ class _LearningProjectBuildPageState
                     );
                   }
 
-                  return _BuildContent(
-                    projectId: widget.projectId,
-                    buildRecord: build,
-                    updatingItemIds: _updatingItemIds,
-                    onStatusChanged: _updateItem,
-                    onEditNote: _editNote,
-                    onFindMaterials: _findMaterials,
-                    onShowMaterialCandidates: _showMaterialCandidates,
-                    onUnlinkMaterial: _unlinkMaterial,
-                    onViewLinkedMaterial: _viewLinkedMaterial,
-                    onReserveLinkedMaterial: _reserveLinkedMaterial,
+                  return _buildWorkspace(
+                    context: context,
+                    build: build,
                   );
                 },
               ),
@@ -284,6 +542,53 @@ class _LearningProjectBuildPageState
       ),
     );
   }
+
+  Widget _buildWorkspace({
+    required BuildContext context,
+    required ProjectBuild build,
+  }) {
+    final showGuidePanel = _isBuildGuidePanelOpen(context);
+
+    if (showGuidePanel) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _ensureGuideRestored(build);
+        }
+      });
+    }
+
+    final buildContent = _BuildContent(
+      projectId: widget.projectId,
+      buildRecord: build,
+      updatingItemIds: _updatingItemIds,
+      completingStepIds: _completingStepIds,
+      openingGuide: _openingGuide,
+      onStatusChanged: _updateItem,
+      onEditNote: _editNote,
+      onFindMaterials: _findMaterials,
+      onShowMaterialCandidates: _showMaterialCandidates,
+      onUnlinkMaterial: _unlinkMaterial,
+      onViewLinkedMaterial: _viewLinkedMaterial,
+      onReserveLinkedMaterial: _reserveLinkedMaterial,
+      onCompleteCurrentStep: () => _completeCurrentStep(build),
+      onOpenBuildGuide: () => _openBuildGuide(build),
+    );
+
+    if (!showGuidePanel) {
+      return buildContent;
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: buildContent),
+        AiBuildGuideSidePanel(
+          width: _guidePanelWidth(context),
+          onClose: _closeGuidePanel,
+        ),
+      ],
+    );
+  }
 }
 
 class _BuildContent extends StatelessWidget {
@@ -291,6 +596,8 @@ class _BuildContent extends StatelessWidget {
     required this.projectId,
     required this.buildRecord,
     required this.updatingItemIds,
+    required this.completingStepIds,
+    required this.openingGuide,
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
@@ -298,11 +605,15 @@ class _BuildContent extends StatelessWidget {
     required this.onUnlinkMaterial,
     required this.onViewLinkedMaterial,
     required this.onReserveLinkedMaterial,
+    required this.onCompleteCurrentStep,
+    required this.onOpenBuildGuide,
   });
 
   final String projectId;
   final ProjectBuild buildRecord;
   final Set<String> updatingItemIds;
+  final Set<String> completingStepIds;
+  final bool openingGuide;
   final Future<void> Function(
     ProjectBuildItem item, {
     required ProjectBuildItemStatus status,
@@ -315,11 +626,11 @@ class _BuildContent extends StatelessWidget {
   final ValueChanged<ProjectBuildItem> onUnlinkMaterial;
   final ValueChanged<ProjectBuildItem> onViewLinkedMaterial;
   final ValueChanged<ProjectBuildItem> onReserveLinkedMaterial;
+  final VoidCallback onCompleteCurrentStep;
+  final VoidCallback onOpenBuildGuide;
 
   @override
   Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
-
     return SingleChildScrollView(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       child: Center(
@@ -328,35 +639,35 @@ class _BuildContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _BuildHeader(buildRecord: buildRecord),
+              _BuildHeader(
+                buildRecord: buildRecord,
+                openingGuide: openingGuide,
+                onOpenBuildGuide: onOpenBuildGuide,
+              ),
               const SizedBox(height: AppSpacing.lg),
-              if (buildRecord.items.isEmpty)
-                _EmptyChecklistCard(palette: palette)
-              else
-                ...List.generate(buildRecord.items.length, (index) {
-                  final item = buildRecord.items[index];
-                  return Padding(
-                    padding: EdgeInsetsDirectional.only(
-                      bottom: index == buildRecord.items.length - 1
-                          ? 0
-                          : AppSpacing.md,
-                    ),
-                    child: _BuildItemCard(
-                      index: index,
-                      item: item,
-                      isUpdating: updatingItemIds.contains(item.id),
-                      onStatusChanged: (status) =>
-                          onStatusChanged(item, status: status),
-                      onEditNote: () => onEditNote(item),
-                      onFindMaterials: () => onFindMaterials(item),
-                      onShowMaterialCandidates: () =>
-                          onShowMaterialCandidates(item),
-                      onUnlinkMaterial: () => onUnlinkMaterial(item),
-                      onViewLinkedMaterial: () => onViewLinkedMaterial(item),
-                      onReserveLinkedMaterial: () => onReserveLinkedMaterial(item),
-                    ),
-                  );
-                }),
+              _MaterialsSection(
+                buildRecord: buildRecord,
+                updatingItemIds: updatingItemIds,
+                onStatusChanged: onStatusChanged,
+                onEditNote: onEditNote,
+                onFindMaterials: onFindMaterials,
+                onShowMaterialCandidates: onShowMaterialCandidates,
+                onUnlinkMaterial: onUnlinkMaterial,
+                onViewLinkedMaterial: onViewLinkedMaterial,
+                onReserveLinkedMaterial: onReserveLinkedMaterial,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              _BuildStepsSection(
+                buildRecord: buildRecord,
+                completingStepIds: completingStepIds,
+                onCompleteCurrentStep: onCompleteCurrentStep,
+              ),
+              if (buildRecord.status == ProjectBuildStatus.completed ||
+                  buildRecord.stepProgress.nextAction ==
+                      ProjectBuildNextAction.buildCompleted) ...[
+                const SizedBox(height: AppSpacing.lg),
+                _BuildCompletionNotice(buildRecord: buildRecord),
+              ],
             ],
           ),
         ),
@@ -366,9 +677,15 @@ class _BuildContent extends StatelessWidget {
 }
 
 class _BuildHeader extends StatelessWidget {
-  const _BuildHeader({required this.buildRecord});
+  const _BuildHeader({
+    required this.buildRecord,
+    required this.openingGuide,
+    required this.onOpenBuildGuide,
+  });
 
   final ProjectBuild buildRecord;
+  final bool openingGuide;
+  final VoidCallback onOpenBuildGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -392,21 +709,56 @@ class _BuildHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            buildRecord.project.title,
-            style: AppTextStyles.display(
-              context,
-            ).copyWith(color: palette.textPrimary),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stackGuideAction = constraints.maxWidth < 520;
+              final titleBlock = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    buildRecord.project.title,
+                    style: AppTextStyles.display(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
+                  ),
+                  if (buildRecord.project.shortDescription.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      buildRecord.project.shortDescription,
+                      style: AppTextStyles.body(
+                        context,
+                      ).copyWith(color: palette.textSecondary, height: 1.45),
+                    ),
+                  ],
+                ],
+              );
+              final guideAction = _BuildGuideCompactAction(
+                openingGuide: openingGuide,
+                hasExistingConversation: buildRecord.guideConversationId != null,
+                onOpenBuildGuide: onOpenBuildGuide,
+              );
+
+              if (stackGuideAction) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleBlock,
+                    const SizedBox(height: AppSpacing.sm),
+                    guideAction,
+                  ],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: titleBlock),
+                  const SizedBox(width: AppSpacing.md),
+                  guideAction,
+                ],
+              );
+            },
           ),
-          if (buildRecord.project.shortDescription.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              buildRecord.project.shortDescription,
-              style: AppTextStyles.body(
-                context,
-              ).copyWith(color: palette.textSecondary, height: 1.45),
-            ),
-          ],
           const SizedBox(height: AppSpacing.lg),
           ClipRRect(
             borderRadius: AppRadius.pillAll,
@@ -425,6 +777,357 @@ class _BuildHeader extends StatelessWidget {
             ).copyWith(color: palette.textSecondary),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BuildGuideCompactAction extends StatelessWidget {
+  const _BuildGuideCompactAction({
+    required this.openingGuide,
+    required this.hasExistingConversation,
+    required this.onOpenBuildGuide,
+  });
+
+  final bool openingGuide;
+  final bool hasExistingConversation;
+  final VoidCallback onOpenBuildGuide;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = hasExistingConversation ? 'Continue with AI' : 'Ask AI';
+
+    return OutlinedButton.icon(
+      onPressed: openingGuide ? null : onOpenBuildGuide,
+      icon: openingGuide
+          ? const SizedBox.square(
+              dimension: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.smart_toy_outlined, size: 18),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+      ),
+    );
+  }
+}
+
+class _MaterialsSection extends StatelessWidget {
+  const _MaterialsSection({
+    required this.buildRecord,
+    required this.updatingItemIds,
+    required this.onStatusChanged,
+    required this.onEditNote,
+    required this.onFindMaterials,
+    required this.onShowMaterialCandidates,
+    required this.onUnlinkMaterial,
+    required this.onViewLinkedMaterial,
+    required this.onReserveLinkedMaterial,
+  });
+
+  final ProjectBuild buildRecord;
+  final Set<String> updatingItemIds;
+  final Future<void> Function(
+    ProjectBuildItem item, {
+    required ProjectBuildItemStatus status,
+    String? learnerNote,
+  })
+  onStatusChanged;
+  final ValueChanged<ProjectBuildItem> onEditNote;
+  final ValueChanged<ProjectBuildItem> onFindMaterials;
+  final ValueChanged<ProjectBuildItem> onShowMaterialCandidates;
+  final ValueChanged<ProjectBuildItem> onUnlinkMaterial;
+  final ValueChanged<ProjectBuildItem> onViewLinkedMaterial;
+  final ValueChanged<ProjectBuildItem> onReserveLinkedMaterial;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final total = buildRecord.progress.total;
+    final ready = buildRecord.progress.ready;
+    final allReady = total > 0 && ready >= total;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(
+          color: allReady
+              ? palette.lime.withValues(alpha: 0.35)
+              : palette.borderSubtle,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Materials',
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            total == 0
+                ? 'No required components listed yet.'
+                : '$ready of $total ready',
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(
+              color: allReady ? palette.lime : palette.textSecondary,
+            ),
+          ),
+          if (allReady) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'All required materials are ready. You can review them while working through the steps.',
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary, height: 1.4),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          if (buildRecord.items.isEmpty)
+            _EmptyChecklistCard(palette: palette, embedded: true)
+          else
+            ...List.generate(buildRecord.items.length, (index) {
+              final item = buildRecord.items[index];
+              return Padding(
+                padding: EdgeInsetsDirectional.only(
+                  bottom: index == buildRecord.items.length - 1
+                      ? 0
+                      : AppSpacing.md,
+                ),
+                child: _BuildItemCard(
+                  index: index,
+                  item: item,
+                  isUpdating: updatingItemIds.contains(item.id),
+                  onStatusChanged: (status) =>
+                      onStatusChanged(item, status: status),
+                  onEditNote: () => onEditNote(item),
+                  onFindMaterials: () => onFindMaterials(item),
+                  onShowMaterialCandidates: () =>
+                      onShowMaterialCandidates(item),
+                  onUnlinkMaterial: () => onUnlinkMaterial(item),
+                  onViewLinkedMaterial: () => onViewLinkedMaterial(item),
+                  onReserveLinkedMaterial: () =>
+                      onReserveLinkedMaterial(item),
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _BuildCompletionNotice extends StatelessWidget {
+  const _BuildCompletionNotice({required this.buildRecord});
+
+  final ProjectBuild buildRecord;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final style = AppStatusStyle.of(context, AppStatusTone.success);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: style.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.check_circle_outline, color: style.foreground, size: 22),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Build completed',
+                  style: AppTextStyles.subtitle(
+                    context,
+                  ).copyWith(color: palette.textPrimary),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'You finished all build steps for ${buildRecord.project.title}.',
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BuildStepsSection extends StatelessWidget {
+  const _BuildStepsSection({
+    required this.buildRecord,
+    required this.completingStepIds,
+    required this.onCompleteCurrentStep,
+  });
+
+  final ProjectBuild buildRecord;
+  final Set<String> completingStepIds;
+  final VoidCallback onCompleteCurrentStep;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final stepProgress = buildRecord.stepProgress;
+    final materialsReady =
+        buildRecord.stepProgress.nextAction !=
+        ProjectBuildNextAction.prepareMaterials;
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.xlAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Build steps',
+            style: AppTextStyles.title(
+              context,
+            ).copyWith(color: palette.textPrimary),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            materialsReady
+                ? '${stepProgress.completed}/${stepProgress.total} completed · ${stepProgress.percent}%'
+                : 'Prepare all required materials before starting the build steps.',
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
+          ),
+          if (stepProgress.steps.isEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'This project does not include build steps yet.',
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
+            ),
+          ] else ...[
+            const SizedBox(height: AppSpacing.lg),
+            ...stepProgress.steps.map((step) {
+              final isCompleting = completingStepIds.contains(step.stepId);
+              final canComplete =
+                  step.state == ProjectBuildStepState.current && !isCompleting;
+
+              return Padding(
+                padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: palette.cardSurfaceAlt,
+                    borderRadius: AppRadius.lgAll,
+                    border: Border.all(
+                      color: switch (step.state) {
+                        ProjectBuildStepState.current => palette.lime,
+                        ProjectBuildStepState.completed => palette.borderSubtle,
+                        ProjectBuildStepState.locked => palette.borderSubtle,
+                      },
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${step.stepNumber}. ${step.title}',
+                              style: AppTextStyles.subtitle(context).copyWith(
+                                color: palette.textPrimary,
+                              ),
+                            ),
+                          ),
+                          _StepStateChip(state: step.state),
+                        ],
+                      ),
+                      if (step.description.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          step.description,
+                          style: AppTextStyles.body(context).copyWith(
+                            color: palette.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                      if (canComplete) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        FilledButton(
+                          onPressed: onCompleteCurrentStep,
+                          child: const Text('Complete step'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StepStateChip extends StatelessWidget {
+  const _StepStateChip({required this.state});
+
+  final ProjectBuildStepState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (state) {
+      ProjectBuildStepState.locked => 'Locked',
+      ProjectBuildStepState.current => 'Current',
+      ProjectBuildStepState.completed => 'Completed',
+    };
+    final tone = switch (state) {
+      ProjectBuildStepState.locked => AppStatusTone.neutral,
+      ProjectBuildStepState.current => AppStatusTone.primary,
+      ProjectBuildStepState.completed => AppStatusTone.success,
+    };
+    final style = AppStatusStyle.of(context, tone);
+
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: style.border),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.label(context).copyWith(color: style.foreground),
       ),
     );
   }
@@ -459,13 +1162,14 @@ class _BuildItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
     final statusMeta = _BuildStatusMeta.fromStatus(item.status);
+    final statusStyle = AppStatusStyle.of(context, statusMeta.tone);
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: statusMeta.borderColor(palette)),
+        border: Border.all(color: statusStyle.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,12 +1179,12 @@ class _BuildItemCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: statusMeta.backgroundColor(palette),
+                backgroundColor: statusStyle.background,
                 child: Text(
                   '${index + 1}',
                   style: AppTextStyles.label(
                     context,
-                  ).copyWith(color: statusMeta.foregroundColor(palette)),
+                  ).copyWith(color: statusStyle.foreground),
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -539,6 +1243,7 @@ class _BuildItemCard extends StatelessWidget {
                 .map((status) {
                   final selected = status == item.status;
                   final meta = _BuildStatusMeta.fromStatus(status);
+                  final style = AppStatusStyle.of(context, meta.tone);
 
                   return ChoiceChip(
                     selected: selected,
@@ -547,22 +1252,20 @@ class _BuildItemCard extends StatelessWidget {
                       meta.icon,
                       size: 18,
                       color: selected
-                          ? meta.foregroundColor(palette)
+                          ? style.foreground
                           : palette.textSecondary,
                     ),
                     onSelected: isUpdating
                         ? null
                         : (_) => onStatusChanged(status),
-                    selectedColor: meta.backgroundColor(palette),
+                    selectedColor: style.background,
                     backgroundColor: palette.mutedChip,
                     side: BorderSide(
-                      color: selected
-                          ? meta.borderColor(palette)
-                          : palette.borderSubtle,
+                      color: selected ? style.border : palette.borderSubtle,
                     ),
                     labelStyle: AppTextStyles.label(context).copyWith(
                       color: selected
-                          ? meta.foregroundColor(palette)
+                          ? style.foreground
                           : palette.textSecondary,
                     ),
                   );
@@ -651,8 +1354,8 @@ class _BuildStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = LearningUiPalette.of(context);
     final meta = _BuildStatusMeta.fromStatus(status);
+    final style = AppStatusStyle.of(context, meta.tone);
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
@@ -660,20 +1363,20 @@ class _BuildStatusChip extends StatelessWidget {
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: meta.backgroundColor(palette),
+        color: style.background,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: meta.borderColor(palette)),
+        border: Border.all(color: style.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(meta.icon, size: 16, color: meta.foregroundColor(palette)),
+          Icon(meta.icon, size: 16, color: style.foreground),
           const SizedBox(width: AppSpacing.xs),
           Text(
             meta.label,
             style: AppTextStyles.label(
               context,
-            ).copyWith(color: meta.foregroundColor(palette)),
+            ).copyWith(color: style.foreground),
           ),
         ],
       ),
@@ -685,84 +1388,63 @@ class _BuildStatusMeta {
   const _BuildStatusMeta({
     required this.label,
     required this.icon,
-    required this.colorRole,
+    required this.tone,
   });
 
   final String label;
   final IconData icon;
-  final _BuildStatusColorRole colorRole;
-
-  Color backgroundColor(LearningUiPalette palette) {
-    return switch (colorRole) {
-      _BuildStatusColorRole.ready => palette.lime.withValues(alpha: 0.18),
-      _BuildStatusColorRole.warning => Colors.amber.withValues(alpha: 0.18),
-      _BuildStatusColorRole.info => Colors.blue.withValues(alpha: 0.12),
-      _BuildStatusColorRole.neutral => palette.mutedChip,
-    };
-  }
-
-  Color borderColor(LearningUiPalette palette) {
-    return switch (colorRole) {
-      _BuildStatusColorRole.ready => AppColorTokens.forest.withValues(
-        alpha: 0.45,
-      ),
-      _BuildStatusColorRole.warning => Colors.amber.shade700.withValues(
-        alpha: 0.55,
-      ),
-      _BuildStatusColorRole.info => AppColorTokens.blue.withValues(alpha: 0.45),
-      _BuildStatusColorRole.neutral => palette.borderSubtle,
-    };
-  }
-
-  Color foregroundColor(LearningUiPalette palette) {
-    return switch (colorRole) {
-      _BuildStatusColorRole.ready => AppColorTokens.forest,
-      _BuildStatusColorRole.warning => Colors.amber.shade900,
-      _BuildStatusColorRole.info => AppColorTokens.blue,
-      _BuildStatusColorRole.neutral => palette.textPrimary,
-    };
-  }
+  final AppStatusTone tone;
 
   static _BuildStatusMeta fromStatus(ProjectBuildItemStatus status) {
     return switch (status) {
       ProjectBuildItemStatus.available => const _BuildStatusMeta(
         label: 'Available',
         icon: Icons.inventory_2_outlined,
-        colorRole: _BuildStatusColorRole.ready,
+        tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.missing => const _BuildStatusMeta(
         label: 'Missing',
         icon: Icons.search_off_rounded,
-        colorRole: _BuildStatusColorRole.warning,
+        tone: AppStatusTone.warning,
       ),
       ProjectBuildItemStatus.alternative => const _BuildStatusMeta(
         label: 'Alternative',
         icon: Icons.swap_horiz_rounded,
-        colorRole: _BuildStatusColorRole.ready,
+        tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.alreadyOwned => const _BuildStatusMeta(
         label: 'Already owned',
         icon: Icons.home_repair_service_outlined,
-        colorRole: _BuildStatusColorRole.ready,
+        tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.reserved => const _BuildStatusMeta(
         label: 'Reserved',
         icon: Icons.lock_clock_rounded,
-        colorRole: _BuildStatusColorRole.info,
+        tone: AppStatusTone.info,
       ),
     };
   }
 }
 
-enum _BuildStatusColorRole { ready, warning, info, neutral }
-
 class _EmptyChecklistCard extends StatelessWidget {
-  const _EmptyChecklistCard({required this.palette});
+  const _EmptyChecklistCard({required this.palette, this.embedded = false});
 
   final LearningUiPalette palette;
+  final bool embedded;
 
   @override
   Widget build(BuildContext context) {
+    final message = Text(
+      'This project does not list required components yet.',
+      style: AppTextStyles.body(
+        context,
+      ).copyWith(color: palette.textSecondary),
+    );
+
+    if (embedded) {
+      return message;
+    }
+
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -770,12 +1452,7 @@ class _EmptyChecklistCard extends StatelessWidget {
         borderRadius: AppRadius.lgAll,
         border: Border.all(color: palette.borderSubtle),
       ),
-      child: Text(
-        'This project does not list required components yet.',
-        style: AppTextStyles.body(
-          context,
-        ).copyWith(color: palette.textSecondary),
-      ),
+      child: message,
     );
   }
 }

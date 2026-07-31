@@ -126,6 +126,7 @@ export const ensureSelfPickupCodeStored = async (
   await tx.reservation.update({
     where: { id: reservation.id },
     data,
+    select: { id: true },
   });
 
   return { plainCode, hash: data.selfPickupCodeHash };
@@ -167,6 +168,7 @@ export const ensureDeliveryHandoverCodesStored = async (
     await tx.delivery.update({
       where: { id: delivery.id },
       data,
+      select: { id: true },
     });
   }
 

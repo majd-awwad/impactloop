@@ -1,8 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 
 import '../../../core/errors/api_exception.dart';
-import '../../materials/data/material_listing_repository.dart';
-import '../../materials/data/models/material_draft_image.dart';
+import '../../profile/data/models/uploaded_profile_image.dart';
+import '../../profile/data/profile_repository.dart';
 import 'models/update_supplier_profile_images_request.dart';
 import 'supplier_profile_repository.dart';
 
@@ -14,11 +14,11 @@ enum SupplierProfileImageKind { avatar, cover }
 class SupplierProfileImageHelper {
   const SupplierProfileImageHelper(
     this._profileRepository,
-    this._materialListingRepository,
+    this._accountProfileRepository,
   );
 
   final SupplierProfileRepository _profileRepository;
-  final MaterialListingRepository _materialListingRepository;
+  final ProfileRepository _accountProfileRepository;
 
   Future<void> pickUploadAndSave(SupplierProfileImageKind kind) async {
     final picked = await _pickSingleImage();
@@ -26,25 +26,25 @@ class SupplierProfileImageHelper {
       return;
     }
 
-    final uploaded = await _materialListingRepository.uploadMaterialImages(
-      [picked],
-    );
-    if (uploaded.isEmpty) {
+    final uploaded = await _accountProfileRepository.uploadProfileImage(picked);
+    if (uploaded.url.trim().isEmpty) {
       throw const ApiException(message: 'Image upload failed');
     }
 
-    final url = uploaded.first.url;
+    final url = uploaded.url;
     final request = switch (kind) {
-      SupplierProfileImageKind.avatar =>
-        UpdateSupplierProfileImagesRequest(avatarImageUrl: url),
-      SupplierProfileImageKind.cover =>
-        UpdateSupplierProfileImagesRequest(coverImageUrl: url),
+      SupplierProfileImageKind.avatar => UpdateSupplierProfileImagesRequest(
+        avatarImageUrl: url,
+      ),
+      SupplierProfileImageKind.cover => UpdateSupplierProfileImagesRequest(
+        coverImageUrl: url,
+      ),
     };
 
     await _profileRepository.updateProfileImages(request);
   }
 
-  Future<MaterialDraftImage?> _pickSingleImage() async {
+  Future<PendingProfileImage?> _pickSingleImage() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: _allowedExtensions,
@@ -66,7 +66,7 @@ class SupplierProfileImageHelper {
     }
 
     final fileName = file.name.trim().isNotEmpty ? file.name : 'profile.jpg';
-    return MaterialDraftImage.pending(
+    return PendingProfileImage(
       bytes: bytes,
       fileName: fileName,
       mimeType: _mimeFromFileName(fileName),

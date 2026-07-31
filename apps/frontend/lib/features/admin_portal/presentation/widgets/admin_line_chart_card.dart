@@ -72,14 +72,14 @@ class AdminLineChartCard extends StatelessWidget {
         show: true,
         drawVerticalLine: false,
         horizontalInterval: top <= 4 ? 1 : (top / 4).ceilToDouble(),
-        getDrawingHorizontalLine: (value) => FlLine(
-          color: palette.chartGrid,
-          strokeWidth: 1,
-        ),
+        getDrawingHorizontalLine: (value) =>
+            FlLine(color: palette.chartGrid, strokeWidth: 1),
       ),
       titlesData: FlTitlesData(
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,

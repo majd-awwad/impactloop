@@ -1,4 +1,4 @@
-import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 import {
   ADMIN_SUPPLIER_PICKUP_RECONFIRM_REASONS,
   NO_DRIVER_CANCEL_REASON,
@@ -10,31 +10,57 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
-import { reportInclude, type AdminNoShowReportRecord } from './admin-no-show-reports.repository.js';
-
-const pickupRecoveryReportInclude = {
-  ...reportInclude,
-  delivery: {
-    select: {
-      id: true,
-      status: true,
-      assignedDriverProfileId: true,
-      reservationId: true,
-    },
-  },
-} satisfies Prisma.NoShowReportInclude;
-
-type PickupRecoveryReportRecord = Prisma.NoShowReportGetPayload<{
-  include: typeof pickupRecoveryReportInclude;
-}>;
+import { findNoShowReportByIdForAdmin } from './admin-no-show-reports.repository.js';
+import {
+  classifyAdminReportContract,
+  type AdminReportAction,
+} from './admin-no-show-reports.classifier.js';
 
 export type PickupRecoveryKind = 'NO_DRIVER' | 'STALE_PICKUP';
 
-const RECOVERY_DELIVERY_STATUSES = [
-  'AWAITING_RESOLUTION',
-  'DRIVER_NO_SHOW',
-  'FAILED_PICKUP',
-] as const satisfies readonly DeliveryStatus[];
+const pickupRecoveryReportSelect = {
+  id: true,
+  reasonCode: true,
+  targetRole: true,
+  targetUserId: true,
+  deliveryId: true,
+  status: true,
+  reservationId: true,
+} satisfies Prisma.NoShowReportSelect;
+
+const pickupRecoveryReservationSelect = {
+  id: true,
+  status: true,
+  fulfillmentMethod: true,
+  pendingRescheduleRequestedBy: true,
+  pendingRescheduleReason: true,
+  materialId: true,
+  ownerId: true,
+} satisfies Prisma.ReservationSelect;
+
+const pickupRecoveryDeliverySelect = {
+  id: true,
+  status: true,
+  assignedDriverProfileId: true,
+  deliveryGroupId: true,
+  reservationId: true,
+} satisfies Prisma.DeliverySelect;
+
+const reportMutationSelect = {
+  id: true,
+} satisfies Prisma.NoShowReportSelect;
+
+type PickupRecoveryContext = {
+  report: Prisma.NoShowReportGetPayload<{
+    select: typeof pickupRecoveryReportSelect;
+  }>;
+  reservation: Prisma.ReservationGetPayload<{
+    select: typeof pickupRecoveryReservationSelect;
+  }>;
+  delivery: Prisma.DeliveryGetPayload<{
+    select: typeof pickupRecoveryDeliverySelect;
+  }> | null;
+};
 
 export const isNoDriverAvailableSystemReport = (report: {
   reasonCode: string;
@@ -67,66 +93,85 @@ const reconfirmReasonForKind = (kind: PickupRecoveryKind) =>
 const cancelReasonForKind = (kind: PickupRecoveryKind) =>
   kind === 'NO_DRIVER' ? NO_DRIVER_CANCEL_REASON : STALE_PICKUP_CANCEL_REASON;
 
-const loadPickupRecoveryReport = async (
+const loadPickupRecoveryContext = async (
   tx: Prisma.TransactionClient,
   reportId: string,
-) =>
-  tx.noShowReport.findUnique({
+): Promise<PickupRecoveryContext | null> => {
+  const report = await tx.noShowReport.findUnique({
     where: { id: reportId },
-    include: pickupRecoveryReportInclude,
+    select: pickupRecoveryReportSelect,
   });
 
-const validatePickupRecoveryContext = (report: PickupRecoveryReportRecord | null) => {
   if (!report) {
+    return null;
+  }
+
+  const reservation = await tx.reservation.findUnique({
+    where: { id: report.reservationId },
+    select: pickupRecoveryReservationSelect,
+  });
+
+  if (!reservation) {
+    return null;
+  }
+
+  const delivery = report.deliveryId
+    ? await tx.delivery.findUnique({
+        where: { id: report.deliveryId },
+        select: pickupRecoveryDeliverySelect,
+      })
+    : null;
+
+  return { report, reservation, delivery };
+};
+
+const validatePickupRecoveryContext = (
+  context: PickupRecoveryContext | null,
+  action: AdminReportAction,
+) => {
+  if (!context) {
     return { outcome: 'NOT_FOUND' as const };
   }
 
-  if (!isDeliveryPickupRecoveryReport(report)) {
-    return { outcome: 'NOT_ELIGIBLE' as const, report };
+  const { report, reservation, delivery } = context;
+
+  const contract = classifyAdminReportContract({
+    report,
+    reservation,
+    delivery,
+    isGroupedDelivery: delivery?.deliveryGroupId != null,
+    isGroupRecoverySupported: false,
+  });
+
+  if (!contract.availableActions.includes(action)) {
+    return { outcome: 'ACTION_NOT_AVAILABLE' as const };
   }
 
-  if (report.status !== 'PENDING_REVIEW' && report.status !== 'VERIFIED') {
-    return { outcome: 'REPORT_NOT_PENDING' as const, report };
+  if (!delivery) {
+    return { outcome: 'ACTION_NOT_AVAILABLE' as const };
   }
 
-  if (report.reservation.status !== 'AWAITING_RESOLUTION') {
-    return { outcome: 'INVALID_RESERVATION_STATUS' as const, report };
-  }
-
-  if (report.reservation.fulfillmentMethod !== 'DELIVERY') {
-    return { outcome: 'NOT_DELIVERY' as const, report };
-  }
-
-  const delivery = report.delivery;
-
-  if (
-    !delivery ||
-    !(RECOVERY_DELIVERY_STATUSES as readonly DeliveryStatus[]).includes(
-      delivery.status,
-    )
-  ) {
-    return { outcome: 'INVALID_DELIVERY_STATUS' as const, report };
-  }
-
-  if (
-    isNoDriverAvailableSystemReport(report) &&
-    delivery.assignedDriverProfileId
-  ) {
-    return { outcome: 'DRIVER_ASSIGNED' as const, report };
-  }
-
-  return { outcome: 'OK' as const, report, delivery };
+  return { outcome: 'OK' as const, report, reservation, delivery, contract };
 };
 
-const resolveReportWithoutStrike = async (
+const completeOperationalRecoveryReport = async (
   tx: Prisma.TransactionClient,
   input: {
     reportId: string;
     adminUserId: string;
     reviewNote?: string;
+    reportStatus: string;
+    workflowType: string;
   },
-) =>
-  tx.noShowReport.update({
+) => {
+  if (
+    input.workflowType !== 'SYSTEM_RECOVERY' ||
+    input.reportStatus !== 'PENDING_REVIEW'
+  ) {
+    return { id: input.reportId };
+  }
+
+  return tx.noShowReport.update({
     where: { id: input.reportId },
     data: {
       status: 'RESOLVED_NO_STRIKE',
@@ -134,23 +179,27 @@ const resolveReportWithoutStrike = async (
       reviewedAt: new Date(),
       reviewNote: input.reviewNote?.trim() || null,
     },
-    include: reportInclude,
+    select: reportMutationSelect,
   });
+};
 
 export const requestSupplierRescheduleForPickupRecoveryReport = async (input: {
   reportId: string;
   adminUserId: string;
   adminNote?: string;
-}) =>
-  runSerializableTransaction(async (tx) => {
-    const loaded = await loadPickupRecoveryReport(tx, input.reportId);
-    const validation = validatePickupRecoveryContext(loaded);
+}) => {
+  const outcome = await runSerializableTransaction(async (tx) => {
+    const loaded = await loadPickupRecoveryContext(tx, input.reportId);
+    const validation = validatePickupRecoveryContext(
+      loaded,
+      'REQUEST_SUPPLIER_RESCHEDULE',
+    );
 
     if (validation.outcome !== 'OK') {
       return validation;
     }
 
-    const { report, delivery } = validation;
+    const { report, reservation, delivery } = validation;
     const kind = pickupRecoveryKind(report);
     const defaultNote =
       kind === 'NO_DRIVER'
@@ -166,6 +215,14 @@ export const requestSupplierRescheduleForPickupRecoveryReport = async (input: {
         status: 'RELEASED',
         releasedAt: new Date(),
         releaseReason: 'Admin requested supplier pickup reschedule',
+      },
+    });
+
+    await tx.delivery.update({
+      where: { id: delivery.id },
+      data: {
+        assignedDriverProfileId: null,
+        assignedAt: null,
       },
     });
 
@@ -194,44 +251,64 @@ export const requestSupplierRescheduleForPickupRecoveryReport = async (input: {
       },
     });
 
-    let updatedReport: AdminNoShowReportRecord;
-
-    if (report.status === 'PENDING_REVIEW') {
-      updatedReport = await resolveReportWithoutStrike(tx, {
-        reportId: report.id,
-        adminUserId: input.adminUserId,
-        reviewNote: input.adminNote,
-      });
-    } else {
-      updatedReport = await tx.noShowReport.findUniqueOrThrow({
-        where: { id: report.id },
-        include: reportInclude,
-      });
-    }
+    const reportId =
+      report.status === 'PENDING_REVIEW'
+        ? (
+            await completeOperationalRecoveryReport(tx, {
+              reportId: report.id,
+              adminUserId: input.adminUserId,
+              reviewNote: input.adminNote,
+              reportStatus: report.status,
+              workflowType: validation.contract.workflowType,
+            })
+          ).id
+        : report.id;
 
     return {
       outcome: 'REQUESTED' as const,
-      report: updatedReport,
-      supplierId: updatedReport.reservation.owner.id,
+      reportId,
+      supplierId: reservation.ownerId,
       reservationId: report.reservationId,
       recoveryKind: kind,
     };
   });
 
+  if (outcome.outcome !== 'REQUESTED') {
+    return outcome;
+  }
+
+  const report = await findNoShowReportByIdForAdmin(outcome.reportId);
+
+  if (!report) {
+    return { outcome: 'NOT_FOUND' as const };
+  }
+
+  return {
+    outcome: 'REQUESTED' as const,
+    report,
+    supplierId: outcome.supplierId,
+    reservationId: outcome.reservationId,
+    recoveryKind: outcome.recoveryKind,
+  };
+};
+
 export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
   reportId: string;
   adminUserId: string;
   adminNote?: string;
-}) =>
-  runSerializableTransaction(async (tx) => {
-    const loaded = await loadPickupRecoveryReport(tx, input.reportId);
-    const validation = validatePickupRecoveryContext(loaded);
+}) => {
+  const outcome = await runSerializableTransaction(async (tx) => {
+    const loaded = await loadPickupRecoveryContext(tx, input.reportId);
+    const validation = validatePickupRecoveryContext(
+      loaded,
+      'CANCEL_AND_RELEASE_HOLD',
+    );
 
     if (validation.outcome !== 'OK') {
       return validation;
     }
 
-    const { report, delivery } = validation;
+    const { report, reservation, delivery } = validation;
     const kind = pickupRecoveryKind(report);
     const now = new Date();
     const defaultNote =
@@ -292,26 +369,44 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
       },
     });
 
-    await recomputeAndUpdateMaterialStatus(tx, report.reservation.material.id);
+    await recomputeAndUpdateMaterialStatus(tx, reservation.materialId);
 
-    const updatedReport =
+    const reportId =
       report.status === 'PENDING_REVIEW'
-        ? await resolveReportWithoutStrike(tx, {
-            reportId: report.id,
-            adminUserId: input.adminUserId,
-            reviewNote: input.adminNote,
-          })
-        : await tx.noShowReport.findUniqueOrThrow({
-            where: { id: report.id },
-            include: reportInclude,
-          });
+        ? (
+            await completeOperationalRecoveryReport(tx, {
+              reportId: report.id,
+              adminUserId: input.adminUserId,
+              reviewNote: input.adminNote,
+              reportStatus: report.status,
+              workflowType: validation.contract.workflowType,
+            })
+          ).id
+        : report.id;
 
     return {
       outcome: 'CANCELLED' as const,
-      report: updatedReport,
+      reportId,
       recoveryKind: kind,
     };
   });
+
+  if (outcome.outcome !== 'CANCELLED') {
+    return outcome;
+  }
+
+  const report = await findNoShowReportByIdForAdmin(outcome.reportId);
+
+  if (!report) {
+    return { outcome: 'NOT_FOUND' as const };
+  }
+
+  return {
+    outcome: 'CANCELLED' as const,
+    report,
+    recoveryKind: outcome.recoveryKind,
+  };
+};
 
 export const requiresPickupRecoveryOperationalAction = (input: {
   report: {

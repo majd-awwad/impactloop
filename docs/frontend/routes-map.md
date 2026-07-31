@@ -86,7 +86,8 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/learning/submissions` | `LearningProjectSubmissionsPage` | learner | Learner-owned submission dashboard backed by `/api/learning-projects/mine`; shows review status, admin feedback preview, and status CTAs |
 | `/learning/submissions/:id` | `LearningProjectSubmissionDetailPage` | learner | Owner-only unpublished/published submission detail; shows moderation feedback and status-specific actions |
 | `/learning/submissions/:id/edit` | `LearningProjectSubmissionEditPage` | learner | Edit `DRAFT` / `CHANGES_REQUESTED` owner submissions; save changes or save and resubmit |
-| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, and linked-material panel; no AI matching or auto-reservation |
+| `/learning/:id/build` | `LearningProjectBuildPage` | learner | Persisted manual project build checklist with per-item material candidates, link/unlink, linked-material panel, and embedded Build Guide assistant on wide layouts (`?guide=1&conversationId=...`); narrow layouts use full-screen guide route |
+| `/learning/:id/build/guide` | `LearningProjectBuildGuidePage` | learner | Full-screen Build Guide chat for narrow/mobile layouts; reuses the same trusted guide conversation and `AiEmbeddedAssistantChat` |
 | `/learning/:id` | `LearningProjectDetailsPage` | public | API-backed project detail with start/continue build action |
 | `/materials` | `MaterialsDiscoveryPage` | public | API-backed default; optional `q` query pre-fills search |
 | `/materials/:id` | `MaterialDetailsPage` | public | API-backed default; optional query `projectId`, `buildItemId`, `returnTo`, `componentName` for Learning Hub build-context reserve flow |
@@ -108,6 +109,7 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/supplier/materials/:id` | `SupplierOwnedMaterialDetailPage` | supplier | Redirects `id=new` → `/supplier/materials/new` |
 | `/supplier/materials` | `SupplierMyMaterialsPage` | supplier | |
 | `/supplier/reservations` | `SupplierIncomingRequestsPage` | supplier | Query: `tab`, `focus` |
+| `/supplier/reservations/:reservationId` | `SupplierReservationDetailPage` | supplier | Owner-scoped adaptive request workspace; direct deep links and refresh are supported; back fallback returns to Incoming Requests |
 | `/supplier/pickup-schedule` | `SupplierPickupSchedulePage` | supplier | |
 | `/supplier/notifications` | `SupplierNotificationsPage` | supplier | |
 | `/supplier/profile` | `SupplierProfilePage` | supplier | |
@@ -123,8 +125,11 @@ Defined in `app_router.dart` as `_RouteAccessLevel`:
 | `/admin/invitations` | `AdminInvitationsPage` | admin | Admin invitation management |
 | `/admin/impact` | `AdminImpactPage` | admin | Reuse + estimated CO₂ analytics from dashboard API |
 | `/admin/audit-logs` | `AdminAuditLogsPage` | admin | Paginated `admin_activity_logs` with backend filters, summary stats, actor/date filters, details dialog |
+| `/admin/no-show-reports` | `AdminNoShowReportsPage` | admin | Incident report queue with View details navigation |
+| `/admin/no-show-reports/:reportId` | `AdminNoShowReportDetailPage` | admin | Dedicated responsive incident-review workspace; deep-link-safe detail, contract-driven actions, messages and report/delivery history |
 | `/admin/reservations` | `AdminReservationsPage` | admin | Read-only platform reservations monitor with filters, summary stats, detail dialog |
-| `/admin/deliveries` | `AdminDeliveriesPage` | admin | Read-only delivery lifecycle monitor with timeline/location history, filters, detail dialog |
+| `/admin/deliveries` | `AdminDeliveriesPage` | admin | Read-only delivery lifecycle monitor with filters and an explicit route to delivery details |
+| `/admin/deliveries/:deliveryId` | `AdminDeliveryDetailPage` | admin | Adaptive contract-driven delivery workspace with overview, timeline, assignment, conditional group/incident/tracking views, and only server-authorized reopen action |
 | `/admin/learning-projects` | `AdminLearningProjectsPage` | admin | Learning Hub project moderation: summary stats, filters, review detail dialog, approve/reject/hide/archive actions |
 
 ## Admin shell navigation
@@ -141,6 +146,7 @@ From `admin_sidebar.dart`:
 | Invitations | `/admin/invitations` |
 | Impact Analytics | `/admin/impact` |
 | Audit Logs | `/admin/audit-logs` |
+| Incident Reports | `/admin/no-show-reports` |
 | Reservations | `/admin/reservations` |
 | Deliveries | `/admin/deliveries` |
 | Learning Projects | `/admin/learning-projects` |
@@ -183,12 +189,13 @@ Mobile bottom nav (`supplierMobileNavItems`): overview, myMaterials, addMaterial
 | `/learning` | `q` | Optional initial search term, used by material detail project handoff |
 | `/supplier/materials/new` | `categoryRequestId`, `priceRuleRequestId` | Resume listing from approved request |
 | `/supplier/reservations` | `tab`, `focus` | Deep link into reservation inbox |
+| `/supplier/reservations/:reservationId` | `reservationId` | Owner-scoped Supplier request detail; loads independently of Inbox state |
 
 ## Navigation stack behavior
 
 Primary app navigation replaces the current route with `context.go(...)`: entry nav links, mobile bottom tabs, supplier/admin sidebars, portal switchers, auth redirects, and direct filter-reset URL updates.
 
-Page-level drill-ins preserve the previous page with `context.push(...)`: material/project/reservation/delivery detail opens, profile subpages, supplier material add/edit/detail flows, notification deep links, dashboard shortcut cards, and admin overview shortcut cards.
+Page-level drill-ins preserve the previous page with `context.push(...)`: material/project/reservation/delivery detail opens, Supplier request detail, profile subpages, supplier material add/edit/detail flows, notification deep links, dashboard shortcut cards, and admin overview shortcut cards.
 
 Back/save/delete completion paths use `context.popOrGo(<fallback>)` from `app/router/navigation_extensions.dart` when a page must return to the caller if history exists, while still supporting direct web URL entry with a stable fallback route.
 

@@ -73,8 +73,8 @@ class CreatedReservation {
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      unitPriceAtReservation:
-          (json['unitPriceAtReservation'] as num?)?.toDouble(),
+      unitPriceAtReservation: (json['unitPriceAtReservation'] as num?)
+          ?.toDouble(),
       materialSubtotal: (json['materialSubtotal'] as num?)?.toDouble(),
       deliveryFee: (json['deliveryFee'] as num?)?.toDouble(),
       totalAmount: (json['totalAmount'] as num?)?.toDouble(),

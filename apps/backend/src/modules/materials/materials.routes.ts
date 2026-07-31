@@ -1,13 +1,20 @@
 import { Router } from 'express';
 
-import { authMiddleware, optionalAuthMiddleware } from '../../middlewares/auth.middleware.js';
+import {
+  authMiddleware,
+  optionalAuthMiddleware,
+} from '../../middlewares/auth.middleware.js';
 import { requireRoles } from '../../middlewares/role.middleware.js';
 import { validate } from '../../middlewares/validate.middleware.js';
+import { privateNoStoreMiddleware } from '../../middlewares/cache-control.middleware.js';
 import { asyncHandler } from '../../utils/async-handler.js';
 
 import {
   getListingPolicyHandler,
   getMaterial,
+  getMaterialViewerStateHandler,
+  getRelatedMaterialsHandler,
+  recordMaterialViewHandler,
   likeMaterial,
   listMaterials,
   priceCheckHandler,
@@ -17,9 +24,11 @@ import { submitMaterialReport } from '../admin-materials/admin-materials.control
 import {
   materialIdParamSchema,
   materialsQuerySchema,
+  relatedMaterialsQuerySchema,
   priceCheckSchema,
 } from './materials.validation.js';
 import { submitMaterialReportSchema } from '../admin-materials/admin-materials.validation.js';
+import { attachCommentRoutes } from '../comments/comments.routes.js';
 
 export const materialsRouter = Router();
 
@@ -63,9 +72,33 @@ materialsRouter.post(
   asyncHandler(submitMaterialReport),
 );
 
+attachCommentRoutes(materialsRouter);
+
+materialsRouter.get(
+  '/:id/viewer-state',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  validate(materialIdParamSchema, 'params'),
+  asyncHandler(getMaterialViewerStateHandler),
+);
+
+materialsRouter.post(
+  '/:id/view',
+  optionalAuthMiddleware,
+  validate(materialIdParamSchema, 'params'),
+  asyncHandler(recordMaterialViewHandler),
+);
+
+materialsRouter.get(
+  '/:id/related',
+  optionalAuthMiddleware,
+  validate(materialIdParamSchema, 'params'),
+  validate(relatedMaterialsQuerySchema, 'query'),
+  asyncHandler(getRelatedMaterialsHandler),
+);
+
 materialsRouter.get(
   '/:id',
-  optionalAuthMiddleware,
   validate(materialIdParamSchema, 'params'),
   asyncHandler(getMaterial),
 );

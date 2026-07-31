@@ -52,6 +52,7 @@ class SupplierNotificationFilterChips extends ConsumerWidget {
           ),
           selectedColor: accent,
           backgroundColor: isSelected ? accent : colors.chipUnselected,
+          checkmarkColor: colors.textOnAccent,
           side: BorderSide(
             color: isSelected ? accent : colors.border,
             width: isSelected ? 1.5 : 1,

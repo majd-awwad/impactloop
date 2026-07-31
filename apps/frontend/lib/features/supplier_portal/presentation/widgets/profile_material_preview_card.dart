@@ -11,7 +11,6 @@ import '../theme/supplier_theme_extension.dart';
 import 'material_engagement_chip.dart';
 import 'materials/supplier_material_card.dart';
 import 'materials/supplier_material_label_helper.dart';
-import 'materials/supplier_my_materials_colors.dart';
 
 const profileMaterialPreviewCardHeight = supplierMaterialCardHeight;
 const _imageHeight = 160.0;
@@ -26,7 +25,8 @@ class ProfileMaterialPreviewCard extends StatefulWidget {
       _ProfileMaterialPreviewCardState();
 }
 
-class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard> {
+class _ProfileMaterialPreviewCardState
+    extends State<ProfileMaterialPreviewCard> {
   bool _hovered = false;
 
   @override
@@ -34,10 +34,13 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
     final material = widget.material;
     final colors = context.supplierColors;
     final isArabic = context.isSupplierArabic;
-    final imageUrl = (material.imageUrl != null && material.imageUrl!.trim().isNotEmpty)
+    final imageUrl =
+        (material.imageUrl != null && material.imageUrl!.trim().isNotEmpty)
         ? ApiConfig.resolveMediaUrl(material.imageUrl!)
         : null;
-    final condition = SupplierMaterialLabelHelper.conditionMeta(material.condition);
+    final condition = SupplierMaterialLabelHelper.conditionMeta(
+      material.condition,
+    );
     final priceLabel = SupplierMaterialLabelHelper.resolveText(
       SupplierMaterialLabelHelper.priceLabel(
         isFree: material.isFree,
@@ -48,7 +51,10 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
     );
     final categoryLabel = material.categoryName ?? '—';
     final quantityLabel = SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.quantityLabel(material.quantity, material.unit),
+      SupplierMaterialLabelHelper.quantityLabel(
+        material.quantity,
+        material.unit,
+      ),
       isArabic,
     );
     final city = material.locationCity?.trim() ?? '';
@@ -166,10 +172,10 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             categoryLabel,
                             style: context.supplierChip().copyWith(
-                                  color: SupplierMyMaterialsColors.lightTeal,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                              color: colors.accent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -177,11 +183,11 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             material.title,
                             style: context.supplierSectionTitle().copyWith(
-                                  color: colors.textPrimary,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.2,
-                                ),
+                              color: colors.textPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -190,7 +196,9 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                             spacing: AppSpacing.xs,
                             runSpacing: AppSpacing.xs,
                             children: [
-                              _ProfilePreviewStatusBadge(status: material.status),
+                              _ProfilePreviewStatusBadge(
+                                status: material.status,
+                              ),
                               MaterialConditionBadge(
                                 label: SupplierMaterialLabelHelper.resolveText(
                                   condition.label,
@@ -208,17 +216,17 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             quantityLabel,
                             style: context.supplierBody().copyWith(
-                                  color: colors.textSecondary,
-                                  fontSize: 13,
-                                ),
+                              color: colors.textSecondary,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             locationLabel,
                             style: context.supplierBody().copyWith(
-                                  color: colors.textMuted,
-                                  fontSize: 12.5,
-                                ),
+                              color: colors.textMuted,
+                              fontSize: 12.5,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -226,18 +234,18 @@ class _ProfileMaterialPreviewCardState extends State<ProfileMaterialPreviewCard>
                           Text(
                             availabilityLabel,
                             style: context.supplierBody().copyWith(
-                                  color: colors.textMuted,
-                                  fontSize: 12,
-                                ),
+                              color: colors.textMuted,
+                              fontSize: 12,
+                            ),
                           ),
                           const Spacer(),
                           if (footerParts.isNotEmpty)
                             Text(
                               footerParts.join(' · '),
                               style: context.supplierBody().copyWith(
-                                    color: colors.textMuted,
-                                    fontSize: 11.5,
-                                  ),
+                                color: colors.textMuted,
+                                fontSize: 11.5,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -289,93 +297,10 @@ class _ProfilePreviewStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = context.isSupplierArabic;
-    final normalized = status.toUpperCase();
-
-    if (normalized == 'UNAVAILABLE' ||
-        normalized == 'RESERVED' ||
-        normalized == 'PENDING_RESERVATION') {
-      final palette = _semanticPalette(normalized);
-      final label = SupplierMaterialLabelHelper.resolveText(
-        SupplierMaterialLabelHelper.statusMeta(status).label,
-        isArabic,
-      );
-      return _SemanticBadge(label: label, palette: palette);
-    }
-
     final meta = SupplierMaterialLabelHelper.statusMeta(status);
     return MaterialStatusBadge(
       label: SupplierMaterialLabelHelper.resolveText(meta.label, isArabic),
       tone: meta.tone,
     );
   }
-
-  _SemanticPalette _semanticPalette(String status) {
-    switch (status) {
-      case 'UNAVAILABLE':
-        return const _SemanticPalette(
-          background: Color(0xFFFEE2E2),
-          foreground: Color(0xFFB91C1C),
-          border: Color(0xFFFECACA),
-        );
-      case 'PENDING_RESERVATION':
-        return const _SemanticPalette(
-          background: Color(0xFFFFEDD5),
-          foreground: Color(0xFFC2410C),
-          border: Color(0xFFFED7AA),
-        );
-      case 'RESERVED':
-        return const _SemanticPalette(
-          background: Color(0xFFE0E7FF),
-          foreground: Color(0xFF4338CA),
-          border: Color(0xFFA5B4FC),
-        );
-      default:
-        return const _SemanticPalette(
-          background: Color(0xFFF1F5F9),
-          foreground: Color(0xFF64748B),
-          border: Color(0xFFCBD5E1),
-        );
-    }
-  }
-}
-
-class _SemanticBadge extends StatelessWidget {
-  const _SemanticBadge({required this.label, required this.palette});
-
-  final String label;
-  final _SemanticPalette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: palette.border),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: palette.foreground,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-class _SemanticPalette {
-  const _SemanticPalette({
-    required this.background,
-    required this.foreground,
-    required this.border,
-  });
-
-  final Color background;
-  final Color foreground;
-  final Color border;
 }

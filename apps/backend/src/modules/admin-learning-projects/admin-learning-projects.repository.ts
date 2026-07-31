@@ -1,6 +1,25 @@
 import type { LearningProjectStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import { AppError } from '../../utils/app-error.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
+import type {
+  AdminAiReviewContent,
+  AdminAiReviewCoverage,
+} from './admin-learning-projects.ai-review.js';
+import {
+  ADMIN_AI_REVIEW_SCHEMA_VERSION,
+  buildAdminReviewContentFingerprint,
+} from './admin-learning-projects.ai-review.js';
+import {
+  defaultComponentConceptLifecycleDeps,
+  type ComponentConceptLifecycleDeps,
+} from '../taxonomy/component-concept-assignment.repository.js';
+import {
+  defaultProjectTopicLifecycleDeps,
+  type ProjectTopicLifecycleDeps,
+} from '../taxonomy/project-concept-assignment.repository.js';
+import { assertEditableProjectStatus } from './admin-learning-projects.component-enrichment.js';
 import type { AdminLearningProjectsListQuery } from './admin-learning-projects.validation.js';
 
 const startOfUtcDay = (date: Date) => {
@@ -96,12 +115,14 @@ export const adminLearningProjectDetailInclude = {
       id: true,
       imageUrl: true,
       sortOrder: true,
+      createdAt: true,
     },
   },
   requiredComponents: {
     orderBy: { createdAt: 'asc' as const },
     select: {
       id: true,
+      createdAt: true,
       componentName: true,
       materialType: true,
       quantity: true,
@@ -141,6 +162,7 @@ export const adminLearningProjectDetailInclude = {
     orderBy: { createdAt: 'asc' as const },
     select: {
       id: true,
+      createdAt: true,
       linkType: true,
       url: true,
       title: true,
@@ -149,7 +171,7 @@ export const adminLearningProjectDetailInclude = {
   },
   tags: {
     orderBy: { tag: 'asc' as const },
-    select: { tag: true },
+    select: { id: true, tag: true },
   },
 } satisfies Prisma.LearningProjectInclude;
 
@@ -273,11 +295,71 @@ export const updateLearningProjectModeration = async (
   id: string,
   data: Prisma.LearningProjectUpdateInput,
 ) => {
-  return prisma.learningProject.update({
+  const updated = await prisma.learningProject.update({
     where: { id },
     data,
+    select: { id: true },
+  });
+
+  return prisma.learningProject.findUniqueOrThrow({
+    where: { id: updated.id },
     include: adminLearningProjectDetailInclude,
   });
+};
+
+const APPROVE_FROM_STATUSES: LearningProjectStatus[] = [
+  'PENDING_REVIEW',
+  'CHANGES_REQUESTED',
+  'REJECTED',
+];
+
+export const approveLearningProjectInTransaction = async (
+  client: Prisma.TransactionClient,
+  input: {
+    id: string;
+    moderationData: Prisma.LearningProjectUncheckedUpdateManyInput;
+    topicLifecycleDeps?: ProjectTopicLifecycleDeps;
+    componentLifecycleDeps?: ComponentConceptLifecycleDeps;
+  },
+) => {
+  const topicLifecycleDeps =
+    input.topicLifecycleDeps ?? defaultProjectTopicLifecycleDeps;
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
+
+  const updated = await client.learningProject.updateMany({
+    where: {
+      id: input.id,
+      status: { in: APPROVE_FROM_STATUSES },
+    },
+    data: input.moderationData,
+  });
+
+  if (updated.count === 0) {
+    throw new AppError(
+      'Cannot approve while project status is not eligible for approval.',
+      400,
+      'INVALID_STATUS_TRANSITION',
+    );
+  }
+
+  const project = await client.learningProject.findUniqueOrThrow({
+    where: { id: input.id },
+    select: { categoryId: true, status: true },
+  });
+
+  await topicLifecycleDeps.reconcileLearningProjectTopics(
+    client,
+    input.id,
+    project.categoryId,
+  );
+
+  await componentLifecycleDeps.reconcileLearningProjectComponents(
+    client,
+    input.id,
+  );
+
+  return { id: input.id };
 };
 
 export const createLearningProjectAuthorNotification = async (input: {
@@ -329,21 +411,130 @@ export const updateAdminLearningProjectComponent = async (input: {
   projectId: string;
   componentId: string;
   data: Prisma.ProjectRequiredComponentUpdateInput;
+  componentLifecycleDeps?: ComponentConceptLifecycleDeps;
 }) => {
-  const existing = await prisma.projectRequiredComponent.findFirst({
-    where: {
-      id: input.componentId,
-      projectId: input.projectId,
-    },
-    select: { id: true },
-  });
+  const componentLifecycleDeps =
+    input.componentLifecycleDeps ?? defaultComponentConceptLifecycleDeps;
 
-  if (!existing) {
-    return null;
-  }
+  return runSerializableTransaction(async (tx) => {
+    const project = await tx.learningProject.findUniqueOrThrow({
+      where: { id: input.projectId },
+      select: { id: true, status: true },
+    });
+    assertEditableProjectStatus(project.status);
 
-  return prisma.projectRequiredComponent.update({
-    where: { id: input.componentId },
-    data: input.data,
+    const existing = await tx.projectRequiredComponent.findFirst({
+      where: {
+        id: input.componentId,
+        projectId: input.projectId,
+      },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    await tx.projectRequiredComponent.update({
+      where: { id: input.componentId },
+      data: input.data,
+    });
+
+    const committedComponent = await tx.projectRequiredComponent.findUniqueOrThrow({
+      where: { id: input.componentId },
+      select: {
+        id: true,
+        componentName: true,
+        materialType: true,
+      },
+    });
+
+    await componentLifecycleDeps.reconcileProjectRequiredComponent(
+      tx,
+      committedComponent.id,
+    );
+
+    return tx.projectRequiredComponent.findUniqueOrThrow({
+      where: { id: input.componentId },
+    });
   });
 };
+
+export type PersistAdminLearningProjectAiReviewInput = {
+  projectId: string;
+  locale: string;
+  preProviderFingerprint: string;
+  generatedByAdminUserId: string;
+  generatedAt: Date;
+  provider: string;
+  model: string | null;
+  coverage: AdminAiReviewCoverage;
+  review: AdminAiReviewContent;
+};
+
+export const findPersistedAdminLearningProjectAiReview = async (
+  projectId: string,
+  locale: string,
+) =>
+  prisma.learningProjectAdminAiReview.findUnique({
+    where: {
+      projectId_locale: {
+        projectId,
+        locale,
+      },
+    },
+  });
+
+export const persistAdminLearningProjectAiReviewGuarded = async (
+  input: PersistAdminLearningProjectAiReviewInput,
+) =>
+  runSerializableTransaction(async (tx) => {
+    const project = await tx.learningProject.findUnique({
+      where: { id: input.projectId },
+      include: adminLearningProjectDetailInclude,
+    });
+
+    if (!project) {
+      throw new AppError('Learning project not found.', 404, 'NOT_FOUND');
+    }
+
+    const currentFingerprint = buildAdminReviewContentFingerprint(project);
+    if (currentFingerprint !== input.preProviderFingerprint) {
+      throw new AppError(
+        'Project content changed while the AI review was being generated.',
+        409,
+        'AI_REVIEW_CONTENT_CHANGED',
+      );
+    }
+
+    return tx.learningProjectAdminAiReview.upsert({
+      where: {
+        projectId_locale: {
+          projectId: input.projectId,
+          locale: input.locale,
+        },
+      },
+      create: {
+        projectId: input.projectId,
+        locale: input.locale,
+        reviewSchemaVersion: ADMIN_AI_REVIEW_SCHEMA_VERSION,
+        contentFingerprint: currentFingerprint,
+        provider: input.provider,
+        model: input.model,
+        coverage: input.coverage as Prisma.InputJsonValue,
+        review: input.review as Prisma.InputJsonValue,
+        generatedByAdminUserId: input.generatedByAdminUserId,
+        generatedAt: input.generatedAt,
+      },
+      update: {
+        reviewSchemaVersion: ADMIN_AI_REVIEW_SCHEMA_VERSION,
+        contentFingerprint: currentFingerprint,
+        provider: input.provider,
+        model: input.model,
+        coverage: input.coverage as Prisma.InputJsonValue,
+        review: input.review as Prisma.InputJsonValue,
+        generatedByAdminUserId: input.generatedByAdminUserId,
+        generatedAt: input.generatedAt,
+      },
+    });
+  });

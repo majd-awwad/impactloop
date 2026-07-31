@@ -39,7 +39,9 @@ class SupplierMyMaterialsCategoryOption {
   final String nameAr;
   final int count;
 
-  factory SupplierMyMaterialsCategoryOption.fromJson(Map<String, dynamic> json) {
+  factory SupplierMyMaterialsCategoryOption.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return SupplierMyMaterialsCategoryOption(
       id: json['id'] as String? ?? '',
       nameEn: json['nameEn'] as String? ?? '',
@@ -122,7 +124,9 @@ class SupplierMaterialReservationSummary {
   final DateTime? pickupWindowStart;
   final DateTime? pickupWindowEnd;
 
-  factory SupplierMaterialReservationSummary.fromJson(Map<String, dynamic> json) {
+  factory SupplierMaterialReservationSummary.fromJson(
+    Map<String, dynamic> json,
+  ) {
     final learner = json['learner'];
     return SupplierMaterialReservationSummary(
       id: json['id'] as String? ?? '',
@@ -283,13 +287,13 @@ class SupplierMyMaterial {
       suggestedUses: json['suggestedUses'] as String?,
       images: imagesJson is List
           ? imagesJson
-              .whereType<Map>()
-              .map(
-                (item) => SupplierMyMaterialsImage.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(growable: false)
+                .whereType<Map>()
+                .map(
+                  (item) => SupplierMyMaterialsImage.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
           : const [],
       viewsCount: (json['viewsCount'] as num?)?.toInt() ?? 0,
       likesCount: (json['likesCount'] as num?)?.toInt() ?? 0,
@@ -298,7 +302,8 @@ class SupplierMyMaterial {
       reservedReservationsCount:
           (json['reservedReservationsCount'] as num?)?.toInt() ?? 0,
       reservationsCount: (json['reservationsCount'] as num?)?.toInt() ?? 0,
-      activeRequestsCount: (json['activeRequestsCount'] as num?)?.toInt() ??
+      activeRequestsCount:
+          (json['activeRequestsCount'] as num?)?.toInt() ??
           (json['reservationsCount'] as num?)?.toInt() ??
           0,
       completedReservationsCount:
@@ -309,7 +314,8 @@ class SupplierMyMaterial {
       ),
       activeDemandScore: (json['activeDemandScore'] as num?)?.toInt() ?? 0,
       demandScore: (json['demandScore'] as num?)?.toInt() ?? 0,
-      demandScorePercent: (json['demandScorePercent'] as num?)?.toInt() ??
+      demandScorePercent:
+          (json['demandScorePercent'] as num?)?.toInt() ??
           (json['demandScore'] as num?)?.toInt() ??
           0,
       canMarkUnavailable: json['canMarkUnavailable'] == true,
@@ -380,14 +386,12 @@ class UpdateSupplierMyMaterialRequest {
       'condition': condition,
       'pickupAllowed': pickupAllowed,
       'deliveryAllowed': deliveryAllowed,
-      'pickupNotes':
-          pickupNotes == null || pickupNotes!.trim().isEmpty
-              ? null
-              : pickupNotes!.trim(),
-      'suggestedUses':
-          suggestedUses == null || suggestedUses!.trim().isEmpty
-              ? null
-              : suggestedUses!.trim(),
+      'pickupNotes': pickupNotes == null || pickupNotes!.trim().isEmpty
+          ? null
+          : pickupNotes!.trim(),
+      'suggestedUses': suggestedUses == null || suggestedUses!.trim().isEmpty
+          ? null
+          : suggestedUses!.trim(),
     };
   }
 }
@@ -494,13 +498,13 @@ class SupplierMyMaterialsListResult {
     return SupplierMyMaterialsListResult(
       items: itemsJson is List
           ? itemsJson
-              .whereType<Map>()
-              .map(
-                (item) => SupplierMyMaterial.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(growable: false)
+                .whereType<Map>()
+                .map(
+                  (item) => SupplierMyMaterial.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
           : const [],
       pagination: SupplierMyMaterialsPagination.fromJson(
         json['pagination'] as Map<String, dynamic>?,
@@ -510,13 +514,13 @@ class SupplierMyMaterialsListResult {
       ),
       categories: facetsJson is List
           ? facetsJson
-              .whereType<Map>()
-              .map(
-                (item) => SupplierMyMaterialsCategoryOption.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(growable: false)
+                .whereType<Map>()
+                .map(
+                  (item) => SupplierMyMaterialsCategoryOption.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .toList(growable: false)
           : const [],
     );
   }
@@ -579,5 +583,6 @@ class SupplierMyMaterialsQuery {
   }
 
   @override
-  int get hashCode => Object.hash(page, limit, search, status, isFree, categoryId);
+  int get hashCode =>
+      Object.hash(page, limit, search, status, isFree, categoryId);
 }

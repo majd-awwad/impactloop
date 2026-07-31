@@ -9,22 +9,23 @@ class LearningProjectStepText {
   static String formatStepsForEditing(
     Iterable<({String title, String description})> steps,
   ) {
-    return steps
-        .map((step) {
-          final description = step.description.trim();
-          if (description.isNotEmpty) {
-            return description;
-          }
+    final lines = <String>[];
+    var index = 0;
 
-          final title = step.title.trim();
-          if (title.isEmpty) {
-            return '';
-          }
+    for (final step in steps) {
+      final description = step.description.trim();
+      final title = step.title.trim();
+      final body = description.isNotEmpty
+          ? stripStepPrefix(description)
+          : (title.isEmpty ? '' : stripStepPrefix(title));
+      if (body.isEmpty) {
+        continue;
+      }
+      index += 1;
+      lines.add('$index. $body');
+    }
 
-          return stripStepPrefix(title);
-        })
-        .where((line) => line.isNotEmpty)
-        .join('\n');
+    return lines.join('\n');
   }
 
   static String stripStepPrefix(String value) {

@@ -1,0 +1,40 @@
+{
+  "purpose": "Deterministic Phase 2B contract fixture derived from frozen seed sections; not a relevance dataset, quality benchmark, or runtime recommendation input.",
+  "examples": [
+    {
+      "kind": "learner",
+      "source": { "interestKey": "arduino" },
+      "typedConcepts": ["interest:arduino"]
+    },
+    {
+      "kind": "material",
+      "source": {
+        "key": "majd-arduino-uno-r3",
+        "categoryNameEn": "Electronics & Components",
+        "materialType": "Arduino Uno",
+        "tags": ["arduino", "microcontroller", "robotics"]
+      },
+      "typedConcepts": ["material-family:electronics", "material-form:arduino-uno"]
+    },
+    {
+      "kind": "material",
+      "source": {
+        "key": "majd-breadboard-kit",
+        "categoryNameEn": "Electronics & Components",
+        "materialType": "Breadboard",
+        "tags": ["breadboard", "prototype", "electronics"]
+      },
+      "typedConcepts": ["material-family:electronics", "material-form:breadboard"]
+    },
+    {
+      "kind": "project",
+      "source": { "categoryNameEn": "Robotics", "tags": ["robotics", "arduino"] },
+      "typedConcepts": ["project-topic:robotics"]
+    },
+    {
+      "kind": "component",
+      "source": { "componentName": "Ultrasonic Distance Sensor", "materialType": "Ultrasonic Sensor" },
+      "typedConcepts": ["component:ultrasonic-distance-sensor", "material-form:ultrasonic-sensor"]
+    }
+  ]
+}

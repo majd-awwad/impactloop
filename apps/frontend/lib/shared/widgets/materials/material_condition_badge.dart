@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
-import '../../../app/theme/app_text_styles.dart';
+import '../../../app/theme/app_spacing.dart';
 import '../../../app/theme/app_theme_colors.dart';
-import 'materials_ui_palette.dart';
 
 enum MaterialConditionBadgeTone { likeNew, good, fair, mixed }
 
@@ -19,51 +18,35 @@ class MaterialConditionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final palette = switch (tone) {
       MaterialConditionBadgeTone.likeNew => (
-        background: isDark
-            ? materialConditionLikeNewBackground
-            : colors.cardSurfaceAlt,
-        foreground: isDark
-            ? materialConditionLikeNewForeground
-            : colors.textPrimary,
-        border: isDark ? materialBorderStrong : colors.borderSubtle,
+        background: colors.cardSurfaceAlt,
+        foreground: colors.textPrimary,
+        border: colors.borderSubtle,
       ),
       MaterialConditionBadgeTone.good => (
-        background: isDark
-            ? materialConditionGoodBackground
-            : colors.cardSurfaceAlt,
-        foreground: isDark
-            ? materialConditionGoodForeground
-            : colors.textSecondary,
-        border: isDark ? materialBorderStrong : colors.borderSubtle,
+        background: colors.cardSurfaceAlt,
+        foreground: colors.textSecondary,
+        border: colors.borderSubtle,
       ),
       MaterialConditionBadgeTone.fair => (
-        background: isDark
-            ? materialConditionFairBackground
-            : colors.warningSoft,
-        foreground: isDark
-            ? materialConditionFairForeground
-            : colors.warningText,
-        border: isDark ? materialReservedBorder : colors.warningBorder,
+        background: colors.warningSoft,
+        foreground: colors.warningText,
+        border: colors.warningBorder,
       ),
       MaterialConditionBadgeTone.mixed => (
-        background: isDark
-            ? materialConditionMixedBackground
-            : colors.cardSurfaceAlt,
-        foreground: isDark
-            ? materialConditionMixedForeground
-            : colors.textSecondary,
-        border: isDark ? materialBorderSubtle : colors.borderSubtle,
+        background: colors.surfaceMuted,
+        foreground: colors.textSecondary,
+        border: colors.borderSubtle,
       ),
     };
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: materialBadgeHorizontalPadding,
-        vertical: materialBadgeVerticalPadding,
+        horizontal: AppSpacing.md - AppSpacing.xs,
+        vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: palette.background,
@@ -72,9 +55,8 @@ class MaterialConditionBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.label(context).copyWith(
+        style: textTheme.labelSmall?.copyWith(
           color: palette.foreground,
-          fontSize: materialBadgeFontSize,
           fontWeight: FontWeight.w700,
           height: 1.1,
         ),

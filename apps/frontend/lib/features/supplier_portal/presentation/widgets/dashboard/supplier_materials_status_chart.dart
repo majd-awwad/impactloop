@@ -13,12 +13,14 @@ class SupplierMaterialsStatusChart extends StatelessWidget {
     required this.reservedOrPending,
     required this.reused,
     required this.unavailable,
+    this.compact = false,
   });
 
   final int available;
   final int reservedOrPending;
   final int reused;
   final int unavailable;
+  final bool compact;
 
   int get _total => available + reservedOrPending + reused + unavailable;
 
@@ -63,10 +65,11 @@ class SupplierMaterialsStatusChart extends StatelessWidget {
             value: segment.value,
             color: segment.color,
             total: _total,
+            compact: compact,
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
         ],
-        const SizedBox(height: AppSpacing.sm),
+        SizedBox(height: compact ? AppSpacing.xs : AppSpacing.sm),
         SupplierDashboardChartLegend(
           items: segments
               .map(
@@ -89,12 +92,14 @@ class _MaterialBarRow extends StatelessWidget {
     required this.value,
     required this.color,
     required this.total,
+    required this.compact,
   });
 
   final String label;
   final int value;
   final Color color;
   final int total;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +126,7 @@ class _MaterialBarRow extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? AppSpacing.xs : 6),
         LayoutBuilder(
           builder: (context, constraints) {
             final barWidth = constraints.maxWidth * fraction.clamp(0, 1);
@@ -129,7 +134,7 @@ class _MaterialBarRow extends StatelessWidget {
             return Stack(
               children: [
                 Container(
-                  height: 14,
+                  height: compact ? 10 : 14,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: colors.chipUnselected,
@@ -143,15 +148,14 @@ class _MaterialBarRow extends StatelessWidget {
                 ),
                 if (value > 0)
                   Container(
-                    height: 14,
-                    width: barWidth < 12 ? 12 : barWidth,
+                    height: compact ? 10 : 14,
+                    width: barWidth < (compact ? 10 : 12)
+                        ? (compact ? 10 : 12)
+                        : barWidth,
                     decoration: BoxDecoration(
                       borderRadius: AppRadius.pillAll,
                       gradient: LinearGradient(
-                        colors: [
-                          color,
-                          color.withValues(alpha: 0.75),
-                        ],
+                        colors: [color, color.withValues(alpha: 0.75)],
                       ),
                       boxShadow: [
                         BoxShadow(

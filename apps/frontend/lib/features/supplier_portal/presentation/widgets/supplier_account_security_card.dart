@@ -24,10 +24,14 @@ class SupplierAccountSecurityCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: context.supplierColors.accentSoft.withValues(alpha: 0.16),
+                  color: context.supplierColors.accentSoft.withValues(
+                    alpha: 0.16,
+                  ),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: context.supplierColors.border.withValues(alpha: 0.35),
+                    color: context.supplierColors.border.withValues(
+                      alpha: 0.35,
+                    ),
                   ),
                 ),
                 child: Icon(

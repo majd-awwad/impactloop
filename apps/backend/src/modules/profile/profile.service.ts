@@ -1,6 +1,7 @@
 import { AppError } from '../../utils/app-error.js';
 
 import { getAuthenticatedUser, type UserSummary } from '../auth/auth.service.js';
+import { invalidateLearnerHomeCache } from '../learner-home/learner-home.service.js';
 
 import * as profileRepository from './profile.repository.js';
 
@@ -86,6 +87,7 @@ export const updateLearnerProfileForUser = async (
   }
 
   await profileRepository.upsertLearnerProfile(userId, parsed);
+  invalidateLearnerHomeCache(userId);
 
   return getAuthenticatedUser(userId);
 };

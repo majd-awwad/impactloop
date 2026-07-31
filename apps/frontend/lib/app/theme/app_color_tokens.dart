@@ -189,29 +189,31 @@ abstract final class AppColorTokens {
 
   static const Color supplierIncomingPendingBackground = Color(0x24F59E0B);
   static const Color supplierIncomingPendingBorder = Color(0x73F59E0B);
-  static const Color supplierIncomingPendingSelectedBackground =
-      Color(0x38F59E0B);
-  static const Color supplierIncomingPendingSelectedBorder =
-      Color(0x8CF59E0B);
+  static const Color supplierIncomingPendingSelectedBackground = Color(
+    0x38F59E0B,
+  );
+  static const Color supplierIncomingPendingSelectedBorder = Color(0x8CF59E0B);
   static const Color supplierIncomingAcceptedBackground = Color(0x2422C55E);
   static const Color supplierIncomingAcceptedBorder = Color(0x7322C55E);
   static const Color supplierIncomingAcceptedForeground = Color(0xFF4ADE80);
-  static const Color supplierIncomingAcceptedSelectedBackground =
-      Color(0x3822C55E);
-  static const Color supplierIncomingAcceptedSelectedBorder =
-      Color(0x8C22C55E);
+  static const Color supplierIncomingAcceptedSelectedBackground = Color(
+    0x3822C55E,
+  );
+  static const Color supplierIncomingAcceptedSelectedBorder = Color(0x8C22C55E);
   static const Color supplierIncomingDeclinedBackground = Color(0x24EF4444);
   static const Color supplierIncomingDeclinedBorder = Color(0x73EF4444);
-  static const Color supplierIncomingDeclinedSelectedBackground =
-      Color(0x38EF4444);
-  static const Color supplierIncomingDeclinedSelectedBorder =
-      Color(0x8CEF4444);
+  static const Color supplierIncomingDeclinedSelectedBackground = Color(
+    0x38EF4444,
+  );
+  static const Color supplierIncomingDeclinedSelectedBorder = Color(0x8CEF4444);
   static const Color supplierIncomingCompletedBackground = Color(0x243B82F6);
   static const Color supplierIncomingCompletedBorder = Color(0x733B82F6);
-  static const Color supplierIncomingCompletedSelectedBackground =
-      Color(0x383B82F6);
-  static const Color supplierIncomingCompletedSelectedBorder =
-      Color(0x8C3B82F6);
+  static const Color supplierIncomingCompletedSelectedBackground = Color(
+    0x383B82F6,
+  );
+  static const Color supplierIncomingCompletedSelectedBorder = Color(
+    0x8C3B82F6,
+  );
   static const Color supplierDeclineButtonBackground = Color(0x38EF4444);
   static const Color supplierDeclineButtonBorder = Color(0x8CEF4444);
   static const Color supplierDeclineButtonPressedOverlay = Color(0x4DEF4444);
@@ -223,14 +225,16 @@ abstract final class AppColorTokens {
   static const Color supplierPickupTodaySelectedBorder = Color(0xA614B8A6);
   static const Color supplierPickupUpcomingBackground = Color(0x243B82F6);
   static const Color supplierPickupUpcomingBorder = Color(0x803B82F6);
-  static const Color supplierPickupUpcomingSelectedBackground =
-      Color(0x383B82F6);
+  static const Color supplierPickupUpcomingSelectedBackground = Color(
+    0x383B82F6,
+  );
   static const Color supplierPickupUpcomingSelectedBorder = Color(0xA63B82F6);
   static const Color supplierPickupCompletedBackground = Color(0x1F22C55E);
   static const Color supplierPickupCompletedBorder = Color(0x6622C55E);
   static const Color supplierPickupCompletedForeground = Color(0xFF86EFAC);
-  static const Color supplierPickupCompletedSelectedBackground =
-      Color(0x2E22C55E);
+  static const Color supplierPickupCompletedSelectedBackground = Color(
+    0x2E22C55E,
+  );
   static const Color supplierPickupCompletedSelectedBorder = Color(0x8022C55E);
   static const Color supplierPickupAllBackground = Color(0x1F94A3B8);
   static const Color supplierPickupAllBorder = Color(0x5994A3B8);

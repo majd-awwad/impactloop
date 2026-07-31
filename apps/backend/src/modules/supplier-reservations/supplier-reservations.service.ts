@@ -52,11 +52,12 @@ import {
 } from '../reservations/reservation-reschedule.js';
 import { mapReservationFulfillmentLabel } from '../reservations/reservation-delivery.js';
 import {
-  canSupplierMarkDeliveryPickupExpired,
-  canSupplierMarkDriverNoShow,
+  canSupplierMarkLearnerPickupNoShow,
+  canSupplierMarkDeliveryPickupExpired as isSupplierDeliveryPickupExpiryAllowed,
+  canSupplierMarkDriverNoShow as isSupplierDriverNoShowAllowed,
 } from '../fulfillment-failures/fulfillment-failures.eligibility.js';
 import {
-  canReportNoDriverAvailable,
+  canReportNoDriverAvailable as isSupplierNoDriverReportAllowed,
   createNoDriverAvailableReport,
 } from '../reservations/reservations.incidents.repository.js';
 import {
@@ -64,6 +65,13 @@ import {
   notifyReservationDeclined,
 } from '../notifications/reservation-notifications.js';
 import { notifyNewJobForReservationWaitingDelivery } from '../notifications/driver-notification-events.service.js';
+import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
+import { classifyAdminReportContract } from '../admin-no-show-reports/admin-no-show-reports.classifier.js';
+import {
+  composeSupplierReservationContract,
+  type ReservationAttentionState,
+  type SupplierReservationSummaryBucket,
+} from './supplier-reservations.classifier.js';
 import type {
   AcceptSupplierReservationInput,
   CancelSupplierReservationInput,
@@ -164,9 +172,7 @@ const assertPendingReservationForDecline = (status: ReservationStatus) => {
   );
 };
 
-const tabToReservationStatuses = (
-  status: NonNullable<ListSupplierReservationsQuery['status']>,
-): ReservationStatus[] | null => {
+const tabToReservationStatuses = (status: string): ReservationStatus[] | null => {
   switch (status) {
     case 'all':
       return null;
@@ -223,12 +229,15 @@ const mapNoShowReportSummary = (
     targetRole: pending.targetRole,
     status: pending.status,
     reasonCode: pending.reasonCode,
+    note: pending.note,
     createdAt: pending.createdAt.toISOString(),
+    reviewedAt: pending.reviewedAt?.toISOString() ?? null,
+    reviewNote: pending.reviewNote,
   };
 };
 
 export const mapSupplierReservation = (
-  reservation: supplierReservationsRepository.SupplierReservationRecord,
+  reservation: supplierReservationsRepository.SupplierReservationListRecord,
   latestMessage?: ReturnType<typeof mapReservationMessage> | null,
 ) => {
   const directDelivery = reservation.deliveries[0] ?? null;
@@ -236,7 +245,7 @@ export const mapSupplierReservation = (
   const latestDelivery = directDelivery ?? groupDelivery;
   const hasDelivery = latestDelivery != null;
   const deliveryCount = hasDelivery ? 1 : 0;
-  const groupItemCount = reservation.deliveryGroup?.reservations.length ?? 0;
+  const groupItemCount = reservation.deliveryGroup?._count.reservations ?? 0;
   const followUp = resolveReservationFollowUp({
     status: reservation.status,
     pickupWindowStart: reservation.pickupWindowStart,
@@ -279,6 +288,186 @@ export const mapSupplierReservation = (
       fulfillmentMethod: reservation.fulfillmentMethod,
       hasDelivery,
     });
+  const canSupplierComplete =
+    canCompleteBase && pickupHandoverPhase === 'DURING_ALLOWED';
+  const canSupplierCloseOverduePickup =
+    pickupHandoverPhase === 'AFTER_ALLOWED' && isSelfPickup && !hasOpenIncident;
+  const canSupplierReportAndCloseOverduePickup =
+    pickupHandoverPhase === 'AFTER_ALLOWED' && isSelfPickup && !hasOpenIncident;
+  const canSupplierAcceptLearnerReschedule =
+    awaitingLearnerReschedule && isSelfPickup && hasLearnerProposedPickupWindow;
+  const canSupplierProposeDifferentTime = awaitingLearnerReschedule && isSelfPickup;
+  const canSupplierCloseAwaitingLearnerRequest =
+    awaitingLearnerReschedule && isSelfPickup && !hasOpenIncident;
+  const canSupplierReportAwaitingLearnerRequest =
+    awaitingLearnerReschedule && isSelfPickup && !hasOpenIncident;
+  const canReportNoDriverAvailable = isSupplierNoDriverReportAllowed({
+    status: reservation.status,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+    pickupWindowEnd: reservation.pickupWindowEnd,
+    deliveryStatus: latestDelivery?.status ?? null,
+    assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+    hasDelivery,
+    hasPendingReport: hasOpenIncident,
+  });
+  const canSubmitNoDriverPickupWindow =
+    reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION' &&
+    reservation.fulfillmentMethod === 'DELIVERY' &&
+    isAdminSupplierPickupReconfirmReason(reservation.pendingRescheduleReason) &&
+    latestDelivery?.status === 'AWAITING_RESOLUTION';
+  const canSupplierMarkDeliveryPickupExpired =
+    !hasOpenIncident &&
+    isSupplierDeliveryPickupExpiryAllowed({
+      status: reservation.status,
+      fulfillmentMethod: reservation.fulfillmentMethod,
+      supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+      pickupWindowEnd: reservation.pickupWindowEnd,
+      deliveryStatus: latestDelivery?.status ?? null,
+      assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+      hasDelivery,
+    });
+  const canSupplierReportDriverNoShow =
+    !hasOpenIncident &&
+    isSupplierDriverNoShowAllowed({
+      status: reservation.status,
+      supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
+      pickupWindowEnd: reservation.pickupWindowEnd,
+      deliveryStatus: latestDelivery?.status ?? null,
+      assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
+    });
+  const canMarkLearnerNoShow =
+    !hasOpenIncident &&
+    canSupplierMarkLearnerPickupNoShow({
+      status: reservation.status,
+      fulfillmentMethod: reservation.fulfillmentMethod,
+      pickupWindowEnd: reservation.pickupWindowEnd,
+    });
+  const canSendMessage =
+    reservationAllowsMessaging(reservation.status) && !hasOpenIncident;
+  const contract = composeSupplierReservationContract({
+    status: reservation.status,
+    fulfillmentMethod: reservation.fulfillmentMethod,
+    deliveryStatus: latestDelivery?.status ?? null,
+    hasDelivery,
+    canAccept: reservation.status === 'PENDING',
+    canDecline: reservation.status === 'PENDING',
+    canSendMessage,
+    canSupplierComplete,
+    canSupplierReschedule: canReschedule,
+    canSupplierAcceptLearnerReschedule,
+    canSupplierProposeDifferentTime,
+    canSupplierClose:
+      canSupplierCloseOverduePickup || canSupplierCloseAwaitingLearnerRequest,
+    canMarkLearnerNoShow,
+    canReportIncident:
+      canSupplierReportAndCloseOverduePickup ||
+      canSupplierReportAwaitingLearnerRequest,
+    canReportNoDriverAvailable,
+    canMarkDeliveryPickupExpired: canSupplierMarkDeliveryPickupExpired,
+    canReportDriverNoShow: canSupplierReportDriverNoShow,
+    canSubmitRecoveryPickupWindow: canSubmitNoDriverPickupWindow,
+  });
+  const driver =
+    latestDelivery?.assignedDriverProfile ??
+    reservation.deliveryGroup?.assignedDriverProfile ??
+    null;
+  const deliverySummary = latestDelivery
+    ? {
+        deliveryId: latestDelivery.id,
+        status: latestDelivery.status,
+        driver: driver
+          ? {
+              id: driver.id,
+              displayName: driver.displayName,
+              userId: driver.user.id,
+              profileImageUrl: driver.user.profileImageUrl,
+            }
+          : null,
+        requestedAt: latestDelivery.requestedAt.toISOString(),
+        assignedAt: latestDelivery.assignedAt?.toISOString() ?? null,
+        pickedUpAt: latestDelivery.pickedUpAt?.toISOString() ?? null,
+        deliveredAt: latestDelivery.deliveredAt?.toISOString() ?? null,
+        failedAt: latestDelivery.failedAt?.toISOString() ?? null,
+        failureReason: latestDelivery.failureReason,
+        recoveryRequired:
+          reservation.status === 'AWAITING_RESOLUTION' ||
+          latestDelivery.status === 'AWAITING_RESOLUTION',
+      }
+    : null;
+  const groupSummary = reservation.deliveryGroup
+    ? {
+        groupId: reservation.deliveryGroup.id,
+        status: reservation.deliveryGroup.status,
+        itemCount: groupItemCount,
+        grouped: groupItemCount > 1,
+    }
+    : null;
+  const primaryIncident = reservation.noShowReports.find(
+    (report) => report.status === 'PENDING_REVIEW',
+  ) ?? reservation.noShowReports[0] ?? null;
+  const incidentContract = primaryIncident
+    ? classifyAdminReportContract({
+        report: {
+          status: primaryIncident.status,
+          reasonCode: primaryIncident.reasonCode,
+          targetRole: primaryIncident.targetRole,
+          targetUserId: primaryIncident.targetUserId,
+          deliveryId: latestDelivery?.id ?? null,
+        },
+        reservation: {
+          status: reservation.status,
+          fulfillmentMethod: reservation.fulfillmentMethod,
+          pendingRescheduleRequestedBy: reservation.pendingRescheduleRequestedBy,
+          pendingRescheduleReason: reservation.pendingRescheduleReason,
+        },
+        delivery: latestDelivery
+          ? {
+              id: latestDelivery.id,
+              status: latestDelivery.status,
+              assignedDriverProfileId: latestDelivery.assignedDriverProfileId,
+              deliveryGroupId: reservation.deliveryGroup?.id ?? null,
+            }
+          : null,
+        isGroupedDelivery: groupItemCount > 1,
+        isGroupRecoverySupported: false,
+      })
+    : null;
+  const incidentSummary = primaryIncident && incidentContract
+    ? {
+        id: primaryIncident.id,
+        targetUserId: primaryIncident.targetUserId,
+        targetRole: primaryIncident.targetRole,
+        status: primaryIncident.status,
+        reasonCode: primaryIncident.reasonCode,
+        note: primaryIncident.note,
+        createdAt: primaryIncident.createdAt.toISOString(),
+        reviewedAt: primaryIncident.reviewedAt?.toISOString() ?? null,
+        reviewNote: primaryIncident.reviewNote,
+        workflowType: incidentContract.workflowType,
+        operationalState: incidentContract.operationalState,
+        strikeImpact: incidentContract.strikeImpact,
+      }
+    : null;
+  const pendingReschedule = mapPendingRescheduleSummary(reservation);
+  const recoveryContext =
+    reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION' &&
+    reservation.fulfillmentMethod === 'DELIVERY' &&
+    isAdminSupplierPickupReconfirmReason(reservation.pendingRescheduleReason) &&
+    latestDelivery?.status === 'AWAITING_RESOLUTION'
+      ? {
+          initiatedBy: 'ADMIN' as const,
+          reason: reservation.pendingRescheduleReason,
+          note: reservation.pendingRescheduleNote,
+        }
+      : null;
+  const latestSenderRole = latestMessage
+    ? latestMessage.sender.id === reservation.requester.id
+      ? 'LEARNER'
+      : latestMessage.sender.id === reservation.ownerId
+        ? 'SUPPLIER'
+        : 'SYSTEM'
+    : null;
 
   return {
     id: reservation.id,
@@ -320,7 +509,7 @@ export const mapSupplierReservation = (
       reservation.learnerProposedPickupWindowStart?.toISOString() ?? null,
     learnerProposedPickupWindowEnd:
       reservation.learnerProposedPickupWindowEnd?.toISOString() ?? null,
-    pendingReschedule: mapPendingRescheduleSummary(reservation),
+    pendingReschedule,
     supplierPickupWindowStart:
       reservation.supplierPickupWindowStart?.toISOString() ?? null,
     supplierPickupWindowEnd:
@@ -338,21 +527,18 @@ export const mapSupplierReservation = (
           status: latestDelivery.status,
         }
       : null,
-    deliveryGroupId: reservation.deliveryGroupId,
-    groupedDelivery: reservation.deliveryGroupId != null,
+    deliveryGroupId: reservation.deliveryGroup?.id ?? null,
+    groupedDelivery: groupItemCount > 1,
     groupItemCount: groupItemCount > 0 ? groupItemCount : null,
     combinedDeliveryLabel:
-      reservation.deliveryGroupId != null && groupItemCount > 0
-        ? 'Combined delivery'
-        : null,
+      groupItemCount > 0 ? 'Combined delivery' : null,
     supplierHandoverCode:
       reservation.status === 'ACCEPTED' &&
       reservation.fulfillmentMethod === 'DELIVERY' &&
       latestDelivery != null
         ? deriveHandoverCode('supplier-handover', latestDelivery.id)
         : null,
-    canSupplierComplete:
-      canCompleteBase && pickupHandoverPhase === 'DURING_ALLOWED',
+    canSupplierComplete,
     pickupWindowStart: reservation.pickupWindowStart?.toISOString() ?? null,
     pickupWindowEnd: reservation.pickupWindowEnd?.toISOString() ?? null,
     supplierNote: reservation.supplierNote,
@@ -363,83 +549,95 @@ export const mapSupplierReservation = (
     isOverdue: followUp.isOverdue,
     needsFollowUp: followUp.needsFollowUp,
     pickupHandoverPhase,
-    canSupplierCloseOverduePickup:
-      pickupHandoverPhase === 'AFTER_ALLOWED' &&
-      isSelfPickup &&
-      !hasOpenIncident,
-    canSupplierReportAndCloseOverduePickup:
-      pickupHandoverPhase === 'AFTER_ALLOWED' &&
-      isSelfPickup &&
-      !hasOpenIncident,
+    canSupplierCloseOverduePickup,
+    canSupplierReportAndCloseOverduePickup,
     canSupplierReschedule: canReschedule,
-    canSupplierAcceptLearnerReschedule:
-      awaitingLearnerReschedule && isSelfPickup && hasLearnerProposedPickupWindow,
-    canSupplierProposeDifferentTime: awaitingLearnerReschedule && isSelfPickup,
-    canSupplierCloseAwaitingLearnerRequest:
-      awaitingLearnerReschedule && isSelfPickup && !hasOpenIncident,
-    canSupplierReportAwaitingLearnerRequest:
-      awaitingLearnerReschedule && isSelfPickup && !hasOpenIncident,
-    canReportNoDriverAvailable: canReportNoDriverAvailable({
-      status: reservation.status,
-      fulfillmentMethod: reservation.fulfillmentMethod,
-      supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
-      pickupWindowEnd: reservation.pickupWindowEnd,
-      deliveryStatus: latestDelivery?.status ?? null,
-      assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
-      hasDelivery,
-      hasPendingReport: hasOpenIncident,
-    }),
-    canSubmitNoDriverPickupWindow:
-      reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION' &&
-      reservation.fulfillmentMethod === 'DELIVERY' &&
-      isAdminSupplierPickupReconfirmReason(
-        reservation.pendingRescheduleReason,
-      ) &&
-      latestDelivery?.status === 'AWAITING_RESOLUTION',
-    canSupplierMarkDeliveryPickupExpired:
-      !hasOpenIncident &&
-      canSupplierMarkDeliveryPickupExpired({
-        status: reservation.status,
-        fulfillmentMethod: reservation.fulfillmentMethod,
-        supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
-        pickupWindowEnd: reservation.pickupWindowEnd,
-        deliveryStatus: latestDelivery?.status ?? null,
-        assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
-        hasDelivery,
-      }),
-    canSupplierReportDriverNoShow:
-      !hasOpenIncident &&
-      canSupplierMarkDriverNoShow({
-        status: reservation.status,
-        supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
-        pickupWindowEnd: reservation.pickupWindowEnd,
-        deliveryStatus: latestDelivery?.status ?? null,
-        assignedDriverProfileId: latestDelivery?.assignedDriverProfileId ?? null,
-      }),
+    canSupplierAcceptLearnerReschedule,
+    canSupplierProposeDifferentTime,
+    canSupplierCloseAwaitingLearnerRequest,
+    canSupplierReportAwaitingLearnerRequest,
+    canReportNoDriverAvailable,
+    canSubmitNoDriverPickupWindow,
+    canSupplierMarkDeliveryPickupExpired,
+    canSupplierReportDriverNoShow,
+    canMarkLearnerNoShow,
     assignedDriverPickupOverdue: isAssignedDriverPickupOverdue({
       supplierPickupWindowEnd: reservation.supplierPickupWindowEnd,
       pickupWindowEnd: reservation.pickupWindowEnd,
       deliveryStatus: latestDelivery?.status ?? null,
     }),
-    canSendMessage:
-      reservationAllowsMessaging(reservation.status) && !hasOpenIncident,
+    canSendMessage,
     noShowReport: mapNoShowReportSummary(reservation.noShowReports),
     latestMessage: latestMessage ?? null,
+    workflowPhase: contract.workflowPhase,
+    attentionState: contract.attentionState,
+    nextActor: contract.nextActor,
+    summaryBucket: contract.summaryBucket,
+    availableActions: contract.availableActions,
+    fulfillmentSummary: {
+      fulfillmentMethod: reservation.fulfillmentMethod,
+      pickupAllowed: reservation.material.pickupAllowed,
+      deliverySelected: reservation.fulfillmentMethod === 'DELIVERY' || hasDelivery,
+      label: mapFulfillmentLabel(reservation.fulfillmentMethod, deliveryCount),
+    },
+    scheduleSummary: {
+      activeWindowType:
+        reservation.fulfillmentMethod === 'DELIVERY'
+          ? 'SUPPLIER_DELIVERY_PICKUP'
+          : reservation.pickupWindowStart
+            ? 'CONFIRMED_PICKUP'
+            : null,
+      effectiveWindowStart:
+        (reservation.fulfillmentMethod === 'DELIVERY'
+          ? reservation.supplierPickupWindowStart
+          : reservation.pickupWindowStart)?.toISOString() ?? null,
+      effectiveWindowEnd:
+        (reservation.fulfillmentMethod === 'DELIVERY'
+          ? reservation.supplierPickupWindowEnd
+          : reservation.pickupWindowEnd)?.toISOString() ?? null,
+      pendingProposalSource: pendingReschedule?.requestedBy ?? null,
+      pendingReschedule,
+      recoveryContext,
+      schedulingConflictReason: reservation.schedulingConflictReason,
+      earliestDeliveryStart: reservation.earliestDeliveryStart?.toISOString() ?? null,
+    },
+    deliverySummary,
+    incidentSummary,
+    groupSummary,
+    messageSummary: {
+      latestMessage: latestMessage ?? null,
+      latestSenderRole,
+      latestTimestamp: latestMessage?.createdAt ?? null,
+      messageCount: reservation._count.messages,
+      matchesOriginalLearnerNote:
+        latestMessage?.sender.id === reservation.requester.id &&
+        latestMessage.body.trim() === (reservation.message?.trim() ?? ''),
+    },
   };
 };
 
-export const listSupplierReservations = async (
-  ownerId: string,
-  query: ListSupplierReservationsQuery,
-) => {
+const resolveSupplierReservationStatuses = (status?: string) => {
+  if (!status) return null;
+  const legacy = tabToReservationStatuses(status);
+  if (legacy) return legacy;
+  return [status as ReservationStatus];
+};
+
+export const runSupplierReservationLazyCleanup = async (ownerId: string) => {
   await expireStalePendingReservationsForOwner(ownerId);
   await expireStaleMissedPickupsForOwner(ownerId);
   await escalateStaleNoDriverDeliveriesForOwner(ownerId);
   await escalateStaleAssignedDriverPickupsForOwner(ownerId);
+};
 
-  const statuses = query.status
-    ? tabToReservationStatuses(query.status)
-    : null;
+/** Legacy service shape retained for existing callers and mutation suites. */
+export const listSupplierReservations = async (
+  ownerId: string,
+  query: Partial<ListSupplierReservationsQuery>,
+) => {
+  await runSupplierReservationLazyCleanup(ownerId);
+
+  const statuses = resolveSupplierReservationStatuses(query.status);
 
   const reservations =
     await supplierReservationsRepository.findSupplierReservations(
@@ -459,6 +657,195 @@ export const listSupplierReservations = async (
         : null,
     ),
   );
+};
+
+const emptySummary = () => ({
+  total: 0,
+  needsSupplierResponse: 0,
+  waitingForLearner: 0,
+  fulfillmentInProgress: 0,
+  adminReview: 0,
+  completed: 0,
+  closed: 0,
+});
+
+const incrementSummary = (
+  summary: ReturnType<typeof emptySummary>,
+  bucket: SupplierReservationSummaryBucket,
+) => {
+  summary.total += 1;
+  const summaryKey: Record<SupplierReservationSummaryBucket, keyof typeof summary> = {
+    NEEDS_SUPPLIER_RESPONSE: 'needsSupplierResponse',
+    WAITING_FOR_LEARNER: 'waitingForLearner',
+    FULFILLMENT_IN_PROGRESS: 'fulfillmentInProgress',
+    ADMIN_REVIEW: 'adminReview',
+    COMPLETED: 'completed',
+    CLOSED: 'closed',
+  };
+  summary[summaryKey[bucket]] += 1;
+};
+
+export const listSupplierReservationsPage = async (
+  ownerId: string,
+  query: ListSupplierReservationsQuery,
+) => {
+  await runSupplierReservationLazyCleanup(ownerId);
+
+  const page = query.page;
+  const limit = query.limit;
+  const offset = (page - 1) * limit;
+  const pageRecords: supplierReservationsRepository.SupplierReservationListRecord[] = [];
+  const summary = emptySummary();
+  let filteredIndex = 0;
+
+  await supplierReservationsRepository.forEachSupplierReservationBatch({
+    ownerId,
+    filter: {
+      statuses: resolveSupplierReservationStatuses(query.status) ?? undefined,
+      fulfillmentMethod: query.fulfillmentMethod,
+      historyScope: query.historyScope,
+      materialId: query.materialId,
+      search: query.search,
+      dateFrom: query.dateFrom ? new Date(query.dateFrom) : undefined,
+      dateTo: query.dateTo ? new Date(query.dateTo) : undefined,
+    },
+    batchSize: 100,
+    onBatch: (records) => {
+      for (const reservation of records) {
+        const mapped = mapSupplierReservation(reservation, null);
+        if (
+          query.attentionState &&
+          mapped.attentionState !== query.attentionState
+        ) {
+          continue;
+        }
+
+        incrementSummary(summary, mapped.summaryBucket);
+        if (filteredIndex >= offset && pageRecords.length < limit) {
+          pageRecords.push(reservation);
+        }
+        filteredIndex += 1;
+      }
+    },
+  });
+
+  const latestMessages = await findLatestReservationMessagesByReservationIds(
+    pageRecords.map((reservation) => reservation.id),
+  );
+  const items = pageRecords.map((reservation) =>
+    mapSupplierReservation(
+      reservation,
+      latestMessages.has(reservation.id)
+        ? mapReservationMessage(latestMessages.get(reservation.id)!)
+        : null,
+    ),
+  );
+
+  return {
+    items,
+    pagination: {
+      page,
+      limit,
+      total: summary.total,
+      totalPages: Math.ceil(summary.total / limit),
+    },
+    summary,
+  };
+};
+
+export const getSupplierReservationDetail = async (
+  ownerId: string,
+  reservationId: string,
+) => {
+  await runSupplierReservationLazyCleanup(ownerId);
+  const reservation =
+    await supplierReservationsRepository.findSupplierReservationDetailForOwner(
+      ownerId,
+      reservationId,
+    );
+
+  if (!reservation) {
+    throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+  }
+
+  const latest = reservation.messages[0]
+    ? mapReservationMessage(reservation.messages[0])
+    : null;
+  const common = mapSupplierReservation(reservation, latest);
+
+  return {
+    ...common,
+    identity: {
+      reservationId: reservation.id,
+      material: common.material,
+      learner: common.learner,
+      quantityRequested: common.quantityRequested,
+      createdAt: common.createdAt,
+      updatedAt: reservation.updatedAt.toISOString(),
+    },
+    canonicalState: {
+      workflowPhase: common.workflowPhase,
+      attentionState: common.attentionState,
+      nextActor: common.nextActor,
+      summaryBucket: common.summaryBucket,
+      availableActions: common.availableActions,
+    },
+    request: {
+      originalLearnerNote: reservation.message,
+      fulfillmentMethod: reservation.fulfillmentMethod,
+      learnerPreferredPickupWindows: common.learnerPreferredPickupWindows,
+      learnerPreferredDeliveryWindows: common.learnerPreferredDeliveryWindows,
+      deliveryAddressText: reservation.deliveryAddressText,
+      safeDropoffAllowed: reservation.safeDropoffAllowed,
+      deliveryNote: reservation.deliveryNote,
+    },
+    schedule: {
+      ...common.scheduleSummary,
+      supplierProposal: {
+        start: common.supplierProposedPickupWindowStart,
+        end: common.supplierProposedPickupWindowEnd,
+      },
+      learnerProposal: {
+        start: common.learnerProposedPickupWindowStart,
+        end: common.learnerProposedPickupWindowEnd,
+      },
+      confirmedPickupWindow: {
+        start: common.pickupWindowStart,
+        end: common.pickupWindowEnd,
+      },
+      supplierDeliveryPickupWindow: {
+        start: common.supplierPickupWindowStart,
+        end: common.supplierPickupWindowEnd,
+      },
+      confirmedDeliveryWindow: {
+        start: common.confirmedDeliveryWindowStart,
+        end: common.confirmedDeliveryWindowEnd,
+      },
+    },
+    messages: {
+      latest: latest,
+      count: reservation._count.messages,
+      items: reservation.messages.map(mapReservationMessage),
+      truncated: reservation._count.messages > reservation.messages.length,
+    },
+    delivery: common.deliverySummary,
+    group: common.groupSummary,
+    incident: common.incidentSummary,
+    history: reservation.statusHistory.map((entry) => ({
+      id: entry.id,
+      statusGroup: entry.statusGroup,
+      oldStatus: entry.oldStatus,
+      newStatus: entry.newStatus,
+      note: entry.note,
+      createdAt: entry.createdAt.toISOString(),
+      actor: entry.changedByUser
+        ? {
+            id: entry.changedByUser.id,
+            displayName: entry.changedByUser.displayName,
+          }
+        : null,
+    })),
+  };
 };
 
 export const acceptSupplierReservation = async (
@@ -586,17 +973,6 @@ export const acceptSupplierReservation = async (
       );
     }
 
-    const learnerDeliveryWindows = mapPreferredWindowsForResponse(
-      existing.learnerPreferredDeliveryWindows,
-    );
-
-    if (!learnerDeliveryWindows.length) {
-      throw new AppError(
-        'Learner delivery windows are required.',
-        400,
-        'VALIDATION_ERROR',
-      );
-    }
   }
 
   const result = await supplierReservationsRepository.acceptSupplierReservation({
@@ -679,6 +1055,7 @@ export const declineSupplierReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('PENDING', 'REJECTED');
   void notifyReservationDeclined(result.reservation.id);
 
   return mapSupplierReservation(result.reservation);
@@ -727,6 +1104,7 @@ export const completeSupplierReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
   return mapSupplierReservation(result.reservation);
 };
 
@@ -866,6 +1244,7 @@ export const cancelSupplierAcceptedReservation = async (
     );
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'CANCELLED');
   return mapSupplierReservation(result.reservation);
 };
 
@@ -929,6 +1308,7 @@ export const submitSupplierNoShowReport = async (
     throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
   }
 
+  invalidateLearnerHomeForReservationTransition('ACCEPTED', 'NO_SHOW');
   return mapSupplierReservation(reservation);
 };
 
@@ -968,6 +1348,10 @@ export const reportSupplierNoDriverAvailable = async (
         'CONFLICT',
       );
     case 'CREATED':
+      invalidateLearnerHomeForReservationTransition(
+        'ACCEPTED',
+        'AWAITING_RESOLUTION',
+      );
       break;
     default:
       throw new AppError('Unable to submit no-driver report.', 500, 'INTERNAL_ERROR');

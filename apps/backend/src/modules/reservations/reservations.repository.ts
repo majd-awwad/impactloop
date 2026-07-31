@@ -1,4 +1,4 @@
-import type { Prisma } from '../../generated/prisma/client.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
 import {
@@ -45,7 +45,43 @@ const reservationInclude = {
   },
 } satisfies Prisma.ReservationInclude;
 
-const learnerReservationListInclude = {
+// Explicit scalar select keeps list queries working when the database has not
+// yet received newer pricing / delivery-group columns from schema migrations.
+const learnerReservationListScalarSelect = {
+  id: true,
+  status: true,
+  quantityRequested: true,
+  message: true,
+  fulfillmentMethod: true,
+  learnerPreferredPickupWindows: true,
+  learnerPreferredDeliveryWindows: true,
+  deliveryAddressText: true,
+  safeDropoffAllowed: true,
+  deliveryNote: true,
+  createdAt: true,
+  updatedAt: true,
+  pickupWindowStart: true,
+  pickupWindowEnd: true,
+  supplierProposedPickupWindowStart: true,
+  supplierProposedPickupWindowEnd: true,
+  learnerProposedPickupWindowStart: true,
+  learnerProposedPickupWindowEnd: true,
+  pendingRescheduleRequestedBy: true,
+  pendingRescheduleReason: true,
+  pendingRescheduleNote: true,
+  supplierPickupWindowStart: true,
+  supplierPickupWindowEnd: true,
+  confirmedDeliveryWindowStart: true,
+  confirmedDeliveryWindowEnd: true,
+  earliestDeliveryStart: true,
+  schedulingConflictReason: true,
+  supplierNote: true,
+  rejectionReason: true,
+  selfPickupCodeHash: true,
+} satisfies Prisma.ReservationSelect;
+
+const learnerReservationListSelect = {
+  ...learnerReservationListScalarSelect,
   material: {
     select: {
       id: true,
@@ -97,33 +133,10 @@ const learnerReservationListInclude = {
     select: {
       id: true,
       status: true,
+      assignedDriverProfileId: true,
     },
     orderBy: { requestedAt: 'desc' },
     take: 1,
-  },
-  deliveryGroup: {
-    select: {
-      id: true,
-      deliveryFee: true,
-      currency: true,
-      status: true,
-      delivery: {
-        select: {
-          id: true,
-          status: true,
-        },
-      },
-      reservations: {
-        where: {
-          status: 'ACCEPTED',
-          fulfillmentMethod: 'DELIVERY',
-        },
-        select: {
-          id: true,
-          materialSubtotal: true,
-        },
-      },
-    },
   },
   noShowReports: {
     select: {
@@ -133,7 +146,7 @@ const learnerReservationListInclude = {
       reasonCode: true,
     },
   },
-} satisfies Prisma.ReservationInclude;
+} satisfies Prisma.ReservationSelect;
 
 const learnerCancelInclude = {
   material: {
@@ -152,17 +165,68 @@ export type LearnerReservationRecord = Prisma.ReservationGetPayload<{
 }>;
 
 export type LearnerReservationListRecord = Prisma.ReservationGetPayload<{
-  include: typeof learnerReservationListInclude;
+  select: typeof learnerReservationListSelect;
 }>;
 
 export type LearnerCancelledReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof learnerCancelInclude;
 }>;
 
+const loadLearnerReservationRecord = async (
+  reservationId: string,
+): Promise<LearnerReservationRecord> => {
+  const reservation = await prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+  });
+
+  const material = await prisma.material.findUniqueOrThrow({
+    where: { id: reservation.materialId },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      unit: true,
+      quantity: true,
+    },
+  });
+
+  const requester = await prisma.user.findUniqueOrThrow({
+    where: { id: reservation.requesterId },
+    select: {
+      id: true,
+      displayName: true,
+    },
+  });
+
+  const owner = await prisma.user.findUniqueOrThrow({
+    where: { id: reservation.ownerId },
+    select: {
+      id: true,
+      displayName: true,
+    },
+  });
+
+  return {
+    ...reservation,
+    material,
+    requester,
+    owner,
+  };
+};
+
+const loadLearnerCancelledReservationRecord = async (
+  reservationId: string,
+): Promise<LearnerCancelledReservationRecord> => {
+  return prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: learnerCancelInclude,
+  });
+};
+
 export const findLearnerReservations = async (requesterId: string) => {
   return prisma.reservation.findMany({
     where: { requesterId },
-    include: learnerReservationListInclude,
+    select: learnerReservationListSelect,
     orderBy: { createdAt: 'desc' },
   });
 };
@@ -176,7 +240,22 @@ export const findLearnerReservationById = async (
       id: reservationId,
       requesterId,
     },
-    include: learnerReservationListInclude,
+    select: learnerReservationListSelect,
+  });
+};
+
+export const findActiveLearnerReservationForMaterial = async (
+  requesterId: string,
+  materialId: string,
+) => {
+  return prisma.reservation.findFirst({
+    where: {
+      requesterId,
+      materialId,
+      status: { in: [...ACTIVE_HOLD_STATUSES] },
+    },
+    select: learnerReservationListSelect,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
   });
 };
 
@@ -196,8 +275,8 @@ export const createLearnerReservation = async (input: {
   buildItemId?: string;
   combineWithDeliveryGroupId?: string;
 }) => {
-  return runSerializableTransaction(async (tx) => {
-    const material = await tx.material.findUnique({
+  const result = await runSerializableTransaction(async (tx) => {
+    const materialRecord = await tx.material.findUnique({
       where: { id: input.materialId },
       select: {
         id: true,
@@ -209,17 +288,29 @@ export const createLearnerReservation = async (input: {
         price: true,
         currency: true,
         supplierProfileId: true,
-        location: {
-          select: {
-            city: true,
-          },
-        },
+        locationId: true,
       },
     });
 
-    if (!material) {
+    if (!materialRecord) {
       return { outcome: 'NOT_FOUND' as const };
     }
+
+    const materialLocation = await tx.location.findUnique({
+      where: { id: materialRecord.locationId },
+      select: {
+        city: true,
+      },
+    });
+
+    if (!materialLocation) {
+      return { outcome: 'NOT_FOUND' as const };
+    }
+
+    const material = {
+      ...materialRecord,
+      location: materialLocation,
+    };
 
     if (material.ownerId === input.requesterId) {
       return { outcome: 'SELF_RESERVATION' as const };
@@ -259,16 +350,28 @@ export const createLearnerReservation = async (input: {
       };
     }
 
-    await expireStalePendingReservationsForLearnerMaterial(tx, {
-      requesterId: input.requesterId,
-      materialId: material.id,
-    });
-
-    await expireStaleMissedPickupsForMaterialIdsInTransaction(
+    const expiredPendingReservationIds = await expireStalePendingReservationsForLearnerMaterial(
       tx,
-      [material.id],
-      input.requesterId,
+      {
+        requesterId: input.requesterId,
+        materialId: material.id,
+      },
     );
+
+    const expiredMissedPickupReservationIds =
+      await expireStaleMissedPickupsForMaterialIdsInTransaction(
+        tx,
+        [material.id],
+        input.requesterId,
+      );
+
+    const availabilityChanged =
+      expiredPendingReservationIds.length > 0 ||
+      expiredMissedPickupReservationIds.length > 0;
+    const withAvailabilityChange = <T extends object>(result: T) => ({
+      ...result,
+      availabilityChanged,
+    });
 
     const openLearnerReservationCount = await tx.reservation.count({
       where: {
@@ -279,7 +382,9 @@ export const createLearnerReservation = async (input: {
     });
 
     if (openLearnerReservationCount > 0) {
-      return { outcome: 'OPEN_RESERVATION_EXISTS' as const };
+      return withAvailabilityChange({
+        outcome: 'OPEN_RESERVATION_EXISTS' as const,
+      });
     }
 
     let linkedBuildItemId: string | null = null;
@@ -292,9 +397,9 @@ export const createLearnerReservation = async (input: {
       });
 
       if (!buildItemValidation.ok) {
-        return {
+        return withAvailabilityChange({
           outcome: buildItemValidation.code,
-        };
+        });
       }
 
       linkedBuildItemId = buildItemValidation.buildItemId;
@@ -329,7 +434,7 @@ export const createLearnerReservation = async (input: {
     );
 
     if (!pricingResult.ok) {
-      return {
+      return withAvailabilityChange({
         outcome: pricingResult.code as
           | 'INVALID_QUANTITY'
           | 'VALIDATION_ERROR'
@@ -340,7 +445,7 @@ export const createLearnerReservation = async (input: {
           pricingResult.code === 'INVALID_QUANTITY'
             ? decimalToNumber(quantityState.availableQuantity)
             : undefined,
-      };
+      });
     }
 
     const { snapshot, groupAction } = pricingResult;
@@ -350,10 +455,10 @@ export const createLearnerReservation = async (input: {
     if (groupAction.type === 'CREATE') {
       const supplierProfileId = material.supplierProfileId;
       if (!supplierProfileId) {
-        return {
+        return withAvailabilityChange({
           outcome: 'DELIVERY_PRICING_ERROR' as const,
           message: 'Delivery fee could not be calculated for this location.',
-        };
+        });
       }
 
       const createdGroup = await tx.deliveryGroup.create({
@@ -387,7 +492,7 @@ export const createLearnerReservation = async (input: {
     const message = input.message?.trim() || null;
     const deliveryNote = input.deliveryNote?.trim() || null;
 
-    const reservation = await tx.reservation.create({
+    const createdReservation = await tx.reservation.create({
       data: {
         materialId: material.id,
         requesterId: input.requesterId,
@@ -397,12 +502,12 @@ export const createLearnerReservation = async (input: {
         fulfillmentMethod: input.fulfillmentMethod,
         learnerPreferredPickupWindows:
           input.fulfillmentMethod === 'PICKUP'
-            ? input.learnerPreferredPickupWindows
-            : null,
+            ? (input.learnerPreferredPickupWindows ?? Prisma.JsonNull)
+            : Prisma.JsonNull,
         learnerPreferredDeliveryWindows:
           input.fulfillmentMethod === 'DELIVERY'
-            ? input.learnerPreferredDeliveryWindows
-            : null,
+            ? (input.learnerPreferredDeliveryWindows ?? Prisma.JsonNull)
+            : Prisma.JsonNull,
         deliveryAddressText:
           input.fulfillmentMethod === 'DELIVERY'
             ? input.deliveryAddressText?.trim() ?? null
@@ -429,12 +534,12 @@ export const createLearnerReservation = async (input: {
         deliveryGroupId,
         status: 'PENDING',
       },
-      include: reservationInclude,
+      select: { id: true },
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: createdReservation.id,
         statusGroup: 'RESERVATION',
         oldStatus: null,
         newStatus: 'PENDING',
@@ -449,24 +554,33 @@ export const createLearnerReservation = async (input: {
       await setBuildItemLinkedReservationId(
         tx,
         linkedBuildItemId,
-        reservation.id,
+        createdReservation.id,
       );
     }
 
-    const updatedReservation = await tx.reservation.findUniqueOrThrow({
-      where: { id: reservation.id },
-      include: reservationInclude,
+    return withAvailabilityChange({
+      outcome: 'CREATED' as const,
+      reservationId: createdReservation.id,
     });
-
-    return { outcome: 'CREATED' as const, reservation: updatedReservation };
   });
+
+  if (result.outcome !== 'CREATED') {
+    return result;
+  }
+
+  const reservation = await loadLearnerReservationRecord(result.reservationId);
+
+  return {
+    ...result,
+    reservation,
+  };
 };
 
 export const cancelLearnerReservation = async (input: {
   requesterId: string;
   reservationId: string;
 }) => {
-  return runSerializableTransaction(async (tx) => {
+  const result = await runSerializableTransaction(async (tx) => {
     const existing = await tx.reservation.findFirst({
       where: {
         id: input.reservationId,
@@ -495,18 +609,18 @@ export const cancelLearnerReservation = async (input: {
 
     const now = new Date();
 
-    const reservation = await tx.reservation.update({
+    await tx.reservation.update({
       where: { id: existing.id },
       data: {
         status: 'CANCELLED',
         cancelledAt: now,
       },
-      include: learnerCancelInclude,
+      select: { id: true },
     });
 
     await tx.reservationStatusHistory.create({
       data: {
-        reservationId: reservation.id,
+        reservationId: existing.id,
         statusGroup: 'RESERVATION',
         oldStatus: existing.status,
         newStatus: 'CANCELLED',
@@ -517,8 +631,21 @@ export const cancelLearnerReservation = async (input: {
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
 
-    return { outcome: 'CANCELLED' as const, reservation };
+    return { outcome: 'CANCELLED' as const, reservationId: existing.id };
   });
+
+  if (result.outcome !== 'CANCELLED') {
+    return result;
+  }
+
+  const reservation = await loadLearnerCancelledReservationRecord(
+    result.reservationId,
+  );
+
+  return {
+    outcome: 'CANCELLED' as const,
+    reservation,
+  };
 };
 
 export const findMaterialForReservationQuote = async (materialId: string) => {

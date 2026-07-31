@@ -39,9 +39,7 @@ class SupplierComingSoonPage extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: decorations.badge(
-                background: colors.chipSelected,
-              ),
+              decoration: decorations.badge(background: colors.chipSelected),
               child: Text(
                 l.comingSoon,
                 style: context.supplierChip().copyWith(color: colors.accent),

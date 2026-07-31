@@ -268,19 +268,20 @@ class DriverDelivery {
       deliveredAt: _dateFromJson(json['deliveredAt']),
       learnerNote: json['learnerNote'] as String?,
       driverNote: json['driverNote'] as String?,
-      supplierPickupWindowStart:
-          _dateFromJson(json['supplierPickupWindowStart']),
+      supplierPickupWindowStart: _dateFromJson(
+        json['supplierPickupWindowStart'],
+      ),
       supplierPickupWindowEnd: _dateFromJson(json['supplierPickupWindowEnd']),
-      confirmedDeliveryWindowStart:
-          _dateFromJson(json['confirmedDeliveryWindowStart']),
-      confirmedDeliveryWindowEnd:
-          _dateFromJson(json['confirmedDeliveryWindowEnd']),
-      canDriverReportPickupFailed:
-          json['canDriverReportPickupFailed'] == true,
+      confirmedDeliveryWindowStart: _dateFromJson(
+        json['confirmedDeliveryWindowStart'],
+      ),
+      confirmedDeliveryWindowEnd: _dateFromJson(
+        json['confirmedDeliveryWindowEnd'],
+      ),
+      canDriverReportPickupFailed: json['canDriverReportPickupFailed'] == true,
       canDriverReportDeliveryFailed:
           json['canDriverReportDeliveryFailed'] == true,
-      canDriverReportDriverIssue:
-          json['canDriverReportDriverIssue'] == true,
+      canDriverReportDriverIssue: json['canDriverReportDriverIssue'] == true,
       pickupCity: json['pickupCity'] as String?,
       pickupArea: json['pickupArea'] as String?,
       dropoffCity: json['dropoffCity'] as String?,

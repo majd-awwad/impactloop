@@ -10,9 +10,7 @@ class SavedDropoffAddressesApi {
 
   Future<List<SavedDropoffAddress>> fetchSavedAddresses() {
     return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>(
-        '/api/learner/saved-dropoff-addresses',
-      ),
+      _client.get<Map<String, dynamic>>('/api/learner/saved-dropoff-addresses'),
       (json) {
         final items = json['items'];
         if (items is! List) {
@@ -22,9 +20,8 @@ class SavedDropoffAddressesApi {
         return items
             .whereType<Map>()
             .map(
-              (item) => SavedDropoffAddress.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  SavedDropoffAddress.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList(growable: false);
       },
@@ -57,14 +54,15 @@ class SavedDropoffAddressesApi {
     SavedDropoffLocation? location,
     bool? isDefault,
   }) {
+    final data = <String, dynamic>{};
+    if (label != null) data['label'] = label;
+    if (location != null) data['location'] = location.toJson();
+    if (isDefault != null) data['isDefault'] = isDefault;
+
     return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(
         '/api/learner/saved-dropoff-addresses/$id',
-        data: {
-          if (label != null) 'label': label,
-          if (location != null) 'location': location.toJson(),
-          if (isDefault != null) 'isDefault': isDefault,
-        },
+        data: data,
       ),
       (json) => SavedDropoffAddress.fromJson(
         Map<String, dynamic>.from(json['savedAddress'] as Map? ?? const {}),

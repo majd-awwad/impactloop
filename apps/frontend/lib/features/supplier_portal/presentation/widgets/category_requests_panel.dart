@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../../../materials/data/models/category_request.dart';
 
@@ -107,23 +109,14 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = switch (status) {
       'APPROVED' => context.s.notificationStatusLabel(
-          SupplierActionNotificationStatus.approved,
-        ),
+        SupplierActionNotificationStatus.approved,
+      ),
       'REJECTED' => context.s.notificationStatusLabel(
-          SupplierActionNotificationStatus.rejected,
-        ),
+        SupplierActionNotificationStatus.rejected,
+      ),
       _ => context.s.tabPending,
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: context.supplierDecorations.badge(
-        background: context.supplierColors.accentSoft.withValues(alpha: 0.12),
-      ),
-      child: Text(label, style: context.supplierChip()),
-    );
+    return AppStatusBadge(label: label, tone: reviewStatusTone(status));
   }
 }

@@ -14,18 +14,17 @@ class AuthFormCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
     final isCompact = MediaQuery.sizeOf(context).width < 420;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: AppRadius.xlAll,
+        color: colors.surfaceElevated,
+        borderRadius: AppRadius.lgAll,
         border: Border.all(color: colors.border),
         boxShadow: [
           BoxShadow(
-            color: colors.primary.withValues(alpha: isDark ? 0.18 : 0.08),
-            blurRadius: isDark ? 22 : 26,
-            offset: const Offset(0, 12),
+            color: colors.textPrimary.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
