@@ -204,6 +204,43 @@ class AdminMaterialsExportPreflight {
   AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
 }
 
+class AdminMaterialReportsExportPreflight {
+  const AdminMaterialReportsExportPreflight({
+    required this.count,
+    required this.filters,
+    required this.formats,
+  });
+
+  final int count;
+  final Map<String, dynamic> filters;
+  final Map<String, AdminExportFormatEligibility> formats;
+
+  factory AdminMaterialReportsExportPreflight.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final rawFormats = json['formats'];
+    final formats = <String, AdminExportFormatEligibility>{};
+    if (rawFormats is Map<String, dynamic>) {
+      for (final entry in rawFormats.entries) {
+        final value = entry.value;
+        if (value is Map<String, dynamic>) {
+          formats[entry.key] = AdminExportFormatEligibility.fromJson(value);
+        }
+      }
+    }
+
+    return AdminMaterialReportsExportPreflight(
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      filters: json['filters'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['filters'] as Map<String, dynamic>)
+          : const <String, dynamic>{},
+      formats: formats,
+    );
+  }
+
+  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+}
+
 class AdminMaterialsApi {
   const AdminMaterialsApi(this._client);
 
@@ -225,6 +262,19 @@ class AdminMaterialsApi {
           reportStatus != 'ALL')
         'reportStatus': reportStatus,
       'isFree': ?isFree,
+      'format': ?format,
+    };
+  }
+
+  Map<String, dynamic> _reportsExportQueryParameters({
+    String? search,
+    String? status,
+    String? format,
+  }) {
+    return {
+      if (search != null && search.isNotEmpty) 'search': search,
+      if (status != null && status.isNotEmpty && status != 'ALL')
+        'status': status,
       'format': ?format,
     };
   }
@@ -296,6 +346,66 @@ class AdminMaterialsApi {
           ),
         ) ??
         'impactloop-materials.$fallbackExtension';
+
+    downloadAdminExportBytes(
+      bytes: bytes,
+      filename: filename,
+      mimeType: mimeType,
+    );
+  }
+
+  Future<AdminMaterialReportsExportPreflight> preflightReportsExport({
+    String? search,
+    String? status,
+  }) async {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/admin/material-reports/export/preflight',
+        queryParameters: _reportsExportQueryParameters(
+          search: search,
+          status: status,
+        ),
+      ),
+      AdminMaterialReportsExportPreflight.fromJson,
+    );
+  }
+
+  Future<void> downloadReportsExport({
+    String format = 'xlsx',
+    String? search,
+    String? status,
+  }) async {
+    final response = await _client.get<List<int>>(
+      '/api/admin/material-reports/export',
+      queryParameters: _reportsExportQueryParameters(
+        search: search,
+        status: status,
+        format: format,
+      ),
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw const ApiException(
+        message: 'Export file was empty.',
+        code: 'EXPORT_EMPTY',
+      );
+    }
+
+    final mimeType = switch (format) {
+      'xlsx' =>
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      _ => 'text/csv; charset=utf-8',
+    };
+    final fallbackExtension = format == 'xlsx' ? 'xlsx' : 'csv';
+    final filename =
+        sanitizeAdminExportFilename(
+          parseContentDispositionFilename(
+            response.headers.value('content-disposition'),
+          ),
+        ) ??
+        'impactloop-material-reports.$fallbackExtension';
 
     downloadAdminExportBytes(
       bytes: bytes,

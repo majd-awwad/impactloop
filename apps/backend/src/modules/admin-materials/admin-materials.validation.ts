@@ -130,3 +130,21 @@ export type AdminMaterialsExportFilters = z.infer<
 export type AdminMaterialsExportDownloadQuery = z.infer<
   typeof adminMaterialsExportDownloadQuerySchema
 >;
+
+export const adminMaterialReportsExportFiltersSchema =
+  adminMaterialReportsListQuerySchema.omit({
+    page: true,
+    limit: true,
+  });
+
+export const adminMaterialReportsExportDownloadQuerySchema =
+  adminMaterialReportsExportFiltersSchema.extend({
+    format: adminExportSpreadsheetFormatSchema.default('xlsx'),
+  });
+
+export type AdminMaterialReportsExportFilters = z.infer<
+  typeof adminMaterialReportsExportFiltersSchema
+>;
+export type AdminMaterialReportsExportDownloadQuery = z.infer<
+  typeof adminMaterialReportsExportDownloadQuerySchema
+>;

@@ -3,6 +3,7 @@ import type { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { createNotification } from '../notifications/notifications.repository.js';
 import type {
+  AdminMaterialReportsExportFilters,
   AdminMaterialReportsListQuery,
   AdminMaterialsExportFilters,
   AdminMaterialsListQuery,
@@ -366,9 +367,32 @@ const reportListInclude = {
   reviewedBy: { select: { id: true, displayName: true } },
 } satisfies Prisma.MaterialReportInclude;
 
-export const listMaterialReportsForAdmin = async (
-  query: AdminMaterialReportsListQuery,
-) => {
+/** Export include matches list fields needed by the safe export mapper. */
+const reportExportInclude = {
+  material: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      owner: {
+        select: {
+          displayName: true,
+          supplierProfile: {
+            select: { publicName: true, verificationStatus: true },
+          },
+        },
+      },
+    },
+  },
+  reporter: { select: { displayName: true, email: true } },
+} satisfies Prisma.MaterialReportInclude;
+
+export const buildMaterialReportsWhere = (
+  query: Pick<
+    AdminMaterialReportsListQuery,
+    'status' | 'reason' | 'search' | 'materialId'
+  >,
+): Prisma.MaterialReportWhereInput => {
   const where: Prisma.MaterialReportWhereInput = {};
 
   if (query.status) {
@@ -394,6 +418,13 @@ export const listMaterialReportsForAdmin = async (
     ];
   }
 
+  return where;
+};
+
+export const listMaterialReportsForAdmin = async (
+  query: AdminMaterialReportsListQuery,
+) => {
+  const where = buildMaterialReportsWhere(query);
   const skip = (query.page - 1) * query.limit;
 
   const [items, total] = await Promise.all([
@@ -408,6 +439,56 @@ export const listMaterialReportsForAdmin = async (
   ]);
 
   return { items, total };
+};
+
+export type AdminMaterialReportExportKeysetCursor = {
+  createdAt: Date;
+  id: string;
+};
+
+export type AdminMaterialReportExportRecord = Prisma.MaterialReportGetPayload<{
+  include: typeof reportExportInclude;
+}>;
+
+export const countAdminMaterialReportsForExport = async (
+  query: AdminMaterialReportsExportFilters,
+) => prisma.materialReport.count({ where: buildMaterialReportsWhere(query) });
+
+/**
+ * Keyset pagination: createdAt DESC, id DESC.
+ * Predicate: createdAt < cursor.createdAt OR (createdAt = cursor.createdAt AND id < cursor.id)
+ */
+export const listAdminMaterialReportsExportBatch = async (input: {
+  query: AdminMaterialReportsExportFilters;
+  cursor?: AdminMaterialReportExportKeysetCursor;
+  take: number;
+}): Promise<AdminMaterialReportExportRecord[]> => {
+  const baseWhere = buildMaterialReportsWhere(input.query);
+  const where: Prisma.MaterialReportWhereInput = input.cursor
+    ? {
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { createdAt: { lt: input.cursor.createdAt } },
+              {
+                AND: [
+                  { createdAt: input.cursor.createdAt },
+                  { id: { lt: input.cursor.id } },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
+
+  return prisma.materialReport.findMany({
+    where,
+    include: reportExportInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: input.take,
+  });
 };
 
 export const findMaterialReportByIdForAdmin = async (id: string) => {

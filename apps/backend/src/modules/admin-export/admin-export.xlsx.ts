@@ -27,6 +27,8 @@ export const buildXlsxBuffer = async (input: {
   rows: unknown[][];
   /** 1-based column indexes that should display as dates */
   dateColumnIndexes?: number[];
+  /** 1-based column indexes that should wrap long text */
+  wrapColumnIndexes?: number[];
 }): Promise<Buffer> => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet(input.sheetName);
@@ -50,15 +52,21 @@ export const buildXlsxBuffer = async (input: {
     worksheet.getColumn(columnIndex).numFmt = 'yyyy-mm-dd hh:mm';
   }
 
+  const wrapColumns = new Set(input.wrapColumnIndexes ?? []);
+  for (const columnIndex of wrapColumns) {
+    worksheet.getColumn(columnIndex).alignment = { wrapText: true, vertical: 'top' };
+  }
+
   for (let columnIndex = 1; columnIndex <= input.headers.length; columnIndex += 1) {
     const column = worksheet.getColumn(columnIndex);
+    const maxCellLength = Math.max(
+      input.headers[columnIndex - 1]?.length ?? 10,
+      ...input.rows.map((row) => String(row[columnIndex - 1] ?? '').length),
+      10,
+    );
     column.width = Math.min(
-      48,
-      Math.max(
-        input.headers[columnIndex - 1]?.length ?? 10,
-        ...input.rows.map((row) => String(row[columnIndex - 1] ?? '').length),
-        10,
-      ),
+      wrapColumns.has(columnIndex) ? 48 : 48,
+      Math.max(wrapColumns.has(columnIndex) ? 24 : 10, Math.min(maxCellLength, 48)),
     );
   }
 

@@ -10,10 +10,16 @@ import {
   preflightAdminMaterialsExport,
   streamAdminMaterialsExport,
 } from './admin-materials.export.js';
+import {
+  preflightAdminMaterialReportsExport,
+  streamAdminMaterialReportsExport,
+} from './admin-material-reports.export.js';
 import * as service from './admin-materials.service.js';
 import type {
   AdminMaterialIdParams,
   AdminMaterialReportIdParams,
+  AdminMaterialReportsExportDownloadQuery,
+  AdminMaterialReportsExportFilters,
   AdminMaterialReportsListQuery,
   AdminMaterialsExportDownloadQuery,
   AdminMaterialsExportFilters,
@@ -115,6 +121,29 @@ export const listAdminMaterialReports = async (
   const query = readValidatedQuery<AdminMaterialReportsListQuery>(req);
   const result = await service.listAdminMaterialReports(query);
   res.json(successResponse('Material reports loaded.', result));
+};
+
+export const preflightAdminMaterialReportsExportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const filters = readValidatedQuery<AdminMaterialReportsExportFilters>(req);
+  const result = await preflightAdminMaterialReportsExport(filters);
+  res.json(
+    successResponse('Material reports export preflight loaded.', result),
+  );
+};
+
+export const exportAdminMaterialReportsHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = readValidatedQuery<AdminMaterialReportsExportDownloadQuery>(req);
+  await streamAdminMaterialReportsExport({
+    res,
+    filters: query,
+    actorUserId: req.auth!.sub,
+  });
 };
 
 export const getAdminMaterialReport = async (
