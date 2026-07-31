@@ -269,12 +269,15 @@ class AdminMaterialsApi {
   Map<String, dynamic> _reportsExportQueryParameters({
     String? search,
     String? status,
+    String? reason,
     String? format,
   }) {
     return {
       if (search != null && search.isNotEmpty) 'search': search,
       if (status != null && status.isNotEmpty && status != 'ALL')
         'status': status,
+      if (reason != null && reason.isNotEmpty && reason != 'ALL')
+        'reason': reason,
       'format': ?format,
     };
   }
@@ -357,6 +360,7 @@ class AdminMaterialsApi {
   Future<AdminMaterialReportsExportPreflight> preflightReportsExport({
     String? search,
     String? status,
+    String? reason,
   }) async {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
@@ -364,6 +368,7 @@ class AdminMaterialsApi {
         queryParameters: _reportsExportQueryParameters(
           search: search,
           status: status,
+          reason: reason,
         ),
       ),
       AdminMaterialReportsExportPreflight.fromJson,
@@ -374,12 +379,14 @@ class AdminMaterialsApi {
     String format = 'xlsx',
     String? search,
     String? status,
+    String? reason,
   }) async {
     final response = await _client.get<List<int>>(
       '/api/admin/material-reports/export',
       queryParameters: _reportsExportQueryParameters(
         search: search,
         status: status,
+        reason: reason,
         format: format,
       ),
       options: Options(responseType: ResponseType.bytes),

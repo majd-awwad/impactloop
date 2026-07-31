@@ -111,6 +111,7 @@ String adminPageTitle(AdminL10n l, String location) {
   if (location.startsWith('/admin/learning-projects')) {
     return l.navLearningProjects;
   }
+  if (location.startsWith('/admin/exports')) return l.navExportCenter;
   if (location.startsWith('/admin/impact')) return l.navImpactAnalytics;
   if (location.startsWith('/admin/audit-logs')) return l.navAuditLogs;
   return l.overviewPageTitle;
