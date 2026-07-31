@@ -7,6 +7,7 @@ import {
   ensureSelfPickupCodeStored,
 } from '../../utils/handover-codes.js';
 import { prisma } from '../../database/prisma.js';
+import { shouldLazyExpire } from '../material-requests/material-requests.lifecycle.js';
 
 import {
   mapReservationMessage,
@@ -518,6 +519,49 @@ export const expireStalePendingReservationsForMaterials = async (
   await expireStaleMissedPickupsForMaterialIds(materialIds);
 };
 
+const linkMaterialRequestMatchToReservation = async (input: {
+  matchId: string;
+  reservationId: string;
+  requesterId: string;
+  materialId: string;
+}) => {
+  const match = await prisma.learnerMaterialRequestMatch.findUnique({
+    where: { id: input.matchId },
+    include: { materialRequest: true },
+  });
+  if (!match || match.materialRequest.learnerId !== input.requesterId) {
+    throw new AppError('Material request suggestion not found', 404, 'NOT_FOUND');
+  }
+  if (match.materialId !== input.materialId) {
+    throw new AppError(
+      'Suggestion does not match this material',
+      400,
+      'VALIDATION_ERROR',
+    );
+  }
+  if (match.status !== 'SUGGESTED') {
+    throw new AppError(
+      'Suggestion is not available for reservation',
+      409,
+      'CONFLICT',
+    );
+  }
+  if (
+    shouldLazyExpire(match.materialRequest) ||
+    match.materialRequest.status !== 'OPEN'
+  ) {
+    throw new AppError('Material request is not open', 409, 'REQUEST_NOT_OPEN');
+  }
+
+  await prisma.learnerMaterialRequestMatch.update({
+    where: { id: match.id },
+    data: {
+      status: 'RESERVATION_CREATED',
+      reservationId: input.reservationId,
+    },
+  });
+};
+
 export const createReservation = async (
   requesterId: string,
   input: CreateReservationInput,
@@ -561,6 +605,14 @@ export const createReservation = async (
   switch (result.outcome) {
     case 'CREATED':
       void notifyReservationCreated(result.reservation.id);
+      if (input.materialRequestMatchId) {
+        await linkMaterialRequestMatchToReservation({
+          matchId: input.materialRequestMatchId,
+          reservationId: result.reservation.id,
+          requesterId,
+          materialId: input.materialId,
+        });
+      }
       return mapReservation(result.reservation);
     case 'NOT_FOUND':
       throw new AppError('Material not found.', 404, 'NOT_FOUND');

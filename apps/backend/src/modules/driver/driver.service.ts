@@ -46,6 +46,41 @@ import {
 } from '../delivery-groups/delivery-group-operations.service.js';
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
 
+const notifyMaterialRequestsFulfilledByReservations = async (
+  reservationIds: string[],
+) => {
+  if (reservationIds.length === 0) {
+    return;
+  }
+
+  const { fulfillRequestFromCompletedReservation } = await import(
+    '../learner-material-requests/learner-material-requests.service.js'
+  );
+  const { createNotificationIfMissing } = await import(
+    '../notifications/notifications.repository.js'
+  );
+
+  for (const reservationId of reservationIds) {
+    const fulfilled = await fulfillRequestFromCompletedReservation(reservationId);
+    if (!fulfilled) {
+      continue;
+    }
+
+    await createNotificationIfMissing({
+      userId: fulfilled.learnerId,
+      notificationType: 'MATERIAL_REQUEST_FULFILLED',
+      title: 'Material request fulfilled',
+      body: `Your request "${fulfilled.requestedItemName}" was marked fulfilled after a completed reservation.`,
+      relatedEntityType: 'MATERIAL_REQUEST',
+      relatedEntityId: fulfilled.id,
+      eventKey: `mr:fulfilled:${fulfilled.id}`,
+      entityType: 'MATERIAL_REQUEST',
+      entityId: fulfilled.id,
+      actionType: 'OPEN_ENTITY',
+    });
+  }
+};
+
 const terminalStatuses = [
   'DELIVERED',
   'CANCELLED',
@@ -849,8 +884,10 @@ export const updateDriverDeliveryStatus = async (
       data: statusData,
     });
 
+    let completedReservationIds: string[] = [];
+
     if (input.status === 'DELIVERED') {
-      await completeReservationsForDeliveredDelivery(tx, {
+      completedReservationIds = await completeReservationsForDeliveredDelivery(tx, {
         delivery: {
           id: delivery.id,
           reservationId: delivery.reservationId,
@@ -884,7 +921,11 @@ export const updateDriverDeliveryStatus = async (
       },
     });
 
-    return { outcome: 'UPDATED' as const, deliveryId: delivery.id };
+    return {
+      outcome: 'UPDATED' as const,
+      deliveryId: delivery.id,
+      completedReservationIds,
+    };
   });
 
   switch (result.outcome) {
@@ -899,6 +940,9 @@ export const updateDriverDeliveryStatus = async (
       }
       if (input.status === 'DELIVERED') {
         invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
+        await notifyMaterialRequestsFulfilledByReservations(
+          result.completedReservationIds,
+        );
       }
       return mapAssignedDelivery(updatedDelivery);
     }

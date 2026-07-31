@@ -1105,6 +1105,29 @@ export const completeSupplierReservation = async (
   }
 
   invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
+  const { fulfillRequestFromCompletedReservation } = await import(
+    '../learner-material-requests/learner-material-requests.service.js'
+  );
+  const { createNotificationIfMissing } = await import(
+    '../notifications/notifications.repository.js'
+  );
+  const fulfilled = await fulfillRequestFromCompletedReservation(
+    result.reservation.id,
+  );
+  if (fulfilled) {
+    await createNotificationIfMissing({
+      userId: fulfilled.learnerId,
+      notificationType: 'MATERIAL_REQUEST_FULFILLED',
+      title: 'Material request fulfilled',
+      body: `Your request “${fulfilled.requestedItemName}” was marked fulfilled after a completed reservation.`,
+      relatedEntityType: 'MATERIAL_REQUEST',
+      relatedEntityId: fulfilled.id,
+      eventKey: `mr:fulfilled:${fulfilled.id}`,
+      entityType: 'MATERIAL_REQUEST',
+      entityId: fulfilled.id,
+      actionType: 'OPEN_ENTITY',
+    });
+  }
   return mapSupplierReservation(result.reservation);
 };
 

@@ -168,6 +168,7 @@ export const createSupplierMaterialSchema = z
     imageUrls: z.array(materialImageUrlSchema).min(1).max(5),
     sourceCategoryRequestId: z.string().trim().min(1).optional(),
     sourcePriceRuleRequestId: z.string().trim().min(1).optional(),
+    suggestToMaterialRequestId: z.string().trim().min(1).optional(),
     useDefaultPickupLocation: z.boolean().default(true),
     pickupLocation: locationSchema.optional(),
   })

@@ -1357,6 +1357,20 @@ export const createSupplierMaterialIdempotent = async (
   });
   const createdMaterial = created.response;
 
+  if (input.suggestToMaterialRequestId && !created.replayed) {
+    const { suggestMaterialForRequest } = await import(
+      "../supplier-material-requests/supplier-material-requests.service.js"
+    );
+    try {
+      await suggestMaterialForRequest(userId, input.suggestToMaterialRequestId, {
+        materialId: createdMaterial.id,
+        confirmWeakMatch: true,
+      });
+    } catch {
+      // Listing succeeds even if suggestion fails; supplier can suggest manually.
+    }
+  }
+
   const publishNotifications: Promise<unknown>[] = [];
   if (input.sourceCategoryRequestId) {
     publishNotifications.push(
