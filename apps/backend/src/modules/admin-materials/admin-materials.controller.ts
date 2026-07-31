@@ -6,11 +6,17 @@ import {
 } from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
+import {
+  preflightAdminMaterialsExport,
+  streamAdminMaterialsExport,
+} from './admin-materials.export.js';
 import * as service from './admin-materials.service.js';
 import type {
   AdminMaterialIdParams,
   AdminMaterialReportIdParams,
   AdminMaterialReportsListQuery,
+  AdminMaterialsExportDownloadQuery,
+  AdminMaterialsExportFilters,
   AdminMaterialsListQuery,
   HideMaterialFromReportInput,
   HideMaterialInput,
@@ -35,6 +41,27 @@ export const listAdminMaterials = async (
   const query = readValidatedQuery<AdminMaterialsListQuery>(req);
   const result = await service.listAdminMaterials(query);
   res.json(successResponse('Materials loaded.', result));
+};
+
+export const preflightAdminMaterialsExportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const filters = readValidatedQuery<AdminMaterialsExportFilters>(req);
+  const result = await preflightAdminMaterialsExport(filters);
+  res.json(successResponse('Material export preflight loaded.', result));
+};
+
+export const exportAdminMaterialsHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = readValidatedQuery<AdminMaterialsExportDownloadQuery>(req);
+  await streamAdminMaterialsExport({
+    res,
+    filters: query,
+    actorUserId: req.auth!.sub,
+  });
 };
 
 export const getAdminMaterial = async (

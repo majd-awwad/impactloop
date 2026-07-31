@@ -15,6 +15,7 @@ import {
 import {
   assertExportWithinLimit,
   buildExportPreflightResult,
+  buildSpreadsheetExportPreflightResult,
 } from './admin-export.preflight.js';
 import {
   assertAdminExportPdfFontsPresent,
@@ -169,6 +170,20 @@ describe('admin-export.preflight', () => {
         error instanceof AppError &&
         error.code === 'EXPORT_LIMIT_EXCEEDED' &&
         (error.details as { format?: string }).format === 'csv',
+    );
+  });
+
+  test('spreadsheet preflight returns only xlsx and csv', () => {
+    const result = buildSpreadsheetExportPreflightResult(12, {
+      status: 'AVAILABLE',
+    });
+    assert.equal(result.count, 12);
+    assert.equal(result.formats.xlsx.allowed, true);
+    assert.equal(result.formats.csv.allowed, true);
+    assert.equal(
+      'pdf' in result.formats,
+      false,
+      'Materials-style preflight must not expose pdf',
     );
   });
 });

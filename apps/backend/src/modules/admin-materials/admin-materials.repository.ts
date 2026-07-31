@@ -4,6 +4,7 @@ import { prisma } from '../../database/prisma.js';
 import { createNotification } from '../notifications/notifications.repository.js';
 import type {
   AdminMaterialReportsListQuery,
+  AdminMaterialsExportFilters,
   AdminMaterialsListQuery,
 } from './admin-materials.validation.js';
 
@@ -27,8 +28,24 @@ const materialListInclude = {
   _count: { select: { reports: true } },
 } satisfies Prisma.MaterialInclude;
 
-const buildMaterialsWhere = (
-  query: AdminMaterialsListQuery,
+const materialExportInclude = {
+  category: { select: { id: true, nameEn: true, nameAr: true } },
+  location: { select: { city: true, area: true } },
+  owner: { select: { id: true, email: true, displayName: true } },
+  supplierProfile: {
+    select: {
+      publicName: true,
+      verificationStatus: true,
+      organizationProfile: {
+        select: { organizationName: true },
+      },
+    },
+  },
+  _count: { select: { reports: true } },
+} satisfies Prisma.MaterialInclude;
+
+export const buildMaterialsWhere = (
+  query: AdminMaterialsListQuery | AdminMaterialsExportFilters,
 ): Prisma.MaterialWhereInput => {
   const where: Prisma.MaterialWhereInput = {};
 
@@ -132,6 +149,77 @@ export const listMaterialsForAdmin = async (query: AdminMaterialsListQuery) => {
   );
 
   return { items, total, pendingByMaterial };
+};
+
+export type AdminMaterialExportKeysetCursor = {
+  createdAt: Date;
+  id: string;
+};
+
+export type AdminMaterialExportRecord = Prisma.MaterialGetPayload<{
+  include: typeof materialExportInclude;
+}>;
+
+export const countAdminMaterialsForExport = async (
+  query: AdminMaterialsExportFilters,
+) => prisma.material.count({ where: buildMaterialsWhere(query) });
+
+/**
+ * Keyset pagination: createdAt DESC, id DESC.
+ * Predicate: createdAt < cursor.createdAt OR (createdAt = cursor.createdAt AND id < cursor.id)
+ */
+export const listAdminMaterialsExportBatch = async (input: {
+  query: AdminMaterialsExportFilters;
+  cursor?: AdminMaterialExportKeysetCursor;
+  take: number;
+}): Promise<AdminMaterialExportRecord[]> => {
+  const baseWhere = buildMaterialsWhere(input.query);
+  const where: Prisma.MaterialWhereInput = input.cursor
+    ? {
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { createdAt: { lt: input.cursor.createdAt } },
+              {
+                AND: [
+                  { createdAt: input.cursor.createdAt },
+                  { id: { lt: input.cursor.id } },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
+
+  return prisma.material.findMany({
+    where,
+    include: materialExportInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: input.take,
+  });
+};
+
+export const countPendingReportsByMaterialIds = async (
+  materialIds: string[],
+): Promise<Map<string, number>> => {
+  if (materialIds.length === 0) {
+    return new Map();
+  }
+
+  const pendingCounts = await prisma.materialReport.groupBy({
+    by: ['materialId'],
+    where: {
+      materialId: { in: materialIds },
+      status: 'PENDING',
+    },
+    _count: { _all: true },
+  });
+
+  return new Map(
+    pendingCounts.map((row) => [row.materialId, row._count._all]),
+  );
 };
 
 const materialDetailInclude = {

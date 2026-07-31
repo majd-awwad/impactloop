@@ -57,6 +57,7 @@ import {
   rejectPriceRequestSchema,
 } from '../admin-approvals/admin-approvals.validation.js';
 import {
+  exportAdminMaterialsHandler,
   getAdminMaterial,
   getAdminMaterialReport,
   getAdminMaterialsSummary,
@@ -65,6 +66,7 @@ import {
   listAdminMaterialReports,
   listAdminMaterials,
   markAdminMaterialUnavailable,
+  preflightAdminMaterialsExportHandler,
   rejectAdminMaterialReport,
   resolveAdminMaterialReport,
   restoreAdminMaterial,
@@ -74,6 +76,8 @@ import {
   adminMaterialIdParamSchema,
   adminMaterialReportIdParamSchema,
   adminMaterialReportsListQuerySchema,
+  adminMaterialsExportDownloadQuerySchema,
+  adminMaterialsExportFiltersSchema,
   adminMaterialsListQuerySchema,
   hideMaterialFromReportSchema,
   hideMaterialSchema,
@@ -339,6 +343,22 @@ adminRouter.get(
   authMiddleware,
   requireRoles('ADMIN'),
   asyncHandler(getAdminMaterialsSummary),
+);
+
+adminRouter.get(
+  '/materials/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminMaterialsExportHandler),
+);
+
+adminRouter.get(
+  '/materials/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminMaterialsHandler),
 );
 
 adminRouter.get(
