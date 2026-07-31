@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:frontend/app/theme/app_theme.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/profile/application/profile_providers.dart';
@@ -13,6 +14,7 @@ import 'package:frontend/features/profile/data/profile_repository.dart';
 import 'package:frontend/features/profile/data/models/learner_interest_options.dart';
 import 'package:frontend/features/profile/presentation/pages/learner_profile_edit_page.dart';
 import 'package:frontend/features/profile/presentation/pages/profile_edit_page.dart';
+import 'package:frontend/features/profile/presentation/widgets/profile_edit_widgets.dart';
 
 void main() {
   test('dropdown values replace a trim/case-equivalent supported value', () {
@@ -47,20 +49,16 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            authControllerProvider.overrideWith(
-              () => _TestAuthController(_testUser()),
-            ),
-            profileRepositoryProvider.overrideWithValue(repository),
-          ],
-          child: const MaterialApp(home: ProfileEditPage()),
+        _profileEditApp(
+          repository: repository,
+          child: const ProfileEditPage(),
         ),
       );
 
       await tester.pump();
 
       await tester.enterText(find.byType(TextFormField).at(0), 'Updated Name');
+      await tester.ensureVisible(find.text('Save changes'));
       await tester.tap(find.text('Save changes'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
@@ -72,6 +70,66 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('profile edit renders hero, sections, and actions in English', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _profileEditApp(
+        repository: _RecordingProfileRepository(),
+        child: const ProfileEditPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit profile'), findsOneWidget);
+    expect(
+      find.text('Update your personal information and profile photo.'),
+      findsOneWidget,
+    );
+    expect(find.byType(ProfileEditIdentityHero), findsOneWidget);
+    expect(find.text('Learner User'), findsWidgets);
+    expect(find.text('learner@example.com'), findsOneWidget);
+    expect(find.text('Edit personal information'), findsOneWidget);
+    expect(find.text('Profile photo'), findsOneWidget);
+    expect(find.text('Basic information'), findsOneWidget);
+    expect(find.text('Save changes'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(
+      find.text('Saving a new phone number will mark it as not verified.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('profile edit mobile and web layouts render without overflow', (
+    tester,
+  ) async {
+    final repository = _RecordingProfileRepository();
+
+    Future<void> pumpAt(Size size) async {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpWidget(
+        _profileEditApp(
+          repository: repository,
+          child: const ProfileEditPage(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('Edit profile'), findsOneWidget);
+      expect(find.text('Profile photo'), findsOneWidget);
+      expect(find.text('Basic information'), findsOneWidget);
+      expect(find.text('Save changes'), findsOneWidget);
+    }
+
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpAt(const Size(360, 800));
+    await pumpAt(const Size(1440, 900));
+  });
 
   testWidgets(
     'learner profile edit syncs auth state and opens the learning profile',
@@ -362,44 +420,63 @@ void main() {
   testWidgets('Arabic personal editor localizes controls and uses RTL', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 800));
+    await tester.binding.setSurfaceSize(const Size(360, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authControllerProvider.overrideWith(
-            () => _TestAuthController(_testUser()),
-          ),
-          profileRepositoryProvider.overrideWithValue(
-            _RecordingProfileRepository(),
-          ),
-        ],
-        child: const MaterialApp(
-          locale: Locale('ar'),
-          supportedLocales: [Locale('en'), Locale('ar')],
-          localizationsDelegates: [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          home: ProfileEditPage(),
-        ),
+      _profileEditApp(
+        repository: _RecordingProfileRepository(),
+        locale: const Locale('ar'),
+        child: const ProfileEditPage(),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('تعديل الملف الشخصي'), findsOneWidget);
+    expect(find.text('حدّث معلوماتك الشخصية وصورة ملفك.'), findsOneWidget);
+    expect(find.byType(ProfileEditIdentityHero), findsOneWidget);
     expect(find.text('اسم العرض'), findsOneWidget);
+    expect(find.text('المعلومات الأساسية'), findsOneWidget);
     expect(find.text('صورة الملف الشخصي'), findsOneWidget);
     expect(find.text('اختيار صورة'), findsOneWidget);
     expect(find.text('حفظ التغييرات'), findsOneWidget);
+    expect(find.text('إلغاء'), findsOneWidget);
+    expect(
+      find.text('سيؤدي حفظ رقم هاتف جديد إلى اعتباره غير موثّق.'),
+      findsOneWidget,
+    );
     expect(
       Directionality.of(tester.element(find.text('تعديل الملف الشخصي'))),
       TextDirection.rtl,
     );
     expect(tester.takeException(), isNull);
   });
+}
+
+Widget _profileEditApp({
+  required Widget child,
+  required _RecordingProfileRepository repository,
+  Locale locale = const Locale('en'),
+}) {
+  return ProviderScope(
+    overrides: [
+      authControllerProvider.overrideWith(
+        () => _TestAuthController(_testUser()),
+      ),
+      profileRepositoryProvider.overrideWithValue(repository),
+    ],
+    child: MaterialApp(
+      theme: AppTheme.light,
+      locale: locale,
+      supportedLocales: const [Locale('en'), Locale('ar')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      home: child,
+    ),
+  );
 }
 
 List<String> _itemLabels(DropdownButton<String> dropdown, String label) {

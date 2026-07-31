@@ -25,6 +25,10 @@ class AccountSettingsL10n {
   String get editPersonalInformation =>
       t('Edit personal information', 'تعديل المعلومات الشخصية');
   String get editProfile => t('Edit profile', 'تعديل الملف الشخصي');
+  String get editProfileSubtitle => t(
+    'Update your personal information and profile photo.',
+    'حدّث معلوماتك الشخصية وصورة ملفك.',
+  );
   String get profileUpdated =>
       t('Profile updated.', 'تم تحديث الملف الشخصي.');
   String get updateProfileFailed => t(
@@ -35,7 +39,16 @@ class AccountSettingsL10n {
     'Profile saved, but current account details could not be refreshed.',
     'تم حفظ الملف الشخصي، لكن تعذّر تحديث بيانات الحساب الحالية.',
   );
+  String get basicInformation => t('Basic information', 'المعلومات الأساسية');
+  String get basicInformationBody => t(
+    'Update your name and phone number.',
+    'حدّث اسمك ورقم هاتفك.',
+  );
   String get displayName => t('Display name', 'اسم العرض');
+  String get displayNameHelper => t(
+    'This is the name that will appear to others on ImpactLoop.',
+    'هذا هو الاسم الذي سيظهر للآخرين في ImpactLoop.',
+  );
   String get displayNameTooShort => t(
     'Display name must be at least 2 characters',
     'يجب ألا يقل اسم العرض عن حرفين',
@@ -48,6 +61,20 @@ class AccountSettingsL10n {
   String get saveChanges => t('Save changes', 'حفظ التغييرات');
   String get saving => t('Saving...', 'جارٍ الحفظ...');
   String get profilePhoto => t('Profile photo', 'صورة الملف الشخصي');
+  String get profilePhotoBody => t(
+    'Your photo is used throughout ImpactLoop.',
+    'تُستخدم صورتك في جميع أنحاء ImpactLoop.',
+  );
+  String get profilePhotoQualityTip => t(
+    'Prefer a clear, high-quality image.',
+    'يُفضل استخدام صورة واضحة وبجودة عالية.',
+  );
+  String get profilePhotoGuidelinesTitle =>
+      t('Image guidelines', 'إرشادات الصورة');
+  String get profilePhotoGuidelinesBody => t(
+    'Use a simple background when possible. JPG, PNG, or WebP up to 5 MB.',
+    'استخدم خلفية بسيطة إن أمكن. JPG أو PNG أو WebP بحجم لا يتجاوز 5 ميجابايت.',
+  );
   String get profilePhotoRequirements => t(
     'JPG, PNG, or WebP up to 5 MB.',
     'JPG أو PNG أو WebP بحجم لا يتجاوز 5 ميجابايت.',
@@ -55,6 +82,7 @@ class AccountSettingsL10n {
   String get choosePhoto => t('Choose photo', 'اختيار صورة');
   String get uploading => t('Uploading...', 'جارٍ الرفع...');
   String get remove => t('Remove', 'إزالة');
+  String get removePhoto => t('Remove photo', 'إزالة الصورة');
   String get imageReadFailed => t(
     'Could not read the selected image.',
     'تعذّرت قراءة الصورة المحددة.',
