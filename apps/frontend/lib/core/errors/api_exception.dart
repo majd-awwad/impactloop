@@ -122,6 +122,16 @@ String localizedApiErrorMessage(
       return l10n.accountSuspended;
     case 'PICKUP_WINDOW_REQUIRED':
       return l10n.pickupWindowRequired;
+    case 'RESERVATION_EXPIRED':
+      return l10n.reservationExpiredError;
+    case 'RESERVATION_ALREADY_ACCEPTED':
+      return l10n.reservationAlreadyAccepted;
+    case 'RESERVATION_ALREADY_DECLINED':
+      return l10n.reservationAlreadyDeclined;
+    case 'RESERVATION_CANCELLED':
+      return l10n.reservationCancelledError;
+    case 'RESERVATION_NOT_PENDING':
+      return l10n.reservationNotPending;
     default:
       final errorCode = error.code;
       if (errorCode != null && errorCode.startsWith('PICKUP_')) {

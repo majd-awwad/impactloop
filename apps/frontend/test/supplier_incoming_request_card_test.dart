@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/supplier_portal/data/models/supplier_incoming_request.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_locale_scope.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import 'package:frontend/features/supplier_portal/presentation/widgets/incoming_request_card.dart';
+import 'package:frontend/l10n/app_localizations.dart';
+import 'package:frontend/l10n/app_localizations_en.dart';
+import 'package:frontend/shared/l10n/learner_ui_labels.dart';
 
 void main() {
   testWidgets(
     'renders canonical inbox fields without a duplicated learner note',
     (tester) async {
+      final en = AppLocalizationsEn();
+      final labels = LearnerUiLabels(en);
       final request = SupplierIncomingRequest(
         id: '24a91f00',
         materialTitle: 'Small DC Gear Motors Pair',
@@ -44,14 +52,25 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              width: 1280,
-              child: IncomingRequestCard(
-                request: request,
-                primaryLabel: 'Review request',
-                onPrimaryAction: () {},
-                onView: () {},
+          locale: const Locale('en'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SupplierLocaleScope(
+            languageCode: 'en',
+            child: Scaffold(
+              body: SizedBox(
+                width: 1280,
+                child: IncomingRequestCard(
+                  request: request,
+                  primaryLabel: 'Review request',
+                  onPrimaryAction: () {},
+                  onView: () {},
+                ),
               ),
             ),
           ),
@@ -59,8 +78,16 @@ void main() {
       );
 
       expect(find.text('Small DC Gear Motors Pair'), findsOneWidget);
-      expect(find.text('Pending'), findsOneWidget);
-      expect(find.text('Needs your response · Next: Supplier'), findsOneWidget);
+      expect(find.text(labels.reservationStatus('PENDING')), findsOneWidget);
+      expect(
+        find.text(
+          en.supplierAttentionNextActor(
+            en.supplierAttentionNeedsYourResponse,
+            en.supplier,
+          ),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Please use the north entrance.'), findsNothing);
     },
   );

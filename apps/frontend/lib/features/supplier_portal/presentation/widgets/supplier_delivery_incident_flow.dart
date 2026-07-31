@@ -5,14 +5,17 @@ import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../../../../l10n/l10n.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_feedback.dart';
+import '../../../../core/errors/api_exception.dart';
 
 Future<String?> _promptIncidentNote(
   BuildContext context, {
   required String title,
   required String hint,
 }) async {
+  final l = context.l10n;
   final controller = TextEditingController();
   final result = await showDialog<String>(
     context: context,
@@ -24,7 +27,7 @@ Future<String?> _promptIncidentNote(
         minLines: 3,
         maxLines: 5,
         decoration: InputDecoration(
-          labelText: 'Note (required)',
+          labelText: l.supplierNoteRequired,
           hintText: hint,
         ),
       ),
@@ -36,7 +39,7 @@ Future<String?> _promptIncidentNote(
             Navigator.of(context).pop(value);
           },
           style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-          child: const Text('Submit report'),
+          child: Text(l.supplierSubmitReport),
         ),
       ),
     ),
@@ -50,14 +53,12 @@ Future<void> handleMarkDeliveryPickupExpired(
   WidgetRef ref, {
   required String reservationId,
 }) async {
+  final l = context.l10n;
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Mark pickup window expired'),
-      content: const Text(
-        'No driver accepted this delivery before the supplier pickup window ended. '
-        'This will close the delivery attempt and send the case to admin review.',
-      ),
+      title: Text(l.supplierMarkPickupExpiredTitle),
+      content: Text(l.supplierMarkPickupExpiredMessage),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
@@ -66,7 +67,7 @@ Future<void> handleMarkDeliveryPickupExpired(
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
           style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-          child: const Text('Mark expired'),
+          child: Text(l.supplierMarkExpired),
         ),
       ],
     ),
@@ -76,13 +77,10 @@ Future<void> handleMarkDeliveryPickupExpired(
   try {
     await markDeliveryPickupExpiredForRequest(ref, requestId: reservationId);
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(
-      context,
-      'Pickup window marked expired. Admin review is in progress.',
-    );
+    showSupplierInfoSnackBar(context, l.supplierPickupExpiredAdminReview);
   } catch (error) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(context, error.toString());
+    showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
   }
 }
 
@@ -91,10 +89,11 @@ Future<void> handleReportNoDriverAvailable(
   WidgetRef ref, {
   required String reservationId,
 }) async {
+  final l = context.l10n;
   final note = await _promptIncidentNote(
     context,
-    title: 'Report no driver available',
-    hint: 'Describe why no driver accepted this delivery',
+    title: l.supplierReportNoDriverTitle,
+    hint: l.supplierReportNoDriverHint,
   );
   if (note == null || !context.mounted) return;
 
@@ -105,10 +104,10 @@ Future<void> handleReportNoDriverAvailable(
       note: note,
     );
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(context, 'No-driver case reported to admin.');
+    showSupplierInfoSnackBar(context, l.supplierNoDriverReported);
   } catch (error) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(context, error.toString());
+    showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
   }
 }
 
@@ -117,19 +116,20 @@ Future<void> handleReportDriverNoShow(
   WidgetRef ref, {
   required String deliveryId,
 }) async {
+  final l = context.l10n;
   final note = await _promptIncidentNote(
     context,
-    title: 'Report driver no-show',
-    hint: 'Describe what happened at supplier pickup',
+    title: l.supplierReportDriverNoShowTitle,
+    hint: l.supplierReportDriverNoShowHint,
   );
   if (note == null || !context.mounted) return;
 
   try {
     await markDriverNoShowForDelivery(ref, deliveryId: deliveryId, note: note);
     if (!context.mounted) return;
-    showSupplierInfoSnackBar(context, 'Driver no-show reported to admin.');
+    showSupplierInfoSnackBar(context, l.supplierDriverNoShowReported);
   } catch (error) {
     if (!context.mounted) return;
-    showSupplierErrorSnackBar(context, error.toString());
+    showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
   }
 }

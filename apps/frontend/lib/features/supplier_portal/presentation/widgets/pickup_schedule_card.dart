@@ -6,7 +6,8 @@ import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
-import '../../data/pickup_schedule_grouping.dart';
+import '../../../../l10n/l10n.dart';
+import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'pickup_schedule_status_style.dart';
 import 'reservation_follow_up_actions.dart';
@@ -52,11 +53,12 @@ class PickupScheduleCard extends StatelessWidget {
     ).resolve(context);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
+    final ui = SupplierReservationUiHelpers.of(context);
     final windowLabel = item.pickupWindow != null
-        ? formatPickupScheduleCardWindow(item.pickupWindow!)
+        ? ui.formatPickupScheduleCardWindow(item.pickupWindow!)
         : item.isCompleted
         ? l.scheduleDone
-        : '—';
+        : ui.emDash;
     final note = _displayNote(item);
     final showFollowUp =
         !item.isCompleted &&
@@ -141,7 +143,7 @@ class PickupScheduleCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          '${item.learnerName} · ${item.quantityLabel} · ${item.pickupType}',
+                          '${item.learnerName} · ${item.quantityLabel} · ${ui.pickupTypeLabel(item.pickupType)}',
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: context.supplierBody().copyWith(
@@ -189,7 +191,9 @@ class PickupScheduleCard extends StatelessWidget {
             if (showDeliveryStatus) ...[
               const SizedBox(height: AppSpacing.sm),
               _DeliveryStatusPanel(
-                statusLabel: item.deliveryStatusLabel,
+                statusLabel: item.activeDelivery?.status == null
+                    ? ui.deliveryStatus(null)
+                    : ui.deliveryStatus(item.activeDelivery!.status),
                 supplierHandoverCode: item.shouldShowSupplierHandoverCode
                     ? item.supplierHandoverCode
                     : null,
@@ -305,8 +309,7 @@ class _DeliveryStatusPanel extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               HandoverConfirmationCodePanel(
                 code: supplierHandoverCode!,
-                instructions:
-                    'Give this code to the driver after handing over the material.',
+                instructions: context.l10n.supplierDriverHandoverCodeInstructions,
               ),
             ],
             SupplierDeliveryIncidentActions(

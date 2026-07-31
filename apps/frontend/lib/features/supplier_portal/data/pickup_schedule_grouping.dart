@@ -1,53 +1,22 @@
+import '../../../l10n/app_localizations.dart';
 import 'models/supplier_pickup_schedule_item.dart';
 import 'models/supplier_incoming_request.dart' show SupplierPickupWindow;
 import 'pickup_schedule_filters.dart';
+import '../presentation/supplier_reservation_ui_helpers.dart';
 
-String formatPickupTimeRange(SupplierPickupWindow window) {
-  final start = window.start.toLocal();
-  final end = window.end.toLocal();
-  final startTime =
-      '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
-  final endTime =
-      '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
-  return '$startTime – $endTime';
-}
+String formatPickupTimeRange(
+  DateTime start,
+  DateTime end,
+  AppLocalizations l10n,
+) => SupplierReservationUiHelpers(l10n).formatPickupTimeRange(start, end);
 
-String formatPickupScheduleCardWindow(SupplierPickupWindow window) {
-  return '${formatScheduleDateLabel(window.start)} · ${formatPickupTimeRange(window)}';
-}
+String formatPickupScheduleCardWindow(
+  SupplierPickupWindow window,
+  AppLocalizations l10n,
+) => SupplierReservationUiHelpers(l10n).formatPickupScheduleCardWindow(window);
 
-String formatScheduleDateLabel(DateTime date) {
-  final local = DateTime(date.year, date.month, date.day);
-  final today = pickupScheduleDateOnly(DateTime.now());
-  final tomorrow = today.add(const Duration(days: 1));
-
-  if (local == today) {
-    return 'Today';
-  }
-  if (local == tomorrow) {
-    return 'Tomorrow';
-  }
-
-  return '${_monthLabel(local.month)} ${local.day}, ${local.year}';
-}
-
-String _monthLabel(int month) {
-  const labels = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return labels[month - 1];
-}
+String formatScheduleDateLabel(DateTime date, AppLocalizations l10n) =>
+    SupplierReservationUiHelpers(l10n).formatScheduleDateLabel(date);
 
 int _groupSortOrder(PickupScheduleGroupKind kind) {
   return switch (kind) {
@@ -60,9 +29,11 @@ int _groupSortOrder(PickupScheduleGroupKind kind) {
 
 List<PickupScheduleDateGroup> groupPickupScheduleItems(
   List<SupplierPickupScheduleItem> items,
-  SupplierPickupScheduleFilter filter, {
+  SupplierPickupScheduleFilter filter,
+  AppLocalizations l10n, {
   DateTime? now,
 }) {
+  final ui = SupplierReservationUiHelpers(l10n);
   if (items.isEmpty) {
     return const [];
   }
@@ -77,7 +48,7 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
       groups.add(
         PickupScheduleDateGroup(
           kind: PickupScheduleGroupKind.completed,
-          label: 'Completed',
+          label: ui.pickupScheduleGroupLabel(PickupScheduleGroupKind.completed),
           items: _sortByPickupStart(completed),
         ),
       );
@@ -113,7 +84,10 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
     groups.add(
       PickupScheduleDateGroup(
         kind: kind,
-        label: formatScheduleDateLabel(date),
+        label: ui.pickupScheduleGroupLabel(
+          kind,
+          dateLabel: formatScheduleDateLabel(date, l10n),
+        ),
         date: date,
         items: groupItems,
       ),
@@ -124,7 +98,7 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
     groups.add(
       PickupScheduleDateGroup(
         kind: PickupScheduleGroupKind.date,
-        label: 'Needs attention',
+        label: ui.pickupScheduleGroupLabel(PickupScheduleGroupKind.date),
         items: undated,
       ),
     );
@@ -134,7 +108,7 @@ List<PickupScheduleDateGroup> groupPickupScheduleItems(
     groups.add(
       PickupScheduleDateGroup(
         kind: PickupScheduleGroupKind.completed,
-        label: 'Completed',
+        label: ui.pickupScheduleGroupLabel(PickupScheduleGroupKind.completed),
         items: _sortByPickupStart(completed),
       ),
     );

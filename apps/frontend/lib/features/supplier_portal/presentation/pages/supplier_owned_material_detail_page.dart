@@ -7,6 +7,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
@@ -15,6 +17,7 @@ import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
 import '../../data/supplier_my_materials_repository.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../supplier_reservation_ui_helpers.dart';
 import '../widgets/materials/supplier_material_delete_helper.dart';
 import '../widgets/materials/supplier_material_edit_helper.dart';
 import '../widgets/materials/supplier_material_label_helper.dart';
@@ -237,12 +240,15 @@ class _MaterialHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
+    final l10n = context.l10n;
     final colors = context.supplierColors;
     final isArabic = l.isArabic;
-    final status = SupplierMaterialLabelHelper.statusMeta(material.status);
-    final condition = SupplierMaterialLabelHelper.conditionMeta(
+    final statusTone = SupplierMaterialLabelHelper.statusMeta(
+      material.status,
+    ).tone;
+    final conditionTone = SupplierMaterialLabelHelper.conditionMeta(
       material.condition,
-    );
+    ).tone;
     final category = isArabic
         ? material.category.nameAr
         : material.category.nameEn;
@@ -302,27 +308,25 @@ class _MaterialHero extends StatelessWidget {
           runSpacing: AppSpacing.xs,
           children: [
             MaterialStatusBadge(
-              label: SupplierMaterialLabelHelper.resolveText(
-                status.label,
-                isArabic,
+              label: SupplierMaterialLabelHelper.statusText(
+                material.status,
+                l10n,
               ),
-              tone: status.tone,
+              tone: statusTone,
             ),
             MaterialConditionBadge(
-              label: SupplierMaterialLabelHelper.resolveText(
-                condition.label,
-                isArabic,
+              label: SupplierMaterialLabelHelper.conditionText(
+                material.condition,
+                l10n,
               ),
-              tone: condition.tone,
+              tone: conditionTone,
             ),
             MaterialPriceBadge(
-              label: SupplierMaterialLabelHelper.resolveText(
-                SupplierMaterialLabelHelper.priceLabel(
-                  isFree: material.isFree,
-                  price: material.price,
-                  currency: material.currency,
-                ),
-                isArabic,
+              label: SupplierMaterialLabelHelper.priceText(
+                isFree: material.isFree,
+                price: material.price,
+                currency: material.currency,
+                l10n: l10n,
               ),
               isFree: material.isFree,
             ),
@@ -372,17 +376,17 @@ class _MetadataStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
+    final l10n = context.l10n;
     final isArabic = l.isArabic;
+    final formatters = LocalizedFormatters(l10n);
     final metadata = [
       _MetadataItem(
         icon: Icons.inventory_2_outlined,
-        text: SupplierMaterialLabelHelper.resolveText(
-          SupplierMaterialLabelHelper.stockLabel(
-            quantity: material.quantity,
-            availableQuantity: material.availableQuantity ?? material.quantity,
-            unit: material.unit,
-          ),
-          isArabic,
+        text: SupplierMaterialLabelHelper.stockText(
+          quantity: material.quantity,
+          availableQuantity: material.availableQuantity ?? material.quantity,
+          unit: material.unit,
+          l10n: l10n,
         ),
       ),
       _MetadataItem(
@@ -408,7 +412,7 @@ class _MetadataStrip extends StatelessWidget {
       _MetadataItem(
         icon: Icons.schedule_outlined,
         text:
-            '${l.createdLabel}: ${_formatDate(material.createdAt, isArabic)}\n${l.updatedLabel}: ${_formatDate(material.updatedAt, isArabic)}',
+            '${l.createdLabel}: ${formatters.date(material.createdAt)}\n${l.updatedLabel}: ${formatters.date(material.updatedAt)}',
       ),
     ];
 
@@ -805,6 +809,7 @@ class _ReuseHistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.s;
+    final formatters = LocalizedFormatters(context.l10n);
     final empty =
         material.completedReservationsCount == 0 && material.reusedCount == 0;
     return _SectionCard(
@@ -823,13 +828,13 @@ class _ReuseHistoryCard extends StatelessWidget {
           if (material.lastCompletedAt != null)
             _MetricRow(
               label: l.lastCompletedLabel,
-              value: _formatDate(material.lastCompletedAt!, l.isArabic),
+              value: formatters.date(material.lastCompletedAt!),
             ),
           if (empty) ...[
             const SizedBox(height: AppSpacing.sm),
             _InfoBanner(
               icon: Icons.info_outline_rounded,
-              text: _reuseHistoryEmptyMessage(l.isArabic),
+              text: l.reuseHistoryWillAppear,
             ),
           ],
         ],
@@ -880,12 +885,12 @@ class _ReservationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = context.s;
     final colors = context.supplierColors;
+    final formatters = LocalizedFormatters(context.l10n);
     final learner = reservation.learnerDisplayName?.trim();
-    final status = _reservationStatusLabel(reservation.status, l.isArabic);
-    final fulfillment = _humanizeLabel(
-      reservation.fulfillmentLabel,
-      l.isArabic,
-    );
+    final status = l.reservationStatusLabel(reservation.status);
+    final fulfillment = SupplierReservationUiHelpers.of(
+      context,
+    ).pickupTypeLabel(reservation.fulfillmentLabel);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -914,7 +919,7 @@ class _ReservationCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            '${_formatQuantity(reservation.quantityRequested)} ${reservation.unit} · $status · ${_formatDate(reservation.createdAt, l.isArabic)}',
+            '${formatters.quantity(reservation.quantityRequested, reservation.unit)} · $status · ${formatters.date(reservation.createdAt)}',
             style: context.supplierBody().copyWith(
               color: colors.textSecondary,
               fontSize: 12,
@@ -1353,84 +1358,4 @@ class _Metric {
   final String value;
   final String label;
   final _MetricTone tone;
-}
-
-String _formatDate(DateTime date, bool isArabic) {
-  const englishMonths = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  const arabicMonths = [
-    'يناير',
-    'فبراير',
-    'مارس',
-    'أبريل',
-    'مايو',
-    'يونيو',
-    'يوليو',
-    'أغسطس',
-    'سبتمبر',
-    'أكتوبر',
-    'نوفمبر',
-    'ديسمبر',
-  ];
-  final month = (isArabic ? arabicMonths : englishMonths)[date.month - 1];
-  return isArabic
-      ? '${date.day} $month ${date.year}'
-      : '$month ${date.day}, ${date.year}';
-}
-
-String _formatQuantity(double value) => value == value.roundToDouble()
-    ? value.toInt().toString()
-    : value.toString();
-
-String _reuseHistoryEmptyMessage(bool isArabic) => isArabic
-    ? 'سيظهر سجل إعادة الاستخدام هنا بعد اكتمال الحجوزات.'
-    : 'Reuse history will appear here after completed reservations.';
-
-String _reservationStatusLabel(String value, bool isArabic) {
-  switch (value.trim().toUpperCase()) {
-    case 'PENDING':
-      return isArabic ? 'قيد المراجعة' : 'Pending';
-    case 'AWAITING_RESOLUTION':
-      return isArabic ? 'بانتظار الحل' : 'Awaiting resolution';
-    case 'RESERVED':
-    case 'ACCEPTED':
-      return isArabic ? 'محجوز' : 'Reserved';
-    case 'COMPLETED':
-      return isArabic ? 'مكتمل' : 'Completed';
-    case 'DECLINED':
-      return isArabic ? 'مرفوض' : 'Declined';
-    case 'CANCELLED':
-      return isArabic ? 'ملغى' : 'Cancelled';
-    default:
-      return _humanizeLabel(value, isArabic);
-  }
-}
-
-String _humanizeLabel(String value, bool isArabic) {
-  final normalized = value.trim();
-  if (normalized.isEmpty) return '';
-  if (isArabic || !RegExp(r'^[A-Z0-9_]+$').hasMatch(normalized)) {
-    return normalized;
-  }
-  return normalized
-      .toLowerCase()
-      .split('_')
-      .map(
-        (word) => word.isEmpty
-            ? word
-            : '${word[0].toUpperCase()}${word.substring(1)}',
-      )
-      .join(' ');
 }

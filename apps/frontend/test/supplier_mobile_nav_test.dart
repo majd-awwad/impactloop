@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/app/theme/app_theme.dart';
 import 'package:frontend/features/supplier_portal/presentation/shell/supplier_mobile_nav.dart';
 import 'package:frontend/features/supplier_portal/presentation/shell/supplier_nav_config.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_locale_scope.dart';
+import 'package:frontend/l10n/app_localizations.dart';
+import 'package:frontend/l10n/app_localizations_ar.dart';
+import 'package:frontend/l10n/app_localizations_en.dart';
 
 void main() {
   test('keeps grouped supplier destinations discoverable on mobile', () {
@@ -57,6 +61,9 @@ void main() {
   testWidgets(
     'renders compact mobile destinations in all supported phone modes',
     (tester) async {
+      final en = AppLocalizationsEn();
+      final ar = AppLocalizationsAr();
+
       for (final width in <double>[360, 400, 412]) {
         for (final direction in <TextDirection>[
           TextDirection.ltr,
@@ -65,11 +72,19 @@ void main() {
           for (final brightness in Brightness.values) {
             final isArabic = direction == TextDirection.rtl;
             final labels = isArabic
-                ? <String>['الرئيسية', 'المواد', 'إضافة', 'الطلبات', 'المزيد']
-                : <String>['Home', 'Materials', 'Add', 'Requests', 'More'];
+                ? <String>[ar.home, ar.materials, ar.supplierAdd, ar.supplierRequests, 'المزيد']
+                : <String>[en.home, en.materials, en.supplierAdd, en.supplierRequests, 'More'];
             final moreLabels = isArabic
-                ? <String>['جدول الاستلام', 'الإشعارات', 'الملف الشخصي']
-                : <String>['Pickup Schedule', 'Notifications', 'Profile'];
+                ? <String>[
+                    ar.supplierPickupSchedule,
+                    ar.notificationsTitle,
+                    ar.profile,
+                  ]
+                : <String>[
+                    en.supplierPickupSchedule,
+                    en.notificationsTitle,
+                    en.profile,
+                  ];
 
             await tester.binding.setSurfaceSize(Size(width, 800));
             await tester.pumpWidget(
@@ -77,6 +92,14 @@ void main() {
                 theme: brightness == Brightness.dark
                     ? AppTheme.dark
                     : AppTheme.light,
+                locale: Locale(isArabic ? 'ar' : 'en'),
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: AppLocalizations.supportedLocales,
                 home: SupplierLocaleScope(
                   languageCode: isArabic ? 'ar' : 'en',
                   child: Directionality(

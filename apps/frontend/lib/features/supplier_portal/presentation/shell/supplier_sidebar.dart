@@ -179,9 +179,7 @@ class _SidebarProfileCard extends StatelessWidget {
               ),
             ),
             Icon(
-              context.isSupplierArabic
-                  ? Icons.chevron_left_rounded
-                  : Icons.chevron_right_rounded,
+              Icons.chevron_right_rounded,
               color: colors.textSecondary,
             ),
           ],

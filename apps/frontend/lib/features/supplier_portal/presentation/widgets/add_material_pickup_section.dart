@@ -16,6 +16,8 @@ import 'supplier_pickup_map.dart';
 import 'supplier_pickup_map_preview.dart';
 import 'supplier_reverse_geocode_state.dart';
 import 'supplier_type_selector.dart';
+import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 
 class MaterialPickupSubmitData {
   const MaterialPickupSubmitData({
@@ -345,7 +347,7 @@ class AddMaterialPickupSectionState
         _locationButtonState = SupplierLocationButtonState.idle;
         _locationCapturedThisSession = false;
       });
-      showSupplierErrorSnackBar(context, error.message);
+      showSupplierErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
     } catch (_) {
       if (!mounted) {
         return;

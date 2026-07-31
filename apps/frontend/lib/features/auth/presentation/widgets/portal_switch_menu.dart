@@ -47,7 +47,11 @@ class PortalModeLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(activePortalModeLabel(user), style: style);
+    final l10n = context.l10n;
+    return Text(
+      user.isSupplierMode ? l10n.supplierMode : l10n.learnerMode,
+      style: style,
+    );
   }
 }
 
@@ -68,12 +72,14 @@ class PortalSwitchMenuItems {
     final resolvedIconColor =
         iconColor ?? Theme.of(context).colorScheme.onSurface;
 
+    final l10n = context.l10n;
+
     if (shouldShowSwitchToLearner(user)) {
       items.add(
         _buildAction(
           context: context,
           icon: Icons.school_outlined,
-          label: 'Switch to Learner',
+          label: l10n.switchToLearner,
           iconColor: resolvedIconColor,
           labelStyle: labelStyle,
           onPressed: () => handlePortalRoleSwitch(
@@ -90,7 +96,7 @@ class PortalSwitchMenuItems {
         _buildAction(
           context: context,
           icon: Icons.school_outlined,
-          label: 'Become a Learner',
+          label: l10n.becomeLearner,
           iconColor: resolvedIconColor,
           labelStyle: labelStyle,
           onPressed: () {
@@ -106,7 +112,7 @@ class PortalSwitchMenuItems {
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 8),
           child: Text(
-            'Organization supplier accounts stay in supplier mode.',
+            l10n.organizationSupplierStaysInSupplierMode,
             style: noteStyle,
           ),
         ),
@@ -118,7 +124,7 @@ class PortalSwitchMenuItems {
         _buildAction(
           context: context,
           icon: Icons.storefront_outlined,
-          label: 'Switch to Supplier',
+          label: l10n.switchToSupplier,
           iconColor: resolvedIconColor,
           labelStyle: labelStyle,
           onPressed: () => handlePortalRoleSwitch(

@@ -10,6 +10,7 @@ import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
 import '../../data/models/become_supplier_request.dart';
 import '../models/become_supplier_step.dart';
+import '../utils/auth_supplier_l10n.dart';
 import '../utils/registration_onboarding_helpers.dart';
 import 'auth_buttons.dart';
 import 'auth_form_fields.dart';
@@ -123,11 +124,13 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   }
 
   bool _validateCurrentStep() {
+    final l10n = context.l10n;
+
     switch (_currentStep) {
       case BecomeSupplierStep.supplierType:
         if (_supplierType == null || _supplierType!.isEmpty) {
           setState(() {
-            _supplierTypeError = 'Supplier type is required';
+            _supplierTypeError = l10n.becomeSupplierSupplierTypeRequired;
           });
           return false;
         }
@@ -135,7 +138,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
       case BecomeSupplierStep.profile:
         if (_publicNameController.text.trim().isEmpty) {
           setState(() {
-            _publicNameError = 'Supplier name is required';
+            _publicNameError = l10n.becomeSupplierSupplierNameRequired;
           });
           return false;
         }
@@ -143,7 +146,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
       case BecomeSupplierStep.location:
         if (_cityController.text.trim().isEmpty) {
           setState(() {
-            _cityError = 'City is required';
+            _cityError = l10n.becomeSupplierCityRequired;
           });
           return false;
         }
@@ -183,9 +186,12 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
 
     setState(() => _isSubmitting = true);
 
+    final l10n = context.l10n;
     final pickupNotes = [
       if (_pickupLocationController.text.trim().isNotEmpty)
-        'Pickup location: ${_pickupLocationController.text.trim()}',
+        l10n.becomeSupplierReviewPickupLocation(
+          _pickupLocationController.text.trim(),
+        ),
       if (_pickupNotesController.text.trim().isNotEmpty)
         _pickupNotesController.text.trim(),
     ].join('\n');
@@ -230,13 +236,14 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
 
       setState(() {
         _isSubmitting = false;
-        _formError = 'Something went wrong. Please try again.';
+        _formError = context.l10n.somethingWentWrong;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final colors = AuthUiPalette.of(context);
 
     return Form(
@@ -245,7 +252,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Become a supplier',
+            l10n.becomeSupplierTitle,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w800,
@@ -254,7 +261,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Keep your learner access and add a supplier profile on the same account.',
+            l10n.becomeSupplierSubtitle,
             style: TextStyle(
               fontSize: 14,
               height: 1.5,
@@ -268,7 +275,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           ),
           const SizedBox(height: AppSpacing.lg),
           Text(
-            _currentStep.title,
+            _currentStep.title(l10n),
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -277,7 +284,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            _currentStep.subtitle,
+            _currentStep.subtitle(l10n),
             style: TextStyle(
               fontSize: 13,
               height: 1.5,
@@ -293,13 +300,16 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           const SizedBox(height: AppSpacing.lg),
           AuthPrimaryButton(
             label: _currentStep == BecomeSupplierStep.review
-                ? 'Open Supplier Portal'
-                : 'Continue',
+                ? l10n.becomeSupplierOpenSupplierPortal
+                : l10n.actionContinue,
             isLoading: _isSubmitting,
             onPressed: _goNext,
           ),
           const SizedBox(height: AppSpacing.sm),
-          AuthOutlinedButton(label: 'Back', onPressed: _goBack),
+          AuthOutlinedButton(
+            label: l10n.supplierBack,
+            onPressed: _goBack,
+          ),
         ],
       ),
     );
@@ -323,15 +333,17 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   }
 
   Widget _buildSupplierTypeStep(BuildContext context) {
+    final l10n = context.l10n;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AuthSectionTitle(title: 'Supplier type'),
+        AuthSectionTitle(title: l10n.supplierSupplierType),
         const SizedBox(height: AppSpacing.sm),
         for (final type in registrationPersonalSupplierTypes) ...[
           AuthSelectCard(
-            label: type,
-            description: supplierTypeDescription(type),
+            label: localizedSupplierType(l10n, type),
+            description: localizedSupplierTypeDescription(l10n, type),
             isSelected: _supplierType == type,
             onTap: () {
               _clearErrors();
@@ -346,7 +358,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
           AppInlineError(message: _supplierTypeError!),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Workshops, factories, and institutions require a separate verification flow.',
+          l10n.becomeSupplierWorkshopsVerificationNote,
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
@@ -358,13 +370,15 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   }
 
   Widget _buildProfileStep(BuildContext context) {
+    final l10n = context.l10n;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AuthTextField(
           controller: _publicNameController,
-          label: 'Supplier name',
-          hint: 'How others will see you',
+          label: l10n.becomeSupplierSupplierNameLabel,
+          hint: l10n.becomeSupplierSupplierNameHint,
           textInputAction: TextInputAction.next,
           errorText: _publicNameError,
           onChanged: (_) => _clearErrors(),
@@ -372,8 +386,8 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
         const AuthFieldGap(),
         AuthTextArea(
           controller: _descriptionController,
-          label: 'About / description (optional)',
-          hint: 'What kinds of materials do you usually share?',
+          label: l10n.becomeSupplierAboutDescriptionOptional,
+          hint: l10n.becomeSupplierAboutDescriptionHint,
           minLines: 2,
           maxLines: 4,
           onChanged: (_) => _clearErrors(),
@@ -383,13 +397,14 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   }
 
   Widget _buildLocationStep(BuildContext context) {
+    final l10n = context.l10n;
     final colors = AuthUiPalette.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'City and area help learners understand where pickup usually happens. Exact pickup details can stay private until a reservation is accepted.',
+          l10n.becomeSupplierLocationHelpText,
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
@@ -399,7 +414,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
         const SizedBox(height: AppSpacing.md),
         AuthTextField(
           controller: _cityController,
-          label: 'City',
+          label: l10n.city,
           hint: 'Nablus',
           textInputAction: TextInputAction.next,
           errorText: _cityError,
@@ -408,7 +423,7 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
         const AuthFieldGap(),
         AuthTextField(
           controller: _areaController,
-          label: 'Area',
+          label: l10n.area,
           hint: 'Rafidia',
           textInputAction: TextInputAction.next,
           onChanged: (_) => _clearErrors(),
@@ -416,8 +431,8 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
         const AuthFieldGap(),
         AuthTextField(
           controller: _pickupLocationController,
-          label: 'Pickup location note (optional)',
-          hint: 'Near university gate, workshop entrance, etc.',
+          label: l10n.becomeSupplierPickupLocationNoteOptional,
+          hint: l10n.becomeSupplierPickupLocationHint,
           textInputAction: TextInputAction.done,
           onChanged: (_) => _clearErrors(),
         ),
@@ -426,21 +441,23 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   }
 
   Widget _buildPickupDetailsStep(BuildContext context) {
+    final l10n = context.l10n;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AuthTextField(
           controller: _workingHoursController,
-          label: 'Working hours (optional)',
-          hint: 'Mon-Fri 4pm-7pm',
+          label: l10n.becomeSupplierWorkingHoursOptional,
+          hint: l10n.becomeSupplierWorkingHoursHint,
           textInputAction: TextInputAction.next,
           onChanged: (_) => _clearErrors(),
         ),
         const AuthFieldGap(),
         AuthTextArea(
           controller: _pickupNotesController,
-          label: 'Pickup notes (optional)',
-          hint: 'Call before pickup, bring student ID, etc.',
+          label: '${l10n.supplierPickupNotes} (${l10n.supplierOptional})',
+          hint: l10n.becomeSupplierPickupNotesHint,
           minLines: 2,
           maxLines: 4,
           onChanged: (_) => _clearErrors(),
@@ -450,31 +467,44 @@ class _BecomeSupplierWizardState extends ConsumerState<BecomeSupplierWizard> {
   }
 
   Widget _buildReviewStep(BuildContext context) {
+    final l10n = context.l10n;
     final notes = [
       if (_pickupLocationController.text.trim().isNotEmpty)
-        'Pickup location: ${_pickupLocationController.text.trim()}',
+        l10n.becomeSupplierReviewPickupLocation(
+          _pickupLocationController.text.trim(),
+        ),
       if (_workingHoursController.text.trim().isNotEmpty)
-        'Working hours: ${_workingHoursController.text.trim()}',
+        l10n.becomeSupplierReviewWorkingHours(
+          _workingHoursController.text.trim(),
+        ),
       if (_pickupNotesController.text.trim().isNotEmpty)
-        'Pickup notes: ${_pickupNotesController.text.trim()}',
+        l10n.becomeSupplierReviewPickupNotes(
+          _pickupNotesController.text.trim(),
+        ),
     ].join('\n');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _ReviewRow(label: 'Supplier type', value: _supplierType ?? '-'),
         _ReviewRow(
-          label: 'Supplier name',
+          label: l10n.supplierSupplierType,
+          value: _supplierType == null
+              ? '-'
+              : localizedSupplierType(l10n, _supplierType!),
+        ),
+        _ReviewRow(
+          label: l10n.becomeSupplierSupplierNameLabel,
           value: _publicNameController.text.trim(),
         ),
         _ReviewRow(
-          label: 'About',
+          label: l10n.about,
           value: _descriptionController.text.trim().isEmpty
               ? '-'
               : _descriptionController.text.trim(),
         ),
-        _ReviewRow(label: 'Pickup area', value: _pickupArea),
-        if (notes.isNotEmpty) _ReviewRow(label: 'Pickup details', value: notes),
+        _ReviewRow(label: l10n.pickupArea, value: _pickupArea),
+        if (notes.isNotEmpty)
+          _ReviewRow(label: l10n.supplierPickupDetails, value: notes),
       ],
     );
   }
@@ -491,12 +521,14 @@ class _BecomeSupplierStepProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final colors = AuthUiPalette.of(context);
 
     return Semantics(
-      label:
-          'Become supplier progress, step ${currentIndex + 1} of '
-          '${steps.length}',
+      label: l10n.becomeSupplierProgressSemantic(
+        currentIndex + 1,
+        steps.length,
+      ),
       child: Row(
         children: [
           for (var index = 0; index < steps.length; index++) ...[

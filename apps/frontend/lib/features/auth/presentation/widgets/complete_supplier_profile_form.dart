@@ -19,6 +19,7 @@ import '../../data/models/become_supplier_request.dart';
 import '../../data/models/registration_draft.dart';
 import '../../../supplier_portal/application/supplier_verification_access.dart';
 import '../../../supplier_portal/data/supplier_verification_api.dart';
+import '../utils/auth_supplier_l10n.dart';
 
 const _maxVerificationDocumentBytes = 5 * 1024 * 1024;
 const _allowedVerificationExtensions = {'pdf', 'png', 'jpg', 'jpeg'};
@@ -103,17 +104,19 @@ class _CompleteSupplierProfileFormState
   }
 
   String? _validateVerificationDocument(PlatformFile? file) {
+    final l10n = context.l10n;
+
     if (file == null || file.bytes == null) {
-      return 'Verification document is required';
+      return l10n.verificationDocumentRequired;
     }
 
     if (file.size > _maxVerificationDocumentBytes) {
-      return 'File must be 5MB or smaller';
+      return l10n.verificationFileSizeLimit;
     }
 
     final extension = file.name.split('.').last.toLowerCase();
     if (!_allowedVerificationExtensions.contains(extension)) {
-      return 'Allowed file types: PDF, PNG, JPG, JPEG';
+      return l10n.verificationAllowedFileTypes;
     }
 
     return null;
@@ -156,7 +159,7 @@ class _CompleteSupplierProfileFormState
         .toList();
 
     if (parts.isEmpty) {
-      throw const FormatException('Pickup area is required');
+      throw FormatException(context.l10n.pickupAreaRequired);
     }
 
     final city = parts.first;
@@ -234,8 +237,7 @@ class _CompleteSupplierProfileFormState
 
           setState(() => _isSubmitting = false);
           setState(() {
-            _formError =
-                'Registration details are incomplete. Please start again.';
+            _formError = context.l10n.registrationDetailsIncomplete;
           });
           context.go('/register');
           return;
@@ -297,26 +299,31 @@ class _CompleteSupplierProfileFormState
 
       setState(() => _isSubmitting = false);
       setState(() {
-        _formError = 'Something went wrong. Please try again.';
+        _formError = context.l10n.somethingWentWrong;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppDropdownField<String>(
-            label: 'Supplier type',
-            hint: 'Select your supplier type',
+            label: l10n.supplierSupplierType,
+            hint: l10n.selectYourSupplierType,
             value: _supplierType,
             errorText: _supplierTypeError,
             items: [
               for (final type in _supplierTypes)
-                DropdownMenuItem(value: type, child: Text(type)),
+                DropdownMenuItem(
+                  value: type,
+                  child: Text(localizedSupplierType(l10n, type)),
+                ),
             ],
             onChanged: (value) {
               if (_supplierTypeError != null || _formError != null) {
@@ -332,7 +339,7 @@ class _CompleteSupplierProfileFormState
             },
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Supplier type is required';
+                return l10n.becomeSupplierSupplierTypeRequired;
               }
               return null;
             },
@@ -341,16 +348,16 @@ class _CompleteSupplierProfileFormState
             const AppFieldGap(),
             Text(
               isOrganizationSupplierInput(_supplierType)
-                  ? 'Organization suppliers are treated as supplier organizations and may need verification before listing materials.'
-                  : 'Student and individual suppliers can still switch back to learner mode after setup.',
+                  ? l10n.organizationSupplierVerificationNote
+                  : l10n.individualSupplierCanSwitchNote,
               style: AppTextStyles.subtitle(context),
             ),
           ],
           const AppFieldGap(),
           AppTextField(
             controller: _publicNameController,
-            label: 'Public name',
-            hint: 'How others will see you',
+            label: l10n.supplierPublicSupplierName,
+            hint: l10n.becomeSupplierSupplierNameHint,
             textInputAction: TextInputAction.next,
             errorText: _publicNameError,
             onChanged: (_) {
@@ -360,7 +367,7 @@ class _CompleteSupplierProfileFormState
             },
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Public name is required';
+                return l10n.publicNameRequired;
               }
               return null;
             },
@@ -368,8 +375,8 @@ class _CompleteSupplierProfileFormState
           const AppFieldGap(),
           AppTextArea(
             controller: _descriptionController,
-            label: 'Short description (optional)',
-            hint: 'What kinds of materials do you usually share?',
+            label: l10n.shortDescriptionOptional,
+            hint: l10n.becomeSupplierAboutDescriptionHint,
             textInputAction: TextInputAction.next,
             minLines: 2,
             maxLines: 4,
@@ -383,7 +390,7 @@ class _CompleteSupplierProfileFormState
           const AppFieldGap(),
           AppTextField(
             controller: _pickupAreaController,
-            label: 'Pickup area / location',
+            label: l10n.pickupAreaLocationLabel,
             hint: 'Nablus, Rafidia',
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _handleSubmit(),
@@ -395,17 +402,17 @@ class _CompleteSupplierProfileFormState
             },
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Pickup area is required';
+                return l10n.pickupAreaRequired;
               }
               return null;
             },
           ),
           if (_isOrganizationSupplier) ...[
             const AppFieldGap(),
-            const _VerificationDocumentSection(),
+            _VerificationDocumentSection(),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Upload a document that proves your organization identity, such as a workshop license, factory document, or university/institution proof.',
+              l10n.verificationDocumentUploadHint,
               style: AppTextStyles.subtitle(context),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -421,13 +428,13 @@ class _CompleteSupplierProfileFormState
           ],
           const SizedBox(height: AppSpacing.md),
           Text(
-            'You can start as an individual and update your supplier details later.',
+            l10n.completeSupplierProfileFooterNote,
             style: AppTextStyles.subtitle(context),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.lg),
           AppPrimaryButton(
-            label: 'Continue',
+            label: l10n.actionContinue,
             isLoading: _isSubmitting,
             onPressed: _handleSubmit,
           ),
@@ -438,12 +445,10 @@ class _CompleteSupplierProfileFormState
 }
 
 class _VerificationDocumentSection extends StatelessWidget {
-  const _VerificationDocumentSection();
-
   @override
   Widget build(BuildContext context) {
     return Text(
-      'Verification document',
+      context.l10n.verificationDocument,
       style: Theme.of(context).textTheme.titleSmall,
     );
   }
@@ -462,11 +467,12 @@ class _VerificationDocumentField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final hasFile = fileName != null && fileName!.trim().isNotEmpty;
 
     return InputDecorator(
       decoration: InputDecoration(
-        hintText: 'PDF, PNG, JPG, or JPEG (max 5MB)',
+        hintText: l10n.verificationDocumentHint,
         floatingLabelBehavior: FloatingLabelBehavior.always,
         errorText: errorText,
         contentPadding: const EdgeInsets.symmetric(
@@ -478,7 +484,7 @@ class _VerificationDocumentField extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              hasFile ? fileName! : 'No file selected',
+              hasFile ? fileName! : l10n.noFileSelected,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: hasFile ? null : Theme.of(context).hintColor,
               ),
@@ -487,7 +493,7 @@ class _VerificationDocumentField extends StatelessWidget {
           ),
           TextButton(
             onPressed: onPick,
-            child: Text(hasFile ? 'Change file' : 'Select file'),
+            child: Text(hasFile ? l10n.changeFile : l10n.selectFile),
           ),
         ],
       ),

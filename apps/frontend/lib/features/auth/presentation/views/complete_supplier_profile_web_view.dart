@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../widgets/auth_form_card.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_shell.dart';
@@ -11,15 +12,16 @@ class CompleteSupplierProfileWebView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return AuthShell(
       layout: AuthShellLayout.webSplit,
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AuthHeader(
-            title: 'Complete your supplier profile',
-            subtitle:
-                'Tell others what materials you share and where pickup works.',
+          AuthHeader(
+            title: l10n.completeSupplierProfileTitle,
+            subtitle: l10n.completeSupplierProfileSubtitle,
           ),
           const SizedBox(height: AppSpacing.lg),
           const AuthFormCard(child: CompleteSupplierProfileForm()),

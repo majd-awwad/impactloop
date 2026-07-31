@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_radius.dart';
+import '../../../../../core/format/localized_formatters.dart';
+import '../../../../../l10n/l10n.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../shared/widgets/app_section_card.dart';
 import '../../../data/models/supplier_dashboard_activity.dart';
@@ -55,7 +57,7 @@ class SupplierDashboardRecentActivityPanel extends StatelessWidget {
             ),
           const SizedBox(height: AppSpacing.md),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
               onPressed: () => context.push(_footerRoute),
               icon: Icon(
@@ -218,39 +220,13 @@ class _ActivityTile extends StatelessWidget {
 
   final _CuratedActivityItem item;
 
-  String? get _timeLabel {
+  String? _timeLabel(BuildContext context) {
     final timestamp = item.timestamp;
     if (timestamp == null || timestamp.millisecondsSinceEpoch == 0) {
       return null;
     }
 
-    final now = DateTime.now();
-    final diff = now.difference(timestamp);
-    if (diff.inDays == 0) {
-      final hour = timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12;
-      final minute = timestamp.minute.toString().padLeft(2, '0');
-      final period = timestamp.hour >= 12 ? 'PM' : 'AM';
-      return '$hour:$minute $period';
-    }
-    if (diff.inDays < 7) {
-      const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      return weekdays[timestamp.weekday - 1];
-    }
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[timestamp.month - 1]} ${timestamp.day}';
+    return LocalizedFormatters(context.l10n).relativeTime(timestamp);
   }
 
   @override
@@ -336,10 +312,10 @@ class _ActivityTile extends StatelessWidget {
               ],
             ),
           ),
-          if (_timeLabel != null) ...[
+          if (_timeLabel(context) != null) ...[
             const SizedBox(width: AppSpacing.xs),
             Text(
-              _timeLabel!,
+              _timeLabel(context)!,
               style: context.supplierBody().copyWith(
                 fontSize: 10,
                 color: colors.textMuted,
@@ -380,7 +356,7 @@ class _EmptyActivityState extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              'Activity will appear as learners request and collect your materials.',
+              context.s.activityWillAppearAsLearners,
               style: context.supplierBody().copyWith(
                 color: colors.textSecondary,
                 fontSize: 13,

@@ -20,6 +20,7 @@ import '../../data/models/registration_draft.dart';
 import '../models/learner_setup_mode.dart';
 import '../models/registration_intent.dart';
 import '../models/registration_wizard_step.dart';
+import '../utils/auth_supplier_l10n.dart';
 import '../utils/registration_onboarding_helpers.dart';
 import 'auth_buttons.dart';
 import 'auth_form_fields.dart';
@@ -194,17 +195,19 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   String? _validateVerificationDocument(PlatformFile? file) {
+    final l10n = context.l10n;
+
     if (file == null || file.bytes == null) {
-      return 'Verification document is required';
+      return l10n.verificationDocumentRequired;
     }
 
     if (file.size > maxVerificationDocumentBytes) {
-      return 'File must be 5MB or smaller';
+      return l10n.verificationFileSizeLimit;
     }
 
     final extension = file.name.split('.').last.toLowerCase();
     if (!allowedVerificationExtensions.contains(extension)) {
-      return 'Allowed file types: PDF, PNG, JPG, JPEG';
+      return l10n.verificationAllowedFileTypes;
     }
 
     return null;
@@ -271,7 +274,10 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
       case RegistrationWizardStep.supplierBasics:
         if (_supplierType == null || _supplierType!.isEmpty) {
-          setState(() => _supplierTypeError = 'Supplier type is required');
+          setState(
+            () => _supplierTypeError =
+                context.l10n.becomeSupplierSupplierTypeRequired,
+          );
           return false;
         }
         return _formKey.currentState?.validate() ?? false;
@@ -672,7 +678,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     if (step == RegistrationWizardStep.goals) {
       return switch (_intent) {
         RegistrationIntent.supplier =>
-          'What do you want to accomplish by sharing materials?',
+          context.l10n.registerSupplierShareMaterialsGoals,
         RegistrationIntent.both =>
           'What do you want to accomplish as both a learner and supplier?',
         RegistrationIntent.learner ||
@@ -683,15 +689,15 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     if (step == RegistrationWizardStep.location) {
       if (_needsSupplierProfile) {
         return _intent == RegistrationIntent.both
-            ? 'Set the general pickup area for materials you share. Learner delivery details are handled later when needed.'
-            : 'Set the general pickup area for materials you share.';
+            ? context.l10n.registerSupplierLocationBothSubtitle
+            : context.l10n.registerSupplierLocationSubtitle;
       }
 
       return 'Optional for learners. Accurate pickup or delivery details are only requested during reservations.';
     }
 
     if (step == RegistrationWizardStep.supplierBasics) {
-      return 'Choose the supplier profile that matches who owns the materials and how it should appear publicly.';
+      return context.l10n.registerSupplierBasicsSubtitle;
     }
 
     if (step == RegistrationWizardStep.learnerBasics) {
@@ -699,7 +705,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
     }
 
     if (step == RegistrationWizardStep.verification) {
-      return 'Organization suppliers need a document so admins can review the account before publishing materials.';
+      return context.l10n.registerSupplierVerificationSubtitle;
     }
 
     if (step == RegistrationWizardStep.review) {
@@ -709,9 +715,9 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
       return switch (_intent) {
         RegistrationIntent.supplier =>
-          'Review your supplier account and pickup area before creating it.',
+          context.l10n.registerSupplierReviewSupplierSubtitle,
         RegistrationIntent.both =>
-          'Review your learner and supplier details before creating the account.',
+          context.l10n.registerSupplierReviewBothSubtitle,
         RegistrationIntent.learner ||
         null => 'Review your learner details before creating the account.',
       };
@@ -843,7 +849,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         _StepProgressSegments(steps: _steps, currentIndex: _stepIndex),
         const SizedBox(height: AppSpacing.md),
         Text(
-          _currentStep.title,
+          _localizedStepTitle(_currentStep),
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w800,
@@ -1183,14 +1189,15 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildSupplierBasicsStep() {
+    final l10n = context.l10n;
     final colors = AuthUiPalette.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const AuthSectionTitle(title: 'Supplier type'),
+        AuthSectionTitle(title: l10n.supplierSupplierType),
         Text(
-          'This controls verification requirements and how your material listings are introduced to requesters.',
+          l10n.registerSupplierTypeControlsVerification,
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
@@ -1200,8 +1207,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const SizedBox(height: AppSpacing.sm),
         for (final type in registrationSupplierTypes) ...[
           AuthSelectCard(
-            label: type,
-            description: supplierTypeDescription(type),
+            label: localizedSupplierType(l10n, type),
+            description: localizedSupplierTypeDescription(l10n, type),
             isSelected: _supplierType == type,
             onTap: () {
               _clearErrors();
@@ -1220,7 +1227,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           AppInlineError(message: _supplierTypeError!),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Public name appears on material listings and reservation messages. Use a workshop, institution, or personal display name that requesters can recognize.',
+          l10n.registerSupplierPublicNameHelp,
           style: TextStyle(
             fontSize: 13,
             height: 1.45,
@@ -1230,9 +1237,9 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const SizedBox(height: AppSpacing.sm),
         AuthTextField(
           controller: _publicNameController,
-          label: 'Supplier display name (optional)',
+          label: l10n.registerSupplierDisplayNameOptional,
           hint: _trimmedDisplayName.isEmpty
-              ? 'Uses your full name by default'
+              ? l10n.registerSupplierUsesFullNameDefault
               : _trimmedDisplayName,
           textInputAction: TextInputAction.next,
           onChanged: (_) => _clearErrors(),
@@ -1240,9 +1247,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const AuthFieldGap(),
         AuthTextArea(
           controller: _descriptionController,
-          label: 'Short description (optional)',
-          hint:
-              'What materials do you expect to share, and when are pickups usually easiest?',
+          label: l10n.shortDescriptionOptional,
+          hint: l10n.becomeSupplierAboutDescriptionHint,
           minLines: 2,
           maxLines: 4,
           onChanged: (_) => _clearErrors(),
@@ -1252,6 +1258,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildVerificationStep() {
+    final l10n = context.l10n;
     final colors = AuthUiPalette.of(context);
     final hasFile =
         _verificationDocument?.name != null &&
@@ -1264,7 +1271,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           Icon(Icons.verified_user_outlined, color: colors.primary, size: 32),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'No verification document is required for this supplier type.',
+            l10n.registerSupplierNoVerificationRequired,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -1273,8 +1280,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'You can review your account details next and create the account '
-            'without uploading a file.',
+            l10n.registerSupplierNoVerificationBody,
             style: TextStyle(
               fontSize: 13,
               color: colors.textSecondary,
@@ -1291,14 +1297,12 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         if (_accountCreated) ...[
           AppInlineError(
             message:
-                _formError ??
-                'Your account is ready. Upload your verification document to continue.',
+                _formError ?? l10n.registerAccountReadyUploadVerification,
           ),
           const SizedBox(height: AppSpacing.md),
         ],
         Text(
-          'Upload a document that proves your organization identity, such as a '
-          'workshop license, factory document, or university/institution proof.',
+          l10n.verificationDocumentUploadHint,
           style: TextStyle(
             fontSize: 13,
             color: colors.textSecondary,
@@ -1308,8 +1312,8 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         const SizedBox(height: AppSpacing.md),
         InputDecorator(
           decoration: InputDecoration(
-            labelText: 'Verification document',
-            hintText: 'PDF, PNG, JPG, or JPEG (max 5MB)',
+            labelText: l10n.verificationDocument,
+            hintText: l10n.verificationDocumentHint,
             floatingLabelBehavior: FloatingLabelBehavior.always,
             errorText: _verificationDocumentError,
             filled: true,
@@ -1334,7 +1338,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
             children: [
               Expanded(
                 child: Text(
-                  hasFile ? _verificationDocument!.name : 'No file selected',
+                  hasFile ? _verificationDocument!.name : l10n.noFileSelected,
                   style: TextStyle(
                     color: hasFile ? colors.textPrimary : colors.textMuted,
                   ),
@@ -1343,7 +1347,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
               ),
               TextButton(
                 onPressed: _pickVerificationDocument,
-                child: Text(hasFile ? 'Change file' : 'Select file'),
+                child: Text(hasFile ? l10n.changeFile : l10n.selectFile),
               ),
             ],
           ),
@@ -1353,6 +1357,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   Widget _buildReviewStep() {
+    final l10n = context.l10n;
     final colors = AuthUiPalette.of(context);
     final draft = ref.watch(registrationDraftProvider);
     final interests = draft.onboardingInterests;
@@ -1411,23 +1416,26 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         ],
         if (draft.supplierProfile != null) ...[
           _ReviewRow(
-            label: 'Supplier type',
-            value: draft.supplierProfile!.supplierType,
+            label: l10n.supplierSupplierType,
+            value: localizedSupplierType(
+              l10n,
+              draft.supplierProfile!.supplierType,
+            ),
           ),
           _ReviewRow(
-            label: 'Public name',
+            label: l10n.supplierPublicSupplierName,
             value: draft.supplierProfile!.publicName,
           ),
           if (draft.supplierProfile!.description?.isNotEmpty ?? false)
             _ReviewRow(
-              label: 'Description',
+              label: l10n.description,
               value: draft.supplierProfile!.description!,
             ),
         ],
         if (_needsVerification)
           _ReviewRow(
-            label: 'Verification document',
-            value: _verificationDocument?.name ?? 'Not selected',
+            label: l10n.verificationDocument,
+            value: _verificationDocument?.name ?? l10n.notSelected,
           ),
         const SizedBox(height: AppSpacing.sm),
         Text(
@@ -1448,40 +1456,49 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
   }
 
   String _intentSetupDescription(RegistrationIntent intent) {
+    final l10n = context.l10n;
     return switch (intent) {
       RegistrationIntent.learner =>
         'You will set learner interests, goals, optional location, and learning level.',
-      RegistrationIntent.supplier =>
-        'You will set supplier goals, pickup area, supplier type, public name, and verification when needed.',
-      RegistrationIntent.both =>
-        'You will set learner interests and learning level, plus supplier pickup and profile details.',
+      RegistrationIntent.supplier => l10n.registerSupplierSetupDescription,
+      RegistrationIntent.both => l10n.registerBothSupplierSetupDescription,
     };
   }
 
   String _locationStepHelperText(bool isRequired) {
+    final l10n = context.l10n;
     if (!isRequired) {
       return 'You can skip this for now. Reservation pickup or delivery details are collected only when they are needed.';
     }
 
     if (_intent == RegistrationIntent.both) {
-      return 'This is the general pickup area for materials you share. It does not expose an exact address publicly, and learner delivery details stay separate.';
+      return l10n.registerSupplierLocationHelperBoth;
     }
 
-    return 'Suppliers need a city and area so requesters can understand pickup feasibility. Exact pickup details can stay private until a reservation or delivery is arranged.';
+    return l10n.registerSupplierLocationHelper;
   }
 
   String _reviewHelperText() {
+    final l10n = context.l10n;
     if (_isAddToExistingAccount) {
       return 'Goals stay in onboarding only. Learner access will be added to your existing account with the learner profile shown above.';
     }
 
     return switch (_intent) {
-      RegistrationIntent.supplier =>
-        'Supplier goals stay in onboarding only. The server receives your account, supplier profile, and pickup area.',
-      RegistrationIntent.both =>
-        'Goals stay in onboarding only. The server receives your account, learner profile, supplier profile, and pickup area.',
+      RegistrationIntent.supplier => l10n.registerSupplierReviewHelper,
+      RegistrationIntent.both => l10n.registerBothReviewHelper,
       RegistrationIntent.learner || null =>
         'Goals stay in onboarding only. The server receives your account and learner profile.',
+    };
+  }
+
+  String _localizedStepTitle(RegistrationWizardStep step) {
+    final l10n = context.l10n;
+    return switch (step) {
+      RegistrationWizardStep.supplierBasics => l10n.supplierProfile,
+      RegistrationWizardStep.verification => l10n.supplierVerification,
+      RegistrationWizardStep.review => l10n.review,
+      _ => step.title,
     };
   }
 
@@ -1508,6 +1525,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isReview = _currentStep == RegistrationWizardStep.review;
     final isVerificationRetry =
         _currentStep == RegistrationWizardStep.verification &&
@@ -1517,11 +1535,11 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
         ? (_isAddToExistingAccount
               ? 'Add learner access'
               : (_accountCreated && _verificationPendingRetry
-                    ? 'Retry verification'
+                    ? l10n.retryVerification
                     : 'Create account'))
         : isVerificationRetry
-        ? 'Retry verification'
-        : 'Continue';
+        ? l10n.retryVerification
+        : l10n.actionContinue;
 
     final showBackButton = _stepIndex > 0 || _isAddToExistingAccount;
 
@@ -1545,7 +1563,7 @@ class _RegistrationWizardState extends ConsumerState<RegistrationWizard> {
           ),
           if (showBackButton) ...[
             const SizedBox(height: AppSpacing.sm),
-            AuthOutlinedButton(label: 'Back', onPressed: _goBack),
+            AuthOutlinedButton(label: l10n.supplierBack, onPressed: _goBack),
           ],
         ],
       ),

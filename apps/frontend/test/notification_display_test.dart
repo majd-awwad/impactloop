@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/features/notifications/application/notification_display.dart';
 import 'package:frontend/features/notifications/data/models/app_notification.dart';
+import 'package:frontend/features/supplier_portal/data/models/supplier_action_notification.dart';
 import 'package:frontend/l10n/app_localizations_ar.dart';
 
 AppNotification _deliveryNotification({
@@ -179,6 +180,119 @@ void main() {
 
       expect(copy.title, ar.notificationFallbackTitle);
       expect(copy.body, ar.notificationFallbackBody);
+    });
+  });
+
+  group('Supplier notification localization', () {
+    final ar = AppLocalizationsAr();
+
+    SupplierActionNotification _supplierNotification({
+      required String rawType,
+      Map<String, dynamic> metadata = const {},
+    }) {
+      return SupplierActionNotification(
+        id: 'supplier-notif-1',
+        group: SupplierActionNotificationGroup.reservationAlert,
+        kind: SupplierActionNotificationKind.reservationPending,
+        title: 'Legacy English title',
+        body: 'Legacy English body from server',
+        status: SupplierActionNotificationStatus.pending,
+        createdAt: DateTime.utc(2026),
+        actionNeeded: true,
+        isCompleted: false,
+        rawType: rawType,
+        category: SupplierNotificationCategory.reservation,
+        state: SupplierNotificationState.needsAction,
+        metadata: metadata,
+      );
+    }
+
+    test('localizes every supplier notification type in Arabic', () {
+      final expectedTitles = <String, String>{
+        'RESERVATION_REQUESTED': ar.notificationReservationRequestedTitle,
+        'RESERVATION_CANCELLED': ar.notificationReservationCancelledSupplierTitle,
+        'RESERVATION_EXPIRED': ar.notificationReservationExpiredSupplierTitle,
+        'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED':
+            ar.notificationChoosePickupWindowTitle,
+        'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED':
+            ar.notificationNewPickupWindowNeededTitle,
+        'CATEGORY_REQUEST_UPDATE': ar.notificationCategoryRequestUpdateTitle,
+        'PRICE_REQUEST_UPDATE': ar.notificationPriceRequestUpdateTitle,
+        'MATERIAL_MODERATION_UPDATE':
+            ar.notificationMaterialModerationUpdateTitle,
+        'SUPPLIER_VERIFICATION_UPDATE':
+            ar.notificationSupplierVerificationUpdateTitle,
+      };
+
+      for (final entry in expectedTitles.entries) {
+        final copy = localizedSupplierNotificationCopy(
+          _supplierNotification(
+            rawType: entry.key,
+            metadata: const {
+              'materialTitle': 'Arduino Uno',
+              'learnerName': 'Majd Learner',
+            },
+          ),
+          ar,
+        );
+
+        expect(copy.title, entry.value);
+        expect(copy.title, isNot(contains('Legacy')));
+        expect(copy.body, isNot(contains('Legacy English body')));
+        if (entry.key == 'RESERVATION_REQUESTED' ||
+            entry.key == 'RESERVATION_CANCELLED') {
+          expect(copy.body, contains('Arduino Uno'));
+          expect(copy.body, contains('Majd Learner'));
+        } else if (entry.key == 'RESERVATION_EXPIRED' ||
+            entry.key == 'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED' ||
+            entry.key == 'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED') {
+          expect(copy.body, contains('Arduino Uno'));
+        }
+      }
+    });
+
+    test('reservation expired uses learner body without supplier metadata', () {
+      final copy = localizedNotificationCopy(
+        AppNotification(
+          id: 'expired-learner',
+          notificationType: 'RESERVATION_EXPIRED',
+          title: 'Legacy English title',
+          body: 'Legacy English body',
+          relatedEntityType: 'RESERVATION',
+          relatedEntityId: 'reservation-1',
+          metadata: const {'materialTitle': 'Arduino Uno'},
+          isRead: false,
+          createdAt: DateTime.utc(2026),
+        ),
+        ar,
+      );
+
+      expect(copy.title, ar.reservationExpiredTitle);
+      expect(copy.body, contains('Arduino Uno'));
+    });
+
+    test('reservation expired uses supplier body when learnerName is present', () {
+      final copy = localizedNotificationCopy(
+        AppNotification(
+          id: 'expired-supplier',
+          notificationType: 'RESERVATION_EXPIRED',
+          title: 'Legacy English title',
+          body: 'Legacy English body',
+          relatedEntityType: 'RESERVATION',
+          relatedEntityId: 'reservation-1',
+          metadata: const {
+            'materialTitle': 'Arduino Uno',
+            'learnerName': 'Majd Learner',
+          },
+          isRead: false,
+          createdAt: DateTime.utc(2026),
+        ),
+        ar,
+      );
+
+      expect(copy.title, ar.notificationReservationExpiredSupplierTitle);
+      expect(copy.body, contains('Arduino Uno'));
+      expect(copy.body, isNot(contains('Legacy')));
     });
   });
 }

@@ -101,12 +101,12 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Your supplier account has been approved. You can now publish materials.',
+                          context.s.accountApprovedBanner,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Dismiss',
+                        tooltip: context.s.dismiss,
                         onPressed: () =>
                             setState(() => _approvalBannerDismissed = true),
                         icon: const Icon(Icons.close, size: 20),

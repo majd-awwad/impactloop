@@ -1,4 +1,5 @@
 import '../data/models/app_notification.dart';
+import '../../supplier_portal/data/models/supplier_action_notification.dart';
 import '../../../l10n/app_localizations.dart';
 
 final RegExp _testTagPattern = RegExp(r'\[test[^\]]*\]', caseSensitive: false);
@@ -118,14 +119,75 @@ String notificationActionLabel(
 
 typedef LocalizedNotificationCopy = ({String title, String body});
 
+String _metadataString(Map<String, dynamic> metadata, String key) =>
+    metadata[key]?.toString().trim() ?? '';
+
+LocalizedNotificationCopy _localizedSupplierNotificationTemplates(
+  String rawType,
+  AppLocalizations l10n, {
+  required String materialTitle,
+  required String learnerName,
+}) {
+  final safeLearnerName =
+      learnerName.isEmpty ? l10n.learner : learnerName;
+
+  return switch (rawType) {
+    'RESERVATION_REQUESTED' => (
+      title: l10n.notificationReservationRequestedTitle,
+      body: l10n.notificationReservationRequestedBody(
+        safeLearnerName,
+        materialTitle,
+      ),
+    ),
+    'RESERVATION_CANCELLED' => (
+      title: l10n.notificationReservationCancelledSupplierTitle,
+      body: l10n.notificationReservationCancelledSupplierBody(
+        safeLearnerName,
+        materialTitle,
+      ),
+    ),
+    'RESERVATION_EXPIRED' => (
+      title: l10n.notificationReservationExpiredSupplierTitle,
+      body: l10n.notificationReservationExpiredSupplierBody(materialTitle),
+    ),
+    'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED' => (
+      title: l10n.notificationChoosePickupWindowTitle,
+      body: l10n.notificationChoosePickupWindowBody(materialTitle),
+    ),
+    'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED' => (
+      title: l10n.notificationNewPickupWindowNeededTitle,
+      body: l10n.notificationNewPickupWindowNeededBody(materialTitle),
+    ),
+    'CATEGORY_REQUEST_UPDATE' => (
+      title: l10n.notificationCategoryRequestUpdateTitle,
+      body: l10n.notificationCategoryRequestUpdateBody,
+    ),
+    'PRICE_REQUEST_UPDATE' => (
+      title: l10n.notificationPriceRequestUpdateTitle,
+      body: l10n.notificationPriceRequestUpdateBody,
+    ),
+    'MATERIAL_MODERATION_UPDATE' => (
+      title: l10n.notificationMaterialModerationUpdateTitle,
+      body: l10n.notificationMaterialModerationUpdateBody,
+    ),
+    'SUPPLIER_VERIFICATION_UPDATE' => (
+      title: l10n.notificationSupplierVerificationUpdateTitle,
+      body: l10n.notificationSupplierVerificationUpdateBody,
+    ),
+    _ => (
+      title: l10n.notificationFallbackTitle,
+      body: l10n.notificationFallbackBody,
+    ),
+  };
+}
+
 LocalizedNotificationCopy localizedNotificationCopy(
   AppNotification notification,
   AppLocalizations l10n,
 ) {
-  final contentTitle =
-      notification.metadata['materialTitle']?.toString().trim() ?? '';
-  final projectTitle =
-      notification.metadata['projectTitle']?.toString().trim() ?? '';
+  final contentTitle = _metadataString(notification.metadata, 'materialTitle');
+  final learnerName = _metadataString(notification.metadata, 'learnerName');
+  final projectTitle = _metadataString(notification.metadata, 'projectTitle');
   final materialTitle = contentTitle.isEmpty ? l10n.material : contentTitle;
   final safeProjectTitle = projectTitle.isEmpty
       ? l10n.learningProject
@@ -142,6 +204,13 @@ LocalizedNotificationCopy localizedNotificationCopy(
       ? summary
       : l10n.projectModerationFeedback(summary, feedback);
 
+  final supplierTemplate = _localizedSupplierNotificationTemplates(
+    notification.notificationType,
+    l10n,
+    materialTitle: materialTitle,
+    learnerName: learnerName,
+  );
+
   return switch (notification.notificationType) {
     'RESERVATION_ACCEPTED' => (
       title: l10n.reservationAcceptedTitle,
@@ -155,10 +224,24 @@ LocalizedNotificationCopy localizedNotificationCopy(
       title: l10n.reservationDeclinedTitle,
       body: l10n.reservationDeclinedBody(materialTitle),
     ),
-    'RESERVATION_EXPIRED' => (
-      title: l10n.reservationExpiredTitle,
-      body: l10n.reservationExpiredBody(materialTitle),
-    ),
+    'RESERVATION_EXPIRED' => learnerName.isNotEmpty
+        ? (
+            title: l10n.notificationReservationExpiredSupplierTitle,
+            body: l10n.notificationReservationExpiredSupplierBody(materialTitle),
+          )
+        : (
+            title: l10n.reservationExpiredTitle,
+            body: l10n.reservationExpiredBody(materialTitle),
+          ),
+    'RESERVATION_REQUESTED' ||
+    'RESERVATION_CANCELLED' ||
+    'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED' ||
+    'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED' ||
+    'CATEGORY_REQUEST_UPDATE' ||
+    'PRICE_REQUEST_UPDATE' ||
+    'MATERIAL_MODERATION_UPDATE' ||
+    'SUPPLIER_VERIFICATION_UPDATE' =>
+      supplierTemplate,
     'LEARNING_PROJECT_MODERATION' => switch (moderationEvent) {
       'APPROVED' => (
         title: l10n.projectApprovedTitle,
@@ -198,6 +281,30 @@ LocalizedNotificationCopy localizedNotificationCopy(
       body: l10n.notificationFallbackBody,
     ),
   };
+}
+
+LocalizedNotificationCopy localizedSupplierNotificationCopy(
+  SupplierActionNotification notification,
+  AppLocalizations l10n,
+) {
+  final materialTitle = _metadataString(notification.metadata, 'materialTitle');
+  final learnerName = _metadataString(notification.metadata, 'learnerName');
+  final safeMaterialTitle =
+      materialTitle.isEmpty ? l10n.material : materialTitle;
+  final copy = _localizedSupplierNotificationTemplates(
+    notification.rawType.toUpperCase(),
+    l10n,
+    materialTitle: safeMaterialTitle,
+    learnerName: learnerName,
+  );
+
+  if (l10n.localeName == 'en' &&
+      copy.title == l10n.notificationFallbackTitle &&
+      notification.title.trim().isNotEmpty) {
+    return (title: notification.title, body: notification.body);
+  }
+
+  return copy;
 }
 
 bool notificationHasNavigationTarget(AppNotification notification) {

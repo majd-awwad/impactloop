@@ -71,7 +71,8 @@ class SupplierProfileButton extends ConsumerWidget {
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.only(top: 72, right: 24),
+          insetPadding: EdgeInsetsDirectional.only(top: 72, end: 24)
+              .resolve(Directionality.of(context)),
           alignment: AlignmentDirectional.topEnd,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),

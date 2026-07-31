@@ -507,6 +507,98 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get notificationReservationRequestedTitle => 'طلب حجز جديد';
+
+  @override
+  String notificationReservationRequestedBody(
+    String learnerName,
+    String materialTitle,
+  ) {
+    return 'طلب $learnerName $materialTitle.';
+  }
+
+  @override
+  String get notificationReservationCancelledSupplierTitle => 'تم إلغاء الحجز';
+
+  @override
+  String notificationReservationCancelledSupplierBody(
+    String learnerName,
+    String materialTitle,
+  ) {
+    return 'ألغى $learnerName طلب $materialTitle.';
+  }
+
+  @override
+  String get notificationReservationExpiredSupplierTitle =>
+      'انتهت صلاحية الحجز';
+
+  @override
+  String notificationReservationExpiredSupplierBody(String materialTitle) {
+    return 'انتهت صلاحية الطلب المعلّق لـ $materialTitle.';
+  }
+
+  @override
+  String get notificationChoosePickupWindowTitle => 'اختر موعد استلام جديد';
+
+  @override
+  String notificationChoosePickupWindowBody(String materialTitle) {
+    return 'اختر موعد استلام جديد لـ $materialTitle.';
+  }
+
+  @override
+  String get notificationNewPickupWindowNeededTitle => 'يلزم موعد استلام جديد';
+
+  @override
+  String notificationNewPickupWindowNeededBody(String materialTitle) {
+    return 'يلزم تحديد موعد استلام جديد لـ $materialTitle.';
+  }
+
+  @override
+  String get notificationCategoryRequestUpdateTitle => 'تحديث طلب الفئة';
+
+  @override
+  String get notificationCategoryRequestUpdateBody =>
+      'هناك تحديث على طلب الفئة الخاص بك.';
+
+  @override
+  String get notificationPriceRequestUpdateTitle => 'تحديث مراجعة السعر';
+
+  @override
+  String get notificationPriceRequestUpdateBody =>
+      'هناك تحديث على طلب مراجعة السعر الخاص بك.';
+
+  @override
+  String get notificationMaterialModerationUpdateTitle => 'تحديث مراجعة المادة';
+
+  @override
+  String get notificationMaterialModerationUpdateBody =>
+      'هناك تحديث على إدراج المادة الخاص بك.';
+
+  @override
+  String get notificationSupplierVerificationUpdateTitle => 'تحديث التحقق';
+
+  @override
+  String get notificationSupplierVerificationUpdateBody =>
+      'هناك تحديث على التحقق من حساب المورّد الخاص بك.';
+
+  @override
+  String get reservationAlreadyAccepted => 'تم قبول هذا الحجز مسبقًا.';
+
+  @override
+  String get reservationAlreadyDeclined => 'تم رفض هذا الحجز مسبقًا.';
+
+  @override
+  String get reservationExpiredError =>
+      'انتهت صلاحية هذا الحجز قبل إمكانية تحديثه.';
+
+  @override
+  String get reservationCancelledError => 'تم إلغاء هذا الحجز ولا يمكن تحديثه.';
+
+  @override
+  String get reservationNotPending =>
+      'يمكن تنفيذ هذا الإجراء على الحجوزات قيد الانتظار فقط.';
+
+  @override
   String get projectModerationTitle => 'تم تحديث مراجعة المشروع';
 
   @override
@@ -1800,4 +1892,4010 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get trackingRefreshFailed =>
       'تعذّر تحديث التتبع. يتم عرض آخر موقع معروف.';
+
+  @override
+  String get supplierSupplierRole => 'دور المورد';
+
+  @override
+  String get supplierOverview => 'نظرة عامة';
+
+  @override
+  String get supplierMyMaterials => 'موادي';
+
+  @override
+  String get supplierAddMaterial => 'إضافة مادة';
+
+  @override
+  String get supplierAdd => 'إضافة';
+
+  @override
+  String get supplierIncomingRequests => 'الطلبات الواردة';
+
+  @override
+  String get supplierRequests => 'الطلبات';
+
+  @override
+  String get supplierPickupSchedule => 'جدول الاستلام';
+
+  @override
+  String get supplierSupplierPortal => 'بوابة المورد';
+
+  @override
+  String get supplierTheme => 'المظهر';
+
+  @override
+  String get supplierViewSupplierProfile => 'عرض ملف المورد';
+
+  @override
+  String get supplierTrackMaterialsRequestsAndImpact =>
+      'تتبع المواد والطلبات والأثر.';
+
+  @override
+  String get supplierListSurplusMaterialsForReuseBy =>
+      'أدرج المواد الفائضة لإعادة استخدامها من قبل المتعلمين والصناع.';
+
+  @override
+  String get supplierManagePublicSupplierDetailsAndPickup =>
+      'إدارة تفاصيل المورد العامة وموقع الاستلام.';
+
+  @override
+  String get supplierReviewLearnerRequestsAndSchedulePickups =>
+      'راجع طلبات المتعلمين وحدد مواعيد الاستلام.';
+
+  @override
+  String get supplierTrackAcceptedPickupsAndUpcomingHandovers =>
+      'تتبع عمليات الاستلام المقبولة والتسليمات القادمة.';
+
+  @override
+  String get supplierReviewUpdatesAndActionsThatNeed =>
+      'راجع التحديثات والإجراءات التي تحتاج انتباهك.';
+
+  @override
+  String get supplierComingSoonInTheSupplierPortal => 'قريباً في بوابة المورد.';
+
+  @override
+  String get supplierManageYourSupplierActivity => 'إدارة نشاطك كمورد.';
+
+  @override
+  String get supplierManageYourListedSurplusMaterials =>
+      'إدارة المواد الفائضة التي أدرجتها.';
+
+  @override
+  String get supplierSearchYourMaterials => 'ابحث في موادك';
+
+  @override
+  String get supplierTotal => 'الإجمالي';
+
+  @override
+  String get supplierPendingReserved => 'قيد الانتظار / محجوزة';
+
+  @override
+  String get supplierUnavailable2 => 'غير متاحة';
+
+  @override
+  String get supplierYouHaveNotListedAnyMaterials => 'لم تدرج أي مواد بعد.';
+
+  @override
+  String get supplierShareSurplusMaterialsWithLearnersAnd =>
+      'شارك المواد الفائضة مع المتعلمين والصناع من ورشتك.';
+
+  @override
+  String get supplierAddYourFirstMaterial => 'أضف أول مادة';
+
+  @override
+  String get supplierWeCouldNotLoadYourMaterials => 'تعذّر تحميل موادك.';
+
+  @override
+  String get supplierNoMaterialsMatchYourFilters =>
+      'لا توجد مواد مطابقة للتصفية.';
+
+  @override
+  String get supplierTryClearingFiltersOrAdjustingYour =>
+      'جرّب مسح التصفية أو تعديل البحث.';
+
+  @override
+  String get supplierLikes => 'الإعجابات';
+
+  @override
+  String get supplierEngagement => 'التفاعل';
+
+  @override
+  String get supplierActiveDemand => 'الطلب النشط';
+
+  @override
+  String get supplierDemandInterestScore => 'درجة الطلب / الاهتمام';
+
+  @override
+  String get supplierReuseHistory => 'سجل إعادة الاستخدام';
+
+  @override
+  String get supplierReservationsForThisMaterial => 'حجوزات هذه المادة';
+
+  @override
+  String get supplierDemandIndicators => 'مؤشرات الطلب';
+
+  @override
+  String get supplierNoReservationsForThisMaterialYet =>
+      'لا توجد حجوزات لهذه المادة بعد.';
+
+  @override
+  String get supplierNoDemandSignalsYet => 'لا توجد إشارات طلب بعد.';
+
+  @override
+  String get supplierNoActiveRequestsRightNowThis =>
+      'لا توجد طلبات نشطة حالياً. تمت إعادة استخدام هذه المادة بالفعل.';
+
+  @override
+  String get supplierThisMaterialHasActiveDemand => 'هذه المادة لديها طلب نشط.';
+
+  @override
+  String get supplierLearnersAreShowingInterestButNo =>
+      'المتعلمون يُظهرون اهتماماً، لكن لا توجد حجوزات بعد.';
+
+  @override
+  String get supplierNoActiveDemandYet => 'لا يوجد طلب نشط بعد.';
+
+  @override
+  String get supplierActiveDemandScore => 'درجة الطلب النشط';
+
+  @override
+  String get supplierOverallDemandScore => 'درجة الطلب الإجمالية';
+
+  @override
+  String supplierPercent(String percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get supplierBasedOnViewsLikesActiveRequests =>
+      'بناءً على المشاهدات والإعجابات والطلبات النشطة وعمليات إعادة الاستخدام المكتملة.';
+
+  @override
+  String get supplierCompletedReservations => 'حجوزات مكتملة';
+
+  @override
+  String get supplierCompletedReuses => 'عمليات إعادة استخدام مكتملة';
+
+  @override
+  String get supplierLastCompleted => 'آخر إكمال';
+
+  @override
+  String get supplierMarkUnavailable => 'تعليم كغير متاحة';
+
+  @override
+  String get supplierRestoreAvailable => 'إعادة إلى متاحة';
+
+  @override
+  String get supplierHighDemand => 'طلب مرتفع';
+
+  @override
+  String get supplierOpenReservation => 'فتح الحجز';
+
+  @override
+  String get supplierPendingReservations => 'حجوزات قيد الانتظار';
+
+  @override
+  String get supplierReservedReservations => 'حجوزات مقبولة';
+
+  @override
+  String get supplierTotalActiveRequests => 'إجمالي الطلبات النشطة';
+
+  @override
+  String get supplierDemandScore => 'درجة الطلب';
+
+  @override
+  String get supplierAllPrices => 'كل الأسعار';
+
+  @override
+  String get supplierStatus => 'الحالة';
+
+  @override
+  String get supplierPrice => 'السعر';
+
+  @override
+  String get supplierAllCategories => 'كل الفئات';
+
+  @override
+  String get supplierManage => 'إدارة';
+
+  @override
+  String get supplierEdit => 'تعديل';
+
+  @override
+  String get supplierEditMaterial => 'تعديل المادة';
+
+  @override
+  String get supplierUpdateSafeListingDetailsPriceAnd =>
+      'حدّث تفاصيل الإدراج الآمنة. تغييرات السعر والفئة تتطلب مراجعة.';
+
+  @override
+  String get supplierPriceCategoryLocationAndImagesAre =>
+      'السعر والفئة والموقع والصور غير قابلة للتعديل هنا بعد.';
+
+  @override
+  String get supplierMaterialUpdatedSuccessfully => 'تم تحديث المادة بنجاح.';
+
+  @override
+  String get supplierCouldNotUpdateMaterialPleaseTry =>
+      'تعذر تحديث المادة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get supplierDelete => 'حذف';
+
+  @override
+  String get supplierDeleteMaterial => 'حذف المادة؟';
+
+  @override
+  String get supplierThisWillRemoveTheMaterialFrom =>
+      'سيؤدي هذا إلى إزالة المادة من إدراجاتك. لا يمكن التراجع عن هذا الإجراء.';
+
+  @override
+  String get supplierMaterialDeletedSuccessfully => 'تم حذف المادة بنجاح.';
+
+  @override
+  String get supplierCouldNotDeleteMaterialPleaseTry =>
+      'تعذر حذف المادة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get supplierReusedMaterialsCannotBeDeletedBecause =>
+      'لا يمكن حذف المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.';
+
+  @override
+  String get supplierCannotDeleteAMaterialWithActive =>
+      'لا يمكن حذف مادة لديها طلبات نشطة.';
+
+  @override
+  String get supplierThisMaterialCannotBeDeletedRight =>
+      'لا يمكن حذف هذه المادة الآن.';
+
+  @override
+  String get supplierReusedMaterialsCannotBeEditedBecause =>
+      'لا يمكن تعديل المواد المعاد استخدامها لأنها جزء من سجل إعادة الاستخدام.';
+
+  @override
+  String get supplierCannotEditAMaterialWithActive =>
+      'لا يمكن تعديل مادة لديها طلبات نشطة أو حالة محظورة.';
+
+  @override
+  String get supplierThisMaterialCannotBeEditedRight =>
+      'لا يمكن تعديل هذه المادة الآن.';
+
+  @override
+  String get supplierEditingNotAvailable => 'التعديل غير متاح';
+
+  @override
+  String get supplierSaveChanges => 'حفظ التغييرات';
+
+  @override
+  String get supplierReadOnly => 'للقراءة فقط';
+
+  @override
+  String get supplierMaterialType => 'نوع المادة';
+
+  @override
+  String get supplierEditingListingsIsComingSoon => 'تعديل الإدراجات قريباً.';
+
+  @override
+  String get supplierPrevious => 'السابق';
+
+  @override
+  String get supplierNext => 'التالي';
+
+  @override
+  String supplierPagePageOfTotalpages(String page, String totalPages) {
+    return 'صفحة $page من $totalPages';
+  }
+
+  @override
+  String supplierListedDate(String date) {
+    return 'أُدرج $date';
+  }
+
+  @override
+  String get supplierMaterialNotFound => 'المادة غير موجودة';
+
+  @override
+  String get supplierThisListingMayHaveBeenRemoved =>
+      'ربما أُزيل هذا الإدراج أو لم يعد متاحاً.';
+
+  @override
+  String get supplierBackToMyMaterials => 'العودة إلى موادي';
+
+  @override
+  String get supplierViews => 'المشاهدات';
+
+  @override
+  String get supplierCreated => 'تاريخ الإنشاء';
+
+  @override
+  String get supplierUpdated => 'تاريخ التحديث';
+
+  @override
+  String get supplierSupplierProfile => 'ملف المورد';
+
+  @override
+  String get supplierCancel => 'إلغاء';
+
+  @override
+  String get supplierBack => 'رجوع';
+
+  @override
+  String get supplierBackToDashboard => 'العودة للوحة التحكم';
+
+  @override
+  String get supplierAccept => 'قبول';
+
+  @override
+  String get supplierDecline => 'رفض';
+
+  @override
+  String get supplierLoading => 'جاري التحميل…';
+
+  @override
+  String get supplierRequired => 'مطلوب';
+
+  @override
+  String get supplierOptional => 'اختياري';
+
+  @override
+  String get supplierComingSoon => 'قريباً';
+
+  @override
+  String supplierWelcomeBackName(String name) {
+    return 'مرحباً بعودتك، $name';
+  }
+
+  @override
+  String get supplierTrackYourMaterialsRespondToRequests =>
+      'تتبع موادك، رد على الطلبات، ونمِّ أثر إعادة الاستخدام.';
+
+  @override
+  String get supplierAddMaterial2 => 'إضافة مادة';
+
+  @override
+  String get supplierViewRequests => 'عرض الطلبات';
+
+  @override
+  String get supplierActiveMaterials => 'المواد النشطة';
+
+  @override
+  String get supplierPendingRequests => 'الطلبات المعلقة';
+
+  @override
+  String get supplierScheduledPickups => 'عمليات الاستلام المجدولة';
+
+  @override
+  String get supplierReusedMaterials => 'المواد المعاد استخدامها';
+
+  @override
+  String get supplierTotalMaterials => 'إجمالي المواد';
+
+  @override
+  String get supplierAvailableMaterials => 'المواد المتاحة';
+
+  @override
+  String get supplierReservedMaterials => 'المواد المحجوزة';
+
+  @override
+  String get supplierTotalMaterialViews => 'إجمالي مشاهدات المواد';
+
+  @override
+  String get supplierTotalMaterialLikes => 'إجمالي إعجابات المواد';
+
+  @override
+  String get supplierFollowers => 'المتابعون';
+
+  @override
+  String get supplierRecentReservationRequests => 'طلبات الحجز الأخيرة';
+
+  @override
+  String get supplierNoReservationRequestsYet => 'لا توجد طلبات حجز بعد.';
+
+  @override
+  String get supplierMostViewedMaterial => 'المادة الأكثر مشاهدة';
+
+  @override
+  String get supplierSupplierEngagement => 'تفاعل المورد';
+
+  @override
+  String get supplierAccountTotals => 'إجماليات الحساب';
+
+  @override
+  String get supplierNoViewedMaterialsYet => 'لا توجد مواد بمشاهدات بعد.';
+
+  @override
+  String get supplierHighDemandMaterials => 'مواد ذات طلب مرتفع';
+
+  @override
+  String get supplierMaterialsWithActiveReservationInterest =>
+      'مواد لديها اهتمام حجز نشط.';
+
+  @override
+  String get supplierNoHighDemandMaterialsYet =>
+      'لا توجد مواد ذات طلب مرتفع بعد.';
+
+  @override
+  String get supplierViewAllRequests => 'عرض كل الطلبات';
+
+  @override
+  String get supplierUnknownLearner => 'متعلم غير معروف';
+
+  @override
+  String get supplierOperationsSnapshot => 'لمحة تشغيلية';
+
+  @override
+  String supplierRequesterStatusDateQtyQuantity(
+    String requester,
+    String status,
+    String date,
+    String quantity,
+  ) {
+    return '$requester · $status · $date · الكمية $quantity';
+  }
+
+  @override
+  String supplierCountViews(String count) {
+    return '$count مشاهدة';
+  }
+
+  @override
+  String get supplierSelectMaterialConditionBeforeVerifyingThe =>
+      'اختر حالة المادة قبل التحقق من السعر.';
+
+  @override
+  String supplierReferenceMaxCurrencysymbolBasemaxConditionConditionlabe(
+    String currencySymbol,
+    String baseMax,
+    String conditionLabel,
+    String adjustedMax,
+  ) {
+    return 'الحد الأقصى المرجعي: $currencySymbol$baseMax · الحالة: $conditionLabel · الحد المعدّل: $currencySymbol$adjustedMax';
+  }
+
+  @override
+  String get supplierSomeMaterialsAreGettingStrongDemand =>
+      'بعض المواد تحظى بطلب قوي.';
+
+  @override
+  String get supplierYourMaterialsAreGettingViewsImprove =>
+      'موادك تحصل على مشاهدات. حسّن العناوين/الصور لزيادة التفاعل.';
+
+  @override
+  String get supplierAddYourFirstMaterialToStart =>
+      'أضف أول مادة لك لتبدأ في تلقي الطلبات.';
+
+  @override
+  String get supplierReservationStatus => 'حالة الحجوزات';
+
+  @override
+  String get supplierMaterialsStatus => 'حالة المواد';
+
+  @override
+  String get supplierRecentActivity => 'النشاط الأخير';
+
+  @override
+  String get supplierCuratedHighlightsFromYourLatestOperations =>
+      'أبرز ما حدث في عملياتك الأخيرة';
+
+  @override
+  String get supplierViewAllActivity => 'عرض كل النشاط';
+
+  @override
+  String get supplierActionableInsights => 'رؤى قابلة للتنفيذ';
+
+  @override
+  String get supplierRecommendedNextStepsBasedOnYour =>
+      'الخطوات التالية الموصى بها بناءً على نشاطك الحالي.';
+
+  @override
+  String get supplierRequestsNeedAttention => 'الطلبات تحتاج انتباهك';
+
+  @override
+  String get supplierNoPendingRequestsRightNow => 'لا توجد طلبات معلقة حالياً.';
+
+  @override
+  String get supplierReviewRequests => 'مراجعة الطلبات';
+
+  @override
+  String get supplierPickupReadiness => 'جاهزية الاستلام';
+
+  @override
+  String get supplierPickupLocationIsSetSelfPickup =>
+      'موقع الاستلام محدد. الاستلام الذاتي مفعّل.';
+
+  @override
+  String get supplierAddOrConfirmYourPickupLocation =>
+      'أضف أو أكّد موقع الاستلام ليعرف المتعلمون مكان الاستلام.';
+
+  @override
+  String get supplierCompleteYourSupplierProfileAndPickup =>
+      'أكمل ملف المورد وموقع الاستلام لبدء قبول الطلبات.';
+
+  @override
+  String get supplierUpdateProfile => 'تحديث الملف';
+
+  @override
+  String get supplierGrowReuse => 'نمِّ إعادة الاستخدام';
+
+  @override
+  String get supplierYouHaveActiveListingsReadyFor =>
+      'لديك قوائم نشطة جاهزة للمتعلمين. الاستلام المكتمل يزيد أثر إعادة الاستخدام.';
+
+  @override
+  String get supplierReuseActivityIsStartingKeepMaterials =>
+      'بدأ نشاط إعادة الاستخدام. حدّث المواد لتحسين الطلبات.';
+
+  @override
+  String get supplierListMaterialsToStartBuildingReuse =>
+      'أدرج مواد لبدء بناء أثر إعادة الاستخدام عند اكتمال الاستلام.';
+
+  @override
+  String get supplierViewMaterials => 'عرض المواد';
+
+  @override
+  String get supplierAllCaughtUpNewLearnerRequests =>
+      'كل شيء محدّث. ستظهر طلبات المتعلمين وتحديثات الاستلام هنا.';
+
+  @override
+  String get supplierNoRecentActivityYet => 'لا يوجد نشاط حديث بعد.';
+
+  @override
+  String get supplierCheckNotifications => 'تحقق من الإشعارات';
+
+  @override
+  String get supplierOpenPickupSchedule => 'فتح جدول الاستلام';
+
+  @override
+  String get supplierEditProfile => 'تعديل الملف';
+
+  @override
+  String get supplierSupplierHub => 'مركز المورد';
+
+  @override
+  String get supplierShareUnusedPartsReduceWasteAnd =>
+      'شارك القطع غير المستخدمة، قلّل الهدر، وساعد المتعلمين على البناء أسرع.';
+
+  @override
+  String supplierPickupCity(String city) {
+    return 'الاستلام: $city';
+  }
+
+  @override
+  String supplierPickupCityArea(String city, String area) {
+    return 'الاستلام: $city، $area';
+  }
+
+  @override
+  String get supplierNoMaterialsListedYet => 'لا توجد مواد مدرجة بعد';
+
+  @override
+  String get supplierStartBySharingUnusedPartsProject =>
+      'ابدأ بمشاركة القطع غير المستخدمة أو مخلفات المشاريع أو المكونات الفائضة.';
+
+  @override
+  String get supplierCompleteYourSupplierProfile => 'أكمل ملف المورد';
+
+  @override
+  String get supplierAddYourPublicSupplierNameAnd =>
+      'أضف اسم المورد العام وموقع الاستلام قبل إدراج المواد.';
+
+  @override
+  String get supplierCompleteProfile => 'إكمال الملف';
+
+  @override
+  String get supplierWeCouldNotLoadYourSupplier =>
+      'تعذّر تحميل لوحة تحكم المورد.';
+
+  @override
+  String get supplierPleaseCheckYourConnectionAndTry =>
+      'يرجى التحقق من الاتصال والمحاولة مجدداً.';
+
+  @override
+  String get supplierReuseImpact => 'أثر إعادة الاستخدام';
+
+  @override
+  String supplierCountReusedQuantityUnits(String count, String quantity) {
+    return '$count معاد استخدامها · $quantity وحدة';
+  }
+
+  @override
+  String get supplierImpactIsCalculatedFromCompletedReuse =>
+      'يُحسب الأثر من بيانات إعادة الاستخدام المكتملة.';
+
+  @override
+  String get supplierProjectImpact => 'أثر المشاريع';
+
+  @override
+  String get supplierYourMaterialsHelpedLearnersCompleteReal =>
+      'ساعدت موادك المتعلمين على إكمال مكوّنات مشاريع حقيقية.';
+
+  @override
+  String get supplierYourCompletedProjectImpactWillAppear =>
+      'سيظهر أثر مشاريعك المكتمل هنا عندما ينهي المتعلمون المكوّنات باستخدام موادك.';
+
+  @override
+  String get supplierProjectsSupported => 'مشاريع مدعومة';
+
+  @override
+  String get supplierComponentsCompleted => 'مكوّنات مكتملة';
+
+  @override
+  String get supplierLearnerBuildsHelped => 'بناءات متعلمين مساندة';
+
+  @override
+  String get supplierRecentSupportedProjects => 'مشاريع مدعومة حديثاً';
+
+  @override
+  String get supplierNoReviewsYet => 'لا توجد مراجعات بعد';
+
+  @override
+  String get supplierRating => 'التقييم';
+
+  @override
+  String supplierCountReviews(String count) {
+    return '$count مراجعة';
+  }
+
+  @override
+  String get supplierMaterialLifecycle => 'دورة حياة المادة';
+
+  @override
+  String get supplierListed => 'مدرجة';
+
+  @override
+  String get supplierActionNeeded => 'يتطلب إجراء';
+
+  @override
+  String get supplierResolved => 'تم الحل';
+
+  @override
+  String supplierNoFilterlabelNotifications(String filterLabel) {
+    return 'لا توجد إشعارات $filterLabel.';
+  }
+
+  @override
+  String get supplierWeCouldNotLoadNotifications => 'تعذّر تحميل الإشعارات.';
+
+  @override
+  String get supplierNoActionAvailableForThisItem =>
+      'لا يوجد إجراء متاح لهذا العنصر.';
+
+  @override
+  String get supplierCouldNotOpenListingTryAgain =>
+      'تعذّر فتح الإدراج. حاول مجدداً من الإشعارات.';
+
+  @override
+  String get supplierApproved => 'موافق عليه';
+
+  @override
+  String supplierMaxFormatnisamountMaxNisUnit(String max, String unit) {
+    return 'الحد $max ₪/$unit';
+  }
+
+  @override
+  String get supplierEditListing => 'تعديل الإدراج';
+
+  @override
+  String get supplierEditPrice => 'تعديل السعر';
+
+  @override
+  String get supplierReviewRequest => 'مراجعة الطلب';
+
+  @override
+  String get supplierChoosePickupWindow => 'اختر نافذة الاستلام';
+
+  @override
+  String get supplierOpenMaterial => 'فتح المادة';
+
+  @override
+  String get supplierOpenProfile => 'فتح الملف الشخصي';
+
+  @override
+  String get supplierSupplierActive => 'المورد نشط';
+
+  @override
+  String get supplierPickupEnabled => 'الاستلام مفعّل';
+
+  @override
+  String get supplierNisListings => 'إدراجات بالشيكل';
+
+  @override
+  String get supplierPendingAcceptedAndCompletedRequests =>
+      'الطلبات المعلقة والمقبولة والمكتملة';
+
+  @override
+  String get supplierInventoryBreakdownAcrossLifecycleStates =>
+      'تفصيل المخزون عبر حالات دورة الحياة';
+
+  @override
+  String get supplierAcceptedPickups => 'عمليات الاستلام المقبولة';
+
+  @override
+  String get supplierCompletedReuse => 'إعادة الاستخدام المكتملة';
+
+  @override
+  String get supplierAcceptedHandovers => 'التسليمات المقبولة';
+
+  @override
+  String get supplierReservationActivityWillAppearHereOnce =>
+      'سيظهر نشاط الحجوزات هنا عند وصول الطلبات.';
+
+  @override
+  String get supplierReservedPending => 'محجوزة / معلقة';
+
+  @override
+  String get supplierMaterialStatusBreakdownWillAppearAfter =>
+      'سيظهر تفصيل حالة المواد بعد أول إدراج.';
+
+  @override
+  String get supplierPendingRequestWaiting => 'طلب معلق بانتظار الرد';
+
+  @override
+  String get supplierNextScheduledPickup => 'عملية الاستلام المجدولة التالية';
+
+  @override
+  String supplierAcceptedPickupWithName(String name) {
+    return 'استلام مقبول مع $name';
+  }
+
+  @override
+  String get supplierLatestCompletedReuse => 'أحدث إعادة استخدام مكتملة';
+
+  @override
+  String get supplierChooseSupplierType => 'اختر نوع المورد';
+
+  @override
+  String get supplierChoosePhotosFromYourDevice => 'اختر الصور من جهازك';
+
+  @override
+  String get supplierMaterialCouldNotBeListed => 'تعذّر إدراج المادة.';
+
+  @override
+  String get supplierChooseACategoryFirst => 'اختر فئة أولاً.';
+
+  @override
+  String get supplierEnterAMaterialNameFirst => 'أدخل اسم المادة أولاً.';
+
+  @override
+  String get supplierEnterAValidQuantityAndPrice => 'أدخل كمية وسعراً صالحين.';
+
+  @override
+  String get supplierPriceReviewRequestFailed => 'فشل طلب مراجعة السعر.';
+
+  @override
+  String get supplierSavedListingDraftWasNotFound =>
+      'لم تُعثر على مسودة الإدراج المحفوظة.';
+
+  @override
+  String get supplierCategoryApprovedContinueYourListing =>
+      'تمت الموافقة على الفئة. تابع إدراجك.';
+
+  @override
+  String get supplierContinueEditingYourSavedListingDraft =>
+      'تابع تعديل مسودة الإدراج المحفوظة.';
+
+  @override
+  String get supplierContinueYourListingFromWhereYou =>
+      'تابع إدراجك من حيث توقفت.';
+
+  @override
+  String get supplierCategoryRequestSubmittedYourListingDraft =>
+      'تم إرسال طلب الفئة. حُفظت مسودة الإدراج. يمكنك المتابعة بعد موافقة المسؤول.';
+
+  @override
+  String get supplierCategoryRequestSubmittedYourListingDraft2 =>
+      'تم إرسال طلب الفئة. حُفظت مسودة الإدراج.';
+
+  @override
+  String get supplierPriceReviewSubmittedAGeminiAssisted =>
+      'تم إرسال مراجعة السعر. تم إنشاء اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.';
+
+  @override
+  String supplierPriceVerificationFailedError(String error) {
+    return 'فشل التحقق من السعر: $error';
+  }
+
+  @override
+  String get supplierSubmitPriceReview => 'إرسال مراجعة السعر';
+
+  @override
+  String get supplierPleaseClarifyTheMaterialName => 'يرجى توضيح اسم المادة';
+
+  @override
+  String get supplierDidYouMeanOneOfThese => 'هل تقصد أحد هذه؟';
+
+  @override
+  String supplierMatchedPriceReferenceLabel(String label) {
+    return 'مرجع السعر المطابق: $label';
+  }
+
+  @override
+  String supplierMaximumAllowedUnitPriceSymbolPrice(
+    String symbol,
+    String price,
+  ) {
+    return 'الحد الأقصى لسعر الوحدة: $symbol$price';
+  }
+
+  @override
+  String supplierMaximumAllowedUnitPriceSymbolPrice2(
+    String symbol,
+    String price,
+    String unit,
+  ) {
+    return 'الحد الأقصى لسعر الوحدة: $symbol$price لكل $unit';
+  }
+
+  @override
+  String supplierApprovedUnitUnit(String unit) {
+    return 'الوحدة المعتمدة: $unit';
+  }
+
+  @override
+  String get supplierPriceReviewIsRequiredBeforePaid =>
+      'مراجعة السعر مطلوبة قبل النشر المدفوع. سيُنشأ اقتراح سعر بمساعدة Gemini لمراجعة المسؤول.';
+
+  @override
+  String get supplierPriceIsAboveTheAllowedLimit =>
+      'السعر أعلى من الحد المسموح';
+
+  @override
+  String get supplierPriceBlocked => 'السعر محظور';
+
+  @override
+  String get supplierMyMaterials2 => 'موادي';
+
+  @override
+  String get supplierIncomingRequests2 => 'الطلبات الواردة';
+
+  @override
+  String get supplierCurrentlyVisibleToLearners => 'ظاهرة حالياً للمتعلمين';
+
+  @override
+  String get supplierWaitingForYourResponse => 'بانتظار ردك';
+
+  @override
+  String get supplierAction => 'إجراء';
+
+  @override
+  String get supplierPickup => 'استلام';
+
+  @override
+  String get supplierListReusableParts => 'أدرج قطعاً قابلة لإعادة الاستخدام';
+
+  @override
+  String get supplierRespondToLearners => 'رد على المتعلمين';
+
+  @override
+  String get supplierUpdatesActions => 'التحديثات والإجراءات';
+
+  @override
+  String get supplierLoadingIncomingRequests => 'جاري تحميل الطلبات الواردة…';
+
+  @override
+  String get supplierWeCouldNotLoadRequests => 'تعذّر تحميل الطلبات.';
+
+  @override
+  String get supplierRequestAccepted => 'تم قبول الطلب.';
+
+  @override
+  String get supplierCouldNotAcceptTheRequest => 'تعذّر قبول الطلب.';
+
+  @override
+  String get supplierRequestDeclined => 'تم رفض الطلب.';
+
+  @override
+  String get supplierCouldNotDeclineTheRequest => 'تعذّر رفض الطلب.';
+
+  @override
+  String get supplierPickupMarkedAsCompleted => 'تم تحديد الاستلام كمكتمل.';
+
+  @override
+  String get supplierCouldNotMarkPickupAsCompleted =>
+      'تعذّر تحديد الاستلام كمكتمل.';
+
+  @override
+  String get supplierNeedsLearnerConfirmation => 'بحاجة إلى تأكيد المتعلم';
+
+  @override
+  String get supplierNeedsLearner => 'بحاجة إلى المتعلم';
+
+  @override
+  String get supplierDeclined => 'مرفوض';
+
+  @override
+  String get supplierNoRequestsYet => 'لا توجد طلبات بعد.';
+
+  @override
+  String get supplierNoRequestsMatchThisFilter =>
+      'لا توجد طلبات تطابق هذا الفلتر.';
+
+  @override
+  String get supplierNoPendingRequests => 'لا توجد طلبات معلقة';
+
+  @override
+  String get supplierNoAcceptedPickupsYet =>
+      'لا توجد عمليات استلام مقبولة بعد.';
+
+  @override
+  String get supplierNoDeclinedRequests => 'لا توجد طلبات مرفوضة.';
+
+  @override
+  String get supplierNoCompletedPickupsYet =>
+      'لا توجد عمليات استلام مكتملة بعد.';
+
+  @override
+  String get supplierNewLearnerRequestsWillAppearHere =>
+      'ستظهر طلبات المتعلمين الجديدة هنا.';
+
+  @override
+  String get supplierAcceptedRequestsWithPickupWindowsWill =>
+      'ستظهر الطلبات المقبولة مع مواعيد الاستلام هنا.';
+
+  @override
+  String get supplierRequestsYouDeclineWillBeListed =>
+      'ستُدرج الطلبات التي ترفضها هنا.';
+
+  @override
+  String get supplierFinishedPickupsWillAppearHere =>
+      'ستظهر عمليات الاستلام المنتهية هنا.';
+
+  @override
+  String get supplierNoLearnerNote => 'لا توجد ملاحظة من المتعلم.';
+
+  @override
+  String get supplierSelfPickup => 'استلام ذاتي';
+
+  @override
+  String supplierPickupWindow2(String window) {
+    return 'الاستلام: $window';
+  }
+
+  @override
+  String get supplierNoRequestsWaitingForLearner =>
+      'لا توجد طلبات بانتظار المتعلم';
+
+  @override
+  String get supplierNoCancelledRequests => 'لا توجد طلبات ملغاة';
+
+  @override
+  String get supplierReservationsAwaitingLearnerConfirmationAppearHere =>
+      'تظهر الحجوزات التي تنتظر تأكيد المتعلم هنا.';
+
+  @override
+  String get supplierCancelledReservationsWillAppearHere =>
+      'ستظهر الحجوزات الملغاة هنا.';
+
+  @override
+  String get supplierWaitingForSupplier => 'بانتظار المورد';
+
+  @override
+  String get supplierLoadingPickupSchedule => 'جاري تحميل جدول الاستلام…';
+
+  @override
+  String get supplierWeCouldNotLoadPickupSchedule =>
+      'تعذّر تحميل جدول الاستلام.';
+
+  @override
+  String get supplierNoPickupsScheduledYet =>
+      'لا توجد عمليات استلام مجدولة بعد.';
+
+  @override
+  String get supplierNoPickupsMatchThisFilter =>
+      'لا توجد عمليات استلام تطابق هذا الفلتر.';
+
+  @override
+  String get supplierMarkCompleted => 'تحديد كمكتمل';
+
+  @override
+  String get supplierUpcoming => 'قادمة';
+
+  @override
+  String get supplierPast => 'سابقة';
+
+  @override
+  String get supplierToday => 'اليوم';
+
+  @override
+  String get supplierDone => 'منتهٍ';
+
+  @override
+  String get supplierNoPickupsScheduledForToday =>
+      'لا توجد عمليات استلام مجدولة اليوم.';
+
+  @override
+  String get supplierNoUpcomingPickups => 'لا توجد عمليات استلام قادمة.';
+
+  @override
+  String get supplierNoPickupScheduleYet => 'لا يوجد جدول استلام بعد.';
+
+  @override
+  String get supplierCreateYourProfile => 'أنشئ ملفك';
+
+  @override
+  String get supplierUpdateYourPublicIdentityAndPickup =>
+      'حدّث هويتك العامة وإعدادات الاستلام.';
+
+  @override
+  String get supplierUpdateHowLearnersDiscoverYouAnd =>
+      'حدّث كيف يكتشفك المتعلمون وأين يمكن جمع المواد.';
+
+  @override
+  String get supplierPublicSupplierDetails => 'تفاصيل المورد العامة';
+
+  @override
+  String get supplierTheseDetailsAppearOnYourPublic =>
+      'تظهر هذه التفاصيل في ملف المورد العام.';
+
+  @override
+  String get supplierPublicSupplierName => 'اسم المورد العام';
+
+  @override
+  String get supplierHowLearnersWillSeeYou => 'كيف سيراك المتعلمون';
+
+  @override
+  String get supplierAboutYourMaterials => 'عن موادك';
+
+  @override
+  String get supplierShareTheMaterialTypesYouUsually =>
+      'شارك أنواع المواد التي تقدمها عادة.';
+
+  @override
+  String get supplierDefaultPickupArea => 'منطقة الاستلام الافتراضية';
+
+  @override
+  String get supplierUseAGeneralPickupAreaExact =>
+      'استخدم منطقة استلام عامة. العناوين الدقيقة تبقى مخفية حتى الحاجة.';
+
+  @override
+  String get supplierChooseManually => 'اختيار يدوي';
+
+  @override
+  String get supplierPickupLocationSelectionMethod =>
+      'طريقة تحديد موقع الاستلام';
+
+  @override
+  String get supplierEnterTheAddressDetailsOrMove =>
+      'أدخل تفاصيل العنوان أو حرّك دبوس الخريطة لاختيار موقع الاستلام الدقيق.';
+
+  @override
+  String get supplierLocationSelected => 'تم تحديد الموقع';
+
+  @override
+  String get supplierFindingAddress => 'جاري البحث عن العنوان…';
+
+  @override
+  String get supplierRefreshCurrentLocation => 'تحديث الموقع الحالي';
+
+  @override
+  String get supplierOptionalAddressDetails => 'تفاصيل العنوان (اختياري)';
+
+  @override
+  String get supplierCoordinatesAreTheSourceOfTruth =>
+      'الإحداثيات هي المرجع. هذه الحقول تساعد المتعلمين في العثور عليك.';
+
+  @override
+  String get supplierPalestine => 'فلسطين';
+
+  @override
+  String get supplierNeighborhoodOrDistrict => 'الحي أو المنطقة';
+
+  @override
+  String get supplierAddressLine => 'سطر العنوان';
+
+  @override
+  String get supplierStreetOrBuildingKeptPrivate =>
+      'الشارع أو المبنى (يُحفظ بسرية)';
+
+  @override
+  String get supplierLocationPrivacy => 'خصوصية الموقع';
+
+  @override
+  String get supplierSetYourExactPickupLocationYour =>
+      'حدّد موقع الاستلام الدقيق. تتحكم إعدادات الظهور بما يمكن للمتعلمين رؤيته.';
+
+  @override
+  String get supplierLocationVisibility => 'ظهور الموقع';
+
+  @override
+  String get supplierPublicArea => 'منطقة عامة';
+
+  @override
+  String get supplierOrderOnly => 'للطلبات فقط';
+
+  @override
+  String get supplierPrivate => 'خاص';
+
+  @override
+  String get supplierShowAsApproximate => 'عرض كموقع تقريبي';
+
+  @override
+  String get supplierLearnersSeeAGeneralAreaNot =>
+      'يرى المتعلمون منطقة عامة وليس موقعاً دقيقاً.';
+
+  @override
+  String get supplierOrganizationDetails => 'تفاصيل المؤسسة';
+
+  @override
+  String get supplierForWorkshopsFactoriesAndEducationalInstitutions =>
+      'للورش والمصانع والمؤسسات التعليمية فقط.';
+
+  @override
+  String get supplierOrganizationName => 'اسم المؤسسة';
+
+  @override
+  String get supplierLegalOrPublicOrganizationName =>
+      'الاسم القانوني أو العام للمؤسسة';
+
+  @override
+  String get supplierContactPerson => 'شخص الاتصال';
+
+  @override
+  String get supplierOptionalContactName => 'اسم جهة الاتصال (اختياري)';
+
+  @override
+  String get supplierSaveProfile => 'حفظ الملف';
+
+  @override
+  String get supplierSaving => 'جاري الحفظ…';
+
+  @override
+  String get supplierDiscardChanges => 'تجاهل التغييرات';
+
+  @override
+  String get supplierKeepYourPublicSupplierDetailsAccurate =>
+      'حافظ على تفاصيل موردك العامة دقيقة وموثوقة وسهلة الفهم للمتعلمين.';
+
+  @override
+  String get supplierCreateYourSupplierProfileSoLearners =>
+      'أنشئ ملف المورد ليعرف المتعلمون أين وكيف يجمعون المواد.';
+
+  @override
+  String get supplierProfileUnavailable => 'الملف غير متاح';
+
+  @override
+  String get supplierProfileCouldNotBeSaved => 'تعذّر حفظ الملف.';
+
+  @override
+  String get supplierSupplierProfileUpdated => 'تم تحديث ملف المورد';
+
+  @override
+  String get supplierPleaseCaptureYourCurrentLocationBefore =>
+      'يرجى تحديد موقعك الحالي قبل الحفظ.';
+
+  @override
+  String get supplierCouldNotGetCurrentLocationPlease =>
+      'تعذّر تحديد الموقع الحالي. حاول مجدداً أو أدخله يدوياً.';
+
+  @override
+  String get supplierCurrentLocation => 'الموقع الحالي';
+
+  @override
+  String get supplierWeFoundThisAddressFromYour =>
+      'وجدنا هذا العنوان من موقعك الحالي. راجعه وعدّله إن لزم.';
+
+  @override
+  String get supplierCurrentLocationCapturedButAddressLookup =>
+      'تم تحديد الموقع الحالي، لكن فشل البحث عن العنوان. يمكنك إضافة المدينة أو المنطقة يدوياً.';
+
+  @override
+  String get supplierCurrentLocationCapturedYouCanOptionally =>
+      'تم تحديد الموقع الحالي. يمكنك إضافة المدينة أو المنطقة أو تفاصيل العنوان اختيارياً.';
+
+  @override
+  String get supplierChooseVisibility => 'اختر مستوى الظهور';
+
+  @override
+  String get supplierWorkingDays => 'أيام العمل';
+
+  @override
+  String get supplierMonTueWed => 'الإثنين، الثلاثاء، الأربعاء';
+
+  @override
+  String get supplierOpenFrom => 'يفتح من';
+
+  @override
+  String get supplierOpenUntil => 'يغلق عند';
+
+  @override
+  String get supplierUseASeparateOrganizationAddress =>
+      'استخدام عنوان مؤسسة منفصل';
+
+  @override
+  String get supplierEnableThisWhenYourOrganizationAddress =>
+      'فعّل هذا الخيار عندما يختلف عنوان المؤسسة عن موقع الاستلام الافتراضي.';
+
+  @override
+  String get supplierBusinessCountry => 'بلد العمل';
+
+  @override
+  String get supplierBusinessCity => 'مدينة العمل';
+
+  @override
+  String get supplierBusinessArea => 'منطقة العمل';
+
+  @override
+  String get supplierBusinessAddressLine => 'سطر عنوان العمل';
+
+  @override
+  String get supplierCountryOptional => 'البلد (اختياري)';
+
+  @override
+  String get supplierCityOptional => 'المدينة (اختياري)';
+
+  @override
+  String get supplierAreaOptional => 'المنطقة (اختياري)';
+
+  @override
+  String get supplierAddressLineOptional => 'سطر العنوان (اختياري)';
+
+  @override
+  String get supplierOptionalNeighborhoodOrDistrict =>
+      'الحي أو المنطقة (اختياري)';
+
+  @override
+  String get supplierOptionalStreetOrBuilding => 'الشارع أو المبنى (اختياري)';
+
+  @override
+  String get supplierCompleteYourSupplierProfileFirst =>
+      'أكمل ملف المورد أولاً.';
+
+  @override
+  String get supplierSupplierDetailsAreRequiredBeforeYou =>
+      'تفاصيل المورد مطلوبة قبل نشر المواد القابلة لإعادة الاستخدام.';
+
+  @override
+  String get supplierGoToSupplierProfile => 'الذهاب لملف المورد';
+
+  @override
+  String get supplierSetYourPickupLocationBeforeListing =>
+      'حدد موقع الاستلام قبل إدراج المواد.';
+
+  @override
+  String get supplierPickupLocationComesFromYourSupplier =>
+      'موقع الاستلام يأتي من ملف المورد ويُستخدم لكل مادة في هذه الخطوة.';
+
+  @override
+  String get supplierEditSupplierProfile => 'تعديل ملف المورد';
+
+  @override
+  String get supplierMaterialCategoriesAreUnavailable =>
+      'فئات المواد غير متاحة.';
+
+  @override
+  String get supplierPleaseTryAgainAfterTheBackend =>
+      'يرجى المحاولة مجدداً عند توفر الخادم.';
+
+  @override
+  String get supplierSupplierProfileCouldNotLoad => 'تعذّر تحميل ملف المورد.';
+
+  @override
+  String get supplierPleaseRefreshOrCompleteYourProfile =>
+      'يرجى التحديث أو إكمال ملفك أولاً.';
+
+  @override
+  String get supplierWhatAreYouListing => 'ماذا تدرج؟';
+
+  @override
+  String get supplierDescribeTheSurplusMaterialClearly =>
+      'صف المادة الفائضة بوضوح.';
+
+  @override
+  String get supplierMaterialTypeName => 'نوع/اسم المادة';
+
+  @override
+  String get supplierWaxMoldsArduinoUnoFabricScraps =>
+      'قوالب شمع، Arduino Uno، بقايا قماش...';
+
+  @override
+  String get supplierUseTheCommonMaterialTypeOr =>
+      'استخدم نوع المادة الشائع أو الاسم البديل. نستخدمه للمطابقة والتحقق من الأسعار المدفوعة.';
+
+  @override
+  String get supplierChooseACategoryFirstToSearch =>
+      'اختر فئة أولاً للبحث في أنواع المواد المراجعة.';
+
+  @override
+  String get supplierNoReviewedMaterialTypesFoundFree =>
+      'لم يتم العثور على أنواع مواد مراجعة. يمكن للإدراجات المجانية المتابعة بهذا الاسم.';
+
+  @override
+  String get supplierReviewedPriceAvailable => 'سعر مراجع متاح';
+
+  @override
+  String get supplierNoReviewedPrice => 'لا يوجد سعر مراجع';
+
+  @override
+  String get supplierPaidListingsNeedAReviewedMaterial =>
+      'تحتاج الإدراجات المدفوعة إلى نوع مادة مراجع مع قاعدة سعر نشطة.';
+
+  @override
+  String supplierAliasesAliases(String aliases) {
+    return 'أسماء بديلة: $aliases';
+  }
+
+  @override
+  String get supplierListingTitle => 'عنوان الإدراج';
+
+  @override
+  String get supplierUsedWaxMolds8Pieces => 'قوالب شمع مستعملة - 8 قطع';
+
+  @override
+  String get supplierDescription => 'الوصف';
+
+  @override
+  String get supplierDescribeConditionQuantityAndWhatIs =>
+      'صف الحالة والكمية وما يشمله العرض.';
+
+  @override
+  String get supplierChooseSource => 'اختر المصدر';
+
+  @override
+  String get supplierCondition => 'الحالة';
+
+  @override
+  String get supplierChooseCondition => 'اختر الحالة';
+
+  @override
+  String get supplierSuggestedUses => 'الاستخدامات المقترحة';
+
+  @override
+  String get supplierCandlesResinCastingCraftProjects =>
+      'شموع، صب راتنج، مشاريع حرفية.';
+
+  @override
+  String get supplierChooseTheClosestBroadCategory => 'اختر أقرب فئة عامة.';
+
+  @override
+  String get supplierBroadCategory => 'الفئة العامة';
+
+  @override
+  String get supplierChooseCategory => 'اختر الفئة';
+
+  @override
+  String get supplierCategoryIsRequired => 'الفئة مطلوبة';
+
+  @override
+  String get supplierPublishMaterial => 'نشر المادة';
+
+  @override
+  String get supplierPublishing => 'جاري النشر…';
+
+  @override
+  String get supplierHideCategoryRequest => 'إخفاء طلب الفئة';
+
+  @override
+  String get supplierCannotFindYourCategory => 'لا تجد فئتك؟';
+
+  @override
+  String get supplierCategoryRequest => 'طلب فئة';
+
+  @override
+  String get supplierSendThisCategoryNameToAdmin =>
+      'أرسل اسم الفئة للمسؤول للموافقة. سيُحفظ نموذج الإدراج الحالي لتكمل لاحقاً.';
+
+  @override
+  String get supplierRequestedCategoryName => 'اسم الفئة المطلوبة';
+
+  @override
+  String get supplierExampleCandleMakingTools => 'مثال: أدوات صنع الشموع';
+
+  @override
+  String get supplierSending => 'جاري الإرسال…';
+
+  @override
+  String get supplierSendCategoryRequest => 'إرسال طلب الفئة';
+
+  @override
+  String get supplierFreeListingsMayUseOtherWhen =>
+      'يمكن للإدراجات المجانية استخدام «أخرى» عندما لا تناسب فئة مراجعة.';
+
+  @override
+  String get supplierPaidListingsCannotUseOtherUse =>
+      'لا يمكن للإدراجات المدفوعة استخدام «أخرى». استخدم «لا تجد فئتك؟» لطلب فئة مراجعة أولاً.';
+
+  @override
+  String get supplierQuantityAndPricing => 'الكمية والتسعير';
+
+  @override
+  String get supplierEnterThePriceForOneUnit =>
+      'أدخل سعر الوحدة الواحدة. تُعالج الكمية بشكل منفصل.';
+
+  @override
+  String get supplierQuantity => 'الكمية';
+
+  @override
+  String get supplierUnit => 'الوحدة';
+
+  @override
+  String get supplierPiece => 'قطعة';
+
+  @override
+  String get supplierPricePerUnit => 'السعر لكل وحدة (₪)';
+
+  @override
+  String get supplierVerifyPrice => 'التحقق من السعر';
+
+  @override
+  String supplierMaximumAllowedPricePerUnitIs(String unit, String max) {
+    return 'الحد الأقصى للسعر لكل $unit هو $max ₪.';
+  }
+
+  @override
+  String get supplierPickupLocationComesFromYourSupplier2 =>
+      'موقع الاستلام يأتي من ملف المورد.';
+
+  @override
+  String get supplierOrganizationListingsUseYourProfilePickup =>
+      'تستخدم إدراجات المؤسسة موقع الاستلام من ملفك.';
+
+  @override
+  String get supplierThisFixedPickupLocationFromYour =>
+      'يُستخدم موقع الاستلام الثابت من ملفك لكل إدراج. حدّثه في ملف المورد إذا تغيّر عنوان الورشة أو المنشأة.';
+
+  @override
+  String get supplierEditPickupInProfile => 'تعديل الاستلام في الملف';
+
+  @override
+  String get supplierUseProfilePickupLocation =>
+      'استخدام موقع الاستلام من الملف';
+
+  @override
+  String get supplierUseYourDefaultPickupAreaOr =>
+      'استخدم منطقة الاستلام الافتراضية، أو حدّد نقطة استلام مختلفة لهذه المادة فقط.';
+
+  @override
+  String get supplierMaterialPickupLocation => 'موقع استلام المادة';
+
+  @override
+  String get supplierSetWhereLearnersShouldPickUp =>
+      'حدد المكان الذي يجب على المتعلمين استلام هذه المادة منه.';
+
+  @override
+  String get supplierEnterACityOrCaptureYour =>
+      'أدخل مدينة أو التقط موقعك الحالي للاستلام.';
+
+  @override
+  String get supplierPickupAllowed => 'الاستلام مسموح';
+
+  @override
+  String get supplierLearnersCanRequestSelfPickupFor =>
+      'يمكن للمتعلمين طلب الاستلام الذاتي لهذه المادة.';
+
+  @override
+  String get supplierDeliveryAllowed => 'التوصيل مسموح';
+
+  @override
+  String get supplierLearnersCanRequestInternalDeliveryAfter =>
+      'يمكن للمتعلمين طلب التوصيل الداخلي بعد قبولك للحجز.';
+
+  @override
+  String get supplierYes => 'نعم';
+
+  @override
+  String get supplierNo => 'لا';
+
+  @override
+  String get supplierPickupNotes => 'ملاحظات الاستلام';
+
+  @override
+  String get supplierPickupNearCampus => 'الاستلام قرب الحرم الجامعي.';
+
+  @override
+  String get supplierPaidListingsCannotUseOther =>
+      'لا يمكن للإدراجات المدفوعة استخدام «أخرى».';
+
+  @override
+  String get supplierPaidListingsMustPassPriceVerification =>
+      'يجب أن تجتاز الإدراجات المدفوعة التحقق من السعر قبل النشر.';
+
+  @override
+  String get supplierNisOnly => 'شيكل فقط';
+
+  @override
+  String get supplierFreeOtherAllowed => '«أخرى» مجانية مسموحة';
+
+  @override
+  String get supplierPaidNeedsPriceVerification =>
+      'المدفوع يحتاج تحققاً من السعر';
+
+  @override
+  String get supplierCouldNotRestoreListingDraft =>
+      'تعذّر استعادة مسودة الإدراج';
+
+  @override
+  String get supplierBackToNotifications => 'العودة للإشعارات';
+
+  @override
+  String get supplierMaterialListedSuccessfully => 'تم إدراج المادة بنجاح.';
+
+  @override
+  String get supplierAddAnotherMaterial => 'إضافة مادة أخرى';
+
+  @override
+  String supplierTitleCategoryPrice(
+    String title,
+    String category,
+    String price,
+  ) {
+    return '$title • $category • $price';
+  }
+
+  @override
+  String get supplierNew => 'جديد';
+
+  @override
+  String get supplierLikeNew => 'كالجديد';
+
+  @override
+  String get supplierGood => 'جيد';
+
+  @override
+  String get supplierUsed => 'مستعمل';
+
+  @override
+  String get supplierNeedsRepair => 'يحتاج إصلاح';
+
+  @override
+  String get supplierStudentLeftover => 'فائض طلابي';
+
+  @override
+  String get supplierWorkshopSurplus => 'فائض ورشة';
+
+  @override
+  String get supplierFactorySurplus => 'فائض مصنع';
+
+  @override
+  String get supplierEducationalInstitution => 'مؤسسة تعليمية';
+
+  @override
+  String get supplierIndividualSupplier => 'مورد فردي';
+
+  @override
+  String get supplierStudentSupplier => 'مورد طالب';
+
+  @override
+  String get supplierWorkshop => 'ورشة';
+
+  @override
+  String get supplierFactory => 'مصنع';
+
+  @override
+  String get supplierVerified => 'موثّق';
+
+  @override
+  String get supplierPendingVerification => 'بانتظار التحقق';
+
+  @override
+  String get supplierNotRequired => 'غير مطلوب';
+
+  @override
+  String get supplierAdminNote => 'ملاحظة المسؤول';
+
+  @override
+  String get supplierSupplierType => 'نوع المورد';
+
+  @override
+  String get supplierPickupCountryCity => 'بلد ومدينة الاستلام';
+
+  @override
+  String get supplierListingPreview => 'معاينة الإدراج';
+
+  @override
+  String get supplierProfileCompletion => 'اكتمال الملف';
+
+  @override
+  String get supplierSelectedCoordinates => 'الإحداثيات المحددة';
+
+  @override
+  String supplierLatitudeValue(String value) {
+    return 'خط العرض: $value';
+  }
+
+  @override
+  String supplierLongitudeValue(String value) {
+    return 'خط الطول: $value';
+  }
+
+  @override
+  String supplierCompleteOfTotalEssentialsComplete(
+    String complete,
+    String total,
+  ) {
+    return '$complete من $total أساسيات مكتملة';
+  }
+
+  @override
+  String get supplierLearnerPreview => 'معاينة المتعلم';
+
+  @override
+  String get supplierHowLearnersMayDiscoverYourSupplier =>
+      'كيف قد يكتشف المتعلمون ملف موردك لاحقاً.';
+
+  @override
+  String get supplierPickupAreaNotSet => 'منطقة الاستلام غير محددة';
+
+  @override
+  String get supplierSharesReusableMaterialsForStudentAnd =>
+      'يشارك مواداً قابلة لإعادة الاستخدام لمشاريع الطلاب والصناع.';
+
+  @override
+  String supplierLocationVisibilityVisibility(String visibility) {
+    return 'ظهور الموقع: $visibility';
+  }
+
+  @override
+  String get supplierYourPublicName => 'اسمك العام';
+
+  @override
+  String supplierCurrentValue(String value) {
+    return 'الحالي: $value';
+  }
+
+  @override
+  String get supplierVerification => 'التحقق';
+
+  @override
+  String get supplierVerificationIsReadOnlyForNow =>
+      'التحقق للقراءة فقط حالياً. ستُضاف لاحقاً عمليات رفع المستندات والمراجعة.';
+
+  @override
+  String get supplierAccountSecurity => 'أمان الحساب';
+
+  @override
+  String get supplierKeepYourAccountProtected => 'حافظ على حماية حسابك.';
+
+  @override
+  String get supplierChangePassword => 'تغيير كلمة المرور';
+
+  @override
+  String get supplierEnterYourCurrentPasswordThenChoose =>
+      'أدخل كلمة المرور الحالية، ثم اختر كلمة مرور جديدة.';
+
+  @override
+  String get supplierCurrentPassword => 'كلمة المرور الحالية';
+
+  @override
+  String get supplierConfirmNewPassword => 'تأكيد كلمة المرور الجديدة';
+
+  @override
+  String get supplierUpdatePassword => 'تحديث كلمة المرور';
+
+  @override
+  String get supplierPasswordUpdatedSuccessfully =>
+      'تم تحديث كلمة المرور بنجاح.';
+
+  @override
+  String get supplierPasswordCouldNotBeUpdatedPlease =>
+      'تعذّر تحديث كلمة المرور. يرجى المحاولة مجدداً.';
+
+  @override
+  String get supplierThisFieldIsRequired => 'هذا الحقل مطلوب';
+
+  @override
+  String get supplierPasswordMustBeAtLeast8 =>
+      'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.';
+
+  @override
+  String get supplierNewPasswordMustBeDifferentFrom =>
+      'يجب أن تختلف كلمة المرور الجديدة عن الحالية.';
+
+  @override
+  String get supplierPasswordsDoNotMatch => 'كلمتا المرور غير متطابقتين.';
+
+  @override
+  String get supplierUpcomingPickups => 'عمليات الاستلام القادمة';
+
+  @override
+  String get supplierRecentMaterials => 'المواد الأخيرة';
+
+  @override
+  String get supplierMaterialPhotos => 'صور المادة';
+
+  @override
+  String get supplierAdd1To5PhotosJpg =>
+      'أضف من صورة إلى 5 صور. JPG أو PNG أو WebP.';
+
+  @override
+  String get supplierAddAtLeastOneMaterialPhoto =>
+      'أضف صورة واحدة على الأقل للمادة قبل النشر.';
+
+  @override
+  String get supplierSelectedPhotos => 'الصور المحددة';
+
+  @override
+  String get supplierAddImages => 'إضافة صور';
+
+  @override
+  String get supplierUploading => 'جاري الرفع...';
+
+  @override
+  String supplierCountMaxPhotos(String count, String max) {
+    return '$count/$max صور';
+  }
+
+  @override
+  String get supplierPickupDetails => 'تفاصيل الاستلام';
+
+  @override
+  String get supplierSendMessage => 'إرسال رسالة';
+
+  @override
+  String get supplierPickupWindowPassedChooseAFollow =>
+      'انتهت نافذة الاستلام. اختر إجراء متابعة.';
+
+  @override
+  String get supplierReschedulePickup => 'إعادة جدولة الاستلام';
+
+  @override
+  String get supplierReportNoShow => 'الإبلاغ عن عدم حضور';
+
+  @override
+  String get supplierNoShowReportAlreadySubmittedFor =>
+      'تم إرسال بلاغ عدم الحضور لهذا الحجز بالفعل.';
+
+  @override
+  String get supplierFollowUpMessages => 'رسائل المتابعة';
+
+  @override
+  String get supplierNoFollowUpMessagesYet => 'لا توجد رسائل متابعة بعد.';
+
+  @override
+  String get supplierWriteAShortFollowUpMessage => 'اكتب رسالة متابعة قصيرة…';
+
+  @override
+  String get supplierCouldNotLoadMessages => 'تعذر تحميل الرسائل.';
+
+  @override
+  String get supplierCouldNotSendMessage => 'تعذّر إرسال الرسالة.';
+
+  @override
+  String get supplierNeedsFollowUp => 'يحتاج متابعة';
+
+  @override
+  String get supplierOverdue => 'متأخر';
+
+  @override
+  String get supplierThisWillCancelTheReservationAnd =>
+      'سيؤدي هذا إلى إلغاء الحجز وإتاحة المادة.';
+
+  @override
+  String get supplierSubmitANoShowReportFor =>
+      'أرسل بلاغ عدم حضور لمراجعة المسؤول. هذا لا يؤدي إلى تعليق حساب المتعلم تلقائياً.';
+
+  @override
+  String get supplierMarkPickupAsCompleted => 'تحديد الاستلام كمكتمل؟';
+
+  @override
+  String get supplierThisWillMoveTheReservationTo =>
+      'سينقل هذا الحجز إلى مكتمل ويحدد المادة كمعاد استخدامها.';
+
+  @override
+  String get supplierAcceptRequest => 'قبول الطلب';
+
+  @override
+  String get supplierChooseAPickupWindowForThe => 'اختر نافذة استلام للمتعلم.';
+
+  @override
+  String get supplierDeclineRequest => 'رفض الطلب';
+
+  @override
+  String get supplierYouCanAddAnOptionalReason =>
+      'يمكنك إضافة سبب اختياري للمتعلم.';
+
+  @override
+  String get supplierReasonOptional => 'السبب (اختياري)';
+
+  @override
+  String get supplierPickupDate => 'تاريخ الاستلام';
+
+  @override
+  String get supplierDriverPickupWindowFromSupplier =>
+      'نافذة استلام السائق من المورد';
+
+  @override
+  String get supplierByAcceptingYouAgreeToHand =>
+      'بالقبول، توافق على تسليم المادة للسائق خلال نافذة الاستلام هذه. سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.';
+
+  @override
+  String get supplierWeWillCheckThisAgainstThe =>
+      'سنتحقق من ذلك مقابل نوافذ التوصيل المفضلة للمتعلم.';
+
+  @override
+  String supplierEarliestDeliveryAfterPickupTime(String time) {
+    return 'أقرب توصيل بعد الاستلام: $time';
+  }
+
+  @override
+  String supplierConfirmedLearnerDeliveryWindowWindow(String window) {
+    return 'نافذة التوصيل المؤكدة للمتعلم: $window';
+  }
+
+  @override
+  String get supplierNoFeasibleLearnerDeliveryWindowThis =>
+      'لا توجد نافذة توصيل مناسبة للمتعلم. سينتظر هذا تأكيد المتعلم.';
+
+  @override
+  String get supplierThisScheduleCanBeAcceptedDirectly =>
+      'يمكن قبول هذا الجدول مباشرة.';
+
+  @override
+  String get supplierThisDeliveryWindowIsNotFeasible =>
+      'نافذة التوصيل هذه غير مناسبة بعد استلام المورد وفترة السفر. سيلزم تأكيد المتعلم.';
+
+  @override
+  String get supplierSelectedLearnerPreferredWindow =>
+      'تم اختيار نافذة الاستلام المفضلة للمتعلم';
+
+  @override
+  String get supplierCustomProposedWindow => 'نافذة مقترحة مخصصة';
+
+  @override
+  String get supplierLearnerPreferredPickupWindows =>
+      'نوافذ الاستلام المفضلة للمتعلم';
+
+  @override
+  String get supplierLearnerPreferredDeliveryWindows =>
+      'نوافذ التوصيل المفضلة للمتعلم';
+
+  @override
+  String get supplierDeliveryNote => 'ملاحظة التوصيل';
+
+  @override
+  String get supplierSelectedLearnerDeliveryWindowWillBe =>
+      'سيتم استخدام نافذة التوصيل المفضلة للمتعلم عندما تكون ممكنة.';
+
+  @override
+  String get supplierProposeCustomDeliveryWindow => 'اقتراح نافذة توصيل مخصصة';
+
+  @override
+  String get supplierProposedLearnerDeliveryWindow =>
+      'نافذة التوصيل المقترحة للمتعلم';
+
+  @override
+  String get supplierChooseTheProposedDeliveryDateAnd =>
+      'اختر تاريخ ووقت التوصيل المقترح.';
+
+  @override
+  String get supplierProposedPickupTimeWaitingForLearner =>
+      'وقت الاستلام المقترح — في انتظار تأكيد المتعلم';
+
+  @override
+  String get supplierSchedulingConflictWaitingForLearnerConfirmation =>
+      'تعارض في الجدولة — في انتظار تأكيد المتعلم';
+
+  @override
+  String get supplierRequestSubmittedAwaitingLearnerConfirmation =>
+      'تم إرسال الطلب — في انتظار تأكيد المتعلم';
+
+  @override
+  String get supplierStartTime => 'وقت البداية';
+
+  @override
+  String get supplierEndTime => 'وقت النهاية';
+
+  @override
+  String get supplierPickupNoteOptional => 'ملاحظة الاستلام (اختياري)';
+
+  @override
+  String get supplierTapToChoose => 'اضغط للاختيار';
+
+  @override
+  String get supplierPriceVerified => 'تم التحقق من السعر';
+
+  @override
+  String get supplierVerifyPriceBeforePublishing => 'تحقق من السعر قبل النشر';
+
+  @override
+  String get supplierPriceVerificationRequired => 'التحقق من السعر مطلوب';
+
+  @override
+  String get supplierWithinApprovedCapVerifyPriceTo =>
+      'ضمن الحد المعتمد — تحقق من السعر للنشر';
+
+  @override
+  String get supplierCategoryRequests => 'طلبات الفئات';
+
+  @override
+  String supplierApprovedAsName(String name) {
+    return 'موافق عليه كـ $name';
+  }
+
+  @override
+  String get supplierWaitingForAdminApproval => 'بانتظار موافقة المسؤول.';
+
+  @override
+  String get supplierContinueListing => 'متابعة الإدراج';
+
+  @override
+  String get supplierDefaultPickupLocation => 'موقع الاستلام الافتراضي';
+
+  @override
+  String get supplierVisibility => 'الظهور';
+
+  @override
+  String get supplierLocationCaptured => 'تم تحديد الموقع';
+
+  @override
+  String get supplierNoAreaSelectedYet => 'لم يُحدد موقع بعد';
+
+  @override
+  String supplierVisibilityValue(String value) {
+    return 'الظهور: $value';
+  }
+
+  @override
+  String supplierTodayTodayUpcomingUpcomingCompletedCompleted(
+    String today,
+    String upcoming,
+    String completed,
+  ) {
+    return 'اليوم: $today   قادمة: $upcoming   مكتملة: $completed';
+  }
+
+  @override
+  String supplierRequesterName(String name) {
+    return 'مقدم الطلب: $name';
+  }
+
+  @override
+  String supplierQtyQty(String qty) {
+    return 'الكمية: $qty';
+  }
+
+  @override
+  String get supplierChooseAPickupDateAndTime =>
+      'اختر تاريخ استلام ونافذة زمنية.';
+
+  @override
+  String get supplierSchedulePending => 'الجدول معلق';
+
+  @override
+  String get supplierAcceptedReservationsWithPickupWindowsWill =>
+      'ستظهر الحجوزات المقبولة مع نوافذ الاستلام هنا.';
+
+  @override
+  String get supplierRecentListingsWillAppearHereAfter =>
+      'ستظهر الإدراجات الأخيرة هنا بعد إضافة مواد قابلة لإعادة الاستخدام.';
+
+  @override
+  String get supplierActivityFromReservationsAndNotificationsWill =>
+      'سيجتمع هنا النشاط من الحجوزات والإشعارات.';
+
+  @override
+  String get supplierOrganizationProfile => 'ملف المؤسسة';
+
+  @override
+  String get supplierRingTheWorkshopBellWhenYou => 'اضغط جرس الورشة عند وصولك.';
+
+  @override
+  String get supplierAlreadyReservedForAnotherLearner => 'محجوز لمُتعلم آخر.';
+
+  @override
+  String get supplierMaterialListingFoundationReady => 'أساس إدراج المواد جاهز';
+
+  @override
+  String supplierCountMaterialCategoriesLoaded(String count) {
+    return 'تم تحميل $count فئات مواد.';
+  }
+
+  @override
+  String get supplierLoadingCategories => 'جاري تحميل الفئات...';
+
+  @override
+  String get supplierCategoriesCouldNotBeLoadedYet => 'تعذّر تحميل الفئات بعد.';
+
+  @override
+  String get supplierLoadingListingPolicy => 'جاري تحميل سياسة الإدراج...';
+
+  @override
+  String get supplierListingPolicyUnavailable => 'سياسة الإدراج غير متاحة.';
+
+  @override
+  String get supplierUseYourCurrentLocationOrEnter =>
+      'استخدم موقعك الحالي أو أدخل تفاصيل الاستلام يدوياً.';
+
+  @override
+  String get supplierTapTheMapToPlaceThe =>
+      'اضغط على الخريطة لوضع دبوس الاستلام';
+
+  @override
+  String get supplierPickupPinSelectedOnMap =>
+      'تم تحديد دبوس الاستلام على الخريطة';
+
+  @override
+  String get supplierPickupType => 'نوع الاستلام';
+
+  @override
+  String get supplierDate => 'التاريخ';
+
+  @override
+  String get supplierTime => 'الوقت';
+
+  @override
+  String get supplierMaterialRequest => 'المادة والطلب';
+
+  @override
+  String supplierPickupWindowRange(String range) {
+    return 'نافذة الاستلام: $range';
+  }
+
+  @override
+  String get supplierInstructions => 'التعليمات';
+
+  @override
+  String get supplierNoPickupInstructions => 'لا توجد تعليمات استلام.';
+
+  @override
+  String get supplierNoDeclineReasonProvided => 'لم يُقدَّم سبب للرفض.';
+
+  @override
+  String get supplierThisRequestExpiredBecauseYouDid =>
+      'انتهت صلاحية هذا الطلب لأنك لم تقبل أو ترفض في الوقت المحدد.';
+
+  @override
+  String get supplierSupplierNote => 'ملاحظة المورد';
+
+  @override
+  String get supplierLearnerMessage => 'رسالة المتعلم';
+
+  @override
+  String get supplierCover => 'الغلاف';
+
+  @override
+  String get supplierDismiss => 'إغلاق';
+
+  @override
+  String get supplierAccountApprovedBanner =>
+      'تمت الموافقة على حساب المورد. يمكنك الآن نشر المواد.';
+
+  @override
+  String get supplierWaitingForAdminApprovalPublish =>
+      'حساب المورد بانتظار موافقة الإدارة. يمكنك نشر المواد بعد الموافقة.';
+
+  @override
+  String get supplierCommonSupplierTasks => 'مهام المورد الشائعة';
+
+  @override
+  String get supplierActivityWillAppearAsLearners =>
+      'سيظهر النشاط هنا عندما يطلب المتعلمون موادك ويجمعونها.';
+
+  @override
+  String supplierPendingReservationsWaitingResponse(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'لديك $count حجز معلق بانتظار ردك.',
+      many: 'لديك $count حجزًا معلقًا بانتظار ردك.',
+      few: 'لديك $count حجوزات معلقة بانتظار ردك.',
+      two: 'لديك حجزان معلقان بانتظار ردك.',
+      one: 'لديك حجز واحد معلق بانتظار ردك.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String supplierCountRequestsNeedResponse(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طلب يحتاج ردك.',
+      many: '$count طلبًا يحتاج ردك.',
+      few: '$count طلبات تحتاج ردك.',
+      two: 'طلبان يحتاجان ردك.',
+      one: 'طلب واحد يحتاج ردك.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String supplierCountReservationsCompleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'اكتمل $count حجز بنجاح.',
+      many: 'اكتمل $count حجزًا بنجاح.',
+      few: 'اكتمل $count حجوزات بنجاح.',
+      two: 'اكتمل حجزان بنجاح.',
+      one: 'اكتمل حجز واحد بنجاح.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get supplierBasicInformation => 'المعلومات الأساسية';
+
+  @override
+  String get supplierTellLearnersWhatMaterial =>
+      'أخبر المتعلمين عن المادة التي تقدمها.';
+
+  @override
+  String get supplierWhyExistingCategoriesDoNotFit =>
+      'لماذا لا تناسب الفئات الحالية';
+
+  @override
+  String get supplierExplainMaterialKindAndWhy =>
+      'اشرح نوع المادة ولماذا لا تناسب أي من الفئات الحالية.';
+
+  @override
+  String get supplierMaterialTypeSlashName => 'نوع / اسم المادة';
+
+  @override
+  String get supplierSearchOrTypeMaterialName => 'ابحث أو اكتب اسم المادة';
+
+  @override
+  String get supplierClearSpecificTitlesHelp =>
+      'العناوين الواضحة والمحددة تساعد المتعلمين على فهم العنصر.';
+
+  @override
+  String get supplierIncludeDetailsHelpLearners =>
+      'أضف تفاصيل تساعد المتعلمين على معرفة ما إذا كانت المادة مناسبة لمشروعهم.';
+
+  @override
+  String get supplierSetQuantityAndPrice => 'حدد الكمية المتاحة والسعر.';
+
+  @override
+  String get supplierPickupAndDelivery => 'الاستلام والتوصيل';
+
+  @override
+  String get supplierSetHowLearnersReceive =>
+      'حدد كيف يمكن للمتعلمين استلام هذه المادة.';
+
+  @override
+  String get supplierPhotosSectionSubtitle =>
+      'أضف صورًا لمساعدة المتعلمين على رؤية المادة بوضوح.';
+
+  @override
+  String get supplierChecklist => 'قائمة التحقق';
+
+  @override
+  String get supplierReadyToPublish => 'جاهز للنشر';
+
+  @override
+  String get supplierChooseCategoryChecklist => 'اختر فئة';
+
+  @override
+  String get supplierEnterMaterialTypeChecklist => 'أدخل نوع/اسم المادة';
+
+  @override
+  String get supplierEnterListingTitleChecklist => 'أدخل عنوان الإعلان';
+
+  @override
+  String get supplierAddDescriptionChecklist => 'أضف وصفًا';
+
+  @override
+  String get supplierSetConditionChecklist => 'حدد الحالة';
+
+  @override
+  String get supplierAddQuantityUnitChecklist => 'أضف الكمية والوحدة';
+
+  @override
+  String get supplierSelectFreeOrPriceChecklist =>
+      'اختر مجاني أو أدخل سعرًا صالحًا';
+
+  @override
+  String get supplierVerifyPaidPriceChecklist =>
+      'تحقق من السعر للمواد المدفوعة';
+
+  @override
+  String get supplierChooseFulfillmentChecklist =>
+      'اختر خيار تسليم واحدًا على الأقل';
+
+  @override
+  String get supplierAddPhotoChecklist => 'أضف صورة واحدة على الأقل';
+
+  @override
+  String get supplierGeneralCategory => 'عام';
+
+  @override
+  String get supplierImageUploadFailed => 'فشل رفع الصورة';
+
+  @override
+  String get supplierEnterMaterialNameBeforeCategory =>
+      'أدخل اسم المادة قبل طلب فئة جديدة.';
+
+  @override
+  String get supplierDescribeMaterialForCategory =>
+      'صف المادة حتى تتمكن الإدارة من مراجعة طلب الفئة.';
+
+  @override
+  String get supplierEnterRequestedCategoryName => 'أدخل اسم الفئة المطلوبة.';
+
+  @override
+  String get supplierExplainWhyCategoriesDoNotFit =>
+      'اشرح لماذا لا تناسب الفئات الحالية.';
+
+  @override
+  String get supplierEnterValidQuantityForMaterial =>
+      'أدخل كمية صالحة لهذه المادة.';
+
+  @override
+  String get supplierEnterUnitForMaterial => 'أدخل وحدة هذه المادة.';
+
+  @override
+  String get supplierCouldNotUploadImages =>
+      'تعذر رفع الصور. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get supplierCategoryStillPendingReview =>
+      'طلب الفئة ما زال بانتظار مراجعة الإدارة.';
+
+  @override
+  String get supplierCategoryNoLongerAvailable =>
+      'الفئة المحددة غير متاحة الآن. حدّث الفئات واختر مرة أخرى.';
+
+  @override
+  String get supplierDetailsNotSavedComplete =>
+      'لم تُحفظ بعض تفاصيل المادة. يرجى إكمال الحقول الناقصة.';
+
+  @override
+  String get supplierCouldNotLoadSavedDraft =>
+      'تعذر تحميل مسودة الإعلان المحفوظة. يرجى المحاولة مرة أخرى.';
+
+  @override
+  String supplierUseForListing(String name) {
+    return 'استخدم $name لهذا الإعلان.';
+  }
+
+  @override
+  String supplierCategoryRejectedUseSuggested(String name) {
+    return 'تم رفض طلب الفئة. استخدم $name لهذا الإعلان.';
+  }
+
+  @override
+  String get supplierCategoryRejectedChooseExisting =>
+      'تم رفض طلب الفئة. اختر فئة موجودة وتابع.';
+
+  @override
+  String get supplierResolveCategoryBeforePriceReview =>
+      'أنهِ طلب الفئة قبل إرسال مراجعة السعر.';
+
+  @override
+  String get supplierSelectValidCategoryBeforePriceReview =>
+      'يرجى اختيار فئة صالحة قبل إرسال مراجعة السعر.';
+
+  @override
+  String get supplierEnterMaterialNameBeforePriceReview =>
+      'أدخل اسم المادة قبل إرسال مراجعة السعر.';
+
+  @override
+  String get supplierEnterDescriptionBeforePriceReview =>
+      'أدخل وصف المادة قبل إرسال مراجعة السعر.';
+
+  @override
+  String get supplierQuantityUnitRequiredBeforePriceReview =>
+      'الكمية والوحدة مطلوبتان قبل إرسال مراجعة السعر.';
+
+  @override
+  String get supplierEnterValidPaidPriceBeforePriceReview =>
+      'أدخل سعرًا مدفوعًا صالحًا قبل إرسال مراجعة السعر.';
+
+  @override
+  String get supplierEnterMaterialNameBeforePriceReview2 =>
+      'أدخل اسم المادة قبل إرسال مراجعة السعر.';
+
+  @override
+  String supplierPriceAcceptedMaxAllowed(String max) {
+    return 'تم قبول السعر. الحد الأقصى المسموح هو $max شيكل.';
+  }
+
+  @override
+  String supplierMaxAllowedPriceEnterLess(String max) {
+    return 'الحد الأقصى المسموح هو $max شيكل. يرجى إدخال $max شيكل أو أقل.';
+  }
+
+  @override
+  String supplierMaxAllowedPricePerUnitEnterLess(String max, String unit) {
+    return 'الحد الأقصى المسموح هو $max شيكل لكل $unit. يرجى إدخال $max شيكل أو أقل.';
+  }
+
+  @override
+  String get supplierPaidMaterialNeedsPriceReview =>
+      'تحتاج هذه المادة المدفوعة إلى مراجعة سعر من الإدارة قبل النشر.';
+
+  @override
+  String get supplierMaterialBeingPublished =>
+      'جاري نشر هذه المادة. يرجى الانتظار قليلًا.';
+
+  @override
+  String get supplierPublishAttemptMismatch =>
+      'محاولة النشر لا تطابق الطلب المحفوظ. أعد تعيين النموذج أو ابدأ من صفحة إضافة مادة جديدة.';
+
+  @override
+  String get supplierSelectValidCategoryBeforePublishing =>
+      'يرجى اختيار فئة صالحة قبل النشر.';
+
+  @override
+  String get supplierEnterNumberGreaterThanZero => 'أدخل رقمًا أكبر من صفر';
+
+  @override
+  String supplierUnitPriceMustBeOrLess(String max) {
+    return 'يجب أن يكون سعر الوحدة $max شيكل أو أقل.';
+  }
+
+  @override
+  String get supplierListingTitleHintExample =>
+      'مثال: مجموعات Breadboard نصف الحجم (دفعة احتياطية)';
+
+  @override
+  String get supplierInventoryOverview => 'نظرة عامة على المخزون';
+
+  @override
+  String get supplierMonitorMaterialAvailability =>
+      'راقب توفر المواد والطلبات وحالة الإعلانات.';
+
+  @override
+  String get supplierClearSearch => 'مسح البحث';
+
+  @override
+  String get supplierResetFilters => 'إعادة ضبط الفلاتر';
+
+  @override
+  String get supplierReset => 'إعادة ضبط';
+
+  @override
+  String get supplierClearAll => 'مسح الكل';
+
+  @override
+  String get supplierMaterialsSection => 'المواد';
+
+  @override
+  String supplierShownOfTotal(int shown, int total) {
+    return 'يُعرض $shown من $total';
+  }
+
+  @override
+  String get supplierListingPreviewSubtitle => 'هكذا ستظهر مادتك للمتعلمين.';
+
+  @override
+  String get supplierMaterialTitlePlaceholder => 'سيظهر عنوان المادة هنا';
+
+  @override
+  String get supplierShortDescriptionPlaceholder =>
+      'سيظهر وصف قصير لمادتك هنا.';
+
+  @override
+  String get supplierQuantityPlaceholder => 'ستظهر الكمية هنا';
+
+  @override
+  String get supplierPickupLocationPlaceholder => 'سيظهر موقع الاستلام هنا';
+
+  @override
+  String get supplierPickupAvailable => 'الاستلام متاح';
+
+  @override
+  String get supplierPickupUnavailable => 'الاستلام غير متاح';
+
+  @override
+  String get supplierInternalDeliveryAvailable => 'التوصيل الداخلي متاح';
+
+  @override
+  String get supplierDeliveryUnavailable => 'التوصيل غير متاح';
+
+  @override
+  String get supplierNoImageYet => 'لا توجد صورة بعد';
+
+  @override
+  String get supplierAddPhotosToSeePreview => 'أضف صورًا لمعاينة الإعلان';
+
+  @override
+  String supplierYouCanAddUpToPhotos(int max) {
+    return 'يمكنك إضافة حتى $max صور.';
+  }
+
+  @override
+  String supplierOnlyMorePhotosCanBeAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'يمكن إضافة $count صورة فقط.',
+      many: 'يمكن إضافة $count صورة فقط.',
+      few: 'يمكن إضافة $count صور فقط.',
+      two: 'يمكن إضافة صورتين فقط.',
+      one: 'يمكن إضافة صورة واحدة فقط.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String supplierCouldNotReadImage(String name) {
+    return 'تعذر قراءة \"$name\". جرّب صورة أخرى.';
+  }
+
+  @override
+  String supplierFileLargerThan5Mb(String name) {
+    return '$name أكبر من 5 ميجابايت.';
+  }
+
+  @override
+  String supplierFileMustBeJpgPngWebp(String name) {
+    return 'يجب أن يكون $name بصيغة JPG أو PNG أو WebP.';
+  }
+
+  @override
+  String get supplierReuseHistoryWillAppear =>
+      'سيظهر سجل إعادة الاستخدام هنا بعد اكتمال الحجوزات.';
+
+  @override
+  String supplierAvailableOfTotal(String available, String total, String unit) {
+    return 'المتاح: $available من $total $unit';
+  }
+
+  @override
+  String get supplierAccessDenied => 'الوصول مرفوض';
+
+  @override
+  String get supplierYouNeedASupplierAccountTo =>
+      'تحتاج حساب مورد للوصول إلى هذه المنطقة.';
+
+  @override
+  String get supplierSupplierAccessRequired => 'مطلوب وصول المورد';
+
+  @override
+  String get supplierYouNeedASupplierRoleTo =>
+      'تحتاج دور المورد للوصول إلى بوابة المورد.';
+
+  @override
+  String get supplierGoToHome => 'الذهاب للرئيسية';
+
+  @override
+  String get supplierDeliveryRequested => 'تم طلب التوصيل';
+
+  @override
+  String get supplierAttentionNeedsYourResponse => 'يحتاج ردك';
+
+  @override
+  String get supplierAttentionWaitingForLearner => 'بانتظار المتعلم';
+
+  @override
+  String get supplierAttentionInProgress => 'قيد التنفيذ';
+
+  @override
+  String get supplierAttentionAdminReview => 'مراجعة إدارية';
+
+  @override
+  String get supplierAttentionNoFurtherAction => 'لا إجراء إضافي';
+
+  @override
+  String get supplierAttentionTerminal => 'نهائي';
+
+  @override
+  String supplierAttentionNextActor(String attention, String actor) {
+    return '$attention · التالي: $actor';
+  }
+
+  @override
+  String get supplierNextActorAdmin => 'المشرف';
+
+  @override
+  String get supplierNextActorSystem => 'النظام';
+
+  @override
+  String get supplierNextActorNone => 'لا جهة فاعلة';
+
+  @override
+  String get supplierRecoveryNextAdmin => 'استعادة · التالي: المشرف';
+
+  @override
+  String get supplierWorkflowInitialDecision => 'قرار أولي';
+
+  @override
+  String get supplierWorkflowScheduling => 'جدولة';
+
+  @override
+  String get supplierWorkflowSelfPickup => 'استلام ذاتي';
+
+  @override
+  String get supplierWorkflowDelivery => 'توصيل';
+
+  @override
+  String get supplierWorkflowRecovery => 'استعادة';
+
+  @override
+  String get supplierCompletedSuccessfully => 'اكتمل بنجاح';
+
+  @override
+  String get supplierNoResponseBeforeDeadline => 'لم يصل رد قبل الموعد النهائي';
+
+  @override
+  String get supplierCompletedFulfillment => 'اكتمل التنفيذ';
+
+  @override
+  String get supplierCancelledBeforeFulfillment => 'أُلغي قبل التنفيذ';
+
+  @override
+  String get supplierExpiredBeforeFulfillment => 'انتهت صلاحيته قبل التنفيذ';
+
+  @override
+  String get supplierClosedAfterNoShow => 'أُغلق بعد عدم حضور المتعلم';
+
+  @override
+  String get supplierRejectedBeforeFulfillment => 'رُفض قبل التنفيذ';
+
+  @override
+  String get supplierFinalReservationOutcome => 'النتيجة النهائية للحجز';
+
+  @override
+  String get supplierTerminalVerbCancelled => 'أُلغي';
+
+  @override
+  String get supplierTerminalVerbExpired => 'انتهت صلاحيته';
+
+  @override
+  String get supplierTerminalVerbCompleted => 'اكتمل';
+
+  @override
+  String get supplierTerminalVerbClosed => 'أُغلق';
+
+  @override
+  String get supplierActionAcceptLearnerTime => 'قبول وقت المتعلم';
+
+  @override
+  String get supplierActionCompleteSelfPickup => 'إكمال الاستلام الذاتي';
+
+  @override
+  String get supplierProposeNewTime => 'اقتراح وقت مختلف';
+
+  @override
+  String get supplierAcceptNewTime => 'قبول وقت جديد';
+
+  @override
+  String get supplierActionMarkLearnerNoShow => 'تسجيل عدم حضور المتعلم';
+
+  @override
+  String get supplierActionReportIncident => 'الإبلاغ عن حادثة';
+
+  @override
+  String get supplierActionReportNoDriver => 'الإبلاغ عن عدم توفر سائق';
+
+  @override
+  String get supplierActionMarkPickupExpired => 'تعليم الاستلام منتهيًا';
+
+  @override
+  String get supplierActionReportDriverNoShow => 'الإبلاغ عن عدم حضور السائق';
+
+  @override
+  String get supplierActionSubmitRecoveryWindow =>
+      'إرسال نافذة استلام للاستعادة';
+
+  @override
+  String get supplierConfirmPickup => 'تأكيد الاستلام';
+
+  @override
+  String get supplierSubmitPickupWindow => 'إرسال نافذة الاستلام';
+
+  @override
+  String get supplierReviewReschedule => 'مراجعة إعادة الجدولة';
+
+  @override
+  String get supplierReportToAdmin => 'الإبلاغ للمشرف';
+
+  @override
+  String get supplierStatusFilterAwaitingLearner => 'بانتظار المتعلم';
+
+  @override
+  String get supplierStatusFilterAwaitingSupplier => 'بانتظار المورد';
+
+  @override
+  String get supplierStatusFilterAwaitingResolution => 'بانتظار الحل';
+
+  @override
+  String get supplierNoShowReasonLearnerDidNotArrive => 'لم يحضر المتعلم';
+
+  @override
+  String get supplierNoShowReasonRepeatedDelay => 'تأخير متكرر';
+
+  @override
+  String get supplierNoShowReasonWrongInformation => 'معلومات خاطئة';
+
+  @override
+  String get supplierNoShowReasonSafetyConcern => 'مخاوف أمان أو ثقة';
+
+  @override
+  String get supplierNoShowReasonOther => 'أخرى';
+
+  @override
+  String get supplierNotProposed => 'غير مقترح';
+
+  @override
+  String supplierWindowUntil(String time) {
+    return 'حتى $time';
+  }
+
+  @override
+  String supplierWindowFrom(String time) {
+    return 'من $time';
+  }
+
+  @override
+  String get supplierTomorrow => 'غدًا';
+
+  @override
+  String get supplierNeedsAttention => 'يحتاج انتباهًا';
+
+  @override
+  String get supplierOperationalOverview => 'نظرة تشغيلية';
+
+  @override
+  String get supplierAllAttention => 'كل حالات الانتباه';
+
+  @override
+  String get supplierAllFulfillment => 'كل طرق التنفيذ';
+
+  @override
+  String get supplierAllStatuses => 'كل الحالات';
+
+  @override
+  String get supplierMoreFilters => 'مزيد من الفلاتر';
+
+  @override
+  String supplierFiltersCount(String count) {
+    return 'فلاتر $count';
+  }
+
+  @override
+  String get supplierDateRange => 'نطاق التاريخ';
+
+  @override
+  String get supplierSearchRequestsHint => 'ابحث عن مادة أو متعلم أو معرف حجز';
+
+  @override
+  String get supplierHistoryActive => 'نشط';
+
+  @override
+  String get supplierHistoryTerminal => 'السجل';
+
+  @override
+  String supplierCompletedCount(String count) {
+    return 'مكتمل $count';
+  }
+
+  @override
+  String supplierClosedCount(String count) {
+    return 'مغلق $count';
+  }
+
+  @override
+  String supplierShowingRange(String start, String end, String total) {
+    return 'عرض $start–$end من $total';
+  }
+
+  @override
+  String supplierShowingRangeRequests(String start, String end, String total) {
+    return 'عرض $start–$end من $total طلب';
+  }
+
+  @override
+  String supplierActiveFiltersCount(String count) {
+    return '$count فلاتر';
+  }
+
+  @override
+  String get supplierColumnRequest => 'الطلب';
+
+  @override
+  String get supplierColumnFulfillmentSchedule => 'التنفيذ والجدولة';
+
+  @override
+  String get supplierColumnStatusAttention => 'الحالة والانتباه';
+
+  @override
+  String get supplierColumnDetails => 'التفاصيل';
+
+  @override
+  String supplierPerPage(String count) {
+    return '$count لكل صفحة';
+  }
+
+  @override
+  String get supplierViewRequestDetails => 'عرض تفاصيل الطلب';
+
+  @override
+  String supplierViewRequestDetailsForMaterial(String material) {
+    return 'عرض تفاصيل طلب $material';
+  }
+
+  @override
+  String get supplierNoConfirmedTimeYet => 'لا وقت مؤكد بعد';
+
+  @override
+  String get supplierAdminRecoveryInProgress => 'استعادة إدارية قيد التنفيذ';
+
+  @override
+  String get supplierDeliveryHandledByDriver =>
+      'يُدار هذا الحجز عبر التوصيل. السائق سيُعلّمه مكتملًا.';
+
+  @override
+  String get supplierMessagesWorkspaceNote =>
+      'ستبقى رسائل الطلب متاحة في مساحة عمل الطلب.';
+
+  @override
+  String get supplierNoFurtherActionRequired =>
+      'لا يلزم أي إجراء إضافي لهذا الطلب.';
+
+  @override
+  String get supplierRequestDetails => 'تفاصيل الطلب';
+
+  @override
+  String get supplierBackToIncomingRequests => 'العودة إلى الطلبات الواردة';
+
+  @override
+  String get supplierAvailableActions => 'الإجراءات المتاحة';
+
+  @override
+  String get supplierMore => 'المزيد';
+
+  @override
+  String get supplierMarkLearnerNoShowTitle => 'تسجيل عدم حضور المتعلم؟';
+
+  @override
+  String get supplierMarkLearnerNoShowMessage =>
+      'سيُسجّل عدم حضور المتعلم لهذا الحجز.';
+
+  @override
+  String get supplierMarkLearnerNoShowConfirm => 'تسجيل عدم الحضور';
+
+  @override
+  String get supplierCouldNotUpdateRequest => 'تعذّر تحديث هذا الطلب.';
+
+  @override
+  String get supplierRequestSummary => 'ملخص الطلب';
+
+  @override
+  String supplierLearnerLine(String name) {
+    return 'المتعلم: $name';
+  }
+
+  @override
+  String get supplierOriginalLearnerNote => 'ملاحظة المتعلم الأصلية';
+
+  @override
+  String get supplierDeliveryAddressLabel => 'عنوان التوصيل';
+
+  @override
+  String supplierDeliveryAddressPrefix(String address) {
+    return 'عنوان التوصيل: $address';
+  }
+
+  @override
+  String get supplierSupplierProposal => 'اقتراح المورد';
+
+  @override
+  String get supplierLearnerProposal => 'اقتراح المتعلم';
+
+  @override
+  String get supplierConfirmedPickupWindow => 'نافذة الاستلام المؤكدة';
+
+  @override
+  String get supplierScheduleNegotiation => 'الجدولة والتفاوض';
+
+  @override
+  String get supplierAdminInitiatedRecovery => 'استعادة بدأها المشرف';
+
+  @override
+  String get supplierPendingReschedule => 'إعادة جدولة معلقة';
+
+  @override
+  String get supplierNoWindowProposed =>
+      'لا توجد نافذة استلام أو توصيل مقترحة حاليًا.';
+
+  @override
+  String get supplierSchedulingContext => 'سياق الجدولة';
+
+  @override
+  String supplierEarliestFeasibleDelivery(String time) {
+    return 'أقرب توصيل ممكن: $time';
+  }
+
+  @override
+  String get supplierNoWindowConfirmedPickup =>
+      'لم تُؤكَّد نافذة استلام أو توصيل لهذا الطلب.';
+
+  @override
+  String supplierNoWindowConfirmedBeforeTerminal(String verb) {
+    return 'لم تُؤكَّد نافذة استلام قبل أن يُ$verb هذا الطلب.';
+  }
+
+  @override
+  String get supplierScheduleHistory => 'سجل الجدولة';
+
+  @override
+  String get supplierFulfillmentAndDelivery => 'التنفيذ والتوصيل';
+
+  @override
+  String get supplierHandoverCodeAvailable => 'رمز متاح';
+
+  @override
+  String get supplierFailureRecovery => 'فشل / استعادة';
+
+  @override
+  String get supplierDeliveryNotCreated =>
+      'لم يُختَر التوصيل أو يُنشأ لهذا الحجز.';
+
+  @override
+  String get supplierAttentionTitle => 'الانتباه';
+
+  @override
+  String get supplierAwaitingAdminResolution =>
+      'هذا الطلب بانتظار حل إداري. عناصر تحكم المورد للقراءة فقط ما لم يُتاح إجراء.';
+
+  @override
+  String get supplierIncidentAdminReview => 'حادثة / مراجعة إدارية';
+
+  @override
+  String get supplierReportIdLabel => 'معرف البلاغ';
+
+  @override
+  String get supplierOperationalStateLabel => 'الحالة التشغيلية';
+
+  @override
+  String get supplierSupplierExplanation => 'شرح المورد';
+
+  @override
+  String get supplierAdminReviewNote => 'ملاحظة المراجعة الإدارية';
+
+  @override
+  String get supplierGroupContext => 'سياق المجموعة';
+
+  @override
+  String get supplierItemsInGroup => 'عناصر في المجموعة';
+
+  @override
+  String get supplierGroupedReservationItem => 'عنصر حجز مجمّع';
+
+  @override
+  String get supplierMoreGroupItems => 'تتوفر المزيد من العناصر في المجموعة.';
+
+  @override
+  String get supplierMessagesTitle => 'الرسائل';
+
+  @override
+  String supplierMessagesTitleWithCount(int count) {
+    return 'الرسائل ($count)';
+  }
+
+  @override
+  String get supplierNoMessagesYet => 'لا رسائل بعد.';
+
+  @override
+  String get supplierTypeMessageHint => 'اكتب رسالة…';
+
+  @override
+  String get supplierSendMessageTooltip => 'إرسال رسالة';
+
+  @override
+  String get supplierYou => 'أنت';
+
+  @override
+  String get supplierReservationUpdated => 'تم تحديث الحجز';
+
+  @override
+  String supplierHistoryStatusChange(String from, String to) {
+    return '$from → $to';
+  }
+
+  @override
+  String get supplierRequestNotFound => 'الطلب غير موجود';
+
+  @override
+  String get supplierRequestUnavailable => 'هذا الطلب غير متاح.';
+
+  @override
+  String get supplierCouldNotLoadRequestTitle => 'تعذّر تحميل الطلب';
+
+  @override
+  String get supplierCouldNotLoadRequest =>
+      'تعذّر تحميل هذا الطلب. حاول مرة أخرى.';
+
+  @override
+  String get supplierFulfillmentLabel => 'التنفيذ';
+
+  @override
+  String get supplierLearnerEmail => 'بريد المتعلّم';
+
+  @override
+  String get supplierMethodLabel => 'الطريقة';
+
+  @override
+  String get supplierDeliveryStatusLabel => 'حالة التوصيل';
+
+  @override
+  String get supplierGroupLabel => 'المجموعة';
+
+  @override
+  String get supplierHandoverLabel => 'التسليم';
+
+  @override
+  String get supplierOutcomeLabel => 'النتيجة';
+
+  @override
+  String get supplierGroupIdLabel => 'معرّف المجموعة';
+
+  @override
+  String get supplierItemsLabel => 'العناصر';
+
+  @override
+  String get supplierConfirmedDeliveryWindow => 'موعد التوصيل المؤكد';
+
+  @override
+  String get supplierSupplierDeliveryPickupWindow =>
+      'موعد استلام المورّد للتوصيل';
+
+  @override
+  String get supplierNewWindowAwaiting => 'موعد جديد بانتظار الرد التالي.';
+
+  @override
+  String supplierActorRequestedReschedule(String actor) {
+    return 'طلب $actor إعادة الجدولة';
+  }
+
+  @override
+  String supplierNextActorLine(String actor) {
+    return 'الدور التالي: $actor';
+  }
+
+  @override
+  String get supplierReservationHistory => 'سجل الحجز';
+
+  @override
+  String get supplierNoHistoryEvents => 'لم يتم إرجاع أي أحداث في السجل.';
+
+  @override
+  String get supplierWorkflowField => 'سير العمل';
+
+  @override
+  String get supplierRescheduleReasonLabel => 'السبب';
+
+  @override
+  String get supplierRescheduleReasonHint => 'لماذا تطلب وقتًا جديدًا؟';
+
+  @override
+  String get supplierSendRequest => 'إرسال الطلب';
+
+  @override
+  String get supplierRescheduleRequestSent =>
+      'أُرسل طلب إعادة الجدولة إلى المتعلم.';
+
+  @override
+  String get supplierChooseNewPickupWindow => 'اختر نافذة استلام جديدة';
+
+  @override
+  String get supplierPickupWindowSubmittedWaiting =>
+      'أُرسلت نافذة الاستلام. بانتظار السائق مجددًا.';
+
+  @override
+  String get supplierNewPickupTimeAccepted => 'قُبل وقت الاستلام الجديد.';
+
+  @override
+  String get supplierReservationClosed => 'أُغلق الحجز.';
+
+  @override
+  String get supplierReportToAdminTitle => 'الإبلاغ للمشرف';
+
+  @override
+  String get supplierReportToAdminMessage =>
+      'أرسل بلاغًا للمراجعة الإدارية. سيُغلق الحجز.';
+
+  @override
+  String get supplierReportAndClose => 'الإبلاغ والإغلاق';
+
+  @override
+  String get supplierDescribeWhatHappened => 'صف ما حدث';
+
+  @override
+  String get supplierNoteRequired => 'ملاحظة (مطلوبة)';
+
+  @override
+  String get supplierSubmitReport => 'إرسال البلاغ';
+
+  @override
+  String get supplierMarkPickupExpiredTitle => 'تعليم نافذة الاستلام منتهية';
+
+  @override
+  String get supplierMarkPickupExpiredMessage =>
+      'لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. سيُغلق محاولة التوصيل ويُحال للمراجعة الإدارية.';
+
+  @override
+  String get supplierMarkExpired => 'تعليم منتهيًا';
+
+  @override
+  String get supplierPickupExpiredAdminReview =>
+      'عُلّمت نافذة الاستلام منتهية. المراجعة الإدارية قيد التنفيذ.';
+
+  @override
+  String get supplierReportNoDriverTitle => 'الإبلاغ عن عدم توفر سائق';
+
+  @override
+  String get supplierReportNoDriverHint =>
+      'صف سبب عدم قبول أي سائق لهذا التوصيل';
+
+  @override
+  String get supplierNoDriverReported => 'أُبلغ عن حالة عدم توفر سائق للمشرف.';
+
+  @override
+  String get supplierReportDriverNoShowTitle => 'الإبلاغ عن عدم حضور السائق';
+
+  @override
+  String get supplierReportDriverNoShowHint => 'صف ما حدث عند استلام المورد';
+
+  @override
+  String get supplierDriverNoShowReported => 'أُبلغ عن عدم حضور السائق للمشرف.';
+
+  @override
+  String get supplierPickupConfirmationCodeLabel => 'رمز تأكيد الاستلام';
+
+  @override
+  String get supplierPickupConfirmationCodeHint =>
+      'أدخل رمز تأكيد الاستلام الذي يعطيك إياه المتعلم عند استلام المادة.';
+
+  @override
+  String get supplierPickupConfirmationCodeError =>
+      'أدخل رمز الاستلام المكوّن من 6 أرقام من المتعلم.';
+
+  @override
+  String get supplierDeliveryWindowMustStartFuture =>
+      'يجب أن تبدأ نافذة التوصيل في المستقبل.';
+
+  @override
+  String get supplierInboxRefreshFailed => 'تعذّر تحديث الطلبات الواردة.';
+
+  @override
+  String get supplierEmptyAllCaughtUp => 'أنت على اطلاع بكل شيء';
+
+  @override
+  String get supplierEmptyNoWaitingLearnerSubtitle =>
+      'لا توجد طلبات تحتاج ردك حاليًا.';
+
+  @override
+  String get supplierEmptyNoWaitingLearner =>
+      'لا توجد طلبات بانتظار تأكيد المتعلم.';
+
+  @override
+  String get supplierEmptyNoActiveFulfillment => 'لا استلامات أو توصيلات نشطة.';
+
+  @override
+  String get supplierEmptyNoAdminReview =>
+      'لا توجد طلبات قيد المراجعة الإدارية.';
+
+  @override
+  String get supplierEmptyNoTerminalHistory =>
+      'لم يُعثر على طلبات مكتملة أو مغلقة.';
+
+  @override
+  String get supplierEmptyNoFilterMatch =>
+      'لا توجد طلبات تطابق الفلاتر المحددة.';
+
+  @override
+  String get supplierIncidentsDriverNotCompletedPickup =>
+      'لم يُكمل السائق المعيّن الاستلام من المورد بعد انتهاء النافذة. أبلغ عن عدم حضور السائق لمراجعته من المشرف.';
+
+  @override
+  String get supplierIncidentsNoDriverBeforeWindow =>
+      'لم يقبل أي سائق هذا التوصيل قبل انتهاء نافذة استلام المورد. أبلغ لمراجعته من المشرف.';
+
+  @override
+  String get supplierIncidentsNoDriverWaitHint =>
+      'لا يوجد سائق بعد. يمكنك الإبلاغ عن عدم توفر سائق بعد 30 دقيقة من انتهاء نافذة الاستلام المجدولة.';
+
+  @override
+  String get supplierIncidentsReportNoDriver => 'الإبلاغ عن عدم توفر سائق';
+
+  @override
+  String get supplierIncidentsReportDriverNoShow =>
+      'الإبلاغ عن عدم حضور السائق';
+
+  @override
+  String get supplierDriverHandoverCodeInstructions =>
+      'أعطِ هذا الرمز للسائق بعد تسليم المادة.';
+
+  @override
+  String get supplierReportedToAdmin => 'أُبلغ للمشرف';
+
+  @override
+  String supplierRequestLine(String id, String status) {
+    return 'طلب $id · $status';
+  }
+
+  @override
+  String get actionContinue => 'متابعة';
+
+  @override
+  String get checkStatus => 'التحقق من الحالة';
+
+  @override
+  String get about => 'نبذة';
+
+  @override
+  String get review => 'مراجعة';
+
+  @override
+  String get description => 'الوصف';
+
+  @override
+  String get document => 'المستند';
+
+  @override
+  String get submitted => 'تاريخ الإرسال';
+
+  @override
+  String get organization => 'المؤسسة';
+
+  @override
+  String get notSelected => 'لم يتم الاختيار';
+
+  @override
+  String get becomeSupplierTitle => 'انضم كمورد';
+
+  @override
+  String get becomeSupplierSubtitle =>
+      'احتفظ بوصولك كمتعلّم وأضف ملف مورد على نفس الحساب.';
+
+  @override
+  String get becomeSupplierOpenSupplierPortal => 'فتح بوابة المورد';
+
+  @override
+  String becomeSupplierProgressSemantic(int step, int total) {
+    return 'تقدّم الانضمام كمورد، الخطوة $step من $total';
+  }
+
+  @override
+  String get becomeSupplierSupplierTypeRequired => 'نوع المورد مطلوب';
+
+  @override
+  String get becomeSupplierSupplierNameRequired => 'اسم المورد مطلوب';
+
+  @override
+  String get becomeSupplierCityRequired => 'المدينة مطلوبة';
+
+  @override
+  String get becomeSupplierSupplierNameLabel => 'اسم المورد';
+
+  @override
+  String get becomeSupplierSupplierNameHint => 'كيف سيراك الآخرون';
+
+  @override
+  String get becomeSupplierAboutDescriptionOptional => 'نبذة / وصف (اختياري)';
+
+  @override
+  String get becomeSupplierAboutDescriptionHint =>
+      'ما أنواع المواد التي تشاركها عادةً؟';
+
+  @override
+  String get becomeSupplierLocationHelpText =>
+      'تساعد المدينة والمنطقة المتعلّمين على فهم مكان الاستلام المعتاد. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم قبول الحجز.';
+
+  @override
+  String get becomeSupplierPickupLocationNoteOptional =>
+      'ملاحظة موقع الاستلام (اختياري)';
+
+  @override
+  String get becomeSupplierPickupLocationHint =>
+      'قرب بوابة الجامعة، مدخل الورشة، إلخ.';
+
+  @override
+  String get becomeSupplierWorkingHoursOptional => 'ساعات العمل (اختياري)';
+
+  @override
+  String get becomeSupplierWorkingHoursHint => 'الإثنين–الجمعة 4م–7م';
+
+  @override
+  String get becomeSupplierPickupNotesHint =>
+      'اتصل قبل الاستلام، أحضر بطاقة الطالب، إلخ.';
+
+  @override
+  String get becomeSupplierWorkshopsVerificationNote =>
+      'الورش والمصانع والمؤسسات تتطلب مسار تحقق منفصل.';
+
+  @override
+  String becomeSupplierReviewPickupLocation(String location) {
+    return 'موقع الاستلام: $location';
+  }
+
+  @override
+  String becomeSupplierReviewWorkingHours(String hours) {
+    return 'ساعات العمل: $hours';
+  }
+
+  @override
+  String becomeSupplierReviewPickupNotes(String notes) {
+    return 'ملاحظات الاستلام: $notes';
+  }
+
+  @override
+  String get becomeSupplierStepSupplierTypeSubtitle =>
+      'اختر كيف ستشارك المواد كمورد.';
+
+  @override
+  String get becomeSupplierStepProfileSubtitle =>
+      'أخبر الآخرين من أنت وما تشاركه عادةً.';
+
+  @override
+  String get becomeSupplierStepLocationSubtitle =>
+      'حدّد المدينة والمنطقة حيث يحدث الاستلام عادةً.';
+
+  @override
+  String get becomeSupplierStepPickupDetailsSubtitle =>
+      'أضف ساعات استلام وملاحظات اختيارية للمتعلّمين.';
+
+  @override
+  String get becomeSupplierStepVerificationSubtitle =>
+      'ارفع إثبات مؤسستك لمراجعة المسؤول.';
+
+  @override
+  String get becomeSupplierStepReviewSubtitle =>
+      'راجع تفاصيل المورد، ثم افتح بوابة المورد.';
+
+  @override
+  String get supplierStudentSupplierDescription =>
+      'للطلاب الذين يشاركون قطعاً أو مواد إضافية. لا يلزم مستند تحقق.';
+
+  @override
+  String get supplierIndividualSupplierDescription =>
+      'للمواد الفائضة الشخصية. لا يلزم مستند تحقق.';
+
+  @override
+  String get supplierWorkshopSupplierDescription =>
+      'للورش أو المختبرات. يلزم مستند تحقق.';
+
+  @override
+  String get supplierFactorySupplierDescription =>
+      'للمصانع أو الشركات. يلزم مستند تحقق.';
+
+  @override
+  String get supplierEducationalInstitutionSupplierDescription =>
+      'للمدارس أو الجامعات أو المراكز. يلزم مستند تحقق.';
+
+  @override
+  String get supplierChooseSupplierTypeFallback =>
+      'اختر من يملك المواد التي ستشاركها.';
+
+  @override
+  String get completeSupplierProfileTitle => 'أكمل ملف المورد';
+
+  @override
+  String get completeSupplierProfileSubtitle =>
+      'أخبر الآخرين بالمواد التي تشاركها وأين يعمل الاستلام.';
+
+  @override
+  String get selectYourSupplierType => 'اختر نوع المورد';
+
+  @override
+  String get publicNameRequired => 'الاسم العام مطلوب';
+
+  @override
+  String get pickupAreaRequired => 'منطقة الاستلام مطلوبة';
+
+  @override
+  String get shortDescriptionOptional => 'وصف قصير (اختياري)';
+
+  @override
+  String get pickupAreaLocationLabel => 'منطقة / موقع الاستلام';
+
+  @override
+  String get organizationSupplierVerificationNote =>
+      'يُعامل موردو المؤسسات كمؤسسات موردين وقد يحتاجون تحققاً قبل إدراج المواد.';
+
+  @override
+  String get individualSupplierCanSwitchNote =>
+      'يمكن لموردي الطلاب والأفراد العودة إلى وضع المتعلّم بعد الإعداد.';
+
+  @override
+  String get completeSupplierProfileFooterNote =>
+      'يمكنك البدء كفرد وتحديث تفاصيل المورد لاحقاً.';
+
+  @override
+  String get verificationDocument => 'مستند التحقق';
+
+  @override
+  String get verificationDocumentRequired => 'مستند التحقق مطلوب';
+
+  @override
+  String get verificationFileSizeLimit =>
+      'يجب أن يكون الملف 5 ميغابايت أو أصغر';
+
+  @override
+  String get verificationAllowedFileTypes =>
+      'أنواع الملفات المسموحة: PDF وPNG وJPG وJPEG';
+
+  @override
+  String get verificationDocumentHint =>
+      'PDF أو PNG أو JPG أو JPEG (بحد أقصى 5 ميغابايت)';
+
+  @override
+  String get verificationDocumentUploadHint =>
+      'ارفع مستنداً يثبت هوية مؤسستك، مثل رخصة ورشة أو مستند مصنع أو إثبات جامعة/مؤسسة.';
+
+  @override
+  String get noFileSelected => 'لم يتم اختيار ملف';
+
+  @override
+  String get selectFile => 'اختيار ملف';
+
+  @override
+  String get changeFile => 'تغيير الملف';
+
+  @override
+  String get registrationDetailsIncomplete =>
+      'تفاصيل التسجيل غير مكتملة. يرجى البدء من جديد.';
+
+  @override
+  String get switchToLearner => 'التبديل إلى المتعلّم';
+
+  @override
+  String get switchToSupplier => 'التبديل إلى المورد';
+
+  @override
+  String get becomeLearner => 'كن متعلّماً';
+
+  @override
+  String get organizationSupplierStaysInSupplierMode =>
+      'حسابات موردي المؤسسات تبقى في وضع المورد.';
+
+  @override
+  String get learnerMode => 'وضع المتعلّم';
+
+  @override
+  String get supplierMode => 'وضع المورد';
+
+  @override
+  String get supplierVerifySubmittedTitle => 'تم إرسال تحقق المورد';
+
+  @override
+  String get supplierVerifyLoadStatusFailed => 'تعذّر تحميل حالة التحقق.';
+
+  @override
+  String get supplierVerifyPendingSubtitle =>
+      'حساب المورد بانتظار موافقة المسؤول. ستتمكن من نشر المواد بعد الموافقة على حسابك.';
+
+  @override
+  String get supplierVerifyStillWaitingApproval =>
+      'حساب المورد لا يزال بانتظار موافقة المسؤول.';
+
+  @override
+  String get supplierVerifyRejectedTitle => 'تم رفض تحقق المورد';
+
+  @override
+  String get supplierVerifyChangesRequestedTitle => 'طُلبت تعديلات';
+
+  @override
+  String get supplierVerifyStatusTitle => 'حالة تحقق المورد';
+
+  @override
+  String get supplierVerifyRejectedBody =>
+      'تم رفض تحقق المورد. نشر المواد محظور حتى تتم الموافقة على مؤسستك.';
+
+  @override
+  String get supplierVerifyChangesRequestedBody =>
+      'طلب مسؤول تعديلات على طلب التحقق. حدّث المستند وأعد الإرسال للمراجعة.';
+
+  @override
+  String get supplierVerifyStatusBody =>
+      'نشر المواد محظور حتى تتم الموافقة على مؤسستك من قِبل مسؤول.';
+
+  @override
+  String get supplierVerifyStatusRefreshed => 'تم تحديث حالة التحقق.';
+
+  @override
+  String get supplierVerifySelectDocumentToUpload => 'اختر مستند تحقق للرفع.';
+
+  @override
+  String get resubmitVerification => 'إعادة إرسال التحقق';
+
+  @override
+  String get chooseVerificationDocument => 'اختيار مستند التحقق';
+
+  @override
+  String get supplierProfilePhotoUpdated => 'تم تحديث صورة الملف';
+
+  @override
+  String get supplierCoverImageUpdated => 'تم تحديث صورة الغلاف';
+
+  @override
+  String get supplierDiscardChangesQuestion => 'تجاهل التغييرات؟';
+
+  @override
+  String get supplierUnsavedEditsWillBeLost => 'ستفقد التعديلات غير المحفوظة.';
+
+  @override
+  String get supplierKeepEditing => 'متابعة التعديل';
+
+  @override
+  String get registerSupplierTypeControlsVerification =>
+      'يتحكم هذا في متطلبات التحقق وكيف تُعرَض قوائم المواد على الطالبين.';
+
+  @override
+  String get registerSupplierPublicNameHelp =>
+      'يظهر الاسم العام في قوائم المواد ورسائل الحجز. استخدم اسم ورشة أو مؤسسة أو اسماً شخصياً يتعرّف عليه الطالبون.';
+
+  @override
+  String get registerSupplierDisplayNameOptional => 'اسم عرض المورد (اختياري)';
+
+  @override
+  String get registerSupplierUsesFullNameDefault =>
+      'يستخدم اسمك الكامل افتراضياً';
+
+  @override
+  String get registerSupplierShareMaterialsGoals =>
+      'ماذا تريد أن تحقق بمشاركة المواد؟';
+
+  @override
+  String get registerSupplierBasicsSubtitle =>
+      'اختر ملف المورد الذي يطابق من يملك المواد وكيف يظهر علناً.';
+
+  @override
+  String get registerSupplierVerificationSubtitle =>
+      'يحتاج موردو المؤسسات مستنداً ليراجع المسؤول الحساب قبل نشر المواد.';
+
+  @override
+  String get registerSupplierReviewSupplierSubtitle =>
+      'راجع حساب المورد ومنطقة الاستلام قبل إنشائه.';
+
+  @override
+  String get registerSupplierReviewBothSubtitle =>
+      'راجع تفاصيل المتعلّم والمورد قبل إنشاء الحساب.';
+
+  @override
+  String get registerSupplierLocationBothSubtitle =>
+      'حدّد منطقة الاستلام العامة للمواد التي تشاركها. تُعالَج تفاصيل توصيل المتعلّم لاحقاً عند الحاجة.';
+
+  @override
+  String get registerSupplierLocationSubtitle =>
+      'حدّد منطقة الاستلام العامة للمواد التي تشاركها.';
+
+  @override
+  String get registerSupplierNoVerificationRequired =>
+      'لا يلزم مستند تحقق لهذا النوع من الموردين.';
+
+  @override
+  String get registerSupplierNoVerificationBody =>
+      'يمكنك مراجعة تفاصيل حسابك ثم إنشاء الحساب دون رفع ملف.';
+
+  @override
+  String get registerAccountReadyUploadVerification =>
+      'حسابك جاهز. ارفع مستند التحقق للمتابعة.';
+
+  @override
+  String get registerSupplierSetupDescription =>
+      'ستحدّد أهداف المورد ومنطقة الاستلام ونوع المورد والاسم العام والتحقق عند الحاجة.';
+
+  @override
+  String get registerBothSupplierSetupDescription =>
+      'ستحدّد اهتمامات المتعلّم ومستوى التعلّم، إضافةً إلى الاستلام وملف المورد.';
+
+  @override
+  String get registerSupplierLocationHelperBoth =>
+      'هذه منطقة الاستلام العامة للمواد التي تشاركها. لا تكشف عنواناً دقيقاً علناً، وتبقى تفاصيل توصيل المتعلّم منفصلة.';
+
+  @override
+  String get registerSupplierLocationHelper =>
+      'يحتاج الموردون مدينة ومنطقة ليفهم الطالبون جدوى الاستلام. يمكن إبقاء تفاصيل الاستلام الدقيقة خاصة حتى يتم ترتيب حجز أو توصيل.';
+
+  @override
+  String get registerSupplierReviewHelper =>
+      'تبقى أهداف المورد في الإعداد فقط. يستقبل الخادم حسابك وملف المورد ومنطقة الاستلام.';
+
+  @override
+  String get registerBothReviewHelper =>
+      'تبقى الأهداف في الإعداد فقط. يستقبل الخادم حسابك وملف المتعلّم وملف المورد ومنطقة الاستلام.';
+
+  @override
+  String get retryVerification => 'إعادة محاولة التحقق';
+
+  @override
+  String get conditionNew => 'جديد';
+
+  @override
+  String get conditionLikeNew => 'كالجديد';
+
+  @override
+  String get conditionGood => 'جيد';
+
+  @override
+  String get conditionUsed => 'مستعمل';
+
+  @override
+  String get conditionNeedsRepair => 'يحتاج إصلاح';
+
+  @override
+  String get sourceTypeStudentLeftover => 'فائض طلابي';
+
+  @override
+  String get sourceTypeWorkshopSurplus => 'فائض ورشة';
+
+  @override
+  String get sourceTypeFactorySurplus => 'فائض مصنع';
+
+  @override
+  String get sourceTypeEducationalInstitution => 'مؤسسة تعليمية';
+
+  @override
+  String get materialStatusAvailable => 'متاح';
+
+  @override
+  String get materialStatusPendingReservation => 'قيد انتظار الحجز';
+
+  @override
+  String get materialStatusReserved => 'محجوز';
+
+  @override
+  String get materialStatusReused => 'أُعيد استخدامها';
+
+  @override
+  String get materialStatusUnavailable => 'غير متاح';
+
+  @override
+  String get supplierApply => 'تطبيق';
+
+  @override
+  String get supplierSelectScheduleRange => 'اختر نطاق الجدول';
+
+  @override
+  String get supplierActionCouldNotComplete => 'تعذّر تنفيذ الإجراء.';
+
+  @override
+  String get supplierHandovers => 'عمليات التسليم';
+
+  @override
+  String get supplierSearchScheduleHint =>
+      'ابحث بالمادة أو المتعلم أو رقم الحجز...';
+
+  @override
+  String get supplierDeliveryPickup => 'استلام للتوصيل';
+
+  @override
+  String get supplierNoAttention => 'لا تحتاج انتباهاً';
+
+  @override
+  String get supplierScheduleColumnSchedule => 'الجدول';
+
+  @override
+  String get supplierScheduleColumnMaterialLearner => 'المادة والمتعلم';
+
+  @override
+  String get supplierScheduleColumnFulfillment => 'التنفيذ';
+
+  @override
+  String get supplierScheduleColumnWindow => 'النافذة';
+
+  @override
+  String get supplierScheduleColumnNextActor => 'الطرف التالي';
+
+  @override
+  String get supplierScheduleColumnActions => 'الإجراءات';
+
+  @override
+  String get supplierNoConfirmedWindow => 'لا توجد نافذة مؤكدة';
+
+  @override
+  String supplierGroupReservationsQuantity(String count, String quantity) {
+    return '$count حجوزات · $quantity';
+  }
+
+  @override
+  String supplierGroupReservationsCount(String count) {
+    return '$count حجوزات';
+  }
+
+  @override
+  String get supplierConfirmed => 'مؤكد';
+
+  @override
+  String get supplierSupplierPickup => 'استلام المورد';
+
+  @override
+  String get supplierConfirmedPickup => 'استلام مؤكد';
+
+  @override
+  String get supplierWaitingForDriver => 'بانتظار السائق';
+
+  @override
+  String get supplierDriverAssigned => 'تم تعيين السائق';
+
+  @override
+  String get supplierArrivedAtSupplier => 'وصل إلى المورد';
+
+  @override
+  String get supplierDriverOnTheWay => 'السائق في الطريق';
+
+  @override
+  String get supplierPickedUp => 'تم الاستلام';
+
+  @override
+  String get supplierView => 'عرض';
+
+  @override
+  String get supplierMoreActions => 'إجراءات إضافية';
+
+  @override
+  String supplierShowingHandoversRange(String start, String end, String total) {
+    return 'عرض $start–$end من $total تسليمات';
+  }
+
+  @override
+  String get supplierRowsPerPage => 'صفوف لكل صفحة';
+
+  @override
+  String get supplierPickupScheduleLoadFailedTitle =>
+      'تعذّر تحميل جدول الاستلام';
+
+  @override
+  String get supplierPleaseTryAgain => 'يرجى المحاولة مرة أخرى.';
+
+  @override
+  String get supplierNoHandoversMatchFilters =>
+      'لا توجد تسليمات تطابق الفلاتر المحددة.';
+
+  @override
+  String get supplierNoHandoversToday => 'لا توجد تسليمات مجدولة اليوم.';
+
+  @override
+  String get supplierNoHandoversUpcoming => 'لا توجد تسليمات قادمة.';
+
+  @override
+  String get supplierNoHandoversOverdue => 'لا توجد تسليمات متأخرة.';
+
+  @override
+  String get supplierNoHandoversCompletedPeriod =>
+      'لا توجد تسليمات مكتملة في هذه الفترة.';
+
+  @override
+  String get supplierNoHandoversClosedPeriod =>
+      'لا توجد تسليمات مغلقة في هذه الفترة.';
+
+  @override
+  String get supplierNoHandoversScheduled => 'لا توجد تسليمات مجدولة بعد.';
+
+  @override
+  String get supplierResetFiltersToSeeMore =>
+      'جرّب إعادة ضبط الفلاتر لرؤية المزيد من التسليمات.';
+
+  @override
+  String get supplierConfirmedHandoversAppearHere =>
+      'ستظهر هنا مواعيد الاستلام الذاتي واستلام السائق المؤكدة.';
+
+  @override
+  String get supplierOpenIncomingRequests => 'فتح الطلبات الواردة';
+
+  @override
+  String get supplierFiltersTitle => 'الفلاتر';
+
+  @override
+  String get supplierFilterOverdue => 'متأخرة';
+
+  @override
+  String get supplierUnscheduledAction => 'إجراء يحتاج جدولة';
+
+  @override
+  String get supplierNeedsScheduling => 'تحتاج جدولة';
+
+  @override
+  String get supplierAwaitingResolution => 'بانتظار الحل';
+
+  @override
+  String get supplierPastDue => 'متأخرة';
+
+  @override
+  String get supplierScheduled => 'مجدولة';
+
+  @override
+  String get supplierHandoverCompleted => 'اكتمل التسليم';
+
+  @override
+  String get supplierNeedsReview => 'تحتاج مراجعة';
+
+  @override
+  String get supplierExpired => 'منتهية';
+
+  @override
+  String get supplierNoShow => 'عدم حضور';
+
+  @override
+  String get supplierFulfillmentFailed => 'فشل التنفيذ';
+
+  @override
+  String get supplierCancelled => 'ملغاة';
+
+  @override
+  String get supplierAdminReview => 'مراجعة الإدارة';
+
+  @override
+  String get supplierNextActorYou => 'أنت';
+
+  @override
+  String get supplierNextActorLearner => 'المتعلم';
+
+  @override
+  String get supplierNextActorDriver => 'السائق';
+
+  @override
+  String get supplierCompletePickup => 'إكمال الاستلام';
+
+  @override
+  String get supplierReportLearnerNoShow => 'الإبلاغ عن عدم حضور المتعلم';
+
+  @override
+  String get supplierCloseReservation => 'إغلاق الحجز';
+
+  @override
+  String get supplierMessage => 'رسالة';
+
+  @override
+  String get supplierEditCover => 'تعديل الغلاف';
+
+  @override
+  String get supplierEditProfilePhoto => 'تعديل صورة ملف المورد';
+
+  @override
+  String get supplierEssentialsCompleteTitle => 'اكتملت الأساسيات';
+
+  @override
+  String get supplierEditProfileCompletionDetails =>
+      'تعديل تفاصيل اكتمال ملف المورد';
+
+  @override
+  String supplierProfileCompletionPercent(String percent) {
+    return 'اكتمال الملف $percent بالمئة';
+  }
+
+  @override
+  String supplierMissingFields(String fields) {
+    return 'المفقود: $fields';
+  }
+
+  @override
+  String get supplierBusinessIdentity => 'هوية النشاط';
+
+  @override
+  String get supplierWorkingAvailability => 'التوفر للعمل';
+
+  @override
+  String get supplierWorkingAvailabilityMissing =>
+      'لم تتم إضافة أوقات التوفر للعمل.';
+
+  @override
+  String get supplierWorkingHours => 'ساعات العمل';
+
+  @override
+  String get supplierPickupLocationAndPrivacy => 'موقع الاستلام والخصوصية';
+
+  @override
+  String get supplierCityArea => 'المدينة / المنطقة';
+
+  @override
+  String get supplierPickupAddress => 'عنوان الاستلام';
+
+  @override
+  String get supplierPickupLocationMap => 'خريطة موقع الاستلام';
+
+  @override
+  String get supplierSavedPickupLocation => 'موقع الاستلام المحفوظ الخاص بك.';
+
+  @override
+  String get supplierSubmitForReview => 'إرسال للمراجعة';
+
+  @override
+  String get supplierResubmit => 'إعادة الإرسال';
+
+  @override
+  String get supplierThanksVerificationCommunity =>
+      'شكراً لمساعدتك في جعل ImpactLoop موثوقاً وآمناً لمجتمعنا.';
+
+  @override
+  String get supplierReviewedDate => 'تاريخ المراجعة';
+
+  @override
+  String get supplierSubmittedDate => 'تاريخ الإرسال';
+
+  @override
+  String get supplierAwaitingReview => 'بانتظار المراجعة';
+
+  @override
+  String get supplierChangesRequired => 'مطلوب تعديلات';
+
+  @override
+  String get supplierVerificationNotRequired => 'التحقق غير مطلوب';
+
+  @override
+  String get supplierNotVerified => 'غير موثّق';
+
+  @override
+  String get supplierVerificationUnavailable => 'التحقق غير متاح';
+
+  @override
+  String get supplierProfileVerified => 'تم توثيق الملف';
+
+  @override
+  String get supplierProfileAwaitingReview => 'ملفك بانتظار المراجعة.';
+
+  @override
+  String get supplierChangesRequiredBeforeApproval =>
+      'مطلوب إجراء تعديلات قبل الموافقة.';
+
+  @override
+  String get supplierVerificationRejected => 'تم رفض التحقق من ملفك.';
+
+  @override
+  String get supplierVerificationNotRequiredMessage => 'التحقق غير مطلوب.';
+
+  @override
+  String get supplierProfileNotVerifiedYet => 'ملفك غير موثّق بعد.';
+
+  @override
+  String get supplierVerificationStatusUnavailable => 'حالة التحقق غير متاحة.';
+
+  @override
+  String get supplierPickupLocationLabel => 'موقع الاستلام';
+
+  @override
+  String get supplierPublicAreaApproximateTitle => 'منطقة عامة — موقع تقريبي';
+
+  @override
+  String get supplierPublicAreaApproximateExplanation =>
+      'يرى المتعلمون المنطقة العامة قبل القبول. تتم مشاركة عنوان الاستلام الدقيق فقط عندما يسمح مسار العمل بذلك.';
+
+  @override
+  String get supplierPublicExactLocation => 'موقع عام دقيق';
+
+  @override
+  String get supplierPublicExactLocationExplanation =>
+      'موقع الاستلام ظاهر للعامة.';
+
+  @override
+  String get supplierSharedAfterAcceptanceTitle =>
+      'تتم المشاركة بعد قبول الحجز';
+
+  @override
+  String get supplierSharedAfterAcceptanceExplanation =>
+      'لا يرى المتعلمون عنوان الاستلام الدقيق قبل قبول الحجز.';
+
+  @override
+  String get supplierPrivateLocation => 'موقع خاص';
+
+  @override
+  String get supplierPrivateLocationExplanation =>
+      'لا يظهر موقع الاستلام للعامة.';
+
+  @override
+  String get supplierLocationPrivacyUnavailable => 'خصوصية الموقع غير متاحة';
+
+  @override
+  String get supplierLocationPrivacyUnavailableExplanation =>
+      'تفاصيل الظهور غير متاحة حالياً.';
+
+  @override
+  String get supplierDaySun => 'الأحد';
+
+  @override
+  String get supplierDayMon => 'الإثنين';
+
+  @override
+  String get supplierDayTue => 'الثلاثاء';
+
+  @override
+  String get supplierDayWed => 'الأربعاء';
+
+  @override
+  String get supplierDayThu => 'الخميس';
+
+  @override
+  String get supplierDayFri => 'الجمعة';
+
+  @override
+  String get supplierDaySat => 'السبت';
+
+  @override
+  String get supplierSummaryClosed => 'مغلقة';
+
+  @override
+  String get supplierNotifCategoryMaterialReview => 'مراجعة المواد';
+
+  @override
+  String get supplierNotifCategoryDeliveryRecovery => 'معالجة التوصيل';
+
+  @override
+  String get supplierNotifCategorySystem => 'النظام';
+
+  @override
+  String get supplierNotifStateWaiting => 'بانتظار';
+
+  @override
+  String get supplierChooseTime => 'اختر الوقت';
+
+  @override
+  String get supplierPublicProfileSection => 'الملف العام';
+
+  @override
+  String get supplierOrganizationAvailabilitySection => 'المؤسسة والتوفر';
+
+  @override
+  String get supplierOrganizationNameHelp =>
+      'اسم المؤسسة يحدد المؤسسة، وقد يطابق اسم المورد العام.';
+
+  @override
+  String get supplierAvailabilityInformationalHelp =>
+      'التوفر للمعلومات ويساعد المتعلمين على التخطيط للاستلام.';
+
+  @override
+  String get supplierSeparateOrganizationAddress => 'عنوان المؤسسة المنفصل';
+
+  @override
+  String get supplierVisibilityPublicApproximate =>
+      'يرى المتعلمون المنطقة العامة. يُشارك عنوان الاستلام الدقيق بعد قبول الحجز.';
+
+  @override
+  String get supplierVisibilityPublicExact =>
+      'يمكن للمتعلمين رؤية موقع الاستلام المحفوظ وفق إعدادات الظهور العامة.';
+
+  @override
+  String get supplierVisibilityOrderOnly =>
+      'يرى المتعلمون عنوان الاستلام الدقيق فقط بعد قبول الحجز.';
+
+  @override
+  String get supplierVisibilityPrivate => 'يبقى موقع الاستلام خاصاً.';
+
+  @override
+  String get supplierVisibilityUnavailable => 'تفاصيل ظهور الموقع غير متاحة.';
+
+  @override
+  String get supplierChooseValidTime => 'اختر وقتاً صالحاً.';
+
+  @override
+  String get supplierPickupMapUnavailable => 'خريطة الاستلام غير متاحة';
+
+  @override
+  String get supplierAddPickupLocationForMap => 'أضف موقع استلام لعرض الخريطة.';
+
+  @override
+  String get supplierCouldNotLoadSupplierProfile => 'تعذّر تحميل ملف المورد';
+
+  @override
+  String supplierMaterialRequestsBadge(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طلبات',
+      one: 'طلب واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String supplierMaterialsResultCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مواد معروضة',
+      one: 'مادة واحدة معروضة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String supplierActiveRequestsLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count طلبات نشطة',
+      one: '$count طلب نشط',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String supplierDemandCountLabel(int demand, int views) {
+    String _temp0 = intl.Intl.pluralLogic(
+      demand,
+      locale: localeName,
+      other: '$demand حجوزات',
+      one: '$demand حجز',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      views,
+      locale: localeName,
+      other: '$views مشاهدات',
+      one: '$views مشاهدة',
+      zero: '$views مشاهدة',
+    );
+    return '$_temp0 · $_temp1';
+  }
 }
