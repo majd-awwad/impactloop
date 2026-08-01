@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'supplier_dark_form_field.dart';
+import '../theme/supplier_theme_extension.dart';
 
 const supplierTypeValues = [
   'STUDENT_SUPPLIER',
@@ -16,17 +17,6 @@ bool isOrganizationSupplierType(String value) {
       value == 'EDUCATIONAL_INSTITUTION';
 }
 
-String supplierTypeLabel(String value) {
-  return switch (value) {
-    'STUDENT_SUPPLIER' => 'Student supplier',
-    'INDIVIDUAL_SUPPLIER' => 'Individual supplier',
-    'WORKSHOP' => 'Workshop',
-    'FACTORY' => 'Factory',
-    'EDUCATIONAL_INSTITUTION' => 'Educational institution',
-    _ => value,
-  };
-}
-
 class SupplierTypeSelector extends StatelessWidget {
   const SupplierTypeSelector({
     super.key,
@@ -39,13 +29,15 @@ class SupplierTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+
     return SupplierDarkDropdownField<String>(
-      label: 'Supplier type',
-      hint: 'Choose supplier type',
+      label: l.supplierType,
+      hint: l.chooseSupplierType,
       value: value,
       items: [
         for (final type in supplierTypeValues)
-          DropdownMenuItem(value: type, child: Text(supplierTypeLabel(type))),
+          DropdownMenuItem(value: type, child: Text(l.supplierTypeLabel(type))),
       ],
       onChanged: (value) {
         if (value != null) {

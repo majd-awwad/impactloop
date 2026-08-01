@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import '../../../../shared/widgets/app_section_card.dart';
 import '../../data/models/supplier_profile.dart';
-import 'supplier_location_privacy_card.dart';
-import 'supplier_type_selector.dart';
 import 'supplier_verification_badge.dart';
 
 class SupplierProfileSummaryCard extends StatelessWidget {
@@ -23,10 +21,7 @@ class SupplierProfileSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final supplier = profile.supplier;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.dashboardCard,
+    return AppSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -37,7 +32,7 @@ class SupplierProfileSummaryCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 alignment: Alignment.center,
-                decoration: SupplierDecorations.avatarCircle,
+                decoration: context.supplierDecorations.avatarCircle,
                 child: Text(
                   (supplier?.publicName.isNotEmpty == true
                           ? supplier!.publicName
@@ -45,8 +40,8 @@ class SupplierProfileSummaryCard extends StatelessWidget {
                       .characters
                       .first
                       .toUpperCase(),
-                  style: AuthDarkTextStyles.title(context).copyWith(
-                    color: AuthDarkColors.accent,
+                  style: context.supplierTitle().copyWith(
+                    color: context.supplierColors.accent,
                   ),
                 ),
               ),
@@ -59,10 +54,10 @@ class SupplierProfileSummaryCard extends StatelessWidget {
                       supplier?.publicName.isNotEmpty == true
                           ? supplier!.publicName
                           : profile.user.displayName,
-                      style: AuthDarkTextStyles.title(context),
+                      style: context.supplierTitle(),
                     ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(profile.user.email, style: AuthDarkTextStyles.body(context)),
+                    Text(profile.user.email, style: context.supplierBody()),
                     if (supplier != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
@@ -71,7 +66,9 @@ class SupplierProfileSummaryCard extends StatelessWidget {
                         children: [
                           if (supplier.supplierType.isNotEmpty)
                             _InfoChip(
-                              label: supplierTypeLabel(supplier.supplierType),
+                              label: context.s.supplierTypeLabel(
+                                supplier.supplierType,
+                              ),
                             ),
                           SupplierVerificationBadge(
                             status: supplier.verificationStatus,
@@ -84,28 +81,28 @@ class SupplierProfileSummaryCard extends StatelessWidget {
               ),
               OutlinedButton.icon(
                 onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Edit Profile'),
+                icon: Icon(Icons.edit_outlined),
+                label: Text(context.s.editProfile),
               ),
             ],
           ),
           if (supplier?.description?.isNotEmpty == true) ...[
             const SizedBox(height: AppSpacing.lg),
-            Text(supplier!.description!, style: AuthDarkTextStyles.body(context)),
+            Text(supplier!.description!, style: context.supplierBody()),
           ],
           if (supplier?.defaultPickupLocation != null) ...[
             const SizedBox(height: AppSpacing.lg),
             _ProfileDetailRow(
               icon: Icons.location_on_outlined,
-              title: 'Default pickup location',
+              title: context.s.defaultPickupLocation,
               body:
                   '${supplier!.defaultPickupLocation!.country}, ${supplier.defaultPickupLocation!.summary}',
             ),
             const SizedBox(height: AppSpacing.sm),
             _ProfileDetailRow(
               icon: Icons.visibility_outlined,
-              title: 'Visibility',
-              body: visibilityLabel(
+              title: context.s.visibility,
+              body: context.s.visibilityLabel(
                 supplier.defaultPickupLocation!.visibility ?? 'ORDER_ONLY',
               ),
             ),
@@ -128,10 +125,10 @@ class _InfoChip extends StatelessWidget {
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
-      decoration: SupplierDecorations.badge(
-        background: AuthDarkColors.accentSoft.withValues(alpha: 0.16),
+      decoration: context.supplierDecorations.badge(
+        background: context.supplierColors.accentSoft.withValues(alpha: 0.16),
       ),
-      child: Text(label, style: AuthDarkTextStyles.chip(context)),
+      child: Text(label, style: context.supplierChip()),
     );
   }
 }
@@ -152,7 +149,7 @@ class _ProfileDetailRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AuthDarkColors.accent, size: 20),
+        Icon(icon, color: context.supplierColors.accent, size: 20),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Column(
@@ -160,12 +157,12 @@ class _ProfileDetailRow extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AuthDarkTextStyles.label(context).copyWith(
-                  color: AuthDarkColors.textPrimary,
+                style: context.supplierLabel().copyWith(
+                  color: context.supplierColors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              Text(body, style: AuthDarkTextStyles.body(context)),
+              Text(body, style: context.supplierBody()),
             ],
           ),
         ),

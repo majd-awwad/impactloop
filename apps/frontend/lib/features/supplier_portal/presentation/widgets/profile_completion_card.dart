@@ -1,23 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../data/models/supplier_profile.dart';
 
 class ProfileCompletionCard extends StatelessWidget {
-  const ProfileCompletionCard({
-    super.key,
-    required this.profile,
-    this.draft,
-  });
+  const ProfileCompletionCard({super.key, required this.profile, this.draft});
 
   final SupplierProfileResponse profile;
   final SupplierProfileDraft? draft;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     final supplier = profile.supplier;
     final publicName = draft?.publicName ?? supplier?.publicName ?? '';
     final supplierType = draft?.supplierType ?? supplier?.supplierType ?? '';
@@ -27,26 +22,32 @@ class ProfileCompletionCard extends StatelessWidget {
     final city = draft?.city ?? supplier?.defaultPickupLocation?.city ?? '';
     final visibility =
         draft?.visibility ?? supplier?.defaultPickupLocation?.visibility ?? '';
+    final pickupCoordinatesComplete =
+        draft?.usesCurrentLocationCoordinates == true &&
+        draft?.latitude != null &&
+        draft?.longitude != null;
 
     final checks = <_CompletionItem>[
       _CompletionItem(
-        label: 'Public name',
+        label: context.s.publicName,
         complete: publicName.trim().isNotEmpty,
       ),
       _CompletionItem(
-        label: 'Supplier type',
+        label: context.s.supplierType,
         complete: supplierType.trim().isNotEmpty,
       ),
       _CompletionItem(
-        label: 'About your materials',
+        label: context.s.aboutMaterials,
         complete: description.trim().isNotEmpty,
       ),
       _CompletionItem(
-        label: 'Pickup country & city',
-        complete: country.trim().isNotEmpty && city.trim().isNotEmpty,
+        label: context.s.pickupCountryCity,
+        complete:
+            pickupCoordinatesComplete ||
+            (country.trim().isNotEmpty && city.trim().isNotEmpty),
       ),
       _CompletionItem(
-        label: 'Location visibility',
+        label: context.s.locationVisibility,
         complete: visibility.trim().isNotEmpty,
       ),
     ];
@@ -56,7 +57,7 @@ class ProfileCompletionCard extends StatelessWidget {
 
     return _SupplierInsightCard(
       icon: Icons.task_alt_outlined,
-      title: 'Profile completion',
+      title: context.s.profileCompletion,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -68,16 +69,16 @@ class ProfileCompletionCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     minHeight: 8,
                     value: progress,
-                    backgroundColor: AuthDarkColors.chipUnselected,
-                    color: AuthDarkColors.accent,
+                    backgroundColor: colors.chipUnselected,
+                    color: colors.accent,
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 '${(progress * 100).round()}%',
-                style: AuthDarkTextStyles.label(context).copyWith(
-                  color: AuthDarkColors.accent,
+                style: context.supplierLabel().copyWith(
+                  color: colors.accent,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -85,8 +86,8 @@ class ProfileCompletionCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '$complete of ${checks.length} essentials complete',
-            style: AuthDarkTextStyles.body(context),
+            context.s.essentialsComplete(complete, checks.length),
+            style: context.supplierBody(),
           ),
           const SizedBox(height: AppSpacing.md),
           ...checks.map(
@@ -99,13 +100,11 @@ class ProfileCompletionCard extends StatelessWidget {
                         ? Icons.check_circle_outline
                         : Icons.radio_button_unchecked,
                     size: 16,
-                    color: item.complete
-                        ? AuthDarkColors.accent
-                        : AuthDarkColors.textMuted,
+                    color: item.complete ? colors.accent : colors.textMuted,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
-                    child: Text(item.label, style: AuthDarkTextStyles.body(context)),
+                    child: Text(item.label, style: context.supplierBody()),
                   ),
                 ],
               ),
@@ -133,6 +132,9 @@ class SupplierProfileDraft {
     required this.city,
     required this.area,
     required this.visibility,
+    this.latitude,
+    this.longitude,
+    this.usesCurrentLocationCoordinates = false,
   });
 
   final String publicName;
@@ -142,6 +144,9 @@ class SupplierProfileDraft {
   final String city;
   final String area;
   final String visibility;
+  final double? latitude;
+  final double? longitude;
+  final bool usesCurrentLocationCoordinates;
 }
 
 class _SupplierInsightCard extends StatelessWidget {
@@ -157,11 +162,13 @@ class _SupplierInsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 180),
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.sideInsightCard,
+      decoration: context.supplierDecorations.sideInsightCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -172,16 +179,16 @@ class _SupplierInsightCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AuthDarkColors.accentSoft.withValues(alpha: 0.16),
+                  color: colors.accentSoft.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: AuthDarkColors.border.withValues(alpha: 0.35),
+                    color: colors.border.withValues(alpha: 0.35),
                   ),
                 ),
-                child: Icon(icon, color: AuthDarkColors.accent, size: 20),
+                child: Icon(icon, color: colors.accent, size: 20),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Text(title, style: AuthDarkTextStyles.sectionTitle(context)),
+              Text(title, style: context.supplierSectionTitle()),
             ],
           ),
           const SizedBox(height: AppSpacing.md),

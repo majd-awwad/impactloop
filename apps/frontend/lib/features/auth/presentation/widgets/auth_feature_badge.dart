@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_decorations.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 
 class AuthFeatureBadge extends StatelessWidget {
   const AuthFeatureBadge({
@@ -20,6 +20,8 @@ class AuthFeatureBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
     if (compact) {
       return Container(
         padding: const EdgeInsets.symmetric(
@@ -51,10 +53,10 @@ class AuthFeatureBadge extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.sm),
             decoration: BoxDecoration(
-              color: AppColors.textOnBrand.withValues(alpha: 0.14),
+              color: colors.textOnPrimary.withValues(alpha: 0.14),
               borderRadius: AppRadius.smAll,
             ),
-            child: Icon(icon, color: AppColors.textOnBrand, size: 22),
+            child: Icon(icon, color: colors.textOnPrimary, size: 22),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

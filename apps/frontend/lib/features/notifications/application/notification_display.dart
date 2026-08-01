@@ -1,0 +1,142 @@
+import '../data/models/app_notification.dart';
+
+final RegExp _testTagPattern = RegExp(r'\[test[^\]]*\]', caseSensitive: false);
+
+String sanitizeNotificationText(String value) {
+  var result = value.replaceAll(_testTagPattern, '');
+  result = result.replaceAll(RegExp(r',\s*,+'), ',');
+  result = result.replaceAll(RegExp(r'\s{2,}'), ' ');
+  result = result.replaceAll(RegExp(r'\s+,'), ',');
+  result = result.replaceAll(RegExp(r',\s*$'), '');
+  result = result.replaceAll(RegExp(r'^\s*,\s*'), '');
+  return result.trim();
+}
+
+AppNotification sanitizeNotification(AppNotification notification) {
+  return notification.copyWith(
+    title: sanitizeNotificationText(notification.title).isEmpty
+        ? 'Notification'
+        : sanitizeNotificationText(notification.title),
+    body: sanitizeNotificationText(notification.body),
+  );
+}
+
+enum NotificationVisualCategory {
+  job,
+  reminder,
+  deliveryUpdate,
+  account,
+  general,
+}
+
+NotificationVisualCategory categoryForNotification(
+  AppNotification notification,
+) {
+  switch (notification.notificationType) {
+    case 'DRIVER_NEW_JOB':
+      return NotificationVisualCategory.job;
+    case 'DRIVER_PICKUP_TIME':
+    case 'DRIVER_PICKUP_REMINDER':
+    case 'DRIVER_PICKUP_STARTING_SOON':
+    case 'DRIVER_PICKUP_WINDOW_STARTED':
+    case 'DRIVER_PICKUP_OVERDUE':
+    case 'DRIVER_DROPOFF_TIME':
+    case 'DRIVER_DROPOFF_REMINDER':
+    case 'DRIVER_DROPOFF_STARTING_SOON':
+    case 'DRIVER_DROPOFF_WINDOW_STARTED':
+    case 'DRIVER_DROPOFF_OVERDUE':
+      return NotificationVisualCategory.reminder;
+    case 'DRIVER_DELIVERY_REQUEST_CREATED':
+      return NotificationVisualCategory.deliveryUpdate;
+    case 'DRIVER_DELIVERY_ACCEPTED':
+    case 'DRIVER_DELIVERY_NEXT_STEP':
+    case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
+    case 'DELIVERY_DRIVER_ASSIGNED':
+      return NotificationVisualCategory.deliveryUpdate;
+    default:
+      if (notification.notificationType.contains('VERIFICATION') ||
+          notification.notificationType.contains('ACCOUNT')) {
+        return NotificationVisualCategory.account;
+      }
+      return NotificationVisualCategory.general;
+  }
+}
+
+String notificationTypeChipLabel(NotificationVisualCategory category) {
+  switch (category) {
+    case NotificationVisualCategory.job:
+      return 'Job';
+    case NotificationVisualCategory.reminder:
+      return 'Reminder';
+    case NotificationVisualCategory.deliveryUpdate:
+      return 'Delivery update';
+    case NotificationVisualCategory.account:
+      return 'Account';
+    case NotificationVisualCategory.general:
+      return 'Update';
+  }
+}
+
+String notificationActionLabel(AppNotification notification) {
+  if (notification.relatedEntityType == 'DELIVERY') {
+    if (notification.notificationType == 'DRIVER_NEW_JOB') {
+      return 'View jobs';
+    }
+    if (notification.notificationType ==
+            'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
+        notification.notificationType ==
+            'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN') {
+      return 'View details';
+    }
+    return 'View delivery';
+  }
+  if (notification.relatedEntityType == 'RESERVATION') {
+    return 'View reservation';
+  }
+  if (notification.relatedEntityType == 'LEARNING_PROJECT') {
+    return 'View submission';
+  }
+  if (notification.relatedEntityType == 'MATERIAL_REQUEST') {
+    return 'View request';
+  }
+  return 'Open';
+}
+
+bool notificationHasNavigationTarget(AppNotification notification) {
+  return (notification.relatedEntityType == 'DELIVERY' ||
+          notification.relatedEntityType == 'RESERVATION' ||
+          notification.relatedEntityType == 'LEARNING_PROJECT' ||
+          notification.relatedEntityType == 'MATERIAL_REQUEST') &&
+      notification.relatedEntityId != null &&
+      notification.relatedEntityId!.isNotEmpty;
+}
+
+/// Learner material-request notifications open the request detail route.
+String? materialRequestNotificationRoute(AppNotification notification) {
+  if (notification.relatedEntityType != 'MATERIAL_REQUEST' ||
+      notification.relatedEntityId == null ||
+      notification.relatedEntityId!.isEmpty) {
+    return null;
+  }
+
+  return '/learner/material-requests/${notification.relatedEntityId}';
+}
+
+/// Driver delivery notifications open the delivery detail route, which shows
+/// inactive-context messaging when the job is no longer active.
+String? driverDeliveryNotificationRoute(AppNotification notification) {
+  if (notification.relatedEntityType != 'DELIVERY' ||
+      notification.relatedEntityId == null ||
+      notification.relatedEntityId!.isEmpty) {
+    return null;
+  }
+
+  final rawId = notification.relatedEntityId!;
+  final deliveryId = rawId.contains(':') ? rawId.split(':').first : rawId;
+
+  if (notification.notificationType == 'DRIVER_NEW_JOB') {
+    return '/driver/jobs';
+  }
+
+  return '/driver/deliveries/$deliveryId';
+}

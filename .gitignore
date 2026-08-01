@@ -1,7 +1,72 @@
-node_modules/
-dist/
+# Secrets
 .env
 .env.*
-!.env.example
+*.pem
+*.key
 
-# Flutter and editor-generated files are handled by app-level ignore files.
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Builds
+dist/
+build/
+coverage/
+apps/frontend/build/
+apps/backend/dist/
+apps/frontend/coverage/
+
+# Local Admin export verification artifacts
+apps/backend/tmp-exports/
+apps/backend/tmp/
+
+# Generated / machine-written
+apps/backend/src/generated/
+apps/backend/generated/
+apps/backend/prisma/generated/
+apps/frontend/lib/generated/
+**/*.g.dart
+**/*.freezed.dart
+**/*.gr.dart
+**/*.mocks.dart
+
+# Offline ML compatibility environments and generated artifacts
+ml/recommendation/.venv/
+ml/recommendation/.venv311/
+ml/recommendation/python311/
+ml/recommendation/conda-env/
+ml/recommendation/conda-env-repro/
+ml/recommendation/miniconda/
+ml/recommendation/generated/
+ml/recommendation/.pytest_cache/
+ml/recommendation/**/__pycache__/
+
+# Usually not useful for agent context unless explicitly needed
+apps/frontend/pubspec.lock
+apps/backend/package-lock.json
+apps/backend/pnpm-lock.yaml
+
+# Heavy files
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.mp4
+*.zip
+
+# Logs
+*.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/.cursor/
+AGENTS.md
+.cursor/
+.cursorignore

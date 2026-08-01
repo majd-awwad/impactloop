@@ -1,14 +1,57 @@
 import type {
+  MaterialCondition,
   MaterialStatus,
   Prisma,
   ReservationStatus,
-} from '../../generated/prisma/client.js';
+} from "../../generated/prisma/client.js";
 
-import { prisma } from '../../database/prisma.js';
-import type { UpdateSupplierProfileInput } from './supplier.validation.js';
+import { prisma } from "../../database/prisma.js";
+import { AppError } from "../../utils/app-error.js";
+import type { UpdateSupplierProfileInput } from "./supplier.validation.js";
+import {
+  buildSupplierMaterialWhere,
+  resolveSupplierProfileForUser,
+  type SupplierMaterialScope,
+} from "./supplier-material-scope.js";
+import {
+  emptyMaterialReservationStatusCounts,
+  foldMaterialReservationStatusCounts,
+  MATERIAL_DEMAND_ACTIVE_STATUSES,
+  MATERIAL_DEMAND_TRACKED_STATUSES,
+  type MaterialReservationStatusCounts,
+} from "./supplier.material-demand-metrics.js";
+type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
+
+const CONCEPT_WRITE_INTERNAL_MESSAGE =
+  "Material concept assignment failed due to an internal error.";
+
+/** Structural create-assignment contract: 1–2 nonblank unique concept IDs. */
+const assertMaterialConceptWriteContract = (conceptIds?: string[]): string[] => {
+  if (!conceptIds || conceptIds.length < 1 || conceptIds.length > 2) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_CARDINALITY",
+    });
+  }
+  if (
+    conceptIds.some(
+      (conceptId) =>
+        typeof conceptId !== "string" || conceptId.trim().length === 0,
+    )
+  ) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_BLANK",
+    });
+  }
+  if (new Set(conceptIds).size !== conceptIds.length) {
+    throw new AppError(CONCEPT_WRITE_INTERNAL_MESSAGE, 500, "INTERNAL_ERROR", {
+      reason: "CONCEPT_IDS_DUPLICATE",
+    });
+  }
+  return conceptIds;
+};
 
 const decimalToNumber = (value: { toNumber(): number } | number): number => {
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     return value;
   }
 
@@ -16,11 +59,32 @@ const decimalToNumber = (value: { toNumber(): number } | number): number => {
 };
 
 export const findSupplierProfileForDashboard = async (userId: string) => {
+  const profile = await resolveSupplierProfileForUser(userId);
+
+  if (!profile) {
+    return null;
+  }
+
   return prisma.supplierProfile.findUnique({
-    where: { userId },
+    where: { id: profile.id },
     include: {
       defaultPickupLocation: true,
       organizationProfile: true,
+    },
+  });
+};
+
+export const findSupplierProfileForMaterialCreate = async (userId: string) => {
+  const profile = await resolveSupplierProfileForUser(userId);
+
+  if (!profile) {
+    return null;
+  }
+
+  return prisma.supplierProfile.findUnique({
+    where: { id: profile.id },
+    include: {
+      defaultPickupLocation: true,
     },
   });
 };
@@ -47,18 +111,366 @@ export const findSupplierProfileDetailsByUserId = async (userId: string) => {
   });
 };
 
-const isOrganizationSupplierType = (supplierType: string): boolean => {
+export const findSupplierProfileManagementByUserId = async (userId: string) => {
+  return prisma.supplierProfile.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      publicName: true,
+      supplierType: true,
+      description: true,
+      avatarImageUrl: true,
+      coverImageUrl: true,
+      verificationStatus: true,
+      verificationSubmittedAt: true,
+      verificationReviewedAt: true,
+      verificationAdminNote: true,
+      defaultPickupLocation: {
+        select: {
+          id: true,
+          country: true,
+          city: true,
+          area: true,
+          addressLine: true,
+          latitude: true,
+          longitude: true,
+          visibility: true,
+          isApproximate: true,
+          locationType: true,
+        },
+      },
+      organizationProfile: {
+        select: {
+          id: true,
+          organizationName: true,
+          organizationType: true,
+          contactPersonName: true,
+          workingDays: true,
+          workingHours: true,
+        },
+      },
+    },
+  });
+};
+
+export const countSupplierFollowers = async (supplierProfileId: string) => {
+  return prisma.supplierFollower.count({
+    where: { supplierProfileId },
+  });
+};
+
+export const listLatestSupplierFollowers = async (
+  supplierProfileId: string,
+  limit = 5,
+) => {
+  return prisma.supplierFollower.findMany({
+    where: { supplierProfileId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      followerUser: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+          profileImageUrl: true,
+        },
+      },
+    },
+  });
+};
+
+export const listSupplierFollowers = async (input: {
+  supplierProfileId: string;
+  page: number;
+  limit: number;
+}) => {
+  const skip = (input.page - 1) * input.limit;
+
+  const [items, total] = await Promise.all([
+    prisma.supplierFollower.findMany({
+      where: { supplierProfileId: input.supplierProfileId },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: input.limit,
+      include: {
+        followerUser: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            profileImageUrl: true,
+          },
+        },
+      },
+    }),
+    prisma.supplierFollower.count({
+      where: { supplierProfileId: input.supplierProfileId },
+    }),
+  ]);
+
+  return { items, total };
+};
+
+export const findSupplierMaterialsPreview = async (
+  scope: SupplierMaterialScope,
+  limit = 4,
+) => {
+  return prisma.material.findMany({
+    where: buildSupplierMaterialWhere(scope),
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      category: {
+        select: { id: true, nameEn: true, nameAr: true },
+      },
+      location: {
+        select: { city: true, area: true },
+      },
+      images: {
+        where: { isCover: true },
+        take: 1,
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+};
+
+export const countSupplierReservationsTotal = async (ownerId: string) => {
+  return prisma.reservation.count({ where: { ownerId } });
+};
+
+export const countLikesByMaterialIds = async (materialIds: string[]) => {
+  if (materialIds.length === 0) return new Map<string, number>();
+
+  const groups = await prisma.materialLike.groupBy({
+    by: ['materialId'],
+    where: { materialId: { in: materialIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const countViewsByMaterialIds = async (materialIds: string[]) => {
+  if (materialIds.length === 0) return new Map<string, number>();
+
+  const groups = await prisma.materialView.groupBy({
+    by: ['materialId'],
+    where: { materialId: { in: materialIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const countReservationsByMaterialIds = async (materialIds: string[]) => {
+  if (materialIds.length === 0) return new Map<string, number>();
+
+  const groups = await prisma.reservation.groupBy({
+    by: ['materialId'],
+    where: { materialId: { in: materialIds } },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const countTotalLikesForSupplier = async (scope: SupplierMaterialScope) => {
+  return prisma.materialLike.count({
+    where: { material: buildSupplierMaterialWhere(scope) },
+  });
+};
+
+export const countTotalViewsForSupplier = async (scope: SupplierMaterialScope) => {
+  return prisma.materialView.count({
+    where: { material: buildSupplierMaterialWhere(scope) },
+  });
+};
+
+export const countScheduledPickups = async (ownerId: string) => {
+  const now = new Date();
+
+  return prisma.reservation.count({
+    where: {
+      ownerId,
+      status: 'ACCEPTED',
+      pickupWindowStart: { gte: now },
+    },
+  });
+};
+
+export const findRecentReservationRequests = async (
+  ownerId: string,
+  limit = 5,
+) => {
+  return prisma.reservation.findMany({
+    where: { ownerId },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: {
+      material: { select: { id: true, title: true } },
+      requester: { select: { displayName: true } },
+    },
+  });
+};
+
+export const findMostViewedMaterial = async (scope: SupplierMaterialScope) => {
+  const materialWhere = buildSupplierMaterialWhere(scope);
+
+  const topViewGroup = await prisma.materialView.groupBy({
+    by: ['materialId'],
+    where: { material: materialWhere },
+    _count: { _all: true },
+    orderBy: { _count: { materialId: 'desc' } },
+    take: 1,
+  });
+
+  if (topViewGroup.length === 0 || topViewGroup[0]._count._all <= 0) {
+    return null;
+  }
+
+  const material = await prisma.material.findFirst({
+    where: {
+      AND: [{ id: topViewGroup[0].materialId }, materialWhere],
+    },
+    include: {
+      category: { select: { nameEn: true } },
+      images: {
+        where: { isCover: true },
+        take: 1,
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+
+  if (!material) {
+    return null;
+  }
+
+  return {
+    material,
+    viewsCount: topViewGroup[0]._count._all,
+  };
+};
+
+export const findHighDemandMaterials = async (
+  scope: SupplierMaterialScope,
+  limit = 5,
+) => {
+  const materialWhere = buildSupplierMaterialWhere(scope);
+
+  const demandGroups = await prisma.reservation.groupBy({
+    by: ['materialId'],
+    where: {
+      status: { in: ['PENDING', 'ACCEPTED'] },
+      material: materialWhere,
+    },
+    _count: { _all: true },
+    orderBy: { _count: { materialId: 'desc' } },
+    take: limit,
+  });
+
+  if (demandGroups.length === 0) {
+    return [];
+  }
+
+  const materialIds = demandGroups.map((group) => group.materialId);
+  const materials = await prisma.material.findMany({
+    where: { id: { in: materialIds } },
+    include: {
+      category: { select: { nameEn: true } },
+      images: {
+        where: { isCover: true },
+        take: 1,
+        orderBy: { sortOrder: 'asc' },
+      },
+    },
+  });
+
+  const materialById = new Map(materials.map((material) => [material.id, material]));
+
+  return demandGroups
+    .map((group) => {
+      const material = materialById.get(group.materialId);
+      if (!material) {
+        return null;
+      }
+
+      return {
+        material,
+        demandCount: group._count._all,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+};
+
+export const isOrganizationSupplierType = (supplierType: string): boolean => {
   return (
-    supplierType === 'WORKSHOP' ||
-    supplierType === 'FACTORY' ||
-    supplierType === 'EDUCATIONAL_INSTITUTION'
+    supplierType === "WORKSHOP" ||
+    supplierType === "FACTORY" ||
+    supplierType === "EDUCATIONAL_INSTITUTION"
   );
+};
+
+type LocationCopySource = {
+  country: string;
+  city: string;
+  area: string | null;
+  addressLine: string | null;
+  latitude: Prisma.Decimal | number | null;
+  longitude: Prisma.Decimal | number | null;
+  visibility: string | null;
+  isApproximate: boolean;
+};
+
+export const copyLocationRow = async (
+  source: LocationCopySource,
+  locationType = "MATERIAL_PICKUP",
+  client: PrismaClientLike = prisma,
+): Promise<string> => {
+  const location = await client.location.create({
+    data: {
+      country: source.country,
+      city: source.city,
+      area: source.area,
+      addressLine: source.addressLine,
+      latitude: source.latitude,
+      longitude: source.longitude,
+      visibility: source.visibility,
+      isApproximate: source.isApproximate,
+      locationType,
+    },
+  });
+
+  return location.id;
+};
+
+export const createMaterialPickupLocation = async (
+  input: UpdateSupplierProfileInput["defaultPickupLocation"],
+  client: PrismaClientLike = prisma,
+): Promise<string> => {
+  const location = await client.location.create({
+    data: {
+      country: input.country,
+      city: input.city,
+      area: input.area ?? null,
+      addressLine: input.addressLine ?? null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
+      visibility: input.visibility,
+      isApproximate: input.isApproximate,
+      locationType: input.locationType ?? "MATERIAL_PICKUP",
+    },
+  });
+
+  return location.id;
 };
 
 const upsertLocation = async (
   tx: Prisma.TransactionClient,
   locationId: string | null | undefined,
-  input: UpdateSupplierProfileInput['defaultPickupLocation'],
+  input: UpdateSupplierProfileInput["defaultPickupLocation"],
   fallbackLocationType: string,
 ): Promise<string> => {
   const data = {
@@ -107,7 +519,7 @@ export const upsertSupplierProfileDetails = async (
       tx,
       existingProfile?.defaultPickupLocationId,
       input.defaultPickupLocation,
-      'PICKUP_POINT',
+      "PICKUP_POINT",
     );
 
     const supplierProfile = await tx.supplierProfile.upsert({
@@ -141,9 +553,9 @@ export const upsertSupplierProfileDetails = async (
             tx,
             existingOrganization?.businessLocationId,
             input.organizationProfile.businessLocation,
-            'BUSINESS_LOCATION',
+            "BUSINESS_LOCATION",
           )
-        : existingOrganization?.businessLocationId ?? null;
+        : (existingOrganization?.businessLocationId ?? null);
 
       await tx.organizationProfile.upsert({
         where: { supplierProfileId: supplierProfile.id },
@@ -153,14 +565,12 @@ export const upsertSupplierProfileDetails = async (
           organizationType: input.organizationProfile.organizationType,
           contactPersonName:
             input.organizationProfile.contactPersonName ?? null,
-          workingDays:
-            input.organizationProfile.workingDays as
-              | Prisma.InputJsonValue
-              | undefined,
-          workingHours:
-            input.organizationProfile.workingHours as
-              | Prisma.InputJsonValue
-              | undefined,
+          workingDays: input.organizationProfile.workingDays as
+            | Prisma.InputJsonValue
+            | undefined,
+          workingHours: input.organizationProfile.workingHours as
+            | Prisma.InputJsonValue
+            | undefined,
           businessLocationId,
         },
         update: {
@@ -168,14 +578,12 @@ export const upsertSupplierProfileDetails = async (
           organizationType: input.organizationProfile.organizationType,
           contactPersonName:
             input.organizationProfile.contactPersonName ?? null,
-          workingDays:
-            input.organizationProfile.workingDays as
-              | Prisma.InputJsonValue
-              | undefined,
-          workingHours:
-            input.organizationProfile.workingHours as
-              | Prisma.InputJsonValue
-              | undefined,
+          workingDays: input.organizationProfile.workingDays as
+            | Prisma.InputJsonValue
+            | undefined,
+          workingHours: input.organizationProfile.workingHours as
+            | Prisma.InputJsonValue
+            | undefined,
           businessLocationId,
         },
       });
@@ -203,25 +611,49 @@ export const upsertSupplierProfileDetails = async (
   });
 };
 
-export const countMaterialsByStatus = async (ownerId: string) => {
+export const updateSupplierProfileImages = async (
+  userId: string,
+  input: { avatarImageUrl?: string | null; coverImageUrl?: string | null },
+) => {
+  const data: {
+    avatarImageUrl?: string | null;
+    coverImageUrl?: string | null;
+  } = {};
+
+  if (input.avatarImageUrl !== undefined) {
+    data.avatarImageUrl = input.avatarImageUrl;
+  }
+  if (input.coverImageUrl !== undefined) {
+    data.coverImageUrl = input.coverImageUrl;
+  }
+
+  return prisma.supplierProfile.update({
+    where: { userId },
+    data,
+  });
+};
+
+export const countMaterialsByStatus = async (scope: SupplierMaterialScope) => {
   return prisma.material.groupBy({
-    by: ['status'],
-    where: { ownerId },
+    by: ["status"],
+    where: buildSupplierMaterialWhere(scope),
     _count: { _all: true },
   });
 };
 
 export const countReservationsByStatus = async (ownerId: string) => {
   return prisma.reservation.groupBy({
-    by: ['status'],
+    by: ["status"],
     where: { ownerId },
     _count: { _all: true },
   });
 };
 
-export const aggregateReusedMaterials = async (ownerId: string) => {
+export const aggregateReusedMaterials = async (scope: SupplierMaterialScope) => {
   return prisma.material.aggregate({
-    where: { ownerId, status: 'REUSED' },
+    where: {
+      AND: [buildSupplierMaterialWhere(scope), { status: "REUSED" }],
+    },
     _count: { _all: true },
     _sum: { quantity: true },
   });
@@ -231,7 +663,7 @@ export const aggregateSupplierReviews = async (reviewedUserId: string) => {
   return prisma.review.aggregate({
     where: {
       reviewedUserId,
-      targetType: 'SUPPLIER',
+      targetType: "SUPPLIER",
     },
     _avg: { rating: true },
     _count: { _all: true },
@@ -244,17 +676,394 @@ export const countUnreadNotifications = async (userId: string) => {
   });
 };
 
-export const findRecentMaterials = async (ownerId: string, limit = 3) => {
+const supplierMaterialListInclude = {
+  category: {
+    select: { id: true, nameEn: true, nameAr: true },
+  },
+  location: {
+    select: { city: true, area: true, addressLine: true },
+  },
+  images: {
+    orderBy: { sortOrder: "asc" as const },
+  },
+} satisfies Prisma.MaterialInclude;
+
+const supplierMaterialMutationSelect = {
+  id: true,
+  title: true,
+  description: true,
+  quantity: true,
+  unit: true,
+  condition: true,
+  pickupAllowed: true,
+  deliveryAllowed: true,
+  pickupNotes: true,
+  suggestedUses: true,
+  materialType: true,
+  status: true,
+  isFree: true,
+  price: true,
+  currency: true,
+  viewsCount: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
+export type SupplierOwnedMaterialListRecord = Prisma.MaterialGetPayload<{
+  include: typeof supplierMaterialListInclude;
+}>;
+
+const buildSupplierMaterialsWhere = (
+  scope: SupplierMaterialScope,
+  query: {
+    search?: string;
+    status?: MaterialStatus;
+    isFree?: boolean;
+    categoryId?: string;
+    condition?: MaterialCondition;
+  },
+): Prisma.MaterialWhereInput => {
+  const andConditions: Prisma.MaterialWhereInput[] = [
+    buildSupplierMaterialWhere(scope),
+  ];
+
+  if (query.status) {
+    andConditions.push({ status: query.status });
+  }
+
+  if (query.isFree !== undefined) {
+    andConditions.push({ isFree: query.isFree });
+  }
+
+  if (query.categoryId) {
+    andConditions.push({ categoryId: query.categoryId });
+  }
+
+  if (query.condition) {
+    andConditions.push({ condition: query.condition });
+  }
+
+  if (query.search) {
+    const normalized = query.search.trim();
+    const searchConditions: Prisma.MaterialWhereInput[] = [
+      { title: { contains: normalized, mode: "insensitive" } },
+      { description: { contains: normalized, mode: "insensitive" } },
+      { category: { nameEn: { contains: normalized, mode: "insensitive" } } },
+      { category: { nameAr: { contains: normalized, mode: "insensitive" } } },
+      { location: { city: { contains: normalized, mode: "insensitive" } } },
+      { location: { area: { contains: normalized, mode: "insensitive" } } },
+    ];
+
+    const statusCandidate = normalized
+      .toUpperCase()
+      .replace(/[\s-]+/g, "_") as MaterialStatus;
+    const materialStatuses: MaterialStatus[] = [
+      "AVAILABLE",
+      "PENDING_RESERVATION",
+      "RESERVED",
+      "REUSED",
+      "UNAVAILABLE",
+    ];
+
+    if (materialStatuses.includes(statusCandidate)) {
+      searchConditions.push({ status: statusCandidate });
+    }
+
+    andConditions.push({ OR: searchConditions });
+  }
+
+  return andConditions.length === 1
+    ? andConditions[0]!
+    : { AND: andConditions };
+};
+
+export const findSupplierMaterials = async (
+  scope: SupplierMaterialScope,
+  query: {
+    page: number;
+    limit: number;
+    search?: string;
+    status?: MaterialStatus;
+    isFree?: boolean;
+    categoryId?: string;
+    condition?: MaterialCondition;
+  },
+) => {
+  const where = buildSupplierMaterialsWhere(scope, query);
+  const skip = (query.page - 1) * query.limit;
+
+  const [items, total] = await Promise.all([
+    prisma.material.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: query.limit,
+      include: supplierMaterialListInclude,
+    }),
+    prisma.material.count({ where }),
+  ]);
+
+  return { items, total };
+};
+
+export const findSupplierMaterialsSummary = async (
+  scope: SupplierMaterialScope,
+) => {
+  const baseWhere = buildSupplierMaterialWhere(scope);
+
+  const countWith = (extra: Prisma.MaterialWhereInput) =>
+    prisma.material.count({
+      where: { AND: [baseWhere, extra] },
+    });
+
+  const [
+    total,
+    available,
+    pendingReservation,
+    reserved,
+    reused,
+    unavailable,
+    free,
+    paid,
+  ] = await Promise.all([
+    prisma.material.count({ where: baseWhere }),
+    countWith({ status: "AVAILABLE" }),
+    countWith({ status: "PENDING_RESERVATION" }),
+    countWith({ status: "RESERVED" }),
+    countWith({ status: "REUSED" }),
+    countWith({ status: "UNAVAILABLE" }),
+    countWith({ isFree: true }),
+    countWith({ isFree: false }),
+  ]);
+
+  return {
+    total,
+    available,
+    pendingReservation,
+    reserved,
+    reused,
+    unavailable,
+    free,
+    paid,
+  };
+};
+
+export const findSupplierMaterialCategories = async (
+  scope: SupplierMaterialScope,
+) => {
+  const groups = await prisma.material.groupBy({
+    by: ["categoryId"],
+    where: buildSupplierMaterialWhere(scope),
+    _count: { id: true },
+  });
+
+  const categoryIds = groups
+    .map((group) => group.categoryId)
+    .filter((id): id is string => id != null);
+
+  if (categoryIds.length === 0) {
+    return [];
+  }
+
+  const categories = await prisma.category.findMany({
+    where: { id: { in: categoryIds } },
+    select: { id: true, nameEn: true, nameAr: true },
+    orderBy: { nameEn: "asc" },
+  });
+
+  return categories
+    .map((category) => {
+      const count =
+        groups.find((group) => group.categoryId === category.id)?._count.id ??
+        0;
+
+      return {
+        id: category.id,
+        nameEn: category.nameEn,
+        nameAr: category.nameAr,
+        count,
+      };
+    })
+    .filter((category) => category.count > 0);
+};
+
+export const findSupplierOwnedMaterialById = async (
+  scope: SupplierMaterialScope,
+  materialId: string,
+) => {
+  return prisma.material.findFirst({
+    where: {
+      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+    },
+    include: supplierMaterialListInclude,
+  });
+};
+
+export const findSupplierOwnedMaterialForRelatedProjects = async (
+  scope: SupplierMaterialScope,
+  materialId: string,
+) => {
+  return prisma.material.findFirst({
+    where: {
+      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      materialType: true,
+      categoryId: true,
+      tags: {
+        select: { tag: true },
+      },
+    },
+  });
+};
+
+export const countBlockingReservationsByMaterialIds = async (
+  materialIds: string[],
+) => {
+  if (materialIds.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const groups = await prisma.reservation.groupBy({
+    by: ["materialId"],
+    where: {
+      materialId: { in: materialIds },
+      status: { in: ["PENDING", "ACCEPTED", "COMPLETED"] },
+    },
+    _count: { _all: true },
+  });
+
+  return new Map(groups.map((group) => [group.materialId, group._count._all]));
+};
+
+export const countBlockingReservationsForMaterial = async (
+  materialId: string,
+) => {
+  return prisma.reservation.count({
+    where: {
+      materialId,
+      status: { in: ["PENDING", "ACCEPTED", "COMPLETED"] },
+    },
+  });
+};
+
+export type SupplierMaterialScalarUpdateData = {
+  title: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  condition: MaterialCondition;
+  pickupAllowed: boolean;
+  deliveryAllowed: boolean;
+  pickupNotes: string | null;
+  suggestedUses: string | null;
+};
+
+export type UpdateSupplierMaterialWithConceptsResult =
+  | {
+      status: "ok";
+      material: Prisma.MaterialGetPayload<{
+        select: typeof supplierMaterialMutationSelect;
+      }>;
+    }
+  | { status: "stale" }
+  | { status: "not_found" };
+
+/**
+ * Conditional owned-material update with optional exact MaterialConcept sync.
+ * `replaceConceptIds: undefined` preserves all concept rows.
+ * Caller must provide the transaction client; all queries run sequentially.
+ */
+export const updateSupplierMaterialWithConcepts = async (input: {
+  client: Prisma.TransactionClient;
+  scope: SupplierMaterialScope;
+  materialId: string;
+  expectedUpdatedAt: Date;
+  updateData: SupplierMaterialScalarUpdateData;
+  replaceConceptIds?: readonly string[];
+}): Promise<UpdateSupplierMaterialWithConceptsResult> => {
+  const replaceConceptIds =
+    input.replaceConceptIds === undefined
+      ? undefined
+      : assertMaterialConceptWriteContract([...input.replaceConceptIds]);
+
+  const updated = await input.client.material.updateMany({
+    where: {
+      AND: [
+        { id: input.materialId },
+        buildSupplierMaterialWhere(input.scope),
+        { updatedAt: input.expectedUpdatedAt },
+      ],
+    },
+    data: input.updateData,
+  });
+
+  if (updated.count === 0) {
+    const owned = await input.client.material.findFirst({
+      where: {
+        AND: [{ id: input.materialId }, buildSupplierMaterialWhere(input.scope)],
+      },
+      select: { id: true },
+    });
+    return owned ? { status: "stale" } : { status: "not_found" };
+  }
+
+  if (replaceConceptIds !== undefined) {
+    const currentRows = await input.client.materialConcept.findMany({
+      where: { materialId: input.materialId },
+      select: { conceptId: true },
+    });
+    const currentIds = currentRows.map((row) => row.conceptId);
+    const currentSet = new Set(currentIds);
+    const desiredSet = new Set(replaceConceptIds);
+    const setsEqual =
+      currentSet.size === desiredSet.size &&
+      replaceConceptIds.every((conceptId) => currentSet.has(conceptId));
+
+    if (!setsEqual) {
+      await input.client.materialConcept.deleteMany({
+        where: { materialId: input.materialId },
+      });
+      await input.client.materialConcept.createMany({
+        data: replaceConceptIds.map((conceptId) => ({
+          materialId: input.materialId,
+          conceptId,
+        })),
+      });
+    }
+  }
+
+  const material = await input.client.material.findUniqueOrThrow({
+    where: { id: input.materialId },
+    select: supplierMaterialMutationSelect,
+  });
+
+  return { status: "ok", material };
+};
+
+export const deleteSupplierOwnedMaterial = async (materialId: string) => {
+  return prisma.material.delete({
+    where: { id: materialId },
+  });
+};
+
+export const findRecentMaterials = async (
+  scope: SupplierMaterialScope,
+  limit = 3,
+) => {
   return prisma.material.findMany({
-    where: { ownerId },
-    orderBy: { createdAt: 'desc' },
+    where: buildSupplierMaterialWhere(scope),
+    orderBy: { createdAt: "desc" },
     take: limit,
     include: {
       category: { select: { nameEn: true } },
       images: {
         where: { isCover: true },
         take: 1,
-        orderBy: { sortOrder: 'asc' },
+        orderBy: { sortOrder: "asc" },
       },
     },
   });
@@ -266,10 +1075,10 @@ export const findUpcomingPickups = async (ownerId: string, limit = 3) => {
   return prisma.reservation.findMany({
     where: {
       ownerId,
-      status: 'ACCEPTED',
+      status: "ACCEPTED",
       pickupWindowStart: { gte: now },
     },
-    orderBy: { pickupWindowStart: 'asc' },
+    orderBy: { pickupWindowStart: "asc" },
     take: limit,
     include: {
       material: { select: { title: true } },
@@ -281,7 +1090,7 @@ export const findUpcomingPickups = async (ownerId: string, limit = 3) => {
 export const findRecentNotifications = async (userId: string, limit = 3) => {
   return prisma.notification.findMany({
     where: { userId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     take: limit,
   });
 };
@@ -292,7 +1101,7 @@ export const findRecentReservationsForActivity = async (
 ) => {
   return prisma.reservation.findMany({
     where: { ownerId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
     take: limit,
     include: {
       material: { select: { title: true } },
@@ -317,19 +1126,19 @@ export const foldMaterialStatusCounts = (
     stats.total += count;
 
     switch (row.status) {
-      case 'AVAILABLE':
+      case "AVAILABLE":
         stats.available = count;
         break;
-      case 'PENDING_RESERVATION':
+      case "PENDING_RESERVATION":
         stats.pendingReservation = count;
         break;
-      case 'RESERVED':
+      case "RESERVED":
         stats.reserved = count;
         break;
-      case 'REUSED':
+      case "REUSED":
         stats.reused = count;
         break;
-      case 'UNAVAILABLE':
+      case "UNAVAILABLE":
         stats.unavailable = count;
         break;
       default:
@@ -356,22 +1165,22 @@ export const foldReservationStatusCounts = (
     const count = row._count._all;
 
     switch (row.status) {
-      case 'PENDING':
+      case "PENDING":
         stats.pending = count;
         break;
-      case 'ACCEPTED':
+      case "ACCEPTED":
         stats.accepted = count;
         break;
-      case 'COMPLETED':
+      case "COMPLETED":
         stats.completed = count;
         break;
-      case 'REJECTED':
+      case "REJECTED":
         stats.rejected = count;
         break;
-      case 'CANCELLED':
+      case "CANCELLED":
         stats.cancelled = count;
         break;
-      case 'EXPIRED':
+      case "EXPIRED":
         stats.expired = count;
         break;
       default:
@@ -391,3 +1200,292 @@ export const sumReusedQuantity = (
 
   return decimalToNumber(aggregate._sum.quantity);
 };
+
+export const createSupplierMaterial = async (input: {
+  ownerId: string;
+  supplierProfileId: string;
+  categoryId: string;
+  locationId: string;
+  title: string;
+  description: string;
+  materialType: string;
+  materialTypeId?: string | null;
+  customMaterialType?: string | null;
+  quantity: number;
+  unit: string;
+  condition: Prisma.MaterialCreateInput["condition"];
+  sourceType: Prisma.MaterialCreateInput["sourceType"];
+  isFree: boolean;
+  price?: number | null;
+  currency: string;
+  pickupAllowed: boolean;
+  deliveryAllowed: boolean;
+  pickupNotes?: string | null;
+  suggestedUses?: string | null;
+  priceRuleId?: string | null;
+  priceCheckedAt?: Date | null;
+  maxAllowedPriceAtCheck?: number | null;
+  imageUrls: string[];
+  /** Exactly 1–2 ordered concept IDs (family, optional form). Required for all creates. */
+  conceptIds: string[];
+  client?: PrismaClientLike;
+}) => {
+  const conceptIds = assertMaterialConceptWriteContract(input.conceptIds);
+
+  const createMaterial = async (client: PrismaClientLike) => {
+    const material = await client.material.create({
+      data: {
+        ownerId: input.ownerId,
+        supplierProfileId: input.supplierProfileId,
+        categoryId: input.categoryId,
+        locationId: input.locationId,
+        title: input.title,
+        description: input.description,
+        materialType: input.materialType,
+        materialTypeId: input.materialTypeId ?? null,
+        customMaterialType: input.customMaterialType ?? null,
+        quantity: input.quantity,
+        unit: input.unit,
+        condition: input.condition,
+        sourceType: input.sourceType,
+        status: "AVAILABLE",
+        isFree: input.isFree,
+        price: input.price ?? null,
+        currency: input.currency,
+        pickupAllowed: input.pickupAllowed,
+        deliveryAllowed: input.deliveryAllowed,
+        pickupNotes: input.pickupNotes ?? null,
+        suggestedUses: input.suggestedUses ?? null,
+        priceRuleId: input.priceRuleId ?? null,
+        priceCheckedAt: input.priceCheckedAt ?? null,
+        maxAllowedPriceAtCheck: input.maxAllowedPriceAtCheck ?? null,
+        images:
+          input.imageUrls.length > 0
+            ? {
+                create: input.imageUrls.map((imageUrl, index) => ({
+                  imageUrl,
+                  sortOrder: index,
+                  isCover: index === 0,
+                })),
+              }
+            : undefined,
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            nameEn: true,
+            nameAr: true,
+          },
+        },
+        images: {
+          orderBy: { sortOrder: "asc" },
+        },
+      },
+    });
+
+    await client.materialConcept.createMany({
+      data: conceptIds.map((conceptId) => ({
+        materialId: material.id,
+        conceptId,
+      })),
+    });
+
+    return material;
+  };
+
+  if (input.client) {
+    return createMaterial(input.client);
+  }
+
+  return prisma.$transaction((tx) => createMaterial(tx));
+};
+
+export type MaterialReservationDemandCounts = MaterialReservationStatusCounts;
+
+export type MaterialReuseSummary = {
+  reusedCount: number;
+  lastCompletedAt: Date | null;
+};
+
+const emptyReuseSummary = (): MaterialReuseSummary => ({
+  reusedCount: 0,
+  lastCompletedAt: null,
+});
+
+export const findReservationDemandByMaterialIds = async (
+  materialIds: string[],
+): Promise<Map<string, MaterialReservationDemandCounts>> => {
+  const map = new Map<string, MaterialReservationDemandCounts>();
+  if (materialIds.length === 0) {
+    return map;
+  }
+
+  for (const materialId of materialIds) {
+    map.set(materialId, emptyMaterialReservationStatusCounts());
+  }
+
+  const groups = await prisma.reservation.groupBy({
+    by: ["materialId", "status"],
+    where: {
+      materialId: { in: materialIds },
+      status: { in: [...MATERIAL_DEMAND_TRACKED_STATUSES] },
+    },
+    _count: { _all: true },
+  });
+
+  const groupedByMaterial = new Map<string, Array<{ status: string; count: number }>>();
+
+  for (const group of groups) {
+    const materialGroups = groupedByMaterial.get(group.materialId) ?? [];
+    materialGroups.push({
+      status: group.status,
+      count: group._count._all,
+    });
+    groupedByMaterial.set(group.materialId, materialGroups);
+  }
+
+  for (const [materialId, statusGroups] of groupedByMaterial) {
+    map.set(materialId, foldMaterialReservationStatusCounts(statusGroups));
+  }
+
+  return map;
+};
+
+export const findMaterialReuseSummaryByMaterialIds = async (
+  materialIds: string[],
+): Promise<Map<string, MaterialReuseSummary>> => {
+  const map = new Map<string, MaterialReuseSummary>();
+  if (materialIds.length === 0) {
+    return map;
+  }
+
+  for (const materialId of materialIds) {
+    map.set(materialId, emptyReuseSummary());
+  }
+
+  const [materials, completedGroups] = await Promise.all([
+    prisma.material.findMany({
+      where: { id: { in: materialIds } },
+      select: {
+        id: true,
+        reusedAt: true,
+        status: true,
+      },
+    }),
+    prisma.reservation.groupBy({
+      by: ["materialId"],
+      where: {
+        materialId: { in: materialIds },
+        status: "COMPLETED",
+      },
+      _max: {
+        completedAt: true,
+      },
+    }),
+  ]);
+
+  for (const material of materials) {
+    map.set(material.id, {
+      reusedCount: material.reusedAt != null || material.status === "REUSED" ? 1 : 0,
+      lastCompletedAt: null,
+    });
+  }
+
+  for (const group of completedGroups) {
+    const entry = map.get(group.materialId) ?? emptyReuseSummary();
+    entry.lastCompletedAt = group._max.completedAt ?? null;
+    map.set(group.materialId, entry);
+  }
+
+  return map;
+};
+
+export const countActiveReservationsForMaterial = async (materialId: string) => {
+  return prisma.reservation.count({
+    where: {
+      materialId,
+      status: { in: [...MATERIAL_DEMAND_ACTIVE_STATUSES] },
+    },
+  });
+};
+
+const supplierMaterialReservationInclude = {
+  requester: {
+    select: {
+      id: true,
+      displayName: true,
+      profileImageUrl: true,
+    },
+  },
+  deliveries: {
+    select: {
+      id: true,
+      status: true,
+    },
+    orderBy: { requestedAt: "desc" as const },
+    take: 1,
+  },
+  _count: {
+    select: {
+      deliveries: true,
+    },
+  },
+} satisfies Prisma.ReservationInclude;
+
+export type SupplierMaterialReservationRecord = Prisma.ReservationGetPayload<{
+  include: typeof supplierMaterialReservationInclude;
+}>;
+
+export const findReservationsForSupplierMaterial = async (
+  scope: SupplierMaterialScope,
+  materialId: string,
+) => {
+  return prisma.reservation.findMany({
+    where: {
+      materialId,
+      material: buildSupplierMaterialWhere(scope),
+    },
+    include: supplierMaterialReservationInclude,
+    orderBy: { createdAt: "desc" },
+  });
+};
+
+const supplierMaterialStatusMutationSelect = {
+  id: true,
+  status: true,
+  updatedAt: true,
+} satisfies Prisma.MaterialSelect;
+
+export const updateSupplierOwnedMaterialStatus = async (
+  scope: SupplierMaterialScope,
+  materialId: string,
+  status: "AVAILABLE" | "UNAVAILABLE",
+) => {
+  const existing = await prisma.material.findFirst({
+    where: {
+      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+    },
+    select: { id: true },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  return prisma.material.update({
+    where: { id: materialId },
+    data: {
+      status,
+      ...(status === "AVAILABLE"
+        ? {
+            moderationReason: null,
+            moderatedAt: null,
+            moderatedById: null,
+          }
+        : {}),
+    },
+    select: supplierMaterialStatusMutationSelect,
+  });
+};
+

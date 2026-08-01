@@ -1,58 +1,51 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class SupplierSelectedCoordinatesPanel extends StatelessWidget {
   const SupplierSelectedCoordinatesPanel({
     super.key,
     required this.latitude,
     required this.longitude,
-    this.showCaptureHelper = false,
+    this.helperMessage,
   });
 
   final double latitude;
   final double longitude;
-  final bool showCaptureHelper;
+  final String? helperMessage;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.profileSectionPanel,
+      decoration: context.supplierDecorations.profileSectionPanel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Selected coordinates',
-            style: AuthDarkTextStyles.label(context).copyWith(
-              color: AuthDarkColors.textPrimary,
+            context.s.selectedCoordinates,
+            style: context.supplierLabel().copyWith(
+              color: colors.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Latitude: ${latitude.toStringAsFixed(5)}',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.accent,
-            ),
+            context.s.latitudeLabel(latitude.toStringAsFixed(5)),
+            style: context.supplierBody().copyWith(color: colors.accent),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Longitude: ${longitude.toStringAsFixed(5)}',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.accent,
-            ),
+            context.s.longitudeLabel(longitude.toStringAsFixed(5)),
+            style: context.supplierBody().copyWith(color: colors.accent),
           ),
-          if (showCaptureHelper) ...[
+          if (helperMessage != null && helperMessage!.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Coordinates captured. Please confirm country, city, and area manually.',
-              style: AuthDarkTextStyles.body(context),
-            ),
+            Text(helperMessage!, style: context.supplierBody()),
           ],
         ],
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'external_document.dart';
+
 class ApiConfig {
   const ApiConfig._();
 
@@ -23,5 +25,25 @@ class ApiConfig {
     }
 
     return 'http://localhost:4000';
+  }
+
+  static String resolveMediaUrl(String url) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+
+    if (url.startsWith('/')) {
+      return '$baseUrl$url';
+    }
+
+    return '$baseUrl/$url';
+  }
+
+  static void openExternalDocument(String url) {
+    final resolved = resolveMediaUrl(url);
+
+    if (kIsWeb) {
+      openExternalDocumentUrl(resolved);
+    }
   }
 }

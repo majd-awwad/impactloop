@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app_radius.dart';
 import 'app_spacing.dart';
+import 'app_color_tokens.dart';
 import 'auth_dark_colors.dart';
 
 abstract final class AuthDarkDecorations {
@@ -23,7 +24,7 @@ abstract final class AuthDarkDecorations {
     end: Alignment.bottomRight,
     colors: [
       AuthDarkColors.backgroundElevated,
-      Color(0xFF10362E),
+      AppColorTokens.legacyAuthDecorationMid,
       AuthDarkColors.background,
     ],
   );

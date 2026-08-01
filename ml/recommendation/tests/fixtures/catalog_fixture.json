@@ -1,0 +1,34 @@
+{
+  "materials": [
+    {
+      "material_key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "category_key": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "category_label": "Invented Category",
+      "material_type": "invented-board",
+      "material_type_label": "Invented Board",
+      "concept_keys": ["invented-concept"],
+      "concept_labels": ["Invented Concept"],
+      "condition": "USED_GOOD",
+      "is_free": true,
+      "price_bucket": "FREE",
+      "pickup_allowed": true,
+      "delivery_allowed": false,
+      "public_state": "AVAILABLE",
+      "publication_timestamp": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "projects": [
+    {
+      "project_key": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "category_key": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "category_label": "Invented Category",
+      "concept_keys": ["invented-concept"],
+      "concept_labels": ["Invented Concept"],
+      "difficulty": "BEGINNER",
+      "component_concept_keys": ["invented-component"],
+      "component_concept_labels": ["Invented Component"],
+      "public_state": "PUBLISHED",
+      "publication_timestamp": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}

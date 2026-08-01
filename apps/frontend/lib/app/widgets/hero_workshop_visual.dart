@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import '../theme/auth_dark_colors.dart';
-import '../theme/auth_dark_decorations.dart';
 import '../theme/auth_dark_text_styles.dart';
+import '../theme/landing_colors.dart';
 
 /// Hero workshop photo with premium impact overlays.
 class HeroWorkshopVisual extends StatelessWidget {
@@ -14,6 +13,9 @@ class HeroWorkshopVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ClipRRect(
       borderRadius: AppRadius.xlAll,
       child: AspectRatio(
@@ -27,11 +29,17 @@ class HeroWorkshopVisual extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    AuthDarkColors.background.withValues(alpha: 0.28),
-                    AuthDarkColors.background.withValues(alpha: 0.18),
-                    AuthDarkColors.background.withValues(alpha: 0.9),
-                  ],
+                  colors: isDark
+                      ? [
+                          colors.background.withValues(alpha: 0.22),
+                          colors.background.withValues(alpha: 0.12),
+                          colors.background.withValues(alpha: 0.72),
+                        ]
+                      : [
+                          colors.background.withValues(alpha: 0.08),
+                          colors.backgroundAlt.withValues(alpha: 0.12),
+                          colors.primary.withValues(alpha: 0.18),
+                        ],
                   stops: const [0.0, 0.35, 1.0],
                 ),
               ),
@@ -57,17 +65,22 @@ class HeroWorkshopVisual extends StatelessWidget {
 class _BackgroundImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Image.asset(
       HeroWorkshopVisual._heroImageAsset,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
         return DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: AuthDarkDecorations.pageGradient,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [colors.backgroundAlt, colors.background],
+            ),
           ),
           child: Stack(
             children: [
-              ...AuthDarkDecorations.backgroundBlobs(),
               const Positioned.fill(child: _AbstractWorkshopPattern()),
             ],
           ),
@@ -82,31 +95,28 @@ class _ImpactBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.9),
+        color: colors.surfaceElevated.withValues(alpha: 0.92),
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.auto_awesome,
-            size: 16,
-            color: AuthDarkColors.accent,
-          ),
+          Icon(Icons.auto_awesome, size: 16, color: colors.accentAmber),
           const SizedBox(width: AppSpacing.xs),
           Text(
             'Impact first',
-            style: AuthDarkTextStyles.body(context).copyWith(
-              color: AuthDarkColors.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: colors.textPrimary, fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -117,6 +127,8 @@ class _ImpactBadge extends StatelessWidget {
 class _ImpactCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -125,9 +137,9 @@ class _ImpactCard extends StatelessWidget {
         AppSpacing.lg,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.94),
+        color: colors.surfaceGlass,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: colors.borderStrong),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,12 +150,12 @@ class _ImpactCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: AuthDarkColors.accentSoft,
+                  color: colors.primarySoft,
                   borderRadius: AppRadius.mdAll,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.eco_rounded,
-                  color: AuthDarkColors.accent,
+                  color: colors.accentMint,
                   size: 20,
                 ),
               ),
@@ -156,17 +168,15 @@ class _ImpactCard extends StatelessWidget {
                       'Make an impact',
                       style: AuthDarkTextStyles.title(
                         context,
-                      ).copyWith(fontSize: 22),
+                      ).copyWith(color: colors.textPrimary, fontSize: 22),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       'Every successful reuse turns overlooked materials into '
                       'projects, prototypes, and practical learning.',
-                      style: AuthDarkTextStyles.body(context).copyWith(
-                        color: AuthDarkColors.textPrimary.withValues(
-                          alpha: 0.88,
-                        ),
-                      ),
+                      style: AuthDarkTextStyles.body(
+                        context,
+                      ).copyWith(color: colors.textSecondary),
                     ),
                   ],
                 ),
@@ -225,16 +235,25 @@ class _PrimaryMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Materials reused', style: AuthDarkTextStyles.label(context)),
+        Text(
+          'Materials reused',
+          style: AuthDarkTextStyles.label(
+            context,
+          ).copyWith(color: colors.textMuted),
+        ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           '12,584+',
-          style: AuthDarkTextStyles.display(
-            context,
-          ).copyWith(fontSize: maxWidth < 360 ? 34 : 42, height: 1.0),
+          style: AuthDarkTextStyles.display(context).copyWith(
+            color: colors.textPrimary,
+            fontSize: maxWidth < 360 ? 34 : 42,
+            height: 1.0,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         const _ImpactBar(),
@@ -248,28 +267,37 @@ class _ImpactTrendCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.9),
+        color: colors.surfaceElevated,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Monthly lift', style: AuthDarkTextStyles.label(context)),
+          Text(
+            'Monthly lift',
+            style: AuthDarkTextStyles.label(
+              context,
+            ).copyWith(color: colors.textMuted),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             '+18%',
             style: AuthDarkTextStyles.title(
               context,
-            ).copyWith(fontSize: 28, color: AuthDarkColors.accent),
+            ).copyWith(fontSize: 28, color: colors.accentMint),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Momentum from workshop and campus reuse activity.',
-            style: AuthDarkTextStyles.body(context),
+            style: AuthDarkTextStyles.body(
+              context,
+            ).copyWith(color: colors.textSecondary),
           ),
         ],
       ),
@@ -282,6 +310,8 @@ class _ImpactBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(
@@ -289,9 +319,9 @@ class _ImpactBar extends StatelessWidget {
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.backgroundElevated.withValues(alpha: 0.92),
+        color: colors.surfaceElevated,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) => Column(
@@ -302,13 +332,15 @@ class _ImpactBar extends StatelessWidget {
                     'Reuse trend',
                     style: AuthDarkTextStyles.label(
                       context,
-                    ).copyWith(color: AuthDarkColors.accent),
+                    ).copyWith(color: colors.accentMint),
                   )
                 : Row(
                     children: [
                       Text(
                         'Reuse trend',
-                        style: AuthDarkTextStyles.label(context),
+                        style: AuthDarkTextStyles.label(
+                          context,
+                        ).copyWith(color: colors.textMuted),
                       ),
                       const Spacer(),
                       Flexible(
@@ -319,7 +351,7 @@ class _ImpactBar extends StatelessWidget {
                           textAlign: TextAlign.end,
                           style: AuthDarkTextStyles.label(
                             context,
-                          ).copyWith(color: AuthDarkColors.accent),
+                          ).copyWith(color: colors.accentMint),
                         ),
                       ),
                     ],
@@ -338,13 +370,15 @@ class _ImpactTrendLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Stack(
       alignment: Alignment.centerLeft,
       children: [
         Container(
           height: 6,
           decoration: BoxDecoration(
-            color: AuthDarkColors.surfaceSolid,
+            color: colors.border.withValues(alpha: 0.55),
             borderRadius: AppRadius.pillAll,
           ),
         ),
@@ -358,8 +392,8 @@ class _ImpactTrendLine extends StatelessWidget {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  AuthDarkColors.accent.withValues(alpha: 0.5),
-                  AuthDarkColors.accent,
+                  colors.accentMint.withValues(alpha: 0.45),
+                  colors.accentMint,
                 ],
               ),
             ),
@@ -388,17 +422,19 @@ class _TrendDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Container(
       width: active ? 10 : 8,
       height: active ? 10 : 8,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: active
-            ? AuthDarkColors.accent
-            : AuthDarkColors.textMuted.withValues(alpha: 0.55),
+            ? colors.accentMint
+            : colors.textMuted.withValues(alpha: 0.45),
         border: Border.all(
           color: active
-              ? AuthDarkColors.textPrimary.withValues(alpha: 0.2)
+              ? colors.textPrimary.withValues(alpha: 0.2)
               : Colors.transparent,
         ),
       ),
@@ -414,24 +450,28 @@ class _MiniStatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.chipUnselected,
+        color: colors.surfaceElevated,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: RichText(
         text: TextSpan(
-          style: AuthDarkTextStyles.body(context),
+          style: AuthDarkTextStyles.body(
+            context,
+          ).copyWith(color: colors.textSecondary),
           children: [
             TextSpan(
               text: '$value ',
               style: AuthDarkTextStyles.body(context).copyWith(
-                color: AuthDarkColors.textPrimary,
+                color: colors.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -448,6 +488,8 @@ class _AbstractWorkshopPattern extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Stack(
       children: [
         Positioned(
@@ -458,7 +500,7 @@ class _AbstractWorkshopPattern extends StatelessWidget {
             height: 110,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AuthDarkColors.blobAccent,
+              color: colors.accentMint.withValues(alpha: 0.16),
             ),
           ),
         ),
@@ -470,7 +512,7 @@ class _AbstractWorkshopPattern extends StatelessWidget {
             height: 160,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AuthDarkColors.blobPrimary,
+              color: colors.primary.withValues(alpha: 0.18),
             ),
           ),
         ),
@@ -478,7 +520,10 @@ class _AbstractWorkshopPattern extends StatelessWidget {
           left: 36,
           right: 36,
           bottom: 120,
-          child: Container(height: 1, color: AuthDarkColors.border),
+          child: Container(
+            height: 1,
+            color: colors.borderStrong.withValues(alpha: 0.28),
+          ),
         ),
       ],
     );

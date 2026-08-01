@@ -25,23 +25,41 @@ class LearnerProfile {
 
 class SupplierProfile {
   const SupplierProfile({
+    this.id,
     required this.supplierType,
     required this.publicName,
     this.description,
     this.pickupAreaLabel,
+    this.verificationStatus = 'NOT_REQUIRED',
+    this.verificationAdminNote,
+    this.verificationSubmittedAt,
+    this.verificationDocumentName,
   });
 
+  final String? id;
   final String supplierType;
   final String publicName;
   final String? description;
   final String? pickupAreaLabel;
+  final String verificationStatus;
+  final String? verificationAdminNote;
+  final DateTime? verificationSubmittedAt;
+  final String? verificationDocumentName;
 
   factory SupplierProfile.fromJson(Map<String, dynamic> json) {
     return SupplierProfile(
+      id: json['id'] as String?,
       supplierType: json['supplierType'] as String? ?? '',
       publicName: json['publicName'] as String? ?? '',
       description: json['description'] as String?,
       pickupAreaLabel: json['pickupAreaLabel'] as String?,
+      verificationStatus:
+          json['verificationStatus'] as String? ?? 'NOT_REQUIRED',
+      verificationAdminNote: json['verificationAdminNote'] as String?,
+      verificationSubmittedAt: json['verificationSubmittedAt'] == null
+          ? null
+          : DateTime.tryParse(json['verificationSubmittedAt'] as String),
+      verificationDocumentName: json['verificationDocumentName'] as String?,
     );
   }
 }
@@ -55,9 +73,16 @@ class User {
     required this.accountStatus,
     this.profileImageUrl,
     required this.roles,
+    this.activeRole = 'LEARNER',
+    this.canSwitchToLearner = false,
+    this.canSwitchToSupplier = false,
+    this.canBecomeLearner = false,
+    this.defaultPortalRoute = '/home',
     this.learnerProfile,
     this.supplierProfile,
     this.emailVerifiedAt,
+    this.phoneVerifiedAt,
+    this.lastLoginAt,
     required this.createdAt,
   });
 
@@ -68,10 +93,23 @@ class User {
   final String accountStatus;
   final String? profileImageUrl;
   final List<String> roles;
+  final String activeRole;
+  final bool canSwitchToLearner;
+  final bool canSwitchToSupplier;
+  final bool canBecomeLearner;
+  final String defaultPortalRoute;
   final LearnerProfile? learnerProfile;
   final SupplierProfile? supplierProfile;
   final DateTime? emailVerifiedAt;
+  final DateTime? phoneVerifiedAt;
+  final DateTime? lastLoginAt;
   final DateTime createdAt;
+
+  bool get isLearnerMode => activeRole.trim().toUpperCase() == 'LEARNER';
+
+  bool get isSupplierMode => activeRole.trim().toUpperCase() == 'SUPPLIER';
+
+  bool get isDriverMode => activeRole.trim().toUpperCase() == 'DRIVER';
 
   bool hasRole(String role) {
     final normalizedRole = role.trim().toUpperCase();
@@ -91,6 +129,13 @@ class User {
       accountStatus: json['accountStatus'] as String? ?? 'PENDING_VERIFICATION',
       profileImageUrl: json['profileImageUrl'] as String?,
       roles: parsedRoles,
+      activeRole:
+          (json['activeRole'] as String?)?.trim().toUpperCase() ??
+          (parsedRoles.isNotEmpty ? parsedRoles.first : 'LEARNER'),
+      canSwitchToLearner: json['canSwitchToLearner'] as bool? ?? false,
+      canSwitchToSupplier: json['canSwitchToSupplier'] as bool? ?? false,
+      canBecomeLearner: json['canBecomeLearner'] as bool? ?? false,
+      defaultPortalRoute: json['defaultPortalRoute'] as String? ?? '/home',
       learnerProfile: learnerProfileJson is Map<String, dynamic>
           ? LearnerProfile.fromJson(learnerProfileJson)
           : null,
@@ -100,6 +145,10 @@ class User {
       emailVerifiedAt: DateTime.tryParse(
         json['emailVerifiedAt'] as String? ?? '',
       ),
+      phoneVerifiedAt: DateTime.tryParse(
+        json['phoneVerifiedAt'] as String? ?? '',
+      ),
+      lastLoginAt: DateTime.tryParse(json['lastLoginAt'] as String? ?? ''),
       createdAt:
           DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),

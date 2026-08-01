@@ -1,39 +1,52 @@
 import 'package:flutter/material.dart';
 
+import 'app_color_tokens.dart';
+
 /// Central color tokens for ImpactLoop. Do not hardcode colors in feature UI.
 abstract final class AppColors {
-  static const Color primary = Color(0xFF0891B2);
-  static const Color primaryContainer = Color(0xFFCFFAFE);
-  static const Color secondary = Color(0xFF38BDF8);
-  static const Color secondaryContainer = Color(0xFFE0F2FE);
-  static const Color accent = Color(0xFF2DD4BF);
-  static const Color accentSoft = Color(0xFFCCFBF1);
+  static const Color primary = AppColorTokens.forest;
+  static const Color primaryContainer = AppColorTokens.lightSurfaceSoft;
+  static const Color secondary = AppColorTokens.teal;
+  static const Color secondaryContainer = AppColorTokens.lightFallbackMid;
+  static const Color accent = AppColorTokens.emerald;
+  static const Color accentSoft = AppColorTokens.lightSurfaceSoft;
 
-  static const Color background = Color(0xFFF0F9FF);
-  static const Color surface = Color(0xFFF8FDFF);
-  static const Color surfaceElevated = Color(0xFFFFFFFF);
+  static const Color background = AppColorTokens.lightBackground;
+  static const Color surface = AppColorTokens.lightSurface;
+  static const Color surfaceElevated = AppColorTokens.lightSurface;
+  static const Color surfaceContainer = AppColorTokens.lightSurfaceElevated;
 
-  static const Color brandingGradientStart = Color(0xFF0E7490);
-  static const Color brandingGradientEnd = Color(0xFF0891B2);
-  static const Color brandingGradientMid = Color(0xFF22D3EE);
+  static const Color brandingGradientStart = AppColorTokens.forest;
+  static const Color brandingGradientEnd = AppColorTokens.teal;
+  static const Color brandingGradientMid = AppColorTokens.emerald;
 
-  static const Color blobPrimary = Color(0x3D0891B2);
-  static const Color blobSecondary = Color(0x3338BDF8);
-  static const Color blobAccent = Color(0x2D2DD4BF);
+  static const Color blobPrimary = AppColorTokens.lightBlobPrimary;
+  static const Color blobSecondary = AppColorTokens.lightBlobSecondary;
+  static const Color blobAccent = AppColorTokens.lightBlobAccent;
 
-  static const Color textPrimary = Color(0xFF0F172A);
-  static const Color textSecondary = Color(0xFF475569);
-  static const Color textOnBrand = Color(0xFFFFFFFF);
-  static const Color textOnBrandMuted = Color(0xFFCFFAFE);
+  static const Color textPrimary = AppColorTokens.textPrimary;
+  static const Color textSecondary = AppColorTokens.textSecondary;
+  static const Color textOnBrand = AppColorTokens.lightSurface;
+  static const Color textOnBrandMuted = AppColorTokens.lightFallbackMid;
 
-  static const Color border = Color(0xFFBAE6FD);
-  static const Color borderFocused = Color(0xFF0891B2);
+  static const Color border = AppColorTokens.lightBorderAlt;
+  static const Color borderFocused = AppColorTokens.forest;
 
-  static const Color error = Color(0xFFD32F2F);
-  static const Color errorSurface = Color(0xFFFFEBEE);
+  static const Color error = AppColorTokens.dangerLight;
+  static const Color errorSurface = AppColorTokens.lightWarmSurface;
 
-  static const Color link = Color(0xFF0E7490);
-  static const Color shadow = Color(0x140891B2);
+  static const Color link = AppColorTokens.forest;
+  static const Color shadow = AppColorTokens.shadow;
+
+  static const Color darkPrimary = AppColorTokens.mintBright;
+  static const Color darkSecondary = AppColorTokens.mintDark;
+  static const Color darkBackground = AppColorTokens.darkBackground;
+  static const Color darkSurface = AppColorTokens.darkSurface;
+  static const Color darkSurfaceContainer = AppColorTokens.darkSurfaceSoft;
+  static const Color darkSurfaceElevated = AppColorTokens.darkSurfaceElevated;
+  static const Color darkTextPrimary = AppColorTokens.darkTextPrimary;
+  static const Color darkTextSecondary = AppColorTokens.darkTextMuted;
+  static const Color darkBorder = AppColorTokens.darkBorder;
 
   /// Legacy alias used by ColorScheme seed.
   static const Color seed = primary;

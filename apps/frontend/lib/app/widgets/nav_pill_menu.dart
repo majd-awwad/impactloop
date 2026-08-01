@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
-import '../theme/auth_dark_colors.dart';
 import '../theme/auth_dark_text_styles.dart';
+import '../theme/app_theme_colors.dart';
 
 class NavPillMenu<T> extends StatelessWidget {
   const NavPillMenu({
@@ -25,14 +25,22 @@ class NavPillMenu<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final surface = colors.surfaceElevated;
+    final selectedSurface = colors.primarySoft;
+    final hoverSurface = colors.surfaceMuted;
+    final primaryText = colors.textPrimary;
+    final secondaryText = colors.textSecondary;
+    final border = colors.borderSubtle;
+
     return MenuAnchor(
       style: MenuStyle(
-        backgroundColor: WidgetStatePropertyAll(AuthDarkColors.surfaceSolid),
+        backgroundColor: WidgetStatePropertyAll(surface),
         elevation: const WidgetStatePropertyAll(8),
         shape: WidgetStatePropertyAll(
           RoundedRectangleBorder(
             borderRadius: AppRadius.mdAll,
-            side: const BorderSide(color: AuthDarkColors.border),
+            side: BorderSide(color: border),
           ),
         ),
         padding: const WidgetStatePropertyAll(
@@ -59,16 +67,16 @@ class NavPillMenu<T> extends StatelessWidget {
             style: ButtonStyle(
               foregroundColor: WidgetStateProperty.resolveWith((states) {
                 if (states.contains(WidgetState.hovered)) {
-                  return AuthDarkColors.textPrimary;
+                  return primaryText;
                 }
-                return AuthDarkColors.textSecondary;
+                return secondaryText;
               }),
               backgroundColor: WidgetStateProperty.resolveWith((states) {
                 if (item == selectedValue) {
-                  return AuthDarkColors.chipSelected;
+                  return selectedSurface;
                 }
                 if (states.contains(WidgetState.hovered)) {
-                  return AuthDarkColors.chipUnselected;
+                  return hoverSurface;
                 }
                 return Colors.transparent;
               }),
@@ -85,9 +93,7 @@ class NavPillMenu<T> extends StatelessWidget {
               child: Text(
                 itemLabel(item),
                 style: AuthDarkTextStyles.body(context).copyWith(
-                  color: item == selectedValue
-                      ? AuthDarkColors.textPrimary
-                      : AuthDarkColors.textSecondary,
+                  color: item == selectedValue ? primaryText : secondaryText,
                   fontWeight: item == selectedValue
                       ? FontWeight.w600
                       : FontWeight.w400,
@@ -115,6 +121,14 @@ class _NavPillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final accent = colors.primary;
+    final surface = colors.surfaceElevated;
+    final primaryText = colors.textPrimary;
+    final secondaryText = colors.textSecondary;
+    final border = colors.borderSubtle;
+    final focusedBorder = colors.primary;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -125,32 +139,28 @@ class _NavPillButton extends StatelessWidget {
             horizontal: AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
+          height: 42,
           decoration: BoxDecoration(
-            color: AuthDarkColors.chipUnselected,
+            color: surface,
             borderRadius: AppRadius.pillAll,
-            border: Border.all(
-              color: isOpen
-                  ? AuthDarkColors.borderFocused
-                  : AuthDarkColors.border,
-            ),
+            border: Border.all(color: isOpen ? focusedBorder : border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 18, color: AuthDarkColors.accent),
+              Icon(icon, size: 18, color: accent),
               const SizedBox(width: AppSpacing.sm),
               Text(
                 label,
-                style: AuthDarkTextStyles.body(context).copyWith(
-                  color: AuthDarkColors.textPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: AuthDarkTextStyles.body(
+                  context,
+                ).copyWith(color: primaryText, fontWeight: FontWeight.w500),
               ),
               const SizedBox(width: AppSpacing.xs),
               Icon(
                 isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                 size: 18,
-                color: AuthDarkColors.textSecondary,
+                color: secondaryText,
               ),
             ],
           ),

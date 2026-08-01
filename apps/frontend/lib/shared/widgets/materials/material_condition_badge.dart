@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_radius.dart';
-import '../../../app/theme/app_text_styles.dart';
-import 'materials_ui_palette.dart';
+import '../../../app/theme/app_spacing.dart';
+import '../../../app/theme/app_theme_colors.dart';
 
-enum MaterialConditionBadgeTone {
-  likeNew,
-  good,
-  fair,
-  mixed,
-}
+enum MaterialConditionBadgeTone { likeNew, good, fair, mixed }
 
 class MaterialConditionBadge extends StatelessWidget {
   const MaterialConditionBadge({
@@ -23,33 +18,35 @@ class MaterialConditionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final palette = switch (tone) {
       MaterialConditionBadgeTone.likeNew => (
-        background: materialConditionLikeNewBackground,
-        foreground: materialConditionLikeNewForeground,
-        border: materialBorderStrong,
+        background: colors.cardSurfaceAlt,
+        foreground: colors.textPrimary,
+        border: colors.borderSubtle,
       ),
       MaterialConditionBadgeTone.good => (
-        background: materialConditionGoodBackground,
-        foreground: materialConditionGoodForeground,
-        border: materialBorderStrong,
+        background: colors.cardSurfaceAlt,
+        foreground: colors.textSecondary,
+        border: colors.borderSubtle,
       ),
       MaterialConditionBadgeTone.fair => (
-        background: materialConditionFairBackground,
-        foreground: materialConditionFairForeground,
-        border: materialReservedBorder,
+        background: colors.warningSoft,
+        foreground: colors.warningText,
+        border: colors.warningBorder,
       ),
       MaterialConditionBadgeTone.mixed => (
-        background: materialConditionMixedBackground,
-        foreground: materialConditionMixedForeground,
-        border: materialBorderSubtle,
+        background: colors.surfaceMuted,
+        foreground: colors.textSecondary,
+        border: colors.borderSubtle,
       ),
     };
 
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: materialBadgeHorizontalPadding,
-        vertical: materialBadgeVerticalPadding,
+        horizontal: AppSpacing.md - AppSpacing.xs,
+        vertical: AppSpacing.sm,
       ),
       decoration: BoxDecoration(
         color: palette.background,
@@ -58,11 +55,8 @@ class MaterialConditionBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: AppTextStyles.label(
-          context,
-        ).copyWith(
+        style: textTheme.labelSmall?.copyWith(
           color: palette.foreground,
-          fontSize: materialBadgeFontSize,
           fontWeight: FontWeight.w700,
           height: 1.1,
         ),

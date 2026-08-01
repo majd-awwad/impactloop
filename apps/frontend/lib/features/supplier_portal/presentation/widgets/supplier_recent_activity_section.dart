@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
+
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../data/models/supplier_dashboard_activity.dart';
 
 class SupplierRecentActivitySection extends StatelessWidget {
@@ -24,27 +23,26 @@ class SupplierRecentActivitySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Recent activity',
-          style: AuthDarkTextStyles.sectionTitle(context),
-        ),
+        Text(context.s.recentActivity, style: context.supplierSectionTitle()),
         const SizedBox(height: AppSpacing.md),
         if (activity.isEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: SupplierDecorations.dashboardCard,
+            decoration: context.supplierDecorations.dashboardCard,
             child: Row(
               children: [
-                const Icon(Icons.bolt_outlined, color: AuthDarkColors.accent),
+                Icon(Icons.bolt_outlined, color: colors.accent),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    'Activity from reservations and notifications will collect here.',
-                    style: AuthDarkTextStyles.body(context),
+                    context.s.noRecentActivity,
+                    style: context.supplierBody(),
                   ),
                 ),
               ],
@@ -56,15 +54,11 @@ class SupplierRecentActivitySection extends StatelessWidget {
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: SupplierDecorations.dashboardCard,
+              decoration: context.supplierDecorations.dashboardCard,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    _iconFor(item.type),
-                    color: AuthDarkColors.accent,
-                    size: 20,
-                  ),
+                  Icon(_iconFor(item.type), color: colors.accent, size: 20),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(
@@ -72,16 +66,13 @@ class SupplierRecentActivitySection extends StatelessWidget {
                       children: [
                         Text(
                           item.title,
-                          style: AuthDarkTextStyles.label(context).copyWith(
-                            color: AuthDarkColors.textPrimary,
+                          style: context.supplierLabel().copyWith(
+                            color: colors.textPrimary,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          item.body,
-                          style: AuthDarkTextStyles.body(context),
-                        ),
+                        Text(item.body, style: context.supplierBody()),
                       ],
                     ),
                   ),

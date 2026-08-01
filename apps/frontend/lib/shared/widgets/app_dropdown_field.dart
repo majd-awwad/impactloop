@@ -15,7 +15,7 @@ class AppDropdownField<T> extends StatelessWidget {
   final String label;
   final T? value;
   final List<DropdownMenuItem<T>> items;
-  final ValueChanged<T?> onChanged;
+  final ValueChanged<T?>? onChanged;
   final String? Function(T?)? validator;
   final String? hint;
   final String? errorText;
@@ -25,15 +25,47 @@ class AppDropdownField<T> extends StatelessWidget {
     return DropdownButtonFormField<T>(
       key: ValueKey<T?>(value),
       initialValue: value,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         floatingLabelBehavior: FloatingLabelBehavior.always,
       ),
-      items: items,
+      items: items
+          .map(
+            (item) => DropdownMenuItem<T>(
+              value: item.value,
+              enabled: item.enabled,
+              alignment: item.alignment,
+              child: _ellipsisDropdownChild(item.child),
+            ),
+          )
+          .toList(),
+      selectedItemBuilder: (context) => items
+          .map(
+            (item) => Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _ellipsisDropdownChild(item.child),
+            ),
+          )
+          .toList(),
       onChanged: onChanged,
       validator: validator,
       forceErrorText: errorText,
     );
   }
+}
+
+Widget _ellipsisDropdownChild(Widget? child) {
+  if (child is Text) {
+    return Text(
+      child.data ?? '',
+      style: child.style,
+      overflow: TextOverflow.ellipsis,
+      maxLines: 1,
+      textAlign: child.textAlign,
+    );
+  }
+
+  return child ?? const SizedBox.shrink();
 }

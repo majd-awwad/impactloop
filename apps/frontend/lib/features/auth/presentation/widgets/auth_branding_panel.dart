@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
-import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_decorations.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/app_theme_colors.dart';
 import 'auth_feature_badge.dart';
 
 enum AuthBrandingVariant { full, compact }
@@ -50,6 +50,8 @@ class AuthBrandingPanel extends StatelessWidget {
 class _FullContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(
@@ -64,14 +66,10 @@ class _FullContent extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.sm),
                   decoration: BoxDecoration(
-                    color: AppColors.textOnBrand.withValues(alpha: 0.14),
+                    color: colors.textOnPrimary.withValues(alpha: 0.14),
                     borderRadius: AppRadius.smAll,
                   ),
-                  child: const Icon(
-                    Icons.eco,
-                    color: AppColors.textOnBrand,
-                    size: 28,
-                  ),
+                  child: Icon(Icons.eco, color: colors.textOnPrimary, size: 28),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text('ImpactLoop', style: AppTextStyles.brandingTitle(context)),
@@ -103,6 +101,8 @@ class _FullContent extends StatelessWidget {
 class _CompactContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final colors = AppThemeColors.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -111,14 +111,10 @@ class _CompactContent extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: AppColors.textOnBrand.withValues(alpha: 0.14),
+                color: colors.textOnPrimary.withValues(alpha: 0.14),
                 borderRadius: AppRadius.smAll,
               ),
-              child: const Icon(
-                Icons.eco,
-                color: AppColors.textOnBrand,
-                size: 22,
-              ),
+              child: Icon(Icons.eco, color: colors.textOnPrimary, size: 22),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(

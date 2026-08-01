@@ -1,13 +1,19 @@
 import { z } from 'zod';
 
 import { bodyEmailSchema } from '../../utils/zod-helpers.js';
+import { optionalLearnerInterestsFieldSchema } from '../learner-home/learner-interests.validation.js';
+import {
+  isBlockedBecomeSupplierType,
+  isPersonalBecomeSupplierType,
+  ORGANIZATION_BECOME_SUPPLIER_MESSAGE,
+} from './role-capabilities.js';
 
 export const PUBLIC_SIGNUP_ROLES = ['LEARNER', 'SUPPLIER'] as const;
 
 const learnerProfileSchema = z.object({
   learnerType: z.string().trim().min(1).max(100),
   skillLevel: z.string().trim().min(1).max(100),
-  interests: z.array(z.string().trim().min(1).max(100)).optional(),
+  interests: optionalLearnerInterestsFieldSchema,
   bio: z.string().trim().max(2000).optional(),
 });
 
@@ -124,3 +130,45 @@ export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+const becomeSupplierProfileSchema = z
+  .object({
+    supplierType: z.string().trim().min(1).max(100),
+    publicName: z.string().trim().min(1).max(100),
+    description: z.string().trim().max(2000).optional(),
+    pickupArea: z.string().trim().min(1).max(200),
+    workingHours: z.string().trim().max(200).optional(),
+    pickupNotes: z.string().trim().max(500).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (isBlockedBecomeSupplierType(data.supplierType)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: ORGANIZATION_BECOME_SUPPLIER_MESSAGE,
+        path: ['supplierType'],
+      });
+      return;
+    }
+
+    if (!isPersonalBecomeSupplierType(data.supplierType)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Unsupported supplier type for this flow.',
+        path: ['supplierType'],
+      });
+    }
+  });
+
+export const becomeSupplierSchema = becomeSupplierProfileSchema;
+
+export const becomeLearnerSchema = learnerProfileSchema;
+
+export const switchRoleSchema = z.object({
+  activeRole: z.enum(['LEARNER', 'SUPPLIER'], {
+    error: 'activeRole must be LEARNER or SUPPLIER',
+  }),
+});
+
+export type BecomeSupplierInput = z.infer<typeof becomeSupplierSchema>;
+export type BecomeLearnerInput = z.infer<typeof becomeLearnerSchema>;
+export type SwitchRoleInput = z.infer<typeof switchRoleSchema>;

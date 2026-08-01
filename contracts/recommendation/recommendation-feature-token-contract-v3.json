@@ -1,0 +1,386 @@
+{
+  "contractId": "recommendation-feature-token-contract-v3",
+  "contractVersion": "3.0.0",
+  "status": {
+    "lifecycle": "SPECIFICATION_ONLY",
+    "runtimeActivation": "INACTIVE",
+    "aggregationBlocked": true
+  },
+  "supportedDomains": ["material", "project"],
+  "tokenGrammarVersion": "recommendation-canonical-feature-token-grammar-v1",
+  "taxonomyCompatibility": {
+    "sourceId": "impactloop-taxonomy-foundation",
+    "sourceModule": "apps/backend/src/modules/taxonomy/taxonomy-foundation.data.ts",
+    "membershipMode": "EXACT_CANONICAL_KEY_AND_CONCEPT_TYPE",
+    "fingerprintAlgorithm": "SHA-256",
+    "fingerprintSerialization": "Sort by canonicalKey using ASCII order; serialize each entry as <conceptType>\\t<canonicalKey>; join with LF; encode as UTF-8. Aliases, labels, and mapping rules are excluded.",
+    "taxonomyVocabularyFingerprint": "c84173df47de8dfc547e5d68277fbf789b9e0a27561be08221e5e0d88d3db370"
+  },
+  "normalization": {
+    "inputAliasResolution": "OUTSIDE_CONTRACT_UNICODE_SAFE",
+    "canonicalTokenIdentity": "EXACT_AFTER_RESOLUTION",
+    "vectorAggregation": "CONTRACT_SELECTED_AFTER_VALIDATION"
+  },
+  "namespaces": [
+    {
+      "id": "interest",
+      "tokenPattern": "^interest:[a-z0-9][a-z0-9./-]*$",
+      "valueSource": { "kind": "taxonomy", "conceptType": "INTEREST" }
+    },
+    {
+      "id": "material-family",
+      "tokenPattern": "^material-family:[a-z0-9][a-z0-9./-]*$",
+      "valueSource": { "kind": "taxonomy", "conceptType": "MATERIAL_FAMILY" }
+    },
+    {
+      "id": "material-form",
+      "tokenPattern": "^material-form:[a-z0-9][a-z0-9./-]*$",
+      "valueSource": { "kind": "taxonomy", "conceptType": "MATERIAL_FORM" }
+    },
+    {
+      "id": "project-topic",
+      "tokenPattern": "^project-topic:[a-z0-9][a-z0-9./-]*$",
+      "valueSource": { "kind": "taxonomy", "conceptType": "PROJECT_TOPIC" }
+    },
+    {
+      "id": "component",
+      "tokenPattern": "^component:[a-z0-9][a-z0-9./-]*$",
+      "valueSource": { "kind": "taxonomy", "conceptType": "COMPONENT" }
+    },
+    {
+      "id": "material-condition",
+      "tokenPattern": "^material-condition:[a-z][a-z0-9-]*$",
+      "valueSource": {
+        "kind": "enum",
+        "enumName": "MaterialCondition",
+        "values": [
+          { "sourceValue": "NEW", "tokenValue": "new" },
+          { "sourceValue": "LIKE_NEW", "tokenValue": "like-new" },
+          { "sourceValue": "GOOD", "tokenValue": "good" },
+          { "sourceValue": "USED", "tokenValue": "used" },
+          { "sourceValue": "NEEDS_REPAIR", "tokenValue": "needs-repair" }
+        ]
+      }
+    },
+    {
+      "id": "material-is-free",
+      "tokenPattern": "^material-is-free:(true|false)$",
+      "valueSource": {
+        "kind": "boolean",
+        "values": [
+          { "sourceValue": true, "tokenValue": "true" },
+          { "sourceValue": false, "tokenValue": "false" }
+        ]
+      }
+    },
+    {
+      "id": "material-pickup-allowed",
+      "tokenPattern": "^material-pickup-allowed:(true|false)$",
+      "valueSource": {
+        "kind": "boolean",
+        "values": [
+          { "sourceValue": true, "tokenValue": "true" },
+          { "sourceValue": false, "tokenValue": "false" }
+        ]
+      }
+    },
+    {
+      "id": "material-delivery-allowed",
+      "tokenPattern": "^material-delivery-allowed:(true|false)$",
+      "valueSource": {
+        "kind": "boolean",
+        "values": [
+          { "sourceValue": true, "tokenValue": "true" },
+          { "sourceValue": false, "tokenValue": "false" }
+        ]
+      }
+    },
+    {
+      "id": "project-difficulty",
+      "tokenPattern": "^project-difficulty:[a-z][a-z0-9-]*$",
+      "valueSource": {
+        "kind": "enum",
+        "enumName": "ProjectDifficulty",
+        "values": [
+          { "sourceValue": "BEGINNER", "tokenValue": "beginner" },
+          { "sourceValue": "INTERMEDIATE", "tokenValue": "intermediate" },
+          { "sourceValue": "ADVANCED", "tokenValue": "advanced" }
+        ]
+      }
+    }
+  ],
+  "featureGroups": [
+    {
+      "id": "user.declared-interest",
+      "side": "user",
+      "domains": ["material", "project"],
+      "namespaceId": "interest",
+      "cardinality": { "minimum": 1, "maximum": null },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "user.inferred-affinity",
+      "side": "user",
+      "domains": ["material", "project"],
+      "namespaceId": null,
+      "cardinality": { "minimum": null, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": null,
+      "portableRuntimeEligible": false,
+      "trainingSupport": "NOT_SUPPORTED",
+      "classification": "DEFERRED"
+    },
+    {
+      "id": "user.identity",
+      "side": "user",
+      "domains": ["material", "project"],
+      "namespaceId": null,
+      "cardinality": { "minimum": null, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": null,
+      "portableRuntimeEligible": false,
+      "trainingSupport": "WARM_EXPERIMENT_ONLY",
+      "classification": "TRAINING_ONLY"
+    },
+    {
+      "id": "user.preference",
+      "side": "user",
+      "domains": ["material", "project"],
+      "namespaceId": null,
+      "cardinality": { "minimum": null, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": null,
+      "portableRuntimeEligible": false,
+      "trainingSupport": "NOT_SUPPORTED",
+      "classification": "DEFERRED"
+    },
+    {
+      "id": "request.session-context",
+      "side": "user",
+      "domains": ["material", "project"],
+      "namespaceId": null,
+      "cardinality": { "minimum": null, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": null,
+      "portableRuntimeEligible": false,
+      "trainingSupport": "NOT_SUPPORTED",
+      "classification": "DEFERRED"
+    },
+    {
+      "id": "material.family",
+      "side": "item",
+      "domains": ["material"],
+      "namespaceId": "material-family",
+      "cardinality": { "minimum": 1, "maximum": null },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "material.form",
+      "side": "item",
+      "domains": ["material"],
+      "namespaceId": "material-form",
+      "cardinality": { "minimum": 0, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "material.condition",
+      "side": "item",
+      "domains": ["material"],
+      "namespaceId": "material-condition",
+      "cardinality": { "minimum": 1, "maximum": 1 },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "material.is-free",
+      "side": "item",
+      "domains": ["material"],
+      "namespaceId": "material-is-free",
+      "cardinality": { "minimum": 1, "maximum": 1 },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "material.pickup-allowed",
+      "side": "item",
+      "domains": ["material"],
+      "namespaceId": "material-pickup-allowed",
+      "cardinality": { "minimum": 1, "maximum": 1 },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "material.delivery-allowed",
+      "side": "item",
+      "domains": ["material"],
+      "namespaceId": "material-delivery-allowed",
+      "cardinality": { "minimum": 1, "maximum": 1 },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "project.topic",
+      "side": "item",
+      "domains": ["project"],
+      "namespaceId": "project-topic",
+      "cardinality": { "minimum": 1, "maximum": null },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "project.required-component",
+      "side": "item",
+      "domains": ["project"],
+      "namespaceId": "component",
+      "cardinality": { "minimum": 0, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "project.difficulty",
+      "side": "item",
+      "domains": ["project"],
+      "namespaceId": "project-difficulty",
+      "cardinality": { "minimum": 1, "maximum": 1 },
+      "requiredForScoring": true,
+      "baseWeight": 1.0,
+      "portableRuntimeEligible": true,
+      "trainingSupport": "SUPPORTED",
+      "classification": "SUPPORTED"
+    },
+    {
+      "id": "item.identity",
+      "side": "item",
+      "domains": ["material", "project"],
+      "namespaceId": null,
+      "cardinality": { "minimum": null, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": null,
+      "portableRuntimeEligible": false,
+      "trainingSupport": "WARM_EXPERIMENT_ONLY",
+      "classification": "TRAINING_ONLY"
+    },
+    {
+      "id": "synthetic.persona-attribute",
+      "side": "user",
+      "domains": ["material", "project"],
+      "namespaceId": null,
+      "cardinality": { "minimum": null, "maximum": null },
+      "requiredForScoring": false,
+      "baseWeight": null,
+      "portableRuntimeEligible": false,
+      "trainingSupport": "SYNTHETIC_EXPERIMENT_ONLY",
+      "classification": "TRAINING_ONLY"
+    }
+  ],
+  "weighting": {
+    "portableBaseWeight": 1.0,
+    "duplicateMode": "SET_DEDUPLICATE",
+    "conflictingDuplicateWeight": "REJECT",
+    "nonFiniteWeight": "REJECT",
+    "negativeWeight": "REJECT",
+    "declaredInterestWeighting": "UNIFORM"
+  },
+  "aggregation": {
+    "status": "PENDING_CONTROLLED_EXPERIMENT",
+    "selectedMode": null,
+    "candidateModes": ["weighted-sum", "weighted-mean", "l1", "l2"],
+    "scope": "One global mode applied independently to every user and item feature row in both domains.",
+    "portableActivationAllowed": false
+  },
+  "unknownAndUnsupportedPolicy": {
+    "unknownNamespace": "REJECT",
+    "unknownCanonicalTaxonomyKey": "REJECT",
+    "unknownClosedValue": "REJECT",
+    "unresolvedHumanInput": "OUTSIDE_CONTRACT",
+    "missingRequiredGroup": "INELIGIBLE_FOR_PORTABLE_SCORING",
+    "unsupportedPortableGroup": "REJECT",
+    "localizedLabelAsIdentity": "REJECT",
+    "generatedIdOrHashAsSemanticIdentity": "REJECT"
+  },
+  "deprecationPolicy": {
+    "mode": "REJECT_NO_AUTOMATIC_REWRITE",
+    "deprecatedTokens": []
+  },
+  "legacyCompatibility": {
+    "v3AcceptsLegacyArtifacts": false,
+    "historicalArtifactVersions": ["impactloop-lightfm-portable-v1"],
+    "historicalFeatureSchemaVersions": ["slice-3-approved-features-v1", "runtime-approved-features-v2"],
+    "rejectedTokenPrefixes": [
+      "category:",
+      "concept:",
+      "user_identity:",
+      "item_identity:",
+      "activity:",
+      "free_pref:",
+      "delivery_pref:",
+      "project_tendency:"
+    ]
+  },
+  "validExamples": [
+    { "token": "interest:arduino", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0 },
+    { "token": "material-family:electronics", "groupId": "material.family", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-form:arduino-uno", "groupId": "material.form", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-condition:new", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-condition:like-new", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-condition:good", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-condition:used", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-condition:needs-repair", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-is-free:true", "groupId": "material.is-free", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-is-free:false", "groupId": "material.is-free", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-pickup-allowed:true", "groupId": "material.pickup-allowed", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-pickup-allowed:false", "groupId": "material.pickup-allowed", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-delivery-allowed:true", "groupId": "material.delivery-allowed", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "material-delivery-allowed:false", "groupId": "material.delivery-allowed", "side": "item", "domain": "material", "weight": 1.0 },
+    { "token": "project-topic:robotics", "groupId": "project.topic", "side": "item", "domain": "project", "weight": 1.0 },
+    { "token": "component:dc-gear-motors", "groupId": "project.required-component", "side": "item", "domain": "project", "weight": 1.0 },
+    { "token": "project-difficulty:beginner", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0 },
+    { "token": "project-difficulty:intermediate", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0 },
+    { "token": "project-difficulty:advanced", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0 }
+  ],
+  "invalidExamples": [
+    { "token": "interest:interest:arduino", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0, "reason": "Doubled namespace" },
+    { "token": "concept:material-form:arduino-uno", "groupId": "material.form", "side": "item", "domain": "material", "weight": 1.0, "reason": "Legacy generic concept wrapper" },
+    { "token": "component:component:dc-motor", "groupId": "project.required-component", "side": "item", "domain": "project", "weight": 1.0, "reason": "Doubled namespace" },
+    { "token": "category:material-family:electronics", "groupId": "material.family", "side": "item", "domain": "material", "weight": 1.0, "reason": "Legacy generic category wrapper" },
+    { "token": "interest:Arduino", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0, "reason": "Display label is not canonical identity" },
+    { "token": "interest:إلكترونيات", "groupId": "user.declared-interest", "side": "user", "domain": "material", "weight": 1.0, "reason": "Localized label is not canonical identity" },
+    { "token": "custom:robotics", "groupId": "user.declared-interest", "side": "user", "domain": "project", "weight": 1.0, "reason": "Custom interest is unresolved" },
+    { "token": "material-family:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "groupId": "material.family", "side": "item", "domain": "material", "weight": 1.0, "reason": "Generated hash is not taxonomy membership" },
+    { "token": "material-condition:NEEDS_REPAIR", "groupId": "material.condition", "side": "item", "domain": "material", "weight": 1.0, "reason": "Enum token is not lower-kebab" },
+    { "token": "material-is-free:1", "groupId": "material.is-free", "side": "item", "domain": "material", "weight": 1.0, "reason": "Boolean token must be literal true or false" },
+    { "token": "project-difficulty:expert", "groupId": "project.difficulty", "side": "item", "domain": "project", "weight": 1.0, "reason": "Unknown closed enum value" },
+    { "token": "user_identity:sim_user_0001", "groupId": "user.identity", "side": "user", "domain": "material", "weight": 1.0, "reason": "Training identity is prohibited from portable features" },
+    { "token": "activity:high", "groupId": "synthetic.persona-attribute", "side": "user", "domain": "material", "weight": 1.0, "reason": "Synthetic feature is prohibited from portable features" }
+  ]
+}

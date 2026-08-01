@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import '../../../auth/application/auth_controller.dart';
+import '../../application/supplier_verification_access.dart';
 import '../../data/models/supplier_dashboard.dart';
+import '../../data/models/supplier_dashboard_stats.dart';
 import '../controllers/supplier_dashboard_providers.dart';
+import '../theme/supplier_theme_extension.dart';
+import '../widgets/dashboard/supplier_category_demand_panel.dart';
+import '../widgets/dashboard/supplier_dashboard_chart_card.dart';
+import '../widgets/dashboard/supplier_dashboard_hero.dart';
+import '../widgets/dashboard/supplier_dashboard_quick_actions_panel.dart';
+import '../widgets/dashboard/supplier_dashboard_recent_activity_panel.dart';
+import '../widgets/dashboard/supplier_dashboard_insights_panel.dart';
+import '../widgets/dashboard/supplier_dashboard_stat_card.dart';
+import '../widgets/dashboard/supplier_materials_status_chart.dart';
+import '../widgets/dashboard/supplier_project_impact_panel.dart';
+import '../widgets/dashboard/supplier_reservation_status_chart.dart';
 import '../widgets/supplier_empty_dashboard_state.dart';
-import '../widgets/supplier_hero_panel.dart';
-import '../widgets/supplier_quick_action_card.dart';
-import '../widgets/supplier_recent_activity_section.dart';
-import '../widgets/supplier_recent_materials_section.dart';
-import '../widgets/supplier_stat_card.dart';
-import '../widgets/supplier_upcoming_pickups_section.dart';
 
 class SupplierDashboardPage extends ConsumerWidget {
   const SupplierDashboardPage({super.key});
@@ -31,234 +37,312 @@ class SupplierDashboardPage extends ConsumerWidget {
   }
 }
 
-class _DashboardContent extends StatelessWidget {
+class _DashboardContent extends ConsumerStatefulWidget {
   const _DashboardContent({required this.dashboard});
 
   final SupplierDashboard dashboard;
 
   @override
-  Widget build(BuildContext context) {
-    final compact =
-        MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
-    final stats = dashboard.stats;
-    final totalMaterials = stats.materials.total;
-    double ratio(int value) => totalMaterials == 0 ? 0 : value / totalMaterials;
+  ConsumerState<_DashboardContent> createState() => _DashboardContentState();
+}
 
-    return SingleChildScrollView(
-      padding: SupplierDecorations.pagePadding(compact: compact),
+class _DashboardContentState extends ConsumerState<_DashboardContent> {
+  bool _approvalBannerDismissed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = widget.dashboard.stats;
+    final scheduledPickups = stats.operational.scheduledPickups > 0
+        ? stats.operational.scheduledPickups
+        : widget.dashboard.upcomingPickups.length;
+    final supplierProfile = ref
+        .watch(authControllerProvider)
+        .user
+        ?.supplierProfile;
+    final showApprovedBanner =
+        !_approvalBannerDismissed &&
+        isOrganizationSupplierType(supplierProfile?.supplierType) &&
+        normalizeVerificationStatus(supplierProfile?.verificationStatus) ==
+            'APPROVED';
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact =
+            constraints.maxWidth < AppSpacing.supplierLayoutBreakpoint;
+        final phone = constraints.maxWidth < 600;
+        final pagePadding = phone
+            ? const EdgeInsets.all(AppSpacing.sm + AppSpacing.xs)
+            : context.supplierDecorations.pagePadding(compact: compact);
+
+        return SingleChildScrollView(
+          padding: pagePadding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showApprovedBanner) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.verified_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Your supplier account has been approved. You can now publish materials.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Dismiss',
+                        onPressed: () =>
+                            setState(() => _approvalBannerDismissed = true),
+                        icon: const Icon(Icons.close, size: 20),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+              ],
+              if (!widget.dashboard.hasSupplierProfile)
+                const SupplierMissingProfileCard()
+              else if (widget.dashboard.supplier != null)
+                SupplierDashboardHero(
+                  supplier: widget.dashboard.supplier!,
+                  compact: compact,
+                  mobile: phone,
+                ),
+              SizedBox(height: phone ? AppSpacing.sm : AppSpacing.lg),
+              SupplierDashboardMainStatGrid(
+                activeMaterials: stats.materials.available,
+                pendingRequests: stats.reservations.pending,
+                scheduledPickups: scheduledPickups,
+                reusedMaterials: stats.materials.reused,
+              ),
+              SizedBox(height: phone ? AppSpacing.xs : AppSpacing.sm),
+              SupplierDashboardSecondaryMetricsRow(
+                totalMaterials: stats.materials.total,
+                availableMaterials: stats.materials.available,
+                reservedMaterials: stats.materials.reserved,
+                totalViews: stats.engagement.totalViews,
+                totalLikes: stats.engagement.totalLikes,
+                followersCount: stats.engagement.followersCount,
+              ),
+              SizedBox(height: phone ? AppSpacing.md : AppSpacing.xl),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final operations = _OperationsSnapshotPanel(
+                    stats: stats,
+                    mobile: phone,
+                  );
+                  final impact = SupplierProjectImpactPanel(
+                    projectSupport: widget.dashboard.projectSupport,
+                  );
+                  final engagement = SupplierDashboardEngagementPanel(
+                    dashboard: widget.dashboard,
+                  );
+
+                  if (widget.dashboard.hasSupplierProfile &&
+                      constraints.maxWidth >= 1180) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: operations),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(
+                          flex: 2,
+                          child: Column(
+                            children: [
+                              impact,
+                              const SizedBox(height: AppSpacing.lg),
+                              engagement,
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      operations,
+                      if (widget.dashboard.hasSupplierProfile) ...[
+                        SizedBox(height: phone ? AppSpacing.md : AppSpacing.lg),
+                        impact,
+                        const SizedBox(height: AppSpacing.lg),
+                        engagement,
+                      ],
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              const SupplierCategoryDemandPanel(),
+              const SizedBox(height: AppSpacing.xl),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final insights = SupplierDashboardInsightsPanel(
+                    dashboard: widget.dashboard,
+                  );
+                  final quickActions =
+                      const SupplierDashboardQuickActionsPanel();
+
+                  if (constraints.maxWidth >= 1180) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: insights),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(flex: 2, child: quickActions),
+                      ],
+                    );
+                  }
+
+                  if (constraints.maxWidth >= 800) {
+                    return Column(
+                      children: [
+                        insights,
+                        const SizedBox(height: AppSpacing.lg),
+                        quickActions,
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      insights,
+                      const SizedBox(height: AppSpacing.lg),
+                      quickActions,
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final recentActivity = SupplierDashboardRecentActivityPanel(
+                    activity: widget.dashboard.recentActivity,
+                    upcomingPickups: widget.dashboard.upcomingPickups,
+                    stats: stats,
+                  );
+                  final highDemand = SupplierDashboardHighDemandPanel(
+                    dashboard: widget.dashboard,
+                  );
+
+                  if (constraints.maxWidth >= 980) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: recentActivity),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(flex: 2, child: highDemand),
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      recentActivity,
+                      const SizedBox(height: AppSpacing.lg),
+                      highDemand,
+                    ],
+                  );
+                },
+              ),
+              if (widget.dashboard.hasSupplierProfile &&
+                  stats.materials.total == 0 &&
+                  widget.dashboard.recentMaterials.isEmpty) ...[
+                const SizedBox(height: AppSpacing.xl),
+                const SupplierEmptyDashboardState(),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _OperationsSnapshotPanel extends StatelessWidget {
+  const _OperationsSnapshotPanel({required this.stats, required this.mobile});
+
+  final SupplierDashboardStats stats;
+  final bool mobile;
+
+  @override
+  Widget build(BuildContext context) {
+    final reservationChart = SupplierDashboardChartCard(
+      title: context.s.reservationStatus,
+      subtitle: context.s.chartReservationSubtitle,
+      compact: mobile,
+      child: SupplierReservationStatusChart(
+        pending: stats.reservations.pending,
+        accepted: stats.reservations.accepted,
+        completed: stats.reservations.completed,
+      ),
+    );
+    final materialsChart = SupplierDashboardChartCard(
+      title: context.s.materialsStatus,
+      subtitle: context.s.chartMaterialsSubtitle,
+      compact: mobile,
+      child: SupplierMaterialsStatusChart(
+        available: stats.materials.available,
+        reservedOrPending:
+            stats.materials.reserved + stats.materials.pendingReservation,
+        reused: stats.materials.reused,
+        unavailable: stats.materials.unavailable,
+        compact: mobile,
+      ),
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(mobile ? AppSpacing.md : AppSpacing.lg),
+      decoration: context.supplierDecorations.dashboardCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!dashboard.hasSupplierProfile)
-            const SupplierMissingProfileCard()
-          else if (dashboard.supplier != null)
-            SupplierHeroPanel(supplier: dashboard.supplier!, compact: compact),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Overview', style: AuthDarkTextStyles.sectionTitle(context)),
-          const SizedBox(height: AppSpacing.md),
+          Text(
+            context.s.operationsSnapshot,
+            style: context.supplierSectionTitle(),
+          ),
+          SizedBox(height: mobile ? AppSpacing.sm : AppSpacing.md),
           LayoutBuilder(
             builder: (context, constraints) {
-              final columns = _columnsForWidth(constraints.maxWidth);
-              final cardWidth =
-                  (constraints.maxWidth - (AppSpacing.md * (columns - 1))) /
-                  columns;
-              final cardHeight = compact ? 156.0 : 164.0;
-              final wideWidth = columns == 1
-                  ? constraints.maxWidth
-                  : (cardWidth * 2) + AppSpacing.md;
-
-              return Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
+              if (constraints.maxWidth >= 680) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: reservationChart),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(child: materialsChart),
+                  ],
+                );
+              }
+              return Column(
                 children: [
-                  SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: SupplierStatCard(
-                      label: 'Listed materials',
-                      value: '${stats.materials.total}',
-                      icon: Icons.inventory_2_outlined,
-                      subtitle: totalMaterials == 0
-                          ? 'Ready for your first listing'
-                          : 'All supplier listings',
-                    ),
-                  ),
-                  SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: SupplierStatCard(
-                      label: 'Available now',
-                      value: '${stats.materials.available}',
-                      icon: Icons.check_circle_outline,
-                      progress: ratio(stats.materials.available),
-                      subtitle: 'Shareable inventory',
-                    ),
-                  ),
-                  SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: SupplierStatCard(
-                      label: 'Pending requests',
-                      value: '${stats.reservations.pending}',
-                      icon: Icons.inbox_outlined,
-                      highlight: stats.reservations.pending > 0,
-                      badge: stats.reservations.pending > 0 ? 'Action' : null,
-                      subtitle: stats.reservations.pending > 0
-                          ? 'Needs your review'
-                          : 'No open requests',
-                    ),
-                  ),
-                  SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: SupplierImpactCard(
-                      reusedMaterials: stats.impact.reusedMaterials,
-                      reusedQuantity: stats.impact.reusedQuantity,
-                      totalMaterials: totalMaterials,
-                    ),
-                  ),
-                  SizedBox(
-                    width: wideWidth,
-                    height: cardHeight,
-                    child: SupplierLifecycleCard(
-                      total: totalMaterials,
-                      available: stats.materials.available,
-                      reserved: stats.materials.reserved,
-                      reused: stats.materials.reused,
-                    ),
-                  ),
-                  SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: SupplierStatCard(
-                      label: 'Upcoming pickups',
-                      value: '${dashboard.upcomingPickups.length}',
-                      icon: Icons.local_shipping_outlined,
-                      subtitle: 'Accepted reservations',
-                    ),
-                  ),
-                  SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: SupplierRatingCard(
-                      averageRating: stats.reviews.averageRating,
-                      totalReviews: stats.reviews.totalReviews,
-                    ),
-                  ),
-                  SizedBox(
-                    width: cardWidth,
-                    height: cardHeight,
-                    child: SupplierStatCard(
-                      label: 'Unread notifications',
-                      value: '${stats.notifications.unread}',
-                      icon: Icons.notifications_none_rounded,
-                      highlight: stats.notifications.unread > 0,
-                      badge: stats.notifications.unread > 0 ? 'New' : null,
-                      subtitle: stats.notifications.unread > 0
-                          ? 'Open updates'
-                          : 'All caught up',
-                    ),
-                  ),
+                  reservationChart,
+                  SizedBox(height: mobile ? AppSpacing.sm : AppSpacing.md),
+                  materialsChart,
                 ],
               );
             },
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            'Quick actions',
-            style: AuthDarkTextStyles.sectionTitle(context),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = compact
-                  ? 1
-                  : constraints.maxWidth >= 1100
-                  ? 3
-                  : 2;
-              final actionWidth =
-                  (constraints.maxWidth - (AppSpacing.md * (columns - 1))) /
-                  columns;
-
-              return Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.md,
-                children:
-                    const [
-                          SupplierQuickActionCard(
-                            label: 'Add material',
-                            caption: 'List reusable parts',
-                            icon: Icons.add_circle_outline,
-                            route: '/supplier/materials/new',
-                          ),
-                          SupplierQuickActionCard(
-                            label: 'Manage materials',
-                            caption: 'Review your inventory',
-                            icon: Icons.inventory_2_outlined,
-                            route: '/supplier/materials',
-                          ),
-                          SupplierQuickActionCard(
-                            label: 'Incoming requests',
-                            caption: 'Check learner interest',
-                            icon: Icons.inbox_outlined,
-                            route: '/supplier/reservations',
-                          ),
-                          SupplierQuickActionCard(
-                            label: 'Edit supplier profile',
-                            caption: 'Update public details',
-                            icon: Icons.person_outline,
-                            route: '/supplier/profile',
-                          ),
-                          SupplierQuickActionCard(
-                            label: 'Browse materials',
-                            caption: 'Explore shared discovery',
-                            icon: Icons.search,
-                            route: '/materials',
-                          ),
-                        ]
-                        .map(
-                          (child) => SizedBox(
-                            width: actionWidth,
-                            height: 96,
-                            child: child,
-                          ),
-                        )
-                        .toList(),
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          if (dashboard.hasSupplierProfile &&
-              stats.materials.total == 0 &&
-              dashboard.recentMaterials.isEmpty)
-            const SupplierEmptyDashboardState(),
-          if (dashboard.recentMaterials.isNotEmpty) ...[
-            SupplierRecentMaterialsSection(
-              materials: dashboard.recentMaterials,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-          ],
-          SupplierUpcomingPickupsSection(pickups: dashboard.upcomingPickups),
-          const SizedBox(height: AppSpacing.lg),
-          SupplierRecentActivitySection(activity: dashboard.recentActivity),
         ],
       ),
     );
-  }
-
-  int _columnsForWidth(double width) {
-    if (width >= 1180) {
-      return 4;
-    }
-
-    if (width >= 820) {
-      return 3;
-    }
-
-    if (width >= 420) {
-      return 2;
-    }
-
-    return 1;
   }
 }

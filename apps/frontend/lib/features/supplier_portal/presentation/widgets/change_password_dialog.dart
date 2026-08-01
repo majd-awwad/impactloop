@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
-import '../../../auth/application/auth_providers.dart';
+import '../../../../shared/widgets/app_close_button.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../auth/application/auth_controller.dart';
 import '../../../../core/errors/api_exception.dart';
 import 'supplier_dark_form_field.dart';
 import 'supplier_feedback.dart';
@@ -71,7 +72,9 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).changePassword(
+      await ref
+          .read(authControllerProvider.notifier)
+          .changePassword(
             currentPassword: _currentPasswordController.text,
             newPassword: _newPasswordController.text,
             confirmNewPassword: _confirmPasswordController.text,
@@ -86,10 +89,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
       _confirmPasswordController.clear();
 
       Navigator.of(context).pop();
-      showSupplierInfoSnackBar(
-        context,
-        'Password updated successfully.',
-      );
+      showSupplierInfoSnackBar(context, context.s.passwordUpdated);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
@@ -106,14 +106,14 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
 
       setState(() {
         _isSubmitting = false;
-        _formError = 'Password could not be updated. Please try again.';
+        _formError = context.s.passwordUpdateFailed;
       });
     }
   }
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'This field is required';
+      return context.s.fieldRequired;
     }
     return null;
   }
@@ -125,11 +125,11 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
     }
 
     if (value!.length < 8) {
-      return 'Password must be at least 8 characters.';
+      return context.s.passwordMinLength;
     }
 
     if (value == _currentPasswordController.text) {
-      return 'New password must be different from your current password.';
+      return context.s.passwordMustDiffer;
     }
 
     return null;
@@ -142,7 +142,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
     }
 
     if (value != _newPasswordController.text) {
-      return 'Passwords do not match.';
+      return context.s.passwordsDoNotMatch;
     }
 
     return null;
@@ -150,6 +150,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Material(
@@ -163,7 +164,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
           AppSpacing.lg,
           AppSpacing.lg + bottomInset,
         ),
-        decoration: SupplierDecorations.sideInsightCard.copyWith(
+        decoration: context.supplierDecorations.sideInsightCard.copyWith(
           borderRadius: AppRadius.lgAll,
         ),
         child: SingleChildScrollView(
@@ -177,27 +178,26 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        'Change password',
-                        style: AuthDarkTextStyles.title(context),
+                        context.s.changePassword,
+                        style: context.supplierTitle(),
                       ),
                     ),
-                    IconButton(
+                    AppCloseButton(
                       onPressed: _isSubmitting
                           ? null
                           : () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close, color: AuthDarkColors.textMuted),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Enter your current password, then choose a new one.',
-                  style: AuthDarkTextStyles.body(context),
+                  context.s.changePasswordIntro,
+                  style: context.supplierBody(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 SupplierDarkPasswordField(
                   controller: _currentPasswordController,
-                  label: 'Current password',
+                  label: context.s.currentPassword,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.password],
                   validator: _required,
@@ -210,7 +210,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                 const SupplierFieldGap(),
                 SupplierDarkPasswordField(
                   controller: _newPasswordController,
-                  label: 'New password',
+                  label: context.s.newPassword,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.newPassword],
                   validator: _validateNewPassword,
@@ -223,7 +223,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                 const SupplierFieldGap(),
                 SupplierDarkPasswordField(
                   controller: _confirmPasswordController,
-                  label: 'Confirm new password',
+                  label: context.s.confirmNewPassword,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.newPassword],
                   validator: _validateConfirmPassword,
@@ -238,9 +238,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     _formError!,
-                    style: AuthDarkTextStyles.body(context).copyWith(
-                      color: AuthDarkColors.error,
-                    ),
+                    style: context.supplierBody().copyWith(color: colors.error),
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
@@ -248,10 +246,12 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   width: double.infinity,
                   child: FilledButton(
                     onPressed: _isSubmitting ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AuthDarkColors.accent,
-                      foregroundColor: AuthDarkColors.background,
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.md,
+                      ),
                     ),
                     child: _isSubmitting
                         ? const SizedBox(
@@ -259,7 +259,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Update password'),
+                        : Text(context.s.updatePassword),
                   ),
                 ),
               ],

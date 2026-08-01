@@ -10,6 +10,9 @@ import '../../../../shared/widgets/app_inline_error.dart';
 import '../../../../shared/widgets/app_primary_button.dart';
 import '../../../../shared/widgets/app_text_area.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../profile/application/profile_providers.dart';
+import '../../../profile/data/models/learner_interest_options.dart';
+import '../../../profile/presentation/widgets/learner_interest_chip_picker.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
 import '../../application/registration_draft_notifier.dart';
@@ -32,10 +35,11 @@ class CompleteLearnerProfileForm extends ConsumerStatefulWidget {
 class _CompleteLearnerProfileFormState
     extends ConsumerState<CompleteLearnerProfileForm> {
   final _formKey = GlobalKey<FormState>();
-  final _interestsController = TextEditingController();
+  final _customInterestController = TextEditingController();
   final _bioController = TextEditingController();
   String? _learnerType;
   String? _skillLevel;
+  Set<String> _selectedInterestKeys = {};
   bool _isSubmitting = false;
   String? _learnerTypeError;
   String? _skillLevelError;
@@ -59,7 +63,7 @@ class _CompleteLearnerProfileFormState
 
   @override
   void dispose() {
-    _interestsController.dispose();
+    _customInterestController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -113,7 +117,10 @@ class _CompleteLearnerProfileFormState
       LearnerProfileDraft(
         learnerType: _learnerType!,
         skillLevel: _skillLevel!,
-        interests: parseInterestsInput(_interestsController.text),
+        interests: mergeInterestSelection(
+          selectedKeys: _selectedInterestKeys,
+          customInterestText: _customInterestController.text,
+        ),
         bio: _bioController.text.trim().isEmpty
             ? null
             : _bioController.text.trim(),
@@ -146,9 +153,9 @@ class _CompleteLearnerProfileFormState
     }
 
     try {
-      final user = await ref.read(authControllerProvider.notifier).register(
-        request,
-      );
+      final user = await ref
+          .read(authControllerProvider.notifier)
+          .register(request);
       ref.read(registrationDraftProvider.notifier).clear();
 
       if (!mounted) {
@@ -177,103 +184,135 @@ class _CompleteLearnerProfileFormState
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (widget.showSupplierNextHint) ...[
-            Text(
-              'Next, we’ll help you set up your supplier profile too.',
-              style: AppTextStyles.subtitle(context),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
-          AppDropdownField<String>(
-            label: 'Learner type',
-            hint: 'Select your learner type',
-            value: _learnerType,
-            errorText: _learnerTypeError,
-            items: [
-              for (final type in _learnerTypes)
-                DropdownMenuItem(value: type, child: Text(type)),
-            ],
-            onChanged: (value) {
-              if (_learnerTypeError != null || _formError != null) {
-                _clearErrors();
-              }
-              setState(() => _learnerType = value);
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Learner type is required';
-              }
-              return null;
-            },
-          ),
-          const AppFieldGap(),
-          AppDropdownField<String>(
-            label: 'Skill level',
-            hint: 'Select your skill level',
-            value: _skillLevel,
-            errorText: _skillLevelError,
-            items: [
-              for (final level in _skillLevels)
-                DropdownMenuItem(value: level, child: Text(level)),
-            ],
-            onChanged: (value) {
-              if (_skillLevelError != null || _formError != null) {
-                _clearErrors();
-              }
-              setState(() => _skillLevel = value);
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Skill level is required';
-              }
-              return null;
-            },
-          ),
-          const AppFieldGap(),
-          AppTextField(
-            controller: _interestsController,
-            label: 'Interests (optional)',
-            hint: 'Arduino, robotics, electronics',
-            textInputAction: TextInputAction.next,
-            errorText: _interestsError,
-            onChanged: (_) {
-              if (_interestsError != null || _formError != null) {
-                _clearErrors();
-              }
-            },
-          ),
-          const AppFieldGap(),
-          AppTextArea(
-            controller: _bioController,
-            label: 'Bio (optional)',
-            hint: 'Tell others a little about your learning goals',
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => _handleSubmit(),
-            errorText: _bioError,
-            onChanged: (_) {
-              if (_bioError != null || _formError != null) {
-                _clearErrors();
-              }
-            },
-          ),
-          if (_formError != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            AppInlineError(message: _formError!),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-          AppPrimaryButton(
-            label: 'Continue',
-            isLoading: _isSubmitting,
-            onPressed: _handleSubmit,
-          ),
-        ],
+    final optionsAsync = ref.watch(learnerInterestOptionsProvider);
+    final draft = ref.watch(registrationDraftProvider);
+
+    return optionsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => LearnerInterestChipPicker(
+        options: fallbackLearnerInterestOptions,
+        selectedKeys: _selectedInterestKeys,
+        onChanged: (value) {
+          if (_interestsError != null || _formError != null) {
+            _clearErrors();
+          }
+          setState(() => _selectedInterestKeys = value);
+        },
+        customInterestController: _customInterestController,
+        label: 'Interests (optional)',
+        errorText: _interestsError,
       ),
+      data: (options) {
+        if (_selectedInterestKeys.isEmpty) {
+          final fromDraft = draft.onboardingInterests.isNotEmpty
+              ? draft.onboardingInterests
+              : draft.learnerProfile?.interests ?? const [];
+          _selectedInterestKeys = normalizeSelectedInterestKeys(
+            fromDraft,
+            labelByKey: options.labelByKey,
+          );
+        }
+
+        return Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (widget.showSupplierNextHint) ...[
+                Text(
+                  'Next, we’ll help you set up your supplier profile too.',
+                  style: AppTextStyles.subtitle(context),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
+              AppDropdownField<String>(
+                label: 'Learner type',
+                hint: 'Select your learner type',
+                value: _learnerType,
+                errorText: _learnerTypeError,
+                items: [
+                  for (final type in _learnerTypes)
+                    DropdownMenuItem(value: type, child: Text(type)),
+                ],
+                onChanged: (value) {
+                  if (_learnerTypeError != null || _formError != null) {
+                    _clearErrors();
+                  }
+                  setState(() => _learnerType = value);
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Learner type is required';
+                  }
+                  return null;
+                },
+              ),
+              const AppFieldGap(),
+              AppDropdownField<String>(
+                label: 'Skill level',
+                hint: 'Select your skill level',
+                value: _skillLevel,
+                errorText: _skillLevelError,
+                items: [
+                  for (final level in _skillLevels)
+                    DropdownMenuItem(value: level, child: Text(level)),
+                ],
+                onChanged: (value) {
+                  if (_skillLevelError != null || _formError != null) {
+                    _clearErrors();
+                  }
+                  setState(() => _skillLevel = value);
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Skill level is required';
+                  }
+                  return null;
+                },
+              ),
+              const AppFieldGap(),
+              LearnerInterestChipPicker(
+                options: options,
+                selectedKeys: _selectedInterestKeys,
+                onChanged: (value) {
+                  if (_interestsError != null || _formError != null) {
+                    _clearErrors();
+                  }
+                  setState(() => _selectedInterestKeys = value);
+                },
+                customInterestController: _customInterestController,
+                label: 'Interests (optional)',
+                errorText: _interestsError,
+              ),
+              const AppFieldGap(),
+              AppTextArea(
+                controller: _bioController,
+                label: 'Bio (optional)',
+                hint: 'Tell others a little about your learning goals',
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _handleSubmit(),
+                errorText: _bioError,
+                onChanged: (_) {
+                  if (_bioError != null || _formError != null) {
+                    _clearErrors();
+                  }
+                },
+              ),
+              if (_formError != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                AppInlineError(message: _formError!),
+              ],
+              const SizedBox(height: AppSpacing.lg),
+              AppPrimaryButton(
+                label: 'Continue',
+                isLoading: _isSubmitting,
+                onPressed: _handleSubmit,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

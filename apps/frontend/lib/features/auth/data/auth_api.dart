@@ -1,7 +1,10 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/auth/auth_interceptor.dart';
 import '../../../core/network/api_response.dart';
 import 'models/auth_tokens.dart';
+import 'models/become_learner_request.dart';
+import 'models/become_supplier_request.dart';
 import 'models/register_request.dart';
 import 'models/user.dart';
 
@@ -33,6 +36,9 @@ class AuthApi {
         data: refreshToken == null
             ? const <String, dynamic>{}
             : {'refreshToken': refreshToken},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
       ),
       AuthTokens.fromJson,
     );
@@ -51,17 +57,47 @@ class AuthApi {
 
   Future<User> me() {
     return unwrapApiResponse(
-      _client.get<Map<String, dynamic>>('$_authBasePath/me'),
+      _client.get<Map<String, dynamic>>(
+        '$_authBasePath/me',
+        options: Options(headers: const {'Cache-Control': 'no-cache'}),
+      ),
       (json) => User.fromJson(json['user'] as Map<String, dynamic>),
     );
   }
 
-  Future<void> changePassword({
+  Future<({AuthTokens tokens, User user})> becomeSupplier(
+    BecomeSupplierRequest request,
+  ) {
+    return _postAuthSession(
+      '$_authBasePath/become-supplier',
+      data: request.toJson(),
+    );
+  }
+
+  Future<({AuthTokens tokens, User user})> becomeLearner(
+    BecomeLearnerRequest request,
+  ) {
+    return _postAuthSession(
+      '$_authBasePath/become-learner',
+      data: request.toJson(),
+    );
+  }
+
+  Future<({AuthTokens tokens, User user})> switchRole({
+    required String activeRole,
+  }) {
+    return _postAuthSession(
+      '$_authBasePath/switch-role',
+      data: {'activeRole': activeRole.trim().toUpperCase()},
+    );
+  }
+
+  Future<({AuthTokens tokens, User user})> changePassword({
     required String currentPassword,
     required String newPassword,
     required String confirmNewPassword,
   }) {
-    return unwrapApiVoidResponse(
+    return unwrapApiResponse(
       _client.patch<Map<String, dynamic>>(
         '$_authBasePath/change-password',
         data: {
@@ -69,6 +105,45 @@ class AuthApi {
           'newPassword': newPassword,
           'confirmNewPassword': confirmNewPassword,
         },
+      ),
+      (json) {
+        final userJson = json['user'];
+
+        if (userJson is! Map<String, dynamic>) {
+          throw const FormatException('Missing user in auth response');
+        }
+
+        return (
+          tokens: AuthTokens.fromJson(json),
+          user: User.fromJson(userJson),
+        );
+      },
+    );
+  }
+
+  Future<void> forgotPassword({required String email}) {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/forgot-password',
+        data: {'email': email.trim()},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
+      ),
+    );
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) {
+    return unwrapApiVoidResponse(
+      _client.post<Map<String, dynamic>>(
+        '$_authBasePath/reset-password',
+        data: {'token': token, 'newPassword': newPassword},
+        options: Options(
+          extra: const {AuthInterceptor.skipAuthRefreshExtraKey: true},
+        ),
       ),
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
+import '../../../../app/theme/landing_colors.dart';
 import '../widgets/landing_feature_cards.dart';
 import '../widgets/landing_footer.dart';
 import '../widgets/landing_hero_section.dart';
@@ -13,8 +13,10 @@ class LandingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return Scaffold(
-      backgroundColor: AuthDarkColors.landingBackground,
+      backgroundColor: colors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

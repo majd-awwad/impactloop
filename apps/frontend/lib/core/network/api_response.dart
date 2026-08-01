@@ -24,6 +24,9 @@ class ApiResponse<T> {
 }
 
 ApiException mapDioException(DioException error) {
+  if (error.type == DioExceptionType.cancel) {
+    return const ApiException(message: 'Request cancelled', code: 'CANCELLED');
+  }
   if (error.type == DioExceptionType.connectionTimeout ||
       error.type == DioExceptionType.sendTimeout ||
       error.type == DioExceptionType.receiveTimeout) {
@@ -93,11 +96,11 @@ Future<T> unwrapApiResponse<T>(
 
     final rawData = body['data'];
 
-    if (rawData is! Map<String, dynamic>) {
+    if (rawData is! Map) {
       throw const ApiException(message: 'Unexpected response data format');
     }
 
-    return parseData(rawData);
+    return parseData(Map<String, dynamic>.from(rawData));
   } on DioException catch (error) {
     throw mapDioException(error);
   }
@@ -106,5 +109,31 @@ Future<T> unwrapApiResponse<T>(
 Future<void> unwrapApiVoidResponse(
   Future<Response<Map<String, dynamic>>> request,
 ) async {
-  await unwrapApiResponse(request, (_) => null);
+  try {
+    final response = await request;
+    final body = response.data;
+
+    if (body == null) {
+      throw const ApiException(message: 'Empty response from server');
+    }
+
+    if (body['success'] != true) {
+      final errorBody = body['error'];
+
+      throw ApiException(
+        message: body['message'] as String? ?? 'Request failed',
+        code: errorBody is Map<String, dynamic>
+            ? errorBody['code'] as String?
+            : null,
+        statusCode: response.statusCode,
+        details:
+            errorBody is Map<String, dynamic> &&
+                errorBody['details'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(errorBody['details'] as Map)
+            : null,
+      );
+    }
+  } on DioException catch (error) {
+    throw mapDioException(error);
+  }
 }

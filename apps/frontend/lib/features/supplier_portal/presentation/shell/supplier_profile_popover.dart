@@ -4,12 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../../auth/application/auth_controller.dart';
-import '../../../../shared/widgets/app_feedback.dart';
+import '../../../auth/application/portal_navigation.dart';
+import '../../../auth/presentation/widgets/portal_switch_menu.dart';
 import 'supplier_settings_controls.dart';
+import '../widgets/supplier_feedback.dart';
+import '../widgets/supplier_portal_avatar.dart';
 import '../widgets/supplier_verification_badge.dart';
 
 class SupplierProfileButton extends ConsumerWidget {
@@ -28,15 +29,6 @@ class SupplierProfileButton extends ConsumerWidget {
   final String verificationStatus;
   final bool showSettingsControls;
 
-  String get _initial {
-    final trimmed = displayName.trim();
-    if (trimmed.isEmpty) {
-      return 'S';
-    }
-
-    return trimmed.characters.first.toUpperCase();
-  }
-
   void _openPopover(BuildContext context, WidgetRef ref) {
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
@@ -54,6 +46,9 @@ class SupplierProfileButton extends ConsumerWidget {
               supplierType: supplierType,
               verificationStatus: verificationStatus,
               showSettingsControls: showSettingsControls,
+              onBeforePortalSwitch: () {
+                Navigator.of(sheetContext).pop();
+              },
               onNavigate: (route) {
                 Navigator.of(sheetContext).pop();
                 context.go(route);
@@ -75,7 +70,7 @@ class SupplierProfileButton extends ConsumerWidget {
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.only(top: 72, right: 24),
-          alignment: Alignment.topRight,
+          alignment: AlignmentDirectional.topEnd,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
             child: SupplierProfilePopoverContent(
@@ -84,6 +79,9 @@ class SupplierProfileButton extends ConsumerWidget {
               supplierType: supplierType,
               verificationStatus: verificationStatus,
               showSettingsControls: showSettingsControls,
+              onBeforePortalSwitch: () {
+                Navigator.of(dialogContext).pop();
+              },
               onNavigate: (route) {
                 Navigator.of(dialogContext).pop();
                 context.go(route);
@@ -111,10 +109,7 @@ class SupplierProfileButton extends ConsumerWidget {
     context.go('/login');
 
     if (logoutError != null) {
-      showInfoSnackBar(
-        context,
-        'You were signed out locally, but the server could not be reached.',
-      );
+      showSupplierInfoSnackBar(context, context.s.signedOutLocallyMessage);
     }
   }
 
@@ -123,23 +118,12 @@ class SupplierProfileButton extends ConsumerWidget {
     return InkWell(
       onTap: () => _openPopover(context, ref),
       borderRadius: AppRadius.pillAll,
-      child: Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        decoration: SupplierDecorations.avatarCircle,
-        child: Text(
-          _initial,
-          style: AuthDarkTextStyles.label(
-            context,
-          ).copyWith(color: AuthDarkColors.accent, fontWeight: FontWeight.w700),
-        ),
-      ),
+      child: SupplierPortalAvatar(displayName: displayName, size: 40),
     );
   }
 }
 
-class SupplierProfilePopoverContent extends StatelessWidget {
+class SupplierProfilePopoverContent extends ConsumerWidget {
   const SupplierProfilePopoverContent({
     super.key,
     required this.displayName,
@@ -147,6 +131,7 @@ class SupplierProfilePopoverContent extends StatelessWidget {
     this.supplierType,
     required this.verificationStatus,
     this.showSettingsControls = false,
+    this.onBeforePortalSwitch,
     required this.onNavigate,
     required this.onLogout,
   });
@@ -156,105 +141,117 @@ class SupplierProfilePopoverContent extends StatelessWidget {
   final String? supplierType;
   final String verificationStatus;
   final bool showSettingsControls;
+  final VoidCallback? onBeforePortalSwitch;
   final ValueChanged<String> onNavigate;
   final VoidCallback onLogout;
 
-  String _supplierTypeLabel(String value) {
-    return switch (value.trim().toUpperCase()) {
-      'INDIVIDUAL_SUPPLIER' || 'INDIVIDUAL SUPPLIER' => 'Individual supplier',
-      'STUDENT_SUPPLIER' || 'STUDENT SUPPLIER' => 'Student supplier',
-      'WORKSHOP' => 'Workshop',
-      'FACTORY' => 'Factory',
-      'EDUCATIONAL_INSTITUTION' ||
-      'EDUCATIONAL INSTITUTION' => 'Educational institution',
-      _ => value,
-    };
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
+    final user = ref.watch(authControllerProvider).user;
+
     return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      ),
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.dashboardCard,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: SupplierDecorations.avatarCircle,
-                child: Text(
-                  displayName.trim().isEmpty
-                      ? 'S'
-                      : displayName.trim().characters.first.toUpperCase(),
-                  style: AuthDarkTextStyles.title(
-                    context,
-                  ).copyWith(color: AuthDarkColors.accent, fontSize: 20),
+      decoration: decorations.dashboardCard,
+      child: SingleChildScrollView(
+        primary: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SupplierPortalAvatar(
+                  displayName: displayName,
+                  size: 48,
+                  fontSize: 20,
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      displayName,
-                      style: AuthDarkTextStyles.label(context).copyWith(
-                        color: AuthDarkColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (email != null)
-                      Text(email!, style: AuthDarkTextStyles.body(context)),
-                    if (supplierType != null && supplierType!.isNotEmpty)
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        _supplierTypeLabel(supplierType!),
-                        style: AuthDarkTextStyles.body(context),
+                        displayName,
+                        style: context.supplierLabel().copyWith(
+                          color: colors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                  ],
+                      if (email != null)
+                        Text(email!, style: context.supplierBody()),
+                      if (supplierType != null && supplierType!.isNotEmpty)
+                        Text(
+                          context.s.supplierTypeLabel(supplierType!),
+                          style: context.supplierBody(),
+                        ),
+                      if (user != null)
+                        Text(
+                          activePortalModeLabel(user),
+                          style: context.supplierBody().copyWith(
+                            color: colors.accent,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SupplierVerificationBadge(status: verificationStatus),
+            if (showSettingsControls) ...[
+              const SizedBox(height: AppSpacing.md),
+              const SupplierSettingsControls(compact: true),
+            ],
+            Divider(color: colors.border, height: 24),
+            _PopoverAction(
+              label: context.s.viewSupplierProfile,
+              icon: Icons.person_outline,
+              onTap: () => onNavigate('/supplier/profile'),
+            ),
+            _PopoverAction(
+              label: context.s.navMyMaterials,
+              icon: Icons.inventory_2_outlined,
+              onTap: () => onNavigate('/supplier/materials'),
+            ),
+            _PopoverAction(
+              label: context.s.navIncomingRequests,
+              icon: Icons.inbox_outlined,
+              onTap: () => onNavigate('/supplier/reservations'),
+            ),
+            _PopoverAction(
+              label: context.s.navNotifications,
+              icon: Icons.notifications_none_rounded,
+              onTap: () => onNavigate('/supplier/notifications'),
+            ),
+            if (user != null) ...[
+              Divider(color: colors.border, height: 24),
+              ...PortalSwitchMenuItems.build(
+                context: context,
+                ref: ref,
+                user: user,
+                labelStyle: context.supplierLabel().copyWith(
+                  color: colors.textPrimary,
+                ),
+                noteStyle: context.supplierBody(),
+                onBeforeSwitch: onBeforePortalSwitch,
+                iconColor: colors.textPrimary,
+                useListTileStyle: true,
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          SupplierVerificationBadge(status: verificationStatus),
-          if (showSettingsControls) ...[
-            const SizedBox(height: AppSpacing.md),
-            const SupplierSettingsControls(compact: true),
+            Divider(color: colors.border, height: 24),
+            _PopoverAction(
+              label: context.s.logout,
+              icon: Icons.logout_rounded,
+              onTap: onLogout,
+              destructive: true,
+            ),
           ],
-          const Divider(color: AuthDarkColors.border, height: 24),
-          _PopoverAction(
-            label: 'View supplier profile',
-            icon: Icons.person_outline,
-            onTap: () => onNavigate('/supplier/profile'),
-          ),
-          _PopoverAction(
-            label: 'My materials',
-            icon: Icons.inventory_2_outlined,
-            onTap: () => onNavigate('/supplier/materials'),
-          ),
-          _PopoverAction(
-            label: 'Incoming requests',
-            icon: Icons.inbox_outlined,
-            onTap: () => onNavigate('/supplier/reservations'),
-          ),
-          _PopoverAction(
-            label: 'Notifications',
-            icon: Icons.notifications_none_rounded,
-            onTap: () => onNavigate('/supplier/notifications'),
-          ),
-          const Divider(color: AuthDarkColors.border, height: 24),
-          _PopoverAction(
-            label: 'Logout',
-            icon: Icons.logout_rounded,
-            onTap: onLogout,
-            destructive: true,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -275,17 +272,13 @@ class _PopoverAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive
-        ? AuthDarkColors.error
-        : AuthDarkColors.textPrimary;
+    final colors = context.supplierColors;
+    final color = destructive ? colors.error : colors.textPrimary;
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: color, size: 20),
-      title: Text(
-        label,
-        style: AuthDarkTextStyles.label(context).copyWith(color: color),
-      ),
+      title: Text(label, style: context.supplierLabel().copyWith(color: color)),
       onTap: onTap,
       dense: true,
       visualDensity: VisualDensity.compact,

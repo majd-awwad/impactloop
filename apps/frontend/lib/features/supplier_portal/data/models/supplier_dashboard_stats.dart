@@ -96,8 +96,43 @@ class SupplierNotificationStats {
   final int unread;
 
   factory SupplierNotificationStats.fromJson(Map<String, dynamic> json) {
-    return SupplierNotificationStats(
-      unread: json['unread'] as int? ?? 0,
+    return SupplierNotificationStats(unread: json['unread'] as int? ?? 0);
+  }
+}
+
+class SupplierEngagementStats {
+  const SupplierEngagementStats({
+    required this.totalViews,
+    required this.totalLikes,
+    required this.followersCount,
+  });
+
+  final int totalViews;
+  final int totalLikes;
+  final int followersCount;
+
+  factory SupplierEngagementStats.fromJson(Map<String, dynamic> json) {
+    return SupplierEngagementStats(
+      totalViews: json['totalViews'] as int? ?? 0,
+      totalLikes: json['totalLikes'] as int? ?? 0,
+      followersCount: json['followersCount'] as int? ?? 0,
+    );
+  }
+}
+
+class SupplierOperationalStats {
+  const SupplierOperationalStats({
+    required this.scheduledPickups,
+    required this.activeMaterials,
+  });
+
+  final int scheduledPickups;
+  final int activeMaterials;
+
+  factory SupplierOperationalStats.fromJson(Map<String, dynamic> json) {
+    return SupplierOperationalStats(
+      scheduledPickups: json['scheduledPickups'] as int? ?? 0,
+      activeMaterials: json['activeMaterials'] as int? ?? 0,
     );
   }
 }
@@ -109,6 +144,8 @@ class SupplierDashboardStats {
     required this.impact,
     required this.reviews,
     required this.notifications,
+    required this.engagement,
+    required this.operational,
   });
 
   final SupplierMaterialStats materials;
@@ -116,6 +153,8 @@ class SupplierDashboardStats {
   final SupplierImpactStats impact;
   final SupplierReviewStats reviews;
   final SupplierNotificationStats notifications;
+  final SupplierEngagementStats engagement;
+  final SupplierOperationalStats operational;
 
   factory SupplierDashboardStats.fromJson(Map<String, dynamic> json) {
     return SupplierDashboardStats(
@@ -133,6 +172,12 @@ class SupplierDashboardStats {
       ),
       notifications: SupplierNotificationStats.fromJson(
         json['notifications'] as Map<String, dynamic>? ?? const {},
+      ),
+      engagement: SupplierEngagementStats.fromJson(
+        json['engagement'] as Map<String, dynamic>? ?? const {},
+      ),
+      operational: SupplierOperationalStats.fromJson(
+        json['operational'] as Map<String, dynamic>? ?? const {},
       ),
     );
   }

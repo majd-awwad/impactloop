@@ -3,9 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../data/models/supplier_dashboard.dart';
 import 'supplier_verification_badge.dart';
 
@@ -19,40 +17,27 @@ class SupplierHeroPanel extends StatelessWidget {
   final SupplierDashboardProfile supplier;
   final bool compact;
 
-  String _supplierTypeLabel(String value) {
-    return switch (value.trim().toUpperCase()) {
-      'INDIVIDUAL_SUPPLIER' || 'INDIVIDUAL SUPPLIER' => 'Individual supplier',
-      'STUDENT_SUPPLIER' || 'STUDENT SUPPLIER' => 'Student supplier',
-      'WORKSHOP' => 'Workshop',
-      'FACTORY' => 'Factory',
-      'EDUCATIONAL_INSTITUTION' ||
-      'EDUCATIONAL INSTITUTION' => 'Educational institution',
-      _ => value,
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+    final decorations = context.supplierDecorations;
     final organization = supplier.organization;
 
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.lg),
-      decoration: SupplierDecorations.heroPanel,
+      decoration: decorations.heroPanel,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Supplier Hub',
-            style: AuthDarkTextStyles.display(
-              context,
-            ).copyWith(fontSize: compact ? 26 : 32),
+            context.s.supplierHub,
+            style: context.supplierDisplay().copyWith(
+              fontSize: compact ? 26 : 32,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Share unused parts, reduce waste, and help learners build faster.',
-            style: AuthDarkTextStyles.subtitle(context),
-          ),
+          Text(context.s.heroTagline, style: context.supplierSubtitle()),
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.sm,
@@ -62,9 +47,7 @@ class SupplierHeroPanel extends StatelessWidget {
               if (supplier.publicName.isNotEmpty)
                 Text(
                   supplier.publicName,
-                  style: AuthDarkTextStyles.title(
-                    context,
-                  ).copyWith(fontSize: 18),
+                  style: context.supplierTitle().copyWith(fontSize: 18),
                 ),
               if (supplier.supplierType.isNotEmpty)
                 Container(
@@ -72,12 +55,12 @@ class SupplierHeroPanel extends StatelessWidget {
                     horizontal: 10,
                     vertical: 4,
                   ),
-                  decoration: SupplierDecorations.badge(
-                    background: AuthDarkColors.chipUnselected,
+                  decoration: decorations.badge(
+                    background: colors.chipUnselected,
                   ),
                   child: Text(
-                    _supplierTypeLabel(supplier.supplierType),
-                    style: AuthDarkTextStyles.chip(context),
+                    context.s.supplierTypeLabel(supplier.supplierType),
+                    style: context.supplierChip(),
                   ),
                 ),
               SupplierVerificationBadge(status: supplier.verificationStatus),
@@ -87,12 +70,12 @@ class SupplierHeroPanel extends StatelessWidget {
                     horizontal: 10,
                     vertical: 4,
                   ),
-                  decoration: SupplierDecorations.badge(
-                    background: AuthDarkColors.chipSelected,
+                  decoration: decorations.badge(
+                    background: colors.chipSelected,
                   ),
                   child: Text(
                     organization.organizationName,
-                    style: AuthDarkTextStyles.chip(context),
+                    style: context.supplierChip(),
                   ),
                 ),
             ],
@@ -100,9 +83,11 @@ class SupplierHeroPanel extends StatelessWidget {
           if (supplier.defaultLocation != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Pickup: ${supplier.defaultLocation!.city}'
-              '${supplier.defaultLocation!.area != null ? ', ${supplier.defaultLocation!.area}' : ''}',
-              style: AuthDarkTextStyles.body(context),
+              context.s.pickupLine(
+                supplier.defaultLocation!.city,
+                supplier.defaultLocation!.area,
+              ),
+              style: context.supplierBody(),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),
@@ -129,6 +114,7 @@ class SupplierHeroPanel extends StatelessWidget {
   }
 
   List<Widget> _heroActions(BuildContext context, {bool compact = false}) {
+    final colors = context.supplierColors;
     final buttonPadding = EdgeInsets.symmetric(
       horizontal: compact ? AppSpacing.md : AppSpacing.lg,
       vertical: compact ? AppSpacing.sm : AppSpacing.md,
@@ -136,37 +122,35 @@ class SupplierHeroPanel extends StatelessWidget {
 
     return [
       FilledButton.icon(
-        onPressed: () => context.go('/supplier/materials/new'),
+        onPressed: () => context.push('/supplier/materials/new'),
         style: FilledButton.styleFrom(
-          backgroundColor: AuthDarkColors.accent,
-          foregroundColor: AuthDarkColors.textOnAccent,
+          backgroundColor: colors.accent,
+          foregroundColor: colors.textOnAccent,
           shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
           padding: buttonPadding,
         ),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Add Material'),
+        label: Text(context.s.addMaterial),
       ),
       OutlinedButton.icon(
-        onPressed: () => context.go('/supplier/profile'),
+        onPressed: () => context.push('/supplier/profile'),
         style: OutlinedButton.styleFrom(
-          foregroundColor: AuthDarkColors.textPrimary,
-          side: BorderSide(
-            color: AuthDarkColors.borderFocused.withValues(alpha: 0.5),
-          ),
+          foregroundColor: colors.textPrimary,
+          side: BorderSide(color: colors.borderFocused.withValues(alpha: 0.5)),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.pillAll),
           padding: buttonPadding,
         ),
         icon: const Icon(Icons.edit_outlined),
-        label: const Text('Edit Profile'),
+        label: Text(context.s.editProfile),
       ),
       TextButton.icon(
-        onPressed: () => context.go('/supplier/materials'),
+        onPressed: () => context.push('/supplier/materials'),
         style: TextButton.styleFrom(
-          foregroundColor: AuthDarkColors.accent,
+          foregroundColor: colors.accent,
           padding: buttonPadding,
         ),
         icon: const Icon(Icons.inventory_2_outlined),
-        label: const Text('View Materials'),
+        label: Text(context.s.viewMaterials),
       ),
     ];
   }

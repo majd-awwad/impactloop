@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=65,<84"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "impactloop-recommendation-offline"
+version = "0.1.0"
+description = "Offline synthetic recommendation experiments for ImpactLoop"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "lightfm==1.17",
+  "numpy==1.26.4",
+  "scipy==1.13.1",
+  "pandas==2.2.3",
+  "scikit-learn==1.5.2",
+  "PyYAML==6.0.2",
+  "pyarrow==18.1.0",
+  "pytest==8.3.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["ml/recommendation/tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"

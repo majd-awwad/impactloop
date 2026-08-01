@@ -18,6 +18,7 @@ class MockRatingSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
     final highestCount = breakdown.fold<int>(
       1,
       (max, item) => item.count > max ? item.count : max,
@@ -26,14 +27,14 @@ class MockRatingSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: learningCardSurface,
+        color: palette.cardSurface,
         borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: learningCardShadow,
+            color: palette.cardShadow,
             blurRadius: 24,
-            offset: Offset(0, 12),
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -51,7 +52,7 @@ class MockRatingSummaryCard extends StatelessWidget {
                     project.ratingValue.toStringAsFixed(1),
                     style: AppTextStyles.brandingTitle(
                       context,
-                    ).copyWith(color: learningLime),
+                    ).copyWith(color: palette.lime),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Row(
@@ -61,7 +62,7 @@ class MockRatingSummaryCard extends StatelessWidget {
                         index < 4
                             ? Icons.star_rounded
                             : Icons.star_border_rounded,
-                        color: learningLime,
+                        color: palette.lime,
                         size: 20,
                       ),
                     ),
@@ -73,7 +74,7 @@ class MockRatingSummaryCard extends StatelessWidget {
                 '${project.ratingCount}\n${project.ratingLabel.resolve(context)}',
                 style: AppTextStyles.mobileHeroSubtitle(
                   context,
-                ).copyWith(color: learningTextSecondary),
+                ).copyWith(color: palette.textSecondary),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -95,7 +96,7 @@ class MockRatingSummaryCard extends StatelessWidget {
                         '${item.stars}',
                         style: AppTextStyles.body(
                           context,
-                        ).copyWith(color: learningTextSecondary),
+                        ).copyWith(color: palette.textSecondary),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
@@ -105,11 +106,9 @@ class MockRatingSummaryCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: ratio,
                           minHeight: 8,
-                          backgroundColor: Colors.white.withValues(
-                            alpha: 0.14,
-                          ),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            learningLime,
+                          backgroundColor: palette.darkSurfaceSoft,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            palette.lime,
                           ),
                         ),
                       ),
@@ -130,7 +129,7 @@ class MockRatingSummaryCard extends StatelessWidget {
                 ).resolve(context),
                 style: AppTextStyles.brandingHeadline(
                   context,
-                ).copyWith(fontSize: 26, color: learningTextPrimary),
+                ).copyWith(fontSize: 26, color: palette.textPrimary),
               ),
               const SizedBox(height: AppSpacing.lg),
               compact

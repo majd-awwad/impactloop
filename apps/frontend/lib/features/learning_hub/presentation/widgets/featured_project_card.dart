@@ -3,9 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../presentation/theme/learning_project_visuals.dart';
+import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
+import 'project_engagement_strip.dart';
 
 class FeaturedProjectCard extends StatelessWidget {
   const FeaturedProjectCard({super.key, required this.project});
@@ -14,16 +15,18 @@ class FeaturedProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: learningCardSurface,
-        borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: learningCardShadow,
-            blurRadius: 28,
-            offset: Offset(0, 12),
+            color: palette.cardShadow.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -35,9 +38,13 @@ class FeaturedProjectCard extends StatelessWidget {
 
             return compact
                 ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _FeaturedMedia(project: project, compact: true),
+                      _FeaturedMedia(
+                        project: project,
+                        compact: true,
+                        width: constraints.maxWidth,
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       _FeaturedContent(project: project, compact: true),
                     ],
@@ -45,10 +52,17 @@ class FeaturedProjectCard extends StatelessWidget {
                 : Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _FeaturedMedia(project: project, compact: false),
+                      _FeaturedMedia(
+                        project: project,
+                        compact: false,
+                        width: 228,
+                      ),
                       const SizedBox(width: AppSpacing.lg),
                       Expanded(
-                        child: _FeaturedContent(project: project, compact: false),
+                        child: _FeaturedContent(
+                          project: project,
+                          compact: false,
+                        ),
                       ),
                     ],
                   );
@@ -60,26 +74,17 @@ class FeaturedProjectCard extends StatelessWidget {
 }
 
 class _FeaturedContent extends StatelessWidget {
-  const _FeaturedContent({
-    required this.project,
-    required this.compact,
-  });
+  const _FeaturedContent({required this.project, required this.compact});
 
   final LearningProject project;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final buttonChild = FilledButton.icon(
-      onPressed: () => context.go('/learning/${project.id}'),
-      style: FilledButton.styleFrom(
-        backgroundColor: learningLime,
-        foregroundColor: Colors.black,
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-      ),
+      onPressed: () => context.push('/learning/${project.id}'),
       icon: const Icon(Icons.arrow_forward_rounded),
       label: Text(
         const LocalizedText(en: 'Explore', ar: 'استكشف').resolve(context),
@@ -87,7 +92,9 @@ class _FeaturedContent extends StatelessWidget {
     );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: compact
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
       children: [
         Align(
           alignment: AlignmentDirectional.centerStart,
@@ -97,36 +104,41 @@ class _FeaturedContent extends StatelessWidget {
               vertical: AppSpacing.xs,
             ),
             decoration: BoxDecoration(
-              color: learningDarkSurfaceSoft,
+              color: palette.cardSurfaceAlt,
               borderRadius: AppRadius.pillAll,
-              border: Border.all(color: learningBorderSubtle),
+              border: Border.all(color: palette.borderSubtle),
             ),
             child: Text(
               const LocalizedText(
                 en: 'Project of the week',
                 ar: 'مشروع الأسبوع',
               ).resolve(context),
-              style: AppTextStyles.badgeLabel(
-                context,
-              ).copyWith(fontSize: 12, color: learningTextPrimary),
+              style: textTheme.labelSmall?.copyWith(
+                color: palette.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
           project.title.resolve(context),
-          style: AppTextStyles.display(
-            context,
-          ).copyWith(color: learningTextPrimary),
+          style: textTheme.headlineMedium?.copyWith(
+            color: palette.textPrimary,
+            fontWeight: FontWeight.w700,
+            height: 1.16,
+          ),
           textAlign: TextAlign.start,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           project.summary.resolve(context),
-          style: AppTextStyles.subtitle(
-            context,
-          ).copyWith(color: learningTextSecondary),
+          style: textTheme.bodyLarge?.copyWith(color: palette.textSecondary),
           textAlign: TextAlign.start,
+          maxLines: compact ? 3 : 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: AppSpacing.md),
         Wrap(
@@ -135,18 +147,20 @@ class _FeaturedContent extends StatelessWidget {
           children: [
             _MetaChip(label: project.difficulty.resolve(context)),
             _MetaChip(label: project.duration.resolve(context)),
-            _MetaChip(label: project.componentCountLabel.resolve(context)),
-            _MetaChip(
-              label:
-                  '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount} ${project.ratingLabel.resolve(context)})',
-              accent: true,
-            ),
+            if (project.componentCountLabel.en.trim().isNotEmpty)
+              _MetaChip(label: project.componentCountLabel.resolve(context)),
+            if (project.hasRatings)
+              _MetaChip(
+                label:
+                    '${project.ratingValue.toStringAsFixed(1)} (${project.ratingCount} ${project.ratingLabel.resolve(context)})',
+                accent: true,
+              ),
           ],
         ),
+        const SizedBox(height: AppSpacing.md),
+        ProjectEngagementStrip(project: project),
         const SizedBox(height: AppSpacing.lg),
-        compact
-            ? SizedBox(width: double.infinity, child: buttonChild)
-            : SizedBox(width: 176, child: buttonChild),
+        compact ? buttonChild : SizedBox(width: 176, child: buttonChild),
       ],
     );
   }
@@ -156,15 +170,19 @@ class _FeaturedMedia extends StatelessWidget {
   const _FeaturedMedia({
     required this.project,
     required this.compact,
+    required this.width,
   });
 
   final LearningProject project;
   final bool compact;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return SizedBox(
-      width: compact ? double.infinity : 228,
+      width: width,
       height: compact ? 180 : 228,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -188,20 +206,29 @@ class _FeaturedMedia extends StatelessWidget {
                       const SizedBox.shrink(),
                 ),
               ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: AppRadius.lgAll,
-                color: learningOverlayDark,
+            if (project.imageUrl != null)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.lgAll,
+                  color: palette.overlayDark.withValues(alpha: 0.22),
+                ),
+              )
+            else ...[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.lgAll,
+                  color: palette.overlayDark,
+                ),
               ),
-            ),
-            Align(
-              alignment: AlignmentDirectional.center,
-              child: Icon(
-                project.heroIconData,
-                size: compact ? 48 : 58,
-                color: learningTextPrimary,
+              Align(
+                alignment: AlignmentDirectional.center,
+                child: Icon(
+                  project.heroIconData,
+                  size: compact ? 48 : 58,
+                  color: palette.textPrimary,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -217,22 +244,34 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: accent
-            ? learningLime.withValues(alpha: 0.24)
-            : learningDarkSurfaceSoft,
+        color: accent ? palette.limeSoft : palette.cardSurfaceAlt,
         borderRadius: AppRadius.pillAll,
+        border: Border.all(
+          color: accent
+              ? palette.lime.withValues(alpha: 0.28)
+              : palette.borderSubtle,
+        ),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.body(
-          context,
-        ).copyWith(color: accent ? learningLimeSoft : learningTextSecondary),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: textTheme.labelSmall?.copyWith(
+              color: accent ? palette.lime : palette.textSecondary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

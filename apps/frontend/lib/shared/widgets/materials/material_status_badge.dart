@@ -1,14 +1,48 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/app_radius.dart';
-import '../../../app/theme/app_text_styles.dart';
-import 'materials_ui_palette.dart';
+import '../app_status_badge.dart';
 
 enum MaterialStatusBadgeTone {
   available,
   reserved,
   reused,
   draft,
+  success,
+  danger,
+  info,
+  neutral,
+}
+
+extension MaterialStatusBadgeToneX on MaterialStatusBadgeTone {
+  AppStatusTone get appStatusTone => switch (this) {
+    MaterialStatusBadgeTone.available => AppStatusTone.primary,
+    MaterialStatusBadgeTone.reserved => AppStatusTone.warning,
+    MaterialStatusBadgeTone.reused ||
+    MaterialStatusBadgeTone.success => AppStatusTone.success,
+    MaterialStatusBadgeTone.danger => AppStatusTone.danger,
+    MaterialStatusBadgeTone.info => AppStatusTone.info,
+    MaterialStatusBadgeTone.draft ||
+    MaterialStatusBadgeTone.neutral => AppStatusTone.neutral,
+  };
+}
+
+/// Maps material lifecycle values to the shared semantic status contract.
+MaterialStatusBadgeTone materialLifecycleStatusTone(String status) {
+  switch (status) {
+    case 'AVAILABLE':
+      return MaterialStatusBadgeTone.available;
+    case 'PENDING_RESERVATION':
+    case 'RESERVED':
+      return MaterialStatusBadgeTone.reserved;
+    case 'REUSED':
+      return MaterialStatusBadgeTone.reused;
+    case 'UNAVAILABLE':
+      return MaterialStatusBadgeTone.danger;
+    case 'DRAFT':
+      return MaterialStatusBadgeTone.draft;
+    default:
+      return MaterialStatusBadgeTone.neutral;
+  }
 }
 
 class MaterialStatusBadge extends StatelessWidget {
@@ -22,54 +56,6 @@ class MaterialStatusBadge extends StatelessWidget {
   final MaterialStatusBadgeTone tone;
 
   @override
-  Widget build(BuildContext context) {
-    final palette = switch (tone) {
-      MaterialStatusBadgeTone.available => (
-        background: materialAvailableBackground,
-        foreground: materialAvailableForeground,
-        border: materialAvailableBorder,
-      ),
-      MaterialStatusBadgeTone.reserved => (
-        background: materialReservedBackground,
-        foreground: materialReservedForeground,
-        border: materialReservedBorder,
-      ),
-      MaterialStatusBadgeTone.reused => (
-        background: materialReusedBackground,
-        foreground: materialReusedForeground,
-        border: materialReusedBorder,
-      ),
-      MaterialStatusBadgeTone.draft => (
-        background: materialDraftBackground,
-        foreground: materialDraftForeground,
-        border: materialDraftBorder,
-      ),
-    };
-
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: materialBadgeHorizontalPadding,
-        vertical: materialBadgeVerticalPadding,
-      ),
-      decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.border),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(
-          context,
-        ).copyWith(
-          color: palette.foreground,
-          fontSize: materialBadgeFontSize,
-          fontWeight: FontWeight.w700,
-          height: 1.1,
-        ),
-        textAlign: TextAlign.start,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      AppStatusBadge(label: label, tone: tone.appStatusTone);
 }

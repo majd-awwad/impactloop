@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 import 'learning_hub_text.dart';
 
@@ -12,10 +11,12 @@ class LearningCategoryChips extends StatelessWidget {
     super.key,
     required this.categories,
     required this.selectedIndex,
+    this.onSelected,
   });
 
   final List<LocalizedText> categories;
   final int selectedIndex;
+  final ValueChanged<int>? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +30,7 @@ class LearningCategoryChips extends StatelessWidget {
               _CategoryChip(
                 label: categories[index].resolve(context),
                 selected: index == selectedIndex,
+                onTap: onSelected == null ? null : () => onSelected!(index),
               ),
               if (index != categories.length - 1)
                 const SizedBox(width: AppSpacing.sm),
@@ -41,31 +43,51 @@ class LearningCategoryChips extends StatelessWidget {
 }
 
 class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.label, required this.selected});
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
 
   final String label;
   final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: selected ? learningLime : learningDarkSurfaceSoft,
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final background = selected ? palette.limeSoft : palette.cardSurface;
+    final border = selected
+        ? palette.lime.withValues(alpha: 0.34)
+        : palette.borderSubtle;
+    final foreground = selected ? palette.lime : palette.textSecondary;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(
-          color: selected ? learningLime : learningBorderSubtle,
-        ),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.label(
-          context,
-        ).copyWith(
-          color: selected ? Colors.black87 : learningTextSecondary,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 42),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: AppRadius.pillAll,
+            border: Border.all(color: border),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: textTheme.labelMedium?.copyWith(
+                color: foreground,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+              ),
+            ),
+          ),
         ),
       ),
     );

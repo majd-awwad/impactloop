@@ -3,8 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
+import '../../../../app/theme/landing_colors.dart';
 import '../../../../app/widgets/hero_workshop_visual.dart';
 
 class LandingHeroSection extends StatelessWidget {
@@ -44,18 +44,21 @@ class _HeroContent extends StatelessWidget {
 
   final VoidCallback onSignIn;
 
-  static const _avatarColors = [
-    AuthDarkColors.accent,
-    AuthDarkColors.accentMuted,
-    AuthDarkColors.gradientMid,
-    AuthDarkColors.gradientStart,
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
     final isNarrow = MediaQuery.sizeOf(context).width < 520;
     final isCompactPhone = MediaQuery.sizeOf(context).width < 640;
     final isMobileHero = MediaQuery.sizeOf(context).width < 700;
+    final chipAccent = Theme.of(context).brightness == Brightness.dark
+        ? colors.accentMint
+        : colors.primary;
+    final avatarColors = [
+      colors.accentMint,
+      colors.accentAmber,
+      colors.accentBlue,
+      colors.primary,
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,24 +69,20 @@ class _HeroContent extends StatelessWidget {
             vertical: AppSpacing.sm,
           ),
           decoration: BoxDecoration(
-            color: AuthDarkColors.chipUnselected,
+            color: colors.surfaceSoft,
             borderRadius: AppRadius.pillAll,
-            border: Border.all(color: AuthDarkColors.border),
+            border: Border.all(color: colors.border),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.eco_outlined,
-                size: 16,
-                color: AuthDarkColors.accent,
-              ),
+              Icon(Icons.eco_outlined, size: 16, color: chipAccent),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 'Build a better future',
                 style: AuthDarkTextStyles.chip(
                   context,
-                ).copyWith(color: AuthDarkColors.accent),
+                ).copyWith(color: chipAccent),
               ),
             ],
           ),
@@ -92,9 +91,10 @@ class _HeroContent extends StatelessWidget {
         Text(
           'Learn. Reuse. Build.',
           style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
+            color: colors.textPrimary,
             fontSize: isNarrow ? 42 : 60,
             height: 1.0,
-            letterSpacing: -1.6,
+            letterSpacing: 0,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -107,15 +107,15 @@ class _HeroContent extends StatelessWidget {
             'surplus into projects with a cleaner, community-driven workflow.',
             style: AuthDarkTextStyles.brandingSubtitle(
               context,
-            ).copyWith(fontSize: 18, color: AuthDarkColors.textSecondary),
+            ).copyWith(fontSize: 18, color: colors.textSecondary),
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
         DecoratedBox(
           decoration: BoxDecoration(
-            color: AuthDarkColors.surface.withValues(alpha: 0.76),
+            color: colors.surfaceGlass,
             borderRadius: AppRadius.xlAll,
-            border: Border.all(color: AuthDarkColors.border),
+            border: Border.all(color: colors.border),
           ),
           child: Padding(
             padding: EdgeInsets.all(
@@ -159,7 +159,7 @@ class _HeroContent extends StatelessWidget {
                         'No credit card. No noise. Just building.',
                         style: AuthDarkTextStyles.body(
                           context,
-                        ).copyWith(color: AuthDarkColors.textMuted),
+                        ).copyWith(color: colors.textMuted),
                       ),
                     ],
                   ),
@@ -217,9 +217,11 @@ class _HeroContent extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AuthDarkColors.surface.withValues(alpha: 0.6),
+              color: colors.surfaceSoft,
               borderRadius: AppRadius.lgAll,
-              border: Border.all(color: AuthDarkColors.border),
+              border: Border.all(
+                color: colors.borderStrong.withValues(alpha: 0.7),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -234,13 +236,11 @@ class _HeroContent extends StatelessWidget {
                           left: index * 22.0,
                           child: CircleAvatar(
                             radius: 18,
-                            backgroundColor: _avatarColors[index],
+                            backgroundColor: avatarColors[index],
                             child: Icon(
                               Icons.person,
                               size: 18,
-                              color: AuthDarkColors.textOnAccent.withValues(
-                                alpha: 0.85,
-                              ),
+                              color: colors.textOnPrimary,
                             ),
                           ),
                         ),
@@ -254,7 +254,7 @@ class _HeroContent extends StatelessWidget {
                     'who are building with less waste.',
                     style: AuthDarkTextStyles.body(
                       context,
-                    ).copyWith(color: AuthDarkColors.textPrimary),
+                    ).copyWith(color: colors.textSecondary),
                   ),
                 ),
               ],
@@ -279,11 +279,13 @@ class _HeroMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AuthDarkColors.surface.withValues(alpha: 0.7),
+        color: colors.surfaceElevated,
         borderRadius: AppRadius.lgAll,
-        border: Border.all(color: AuthDarkColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -292,10 +294,10 @@ class _HeroMetricCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: AuthDarkColors.accentSoft,
+                color: colors.primarySoft,
                 borderRadius: AppRadius.mdAll,
               ),
-              child: Icon(icon, size: 18, color: AuthDarkColors.accent),
+              child: Icon(icon, size: 18, color: colors.accentMint),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -309,14 +311,16 @@ class _HeroMetricCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: AuthDarkTextStyles.title(
                       context,
-                    ).copyWith(fontSize: 18),
+                    ).copyWith(color: colors.textPrimary, fontSize: 18),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AuthDarkTextStyles.label(context),
+                    style: AuthDarkTextStyles.label(
+                      context,
+                    ).copyWith(color: colors.textMuted),
                   ),
                 ],
               ),
@@ -343,12 +347,14 @@ class _LandingPrimaryCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     final button = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: AppRadius.lgAll,
         boxShadow: [
           BoxShadow(
-            color: AuthDarkColors.accent.withValues(alpha: 0.12),
+            color: colors.primary.withValues(alpha: 0.22),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -356,8 +362,8 @@ class _LandingPrimaryCta extends StatelessWidget {
       ),
       child: FilledButton.icon(
         style: FilledButton.styleFrom(
-          backgroundColor: AuthDarkColors.accent,
-          foregroundColor: AuthDarkColors.textOnAccent,
+          backgroundColor: colors.primary,
+          foregroundColor: colors.textOnPrimary,
           minimumSize: const Size(0, 58),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
@@ -369,10 +375,9 @@ class _LandingPrimaryCta extends StatelessWidget {
         icon: Icon(icon, size: 20),
         label: Text(
           label,
-          style: AuthDarkTextStyles.body(context).copyWith(
-            color: AuthDarkColors.textOnAccent,
-            fontWeight: FontWeight.w800,
-          ),
+          style: AuthDarkTextStyles.body(
+            context,
+          ).copyWith(color: colors.textOnPrimary, fontWeight: FontWeight.w800),
         ),
       ),
     );
@@ -400,26 +405,27 @@ class _LandingOutlinedCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = LandingColors.of(context);
+
     final button = OutlinedButton.icon(
       style: OutlinedButton.styleFrom(
-        foregroundColor: AuthDarkColors.textPrimary,
-        side: const BorderSide(color: AuthDarkColors.border),
+        foregroundColor: colors.textPrimary,
+        side: BorderSide(color: colors.borderStrong),
         minimumSize: const Size(0, 58),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
-        backgroundColor: AuthDarkColors.surface.withValues(alpha: 0.35),
+        backgroundColor: colors.surfaceElevated.withValues(alpha: 0.75),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
       ),
       onPressed: onPressed,
-      icon: Icon(icon, size: 20),
+      icon: Icon(icon, size: 20, color: colors.textSecondary),
       label: Text(
         label,
-        style: AuthDarkTextStyles.body(context).copyWith(
-          color: AuthDarkColors.textPrimary,
-          fontWeight: FontWeight.w700,
-        ),
+        style: AuthDarkTextStyles.body(
+          context,
+        ).copyWith(color: colors.textPrimary, fontWeight: FontWeight.w700),
       ),
     );
 

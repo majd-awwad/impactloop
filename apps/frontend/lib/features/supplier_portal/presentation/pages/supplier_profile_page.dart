@@ -1,41 +1,46 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_section_card.dart';
+import '../../../profile/application/profile_providers.dart';
+import '../../application/supplier_verification_access.dart'
+    show supplierVerificationPendingRoute, supplierVerificationStatusRoute;
 import '../../data/supplier_location_service.dart';
+import '../../data/models/reverse_geocode_result.dart';
 import '../../data/models/supplier_profile.dart';
 import '../../data/models/update_supplier_profile_request.dart';
+import '../../data/supplier_profile_image_helper.dart';
 import '../../data/supplier_profile_repository.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../controllers/supplier_profile_providers.dart';
-import '../widgets/profile_completion_card.dart';
-import '../widgets/supplier_account_security_card.dart';
+import '../theme/supplier_theme_extension.dart';
 import '../widgets/supplier_feedback.dart';
-import '../widgets/supplier_location_privacy_card.dart';
+import '../widgets/supplier_location_input_mode.dart';
 import '../widgets/supplier_pickup_map.dart';
-import '../widgets/supplier_pickup_map_preview.dart';
 import '../widgets/supplier_profile_form.dart';
-import '../widgets/supplier_profile_identity_card.dart';
-import '../widgets/supplier_profile_preview_card.dart';
+import '../widgets/supplier_profile_view_widgets.dart';
+import '../widgets/supplier_reverse_geocode_state.dart';
 import '../widgets/supplier_type_selector.dart';
-import '../widgets/supplier_verification_card.dart';
 
 class SupplierProfilePage extends ConsumerWidget {
   const SupplierProfilePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(supplierProfileProvider);
+    final profile = ref.watch(supplierProfileManagementProvider);
 
     return profile.when(
       data: (data) => _SupplierProfileContent(profile: data),
       loading: () => const _SupplierProfileLoading(),
       error: (error, _) => _SupplierProfileError(
-        message: error is ApiException ? error.message : 'Profile could not load.',
+        message: error is ApiException
+            ? error.message
+            : context.s.profileLoadError,
       ),
     );
   }
@@ -44,7 +49,7 @@ class SupplierProfilePage extends ConsumerWidget {
 class _SupplierProfileContent extends ConsumerStatefulWidget {
   const _SupplierProfileContent({required this.profile});
 
-  final SupplierProfileResponse profile;
+  final SupplierProfileManagement profile;
 
   @override
   ConsumerState<_SupplierProfileContent> createState() =>
@@ -62,22 +67,34 @@ class _SupplierProfileContentState
   late final TextEditingController _addressLineController;
   late final TextEditingController _organizationNameController;
   late final TextEditingController _contactPersonController;
-  late final TextEditingController _workingDaysController;
   late final TextEditingController _workingFromController;
   late final TextEditingController _workingToController;
   late final TextEditingController _businessCountryController;
   late final TextEditingController _businessCityController;
   late final TextEditingController _businessAreaController;
   late final TextEditingController _businessAddressLineController;
+  late final ScrollController _editScrollController;
   late String _supplierType;
   late String _visibility;
   late bool _isApproximate;
   late bool _useSeparateBusinessLocation;
+  List<String> _selectedWorkingDays = [];
   bool _isEditing = false;
   bool _isSaving = false;
-  int _draftTick = 0;
+  bool _isUploadingAvatar = false;
+  bool _isUploadingCover = false;
   double? _latitude;
   double? _longitude;
+  SupplierLocationInputMode _locationInputMode =
+      SupplierLocationInputMode.manual;
+  bool _locationCapturedThisSession = false;
+  bool _hasUnsavedChanges = false;
+  String _savedDraftFingerprint = '';
+  String? _storedCountryValue;
+  bool _countryFieldEdited = false;
+  bool _manualAddressEditedAfterCapture = false;
+  SupplierReverseGeocodeState _reverseGeocodeState =
+      SupplierReverseGeocodeState.idle;
   SupplierLocationButtonState _locationButtonState =
       SupplierLocationButtonState.idle;
   final _locationService = const SupplierLocationService();
@@ -93,13 +110,13 @@ class _SupplierProfileContentState
     _addressLineController = TextEditingController();
     _organizationNameController = TextEditingController();
     _contactPersonController = TextEditingController();
-    _workingDaysController = TextEditingController();
     _workingFromController = TextEditingController();
     _workingToController = TextEditingController();
     _businessCountryController = TextEditingController();
     _businessCityController = TextEditingController();
     _businessAreaController = TextEditingController();
     _businessAddressLineController = TextEditingController();
+    _editScrollController = ScrollController(keepScrollOffset: true);
     _applyProfile(widget.profile);
     _isEditing = !widget.profile.hasSupplierProfile;
   }
@@ -112,44 +129,209 @@ class _SupplierProfileContentState
     }
   }
 
-  void _applyProfile(SupplierProfileResponse profile) {
-    final supplier = profile.supplier;
-    final location = supplier?.defaultPickupLocation;
-    final organization = supplier?.organizationProfile;
-    final businessLocation = organization?.businessLocation;
+  void _clearManualAddressFields() {
+    _countryController.clear();
+    _cityController.clear();
+    _areaController.clear();
+    _addressLineController.clear();
+  }
 
-    _publicNameController.text = supplier?.publicName.isNotEmpty == true
-        ? supplier!.publicName
-        : profile.user.displayName;
-    _descriptionController.text = supplier?.description ?? '';
+  void _restoreManualAddressFromProfile() {
+    final location = widget.profile.pickupLocation;
+    final storedCountry = location?.country ?? '';
+    _storedCountryValue = storedCountry;
+    _countryFieldEdited = false;
+    _countryController.text = context.s.countryDisplay(storedCountry);
+    _cityController.text = location?.city ?? '';
+    _areaController.text = location?.area ?? '';
+    _addressLineController.text = location?.addressLine ?? '';
+  }
+
+  void _applyProfile(SupplierProfileManagement profile) {
+    final identity = profile.identity;
+    final location = profile.pickupLocation;
+    final organization = profile.organization;
+
+    _publicNameController.text = identity?.publicName ?? '';
+    _descriptionController.text = identity?.description ?? '';
     _countryController.text = location?.country ?? '';
     _cityController.text = location?.city ?? '';
     _areaController.text = location?.area ?? '';
     _addressLineController.text = location?.addressLine ?? '';
     _organizationNameController.text = organization?.organizationName ?? '';
     _contactPersonController.text = organization?.contactPersonName ?? '';
-    _workingDaysController.text = organization?.workingDays?.join(', ') ?? '';
     _workingFromController.text =
-        organization?.workingHours?['from']?.toString() ?? '';
+        organization?.workingHours?['from']?.toString() ??
+        organization?.workingHours?['start']?.toString() ??
+        '';
     _workingToController.text =
-        organization?.workingHours?['to']?.toString() ?? '';
-    _businessCountryController.text = businessLocation?.country ?? '';
-    _businessCityController.text = businessLocation?.city ?? '';
-    _businessAreaController.text = businessLocation?.area ?? '';
-    _businessAddressLineController.text = businessLocation?.addressLine ?? '';
-    _supplierType = supplierTypeValues.contains(supplier?.supplierType)
-        ? supplier!.supplierType
+        organization?.workingHours?['to']?.toString() ??
+        organization?.workingHours?['end']?.toString() ??
+        '';
+    _businessCountryController.clear();
+    _businessCityController.clear();
+    _businessAreaController.clear();
+    _businessAddressLineController.clear();
+    _supplierType = supplierTypeValues.contains(identity?.supplierType)
+        ? identity!.supplierType
         : 'INDIVIDUAL_SUPPLIER';
-    _visibility = location?.visibility ?? 'ORDER_ONLY';
+    final visibility = location?.visibility?.trim().toUpperCase();
+    _visibility = const {'PUBLIC', 'ORDER_ONLY', 'PRIVATE'}.contains(visibility)
+        ? visibility!
+        : 'ORDER_ONLY';
     _isApproximate = location?.isApproximate ?? true;
-    _useSeparateBusinessLocation = businessLocation != null;
+    _useSeparateBusinessLocation = false;
+    _selectedWorkingDays = [
+      for (final day in organization?.workingDays ?? <String>[])
+        if (supplierWorkingDayValues.contains(day)) day,
+    ];
     _latitude = location?.latitude;
     _longitude = location?.longitude;
+    _locationInputMode = SupplierLocationInputMode.manual;
+    _locationCapturedThisSession = false;
+    _manualAddressEditedAfterCapture = false;
+    _reverseGeocodeState = SupplierReverseGeocodeState.idle;
     _locationButtonState = SupplierLocationButtonState.idle;
+    _savedDraftFingerprint = _draftFingerprint();
+    _hasUnsavedChanges = false;
+  }
+
+  void _applyReverseGeocodeResult(ReverseGeocodeResult result) {
+    if (result.country != null) {
+      _countryController.text = context.s.countryDisplay(result.country!);
+      _countryFieldEdited = true;
+    }
+    if (result.city != null) {
+      _cityController.text = result.city!;
+    }
+    if (result.area != null) {
+      _areaController.text = result.area!;
+    }
+    if (result.addressLine != null) {
+      _addressLineController.text = result.addressLine!;
+    }
+  }
+
+  Future<void> _lookupAddressFromCoordinates(
+    double latitude,
+    double longitude,
+  ) async {
+    setState(() => _reverseGeocodeState = SupplierReverseGeocodeState.loading);
+
+    try {
+      final result = await ref
+          .read(supplierProfileRepositoryProvider)
+          .reverseGeocode(latitude: latitude, longitude: longitude);
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!_manualAddressEditedAfterCapture) {
+        _applyReverseGeocodeResult(result);
+      }
+
+      setState(() {
+        _reverseGeocodeState = SupplierReverseGeocodeState.success;
+      });
+
+      if (kDebugMode) {
+        debugPrint(
+          '[SupplierProfile] reverse geocode country=${result.country} '
+          'city=${result.city} area=${result.area} '
+          'address=${result.addressLine}',
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _reverseGeocodeState = SupplierReverseGeocodeState.failure;
+      });
+
+      if (kDebugMode) {
+        debugPrint('[SupplierProfile] reverse geocode failed: $error');
+      }
+    }
+  }
+
+  void _onPickupAddressFieldChanged() {
+    if (_locationCapturedThisSession) {
+      _manualAddressEditedAfterCapture = true;
+    }
+    _markDirty();
+  }
+
+  void _onCountryFieldChanged() {
+    if (_locationCapturedThisSession) {
+      _manualAddressEditedAfterCapture = true;
+    }
+    _countryFieldEdited = true;
+    _markDirty();
+  }
+
+  void _markDirty() {
+    setState(() {
+      _hasUnsavedChanges = _draftFingerprint() != _savedDraftFingerprint;
+    });
+  }
+
+  String _draftFingerprint() => [
+    _publicNameController.text,
+    _descriptionController.text,
+    _countryController.text,
+    _cityController.text,
+    _areaController.text,
+    _addressLineController.text,
+    _supplierType,
+    _visibility,
+    _isApproximate,
+    _organizationNameController.text,
+    _contactPersonController.text,
+    _selectedWorkingDays.join(','),
+    _workingFromController.text,
+    _workingToController.text,
+    _useSeparateBusinessLocation,
+    _businessCountryController.text,
+    _businessCityController.text,
+    _businessAreaController.text,
+    _businessAddressLineController.text,
+    _latitude,
+    _longitude,
+    _locationInputMode,
+  ].join('\u0000');
+
+  void _startEditing() {
+    if (_editScrollController.hasClients) {
+      _editScrollController.jumpTo(0);
+    }
+    setState(() => _isEditing = true);
+  }
+
+  void _scheduleEditScrollClamp() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_editScrollController.hasClients) return;
+      final position = _editScrollController.position;
+      final clamped = position.pixels
+          .clamp(0.0, position.maxScrollExtent)
+          .toDouble();
+      if (clamped != position.pixels) {
+        _editScrollController.jumpTo(clamped);
+      }
+    });
   }
 
   Future<void> _captureCurrentLocation() async {
-    setState(() => _locationButtonState = SupplierLocationButtonState.loading);
+    _countryFieldEdited = true;
+    setState(() {
+      _locationButtonState = SupplierLocationButtonState.loading;
+      _locationCapturedThisSession = false;
+      _manualAddressEditedAfterCapture = false;
+      _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+    });
+    _markDirty();
 
     try {
       final capture = await _locationService.captureCurrentLocation();
@@ -160,27 +342,94 @@ class _SupplierProfileContentState
       setState(() {
         _latitude = capture.latitude;
         _longitude = capture.longitude;
+        _locationInputMode = SupplierLocationInputMode.currentLocation;
+        _locationCapturedThisSession = true;
         _locationButtonState = SupplierLocationButtonState.captured;
-        _draftTick++;
+        _clearManualAddressFields();
       });
+      _markDirty();
+
+      if (kDebugMode) {
+        debugPrint(
+          '[SupplierProfile] form state lat=$_latitude lng=$_longitude '
+          '(manual address fields cleared)',
+        );
+      }
+
+      await _lookupAddressFromCoordinates(capture.latitude, capture.longitude);
     } on SupplierLocationException catch (error) {
       if (!mounted) {
         return;
       }
 
-      setState(() => _locationButtonState = SupplierLocationButtonState.idle);
+      setState(() {
+        _locationButtonState = SupplierLocationButtonState.idle;
+        _locationCapturedThisSession = false;
+        _manualAddressEditedAfterCapture = false;
+        _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+        _restoreManualAddressFromProfile();
+      });
+      _markDirty();
       showSupplierErrorSnackBar(context, error.message);
     } catch (_) {
       if (!mounted) {
         return;
       }
 
-      setState(() => _locationButtonState = SupplierLocationButtonState.idle);
-      showSupplierErrorSnackBar(
-        context,
-        'Current location is not available on this browser or device.',
-      );
+      setState(() {
+        _locationButtonState = SupplierLocationButtonState.idle;
+        _locationCapturedThisSession = false;
+        _manualAddressEditedAfterCapture = false;
+        _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+        _restoreManualAddressFromProfile();
+      });
+      _markDirty();
+      showSupplierErrorSnackBar(context, context.s.couldNotGetLocation);
     }
+  }
+
+  void _onLocationInputModeChanged(SupplierLocationInputMode mode) {
+    if (mode == SupplierLocationInputMode.currentLocation) {
+      setState(() {
+        _locationInputMode = mode;
+        _latitude = null;
+        _longitude = null;
+        _locationCapturedThisSession = false;
+        _manualAddressEditedAfterCapture = false;
+        _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+        _locationButtonState = SupplierLocationButtonState.idle;
+        _clearManualAddressFields();
+      });
+      _captureCurrentLocation();
+      return;
+    }
+
+    setState(() {
+      _locationInputMode = mode;
+      _locationCapturedThisSession = false;
+      _manualAddressEditedAfterCapture = false;
+      _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+      _locationButtonState = SupplierLocationButtonState.idle;
+      if (_latitude == null && _longitude == null) {
+        final savedLocation = widget.profile.pickupLocation;
+        _latitude = savedLocation?.latitude;
+        _longitude = savedLocation?.longitude;
+      }
+    });
+    _markDirty();
+  }
+
+  void _onPickupPinMoved(LatLng point) {
+    setState(() {
+      _latitude = point.latitude;
+      _longitude = point.longitude;
+      _locationInputMode = SupplierLocationInputMode.manual;
+      _locationCapturedThisSession = false;
+      _manualAddressEditedAfterCapture = false;
+      _reverseGeocodeState = SupplierReverseGeocodeState.idle;
+    });
+    _markDirty();
+    _lookupAddressFromCoordinates(point.latitude, point.longitude);
   }
 
   @override
@@ -193,219 +442,331 @@ class _SupplierProfileContentState
     _addressLineController.dispose();
     _organizationNameController.dispose();
     _contactPersonController.dispose();
-    _workingDaysController.dispose();
     _workingFromController.dispose();
     _workingToController.dispose();
     _businessCountryController.dispose();
     _businessCityController.dispose();
     _businessAreaController.dispose();
     _businessAddressLineController.dispose();
+    _editScrollController.dispose();
     super.dispose();
   }
 
-  SupplierProfileDraft get _draft {
-    return SupplierProfileDraft(
-      publicName: _publicNameController.text,
-      supplierType: _supplierType,
-      description: _descriptionController.text,
-      country: _countryController.text,
-      city: _cityController.text,
-      area: _areaController.text,
-      visibility: _visibility,
-    );
+  String? _locationStatusMessage(SupplierL10n l) {
+    if (_locationButtonState == SupplierLocationButtonState.loading) {
+      return l.gettingLocation;
+    }
+
+    if (_reverseGeocodeState == SupplierReverseGeocodeState.loading) {
+      return l.findingAddress;
+    }
+
+    if (_reverseGeocodeState == SupplierReverseGeocodeState.success) {
+      return l.addressFoundFromLocation;
+    }
+
+    if (_reverseGeocodeState == SupplierReverseGeocodeState.failure &&
+        _locationCapturedThisSession) {
+      return l.addressLookupFailed;
+    }
+
+    if (_locationCapturedThisSession) {
+      return l.locationCapturedOptionalDetails;
+    }
+
+    return null;
+  }
+
+  Future<void> _uploadProfileImage(SupplierProfileImageKind kind) async {
+    if (_isUploadingAvatar || _isUploadingCover) {
+      return;
+    }
+
+    setState(() {
+      if (kind == SupplierProfileImageKind.avatar) {
+        _isUploadingAvatar = true;
+      } else {
+        _isUploadingCover = true;
+      }
+    });
+
+    try {
+      final helper = SupplierProfileImageHelper(
+        ref.read(supplierProfileRepositoryProvider),
+        ref.read(profileRepositoryProvider),
+      );
+      await helper.pickUploadAndSave(kind);
+      ref.invalidate(supplierProfileManagementProvider);
+      await ref.read(supplierProfileManagementProvider.future);
+      if (kind == SupplierProfileImageKind.avatar) {
+        ref.invalidate(supplierProfileProvider);
+      }
+      if (!mounted) {
+        return;
+      }
+      showSupplierInfoSnackBar(
+        context,
+        kind == SupplierProfileImageKind.avatar
+            ? 'Profile photo updated'
+            : 'Cover image updated',
+      );
+    } on ApiException catch (error) {
+      if (mounted) {
+        showSupplierErrorSnackBar(context, error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        showSupplierErrorSnackBar(context, context.s.profileCouldNotSave);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingAvatar = false;
+          _isUploadingCover = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final profile = widget.profile;
-    final supplier = profile.supplier;
     final isWide = MediaQuery.sizeOf(context).width >= 1024;
-    final draft = _isEditing ? _draft : null;
-    // Trigger rebuild when draft fields change during edit mode.
-    final _ = _draftTick;
-    final activeLatitude = _isEditing
-        ? _latitude
-        : supplier?.defaultPickupLocation?.latitude;
-    final activeLongitude = _isEditing
-        ? _longitude
-        : supplier?.defaultPickupLocation?.longitude;
+    final verificationAction = profile.verification.canResubmit
+        ? () => context.go(supplierVerificationStatusRoute)
+        : profile.verification.canSubmit
+        ? () => context.go(supplierVerificationPendingRoute)
+        : null;
 
-    final preview = SupplierProfilePreviewCard(
-      publicName: draft?.publicName ??
-          (supplier?.publicName.isNotEmpty == true
-              ? supplier!.publicName
-              : profile.user.displayName),
-      supplierType: draft?.supplierType ?? supplier?.supplierType ?? _supplierType,
-      verificationStatus: supplier?.verificationStatus ?? 'UNVERIFIED',
-      description: draft?.description ?? supplier?.description,
-      city: draft?.city ?? supplier?.defaultPickupLocation?.city,
-      area: draft?.area ?? supplier?.defaultPickupLocation?.area,
-      country: draft?.country ?? supplier?.defaultPickupLocation?.country,
-      visibility: draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
-    );
-
-    final sideColumn = Column(
-      children: [
-        ProfileCompletionCard(profile: profile, draft: draft),
-        const SizedBox(height: AppSpacing.lg),
-        SupplierVerificationCard(
-          status: supplier?.verificationStatus ?? 'UNVERIFIED',
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        SupplierLocationPrivacyCard(
-          visibility: draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        SupplierPickupMapPreview(
-          city: draft?.city ?? supplier?.defaultPickupLocation?.city ?? '',
-          area: draft?.area ?? supplier?.defaultPickupLocation?.area,
-          country: draft?.country ?? supplier?.defaultPickupLocation?.country,
-          visibility:
-              draft?.visibility ?? supplier?.defaultPickupLocation?.visibility,
-          latitude: activeLatitude,
-          longitude: activeLongitude,
-          showUseLocationButton: _isEditing && isWide,
-          locationButtonState: _locationButtonState,
-          onUseCurrentLocation: _captureCurrentLocation,
-          showCoordinateDetails: _isEditing,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        const SupplierAccountSecurityCard(),
-      ],
-    );
-
-    final mainColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!_isEditing && profile.hasSupplierProfile) ...[
-          SupplierProfileIdentityCard(
-            profile: profile,
-            onEdit: () => setState(() => _isEditing = true),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          preview,
-          if (!isWide) ...[
-            const SizedBox(height: AppSpacing.lg),
-            SupplierPickupMap(
-              latitude: supplier?.defaultPickupLocation?.latitude,
-              longitude: supplier?.defaultPickupLocation?.longitude,
-              fallbackCity: supplier?.defaultPickupLocation?.city,
-              fallbackArea: supplier?.defaultPickupLocation?.area,
-              fallbackCountry: supplier?.defaultPickupLocation?.country,
-              visibility: supplier?.defaultPickupLocation?.visibility,
-            ),
-          ],
-          const SizedBox(height: AppSpacing.lg),
-        ],
-        if (_isEditing) ...[
-          if (profile.hasSupplierProfile) ...[
-            preview,
-            const SizedBox(height: AppSpacing.lg),
-          ],
-          SupplierProfileForm(
-            formKey: _formKey,
-            isSaving: _isSaving,
-            hasExistingProfile: profile.hasSupplierProfile,
-            publicNameController: _publicNameController,
-            descriptionController: _descriptionController,
-            countryController: _countryController,
-            cityController: _cityController,
-            areaController: _areaController,
-            addressLineController: _addressLineController,
-            supplierType: _supplierType,
-            visibility: _visibility,
-            isApproximate: _isApproximate,
-            organizationNameController: _organizationNameController,
-            contactPersonController: _contactPersonController,
-            workingDaysController: _workingDaysController,
-            workingFromController: _workingFromController,
-            workingToController: _workingToController,
-            useSeparateBusinessLocation: _useSeparateBusinessLocation,
-            businessCountryController: _businessCountryController,
-            businessCityController: _businessCityController,
-            businessAreaController: _businessAreaController,
-            businessAddressLineController: _businessAddressLineController,
-            onSupplierTypeChanged: (value) => setState(() {
-              _supplierType = value;
-            }),
-            onVisibilityChanged: (value) => setState(() {
-              _visibility = value;
-            }),
-            onApproximateChanged: (value) => setState(() {
-              _isApproximate = value;
-            }),
-            onSeparateBusinessLocationChanged: (value) => setState(() {
-              _useSeparateBusinessLocation = value;
-            }),
-            onFieldChanged: () => setState(() => _draftTick++),
-            onCancel: profile.hasSupplierProfile
-                ? () {
-                    _applyProfile(profile);
-                    setState(() => _isEditing = false);
-                  }
-                : null,
-            onSave: _saveProfile,
-            showMapInForm: !isWide,
-            showLocationButton: !isWide,
-            latitude: _latitude,
-            longitude: _longitude,
-            locationButtonState: _locationButtonState,
-            onUseCurrentLocation: _captureCurrentLocation,
-          ),
-        ],
-      ],
-    );
+    if (_isEditing || !profile.hasSupplierProfile) {
+      return _buildEditPage(context, profile, isWide);
+    }
 
     return SingleChildScrollView(
-      padding: SupplierDecorations.pagePadding(compact: !isWide),
+      padding: context.supplierDecorations.pagePadding(compact: !isWide),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PageIntro(hasProfile: profile.hasSupplierProfile),
+          SupplierProfileHeader(
+            profile: profile,
+            onEdit: _startEditing,
+            onChangeAvatar: () =>
+                _uploadProfileImage(SupplierProfileImageKind.avatar),
+            onChangeCover: () =>
+                _uploadProfileImage(SupplierProfileImageKind.cover),
+            isUploadingAvatar: _isUploadingAvatar,
+            isUploadingCover: _isUploadingCover,
+          ),
+          const SizedBox(height: AppSpacing.lg),
           const SizedBox(height: AppSpacing.xl),
-          if (isWide)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: mainColumn),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(flex: 2, child: sideColumn),
-              ],
-            )
-          else ...[
-            mainColumn,
-            const SizedBox(height: AppSpacing.xl),
-            sideColumn,
-          ],
+          ProfileDetailsSection(
+            profile: profile,
+            onEdit: _startEditing,
+            onVerificationAction: verificationAction,
+          ),
         ],
       ),
     );
   }
 
-  Future<void> _saveProfile() async {
-    if (_isSaving || !(_formKey.currentState?.validate() ?? false)) {
+  Widget _buildEditPage(
+    BuildContext context,
+    SupplierProfileManagement profile,
+    bool isWide,
+  ) {
+    final l = context.s;
+    final pagePadding = context.supplierDecorations.pagePadding(
+      compact: !isWide,
+    );
+    _scheduleEditScrollClamp();
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        SingleChildScrollView(
+          key: const PageStorageKey<String>('supplier-profile-edit-scroll'),
+          controller: _editScrollController,
+          primary: false,
+          padding: pagePadding.copyWith(bottom: pagePadding.bottom + 112),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l.editProfileTitle, style: context.supplierTitle()),
+              const SizedBox(height: AppSpacing.xs),
+              Text(l.editProfileSubtitle, style: context.supplierBody()),
+              const SizedBox(height: AppSpacing.lg),
+              SupplierProfileForm(
+                formKey: _formKey,
+                publicNameController: _publicNameController,
+                descriptionController: _descriptionController,
+                countryController: _countryController,
+                cityController: _cityController,
+                areaController: _areaController,
+                addressLineController: _addressLineController,
+                supplierType: _supplierType,
+                visibility: _visibility,
+                isApproximate: _isApproximate,
+                organizationNameController: _organizationNameController,
+                contactPersonController: _contactPersonController,
+                workingFromController: _workingFromController,
+                workingToController: _workingToController,
+                selectedWorkingDays: _selectedWorkingDays,
+                useSeparateBusinessLocation: _useSeparateBusinessLocation,
+                businessCountryController: _businessCountryController,
+                businessCityController: _businessCityController,
+                businessAreaController: _businessAreaController,
+                businessAddressLineController: _businessAddressLineController,
+                onSupplierTypeChanged: (value) => setState(() {
+                  _supplierType = value;
+                }),
+                onVisibilityChanged: (value) => setState(() {
+                  _visibility = value;
+                  if (value != 'PUBLIC') _isApproximate = false;
+                }),
+                onApproximateChanged: (value) => setState(() {
+                  _isApproximate = value;
+                }),
+                onSeparateBusinessLocationChanged: (value) => setState(() {
+                  _useSeparateBusinessLocation = value;
+                }),
+                onWorkingDaysChanged: (days) => setState(() {
+                  _selectedWorkingDays = [...days];
+                  _hasUnsavedChanges =
+                      _draftFingerprint() != _savedDraftFingerprint;
+                }),
+                onFieldChanged: _markDirty,
+                locationInputMode: _locationInputMode,
+                locationCapturedThisSession: _locationCapturedThisSession,
+                reverseGeocodeState: _reverseGeocodeState,
+                locationStatusMessage: _locationStatusMessage(l),
+                onCountryChanged: _onCountryFieldChanged,
+                onPickupAddressFieldChanged: _onPickupAddressFieldChanged,
+                onLocationInputModeChanged: _onLocationInputModeChanged,
+                onPinMoved: _onPickupPinMoved,
+                latitude: _latitude,
+                longitude: _longitude,
+                locationButtonState: _locationButtonState,
+                onUseCurrentLocation: _captureCurrentLocation,
+              ),
+            ],
+          ),
+        ),
+        PositionedDirectional(
+          start: 0,
+          end: 0,
+          bottom: 0,
+          child: _StickyFormActions(
+            isSaving: _isSaving,
+            isDirty: _hasUnsavedChanges,
+            onSave: _saveProfile,
+            onDiscard: () => _discardChanges(profile),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _discardChanges(SupplierProfileManagement profile) async {
+    if (!_hasUnsavedChanges) {
+      _applyProfile(profile);
+      if (profile.hasSupplierProfile && mounted) {
+        setState(() => _isEditing = false);
+      }
       return;
+    }
+
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.s.t('Discard changes?', 'تجاهل التغييرات؟')),
+        content: Text(
+          context.s.t(
+            'Your unsaved edits will be lost.',
+            'ستفقد التعديلات غير المحفوظة.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.s.t('Keep editing', 'متابعة التعديل')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.s.discardChanges),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || shouldDiscard != true) return;
+    _applyProfile(profile);
+    setState(() {
+      if (profile.hasSupplierProfile) _isEditing = false;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    if (_isSaving || !_hasUnsavedChanges) {
+      return;
+    }
+
+    final usingCurrentLocation =
+        _locationInputMode == SupplierLocationInputMode.currentLocation;
+    final hasCoordinates = _latitude != null && _longitude != null;
+
+    if (usingCurrentLocation &&
+        (!_locationCapturedThisSession || !hasCoordinates)) {
+      showSupplierErrorSnackBar(context, context.s.captureLocationBeforeSave);
+      return;
+    }
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    if (kDebugMode) {
+      debugPrint(
+        '[SupplierProfile] save payload lat=$_latitude lng=$_longitude '
+        'city="${_cityController.text.trim()}" '
+        'area="${_areaController.text.trim()}" '
+        'address="${_addressLineController.text.trim()}" '
+        'mode=$_locationInputMode captured=$_locationCapturedThisSession',
+      );
     }
 
     setState(() => _isSaving = true);
     try {
       final request = _buildRequest();
-      await ref.read(supplierProfileRepositoryProvider).updateProfile(request);
-      final refreshed = await ref.refresh(supplierProfileProvider.future);
-      ref.invalidate(supplierDashboardProvider);
-      if (mounted) {
-        _applyProfile(refreshed);
-        setState(() {
-          _isSaving = false;
-          _isEditing = false;
-          _locationButtonState = SupplierLocationButtonState.idle;
-        });
-        showSupplierInfoSnackBar(context, 'Supplier profile updated');
+      if (kDebugMode) {
+        final loc = request.defaultPickupLocation;
+        debugPrint(
+          '[SupplierProfile] request location lat=${loc.latitude} '
+          'lng=${loc.longitude} city="${loc.city}" area="${loc.area}" '
+          'address="${loc.addressLine}"',
+        );
       }
+      await ref.read(supplierProfileRepositoryProvider).updateProfile(request);
+      final refreshed = await ref.refresh(
+        supplierProfileManagementProvider.future,
+      );
+      ref.invalidate(supplierDashboardProvider);
+      if (!mounted) {
+        return;
+      }
+      _applyProfile(refreshed);
+      setState(() {
+        _isSaving = false;
+        _isEditing = false;
+        _locationButtonState = SupplierLocationButtonState.idle;
+      });
+      showSupplierInfoSnackBar(context, context.s.profileUpdated);
     } on ApiException catch (error) {
-      _showSaveError(error.message);
+      if (mounted) {
+        _showSaveError(error.message);
+      }
     } catch (_) {
-      _showSaveError('Profile could not be saved.');
+      if (mounted) {
+        _showSaveError(context.s.profileCouldNotSave);
+      }
     }
   }
 
@@ -415,11 +776,7 @@ class _SupplierProfileContentState
             organizationName: _organizationNameController.text.trim(),
             organizationType: _supplierType,
             contactPersonName: _emptyToNull(_contactPersonController.text),
-            workingDays: _workingDaysController.text
-                .split(',')
-                .map((item) => item.trim())
-                .where((item) => item.isNotEmpty)
-                .toList(),
+            workingDays: List<String>.from(_selectedWorkingDays),
             workingHours: {
               if (_workingFromController.text.trim().isNotEmpty)
                 'from': _workingFromController.text.trim(),
@@ -447,7 +804,9 @@ class _SupplierProfileContentState
       supplierType: _supplierType,
       description: _emptyToNull(_descriptionController.text),
       defaultPickupLocation: UpdateSupplierProfileLocationRequest(
-        country: _countryController.text.trim(),
+        country: _countryFieldEdited
+            ? _countryController.text.trim()
+            : (_storedCountryValue ?? _countryController.text.trim()),
         city: _cityController.text.trim(),
         area: _emptyToNull(_areaController.text),
         addressLine: _emptyToNull(_addressLineController.text),
@@ -476,29 +835,88 @@ class _SupplierProfileContentState
   }
 }
 
-class _PageIntro extends StatelessWidget {
-  const _PageIntro({required this.hasProfile});
+class _StickyFormActions extends StatelessWidget {
+  const _StickyFormActions({
+    required this.isSaving,
+    required this.isDirty,
+    required this.onSave,
+    required this.onDiscard,
+  });
 
-  final bool hasProfile;
+  final bool isSaving;
+  final bool isDirty;
+  final VoidCallback onSave;
+  final VoidCallback onDiscard;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      decoration: SupplierDecorations.profileGlassCard,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Supplier Profile', style: AuthDarkTextStyles.display(context)),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            hasProfile
-                ? 'Keep your public supplier details accurate, trustworthy, and easy for learners to understand.'
-                : 'Create your supplier profile so learners know where and how to collect materials.',
-            style: AuthDarkTextStyles.body(context),
+    final colors = context.supplierColors;
+    final l = context.s;
+    return Material(
+      color: colors.surfaceSolid,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.sm,
           ),
-        ],
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(color: colors.border.withValues(alpha: 0.45)),
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final discard = OutlinedButton(
+                onPressed: !isSaving && isDirty ? onDiscard : null,
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                ),
+                child: Text(l.discardChanges),
+              );
+              final save = SizedBox(
+                width: 168,
+                child: FilledButton.icon(
+                  onPressed: !isSaving && isDirty ? onSave : null,
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.save_outlined, size: 18),
+                  label: Text(isSaving ? l.savingProfile : l.saveChanges),
+                ),
+              );
+              if (constraints.maxWidth < 480) {
+                return Row(
+                  children: [
+                    Expanded(child: discard),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(child: save),
+                  ],
+                );
+              }
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  discard,
+                  const SizedBox(width: AppSpacing.sm),
+                  save,
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
@@ -508,11 +926,7 @@ class _SupplierProfileLoading extends StatelessWidget {
   const _SupplierProfileLoading();
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: CircularProgressIndicator(color: AuthDarkColors.accent),
-    );
-  }
+  Widget build(BuildContext context) => const SupplierProfileLoadingSkeleton();
 }
 
 class _SupplierProfileError extends ConsumerWidget {
@@ -522,36 +936,34 @@ class _SupplierProfileError extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = context.s;
+    final colors = context.supplierColors;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: SupplierDecorations.dashboardCard,
+        child: AppSectionCard(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.error_outline,
-                color: AuthDarkColors.error,
-                size: 40,
-              ),
+              Icon(Icons.error_outline, color: colors.error, size: 40),
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Profile unavailable',
-                style: AuthDarkTextStyles.title(context),
+                l.t('Couldn’t load supplier profile', 'تعذّر تحميل ملف المورد'),
+                style: context.supplierTitle(),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: AuthDarkTextStyles.body(context),
+                style: context.supplierBody(),
               ),
               const SizedBox(height: AppSpacing.lg),
               OutlinedButton.icon(
-                onPressed: () => ref.invalidate(supplierProfileProvider),
+                onPressed: () =>
+                    ref.invalidate(supplierProfileManagementProvider),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Try again'),
+                label: Text(l.tryAgain),
               ),
             ],
           ),

@@ -6,9 +6,10 @@ This document defines the future backend response shape for Material Discovery.
 
 Current frontend status:
 
-- Material Discovery currently uses a local mock repository.
+- Material Discovery uses an API-backed repository by default.
 - The UI loads data through a repository boundary, not directly from API DTOs.
 - `AppMaterialCard` must remain independent from backend response models.
+- `MockMaterialDiscoveryRepository` still exists for fallback and testing.
 
 Future backend integration should:
 
@@ -20,20 +21,42 @@ Future backend integration should:
 
 Frontend repository contract:
 
-- `getMaterials()`
+- `fetchMaterials(MaterialDiscoveryQuery query)` → paginated `MaterialDiscoveryResult`
 - `getMaterialById(String id)`
 
-Current implementation:
+Current implementations:
 
-- `MockMaterialDiscoveryRepository`
+- `ApiMaterialDiscoveryRepository` for the default page flow
+- `MockMaterialDiscoveryRepository` for fallback and testing
 
-Future implementation:
+API integration notes:
 
-- a real API-backed repository that maps backend DTOs into the frontend domain model used by Material Discovery pages and reusable widgets
+- the frontend uses the shared Dio client from `apiClientProvider`
+- API responses are unwrapped with `unwrapApiResponse(...)`
+- `GET /api/materials` maps `data.items` into `DiscoveryMaterial`
+- `GET /api/materials/:id` maps `data` into `DiscoveryMaterial`
+- backend DTOs are mapped before data reaches `AppMaterialCard`
 
 ## GET /api/materials
 
 Returns a paginated list of materials for discovery.
+
+### Query parameters
+
+| Param | Type | Notes |
+|-------|------|-------|
+| `q` | string | Search title, description, material type, tags, category names |
+| `categoryId` | string | Active material category id |
+| `condition` | enum | `NEW`, `LIKE_NEW`, `GOOD`, `USED`, `NEEDS_REPAIR` |
+| `status` | enum | Default `AVAILABLE` |
+| `priceType` | enum | `FREE`, `PAID`, `ANY` (default) |
+| `deliveryAvailable` | boolean | Filters `deliveryAllowed` |
+| `pickupAllowed` | boolean | Filters pickup availability |
+| `city` | string | Case-insensitive contains on location city |
+| `area` | string | Case-insensitive contains on location area |
+| `sort` | enum | `newest` (default) or `popular` (`viewsCount` desc, then `createdAt` desc) |
+| `page` | number | Default `1` |
+| `limit` | number | Default `20`, max `100` |
 
 Public visibility behavior:
 
@@ -70,9 +93,11 @@ Example response:
         "city": "Nablus",
         "area": "Industrial Area",
         "deliveryAvailable": true,
+        "pickupAllowed": true,
         "imageUrl": "https://example.com/materials/plywood-panels.jpg",
         "supplierName": "Green Workshop Co.",
         "ratingSummary": null,
+        "viewsCount": 18,
         "createdAt": "2026-06-01T10:00:00.000Z"
       }
     ],
@@ -88,7 +113,7 @@ Example response:
 
 ## GET /api/materials/:id
 
-Returns one material record by id.
+Returns one material record by id and increments `viewsCount` on each successful read. Missing or non-public materials return `404` without incrementing. `viewsCount` counts total detail loads, not unique visitors.
 
 Public visibility behavior:
 
@@ -125,7 +150,7 @@ Example response:
     "deliveryAvailable": true,
     "imageUrl": "https://example.com/materials/plywood-panels.jpg",
     "supplierName": "Green Workshop Co.",
-    "ratingSummary": 4.8,
+    "ratingSummary": null,
     "createdAt": "2026-06-01T10:00:00.000Z"
   }
 }
@@ -145,11 +170,14 @@ Example response:
 - `price`: nullable price value when `isFree` is true
 - `city`: public city label
 - `area`: public approximate area label
-- `deliveryAvailable`: public fulfillment flag
-- `imageUrl`: nullable public preview image
+- `deliveryAvailable`: public delivery flag (`deliveryAllowed` in DB)
+- `pickupAllowed`: whether pickup is allowed
+- `imageUrl`: nullable public preview image URL or upload object key (same value as `primaryImageUrl`)
+- `primaryImageUrl`: first ordered material image reference (`material_images.imageUrl`); never binary data in the database
 - `supplierName`: public supplier display name
-- `ratingSummary`: optional backend rating summary; current mock UI may still use mock-only rating values
-- `createdAt`: creation timestamp for future sorting/filtering
+- `ratingSummary`: currently `null`; ratings and reviews are future work
+- `viewsCount`: public total detail-view counter incremented on each successful detail read (not unique visitors)
+- `createdAt`: creation timestamp
 
 ## Frontend mapping guidance
 

@@ -2,15 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/auth/token_storage.dart';
+import '../../../core/auth/access_token_holder.dart';
+import '../../../core/auth/auth_session_refresh.dart';
 import '../../../core/network/api_client.dart';
 import 'auth_controller.dart';
 import '../data/auth_api.dart';
 import '../data/auth_repository.dart';
-
-final tokenStorageProvider = Provider<TokenStorage>((ref) {
-  return createTokenStorage();
-});
 
 final authApiProvider = Provider<AuthApi>((ref) {
   return AuthApi(ref.watch(apiClientProvider));

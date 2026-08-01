@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 import 'learning_hub_text.dart';
 
@@ -13,26 +13,29 @@ class LearningHubHero extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.stats,
+    this.onSearchPressed,
+    this.onSubmitPressed,
   });
 
   final LocalizedText title;
   final LocalizedText subtitle;
   final Map<LocalizedText, int> stats;
+  final VoidCallback? onSearchPressed;
+  final VoidCallback? onSubmitPressed;
 
   @override
   Widget build(BuildContext context) {
-    final messenger = ScaffoldMessenger.of(context);
-
+    final palette = LearningUiPalette.of(context);
     return Container(
       constraints: const BoxConstraints(minHeight: 332),
       decoration: BoxDecoration(
         borderRadius: AppRadius.xlAll,
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
-          colors: [learningHeroStart, learningHeroAccent, learningHeroEnd],
+          colors: [palette.heroStart, palette.heroAccent, palette.heroEnd],
         ),
-        border: Border.all(color: learningBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
       child: Stack(
         children: [
@@ -41,7 +44,7 @@ class LearningHubHero extends StatelessWidget {
             start: -28,
             child: _HeroOrb(
               size: 140,
-              color: Colors.white.withValues(alpha: 0.05),
+              color: palette.cardSurface.withValues(alpha: 0.05),
             ),
           ),
           PositionedDirectional(
@@ -49,7 +52,7 @@ class LearningHubHero extends StatelessWidget {
             end: -16,
             child: _HeroOrb(
               size: 200,
-              color: learningLime.withValues(alpha: 0.08),
+              color: palette.lime.withValues(alpha: 0.08),
             ),
           ),
           PositionedDirectional(
@@ -57,7 +60,7 @@ class LearningHubHero extends StatelessWidget {
             end: 160,
             child: _HeroOrb(
               size: 180,
-              color: Colors.white.withValues(alpha: 0.04),
+              color: palette.cardSurface.withValues(alpha: 0.04),
             ),
           ),
           Padding(
@@ -74,34 +77,20 @@ class LearningHubHero extends StatelessWidget {
                   children: [
                     _HeroActionButton(
                       icon: Icons.search_rounded,
-                      onPressed: () {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              const LocalizedText(
-                                en: 'Search is a visual placeholder for now.',
-                                ar: 'البحث عنصر بصري تجريبي حالياً.',
-                              ).resolve(context),
-                            ),
-                          ),
-                        );
-                      },
+                      tooltip: const LocalizedText(
+                        en: 'Search projects',
+                        ar: '╪د╪ذ╪ص╪س ┘┘è ╪د┘┘à╪┤╪د╪▒┘è╪╣',
+                      ).resolve(context),
+                      onPressed: onSearchPressed,
                     ),
                     const Spacer(),
                     _HeroActionButton(
-                      icon: Icons.arrow_forward_rounded,
-                      onPressed: () {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              const LocalizedText(
-                                en: 'Header action is a visual placeholder for now.',
-                                ar: 'زر العنوان عنصر بصري تجريبي حالياً.',
-                              ).resolve(context),
-                            ),
-                          ),
-                        );
-                      },
+                      icon: Icons.edit_note_rounded,
+                      tooltip: const LocalizedText(
+                        en: 'Submit a project',
+                        ar: '╪ح╪▒╪│╪د┘ ┘à╪┤╪▒┘ê╪╣',
+                      ).resolve(context),
+                      onPressed: onSubmitPressed,
                     ),
                   ],
                 ),
@@ -113,7 +102,7 @@ class LearningHubHero extends StatelessWidget {
                     Text(
                       title.resolve(context),
                       style: AppTextStyles.brandingHeadline(context).copyWith(
-                        color: learningTextPrimary,
+                        color: palette.textPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 40,
                       ),
@@ -124,9 +113,9 @@ class LearningHubHero extends StatelessWidget {
                       constraints: const BoxConstraints(maxWidth: 760),
                       child: Text(
                         subtitle.resolve(context),
-                        style: AppTextStyles.brandingSubtitle(context).copyWith(
-                          color: learningTextSecondary,
-                        ),
+                        style: AppTextStyles.brandingSubtitle(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -161,6 +150,8 @@ class _HeroStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -168,13 +159,13 @@ class _HeroStat extends StatelessWidget {
           value,
           style: AppTextStyles.brandingHeadline(
             context,
-          ).copyWith(color: learningLime, fontWeight: FontWeight.w800),
+          ).copyWith(color: palette.lime, fontWeight: FontWeight.w800),
         ),
         Text(
           label,
           style: AppTextStyles.mobileHeroSubtitle(
             context,
-          ).copyWith(color: learningTextSecondary),
+          ).copyWith(color: palette.textSecondary),
         ),
       ],
     );
@@ -184,23 +175,28 @@ class _HeroStat extends StatelessWidget {
 class _HeroActionButton extends StatelessWidget {
   const _HeroActionButton({
     required this.icon,
-    required this.onPressed,
+    required this.tooltip,
+    this.onPressed,
   });
 
   final IconData icon;
-  final VoidCallback onPressed;
+  final String tooltip;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: palette.cardSurface.withValues(alpha: 0.08),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: palette.cardSurface.withValues(alpha: 0.08)),
       ),
       child: IconButton(
         onPressed: onPressed,
-        icon: Icon(icon, color: learningTextPrimary),
+        tooltip: tooltip,
+        icon: Icon(icon, color: palette.textPrimary),
       ),
     );
   }

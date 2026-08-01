@@ -1,18 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
-
-String visibilityLabel(String value) {
-  return switch (value) {
-    'PUBLIC' => 'Public area',
-    'ORDER_ONLY' => 'Order only',
-    'PRIVATE' => 'Private',
-    _ => value,
-  };
-}
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class SupplierLocationPrivacyCard extends StatelessWidget {
   const SupplierLocationPrivacyCard({super.key, this.visibility});
@@ -21,11 +10,13 @@ class SupplierLocationPrivacyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 180),
       padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: SupplierDecorations.sideInsightCard,
+      decoration: context.supplierDecorations.sideInsightCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -36,49 +27,51 @@ class SupplierLocationPrivacyCard extends StatelessWidget {
                 height: 36,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AuthDarkColors.accentSoft.withValues(alpha: 0.16),
+                  color: colors.accentSoft.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: AuthDarkColors.border.withValues(alpha: 0.35),
+                    color: colors.border.withValues(alpha: 0.35),
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.privacy_tip_outlined,
-                  color: AuthDarkColors.accent,
+                  color: colors.accent,
                   size: 20,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
-                'Location privacy',
-                style: AuthDarkTextStyles.sectionTitle(context),
+                context.s.locationPrivacy,
+                style: context.supplierSectionTitle(),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Your exact pickup address stays private. Learners only see a general area until a reservation is accepted.',
-            style: AuthDarkTextStyles.body(context),
+            context.s.locationPrivacySubtitle,
+            style: context.supplierBody(),
           ),
           if (visibility != null && visibility!.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: SupplierDecorations.profileSectionPanel,
+              decoration: context.supplierDecorations.profileSectionPanel,
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.visibility_outlined,
-                    color: AuthDarkColors.accent,
+                    color: colors.accent,
                     size: 18,
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Current: ${visibilityLabel(visibility!)}',
-                      style: AuthDarkTextStyles.body(context).copyWith(
-                        color: AuthDarkColors.textPrimary,
+                      context.s.visibilityCurrent(
+                        context.s.visibilityLabel(visibility!),
+                      ),
+                      style: context.supplierBody().copyWith(
+                        color: colors.textPrimary,
                       ),
                     ),
                   ),

@@ -1,15 +1,53 @@
+import type { CategoryType } from '../../generated/prisma/client.js';
+
 import { prisma } from '../../database/prisma.js';
 
-export const findActiveMaterialCategories = async () => {
+const resolveAllowedCategoryTypes = (
+  type?: 'MATERIAL' | 'PROJECT',
+): CategoryType[] => {
+  if (type === 'MATERIAL') {
+    return ['MATERIAL', 'BOTH'];
+  }
+
+  if (type === 'PROJECT') {
+    return ['PROJECT', 'BOTH'];
+  }
+
+  return ['MATERIAL', 'PROJECT', 'BOTH'];
+};
+
+export const findPublicCategories = async (input: {
+  type?: 'MATERIAL' | 'PROJECT';
+  rootOnly: boolean;
+}) => {
   return prisma.category.findMany({
     where: {
       isActive: true,
       categoryType: {
-        in: ['MATERIAL', 'BOTH'],
+        in: resolveAllowedCategoryTypes(input.type),
       },
+      ...(input.rootOnly ? { parentId: null } : {}),
     },
-    orderBy: {
-      nameEn: 'asc',
+    orderBy: { nameEn: 'asc' },
+  });
+};
+
+export const findCategoryById = async (categoryId: string) => {
+  return prisma.category.findUnique({
+    where: { id: categoryId },
+    select: {
+      id: true,
+      nameEn: true,
+      nameAr: true,
+      categoryType: true,
+      isActive: true,
     },
   });
+};
+
+export const isMaterialSelectableCategory = (categoryType: string): boolean =>
+  categoryType === 'MATERIAL' || categoryType === 'BOTH';
+
+export const isOtherCategory = (nameEn: string): boolean => {
+  return nameEn.trim().toLowerCase() === 'other';
 };

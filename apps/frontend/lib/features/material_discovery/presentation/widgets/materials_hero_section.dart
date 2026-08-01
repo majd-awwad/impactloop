@@ -12,23 +12,124 @@ class MaterialsHeroSection extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.stats,
+    this.compact = false,
   });
 
   final LocalizedText title;
   final LocalizedText subtitle;
   final Map<LocalizedText, String> stats;
+  final bool compact;
+
+  String _listingStatsLine(BuildContext context) {
+    return stats.entries
+        .map((entry) => '${entry.value} ${entry.key.resolve(context)}')
+        .join(' · ');
+  }
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
+    if (compact) {
+      return Container(
+        padding: const EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        decoration: BoxDecoration(
+          color: palette.panelSurface,
+          borderRadius: AppRadius.lgAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final stackStats = constraints.maxWidth < 820;
+            final statsLine = _listingStatsLine(context);
+            final titleBlock = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title.resolve(context),
+                  style: AppTextStyles.title(context).copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 28,
+                    letterSpacing: 0,
+                  ),
+                  textAlign: TextAlign.start,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  subtitle.resolve(context),
+                  style: AppTextStyles.body(context).copyWith(
+                    color: palette.textSecondary,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.start,
+                ),
+                if (stackStats) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    statsLine,
+                    style: AppTextStyles.label(context).copyWith(
+                      color: palette.textMuted,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      letterSpacing: 0,
+                    ),
+                    textAlign: TextAlign.start,
+                  ),
+                ],
+              ],
+            );
+
+            if (stackStats) {
+              return titleBlock;
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: titleBlock),
+                const SizedBox(width: AppSpacing.lg),
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(top: 4),
+                  child: Text(
+                    statsLine,
+                    style: AppTextStyles.label(context).copyWith(
+                      color: palette.textMuted,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      letterSpacing: 0,
+                    ),
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+    }
+
     return Container(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
       decoration: BoxDecoration(
         borderRadius: AppRadius.xlAll,
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
-          colors: [materialHeroStart, materialHeroMid, materialHeroEnd],
+          colors: [palette.heroStart, palette.heroMid, palette.heroEnd],
         ),
-        border: Border.all(color: materialBorderStrong),
+        border: Border.all(color: palette.borderStrong),
       ),
       child: Stack(
         children: [
@@ -37,7 +138,7 @@ class MaterialsHeroSection extends StatelessWidget {
             start: -18,
             child: _HeroOrb(
               size: 132,
-              color: materialHeroGlow,
+              color: palette.mint.withValues(alpha: 0.08),
             ),
           ),
           PositionedDirectional(
@@ -45,7 +146,7 @@ class MaterialsHeroSection extends StatelessWidget {
             end: 18,
             child: _HeroOrb(
               size: 180,
-              color: materialMint.withValues(alpha: 0.06),
+              color: palette.mint.withValues(alpha: 0.08),
             ),
           ),
           PositionedDirectional(
@@ -53,68 +154,60 @@ class MaterialsHeroSection extends StatelessWidget {
             end: 120,
             child: _HeroOrb(
               size: 156,
-              color: materialInfo.withValues(alpha: 0.05),
+              color: palette.textSecondary.withValues(alpha: 0.06),
             ),
           ),
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.xl,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: const [
-                    _HeroActionButton(icon: Icons.tune_rounded),
-                    Spacer(),
-                    _HeroActionButton(
-                      icon: Icons.arrow_outward_rounded,
-                      accent: true,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  _HeroActionButton(icon: Icons.tune_rounded),
+                  Spacer(),
+                  _HeroActionButton(
+                    icon: Icons.arrow_outward_rounded,
+                    accent: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title.resolve(context),
+                      style: AppTextStyles.brandingHeadline(context).copyWith(
+                        color: palette.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 40,
+                      ),
+                      textAlign: TextAlign.start,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      subtitle.resolve(context),
+                      style: AppTextStyles.brandingSubtitle(
+                        context,
+                      ).copyWith(color: palette.textSecondary),
+                      textAlign: TextAlign.start,
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title.resolve(context),
-                        style: AppTextStyles.brandingHeadline(context).copyWith(
-                          color: materialTextPrimary,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 40,
-                        ),
-                        textAlign: TextAlign.start,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        subtitle.resolve(context),
-                        style: AppTextStyles.brandingSubtitle(context).copyWith(
-                          color: materialTextSecondary,
-                        ),
-                        textAlign: TextAlign.start,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Wrap(
-                  spacing: AppSpacing.md,
-                  runSpacing: AppSpacing.md,
-                  children: stats.entries.map((entry) {
-                    return _HeroStat(
-                      label: entry.key.resolve(context),
-                      value: entry.value,
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.md,
+                children: stats.entries.map((entry) {
+                  return _HeroStat(
+                    label: entry.key.resolve(context),
+                    value: entry.value,
+                  );
+                }).toList(),
+              ),
+            ],
           ),
         ],
       ),
@@ -130,6 +223,8 @@ class _HeroStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       padding: const EdgeInsetsDirectional.fromSTEB(
         AppSpacing.md,
@@ -138,10 +233,10 @@ class _HeroStat extends StatelessWidget {
         AppSpacing.md,
       ),
       decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: AppRadius.lgAll,
-            border: Border.all(color: materialBorderStrong),
-          ),
+        color: palette.cardSurface.withValues(alpha: 0.72),
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -149,7 +244,7 @@ class _HeroStat extends StatelessWidget {
             value,
             style: AppTextStyles.brandingHeadline(
               context,
-            ).copyWith(color: materialMint, fontWeight: FontWeight.w800),
+            ).copyWith(color: palette.mint, fontWeight: FontWeight.w800),
             textAlign: TextAlign.start,
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -157,7 +252,7 @@ class _HeroStat extends StatelessWidget {
             label,
             style: AppTextStyles.body(
               context,
-            ).copyWith(color: materialTextSecondary),
+            ).copyWith(color: palette.textSecondary),
             textAlign: TextAlign.start,
           ),
         ],
@@ -174,23 +269,25 @@ class _HeroActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+
     return Container(
       decoration: BoxDecoration(
         color: accent
-            ? materialMint.withValues(alpha: 0.16)
-            : materialPanelSurface.withValues(alpha: 0.82),
+            ? palette.mint.withValues(alpha: 0.16)
+            : palette.panelSurface.withValues(alpha: 0.82),
         shape: BoxShape.circle,
         border: Border.all(
           color: accent
-              ? materialMint.withValues(alpha: 0.4)
-              : materialBorderSubtle,
+              ? palette.mint.withValues(alpha: 0.4)
+              : palette.borderSubtle,
         ),
       ),
       child: IconButton(
         onPressed: () {},
         icon: Icon(
           icon,
-          color: accent ? materialCtaForeground : materialTextPrimary,
+          color: accent ? palette.ctaForeground : palette.textPrimary,
         ),
       ),
     );

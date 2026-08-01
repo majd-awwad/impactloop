@@ -2,35 +2,31 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/auth_dark_colors.dart';
-import '../../../../app/theme/auth_dark_text_styles.dart';
-import '../../../../app/theme/supplier_decorations.dart';
+import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 
 class SupplierFormLabel extends StatelessWidget {
-  const SupplierFormLabel({
-    super.key,
-    required this.label,
-    this.subtitle,
-  });
+  const SupplierFormLabel({super.key, required this.label, this.subtitle});
 
   final String label;
   final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: AuthDarkTextStyles.label(context).copyWith(
-            color: AuthDarkColors.textPrimary,
+          style: context.supplierLabel().copyWith(
+            color: colors.textPrimary,
             fontWeight: FontWeight.w600,
           ),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: AppSpacing.xs),
-          Text(subtitle!, style: AuthDarkTextStyles.body(context)),
+          Text(subtitle!, style: context.supplierBody()),
         ],
       ],
     );
@@ -63,6 +59,8 @@ class SupplierDarkTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -76,8 +74,10 @@ class SupplierDarkTextField extends StatelessWidget {
           onFieldSubmitted: onFieldSubmitted,
           onChanged: onChanged,
           forceErrorText: errorText,
-          style: const TextStyle(color: AuthDarkColors.textPrimary),
-          decoration: SupplierDecorations.darkFormFieldDecoration(hint: hint),
+          style: TextStyle(color: colors.textPrimary),
+          decoration: context.supplierDecorations.formFieldDecoration(
+            hint: hint,
+          ),
         ),
       ],
     );
@@ -108,6 +108,8 @@ class SupplierDarkTextArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -122,8 +124,10 @@ class SupplierDarkTextArea extends StatelessWidget {
           validator: validator,
           onChanged: onChanged,
           forceErrorText: errorText,
-          style: const TextStyle(color: AuthDarkColors.textPrimary),
-          decoration: SupplierDecorations.darkFormFieldDecoration(hint: hint),
+          style: TextStyle(color: colors.textPrimary),
+          decoration: context.supplierDecorations.formFieldDecoration(
+            hint: hint,
+          ),
         ),
       ],
     );
@@ -152,6 +156,8 @@ class SupplierDarkDropdownField<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -165,10 +171,12 @@ class SupplierDarkDropdownField<T> extends StatelessWidget {
           onChanged: onChanged,
           validator: validator,
           forceErrorText: errorText,
-          dropdownColor: AuthDarkColors.surfaceSolid,
-          style: const TextStyle(color: AuthDarkColors.textPrimary),
-          iconEnabledColor: AuthDarkColors.textSecondary,
-          decoration: SupplierDecorations.darkFormFieldDecoration(hint: hint),
+          dropdownColor: colors.surfaceSolid,
+          style: TextStyle(color: colors.textPrimary),
+          iconEnabledColor: colors.textSecondary,
+          decoration: context.supplierDecorations.formFieldDecoration(
+            hint: hint,
+          ),
         ),
       ],
     );
@@ -189,24 +197,26 @@ class SupplierFormSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: SupplierDecorations.profileSectionPanel,
+      decoration: context.supplierDecorations.profileSectionPanel,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Icon(icon, color: AuthDarkColors.accent, size: 22),
+            Icon(icon, color: colors.accent, size: 22),
             const SizedBox(width: AppSpacing.sm),
           ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AuthDarkTextStyles.sectionTitle(context)),
+                Text(title, style: context.supplierSectionTitle()),
                 const SizedBox(height: AppSpacing.xs),
-                Text(subtitle, style: AuthDarkTextStyles.body(context)),
+                Text(subtitle, style: context.supplierBody()),
               ],
             ),
           ),
@@ -228,35 +238,37 @@ class SupplierDarkSwitchTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: AuthDarkColors.surfaceSolid.withValues(alpha: 0.55),
+        color: colors.surfaceSolid.withValues(alpha: 0.55),
         borderRadius: AppRadius.mdAll,
-        border: Border.all(color: AuthDarkColors.border.withValues(alpha: 0.35)),
+        border: Border.all(color: colors.border.withValues(alpha: 0.35)),
       ),
       child: SwitchListTile.adaptive(
         contentPadding: EdgeInsets.zero,
         title: Text(
           title,
-          style: AuthDarkTextStyles.label(context).copyWith(
-            color: AuthDarkColors.textPrimary,
+          style: context.supplierLabel().copyWith(
+            color: colors.textPrimary,
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: subtitle == null
             ? null
-            : Text(subtitle!, style: AuthDarkTextStyles.body(context)),
+            : Text(subtitle!, style: context.supplierBody()),
         value: value,
-        activeTrackColor: AuthDarkColors.accent.withValues(alpha: 0.45),
-        activeThumbColor: AuthDarkColors.accent,
+        activeTrackColor: colors.accent.withValues(alpha: 0.45),
+        activeThumbColor: colors.accent,
         onChanged: onChanged,
       ),
     );
@@ -313,6 +325,8 @@ class _SupplierDarkPasswordFieldState extends State<SupplierDarkPasswordField> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.supplierColors;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -327,16 +341,20 @@ class _SupplierDarkPasswordFieldState extends State<SupplierDarkPasswordField> {
           onFieldSubmitted: widget.onFieldSubmitted,
           onChanged: widget.onChanged,
           forceErrorText: widget.errorText,
-          style: const TextStyle(color: AuthDarkColors.textPrimary),
-          decoration: SupplierDecorations.darkFormFieldDecoration().copyWith(
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                color: AuthDarkColors.textMuted,
+          style: TextStyle(color: colors.textPrimary),
+          decoration: context.supplierDecorations
+              .formFieldDecoration()
+              .copyWith(
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: colors.textMuted,
+                  ),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
               ),
-              onPressed: () => setState(() => _obscure = !_obscure),
-            ),
-          ),
         ),
       ],
     );

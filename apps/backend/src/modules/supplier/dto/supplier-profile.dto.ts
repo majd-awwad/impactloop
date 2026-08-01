@@ -1,3 +1,5 @@
+import type { SupplierVerificationStatus } from '../supplier-verification.status.js';
+
 export type SupplierProfileUserDto = {
   id: string;
   displayName: string;
@@ -26,6 +28,8 @@ export type SupplierOrganizationProfileDto = {
   workingDays: unknown;
   workingHours: unknown;
   verificationDocumentStatus: string | null;
+  verificationDocumentUrl: string | null;
+  verificationDocumentName: string | null;
   businessLocation: SupplierProfileLocationDto | null;
 };
 
@@ -34,13 +38,106 @@ export type SupplierProfileDetailsDto = {
   publicName: string;
   supplierType: string;
   description: string | null;
+  coverImageUrl: string | null;
+  avatarImageUrl: string | null;
   verificationStatus: string;
+  verificationAdminNote: string | null;
+  verificationReviewedAt: string | null;
   defaultPickupLocation: SupplierProfileLocationDto | null;
   organizationProfile: SupplierOrganizationProfileDto | null;
+};
+
+export type SupplierFollowerListItemDto = {
+  user: {
+    id: string;
+    displayName: string;
+    email: string;
+    profileImageUrl: string | null;
+  };
+  followedAt: string;
+};
+
+export type SupplierProfileMaterialPreviewDto = {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  category: {
+    id: string;
+    nameEn: string;
+    nameAr: string;
+  } | null;
+  status: string;
+  condition: string;
+  isFree: boolean;
+  price: number | null;
+  currency: string;
+  quantity: number;
+  unit: string;
+  location: {
+    city: string;
+    area: string | null;
+  } | null;
+  pickupNotes: string | null;
+  pickupAllowed: boolean;
+  deliveryAllowed: boolean;
+  createdAt: string;
+  viewsCount: number;
+  likesCount: number;
+  reservationsCount: number;
+};
+
+export type SupplierProfileStatsDto = {
+  materialsCount: number;
+  availableMaterialsCount: number;
+  reusedMaterialsCount: number;
+  followersCount: number;
+  totalViews: number;
+  totalLikes: number;
+  totalReservations: number;
 };
 
 export type SupplierProfileResponseDto = {
   hasSupplierProfile: boolean;
   user: SupplierProfileUserDto;
   supplier: SupplierProfileDetailsDto | null;
+  stats: SupplierProfileStatsDto;
+  latestFollowers: SupplierFollowerListItemDto[];
+  materialsPreview: SupplierProfileMaterialPreviewDto[];
+};
+
+export type SupplierProfileManagementResponseDto = {
+  hasSupplierProfile: boolean;
+  identity: {
+    supplierProfileId: string;
+    publicName: string;
+    supplierType: string;
+    description: string | null;
+    avatarImageUrl: string | null;
+    coverImageUrl: string | null;
+  } | null;
+  pickupLocation: SupplierProfileLocationDto | null;
+  organization: {
+    id: string;
+    organizationName: string;
+    organizationType: string;
+    contactPersonName: string | null;
+    workingDays: string[] | null;
+    workingHours: Record<string, string> | null;
+  } | null;
+  verification: {
+    rawStatus: string;
+    status: SupplierVerificationStatus;
+    isVerified: boolean;
+    canSubmit: boolean;
+    canResubmit: boolean;
+    adminNote: string | null;
+    submittedAt: string | null;
+    reviewedAt: string | null;
+  };
+  completion: {
+    completedCount: number;
+    totalCount: number;
+    percentage: number;
+    missingFields: string[];
+  };
 };

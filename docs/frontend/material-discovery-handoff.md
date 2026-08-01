@@ -9,9 +9,12 @@ Material Discovery currently includes:
 - reusable shared `AppMaterialCard`
 - local mock search and filter interactions
 - repository boundary for loading discovery data
-- API contract documentation for future backend integration
+- default API-backed repository integration for public discovery
+- API contract documentation for backend/frontend alignment
 
-The current implementation is frontend-only and uses local mock data.
+The current implementation loads Material Discovery from the backend API by
+default through the repository boundary. `MockMaterialDiscoveryRepository`
+still exists for fallback and testing.
 
 ## Important Files
 
@@ -32,6 +35,8 @@ Key files:
 - `apps/frontend/lib/features/material_discovery/domain/discovery_material.dart`
 - `apps/frontend/lib/features/material_discovery/domain/material_discovery_repository.dart`
 - `apps/frontend/lib/features/material_discovery/data/mock_material_discovery_repository.dart`
+- `apps/frontend/lib/features/material_discovery/data/api_material_discovery_repository.dart`
+- `apps/frontend/lib/features/material_discovery/data/material_discovery_api_mapper.dart`
 - `apps/frontend/lib/features/material_discovery/data/mock_materials.dart`
 - `apps/frontend/lib/shared/widgets/materials/app_material_card.dart`
 
@@ -61,18 +66,24 @@ These should be reused later by Supplier My Materials, reservation previews, and
 Current boundary:
 
 - `MaterialDiscoveryRepository` is the abstraction.
-- `MockMaterialDiscoveryRepository` is the current mock implementation.
+- `ApiMaterialDiscoveryRepository` is the default implementation for pages.
+- `MockMaterialDiscoveryRepository` remains available for fallback and testing.
 
 Current contract:
 
 - `Future<List<DiscoveryMaterial>> getMaterials()`
 - `Future<DiscoveryMaterial?> getMaterialById(String id)`
 
-Future backend integration should add:
+Implementation notes:
 
-- `ApiMaterialDiscoveryRepository`
-
-That future repository should implement the same contract and map backend responses into `DiscoveryMaterial`.
+- `ApiMaterialDiscoveryRepository` uses the existing Dio client from
+  `apiClientProvider`.
+- API responses are unwrapped through the shared `unwrapApiResponse(...)`
+  helper.
+- `GET /api/materials` reads `data.items` and ignores pagination UI for now.
+- `GET /api/materials/:id` reads `data`.
+- Backend DTOs are mapped into `DiscoveryMaterial` before reaching shared
+  widgets.
 
 ## Reusing The Card In Supplier My Materials
 
@@ -118,13 +129,15 @@ The supplier feature should own supplier-specific callbacks and actions, not the
 
 If supplier pages need small behavior differences, extend the shared card API carefully instead of forking the component.
 
-## Next Integration Step
+## Current Backend Mapping
 
-When the backend is ready:
+- Backend list response uses `data.items` plus `data.pagination`.
+- Backend material category is an object with `id`, `nameEn`, and `nameAr`.
+- `ratingSummary` is currently `null`; ratings and reviews remain future work.
+- The frontend maps backend DTOs into `DiscoveryMaterial` before data reaches:
+  - `MaterialsDiscoveryPage`
+  - `MaterialDetailsPage`
+  - `MaterialsDiscoveryView`
+  - `AppMaterialCard`
 
-1. Implement `ApiMaterialDiscoveryRepository`.
-2. Map `GET /api/materials` and `GET /api/materials/:id` responses into `DiscoveryMaterial`.
-3. Keep filters local if API filtering is not ready, or move filtering to backend later if the API supports it.
-4. Keep `AppMaterialCard` unchanged.
-
-The safest path is to swap repositories at the page or provider layer while preserving the existing shared widget API.
+`AppMaterialCard` remains API-independent and route-independent.

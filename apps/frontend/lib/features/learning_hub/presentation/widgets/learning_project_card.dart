@@ -3,9 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../presentation/theme/learning_project_visuals.dart';
+import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
+import 'project_engagement_strip.dart';
 
 class LearningProjectCard extends StatelessWidget {
   const LearningProjectCard({super.key, required this.project});
@@ -14,60 +15,96 @@ class LearningProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: AppRadius.xlAll,
-      onTap: () => context.go('/learning/${project.id}'),
-      child: Container(
-        decoration: BoxDecoration(
-          color: learningCardSurface,
-          borderRadius: AppRadius.xlAll,
-          border: Border.all(color: learningBorderSubtle),
-          boxShadow: const [
-            BoxShadow(
-              color: learningCardShadow,
-              blurRadius: 18,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ProjectCardHeader(project: project),
-            Padding(
-              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ProjectTitleRow(project: project),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    project.summary.resolve(context),
-                    style: AppTextStyles.subtitle(
-                      context,
-                    ).copyWith(color: learningTextSecondary),
-                    textAlign: TextAlign.start,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    runSpacing: AppSpacing.sm,
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
+    return SizedBox(
+      height: 412,
+      child: InkWell(
+        borderRadius: AppRadius.lgAll,
+        onTap: () => context.push('/learning/${project.id}'),
+        child: Container(
+          decoration: BoxDecoration(
+            color: palette.cardSurface,
+            borderRadius: AppRadius.lgAll,
+            border: Border.all(color: palette.borderSubtle),
+            boxShadow: [
+              BoxShadow(
+                color: palette.cardShadow.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ProjectCardHeader(project: project),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ProjectMetaChip(label: project.category.resolve(context)),
-                      _ProjectMetaChip(
-                        label: project.componentCountLabel.resolve(context),
+                      SizedBox(
+                        height: 54,
+                        child: _ProjectTitleRow(project: project),
                       ),
-                      _ProjectMetaChip(label: project.duration.resolve(context)),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        project.summary.resolve(context),
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: palette.textSecondary,
+                        ),
+                        textAlign: TextAlign.start,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      SizedBox(
+                        height: 30,
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: [
+                                _ProjectMetaChip(
+                                  label: project.category.resolve(context),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                _ProjectMetaChip(
+                                  label: project.duration.resolve(context),
+                                ),
+                                if (project.componentCountLabel.en
+                                    .trim()
+                                    .isNotEmpty) ...[
+                                  const SizedBox(width: AppSpacing.sm),
+                                  _ProjectMetaChip(
+                                    label: project.componentCountLabel.resolve(
+                                      context,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      SizedBox(
+                        height: 34,
+                        child: ProjectEngagementStrip(
+                          project: project,
+                          density: ProjectEngagementDensity.compact,
+                        ),
+                      ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -81,13 +118,16 @@ class _ProjectCardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
     return SizedBox(
-      height: 190,
+      height: 180,
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: const BorderRadiusDirectional.only(
-            topStart: Radius.circular(AppRadius.xl),
-            topEnd: Radius.circular(AppRadius.xl),
+            topStart: Radius.circular(AppRadius.lg),
+            topEnd: Radius.circular(AppRadius.lg),
           ),
           gradient: LinearGradient(
             begin: AlignmentDirectional.topStart,
@@ -101,8 +141,8 @@ class _ProjectCardHeader extends StatelessWidget {
             if (project.imageUrl != null)
               ClipRRect(
                 borderRadius: const BorderRadiusDirectional.only(
-                  topStart: Radius.circular(AppRadius.xl),
-                  topEnd: Radius.circular(AppRadius.xl),
+                  topStart: Radius.circular(AppRadius.lg),
+                  topEnd: Radius.circular(AppRadius.lg),
                 ),
                 child: Image.network(
                   project.imageUrl!,
@@ -111,15 +151,26 @@ class _ProjectCardHeader extends StatelessWidget {
                       const SizedBox.shrink(),
                 ),
               ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadiusDirectional.only(
-                  topStart: Radius.circular(AppRadius.xl),
-                  topEnd: Radius.circular(AppRadius.xl),
+            if (project.imageUrl != null)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topStart: Radius.circular(AppRadius.lg),
+                    topEnd: Radius.circular(AppRadius.lg),
+                  ),
+                  color: palette.overlayDark.withValues(alpha: 0.20),
                 ),
-                color: learningOverlayDark.withValues(alpha: 0.42),
+              )
+            else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadiusDirectional.only(
+                    topStart: Radius.circular(AppRadius.lg),
+                    topEnd: Radius.circular(AppRadius.lg),
+                  ),
+                  color: palette.overlayDark.withValues(alpha: 0.30),
+                ),
               ),
-            ),
             Padding(
               padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
               child: Column(
@@ -133,23 +184,28 @@ class _ProjectCardHeader extends StatelessWidget {
                         vertical: AppSpacing.xs,
                       ),
                       decoration: BoxDecoration(
-                        color: learningLime,
+                        color: palette.limeSoft,
                         borderRadius: AppRadius.pillAll,
+                        border: Border.all(
+                          color: palette.lime.withValues(alpha: 0.28),
+                        ),
                       ),
                       child: Text(
                         project.difficulty.resolve(context),
-                        style: AppTextStyles.label(
-                          context,
-                        ).copyWith(color: Colors.black87),
+                        style: textTheme.labelSmall?.copyWith(
+                          color: palette.lime,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
                   const Spacer(),
-                  Icon(
-                    project.heroIconData,
-                    size: 54,
-                    color: learningTextPrimary,
-                  ),
+                  if (project.imageUrl == null)
+                    Icon(
+                      project.heroIconData,
+                      size: 54,
+                      color: palette.textPrimary,
+                    ),
                 ],
               ),
             ),
@@ -167,30 +223,35 @@ class _ProjectTitleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ratingPill = Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: learningDarkSurfaceSoft,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: learningBorderSubtle),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            project.ratingValue.toStringAsFixed(1),
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: learningTextPrimary),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          const Icon(Icons.star_rounded, color: learningLime, size: 18),
-        ],
-      ),
-    );
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+    final ratingPill = project.hasRatings
+        ? Container(
+            padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: palette.cardSurfaceAlt,
+              borderRadius: AppRadius.pillAll,
+              border: Border.all(color: palette.borderSubtle),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  project.ratingValue.toStringAsFixed(1),
+                  style: textTheme.labelSmall?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Icon(Icons.star_rounded, color: palette.lime, size: 18),
+              ],
+            ),
+          )
+        : null;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -202,15 +263,19 @@ class _ProjectTitleRow extends StatelessWidget {
             children: [
               Text(
                 project.title.resolve(context),
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: learningTextPrimary),
+                style: textTheme.titleMedium?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  height: 1.18,
+                ),
                 textAlign: TextAlign.start,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: AppSpacing.sm),
-              ratingPill,
+              if (ratingPill != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                ratingPill,
+              ],
             ],
           );
         }
@@ -221,16 +286,20 @@ class _ProjectTitleRow extends StatelessWidget {
             Expanded(
               child: Text(
                 project.title.resolve(context),
-                style: AppTextStyles.title(
-                  context,
-                ).copyWith(color: learningTextPrimary),
+                style: textTheme.titleMedium?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  height: 1.18,
+                ),
                 textAlign: TextAlign.start,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            ratingPill,
+            if (ratingPill != null) ...[
+              const SizedBox(width: AppSpacing.sm),
+              ratingPill,
+            ],
           ],
         );
       },
@@ -245,21 +314,35 @@ class _ProjectMetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
       padding: const EdgeInsetsDirectional.symmetric(
         horizontal: AppSpacing.sm,
         vertical: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: learningMutedChip,
+        color: palette.mutedChip,
         borderRadius: AppRadius.pillAll,
-        border: Border.all(color: learningBorderSubtle),
+        border: Border.all(color: palette.borderSubtle),
       ),
-      child: Text(
-        label,
-        style: AppTextStyles.body(
-          context,
-        ).copyWith(color: learningTextSecondary),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 190),
+            child: Text(
+              label,
+              style: textTheme.labelSmall?.copyWith(
+                color: palette.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

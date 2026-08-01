@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/app_colors.dart';
 import '../domain/models/learning_project.dart';
+
+export '../presentation/theme/learning_project_visuals.dart';
+export '../presentation/theme/learning_ui_palette.dart';
 
 const learningCategories = <LocalizedText>[
   LocalizedText(en: 'All', ar: 'الكل'),
@@ -79,10 +81,12 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Workshop sheet', ar: 'ورقة ورشة'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.smart_toy_outlined,
     cardGradient: [0xFF1F2937, 0xFF243B53],
     isFeatured: true,
+    hasRatings: true,
   ),
   LearningProject(
     id: 'copper-phone-stand',
@@ -136,10 +140,12 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Sizing sheet', ar: 'ورقة القياس'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.handyman_outlined,
     cardGradient: [0xFF8A6B17, 0xFF667C4F],
     isFeatured: false,
+    hasRatings: true,
   ),
   LearningProject(
     id: 'weather-station',
@@ -188,10 +194,12 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Pinout sheet', ar: 'مخطط الأرجل'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.sensors_outlined,
     cardGradient: [0xFF1F456B, 0xFF162538],
     isFeatured: false,
+    hasRatings: true,
   ),
   LearningProject(
     id: 'reclaimed-led-lamp',
@@ -243,10 +251,12 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Safety note', ar: 'ملاحظة أمان'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.lightbulb_outline,
     cardGradient: [0xFF6B8C5B, 0xFF6E9362],
     isFeatured: false,
+    hasRatings: true,
   ),
   LearningProject(
     id: 'wireless-charger',
@@ -317,10 +327,12 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Routing guide', ar: 'دليل التوصيل'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.bolt_rounded,
     cardGradient: [0xFF4C1D95, 0xFF24243E],
     isFeatured: false,
+    hasRatings: true,
   ),
   LearningProject(
     id: 'smart-irrigation',
@@ -375,10 +387,12 @@ const learningProjects = <LearningProject>[
         urlLabel: LocalizedText(en: 'Sizing note', ar: 'مذكرة الاختيار'),
       ),
     ],
-    imageUrl: null,
+    imageUrl:
+        'https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80',
     heroIconData: Icons.agriculture_outlined,
     cardGradient: [0xFF3D7C4B, 0xFF527B53],
     isFeatured: false,
+    hasRatings: true,
   ),
 ];
 
@@ -388,8 +402,8 @@ const learningFeaturedTip = LocalizedText(
 );
 
 const learningAddDraftIntro = LocalizedText(
-  en: 'Share your idea as a draft for review. This screen is a UI mock only and does not submit data yet.',
-  ar: 'شارك فكرتك كمسودة للمراجعة. هذه الشاشة مجرد واجهة تجريبية ولا ترسل أي بيانات بعد.',
+  en: 'Share your idea as a draft for admin review.',
+  ar: 'شارك فكرتك كمسودة لمراجعة الإدارة.',
 );
 
 const learningDisabledAiTitle = LocalizedText(
@@ -401,10 +415,6 @@ const learningDisabledAiSubtitle = LocalizedText(
   en: 'Coming soon. This feature will later help match required components with available materials.',
   ar: 'قريباً. ستساعد هذه الميزة لاحقاً في مطابقة المكونات المطلوبة مع المواد المتاحة.',
 );
-
-List<Color> projectGradient(LearningProject project) {
-  return project.cardGradient.map(Color.new).toList();
-}
 
 LearningProject? learningProjectById(String id) {
   for (final project in learningProjects) {
@@ -428,29 +438,3 @@ List<RatingBreakdown> mockBreakdownFor(LearningProject project) {
     RatingBreakdown(stars: 3, count: low),
   ];
 }
-
-const learningHintSurface = Color(0xFF18251E);
-const learningHintBorder = Color(0xFF2F533C);
-const learningPageBackground = Color(0xFF08110F);
-const learningSectionBackground = Color(0xFF0C1916);
-const learningDarkSurface = Color(0xFF101C21);
-const learningDarkSurfaceSoft = Color(0xFF17262D);
-const learningCardSurface = Color(0xFF13221F);
-const learningCardSurfaceAlt = Color(0xFF0F1A1D);
-const learningHeroStart = Color(0xFF0E171A);
-const learningHeroEnd = Color(0xFF1C4A3B);
-const learningHeroAccent = Color(0xFF14352D);
-const learningLime = Color(0xFFA6D94C);
-const learningLimeSoft = Color(0xFFE3F4BE);
-const learningMutedChip = Color(0xFF1D2C30);
-const learningTimelineLine = Color(0xFF2A3C41);
-const learningDisabledPanel = Color(0xFF1B262B);
-const learningDisabledPanelBorder = Color(0xFF39484E);
-const learningPurpleStart = Color(0xFF4C1D95);
-const learningPurpleEnd = Color(0xFF2A2A4A);
-const learningBeigeBackground = learningPageBackground;
-const learningTextPrimary = Color(0xFFF5F9F7);
-const learningTextSecondary = Color(0xFFAAB8B2);
-const learningBorderSubtle = Color(0xFF20332E);
-const learningOverlayDark = Color(0x9908110F);
-const learningCardShadow = AppColors.shadow;

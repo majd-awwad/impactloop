@@ -3,15 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/access_token_holder.dart';
 import '../auth/auth_interceptor.dart';
+import '../auth/auth_session_refresh.dart';
 import '../config/api_config.dart';
 import 'dio_platform_adapter.dart';
 
-final accessTokenHolderProvider = Provider<AccessTokenHolder>((ref) {
-  return AccessTokenHolder();
-});
+Map<String, String>? recommendationHeaders(String? impressionId) {
+  final normalized = impressionId?.trim();
+  if (normalized == null || normalized.isEmpty) {
+    return null;
+  }
+
+  return {'X-Recommendation-Impression-Id': normalized};
+}
 
 final apiClientProvider = Provider<Dio>((ref) {
   final accessTokenHolder = ref.watch(accessTokenHolderProvider);
+  final sessionRefresher = ref.watch(authSessionRefresherProvider);
 
   final dio = Dio(
     BaseOptions(
@@ -25,7 +32,14 @@ final apiClientProvider = Provider<Dio>((ref) {
   configureDioPlatformAdapter(dio);
 
   dio.interceptors.add(
-    AuthInterceptor(getAccessToken: () => accessTokenHolder.accessToken),
+    AuthInterceptor(
+      getAccessToken: () => accessTokenHolder.accessToken,
+      refreshSession: sessionRefresher,
+      retryClient: dio,
+      onSessionExpired: (error) {
+        ref.read(authSessionExpiryProvider.notifier).expire(error);
+      },
+    ),
   );
 
   return dio;

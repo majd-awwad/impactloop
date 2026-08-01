@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../presentation/models/registration_intent.dart';
+import '../data/models/become_learner_request.dart';
 import '../data/models/register_request.dart';
 import '../data/models/registration_draft.dart';
 
@@ -24,7 +25,11 @@ class RegistrationDraftNotifier extends Notifier<RegistrationDraft> {
   }
 
   void setIntent(RegistrationIntent intent) {
-    state = state.copyWith(intent: intent);
+    state = state.copyWith(
+      intent: intent,
+      clearLearnerProfile: intent == RegistrationIntent.supplier,
+      clearSupplierProfile: intent == RegistrationIntent.learner,
+    );
   }
 
   void setLearnerProfile(LearnerProfileDraft profile) {
@@ -35,9 +40,32 @@ class RegistrationDraftNotifier extends Notifier<RegistrationDraft> {
     state = state.copyWith(supplierProfile: profile);
   }
 
+  void setOnboardingInterests(List<String> interests) {
+    state = state.copyWith(onboardingInterests: interests);
+  }
+
+  void setOnboardingGoals(List<String> goals) {
+    state = state.copyWith(onboardingGoals: goals);
+  }
+
+  void setOnboardingLocation({required String city, required String area}) {
+    state = state.copyWith(
+      onboardingCity: city.trim(),
+      onboardingArea: area.trim(),
+    );
+  }
+
   RegisterRequest? toRegisterRequest() {
     try {
       return RegisterRequest.fromDraft(state);
+    } on StateError {
+      return null;
+    }
+  }
+
+  BecomeLearnerRequest? toBecomeLearnerRequest() {
+    try {
+      return BecomeLearnerRequest.fromDraft(state);
     } on StateError {
       return null;
     }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../data/learning_hub_mock_data.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
+import '../../presentation/theme/learning_ui_palette.dart';
 import '../../domain/models/learning_project.dart';
 import 'learning_hub_text.dart';
 
@@ -23,6 +23,8 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final textTheme = Theme.of(context).textTheme;
     final hasMore = widget.components.length > _collapsedVisibleCount;
     final visibleComponents = _expanded
         ? widget.components
@@ -31,14 +33,14 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: learningCardSurface,
-        borderRadius: AppRadius.xlAll,
-        border: Border.all(color: learningBorderSubtle),
-        boxShadow: const [
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x12000000),
+            color: palette.cardShadow.withValues(alpha: 0.08),
             blurRadius: 18,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -51,10 +53,13 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: learningDarkSurfaceSoft,
+                  color: palette.limeSoft,
                   borderRadius: AppRadius.pillAll,
+                  border: Border.all(
+                    color: palette.lime.withValues(alpha: 0.28),
+                  ),
                 ),
-                child: const Icon(Icons.inventory_2_outlined, color: learningLime),
+                child: Icon(Icons.inventory_2_outlined, color: palette.lime),
               ),
               const Spacer(),
               Text(
@@ -62,9 +67,10 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                   en: 'Required components',
                   ar: 'المكونات المطلوبة',
                 ).resolve(context),
-                style: AppTextStyles.display(
-                  context,
-                ).copyWith(color: learningTextPrimary),
+                style: textTheme.titleLarge?.copyWith(
+                  color: palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
                 textAlign: TextAlign.start,
               ),
             ],
@@ -81,15 +87,16 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                   vertical: AppSpacing.sm,
                 ),
                 decoration: BoxDecoration(
-                  color: learningDarkSurface,
+                  color: palette.cardSurfaceAlt,
                   borderRadius: AppRadius.pillAll,
-                  border: Border.all(color: learningBorderSubtle),
+                  border: Border.all(color: palette.borderSubtle),
                 ),
                 child: Text(
                   component.resolve(context),
-                  style: AppTextStyles.label(
-                    context,
-                  ).copyWith(color: learningTextPrimary),
+                  style: textTheme.labelMedium?.copyWith(
+                    color: palette.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                   textAlign: TextAlign.start,
                 ),
               );
@@ -99,6 +106,10 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
             const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
               onPressed: () => setState(() => _expanded = !_expanded),
+              style: AppStatusButtonStyle.outlined(
+                context,
+                AppStatusTone.neutral,
+              ),
               icon: Icon(
                 _expanded
                     ? Icons.keyboard_arrow_up_rounded
@@ -111,10 +122,8 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
                         ar: 'عرض مكونات أقل',
                       ).resolve(context)
                     : LocalizedText(
-                        en:
-                            'Show all components (${widget.components.length})',
-                        ar:
-                            'عرض كل المكونات (${widget.components.length})',
+                        en: 'Show all components (${widget.components.length})',
+                        ar: 'عرض كل المكونات (${widget.components.length})',
                       ).resolve(context),
               ),
             ),
@@ -127,17 +136,19 @@ class _ProjectComponentsSectionState extends State<ProjectComponentsSection> {
               vertical: AppSpacing.md,
             ),
             decoration: BoxDecoration(
-              color: learningDarkSurfaceSoft,
+              color: palette.cardSurfaceAlt,
               borderRadius: AppRadius.lgAll,
+              border: Border.all(color: palette.borderSubtle),
             ),
             child: Text(
               const LocalizedText(
-                en: 'Note: these components are shown for learning only and will later connect to the AI Material Agent.',
-                ar: 'ملاحظة: هذه المكونات معروضة لأغراض التعلم فقط وستتصل لاحقاً بوكيل المواد الذكي.',
+                en: 'Use these components as the starting point for your material search and build checklist.',
+                ar: 'استخدم هذه المكونات كنقطة بداية للبحث عن المواد وقائمة البناء.',
               ).resolve(context),
-              style: AppTextStyles.body(
-                context,
-              ).copyWith(color: learningTextSecondary),
+              style: textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
+                height: 1.45,
+              ),
               textAlign: TextAlign.start,
             ),
           ),

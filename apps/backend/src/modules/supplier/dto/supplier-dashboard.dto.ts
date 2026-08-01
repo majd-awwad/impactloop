@@ -1,3 +1,5 @@
+import { normalizeSupplierVerificationStatus } from '../supplier-verification.status.js';
+
 export type SupplierLocationSummaryDto = {
   id: string;
   city: string;
@@ -54,12 +56,25 @@ export type NotificationStatsDto = {
   unread: number;
 };
 
+export type EngagementStatsDto = {
+  totalViews: number;
+  totalLikes: number;
+  followersCount: number;
+};
+
+export type OperationalStatsDto = {
+  scheduledPickups: number;
+  activeMaterials: number;
+};
+
 export type DashboardStatsDto = {
   materials: MaterialStatsDto;
   reservations: ReservationStatsDto;
   impact: ImpactStatsDto;
   reviews: ReviewStatsDto;
   notifications: NotificationStatsDto;
+  engagement: EngagementStatsDto;
+  operational: OperationalStatsDto;
 };
 
 export type RecentMaterialDto = {
@@ -91,14 +106,61 @@ export type RecentActivityDto = {
   createdAt: string;
 };
 
+export type RecentReservationRequestDto = {
+  id: string;
+  materialId: string;
+  materialTitle: string;
+  requesterName: string | null;
+  status: string;
+  quantityRequested: number;
+  requestedAt: string;
+};
+
+export type DashboardMaterialInsightDto = {
+  id: string;
+  title: string;
+  status: string;
+  categoryName: string | null;
+  coverImageUrl: string | null;
+  viewsCount: number;
+  demandCount: number;
+};
+
+export type LatestSupportedProjectDto = {
+  projectId: string;
+  title: string;
+  categoryName: string | null;
+  completedAt: string;
+};
+
+export type ProjectSupportStatsDto = {
+  projectsSupported: number;
+  projectComponentsSupported: number;
+  learnerBuildsHelped: number;
+  completedLinkedReservations: number;
+  latestSupportedProjects: LatestSupportedProjectDto[];
+};
+
+export const emptyProjectSupportStats = (): ProjectSupportStatsDto => ({
+  projectsSupported: 0,
+  projectComponentsSupported: 0,
+  learnerBuildsHelped: 0,
+  completedLinkedReservations: 0,
+  latestSupportedProjects: [],
+});
+
 export type SupplierDashboardDto = {
   hasSupplierProfile: boolean;
   message?: string;
   supplier?: SupplierSummaryDto;
   stats: DashboardStatsDto;
+  projectSupport: ProjectSupportStatsDto;
   recentMaterials: RecentMaterialDto[];
   upcomingPickups: UpcomingPickupDto[];
   recentActivity: RecentActivityDto[];
+  recentReservationRequests: RecentReservationRequestDto[];
+  mostViewedMaterial: DashboardMaterialInsightDto | null;
+  highDemandMaterials: DashboardMaterialInsightDto[];
 };
 
 export const emptyMaterialStats = (): MaterialStatsDto => ({
@@ -119,29 +181,28 @@ export const emptyReservationStats = (): ReservationStatsDto => ({
   expired: 0,
 });
 
+export const emptyEngagementStats = (): EngagementStatsDto => ({
+  totalViews: 0,
+  totalLikes: 0,
+  followersCount: 0,
+});
+
+export const emptyOperationalStats = (): OperationalStatsDto => ({
+  scheduledPickups: 0,
+  activeMaterials: 0,
+});
+
 export const emptyDashboardStats = (): DashboardStatsDto => ({
   materials: emptyMaterialStats(),
   reservations: emptyReservationStats(),
   impact: { reusedMaterials: 0, reusedQuantity: 0 },
   reviews: { averageRating: 0, totalReviews: 0 },
   notifications: { unread: 0 },
+  engagement: emptyEngagementStats(),
+  operational: emptyOperationalStats(),
 });
 
 export const normalizeVerificationStatus = (status: string): string => {
-  const normalized = status.trim().toUpperCase();
-
-  if (
-    normalized === 'NOT_REQUIRED' ||
-    normalized === 'PENDING' ||
-    normalized === 'VERIFIED' ||
-    normalized === 'REJECTED'
-  ) {
-    return normalized;
-  }
-
-  if (normalized === 'UNVERIFIED') {
-    return 'PENDING';
-  }
-
-  return normalized;
+  const normalized = normalizeSupplierVerificationStatus(status);
+  return normalized === 'APPROVED' ? 'VERIFIED' : normalized;
 };

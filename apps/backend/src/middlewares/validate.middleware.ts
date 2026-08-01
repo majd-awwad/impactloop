@@ -1,35 +1,64 @@
-import type { NextFunction, Request, Response } from "express";
-import type { ZodType } from "zod";
-import { AppError } from "../utils/app-error.js";
+import type { NextFunction, Request, Response } from 'express';
+import type { ZodType } from 'zod';
 
-type RequestSource = "body" | "query" | "params";
+import { AppError } from '../utils/app-error.js';
+
+type RequestSource = 'body' | 'query' | 'params';
+
+const mapValidationIssueCode = (path: string) => {
+  switch (path) {
+    case 'categoryId':
+      return 'INVALID_COMPONENT_CATEGORY';
+    case 'componentRole':
+      return 'INVALID_COMPONENT_ROLE';
+    case 'quantity':
+      return 'INVALID_QUANTITY';
+    case 'searchKeywords':
+    case 'alternativeKeywords':
+      return 'INVALID_KEYWORDS';
+    default:
+      return 'VALIDATION_ERROR';
+  }
+};
 
 /**
  * Validates req.body, req.query, or req.params.
  * For query/params, prefer z.coerce.* in schemas because Express values are strings.
+ *
+ * Express 5 exposes read-only req.query/req.params, so parsed values are stored on
+ * req.validatedQuery / req.validatedParams instead of mutating the originals.
  */
 export const validate =
-  <T>(schema: ZodType<T>, source: RequestSource = "body") =>
+  <T>(schema: ZodType<T>, source: RequestSource = 'body') =>
   (req: Request, _res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req[source]);
 
     if (!result.success) {
       next(
-        new AppError("Validation failed", 400, "VALIDATION_ERROR", {
+        new AppError('Validation failed', 400, 'VALIDATION_ERROR', {
           issues: result.error.issues.map((issue) => ({
-            path: issue.path.join("."),
+            path: issue.path.join('.'),
             message: issue.message,
+            code: mapValidationIssueCode(issue.path.join('.')),
           })),
         }),
       );
       return;
     }
 
-    Object.defineProperty(req, source, {
-      value: result.data,
-      configurable: true,
-      enumerable: true,
-      writable: true,
-    });
+    if (source === 'query') {
+      req.validatedQuery = result.data;
+    } else if (source === 'params') {
+      req.validatedParams = result.data;
+    } else {
+      req.body = result.data;
+    }
+
     next();
   };
+
+export const readValidatedQuery = <T>(req: Request): T =>
+  req.validatedQuery as T;
+
+export const readValidatedParams = <T>(req: Request): T =>
+  req.validatedParams as T;

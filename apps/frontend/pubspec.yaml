@@ -2,7 +2,7 @@ name: frontend
 description: "ImpactLoop Flutter app for web and mobile."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   flutter_web_plugins:
     sdk: flutter
 
@@ -37,9 +39,17 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   dio: ^5.9.2
+  file_picker: ^10.3.2
+  flutter_map: ^8.3.0
   flutter_riverpod: ^3.3.2
   flutter_secure_storage: ^9.2.4
+  geolocator: ^14.0.2
   go_router: ^17.3.0
+  latlong2: ^0.9.1
+  fl_chart: ^0.70.2
+  intl: 0.20.2
+  web: ^1.1.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -57,7 +67,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

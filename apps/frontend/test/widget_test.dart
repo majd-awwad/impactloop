@@ -23,11 +23,37 @@ import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/auth/application/auth_navigation.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_dashboard.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_dashboard_providers.dart';
+import 'package:frontend/features/material_discovery/application/material_discovery_providers.dart';
+import 'package:frontend/features/material_discovery/data/mock_material_discovery_repository.dart';
+import 'package:frontend/features/locations/application/saved_locations_providers.dart';
+import 'package:frontend/features/materials/application/material_listing_providers.dart';
+import 'package:frontend/features/learning_hub/application/learning_hub_providers.dart';
 import 'package:go_router/go_router.dart';
+
+import 'support/learning_hub_test_support.dart';
+
+final _learningHubTestOverride = learningHubRepositoryProvider
+    .overrideWithValue(emptyLearningHubRepository);
+
+final _materialDiscoveryTestOverrides = [
+  materialDiscoveryRepositoryProvider.overrideWithValue(
+    const MockMaterialDiscoveryRepository(),
+  ),
+  discoveryMaterialCategoriesProvider.overrideWith((ref) => Future.value([])),
+  savedLocationsProvider.overrideWith((ref) => Future.value([])),
+];
 
 void main() {
   Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: ImpactLoopApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+        ],
+        child: const ImpactLoopApp(),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -43,7 +69,12 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(ProviderScope(child: MaterialApp(home: page)));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [_learningHubTestOverride],
+        child: MaterialApp(home: page),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -247,6 +278,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
           healthStatusProvider.overrideWith(
             (ref) async => HealthStatus(
               status: 'ok',
@@ -296,7 +328,11 @@ void main() {
     );
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
         child: const ImpactLoopApp(),
       ),
     );
@@ -334,7 +370,11 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
         child: const ImpactLoopApp(),
       ),
     );
@@ -373,7 +413,11 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repository)],
+        overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
+          authRepositoryProvider.overrideWithValue(repository),
+        ],
         child: const ImpactLoopApp(),
       ),
     );
@@ -394,7 +438,12 @@ void main() {
   testWidgets('supplier users are redirected from /login to /supplier', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -411,6 +460,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
           supplierDashboardProvider.overrideWith(
             (ref) async => _testSupplierDashboard(),
@@ -431,13 +482,21 @@ void main() {
     ).go('/login');
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/supplier');
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/supplier/overview',
+    );
   });
 
   testWidgets('supplier users are redirected from /register to /supplier', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    await tester.binding.setSurfaceSize(const Size(1400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -445,7 +504,10 @@ void main() {
           accessToken: 'restored-access',
           refreshToken: 'rotated-refresh',
         ),
-        meResult: _testUser(roles: const ['LEARNER', 'SUPPLIER']),
+        meResult: _testUser(
+          roles: const ['LEARNER', 'SUPPLIER'],
+          activeRole: 'SUPPLIER',
+        ),
       ),
       tokenStorage: tokenStorage,
       accessTokenHolder: accessTokenHolder,
@@ -454,6 +516,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
           supplierDashboardProvider.overrideWith(
             (ref) async => _testSupplierDashboard(),
@@ -474,13 +538,18 @@ void main() {
     ).go('/register');
     await tester.pumpAndSettle();
 
-    expect(router.routeInformationProvider.value.uri.path, '/supplier');
+    expect(
+      router.routeInformationProvider.value.uri.path,
+      '/supplier/overview',
+    );
   });
 
   testWidgets('logged out users are redirected from /supplier to /login', (
     tester,
   ) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stale-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stale-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -495,6 +564,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -516,7 +587,9 @@ void main() {
   });
 
   testWidgets('non-supplier users see supplier access denied', (tester) async {
-    final tokenStorage = _FakeTokenStorage(initialRefreshToken: 'stored-refresh');
+    final tokenStorage = _FakeTokenStorage(
+      initialRefreshToken: 'stored-refresh',
+    );
     final accessTokenHolder = AccessTokenHolder();
     final repository = AuthRepository(
       api: _FakeAuthApi(
@@ -533,6 +606,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          _learningHubTestOverride,
+          ..._materialDiscoveryTestOverrides,
           authRepositoryProvider.overrideWithValue(repository),
         ],
         child: const ImpactLoopApp(),
@@ -560,7 +635,9 @@ void main() {
     );
   });
 
-  testWidgets('materials route renders material discovery page', (tester) async {
+  testWidgets('materials route renders material discovery page', (
+    tester,
+  ) async {
     await pumpApp(tester);
 
     GoRouter.of(
@@ -570,6 +647,21 @@ void main() {
 
     expect(find.text('Material Discovery'), findsOneWidget);
     expect(find.text('Reusable Materials'), findsOneWidget);
+  });
+
+  testWidgets('learning route q parameter pre-fills project search', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+
+    GoRouter.of(
+      tester.element(find.text('Build a better future')),
+    ).go('/learning?q=Cardboard%20sheets');
+    await tester.pumpAndSettle();
+
+    expect(find.text('Learning Hub'), findsOneWidget);
+    expect(find.text('Cardboard sheets'), findsOneWidget);
+    expect(find.text('No projects match your filters'), findsOneWidget);
   });
 
   test('User.fromJson parses string, object, and primaryRole role shapes', () {
@@ -583,12 +675,58 @@ void main() {
         {'role': 'SUPPLIER'},
       ],
       'primaryRole': 'ADMIN',
+      'activeRole': 'ADMIN',
       'createdAt': '2026-01-01T00:00:00.000Z',
     });
 
     expect(user.roles, containsAll(['LEARNER', 'SUPPLIER', 'ADMIN']));
     expect(user.hasRole('supplier'), isTrue);
-    expect(postAuthRouteForUser(user), '/supplier');
+    expect(postAuthRouteForUser(user), '/admin');
+  });
+
+  test('postAuthRouteForUser uses role priority', () {
+    expect(
+      postAuthRouteForUser(
+        User.fromJson({
+          'id': 'admin-1',
+          'displayName': 'Admin',
+          'email': 'admin@example.com',
+          'accountStatus': 'ACTIVE',
+          'roles': ['ADMIN'],
+          'createdAt': '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+      '/admin',
+    );
+
+    expect(
+      postAuthRouteForUser(
+        User.fromJson({
+          'id': 'supplier-1',
+          'displayName': 'Supplier',
+          'email': 'supplier@example.com',
+          'accountStatus': 'ACTIVE',
+          'roles': ['SUPPLIER'],
+          'activeRole': 'SUPPLIER',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+      '/supplier/overview',
+    );
+
+    expect(
+      postAuthRouteForUser(
+        User.fromJson({
+          'id': 'learner-1',
+          'displayName': 'Learner',
+          'email': 'learner@example.com',
+          'accountStatus': 'ACTIVE',
+          'roles': ['LEARNER'],
+          'createdAt': '2026-01-01T00:00:00.000Z',
+        }),
+      ),
+      '/home',
+    );
   });
 
   testWidgets('landing page stays stable on mobile width', (tester) async {
@@ -685,15 +823,29 @@ class _FakeAuthApi extends AuthApi {
       throw logoutError!;
     }
   }
+
+  @override
+  Future<void> forgotPassword({required String email}) async {}
+
+  @override
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {}
 }
 
-User _testUser({List<String> roles = const ['LEARNER']}) {
+User _testUser({List<String> roles = const ['LEARNER'], String? activeRole}) {
+  final resolvedActiveRole =
+      activeRole ??
+      (roles.length == 1 && roles.first == 'SUPPLIER' ? 'SUPPLIER' : 'LEARNER');
+
   return User(
     id: 'user-1',
     displayName: 'Restored User',
     email: 'restored@example.com',
     accountStatus: 'ACTIVE',
     roles: roles,
+    activeRole: resolvedActiveRole,
     createdAt: DateTime(2026),
   );
 }
@@ -719,17 +871,9 @@ SupplierDashboard _testSupplierDashboard() {
         'cancelled': 0,
         'expired': 0,
       },
-      'impact': {
-        'reusedMaterials': 0,
-        'reusedQuantity': 0,
-      },
-      'reviews': {
-        'averageRating': 0,
-        'totalReviews': 0,
-      },
-      'notifications': {
-        'unread': 0,
-      },
+      'impact': {'reusedMaterials': 0, 'reusedQuantity': 0},
+      'reviews': {'averageRating': 0, 'totalReviews': 0},
+      'notifications': {'unread': 0},
     },
     'recentMaterials': [],
     'upcomingPickups': [],
