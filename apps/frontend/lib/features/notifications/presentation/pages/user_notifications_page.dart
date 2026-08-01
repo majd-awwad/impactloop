@@ -69,7 +69,7 @@ class UserNotificationsPage extends ConsumerWidget {
       return '/home';
     }
     if (user.isDriverMode && user.hasRole('DRIVER')) {
-      return '/driver/jobs';
+      return '/driver';
     }
     if (user.isSupplierMode && user.hasRole('SUPPLIER')) {
       return '/supplier/dashboard';
@@ -359,7 +359,7 @@ class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
 }
 
 bool _isDriverDeliveryRoute(String route) {
-  return route == '/driver/jobs' || route.startsWith('/driver/deliveries/');
+  return route == '/driver' || route.startsWith('/driver/');
 }
 
 class _NotificationsListView extends StatelessWidget {

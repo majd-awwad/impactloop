@@ -6326,6 +6326,77 @@ class AppLocalizationsEn extends AppLocalizations {
       'Delivery status changed. Refresh and try the next valid action.';
 
   @override
+  String get driverInvalidConfirmationCode =>
+      'That confirmation code is incorrect. Check the code and try again.';
+
+  @override
+  String get driverHandoverWindowNotStarted =>
+      'The handover window has not started yet.';
+
+  @override
+  String get driverHandoverWindowExpired =>
+      'The handover window has already ended.';
+
+  @override
+  String get driverPartialPickupSelectionInvalid =>
+      'The selected pickup items are invalid. Refresh and try again.';
+
+  @override
+  String get driverGroupedDeliverySplitConflict =>
+      'This grouped delivery changed. Refresh and try again.';
+
+  @override
+  String get driverAvailableJobsCursorInvalid =>
+      'Job list paging is out of date. Refresh available jobs.';
+
+  @override
+  String get driverPartialPickupTitle => 'Confirm what was picked up';
+
+  @override
+  String get driverPartialPickupBody =>
+      'Select every reservation item the supplier handed over now.';
+
+  @override
+  String get driverPartialPickupPickedSection => 'Will be delivered now';
+
+  @override
+  String get driverPartialPickupPendingSection => 'Will remain pending';
+
+  @override
+  String get driverPartialPickupReasonRequired =>
+      'Choose a reason for each pending item.';
+
+  @override
+  String driverPartialPickupSummary(int pickedCount, int pendingCount) {
+    return '$pickedCount items will be delivered now. $pendingCount items will remain pending.';
+  }
+
+  @override
+  String get driverPartialPickupContinue => 'Continue to confirmation code';
+
+  @override
+  String get driverPartialPickupReasonMaterialNotReady => 'Material not ready';
+
+  @override
+  String get driverPartialPickupReasonMaterialMissing => 'Material missing';
+
+  @override
+  String get driverPartialPickupReasonWrongItem => 'Wrong item';
+
+  @override
+  String get driverPartialPickupReasonQuantityMismatch => 'Quantity mismatch';
+
+  @override
+  String get driverPartialPickupReasonDamagedItem => 'Damaged item';
+
+  @override
+  String get driverPartialPickupReasonSupplierRefused =>
+      'Supplier refused handover';
+
+  @override
+  String get driverPartialPickupReasonOther => 'Other';
+
+  @override
   String get driverPickupFailureReported => 'Pickup failure reported.';
 
   @override

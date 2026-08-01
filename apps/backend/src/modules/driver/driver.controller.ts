@@ -6,6 +6,7 @@ import { successResponse } from '../../utils/api-response.js';
 import {
   acceptDelivery,
   createDeliveryLocationPing,
+  getDriverDeliveryDetail,
   getDriverDeliveryInactiveContext,
   listActiveDriverDeliveries,
   listAvailableDeliveries,
@@ -35,6 +36,16 @@ export const listActiveDriverDeliveriesHandler = async (
   const result = await listActiveDriverDeliveries(req.auth!.sub);
 
   res.json(successResponse('Active deliveries loaded.', result));
+};
+
+export const getDriverDeliveryDetailHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<DeliveryIdParams>(req);
+  const result = await getDriverDeliveryDetail(req.auth!.sub, id);
+
+  res.json(successResponse('Delivery detail loaded.', result));
 };
 
 export const getDriverDeliveryInactiveContextHandler = async (

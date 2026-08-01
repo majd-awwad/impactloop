@@ -5,6 +5,14 @@ import { createNotificationIfMissing } from './notifications.repository.js';
 
 /** Reminder fires within this window before pickup/drop-off start. */
 const REMINDER_LOOKAHEAD_MS = 15 * 60 * 1000;
+const REMINDER_SYNC_THROTTLE_MS = 5_000;
+
+type ReminderSyncEntry = {
+  lastCompletedAt: number;
+  inFlight?: Promise<void>;
+};
+
+const reminderSyncByUser = new Map<string, ReminderSyncEntry>();
 
 const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
   'DRIVER_ASSIGNED',
@@ -392,8 +400,20 @@ export const notifyDriverDeliveryUnassignedByAdmin = async (input: {
  * Idempotent due-only sync for pickup/drop-off reminders.
  * Safe to call from GET /api/notifications — never creates NEW JOB rows.
  */
-export const syncDueDriverTimeRemindersForUser = async (userId: string) =>
-  notifySafely(async () => {
+export const syncDueDriverTimeRemindersForUser = async (userId: string) => {
+  const existing = reminderSyncByUser.get(userId);
+  if (existing?.inFlight) {
+    await existing.inFlight;
+    return;
+  }
+  if (
+    existing &&
+    Date.now() - existing.lastCompletedAt < REMINDER_SYNC_THROTTLE_MS
+  ) {
+    return;
+  }
+
+  const inFlight = notifySafely(async () => {
     const profile = await prisma.driverProfile.findFirst({
       where: { userId, status: 'ACTIVE' },
       select: { id: true },
@@ -415,7 +435,16 @@ export const syncDueDriverTimeRemindersForUser = async (userId: string) =>
       await notifyDriverPickupTime(id);
       await notifyDriverDropoffTime(id);
     }
+  }).finally(() => {
+    reminderSyncByUser.set(userId, { lastCompletedAt: Date.now() });
   });
+
+  reminderSyncByUser.set(userId, {
+    lastCompletedAt: existing?.lastCompletedAt ?? 0,
+    inFlight,
+  });
+  await inFlight;
+};
 
 /** Remove stale unread job alerts once a delivery is accepted. */
 export const clearUnreadNewJobNotificationsForDelivery = async (
@@ -454,5 +483,5 @@ export const notifyDriverDeliveryMovedToAdminReview = async (input: {
   });
 
 export const resetDriverDeliveryReminderSyncThrottleForTests = () => {
-  // Kept for test compatibility.
+  reminderSyncByUser.clear();
 };

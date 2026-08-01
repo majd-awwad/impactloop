@@ -8,6 +8,7 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   acceptDriverDeliveryHandler,
   createDriverDeliveryLocationPingHandler,
+  getDriverDeliveryDetailHandler,
   getDriverDeliveryInactiveContextHandler,
   listActiveDriverDeliveriesHandler,
   listAvailableDriverDeliveriesHandler,
@@ -43,6 +44,12 @@ driverRouter.get(
 driverRouter.get(
   '/deliveries/active',
   asyncHandler(listActiveDriverDeliveriesHandler),
+);
+
+driverRouter.get(
+  '/deliveries/:id',
+  validate(deliveryIdParamsSchema, 'params'),
+  asyncHandler(getDriverDeliveryDetailHandler),
 );
 
 driverRouter.get(

@@ -12,6 +12,7 @@ import {
 import {
   acceptSupplierReservation,
   declineSupplierReservation,
+  submitNoDriverPickupWindow,
 } from '../supplier-reservations/supplier-reservations.service.js';
 import {
   acceptDelivery,
@@ -23,6 +24,16 @@ import {
   createReservation,
 } from '../reservations/reservations.service.js';
 import type { CreateReservationInput } from '../reservations/reservations.validation.js';
+import {
+  markDriverDeliveryFailed,
+  markDriverIssueAfterPickup,
+  markDriverPickupFailed,
+} from '../fulfillment-failures/fulfillment-failures.service.js';
+import {
+  cancelAndReleaseHoldForPickupRecoveryReport,
+  requestSupplierRescheduleForPickupRecoveryReport,
+} from '../admin-no-show-reports/admin-delivery-pickup-recovery.repository.js';
+import { getMaterialQuantityState } from '../reservations/reservations.quantity.js';
 
 const TEST_MARKER = '[test-delivery-group-operational]';
 
@@ -247,6 +258,176 @@ async function createGroupedReservations(
   assert.equal(first.deliveryGroupId, second.deliveryGroupId);
 
   return { first, second, groupId: first.deliveryGroupId!, scheduling };
+}
+
+async function createTripleGroupedReservations(
+  ctx: TestContext,
+  scheduling = buildFeasibleDeliveryScheduling(30),
+) {
+  const materialA = await createMaterial(ctx, 'A');
+  const materialB = await createMaterial(ctx, 'B');
+  const materialC = await createMaterial(ctx, 'C');
+
+  const first = await createReservation(
+    ctx.learnerId,
+    deliveryPayload(materialA.id, scheduling),
+  );
+  ctx.createdReservationIds.push(first.id);
+  if (first.deliveryGroupId) {
+    ctx.createdGroupIds.push(first.deliveryGroupId);
+  }
+
+  const second = await createReservation(
+    ctx.learnerId,
+    deliveryPayload(materialB.id, scheduling, {
+      combineWithDeliveryGroupId: first.deliveryGroupId!,
+    }),
+  );
+  ctx.createdReservationIds.push(second.id);
+
+  const third = await createReservation(
+    ctx.learnerId,
+    deliveryPayload(materialC.id, scheduling, {
+      combineWithDeliveryGroupId: first.deliveryGroupId!,
+    }),
+  );
+  ctx.createdReservationIds.push(third.id);
+
+  assert.equal(first.deliveryGroupId, second.deliveryGroupId);
+  assert.equal(first.deliveryGroupId, third.deliveryGroupId);
+
+  return {
+    first,
+    second,
+    third,
+    groupId: first.deliveryGroupId!,
+    scheduling,
+  };
+}
+
+async function prepareTripleGroupedPickup(ctx: TestContext) {
+  const grouped = await createTripleGroupedReservations(ctx);
+  const reservationIds = [
+    grouped.first.id,
+    grouped.second.id,
+    grouped.third.id,
+  ];
+
+  await acceptDeliveryReservation(ctx, grouped.first.id, grouped.scheduling);
+  await acceptDeliveryReservation(ctx, grouped.second.id, grouped.scheduling);
+  await acceptDeliveryReservation(ctx, grouped.third.id, grouped.scheduling);
+
+  const delivery = await prisma.delivery.findFirstOrThrow({
+    where: { deliveryGroupId: grouped.groupId },
+  });
+  ctx.createdDeliveryIds.push(delivery.id);
+
+  await prisma.reservation.updateMany({
+    where: { id: { in: reservationIds } },
+    data: activePickupWindowReservationUpdate(),
+  });
+  await acceptDelivery(ctx.driverUserId, delivery.id);
+  await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+    status: 'ARRIVED_PICKUP',
+  });
+
+  return { ...grouped, delivery, reservationIds };
+}
+
+async function groupedPickupStateSnapshot(input: {
+  deliveryId: string;
+  groupId: string;
+  reservationIds: string[];
+  driverProfileId: string;
+}) {
+  const [delivery, group, assignments, reservations, deliveryHistoryCount,
+    reservationHistoryCount, driver] = await Promise.all([
+    prisma.delivery.findUniqueOrThrow({
+      where: { id: input.deliveryId },
+      select: {
+        status: true,
+        reservationId: true,
+        deliveryGroupId: true,
+        assignedDriverProfileId: true,
+        pickedUpAt: true,
+        supplierHandoverCodeHash: true,
+        supplierHandoverCodeGeneratedAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.deliveryGroup.findUniqueOrThrow({
+      where: { id: input.groupId },
+      select: {
+        status: true,
+        assignedDriverProfileId: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.deliveryAssignment.findMany({
+      where: { deliveryId: input.deliveryId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        driverProfileId: true,
+        status: true,
+        releasedAt: true,
+        releaseReason: true,
+      },
+    }),
+    prisma.reservation.findMany({
+      where: { id: { in: input.reservationIds } },
+      orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        status: true,
+        fulfillmentMethod: true,
+        deliveryGroupId: true,
+        materialId: true,
+        pendingRescheduleReason: true,
+        pendingRescheduleNote: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.deliveryStatusHistory.count({
+      where: { deliveryId: input.deliveryId },
+    }),
+    prisma.reservationStatusHistory.count({
+      where: { reservationId: { in: input.reservationIds } },
+    }),
+    prisma.driverProfile.findUniqueOrThrow({
+      where: { id: input.driverProfileId },
+      select: { availability: true, updatedAt: true },
+    }),
+  ]);
+
+  const materialHolds = await Promise.all(
+    reservations.map(async (reservation) => {
+      const state = await getMaterialQuantityState(
+        prisma,
+        reservation.materialId,
+      );
+      return {
+        materialId: reservation.materialId,
+        materialQuantity: state?.materialQuantity.toString() ?? null,
+        heldQuantity: state?.heldQuantity.toString() ?? null,
+        availableQuantity: state?.availableQuantity.toString() ?? null,
+      };
+    }),
+  );
+  materialHolds.sort((left, right) =>
+    left.materialId.localeCompare(right.materialId),
+  );
+
+  return {
+    delivery,
+    group,
+    assignments,
+    reservations,
+    materialHolds,
+    deliveryHistoryCount,
+    reservationHistoryCount,
+    driver,
+  };
 }
 
 describe('operational delivery groups', () => {
@@ -654,5 +835,1150 @@ describe('operational delivery groups', () => {
       statuses.every((row) => row.status === 'COMPLETED'),
       true,
     );
+  });
+
+  test('grouped pickup failure atomically moves the whole group to admin recovery', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+
+    const expiredEnd = new Date(Date.now() - 2 * 60 * 60_000);
+    const expiredStart = new Date(expiredEnd.getTime() - 60 * 60_000);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: {
+        supplierPickupWindowStart: expiredStart,
+        supplierPickupWindowEnd: expiredEnd,
+      },
+    });
+
+    await markDriverPickupFailed(ctx.driverUserId, delivery.id, {
+      reason: 'SUPPLIER_UNAVAILABLE',
+      note: 'Grouped pickup could not be completed.',
+    });
+
+    const [updatedDelivery, group, reservations, assignment, driver] =
+      await Promise.all([
+        prisma.delivery.findUniqueOrThrow({ where: { id: delivery.id } }),
+        prisma.deliveryGroup.findUniqueOrThrow({ where: { id: groupId } }),
+        prisma.reservation.findMany({
+          where: { id: { in: [first.id, second.id] } },
+          select: { status: true },
+        }),
+        prisma.deliveryAssignment.findFirstOrThrow({
+          where: { deliveryId: delivery.id },
+          orderBy: { acceptedAt: 'desc' },
+        }),
+        prisma.driverProfile.findUniqueOrThrow({
+          where: { id: ctx.driverProfileId },
+        }),
+      ]);
+
+    assert.equal(updatedDelivery.status, 'FAILED_PICKUP');
+    assert.equal(updatedDelivery.assignedDriverProfileId, null);
+    assert.equal(group.status, 'CANCELLED');
+    assert.equal(group.assignedDriverProfileId, null);
+    assert.equal(
+      reservations.every((reservation) =>
+        reservation.status === 'AWAITING_RESOLUTION'),
+      true,
+    );
+    assert.equal(assignment.status, 'RELEASED');
+    assert.equal(driver.availability, 'AVAILABLE');
+  });
+
+  test('grouped pickup recovery reopens all reservations and the shared delivery', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+
+    const expiredEnd = new Date(Date.now() - 2 * 60 * 60_000);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: {
+        supplierPickupWindowStart: new Date(
+          expiredEnd.getTime() - 60 * 60_000,
+        ),
+        supplierPickupWindowEnd: expiredEnd,
+      },
+    });
+    await markDriverPickupFailed(ctx.driverUserId, delivery.id, {
+      reason: 'MATERIAL_NOT_READY',
+      note: 'Grouped material was not ready.',
+    });
+
+    const report = await prisma.noShowReport.findFirstOrThrow({
+      where: { deliveryId: delivery.id, reasonCode: 'PICKUP_FAILED' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const adminResult =
+      await requestSupplierRescheduleForPickupRecoveryReport({
+        reportId: report.id,
+        adminUserId: ctx.supplierId,
+        adminNote: 'Request a shared replacement pickup window.',
+      });
+    assert.equal(adminResult.outcome, 'REQUESTED');
+
+    const replacementStart = new Date(Date.now() + 24 * 60 * 60_000);
+    const replacementEnd = new Date(
+      replacementStart.getTime() + 2 * 60 * 60_000,
+    );
+    await submitNoDriverPickupWindow(ctx.supplierId, first.id, {
+      pickupWindowStart: replacementStart.toISOString(),
+      pickupWindowEnd: replacementEnd.toISOString(),
+      supplierNote: 'Shared replacement window.',
+    });
+
+    const [reopenedDelivery, reopenedGroup, reservations] = await Promise.all([
+      prisma.delivery.findUniqueOrThrow({ where: { id: delivery.id } }),
+      prisma.deliveryGroup.findUniqueOrThrow({ where: { id: groupId } }),
+      prisma.reservation.findMany({
+        where: { id: { in: [first.id, second.id] } },
+      }),
+    ]);
+    assert.equal(reopenedDelivery.status, 'WAITING_FOR_DRIVER');
+    assert.equal(reopenedDelivery.assignedDriverProfileId, null);
+    assert.equal(reopenedGroup.status, 'OPEN');
+    assert.equal(reopenedGroup.assignedDriverProfileId, null);
+    assert.equal(
+      reservations.every(
+        (reservation) =>
+          reservation.status === 'ACCEPTED' &&
+          reservation.supplierPickupWindowStart?.getTime() ===
+            replacementStart.getTime() &&
+          reservation.supplierPickupWindowEnd?.getTime() ===
+            replacementEnd.getTime(),
+      ),
+      true,
+    );
+  });
+
+  test('partial pickup keeps selected items and detaches unpicked with hold', async () => {
+    const { first, second, third, groupId, scheduling } =
+      await createTripleGroupedReservations(ctx);
+
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    await acceptDeliveryReservation(ctx, third.id, scheduling);
+
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      data: activePickupWindowReservationUpdate(),
+    });
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      data: activeConfirmedDeliveryWindowUpdate(),
+    });
+
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+
+    const heldBefore = await getMaterialQuantityState(
+      prisma,
+      (
+        await prisma.reservation.findUniqueOrThrow({
+          where: { id: third.id },
+          select: { materialId: true },
+        })
+      ).materialId,
+    );
+    assert.ok(heldBefore);
+    assert.equal(Number(heldBefore.heldQuantity), 1);
+
+    const supplierCode = deriveHandoverCode('supplier-handover', delivery.id);
+    const updated = await updateDriverDeliveryStatus(
+      ctx.driverUserId,
+      delivery.id,
+      {
+        status: 'PICKED_UP',
+        confirmationCode: supplierCode,
+        pickedReservationIds: [first.id, second.id],
+        unpicked: [
+          {
+            reservationId: third.id,
+            reason: 'MATERIAL_NOT_READY',
+            note: 'Supplier still preparing the item',
+          },
+        ],
+      },
+    );
+
+    assert.equal(updated.status, 'PICKED_UP');
+    assert.equal(updated.itemCount, 2);
+    assert.equal(
+      updated.items.every((item) =>
+        [first.id, second.id].includes(item.reservationId),
+      ),
+      true,
+    );
+
+    const detachedMaterialId = (
+      await prisma.reservation.findUniqueOrThrow({
+        where: { id: third.id },
+        select: { materialId: true },
+      })
+    ).materialId;
+
+    const [group, detached, carried, assignment, heldAfter] = await Promise.all([
+      prisma.deliveryGroup.findUniqueOrThrow({ where: { id: groupId } }),
+      prisma.reservation.findUniqueOrThrow({ where: { id: third.id } }),
+      prisma.reservation.findMany({
+        where: { id: { in: [first.id, second.id] } },
+      }),
+      prisma.deliveryAssignment.findFirstOrThrow({
+        where: { deliveryId: delivery.id },
+        orderBy: { acceptedAt: 'desc' },
+      }),
+      getMaterialQuantityState(prisma, detachedMaterialId),
+    ]);
+
+    assert.equal(group.status, 'ASSIGNED');
+    assert.equal(group.assignedDriverProfileId, ctx.driverProfileId);
+    assert.equal(detached.deliveryGroupId, null);
+    assert.equal(detached.status, 'AWAITING_SUPPLIER_CONFIRMATION');
+    assert.equal(
+      detached.pendingRescheduleReason,
+      'DRIVER_PARTIAL_PICKUP_MATERIAL_NOT_READY',
+    );
+    assert.equal(
+      carried.every(
+        (reservation) =>
+          reservation.status === 'ACCEPTED' &&
+          reservation.deliveryGroupId === groupId,
+      ),
+      true,
+    );
+    assert.equal(assignment.status, 'ACTIVE');
+    assert.ok(heldAfter);
+    assert.equal(Number(heldAfter.heldQuantity), 1);
+
+    const replacementStart = new Date(Date.now() + 48 * 60 * 60_000);
+    const replacementEnd = new Date(
+      replacementStart.getTime() + 2 * 60 * 60_000,
+    );
+    await submitNoDriverPickupWindow(ctx.supplierId, third.id, {
+      pickupWindowStart: replacementStart.toISOString(),
+      pickupWindowEnd: replacementEnd.toISOString(),
+      supplierNote: 'Replacement item is ready',
+    });
+
+    const regrouped = await prisma.reservation.findUniqueOrThrow({
+      where: { id: third.id },
+    });
+    assert.ok(regrouped.deliveryGroupId);
+    assert.notEqual(regrouped.deliveryGroupId, groupId);
+    ctx.createdGroupIds.push(regrouped.deliveryGroupId!);
+
+    assert.equal(
+      regrouped.deliveryFee?.toString(),
+      detached.deliveryFee?.toString(),
+    );
+    assert.equal(
+      regrouped.totalAmount?.toString(),
+      detached.totalAmount?.toString(),
+    );
+
+    const regroupedDelivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: regrouped.deliveryGroupId },
+      orderBy: { requestedAt: 'desc' },
+    });
+    ctx.createdDeliveryIds.push(regroupedDelivery.id);
+
+    assert.equal(regrouped.status, 'ACCEPTED');
+    assert.equal(regrouped.pendingRescheduleReason, null);
+
+    const jobs = await listAvailableDeliveries(ctx.driverUserId);
+    assert.equal(
+      jobs.deliveries.some((job) => job.id === regroupedDelivery.id),
+      true,
+    );
+
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_DROPOFF',
+    });
+    const learnerCode = deriveHandoverCode('learner-delivery', delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'DELIVERED',
+      confirmationCode: learnerCode,
+    });
+
+    const afterComplete = await prisma.reservation.findMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      select: { id: true, status: true },
+    });
+    assert.equal(
+      afterComplete.find((row) => row.id === first.id)?.status,
+      'COMPLETED',
+    );
+    assert.equal(
+      afterComplete.find((row) => row.id === second.id)?.status,
+      'COMPLETED',
+    );
+    assert.equal(
+      afterComplete.find((row) => row.id === third.id)?.status,
+      'ACCEPTED',
+    );
+  });
+
+  test('invalid confirmation code does not split the group', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: activePickupWindowReservationUpdate(),
+    });
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+          status: 'PICKED_UP',
+          confirmationCode: '000000',
+          pickedReservationIds: [first.id],
+          unpicked: [{ reservationId: second.id, reason: 'WRONG_ITEM' }],
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.statusCode === 400 &&
+        error.code === 'INVALID_CONFIRMATION_CODE',
+    );
+
+    const [deliveryAfter, reservations] = await Promise.all([
+      prisma.delivery.findUniqueOrThrow({ where: { id: delivery.id } }),
+      prisma.reservation.findMany({
+        where: { id: { in: [first.id, second.id] } },
+      }),
+    ]);
+    assert.equal(deliveryAfter.status, 'ARRIVED_PICKUP');
+    assert.equal(
+      reservations.every(
+        (reservation) =>
+          reservation.status === 'ACCEPTED' &&
+          reservation.deliveryGroupId === groupId,
+      ),
+      true,
+    );
+  });
+
+  test('zero selected is rejected and the existing full pickup failure handles all items', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: activePickupWindowReservationUpdate(),
+    });
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+          status: 'PICKED_UP',
+          confirmationCode: deriveHandoverCode(
+            'supplier-handover',
+            delivery.id,
+          ),
+          pickedReservationIds: [],
+          unpicked: [
+            { reservationId: first.id, reason: 'MATERIAL_MISSING' },
+            { reservationId: second.id, reason: 'MATERIAL_MISSING' },
+          ],
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID',
+    );
+
+    const expiredEnd = new Date(Date.now() - 31 * 60_000);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: { supplierPickupWindowEnd: expiredEnd },
+    });
+    await markDriverPickupFailed(ctx.driverUserId, delivery.id, {
+      reason: 'MATERIAL_NOT_READY',
+      note: 'No grouped item was handed over.',
+    });
+
+    const [failedDelivery, cancelledGroup, reservations, assignment] =
+      await Promise.all([
+        prisma.delivery.findUniqueOrThrow({ where: { id: delivery.id } }),
+        prisma.deliveryGroup.findUniqueOrThrow({ where: { id: groupId } }),
+        prisma.reservation.findMany({
+          where: { id: { in: [first.id, second.id] } },
+        }),
+        prisma.deliveryAssignment.findFirstOrThrow({
+          where: { deliveryId: delivery.id },
+          orderBy: { acceptedAt: 'desc' },
+        }),
+      ]);
+    assert.equal(failedDelivery.status, 'FAILED_PICKUP');
+    assert.equal(cancelledGroup.status, 'CANCELLED');
+    assert.equal(cancelledGroup.assignedDriverProfileId, null);
+    assert.equal(
+      reservations.every(
+        (reservation) =>
+          reservation.status === 'AWAITING_RESOLUTION' &&
+          reservation.deliveryGroupId === groupId,
+      ),
+      true,
+    );
+    assert.equal(assignment.status, 'RELEASED');
+  });
+
+  test('duplicate or unrelated partial pickup ids are rejected', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: activePickupWindowReservationUpdate(),
+    });
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+
+    const supplierCode = deriveHandoverCode('supplier-handover', delivery.id);
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+          status: 'PICKED_UP',
+          confirmationCode: supplierCode,
+          pickedReservationIds: [first.id, first.id],
+          unpicked: [{ reservationId: second.id, reason: 'OTHER' }],
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID',
+    );
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+          status: 'PICKED_UP',
+          confirmationCode: supplierCode,
+          pickedReservationIds: [first.id, 'missing-reservation'],
+          unpicked: [{ reservationId: second.id, reason: 'OTHER' }],
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID',
+    );
+  });
+
+  test('post-pickup failure affects only carried reservations after split', async () => {
+    const { first, second, third, groupId, scheduling } =
+      await createTripleGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    await acceptDeliveryReservation(ctx, third.id, scheduling);
+
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      data: {
+        ...activePickupWindowReservationUpdate(),
+        ...activeConfirmedDeliveryWindowUpdate(),
+      },
+    });
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+
+    const supplierCode = deriveHandoverCode('supplier-handover', delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'PICKED_UP',
+      confirmationCode: supplierCode,
+      pickedReservationIds: [first.id, second.id],
+      unpicked: [
+        {
+          reservationId: third.id,
+          reason: 'MATERIAL_NOT_READY',
+          note: 'Still pending at supplier',
+        },
+      ],
+    });
+
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ON_THE_WAY',
+    });
+
+    const { markDriverIssueAfterPickup } = await import(
+      '../fulfillment-failures/fulfillment-failures.service.js'
+    );
+    await markDriverIssueAfterPickup(ctx.driverUserId, delivery.id, {
+      note: 'Vehicle issue after split pickup',
+    });
+
+    const reservations = await prisma.reservation.findMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      select: { id: true, status: true, deliveryGroupId: true },
+    });
+    assert.equal(
+      reservations.find((row) => row.id === first.id)?.status,
+      'AWAITING_RESOLUTION',
+    );
+    assert.equal(
+      reservations.find((row) => row.id === second.id)?.status,
+      'AWAITING_RESOLUTION',
+    );
+    assert.equal(
+      reservations.find((row) => row.id === third.id)?.status,
+      'AWAITING_SUPPLIER_CONFIRMATION',
+    );
+    assert.equal(
+      reservations.find((row) => row.id === third.id)?.deliveryGroupId,
+      null,
+    );
+  });
+
+  test('all-selected partial pickup rejects an attached member with unexpected state and fully rolls back', async () => {
+    const { first, second, third, groupId, delivery, reservationIds } =
+      await prepareTripleGroupedPickup(ctx);
+
+    await prisma.reservation.update({
+      where: { id: third.id },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+
+    const before = await groupedPickupStateSnapshot({
+      deliveryId: delivery.id,
+      groupId,
+      reservationIds,
+      driverProfileId: ctx.driverProfileId,
+    });
+
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+          status: 'PICKED_UP',
+          confirmationCode: deriveHandoverCode(
+            'supplier-handover',
+            delivery.id,
+          ),
+          pickedReservationIds: [first.id, second.id],
+          unpicked: [],
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.statusCode === 409 &&
+        error.code === 'DRIVER_GROUPED_DELIVERY_SPLIT_CONFLICT',
+    );
+
+    const after = await groupedPickupStateSnapshot({
+      deliveryId: delivery.id,
+      groupId,
+      reservationIds,
+      driverProfileId: ctx.driverProfileId,
+    });
+    assert.deepEqual(after, before);
+    assert.equal(after.delivery.status, 'ARRIVED_PICKUP');
+    assert.equal(after.group.status, 'ASSIGNED');
+    assert.equal(after.assignments.length, 1);
+    assert.equal(after.assignments[0]?.status, 'ACTIVE');
+  });
+
+  test('legacy full grouped pickup rejects an unexpected member state and fully rolls back', async () => {
+    const { third, groupId, delivery, reservationIds } =
+      await prepareTripleGroupedPickup(ctx);
+
+    await prisma.reservation.update({
+      where: { id: third.id },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+
+    const before = await groupedPickupStateSnapshot({
+      deliveryId: delivery.id,
+      groupId,
+      reservationIds,
+      driverProfileId: ctx.driverProfileId,
+    });
+
+    await assert.rejects(
+      () =>
+        updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+          status: 'PICKED_UP',
+          confirmationCode: deriveHandoverCode(
+            'supplier-handover',
+            delivery.id,
+          ),
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.statusCode === 409 &&
+        error.code === 'DRIVER_GROUPED_DELIVERY_SPLIT_CONFLICT',
+    );
+
+    const after = await groupedPickupStateSnapshot({
+      deliveryId: delivery.id,
+      groupId,
+      reservationIds,
+      driverProfileId: ctx.driverProfileId,
+    });
+    assert.deepEqual(after, before);
+    assert.equal(after.delivery.status, 'ARRIVED_PICKUP');
+  });
+
+  test('valid all-selected partial contract completes the full grouped pickup', async () => {
+    const { first, second, third, groupId, delivery, reservationIds } =
+      await prepareTripleGroupedPickup(ctx);
+
+    const updated = await updateDriverDeliveryStatus(
+      ctx.driverUserId,
+      delivery.id,
+      {
+        status: 'PICKED_UP',
+        confirmationCode: deriveHandoverCode(
+          'supplier-handover',
+          delivery.id,
+        ),
+        pickedReservationIds: [first.id, second.id, third.id],
+        unpicked: [],
+      },
+    );
+
+    assert.equal(updated.status, 'PICKED_UP');
+    assert.equal(updated.itemCount, 3);
+    const [group, reservations] = await Promise.all([
+      prisma.deliveryGroup.findUniqueOrThrow({ where: { id: groupId } }),
+      prisma.reservation.findMany({
+        where: { id: { in: reservationIds } },
+        select: { status: true, fulfillmentMethod: true, deliveryGroupId: true },
+      }),
+    ]);
+    assert.equal(group.status, 'ASSIGNED');
+    assert.equal(group.assignedDriverProfileId, ctx.driverProfileId);
+    assert.equal(
+      reservations.every(
+        (reservation) =>
+          reservation.status === 'ACCEPTED' &&
+          reservation.fulfillmentMethod === 'DELIVERY' &&
+          reservation.deliveryGroupId === groupId,
+      ),
+      true,
+    );
+  });
+
+  test('valid legacy full grouped pickup succeeds without selection fields', async () => {
+    const { groupId, delivery, reservationIds } =
+      await prepareTripleGroupedPickup(ctx);
+
+    const updated = await updateDriverDeliveryStatus(
+      ctx.driverUserId,
+      delivery.id,
+      {
+        status: 'PICKED_UP',
+        confirmationCode: deriveHandoverCode(
+          'supplier-handover',
+          delivery.id,
+        ),
+      },
+    );
+
+    assert.equal(updated.status, 'PICKED_UP');
+    assert.equal(updated.itemCount, 3);
+    const [group, reservations] = await Promise.all([
+      prisma.deliveryGroup.findUniqueOrThrow({ where: { id: groupId } }),
+      prisma.reservation.findMany({
+        where: { id: { in: reservationIds } },
+        select: { status: true, fulfillmentMethod: true, deliveryGroupId: true },
+      }),
+    ]);
+    assert.equal(group.status, 'ASSIGNED');
+    assert.equal(group.assignedDriverProfileId, ctx.driverProfileId);
+    assert.equal(
+      reservations.every(
+        (reservation) =>
+          reservation.status === 'ACCEPTED' &&
+          reservation.fulfillmentMethod === 'DELIVERY' &&
+          reservation.deliveryGroupId === groupId,
+      ),
+      true,
+    );
+  });
+
+  test('whole grouped pickup failure fails closed on mixed reservation state', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+
+    const expiredEnd = new Date(Date.now() - 2 * 60 * 60_000);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: {
+        supplierPickupWindowStart: new Date(expiredEnd.getTime() - 60 * 60_000),
+        supplierPickupWindowEnd: expiredEnd,
+      },
+    });
+    await prisma.reservation.update({
+      where: { id: second.id },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+
+    const [deliveryHistoryBefore, reservationHistoryBefore, holdBefore] =
+      await Promise.all([
+        prisma.deliveryStatusHistory.count({ where: { deliveryId: delivery.id } }),
+        prisma.reservationStatusHistory.count({
+          where: { reservationId: { in: [first.id, second.id] } },
+        }),
+        getMaterialQuantityState(
+          prisma,
+          (
+            await prisma.reservation.findUniqueOrThrow({
+              where: { id: second.id },
+              select: { materialId: true },
+            })
+          ).materialId,
+        ),
+      ]);
+
+    await assert.rejects(
+      () =>
+        markDriverPickupFailed(ctx.driverUserId, delivery.id, {
+          reason: 'MATERIAL_NOT_READY',
+          note: 'Must reject the mixed group.',
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'GROUPED_DELIVERY_STATE_CONFLICT',
+    );
+
+    const [afterDelivery, afterGroup, afterAssignment, statuses, holdAfter] =
+      await Promise.all([
+        prisma.delivery.findUniqueOrThrow({ where: { id: delivery.id } }),
+        prisma.deliveryGroup.findUniqueOrThrow({ where: { id: groupId } }),
+        prisma.deliveryAssignment.findFirstOrThrow({
+          where: { deliveryId: delivery.id },
+          orderBy: { acceptedAt: 'desc' },
+        }),
+        prisma.reservation.findMany({
+          where: { id: { in: [first.id, second.id] } },
+          select: { id: true, status: true },
+        }),
+        getMaterialQuantityState(
+          prisma,
+          (
+            await prisma.reservation.findUniqueOrThrow({
+              where: { id: second.id },
+              select: { materialId: true },
+            })
+          ).materialId,
+        ),
+      ]);
+
+    assert.equal(afterDelivery.status, 'DRIVER_ASSIGNED');
+    assert.equal(afterGroup.status, 'ASSIGNED');
+    assert.equal(afterAssignment.status, 'ACTIVE');
+    assert.equal(statuses.find((row) => row.id === first.id)?.status, 'ACCEPTED');
+    assert.equal(
+      statuses.find((row) => row.id === second.id)?.status,
+      'AWAITING_RESOLUTION',
+    );
+    assert.equal(
+      await prisma.deliveryStatusHistory.count({ where: { deliveryId: delivery.id } }),
+      deliveryHistoryBefore,
+    );
+    assert.equal(
+      await prisma.reservationStatusHistory.count({
+        where: { reservationId: { in: [first.id, second.id] } },
+      }),
+      reservationHistoryBefore,
+    );
+    assert.equal(holdAfter?.heldQuantity.toString(), holdBefore?.heldQuantity.toString());
+  });
+
+  test('grouped failure rejects primary membership and Driver ownership mismatches', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    const expiredEnd = new Date(Date.now() - 2 * 60 * 60_000);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: { supplierPickupWindowEnd: expiredEnd },
+    });
+
+    const unrelatedMaterial = await createMaterial(ctx, 'unrelated-primary');
+    const unrelated = await createReservation(
+      ctx.learnerId,
+      deliveryPayload(unrelatedMaterial.id, buildFeasibleDeliveryScheduling(72)),
+    );
+    ctx.createdReservationIds.push(unrelated.id);
+    if (unrelated.deliveryGroupId) ctx.createdGroupIds.push(unrelated.deliveryGroupId);
+    await prisma.reservation.update({
+      where: { id: unrelated.id },
+      data: { status: 'ACCEPTED' },
+    });
+
+    await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: { reservationId: unrelated.id },
+    });
+    await assert.rejects(
+      () =>
+        markDriverPickupFailed(ctx.driverUserId, delivery.id, {
+          reason: 'OTHER',
+          note: 'Primary must belong to the group.',
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'GROUPED_DELIVERY_STATE_CONFLICT',
+    );
+
+    await prisma.delivery.update({
+      where: { id: delivery.id },
+      data: { reservationId: first.id },
+    });
+    await prisma.deliveryGroup.update({
+      where: { id: groupId },
+      data: { assignedDriverProfileId: null },
+    });
+    await assert.rejects(
+      () =>
+        markDriverPickupFailed(ctx.driverUserId, delivery.id, {
+          reason: 'OTHER',
+          note: 'Group and Delivery Driver must match.',
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'GROUPED_DELIVERY_STATE_CONFLICT',
+    );
+    const assignment = await prisma.deliveryAssignment.findFirstOrThrow({
+      where: { deliveryId: delivery.id },
+      orderBy: { acceptedAt: 'desc' },
+    });
+    assert.equal(assignment.status, 'ACTIVE');
+  });
+
+  test('post-pickup failure and Driver issue fail closed on mixed carried state', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: {
+        ...activePickupWindowReservationUpdate(),
+        confirmedDeliveryWindowStart: new Date(Date.now() - 3 * 60 * 60_000),
+        confirmedDeliveryWindowEnd: new Date(Date.now() - 2 * 60 * 60_000),
+      },
+    });
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, delivery.id, {
+      status: 'PICKED_UP',
+      confirmationCode: deriveHandoverCode('supplier-handover', delivery.id),
+    });
+    await prisma.reservation.update({
+      where: { id: second.id },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+    const historyBefore = await prisma.deliveryStatusHistory.count({
+      where: { deliveryId: delivery.id },
+    });
+
+    for (const operation of [
+      () =>
+        markDriverDeliveryFailed(ctx.driverUserId, delivery.id, {
+          reason: 'ADDRESS_ISSUE',
+          note: 'Mixed carried state.',
+        }),
+      () =>
+        markDriverIssueAfterPickup(ctx.driverUserId, delivery.id, {
+          note: 'Mixed carried state.',
+        }),
+    ]) {
+      await assert.rejects(
+        operation,
+        (error: unknown) =>
+          error instanceof AppError &&
+          error.code === 'GROUPED_DELIVERY_STATE_CONFLICT',
+      );
+    }
+
+    const after = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+    });
+    assert.equal(after.status, 'PICKED_UP');
+    assert.equal(after.assignedDriverProfileId, ctx.driverProfileId);
+    assert.equal(
+      await prisma.deliveryStatusHistory.count({ where: { deliveryId: delivery.id } }),
+      historyBefore,
+    );
+  });
+
+  test('partial incident is actionable and replacement never reopens history', async () => {
+    const { first, second, third, groupId, scheduling } =
+      await createTripleGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    await acceptDeliveryReservation(ctx, third.id, scheduling);
+    const carryingDelivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(carryingDelivery.id);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id, third.id] } },
+      data: activePickupWindowReservationUpdate(),
+    });
+    await acceptDelivery(ctx.driverUserId, carryingDelivery.id);
+    await updateDriverDeliveryStatus(ctx.driverUserId, carryingDelivery.id, {
+      status: 'ARRIVED_PICKUP',
+    });
+    await updateDriverDeliveryStatus(ctx.driverUserId, carryingDelivery.id, {
+      status: 'PICKED_UP',
+      confirmationCode: deriveHandoverCode(
+        'supplier-handover',
+        carryingDelivery.id,
+      ),
+      pickedReservationIds: [first.id, second.id],
+      unpicked: [
+        {
+          reservationId: third.id,
+          reason: 'WRONG_ITEM',
+          note: 'Different model was presented.',
+        },
+      ],
+    });
+
+    const reports = await prisma.noShowReport.findMany({
+      where: { reservationId: third.id, reasonCode: 'PICKUP_FAILED' },
+    });
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0]!.deliveryId, carryingDelivery.id);
+    assert.equal(reports[0]!.reporterUserId, ctx.driverUserId);
+    assert.match(reports[0]!.note ?? '', /originalDeliveryGroupId=/);
+    assert.match(reports[0]!.note ?? '', /reason=WRONG_ITEM/);
+
+    const originalDeliverySnapshot = await prisma.delivery.findUniqueOrThrow({
+      where: { id: carryingDelivery.id },
+    });
+    const historicalStatuses = ['DELIVERED', 'FAILED_PICKUP'] as const;
+    const historicalIds: string[] = [];
+    for (const status of historicalStatuses) {
+      const historical = await prisma.delivery.create({
+        data: {
+          reservationId: third.id,
+          pickupLocationId: carryingDelivery.pickupLocationId,
+          dropoffLocationId: carryingDelivery.dropoffLocationId,
+          requestedByUserId: ctx.learnerId,
+          status,
+          failureReason: status === 'FAILED_PICKUP' ? 'Historical failure' : null,
+        },
+      });
+      historicalIds.push(historical.id);
+    }
+
+    const adminResult = await requestSupplierRescheduleForPickupRecoveryReport({
+      reportId: reports[0]!.id,
+      adminUserId: ctx.supplierId,
+      adminNote: 'Supplier must provide the correct item window.',
+    });
+    assert.equal(adminResult.outcome, 'REQUESTED');
+
+    const replacementStart = new Date(Date.now() + 48 * 60 * 60_000);
+    const replacementEnd = new Date(replacementStart.getTime() + 2 * 60 * 60_000);
+    await submitNoDriverPickupWindow(ctx.supplierId, third.id, {
+      pickupWindowStart: replacementStart.toISOString(),
+      pickupWindowEnd: replacementEnd.toISOString(),
+      supplierNote: 'Correct item is ready.',
+    });
+
+    const [carryingAfter, historiesAfter, detached, hold] = await Promise.all([
+      prisma.delivery.findUniqueOrThrow({ where: { id: carryingDelivery.id } }),
+      prisma.delivery.findMany({
+        where: { id: { in: historicalIds } },
+        orderBy: { status: 'asc' },
+      }),
+      prisma.reservation.findUniqueOrThrow({ where: { id: third.id } }),
+      getMaterialQuantityState(
+        prisma,
+        (
+          await prisma.reservation.findUniqueOrThrow({
+            where: { id: third.id },
+            select: { materialId: true },
+          })
+        ).materialId,
+      ),
+    ]);
+
+    assert.equal(carryingAfter.status, originalDeliverySnapshot.status);
+    assert.equal(carryingAfter.assignedDriverProfileId, ctx.driverProfileId);
+    assert.deepEqual(
+      historiesAfter.map((delivery) => delivery.status).sort(),
+      [...historicalStatuses].sort(),
+    );
+    assert.equal(detached.status, 'ACCEPTED');
+    assert.ok(detached.deliveryGroupId);
+    ctx.createdGroupIds.push(detached.deliveryGroupId!);
+    const replacementDelivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: detached.deliveryGroupId },
+    });
+    ctx.createdDeliveryIds.push(replacementDelivery.id);
+    assert.equal(replacementDelivery.status, 'WAITING_FOR_DRIVER');
+    assert.equal(historicalIds.includes(replacementDelivery.id), false);
+    assert.equal(Number(hold?.heldQuantity), 1);
+    await prisma.delivery.deleteMany({ where: { id: { in: historicalIds } } });
+  });
+
+  test('mixed-state Admin cancel and supplier shared-window recovery fail closed', async () => {
+    const { first, second, groupId, scheduling } =
+      await createGroupedReservations(ctx);
+    await acceptDeliveryReservation(ctx, first.id, scheduling);
+    await acceptDeliveryReservation(ctx, second.id, scheduling);
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: groupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    await acceptDelivery(ctx.driverUserId, delivery.id);
+    const expiredEnd = new Date(Date.now() - 2 * 60 * 60_000);
+    await prisma.reservation.updateMany({
+      where: { id: { in: [first.id, second.id] } },
+      data: { supplierPickupWindowEnd: expiredEnd },
+    });
+    await markDriverPickupFailed(ctx.driverUserId, delivery.id, {
+      reason: 'MATERIAL_NOT_READY',
+      note: 'Create recovery state for mixed-state checks.',
+    });
+    const report = await prisma.noShowReport.findFirstOrThrow({
+      where: { deliveryId: delivery.id, reasonCode: 'PICKUP_FAILED' },
+    });
+    await prisma.reservation.update({
+      where: { id: second.id },
+      data: { status: 'ACCEPTED' },
+    });
+
+    await assert.rejects(
+      () =>
+        requestSupplierRescheduleForPickupRecoveryReport({
+          reportId: report.id,
+          adminUserId: ctx.supplierId,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'GROUPED_DELIVERY_STATE_CONFLICT',
+    );
+
+    await assert.rejects(
+      () =>
+        cancelAndReleaseHoldForPickupRecoveryReport({
+          reportId: report.id,
+          adminUserId: ctx.supplierId,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'GROUPED_DELIVERY_STATE_CONFLICT',
+    );
+
+    await prisma.reservation.update({
+      where: { id: second.id },
+      data: {
+        status: 'AWAITING_SUPPLIER_CONFIRMATION',
+        pendingRescheduleRequestedBy: 'SUPPLIER',
+        pendingRescheduleReason: 'STALE_PICKUP_ADMIN_REQUEST',
+      },
+    });
+    await prisma.reservation.update({
+      where: { id: first.id },
+      data: {
+        status: 'AWAITING_SUPPLIER_CONFIRMATION',
+        pendingRescheduleRequestedBy: 'SUPPLIER',
+        pendingRescheduleReason: 'STALE_PICKUP_ADMIN_REQUEST',
+      },
+    });
+    await prisma.reservation.update({
+      where: { id: second.id },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+
+    const replacementStart = new Date(Date.now() + 48 * 60 * 60_000);
+    await assert.rejects(
+      () =>
+        submitNoDriverPickupWindow(ctx.supplierId, first.id, {
+          pickupWindowStart: replacementStart.toISOString(),
+          pickupWindowEnd: new Date(
+            replacementStart.getTime() + 2 * 60 * 60_000,
+          ).toISOString(),
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'GROUPED_DELIVERY_STATE_CONFLICT',
+    );
+
+    const unchangedDelivery = await prisma.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
+    });
+    assert.equal(unchangedDelivery.status, 'FAILED_PICKUP');
   });
 });

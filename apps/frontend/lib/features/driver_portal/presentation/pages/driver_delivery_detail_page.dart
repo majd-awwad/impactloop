@@ -26,7 +26,9 @@ import '../../application/driver_delivery_action_controller.dart';
 import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
 import '../../data/models/driver_delivery_inactive_context.dart';
+import '../../data/models/update_driver_delivery_status_request.dart';
 import '../driver_delivery_timing_presentation.dart';
+import '../widgets/partial_pickup_selection_dialog.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -81,7 +83,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                     actionLabel: l10n.driverBackToJobs,
                     actionTone: AppStatusTone.neutral,
                     actionProminent: false,
-                    onAction: () => context.popOrGo('/driver/jobs'),
+                    onAction: () => context.popOrGo('/driver/active'),
                   ),
                 DriverDeliveryDetailNotFound() => _StatePanel(
                   icon: Icons.lock_outline,
@@ -219,9 +221,9 @@ class _SummaryPanel extends StatelessWidget {
                 ? [
                     DriverUiLabels(l10n).groupedItemsCount(delivery.itemCount),
                     for (final item in delivery.items)
-                      '${DriverUiLabels(l10n).materialTitle(item.title)} × ${item.quantityLabel}',
+                      '${bidiIsolate(DriverUiLabels(l10n).materialTitle(item.title))} × ${bidiIsolate(item.quantityLabel)}',
                   ].join('\n')
-                : '${DriverUiLabels(l10n).materialTitle(delivery.material.title)} - ${delivery.material.quantityLabel}',
+                : '${bidiIsolate(DriverUiLabels(l10n).materialTitle(delivery.material.title))} - ${bidiIsolate(delivery.material.quantityLabel)}',
           ),
           const SizedBox(height: AppSpacing.lg),
           _InfoRow(
@@ -460,7 +462,24 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   Future<void> _advance(String nextStatus) async {
     final l10n = context.l10n;
     String? confirmationCode;
+    List<String>? pickedReservationIds;
+    List<UpdateDriverDeliveryUnpickedItem>? unpicked;
+
     if (nextStatus == 'PICKED_UP') {
+      final needsPartialPickupUi =
+          widget.delivery.hasGroupedItems && widget.delivery.items.length > 1;
+      if (needsPartialPickupUi) {
+        final selection = await showPartialPickupSelectionDialog(
+          context: context,
+          delivery: widget.delivery,
+        );
+        if (selection == null || !mounted) {
+          return;
+        }
+        pickedReservationIds = selection.pickedReservationIds;
+        unpicked = selection.unpicked;
+      }
+
       confirmationCode = await HandoverCodeInputDialog.show(
         context,
         title: l10n.driverSupplierHandoverCode,
@@ -491,6 +510,8 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             status: nextStatus,
             note: _noteController.text,
             confirmationCode: confirmationCode,
+            pickedReservationIds: pickedReservationIds,
+            unpicked: unpicked,
           );
 
       if (!mounted) {
@@ -501,7 +522,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         if (!mounted) {
           return;
         }
-        context.popOrGo('/driver/jobs');
+        context.popOrGo('/driver/active');
         leaveDriverDeliveryDetail(ref);
         showInfoSnackBar(context, l10n.driverDeliveryMarkedDelivered);
         return;
@@ -509,17 +530,14 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
 
       showInfoSnackBar(context, l10n.driverStatusUpdated);
       _noteController.clear();
-      ref
-          .read(driverDeliveryActionControllerProvider.notifier)
-          .refreshActiveDelivery(widget.delivery.id);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
       }
 
-      ref.invalidate(activeDriverDeliveryProvider(widget.delivery.id));
+      ref.invalidate(driverDeliveryDetailProvider(widget.delivery.id));
 
-      final message = error.statusCode == 409
+      final message = error.code == 'INVALID_DELIVERY_TRANSITION'
           ? l10n.driverStatusChangedRefresh
           : localizedApiErrorMessage(error, l10n);
       showInfoSnackBar(context, message);
@@ -558,7 +576,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           );
       if (!mounted) return;
       showInfoSnackBar(context, l10n.driverPickupFailureReported);
-      context.popOrGo('/driver/jobs');
+      context.popOrGo('/driver/active');
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -592,7 +610,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           );
       if (!mounted) return;
       showInfoSnackBar(context, l10n.driverDeliveryFailureReported);
-      context.popOrGo('/driver/jobs');
+      context.popOrGo('/driver/active');
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -639,7 +657,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           .reportDriverIssue(deliveryId: widget.delivery.id, note: note);
       if (!mounted) return;
       showInfoSnackBar(context, l10n.driverIssueReported);
-      context.popOrGo('/driver/jobs');
+      context.popOrGo('/driver/active');
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
@@ -748,7 +766,10 @@ class _LocationSharingSectionState
       _autoPingController?.dispose();
       _bindAutoPingController();
     } else {
-      _autoPingController?.updateDeliveryStatus(widget.delivery.status);
+      _autoPingController?.updateDeliveryStatus(
+        widget.delivery.status,
+        canShareLocation: widget.delivery.canShareLocation,
+      );
     }
   }
 
@@ -759,20 +780,24 @@ class _LocationSharingSectionState
   }
 
   void _bindAutoPingController() {
-    _autoPingController = DriverLocationAutoPingController(
-      sendPing: () => ref
-          .read(driverDeliveryActionControllerProvider.notifier)
-          .captureAndSendLocationPing(widget.delivery.id),
-      resolveErrorMessage: (error) =>
-          DriverUiLabels(context.l10n).locationError(error),
-      onStateChanged: (state) {
-        if (!mounted) {
-          return;
-        }
+    _autoPingController =
+        DriverLocationAutoPingController(
+          sendPing: () => ref
+              .read(driverDeliveryActionControllerProvider.notifier)
+              .captureAndSendLocationPing(widget.delivery.id),
+          resolveErrorMessage: (error) =>
+              DriverUiLabels(context.l10n).locationError(error),
+          onStateChanged: (state) {
+            if (!mounted) {
+              return;
+            }
 
-        setState(() => _autoPingState = state);
-      },
-    )..updateDeliveryStatus(widget.delivery.status);
+            setState(() => _autoPingState = state);
+          },
+        )..updateDeliveryStatus(
+          widget.delivery.status,
+          canShareLocation: widget.delivery.canShareLocation,
+        );
     _autoPingState = _autoPingController!.state;
   }
 
@@ -781,7 +806,7 @@ class _LocationSharingSectionState
     final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
     final formatters = LocalizedFormatters(l10n);
-    final eligible = widget.delivery.isAutoPingEligible;
+    final eligible = widget.delivery.canShareLocation;
     final sharingActive = _autoPingState.enabled && _autoPingState.isSharing;
     final isBusy = _autoPingState.isPinging || _isManualPinging;
 
@@ -838,7 +863,9 @@ class _LocationSharingSectionState
           ],
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
-            onPressed: isBusy ? null : () => _sendManualLocation(context),
+            onPressed: !eligible || isBusy
+                ? null
+                : () => _sendManualLocation(context),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
             icon: isBusy
                 ? const SizedBox(
@@ -1341,8 +1368,8 @@ String _deliveryWindowDetail(DriverDelivery delivery, AppLocalizations l10n) {
 
 String _partySummary(DriverDeliveryParty party, AppLocalizations l10n) {
   final details = [
-    DriverUiLabels(l10n).partyDisplayName(party.displayName),
-    if (party.phone?.trim().isNotEmpty == true) party.phone!,
+    bidiIsolate(DriverUiLabels(l10n).partyDisplayName(party.displayName)),
+    if (party.phone?.trim().isNotEmpty == true) bidiIsolate(party.phone!),
   ];
   return details.join(' - ');
 }

@@ -172,7 +172,7 @@ const mapIncidentContract = (
       deliveryGroupId: delivery.deliveryGroupId,
     },
     isGroupedDelivery: delivery.deliveryGroupId != null,
-    isGroupRecoverySupported: false,
+    isGroupRecoverySupported: true,
   });
   return { id: report.id, ...contract, createdAt: report.createdAt, status: report.status, reasonCode: report.reasonCode };
 };

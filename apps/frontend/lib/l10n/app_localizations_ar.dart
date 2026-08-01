@@ -6249,6 +6249,72 @@ class AppLocalizationsAr extends AppLocalizations {
       'تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.';
 
   @override
+  String get driverInvalidConfirmationCode =>
+      'رمز التأكيد غير صحيح. تحقّق من الرمز وحاول مرة أخرى.';
+
+  @override
+  String get driverHandoverWindowNotStarted => 'لم تبدأ نافذة التسليم بعد.';
+
+  @override
+  String get driverHandoverWindowExpired => 'انتهت نافذة التسليم بالفعل.';
+
+  @override
+  String get driverPartialPickupSelectionInvalid =>
+      'عناصر الاستلام المحددة غير صالحة. حدّث الصفحة وحاول مرة أخرى.';
+
+  @override
+  String get driverGroupedDeliverySplitConflict =>
+      'تغيّر هذا التوصيل المجمّع. حدّث الصفحة وحاول مرة أخرى.';
+
+  @override
+  String get driverAvailableJobsCursorInvalid =>
+      'ترقيم قائمة المهام غير محدّث. حدّث المهام المتاحة.';
+
+  @override
+  String get driverPartialPickupTitle => 'تأكيد ما تم استلامه';
+
+  @override
+  String get driverPartialPickupBody => 'حدّد كل عنصر حجز سلّمه المورّد الآن.';
+
+  @override
+  String get driverPartialPickupPickedSection => 'سيُسلَّم الآن';
+
+  @override
+  String get driverPartialPickupPendingSection => 'سيبقى معلّقًا';
+
+  @override
+  String get driverPartialPickupReasonRequired => 'اختر سببًا لكل عنصر معلّق.';
+
+  @override
+  String driverPartialPickupSummary(int pickedCount, int pendingCount) {
+    return 'سيُسلَّم $pickedCount عناصر الآن. سيبقى $pendingCount عناصر معلّقة.';
+  }
+
+  @override
+  String get driverPartialPickupContinue => 'المتابعة إلى رمز التأكيد';
+
+  @override
+  String get driverPartialPickupReasonMaterialNotReady => 'المادة غير جاهزة';
+
+  @override
+  String get driverPartialPickupReasonMaterialMissing => 'المادة مفقودة';
+
+  @override
+  String get driverPartialPickupReasonWrongItem => 'عنصر خاطئ';
+
+  @override
+  String get driverPartialPickupReasonQuantityMismatch => 'عدم تطابق الكمية';
+
+  @override
+  String get driverPartialPickupReasonDamagedItem => 'عنصر تالف';
+
+  @override
+  String get driverPartialPickupReasonSupplierRefused => 'المورّد رفض التسليم';
+
+  @override
+  String get driverPartialPickupReasonOther => 'أخرى';
+
+  @override
   String get driverPickupFailureReported => 'تم الإبلاغ عن فشل الاستلام.';
 
   @override

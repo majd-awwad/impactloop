@@ -5,6 +5,7 @@ import {
   NO_DRIVER_SUPPLIER_RECONFIRM_REASON,
   STALE_PICKUP_CANCEL_REASON,
   STALE_PICKUP_SUPPLIER_RECONFIRM_REASON,
+  isPartialPickupSupplierReconfirmReason,
 } from '../reservations/reservation-timing-policy.js';
 import {
   recomputeAndUpdateMaterialStatus,
@@ -15,8 +16,15 @@ import {
   classifyAdminReportContract,
   type AdminReportAction,
 } from './admin-no-show-reports.classifier.js';
+import {
+  groupedDeliveryStateConflict,
+  loadAndAssertGroupedDeliveryState,
+} from '../delivery-groups/grouped-delivery-state.js';
 
-export type PickupRecoveryKind = 'NO_DRIVER' | 'STALE_PICKUP';
+export type PickupRecoveryKind =
+  | 'NO_DRIVER'
+  | 'STALE_PICKUP'
+  | 'PARTIAL_PICKUP';
 
 const pickupRecoveryReportSelect = {
   id: true,
@@ -36,6 +44,7 @@ const pickupRecoveryReservationSelect = {
   pendingRescheduleReason: true,
   materialId: true,
   ownerId: true,
+  deliveryGroupId: true,
 } satisfies Prisma.ReservationSelect;
 
 const pickupRecoveryDeliverySelect = {
@@ -93,6 +102,14 @@ const reconfirmReasonForKind = (kind: PickupRecoveryKind) =>
 const cancelReasonForKind = (kind: PickupRecoveryKind) =>
   kind === 'NO_DRIVER' ? NO_DRIVER_CANCEL_REASON : STALE_PICKUP_CANCEL_REASON;
 
+const isDetachedPartialPickupRecovery = (context: PickupRecoveryContext) =>
+  context.reservation.deliveryGroupId == null &&
+  context.reservation.status === 'AWAITING_RESOLUTION' &&
+  isPartialPickupSupplierReconfirmReason(
+    context.reservation.pendingRescheduleReason,
+  ) &&
+  context.report.reasonCode === 'PICKUP_FAILED';
+
 const loadPickupRecoveryContext = async (
   tx: Prisma.TransactionClient,
   reportId: string,
@@ -140,7 +157,7 @@ const validatePickupRecoveryContext = (
     reservation,
     delivery,
     isGroupedDelivery: delivery?.deliveryGroupId != null,
-    isGroupRecoverySupported: false,
+    isGroupRecoverySupported: true,
   });
 
   if (!contract.availableActions.includes(action)) {
@@ -200,56 +217,90 @@ export const requestSupplierRescheduleForPickupRecoveryReport = async (input: {
     }
 
     const { report, reservation, delivery } = validation;
-    const kind = pickupRecoveryKind(report);
+    const partialRecovery = isDetachedPartialPickupRecovery(validation);
+    const kind = partialRecovery
+      ? ('PARTIAL_PICKUP' as const)
+      : pickupRecoveryKind(report);
     const defaultNote =
       kind === 'NO_DRIVER'
         ? 'Admin asked supplier to choose a new pickup window after no driver was available'
         : 'Admin asked supplier to choose a new pickup window after pickup was not completed';
 
-    await tx.deliveryAssignment.updateMany({
-      where: {
-        deliveryId: delivery.id,
-        status: 'ACTIVE',
-      },
-      data: {
-        status: 'RELEASED',
-        releasedAt: new Date(),
-        releaseReason: 'Admin requested supplier pickup reschedule',
-      },
-    });
+    const groupedState =
+      !partialRecovery && delivery.deliveryGroupId
+        ? await loadAndAssertGroupedDeliveryState(tx, {
+            deliveryId: delivery.id,
+            expectedDeliveryStatuses: [delivery.status],
+            expectedGroupStatus: 'CANCELLED',
+            expectedReservationStatus: 'AWAITING_RESOLUTION',
+            expectedDriverProfileId: null,
+            expectedActiveAssignments: 0,
+            expectedSupplierUserId: reservation.ownerId,
+          })
+        : undefined;
 
-    await tx.delivery.update({
-      where: { id: delivery.id },
-      data: {
-        assignedDriverProfileId: null,
-        assignedAt: null,
-      },
-    });
+    if (!partialRecovery) {
+      const deliveryChanged = await tx.delivery.updateMany({
+        where: {
+          id: delivery.id,
+          status: delivery.status,
+          assignedDriverProfileId: null,
+          deliveryGroupId: delivery.deliveryGroupId,
+          reservationId: delivery.reservationId,
+        },
+        data: { assignedAt: null },
+      });
+      if (deliveryChanged.count !== 1) {
+        groupedDeliveryStateConflict();
+      }
+    }
 
-    await tx.reservation.update({
-      where: { id: report.reservationId },
-      data: {
-        status: 'AWAITING_SUPPLIER_CONFIRMATION',
-        pendingRescheduleRequestedBy: 'SUPPLIER',
-        pendingRescheduleReason: reconfirmReasonForKind(kind),
-        pendingRescheduleNote: input.adminNote?.trim() || defaultNote,
-        supplierProposedPickupWindowStart: null,
-        supplierProposedPickupWindowEnd: null,
-        learnerProposedPickupWindowStart: null,
-        learnerProposedPickupWindowEnd: null,
-      },
-    });
+    const recoveryReservations =
+      !partialRecovery && delivery.deliveryGroupId
+      ? groupedState?.reservations ?? groupedDeliveryStateConflict()
+      : [
+          await tx.reservation.findUniqueOrThrow({
+            where: { id: report.reservationId },
+          }),
+        ];
 
-    await tx.reservationStatusHistory.create({
-      data: {
-        reservationId: report.reservationId,
-        statusGroup: 'RESERVATION',
-        oldStatus: 'AWAITING_RESOLUTION',
-        newStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
-        changedBy: input.adminUserId,
-        note: input.adminNote?.trim() || defaultNote,
-      },
-    });
+    for (const affected of recoveryReservations) {
+      const reservationChanged = await tx.reservation.updateMany({
+        where: {
+          id: affected.id,
+          status: 'AWAITING_RESOLUTION',
+          fulfillmentMethod: 'DELIVERY',
+          deliveryGroupId: partialRecovery ? null : delivery.deliveryGroupId,
+          ownerId: reservation.ownerId,
+        },
+        data: {
+          status: 'AWAITING_SUPPLIER_CONFIRMATION',
+          pendingRescheduleRequestedBy: 'SUPPLIER',
+          pendingRescheduleReason: partialRecovery
+            ? reservation.pendingRescheduleReason
+            : reconfirmReasonForKind(kind),
+          pendingRescheduleNote: input.adminNote?.trim() || defaultNote,
+          supplierProposedPickupWindowStart: null,
+          supplierProposedPickupWindowEnd: null,
+          learnerProposedPickupWindowStart: null,
+          learnerProposedPickupWindowEnd: null,
+        },
+      });
+      if (reservationChanged.count !== 1) {
+        groupedDeliveryStateConflict();
+      }
+
+      await tx.reservationStatusHistory.create({
+        data: {
+          reservationId: affected.id,
+          statusGroup: 'RESERVATION',
+          oldStatus: 'AWAITING_RESOLUTION',
+          newStatus: 'AWAITING_SUPPLIER_CONFIRMATION',
+          changedBy: input.adminUserId,
+          note: input.adminNote?.trim() || defaultNote,
+        },
+      });
+    }
 
     const reportId =
       report.status === 'PENDING_REVIEW'
@@ -309,67 +360,110 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
     }
 
     const { report, reservation, delivery } = validation;
-    const kind = pickupRecoveryKind(report);
+    const partialRecovery = isDetachedPartialPickupRecovery(validation);
+    const kind = partialRecovery
+      ? ('PARTIAL_PICKUP' as const)
+      : pickupRecoveryKind(report);
     const now = new Date();
     const defaultNote =
       kind === 'NO_DRIVER'
         ? 'Admin cancelled and released hold after no driver available'
         : 'Admin cancelled and released hold after pickup was not completed';
 
-    await tx.deliveryAssignment.updateMany({
-      where: {
-        deliveryId: delivery.id,
-        status: 'ACTIVE',
-      },
-      data: {
-        status: 'RELEASED',
-        releasedAt: now,
-        releaseReason: 'Admin cancelled reservation after pickup recovery review',
-      },
-    });
+    const groupedState =
+      !partialRecovery && delivery.deliveryGroupId
+        ? await loadAndAssertGroupedDeliveryState(tx, {
+            deliveryId: delivery.id,
+            expectedDeliveryStatuses: [delivery.status],
+            expectedGroupStatus: 'CANCELLED',
+            expectedReservationStatus: 'AWAITING_RESOLUTION',
+            expectedDriverProfileId: null,
+            expectedActiveAssignments: 0,
+            expectedSupplierUserId: reservation.ownerId,
+          })
+        : undefined;
 
-    await tx.reservation.update({
-      where: { id: report.reservationId },
-      data: {
-        status: 'EXPIRED',
-        rejectionReason: cancelReasonForKind(kind),
-      },
-    });
+    const recoveryReservations =
+      !partialRecovery && delivery.deliveryGroupId
+      ? groupedState?.reservations ?? groupedDeliveryStateConflict()
+      : [
+          await tx.reservation.findUniqueOrThrow({
+            where: { id: report.reservationId },
+          }),
+        ];
 
-    await tx.reservationStatusHistory.create({
-      data: {
-        reservationId: report.reservationId,
-        statusGroup: 'RESERVATION',
-        oldStatus: 'AWAITING_RESOLUTION',
-        newStatus: 'EXPIRED',
-        changedBy: input.adminUserId,
-        note: input.adminNote?.trim() || defaultNote,
-      },
-    });
+    for (const affected of recoveryReservations) {
+      const reservationChanged = await tx.reservation.updateMany({
+        where: {
+          id: affected.id,
+          status: 'AWAITING_RESOLUTION',
+          fulfillmentMethod: 'DELIVERY',
+          deliveryGroupId: partialRecovery ? null : delivery.deliveryGroupId,
+          ownerId: reservation.ownerId,
+        },
+        data: {
+          status: 'EXPIRED',
+          rejectionReason: cancelReasonForKind(kind),
+        },
+      });
+      if (reservationChanged.count !== 1) {
+        groupedDeliveryStateConflict();
+      }
 
-    await tx.delivery.update({
-      where: { id: delivery.id },
-      data: {
-        status: 'CANCELLED',
-        cancelledAt: now,
-        assignedDriverProfileId: null,
-        assignedAt: null,
-      },
-    });
+      await tx.reservationStatusHistory.create({
+        data: {
+          reservationId: affected.id,
+          statusGroup: 'RESERVATION',
+          oldStatus: 'AWAITING_RESOLUTION',
+          newStatus: 'EXPIRED',
+          changedBy: input.adminUserId,
+          note: input.adminNote?.trim() || defaultNote,
+        },
+      });
+      await recomputeAndUpdateMaterialStatus(tx, affected.materialId);
+    }
 
-    await tx.deliveryStatusHistory.create({
-      data: {
-        deliveryId: delivery.id,
-        oldStatus: delivery.status,
-        newStatus: 'CANCELLED',
-        changedByUserId: input.adminUserId,
-        note:
-          input.adminNote?.trim() ||
-          'Admin cancelled delivery after pickup recovery review',
-      },
-    });
+    if (!partialRecovery) {
+      const deliveryChanged = await tx.delivery.updateMany({
+        where: {
+          id: delivery.id,
+          status: delivery.status,
+          assignedDriverProfileId: null,
+          deliveryGroupId: delivery.deliveryGroupId,
+          reservationId: delivery.reservationId,
+        },
+        data: { status: 'CANCELLED', cancelledAt: now, assignedAt: null },
+      });
+      if (deliveryChanged.count !== 1) {
+        groupedDeliveryStateConflict();
+      }
 
-    await recomputeAndUpdateMaterialStatus(tx, reservation.materialId);
+      await tx.deliveryStatusHistory.create({
+        data: {
+          deliveryId: delivery.id,
+          oldStatus: delivery.status,
+          newStatus: 'CANCELLED',
+          changedByUserId: input.adminUserId,
+          note:
+            input.adminNote?.trim() ||
+            'Admin cancelled delivery after pickup recovery review',
+        },
+      });
+
+      if (delivery.deliveryGroupId) {
+        const groupChanged = await tx.deliveryGroup.updateMany({
+          where: {
+            id: delivery.deliveryGroupId,
+            status: 'CANCELLED',
+            assignedDriverProfileId: null,
+          },
+          data: { status: 'CANCELLED', assignedDriverProfileId: null },
+        });
+        if (groupChanged.count !== 1) {
+          groupedDeliveryStateConflict();
+        }
+      }
+    }
 
     const reportId =
       report.status === 'PENDING_REVIEW'

@@ -21,6 +21,8 @@ import '../../features/home/domain/learner_home_models.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_tracking_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_delivery_detail_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_dashboard_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_active_deliveries_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_authoring_pages.dart';
@@ -847,7 +849,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/driver',
-            redirect: (context, state) => '/driver/jobs',
+            builder: (context, state) => const DriverDashboardPage(),
+          ),
+          GoRoute(
+            path: '/driver/active',
+            builder: (context, state) => const DriverActiveDeliveriesPage(),
           ),
           GoRoute(
             path: '/driver/jobs',

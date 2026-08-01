@@ -10,7 +10,7 @@ typedef PeriodicTimerFactory =
 
 class DriverLocationAutoPingState {
   const DriverLocationAutoPingState({
-    this.enabled = true,
+    this.enabled = false,
     this.isSharing = false,
     this.lastSharedAt,
     this.inlineError,
@@ -70,6 +70,7 @@ class DriverLocationAutoPingController {
   bool _disposed = false;
   bool _inFlight = false;
   String? _deliveryStatus;
+  bool? _canShareLocation;
 
   DriverLocationAutoPingState get state => _state;
 
@@ -82,12 +83,13 @@ class DriverLocationAutoPingController {
     _syncSharing();
   }
 
-  void updateDeliveryStatus(String? status) {
+  void updateDeliveryStatus(String? status, {bool? canShareLocation}) {
     if (_disposed) {
       return;
     }
 
     _deliveryStatus = status;
+    _canShareLocation = canShareLocation;
     _syncSharing();
   }
 
@@ -105,7 +107,7 @@ class DriverLocationAutoPingController {
 
   bool get _isEligible =>
       _deliveryStatus != null &&
-      isDriverAutoPingEligibleStatus(_deliveryStatus!);
+      (_canShareLocation ?? isDriverAutoPingEligibleStatus(_deliveryStatus!));
 
   void _syncSharing() {
     if (_disposed) {

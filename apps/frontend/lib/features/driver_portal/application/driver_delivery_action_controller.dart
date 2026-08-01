@@ -30,7 +30,6 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
 
   void refreshActiveDelivery(String deliveryId) {
     ref.invalidate(activeDriverDeliveriesProvider);
-    ref.invalidate(activeDriverDeliveryProvider(deliveryId));
     ref.invalidate(driverDeliveryDetailProvider(deliveryId));
   }
 
@@ -42,7 +41,8 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
           .read(driverDeliveriesRepositoryProvider)
           .acceptDelivery(deliveryId);
       ref.invalidate(availableDriverDeliveriesProvider);
-      refreshActiveDelivery(delivery.id);
+      ref.invalidate(activeDriverDeliveriesProvider);
+      ref.invalidate(driverDeliveryDetailProvider(delivery.id));
       state = const AsyncData(null);
       return delivery;
     } catch (error, stackTrace) {
@@ -56,6 +56,8 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
     required String status,
     String? note,
     String? confirmationCode,
+    List<String>? pickedReservationIds,
+    List<UpdateDriverDeliveryUnpickedItem>? unpicked,
   }) async {
     state = const AsyncLoading();
 
@@ -68,6 +70,8 @@ class DriverDeliveryActionController extends Notifier<AsyncValue<void>> {
               status: status,
               note: note,
               confirmationCode: confirmationCode,
+              pickedReservationIds: pickedReservationIds,
+              unpicked: unpicked,
             ),
           );
       state = const AsyncData(null);

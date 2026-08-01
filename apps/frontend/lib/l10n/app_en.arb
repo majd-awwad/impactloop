@@ -2981,6 +2981,36 @@
   "driverDeliveryMarkedDelivered": "Delivery marked delivered.",
   "driverStatusUpdated": "Delivery status updated.",
   "driverStatusChangedRefresh": "Delivery status changed. Refresh and try the next valid action.",
+  "driverInvalidConfirmationCode": "That confirmation code is incorrect. Check the code and try again.",
+  "driverHandoverWindowNotStarted": "The handover window has not started yet.",
+  "driverHandoverWindowExpired": "The handover window has already ended.",
+  "driverPartialPickupSelectionInvalid": "The selected pickup items are invalid. Refresh and try again.",
+  "driverGroupedDeliverySplitConflict": "This grouped delivery changed. Refresh and try again.",
+  "driverAvailableJobsCursorInvalid": "Job list paging is out of date. Refresh available jobs.",
+  "driverPartialPickupTitle": "Confirm what was picked up",
+  "driverPartialPickupBody": "Select every reservation item the supplier handed over now.",
+  "driverPartialPickupPickedSection": "Will be delivered now",
+  "driverPartialPickupPendingSection": "Will remain pending",
+  "driverPartialPickupReasonRequired": "Choose a reason for each pending item.",
+  "driverPartialPickupSummary": "{pickedCount} items will be delivered now. {pendingCount} items will remain pending.",
+  "@driverPartialPickupSummary": {
+    "placeholders": {
+      "pickedCount": {
+        "type": "int"
+      },
+      "pendingCount": {
+        "type": "int"
+      }
+    }
+  },
+  "driverPartialPickupContinue": "Continue to confirmation code",
+  "driverPartialPickupReasonMaterialNotReady": "Material not ready",
+  "driverPartialPickupReasonMaterialMissing": "Material missing",
+  "driverPartialPickupReasonWrongItem": "Wrong item",
+  "driverPartialPickupReasonQuantityMismatch": "Quantity mismatch",
+  "driverPartialPickupReasonDamagedItem": "Damaged item",
+  "driverPartialPickupReasonSupplierRefused": "Supplier refused handover",
+  "driverPartialPickupReasonOther": "Other",
   "driverPickupFailureReported": "Pickup failure reported.",
   "driverDeliveryFailureReported": "Delivery failure reported.",
   "driverNoteRequired": "Note (required)",

@@ -10842,6 +10842,126 @@ abstract class AppLocalizations {
   /// **'Delivery status changed. Refresh and try the next valid action.'**
   String get driverStatusChangedRefresh;
 
+  /// No description provided for @driverInvalidConfirmationCode.
+  ///
+  /// In en, this message translates to:
+  /// **'That confirmation code is incorrect. Check the code and try again.'**
+  String get driverInvalidConfirmationCode;
+
+  /// No description provided for @driverHandoverWindowNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'The handover window has not started yet.'**
+  String get driverHandoverWindowNotStarted;
+
+  /// No description provided for @driverHandoverWindowExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The handover window has already ended.'**
+  String get driverHandoverWindowExpired;
+
+  /// No description provided for @driverPartialPickupSelectionInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected pickup items are invalid. Refresh and try again.'**
+  String get driverPartialPickupSelectionInvalid;
+
+  /// No description provided for @driverGroupedDeliverySplitConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This grouped delivery changed. Refresh and try again.'**
+  String get driverGroupedDeliverySplitConflict;
+
+  /// No description provided for @driverAvailableJobsCursorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Job list paging is out of date. Refresh available jobs.'**
+  String get driverAvailableJobsCursorInvalid;
+
+  /// No description provided for @driverPartialPickupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm what was picked up'**
+  String get driverPartialPickupTitle;
+
+  /// No description provided for @driverPartialPickupBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Select every reservation item the supplier handed over now.'**
+  String get driverPartialPickupBody;
+
+  /// No description provided for @driverPartialPickupPickedSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Will be delivered now'**
+  String get driverPartialPickupPickedSection;
+
+  /// No description provided for @driverPartialPickupPendingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Will remain pending'**
+  String get driverPartialPickupPendingSection;
+
+  /// No description provided for @driverPartialPickupReasonRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a reason for each pending item.'**
+  String get driverPartialPickupReasonRequired;
+
+  /// No description provided for @driverPartialPickupSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{pickedCount} items will be delivered now. {pendingCount} items will remain pending.'**
+  String driverPartialPickupSummary(int pickedCount, int pendingCount);
+
+  /// No description provided for @driverPartialPickupContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue to confirmation code'**
+  String get driverPartialPickupContinue;
+
+  /// No description provided for @driverPartialPickupReasonMaterialNotReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Material not ready'**
+  String get driverPartialPickupReasonMaterialNotReady;
+
+  /// No description provided for @driverPartialPickupReasonMaterialMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Material missing'**
+  String get driverPartialPickupReasonMaterialMissing;
+
+  /// No description provided for @driverPartialPickupReasonWrongItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong item'**
+  String get driverPartialPickupReasonWrongItem;
+
+  /// No description provided for @driverPartialPickupReasonQuantityMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Quantity mismatch'**
+  String get driverPartialPickupReasonQuantityMismatch;
+
+  /// No description provided for @driverPartialPickupReasonDamagedItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Damaged item'**
+  String get driverPartialPickupReasonDamagedItem;
+
+  /// No description provided for @driverPartialPickupReasonSupplierRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier refused handover'**
+  String get driverPartialPickupReasonSupplierRefused;
+
+  /// No description provided for @driverPartialPickupReasonOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get driverPartialPickupReasonOther;
+
   /// No description provided for @driverPickupFailureReported.
   ///
   /// In en, this message translates to:

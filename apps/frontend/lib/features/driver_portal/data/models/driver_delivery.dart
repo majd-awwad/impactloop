@@ -170,6 +170,7 @@ class DriverDelivery {
     this.canDriverReportPickupFailed = false,
     this.canDriverReportDeliveryFailed = false,
     this.canDriverReportDriverIssue = false,
+    this.canShareLocation = false,
     this.pickupCity,
     this.pickupArea,
     this.dropoffCity,
@@ -210,6 +211,7 @@ class DriverDelivery {
   final bool canDriverReportPickupFailed;
   final bool canDriverReportDeliveryFailed;
   final bool canDriverReportDriverIssue;
+  final bool canShareLocation;
   final String? pickupCity;
   final String? pickupArea;
   final String? dropoffCity;
@@ -282,6 +284,9 @@ class DriverDelivery {
       canDriverReportDeliveryFailed:
           json['canDriverReportDeliveryFailed'] == true,
       canDriverReportDriverIssue: json['canDriverReportDriverIssue'] == true,
+      canShareLocation: json.containsKey('canShareLocation')
+          ? json['canShareLocation'] == true
+          : isDriverAutoPingEligibleStatus(json['status'] as String? ?? ''),
       pickupCity: json['pickupCity'] as String?,
       pickupArea: json['pickupArea'] as String?,
       dropoffCity: json['dropoffCity'] as String?,

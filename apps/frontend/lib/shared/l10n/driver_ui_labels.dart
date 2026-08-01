@@ -16,6 +16,19 @@ class DriverUiLabels {
         _ => l10n.unknownStatus,
       };
 
+  String partialPickupUnpickedReason(String code) =>
+      switch (code.trim().toUpperCase()) {
+        'MATERIAL_NOT_READY' => l10n.driverPartialPickupReasonMaterialNotReady,
+        'MATERIAL_MISSING' => l10n.driverPartialPickupReasonMaterialMissing,
+        'WRONG_ITEM' => l10n.driverPartialPickupReasonWrongItem,
+        'QUANTITY_MISMATCH' => l10n.driverPartialPickupReasonQuantityMismatch,
+        'DAMAGED_ITEM' => l10n.driverPartialPickupReasonDamagedItem,
+        'SUPPLIER_REFUSED_HANDOVER' =>
+          l10n.driverPartialPickupReasonSupplierRefused,
+        'OTHER' => l10n.driverPartialPickupReasonOther,
+        _ => l10n.unknownStatus,
+      };
+
   String failureDeliveryReason(String code) =>
       switch (code.trim().toUpperCase()) {
         'LEARNER_UNAVAILABLE' => l10n.driverFailureLearnerUnavailable,

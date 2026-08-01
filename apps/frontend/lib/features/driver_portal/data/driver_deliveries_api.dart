@@ -4,6 +4,7 @@ import '../../../core/network/api_response.dart';
 import 'models/driver_delivery_inactive_context.dart';
 import 'models/driver_delivery_failure_request.dart';
 import 'models/driver_delivery.dart';
+import 'models/driver_delivery_detail_result.dart';
 import 'models/driver_deliveries_list_result.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
@@ -15,13 +16,26 @@ class DriverDeliveriesApi {
 
   Future<DriverDeliveriesListResult> fetchAvailableDeliveries({
     DriverAvailableJobsFilter? filter,
+    String? cursor,
+    int limit = 20,
   }) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         '/api/driver/deliveries/available',
-        queryParameters: filter?.toQueryParameters(),
+        queryParameters: {
+          ...?filter?.toQueryParameters(),
+          'limit': limit,
+          'cursor': ?cursor,
+        },
       ),
       _parseDeliveriesListResult,
+    );
+  }
+
+  Future<DriverDeliveryDetailResult> fetchDeliveryDetail(String deliveryId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('/api/driver/deliveries/$deliveryId'),
+      DriverDeliveryDetailResult.fromJson,
     );
   }
 

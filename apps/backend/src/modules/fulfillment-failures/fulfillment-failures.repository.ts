@@ -12,6 +12,10 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
+import {
+  groupedDeliveryStateConflict,
+  loadAndAssertGroupedDeliveryState,
+} from '../delivery-groups/grouped-delivery-state.js';
 
 const prePickupDeliveryStatuses = [
   'WAITING_FOR_DRIVER',
@@ -41,9 +45,10 @@ export const releaseDriverFromDelivery = async (
     deliveryId: string;
     driverProfileId: string;
     releaseReason: string;
+    expectedActiveCount?: number;
   },
 ) => {
-  await tx.deliveryAssignment.updateMany({
+  const released = await tx.deliveryAssignment.updateMany({
     where: {
       deliveryId: input.deliveryId,
       driverProfileId: input.driverProfileId,
@@ -56,10 +61,110 @@ export const releaseDriverFromDelivery = async (
     },
   });
 
+  const remainingActiveDeliveries = await tx.delivery.count({
+    where: {
+      id: { not: input.deliveryId },
+      assignedDriverProfileId: input.driverProfileId,
+      status: {
+        in: [
+          'DRIVER_ASSIGNED',
+          'ARRIVED_PICKUP',
+          'PICKED_UP',
+          'ON_THE_WAY',
+          'ARRIVED_DROPOFF',
+        ],
+      },
+    },
+  });
+
+  if (
+    input.expectedActiveCount != null &&
+    released.count !== input.expectedActiveCount
+  ) {
+    groupedDeliveryStateConflict();
+  }
+
   await tx.driverProfile.update({
     where: { id: input.driverProfileId },
-    data: { availability: 'AVAILABLE' },
+    data: {
+      availability:
+        remainingActiveDeliveries > 0 ? 'ON_DELIVERY' : 'AVAILABLE',
+    },
   });
+};
+
+const transitionFailureReservations = async (
+  tx: Prisma.TransactionClient,
+  input: {
+    delivery: {
+      reservationId: string;
+      deliveryGroupId: string | null;
+      reservation: { status: ReservationStatus };
+    };
+    changedByUserId: string;
+    note: string;
+    groupedState?: Awaited<
+      ReturnType<typeof loadAndAssertGroupedDeliveryState>
+    >;
+  },
+) => {
+  const reservations = input.delivery.deliveryGroupId
+    ? input.groupedState?.reservations ?? groupedDeliveryStateConflict()
+    : [
+        await tx.reservation.findUniqueOrThrow({
+          where: { id: input.delivery.reservationId },
+        }),
+      ];
+
+  for (const reservation of reservations) {
+    const changed = await tx.reservation.updateMany({
+      where: {
+        id: reservation.id,
+        deliveryGroupId: input.delivery.deliveryGroupId,
+        status: 'ACCEPTED',
+        fulfillmentMethod: 'DELIVERY',
+        ownerId: input.groupedState?.supplierUserId,
+      },
+      data: { status: 'AWAITING_RESOLUTION' },
+    });
+    if (changed.count !== 1) {
+      groupedDeliveryStateConflict();
+    }
+    await tx.reservationStatusHistory.create({
+      data: {
+        reservationId: reservation.id,
+        statusGroup: 'RESERVATION',
+        oldStatus: reservation.status,
+        newStatus: 'AWAITING_RESOLUTION',
+        changedBy: input.changedByUserId,
+        note: input.note,
+      },
+    });
+  }
+
+  if (input.delivery.deliveryGroupId) {
+    const cancelled = await tx.deliveryGroup.updateMany({
+      where: {
+        id: input.delivery.deliveryGroupId,
+        status: 'ASSIGNED',
+        assignedDriverProfileId:
+          input.groupedState?.delivery.assignedDriverProfileId,
+      },
+      data: {
+        status: 'CANCELLED',
+        assignedDriverProfileId: null,
+      },
+    });
+    if (cancelled.count !== 1) {
+      groupedDeliveryStateConflict();
+    }
+  }
+
+  return (
+    reservations.find(
+      (reservation) => reservation.id === input.delivery.reservationId,
+    ) ?? reservations[0]
+  );
 };
 
 export const markLearnerPickupNoShow = async (input: {
@@ -455,6 +560,18 @@ export const markDriverPickupFailed = async (input: {
       return { outcome: 'INVALID_DELIVERY_STATUS' as const };
     }
 
+    const groupedState = delivery.deliveryGroupId
+      ? await loadAndAssertGroupedDeliveryState(tx, {
+          deliveryId: delivery.id,
+          expectedDeliveryStatuses: [delivery.status],
+          expectedGroupStatus: 'ASSIGNED',
+          expectedReservationStatus: 'ACCEPTED',
+          expectedDriverProfileId: profile.id,
+          expectedActiveAssignments: 1,
+          expectedSupplierUserId: delivery.reservation.ownerId,
+        })
+      : undefined;
+
     if (!delivery.reservation.supplierPickupWindowEnd) {
       return { outcome: 'MISSING_WINDOW' as const };
     }
@@ -507,10 +624,17 @@ export const markDriverPickupFailed = async (input: {
       deliveryId: delivery.id,
       driverProfileId: profile.id,
       releaseReason: 'Pickup failed',
+      expectedActiveCount: groupedState ? 1 : undefined,
     });
 
-    const updatedDelivery = await tx.delivery.update({
-      where: { id: delivery.id },
+    const deliveryChanged = await tx.delivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: delivery.status,
+        assignedDriverProfileId: profile.id,
+        deliveryGroupId: delivery.deliveryGroupId,
+        reservationId: delivery.reservationId,
+      },
       data: {
         status: 'FAILED_PICKUP',
         assignedDriverProfileId: null,
@@ -518,6 +642,12 @@ export const markDriverPickupFailed = async (input: {
         failureReason: failureNote,
         driverNote: input.note?.trim() || delivery.driverNote,
       },
+    });
+    if (deliveryChanged.count !== 1) {
+      groupedDeliveryStateConflict();
+    }
+    const updatedDelivery = await tx.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
     });
 
     await tx.deliveryStatusHistory.create({
@@ -530,20 +660,13 @@ export const markDriverPickupFailed = async (input: {
       },
     });
 
-    const reservation = await tx.reservation.update({
-      where: { id: delivery.reservationId },
-      data: { status: 'AWAITING_RESOLUTION' },
-    });
-
-    await tx.reservationStatusHistory.create({
-      data: {
-        reservationId: reservation.id,
-        statusGroup: 'RESERVATION',
-        oldStatus: 'ACCEPTED',
-        newStatus: 'AWAITING_RESOLUTION',
-        changedBy: input.driverUserId,
-        note: 'Pickup failed at supplier',
-      },
+    const reservation = await transitionFailureReservations(tx, {
+      delivery,
+      changedByUserId: input.driverUserId,
+      note: delivery.deliveryGroupId
+        ? 'Grouped pickup failed at supplier'
+        : 'Pickup failed at supplier',
+      groupedState,
     });
 
     return {
@@ -595,6 +718,18 @@ export const markDriverDeliveryFailed = async (input: {
     ) {
       return { outcome: 'INVALID_DELIVERY_STATUS' as const };
     }
+
+    const groupedState = delivery.deliveryGroupId
+      ? await loadAndAssertGroupedDeliveryState(tx, {
+          deliveryId: delivery.id,
+          expectedDeliveryStatuses: [delivery.status],
+          expectedGroupStatus: 'ASSIGNED',
+          expectedReservationStatus: 'ACCEPTED',
+          expectedDriverProfileId: profile.id,
+          expectedActiveAssignments: 1,
+          expectedSupplierUserId: delivery.reservation.ownerId,
+        })
+      : undefined;
 
     if (!delivery.reservation.confirmedDeliveryWindowEnd) {
       return { outcome: 'MISSING_WINDOW' as const };
@@ -650,14 +785,27 @@ export const markDriverDeliveryFailed = async (input: {
       }
     }
 
-    const updatedDelivery = await tx.delivery.update({
-      where: { id: delivery.id },
+    const deliveryChanged = await tx.delivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: delivery.status,
+        assignedDriverProfileId: profile.id,
+        deliveryGroupId: delivery.deliveryGroupId,
+        reservationId: delivery.reservationId,
+      },
       data: {
         status: newDeliveryStatus,
+        assignedDriverProfileId: null,
         failedAt: now,
         failureReason: failureNote,
         driverNote: input.note?.trim() || delivery.driverNote,
       },
+    });
+    if (deliveryChanged.count !== 1) {
+      groupedDeliveryStateConflict();
+    }
+    const updatedDelivery = await tx.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
     });
 
     await tx.deliveryStatusHistory.create({
@@ -670,26 +818,20 @@ export const markDriverDeliveryFailed = async (input: {
       },
     });
 
-    const reservation = await tx.reservation.update({
-      where: { id: delivery.reservationId },
-      data: { status: 'AWAITING_RESOLUTION' },
-    });
-
-    await tx.reservationStatusHistory.create({
-      data: {
-        reservationId: reservation.id,
-        statusGroup: 'RESERVATION',
-        oldStatus: delivery.reservation.status as ReservationStatus,
-        newStatus: 'AWAITING_RESOLUTION',
-        changedBy: input.driverUserId,
-        note: 'Delivery failed after pickup',
-      },
+    const reservation = await transitionFailureReservations(tx, {
+      delivery,
+      changedByUserId: input.driverUserId,
+      note: delivery.deliveryGroupId
+        ? 'Grouped delivery failed after pickup'
+        : 'Delivery failed after pickup',
+      groupedState,
     });
 
     await releaseDriverFromDelivery(tx, {
       deliveryId: delivery.id,
       driverProfileId: profile.id,
       releaseReason: 'Delivery failed',
+      expectedActiveCount: groupedState ? 1 : undefined,
     });
 
     return {
@@ -737,6 +879,18 @@ export const markDriverIssueAfterPickup = async (input: {
       return { outcome: 'INVALID_DELIVERY_STATUS' as const };
     }
 
+    const groupedState = delivery.deliveryGroupId
+      ? await loadAndAssertGroupedDeliveryState(tx, {
+          deliveryId: delivery.id,
+          expectedDeliveryStatuses: [delivery.status],
+          expectedGroupStatus: 'ASSIGNED',
+          expectedReservationStatus: 'ACCEPTED',
+          expectedDriverProfileId: profile.id,
+          expectedActiveAssignments: 1,
+          expectedSupplierUserId: delivery.reservation.ownerId,
+        })
+      : undefined;
+
     const duplicate = await tx.noShowReport.findFirst({
       where: {
         reservationId: delivery.reservationId,
@@ -763,14 +917,27 @@ export const markDriverIssueAfterPickup = async (input: {
     }
 
     const now = new Date();
-    const updatedDelivery = await tx.delivery.update({
-      where: { id: delivery.id },
+    const deliveryChanged = await tx.delivery.updateMany({
+      where: {
+        id: delivery.id,
+        status: delivery.status,
+        assignedDriverProfileId: profile.id,
+        deliveryGroupId: delivery.deliveryGroupId,
+        reservationId: delivery.reservationId,
+      },
       data: {
         status: 'AWAITING_RESOLUTION',
+        assignedDriverProfileId: null,
         failedAt: now,
         failureReason: input.note.trim(),
         driverNote: input.note.trim(),
       },
+    });
+    if (deliveryChanged.count !== 1) {
+      groupedDeliveryStateConflict();
+    }
+    const updatedDelivery = await tx.delivery.findUniqueOrThrow({
+      where: { id: delivery.id },
     });
 
     await tx.deliveryStatusHistory.create({
@@ -783,26 +950,20 @@ export const markDriverIssueAfterPickup = async (input: {
       },
     });
 
-    const reservation = await tx.reservation.update({
-      where: { id: delivery.reservationId },
-      data: { status: 'AWAITING_RESOLUTION' },
-    });
-
-    await tx.reservationStatusHistory.create({
-      data: {
-        reservationId: reservation.id,
-        statusGroup: 'RESERVATION',
-        oldStatus: delivery.reservation.status as ReservationStatus,
-        newStatus: 'AWAITING_RESOLUTION',
-        changedBy: input.driverUserId,
-        note: 'Driver issue after pickup',
-      },
+    const reservation = await transitionFailureReservations(tx, {
+      delivery,
+      changedByUserId: input.driverUserId,
+      note: delivery.deliveryGroupId
+        ? 'Driver issue after grouped pickup'
+        : 'Driver issue after pickup',
+      groupedState,
     });
 
     await releaseDriverFromDelivery(tx, {
       deliveryId: delivery.id,
       driverProfileId: profile.id,
       releaseReason: 'Driver issue after pickup',
+      expectedActiveCount: groupedState ? 1 : undefined,
     });
 
     return {
