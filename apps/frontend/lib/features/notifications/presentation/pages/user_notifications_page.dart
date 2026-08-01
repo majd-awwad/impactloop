@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -11,13 +12,13 @@ import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/data/models/user.dart';
 import '../../application/notification_display.dart';
 import '../../application/notifications_provider.dart';
 import '../../data/models/app_notification.dart';
 import '../notification_visual_presentation.dart';
+import '../notification_visuals.dart';
 
 class UserNotificationsPage extends ConsumerWidget {
   const UserNotificationsPage({super.key, this.embeddedInShell = false});
@@ -31,6 +32,7 @@ class UserNotificationsPage extends ConsumerWidget {
     final body = _NotificationsBody(
       user: user,
       embeddedInShell: embeddedInShell,
+      homeRoute: homeRoute,
     );
 
     if (embeddedInShell) {
@@ -40,6 +42,7 @@ class UserNotificationsPage extends ConsumerWidget {
     final palette = MaterialsUiPalette.of(context);
     final hidePublicNav =
         user?.isDriverMode == true || user?.isSupplierMode == true;
+    final isPhone = MediaQuery.sizeOf(context).width < 600;
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -52,7 +55,7 @@ class UserNotificationsPage extends ConsumerWidget {
               showCreateAccount: false,
               homeRoute: homeRoute,
               showPublicNavLinks: !hidePublicNav,
-              trailingActions: const [NotificationBellButton(compact: true)],
+              phoneTitle: isPhone ? context.l10n.notificationsTitle : null,
             ),
             Expanded(child: body),
           ],
@@ -75,23 +78,56 @@ class UserNotificationsPage extends ConsumerWidget {
   }
 }
 
-class _NotificationsBody extends ConsumerWidget {
-  const _NotificationsBody({required this.user, required this.embeddedInShell});
+class _NotificationsBody extends ConsumerStatefulWidget {
+  const _NotificationsBody({
+    required this.user,
+    required this.embeddedInShell,
+    required this.homeRoute,
+  });
 
   final User? user;
   final bool embeddedInShell;
+  final String homeRoute;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_NotificationsBody> createState() => _NotificationsBodyState();
+}
+
+class _NotificationsBodyState extends ConsumerState<_NotificationsBody> {
+  bool _refreshInFlight = false;
+
+  Future<void> _handleRefresh() async {
+    if (_refreshInFlight) {
+      return;
+    }
+
+    setState(() => _refreshInFlight = true);
+    try {
+      await refreshNotifications(ref);
+      if (ref.exists(notificationsListProvider)) {
+        await ref.read(notificationsListProvider.future);
+      }
+    } catch (_) {
+      // List error UI is handled by the async provider state.
+    } finally {
+      if (mounted) {
+        setState(() => _refreshInFlight = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final listAsync = ref.watch(notificationsListProvider);
     final selectedFilter = ref.watch(notificationReadFilterProvider);
-    final isCompactMobile = MediaQuery.sizeOf(context).width < 820;
-    final bottomPadding = embeddedInShell && isCompactMobile
-        ? kBottomNavigationBarHeight +
-              MediaQuery.paddingOf(context).bottom +
-              AppSpacing.lg
-        : AppSpacing.xl;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isCompactMobile = viewportWidth < 820;
+    final showPageBack = !widget.embeddedInShell && viewportWidth < 900;
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final bottomPadding = widget.embeddedInShell && isCompactMobile
+        ? kBottomNavigationBarHeight + safeBottom + AppSpacing.xl
+        : AppSpacing.xl + safeBottom + AppSpacing.md;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -99,20 +135,41 @@ class _NotificationsBody extends ConsumerWidget {
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(
             AppSpacing.md,
-            AppSpacing.lg,
+            AppSpacing.md,
             AppSpacing.md,
             0,
           ),
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1120),
+              constraints: const BoxConstraints(
+                maxWidth: notificationsContentMaxWidth,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (showPageBack) ...[
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton.icon(
+                        key: const Key('notifications-back-button'),
+                        onPressed: () => context.popOrGo(widget.homeRoute),
+                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                        label: Text(l10n.notificationsBack),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: AppSpacing.sm,
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                   _NotificationsHeaderCard(
                     listAsync: listAsync,
+                    isRefreshing: _refreshInFlight || listAsync.isLoading,
                     onMarkAllRead: () => markAllNotificationsRead(ref),
-                    onRefresh: () => refreshNotifications(ref),
+                    onRefresh: _handleRefresh,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   _NotificationFilterBar(
@@ -125,38 +182,68 @@ class _NotificationsBody extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
         Expanded(
           child: listAsync.when(
             skipLoadingOnReload: true,
             loading: () => Center(
-              child: _NotificationsStateCard(
-                icon: Icons.hourglass_top_outlined,
-                title: l10n.notificationsLoading,
-                subtitle: l10n.notificationsLoadingSubtitle,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: notificationsContentMaxWidth,
+                ),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  child: _NotificationsStateCard(
+                    icon: Icons.hourglass_top_outlined,
+                    title: l10n.notificationsLoading,
+                    subtitle: l10n.notificationsLoadingSubtitle,
+                  ),
+                ),
               ),
             ),
             error: (error, _) {
               if (isAuthPendingNotificationError(error) ||
                   isCancelledNotificationError(error)) {
                 return Center(
-                  child: _NotificationsStateCard(
-                    icon: Icons.hourglass_top_outlined,
-                    title: l10n.notificationsLoading,
-                    subtitle: l10n.notificationsLoadingSubtitle,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: notificationsContentMaxWidth,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                      child: _NotificationsStateCard(
+                        icon: Icons.hourglass_top_outlined,
+                        title: l10n.notificationsLoading,
+                        subtitle: l10n.notificationsLoadingSubtitle,
+                      ),
+                    ),
                   ),
                 );
               }
 
               return Center(
-                child: _NotificationsStateCard(
-                  icon: Icons.cloud_off_outlined,
-                  title: l10n.notificationsLoadError,
-                  subtitle: kDebugMode && l10n.localeName == 'en'
-                      ? '$error'
-                      : l10n.tryAgain,
-                  actionLabel: l10n.retry,
-                  onAction: () => refreshNotifications(ref),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: notificationsContentMaxWidth,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                    child: _NotificationsStateCard(
+                      icon: Icons.cloud_off_outlined,
+                      title: l10n.notificationsLoadError,
+                      subtitle: kDebugMode && l10n.localeName == 'en'
+                          ? '$error'
+                          : l10n.tryAgain,
+                      actionLabel: l10n.retry,
+                      onAction: _handleRefresh,
+                    ),
+                  ),
                 ),
               );
             },
@@ -164,20 +251,38 @@ class _NotificationsBody extends ConsumerWidget {
               if (state.items.isEmpty) {
                 final empty = _emptyCopyForFilter(selectedFilter, l10n);
                 return Center(
-                  child: _NotificationsStateCard(
-                    icon: Icons.notifications_none_outlined,
-                    title: empty.title,
-                    subtitle: empty.subtitle,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: notificationsContentMaxWidth,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
+                      child: _NotificationsStateCard(
+                        icon: Icons.notifications_none_outlined,
+                        title: empty.title,
+                        subtitle: empty.subtitle,
+                      ),
+                    ),
                   ),
                 );
               }
 
               return Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1120),
+                  constraints: const BoxConstraints(
+                    maxWidth: notificationsContentMaxWidth,
+                  ),
                   child: _NotificationsListView(
                     state: state,
                     bottomPadding: bottomPadding,
+                    isSupplierMode:
+                        widget.user?.isSupplierMode == true &&
+                        widget.user?.hasRole('SUPPLIER') == true,
+                    isDriverMode:
+                        widget.user?.isDriverMode == true &&
+                        widget.user?.hasRole('DRIVER') == true,
                     onOpen: (notification) =>
                         _handleOpen(context, ref, notification),
                     onLoadMore: () =>
@@ -230,53 +335,47 @@ class _NotificationsBody extends ConsumerWidget {
     }
 
     final currentUser = ref.read(authControllerProvider).user;
+    final route = notificationOpenRoute(
+      notification,
+      isSupplierMode:
+          currentUser?.isSupplierMode == true &&
+          currentUser?.hasRole('SUPPLIER') == true,
+      isDriverMode:
+          currentUser?.isDriverMode == true &&
+          currentUser?.hasRole('DRIVER') == true,
+    );
 
-    if (notification.relatedEntityType == 'RESERVATION' &&
-        notification.relatedEntityId != null &&
-        notification.relatedEntityId!.isNotEmpty) {
-      final reservationId = notification.relatedEntityId!;
-
-      if (currentUser?.isSupplierMode == true &&
-          currentUser?.hasRole('SUPPLIER') == true) {
-        context.push('/supplier/reservations?tab=pending&focus=$reservationId');
-        return;
-      }
-
-      context.push('/learner/reservations/$reservationId');
+    if (route == null) {
       return;
     }
 
-    if (notification.relatedEntityType == 'DELIVERY' &&
-        notification.relatedEntityId != null &&
-        notification.relatedEntityId!.isNotEmpty) {
-      if (currentUser?.isDriverMode == true &&
-          currentUser?.hasRole('DRIVER') == true) {
-        final route = driverDeliveryNotificationRoute(notification);
-        if (route != null) {
-          context.go(route);
-        }
-        return;
-      }
+    if (_isDriverDeliveryRoute(route)) {
+      context.go(route);
+      return;
     }
 
-    if (notification.relatedEntityType == 'LEARNING_PROJECT' &&
-        notification.relatedEntityId != null &&
-        notification.relatedEntityId!.isNotEmpty) {
-      context.push('/learning/submissions/${notification.relatedEntityId}');
-    }
+    context.push(route);
   }
+}
+
+bool _isDriverDeliveryRoute(String route) {
+  return route == '/driver/jobs' || route.startsWith('/driver/deliveries/');
 }
 
 class _NotificationsListView extends StatelessWidget {
   const _NotificationsListView({
     required this.state,
     required this.bottomPadding,
+    required this.isSupplierMode,
+    required this.isDriverMode,
     required this.onOpen,
     required this.onLoadMore,
   });
 
   final NotificationsListState state;
   final double bottomPadding;
+  final bool isSupplierMode;
+  final bool isDriverMode;
   final ValueChanged<AppNotification> onOpen;
   final VoidCallback onLoadMore;
 
@@ -304,6 +403,8 @@ class _NotificationsListView extends StatelessWidget {
         if (index < state.items.length) {
           return _NotificationTile(
             notification: state.items[index],
+            isSupplierMode: isSupplierMode,
+            isDriverMode: isDriverMode,
             onOpen: () => onOpen(state.items[index]),
           );
         }
@@ -312,36 +413,47 @@ class _NotificationsListView extends StatelessWidget {
 
         if (state.hasMore) {
           if (footerIndex == 0) {
-            return Center(
-              child: state.isLoadingMore
-                  ? const Padding(
-                      padding: EdgeInsets.all(AppSpacing.md),
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+            return Padding(
+              padding: const EdgeInsetsDirectional.only(top: AppSpacing.sm),
+              child: Center(
+                child: state.isLoadingMore
+                    ? const Padding(
+                        padding: EdgeInsets.all(AppSpacing.md),
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : OutlinedButton.icon(
+                        onPressed: onLoadMore,
+                        style: AppStatusButtonStyle.outlined(
+                          context,
+                          AppStatusTone.neutral,
+                        ),
+                        icon: const Icon(Icons.expand_more_rounded),
+                        label: Text(l10n.loadMore),
                       ),
-                    )
-                  : OutlinedButton.icon(
-                      onPressed: onLoadMore,
-                      style: AppStatusButtonStyle.outlined(
-                        context,
-                        AppStatusTone.neutral,
-                      ),
-                      icon: const Icon(Icons.expand_more_rounded),
-                      label: Text(l10n.loadMore),
-                    ),
+              ),
             );
           }
           footerIndex -= 1;
         }
 
-        return Text(
-          l10n.notificationCount(state.items.length, state.total),
-          textAlign: TextAlign.center,
-          style: AppTextStyles.label(
-            context,
-          ).copyWith(color: palette.textMuted),
+        return Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.sm,
+          ),
+          child: Text(
+            l10n.notificationCount(state.items.length, state.total),
+            textAlign: TextAlign.center,
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textMuted, height: 1.35),
+          ),
         );
       },
     );
@@ -384,11 +496,13 @@ class _NotificationFilterBar extends StatelessWidget {
 class _NotificationsHeaderCard extends StatelessWidget {
   const _NotificationsHeaderCard({
     required this.listAsync,
+    required this.isRefreshing,
     required this.onMarkAllRead,
     required this.onRefresh,
   });
 
   final AsyncValue<NotificationsListState> listAsync;
+  final bool isRefreshing;
   final VoidCallback onMarkAllRead;
   final VoidCallback onRefresh;
 
@@ -400,9 +514,10 @@ class _NotificationsHeaderCard extends StatelessWidget {
       data: (state) => state.unreadCount,
       orElse: () => 0,
     );
+    final refreshLabel = l10n.refreshNotifications;
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -415,9 +530,11 @@ class _NotificationsHeaderCard extends StatelessWidget {
             children: [
               Text(
                 l10n.notificationsTitle,
-                style: AppTextStyles.display(
-                  context,
-                ).copyWith(color: palette.textPrimary),
+                style: AppTextStyles.title(context).copyWith(
+                  color: palette.textPrimary,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
@@ -428,18 +545,50 @@ class _NotificationsHeaderCard extends StatelessWidget {
               ),
             ],
           );
+
+          final refreshControl = constraints.maxWidth < 520
+              ? IconButton(
+                  key: const Key('notifications-refresh-button'),
+                  tooltip: refreshLabel,
+                  onPressed: isRefreshing ? null : onRefresh,
+                  style: AppStatusButtonStyle.text(context, AppStatusTone.info),
+                  icon: isRefreshing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                )
+              : Tooltip(
+                  message: refreshLabel,
+                  child: OutlinedButton.icon(
+                    key: const Key('notifications-refresh-button'),
+                    onPressed: isRefreshing ? null : onRefresh,
+                    style: AppStatusButtonStyle.outlined(
+                      context,
+                      AppStatusTone.info,
+                    ),
+                    icon: isRefreshing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(l10n.refresh),
+                  ),
+                );
+
           final actions = Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              IconButton(
-                tooltip: l10n.refresh,
-                onPressed: onRefresh,
-                style: AppStatusButtonStyle.text(context, AppStatusTone.info),
-                icon: const Icon(Icons.refresh_rounded),
-              ),
+              refreshControl,
               if (unreadCount > 0)
                 FilledButton(
+                  key: const Key('notifications-mark-all-read'),
                   onPressed: onMarkAllRead,
                   style: AppStatusButtonStyle.filled(
                     context,
@@ -506,6 +655,7 @@ class _NotificationsStateCard extends StatelessWidget {
         border: Border.all(color: palette.borderStrong),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 40, color: palette.mint),
           const SizedBox(height: AppSpacing.md),
@@ -542,9 +692,16 @@ class _NotificationsStateCard extends StatelessWidget {
 }
 
 class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.notification, required this.onOpen});
+  const _NotificationTile({
+    required this.notification,
+    required this.isSupplierMode,
+    required this.isDriverMode,
+    required this.onOpen,
+  });
 
   final AppNotification notification;
+  final bool isSupplierMode;
+  final bool isDriverMode;
   final VoidCallback onOpen;
 
   @override
@@ -553,11 +710,90 @@ class _NotificationTile extends StatelessWidget {
     final l10n = context.l10n;
     final category = categoryForNotification(notification);
     final chipLabel = notificationTypeChipLabel(category, l10n: l10n);
-    final actionLabel = notificationActionLabel(notification, l10n: l10n);
+    final actionLabel = notificationActionLabel(
+      notification,
+      l10n: l10n,
+      isSupplierMode: isSupplierMode,
+      isDriverMode: isDriverMode,
+    );
     final copy = localizedNotificationCopy(notification, l10n);
-    final hasTarget = notificationHasNavigationTarget(notification);
+    final hasTarget = notificationHasNavigationTarget(
+      notification,
+      isSupplierMode: isSupplierMode,
+      isDriverMode: isDriverMode,
+    );
     final tone = notificationVisualTone(category);
     final accent = AppStatusStyle.of(context, tone).foreground;
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
+    final relativeTime = LocalizedFormatters(
+      l10n,
+    ).relativeTime(notification.createdAt);
+
+    final typeIcon = ExcludeSemantics(
+      child: Container(
+        key: Key('notification-type-icon-${notification.id}'),
+        width: isCompact ? 36 : 40,
+        height: isCompact ? 36 : 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.12),
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(color: accent.withValues(alpha: 0.35)),
+        ),
+        child: Icon(
+          iconForNotification(notification),
+          size: isCompact ? 18 : 20,
+          color: accent,
+        ),
+      ),
+    );
+
+    final unreadDot = !notification.isRead
+        ? Container(
+            key: Key('notification-unread-dot-${notification.id}'),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: palette.mint,
+              shape: BoxShape.circle,
+            ),
+          )
+        : null;
+
+    final title = Text(
+      copy.title,
+      style: AppTextStyles.body(context).copyWith(
+        color: palette.textPrimary,
+        fontSize: isCompact ? 15 : 16,
+        fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.w700,
+        height: 1.3,
+      ),
+    );
+
+    final body = Text(
+      copy.body,
+      style: AppTextStyles.body(
+        context,
+      ).copyWith(color: palette.textSecondary, fontSize: 14, height: 1.35),
+    );
+
+    final timestamp = Text(
+      relativeTime,
+      style: AppTextStyles.label(
+        context,
+      ).copyWith(color: palette.textMuted, fontSize: 12),
+    );
+
+    final action = hasTarget
+        ? Text(
+            actionLabel,
+            style: AppTextStyles.label(context).copyWith(
+              color: palette.mint,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          )
+        : null;
 
     return Material(
       color: notification.isRead ? palette.panelSurface : palette.inputSurface,
@@ -574,121 +810,81 @@ class _NotificationTile extends StatelessWidget {
                   : palette.borderStrong,
             ),
           ),
-          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.12),
-                  borderRadius: AppRadius.mdAll,
-                  border: Border.all(color: accent.withValues(alpha: 0.35)),
-                ),
-                child: Icon(
-                  _iconForNotification(notification),
-                  size: 20,
-                  color: accent,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
+          padding: EdgeInsetsDirectional.all(
+            isCompact ? AppSpacing.sm + 2 : AppSpacing.md,
+          ),
+          child: isCompact
+              ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Wrap(
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                    Row(
                       children: [
-                        AppStatusBadge(label: chipLabel, tone: tone),
-                        if (!notification.isRead)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: palette.mint,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
+                        if (unreadDot != null) ...[
+                          unreadDot,
+                          const SizedBox(width: AppSpacing.xs),
+                        ],
+                        Flexible(
+                          child: AppStatusBadge(label: chipLabel, tone: tone),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        timestamp,
                       ],
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      copy.title,
-                      style: AppTextStyles.title(context).copyWith(
-                        color: palette.textPrimary,
-                        fontWeight: notification.isRead
-                            ? FontWeight.w600
-                            : FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      copy.body,
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: palette.textSecondary),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          LocalizedFormatters(
-                            l10n,
-                          ).relativeTime(notification.createdAt),
-                          style: AppTextStyles.label(
-                            context,
-                          ).copyWith(color: palette.textMuted),
-                        ),
-                        if (hasTarget)
-                          Text(
-                            actionLabel,
-                            style: AppTextStyles.label(context).copyWith(
-                              color: palette.mint,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        typeIcon,
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: title),
                       ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    body,
+                    if (action != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      action,
+                    ],
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    typeIcon,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Wrap(
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              AppStatusBadge(label: chipLabel, tone: tone),
+                              ?unreadDot,
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          title,
+                          const SizedBox(height: AppSpacing.xs),
+                          body,
+                          const SizedBox(height: AppSpacing.sm),
+                          Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.xs,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [timestamp, ?action],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );
-  }
-
-  IconData _iconForNotification(AppNotification notification) {
-    switch (notification.notificationType) {
-      case 'DRIVER_NEW_JOB':
-        return Icons.local_shipping_outlined;
-      case 'DRIVER_DELIVERY_REQUEST_CREATED':
-        return Icons.local_shipping_outlined;
-      case 'DRIVER_DELIVERY_ACCEPTED':
-      case 'DRIVER_DELIVERY_NEXT_STEP':
-      case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
-        return Icons.admin_panel_settings_outlined;
-      case 'DRIVER_PICKUP_TIME':
-      case 'DRIVER_PICKUP_REMINDER':
-      case 'DRIVER_PICKUP_STARTING_SOON':
-      case 'DRIVER_PICKUP_WINDOW_STARTED':
-      case 'DRIVER_PICKUP_OVERDUE':
-        return Icons.schedule_outlined;
-      case 'DRIVER_DROPOFF_TIME':
-      case 'DRIVER_DROPOFF_REMINDER':
-      case 'DRIVER_DROPOFF_STARTING_SOON':
-      case 'DRIVER_DROPOFF_WINDOW_STARTED':
-      case 'DRIVER_DROPOFF_OVERDUE':
-        return Icons.place_outlined;
-      default:
-        return Icons.notifications_none_outlined;
-    }
   }
 }

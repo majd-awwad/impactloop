@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -9,8 +10,11 @@ import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/application/auth_route_helpers.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/driver_portal/presentation/shell/driver_portal_shell.dart';
+import 'package:frontend/features/notifications/application/notifications_provider.dart';
+import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_notifications_providers.dart';
 import 'package:frontend/features/supplier_portal/presentation/shell/supplier_profile_popover.dart';
 import 'package:frontend/features/supplier_portal/presentation/widgets/supplier_portal_avatar.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/shared/widgets/user_avatar.dart';
 
 void main() {
@@ -175,8 +179,23 @@ Future<GoRouter> _pumpRouter(
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(() => _TestAuthController(user)),
+        myNotificationUnreadCountProvider.overrideWith(
+          _ZeroUnreadCountNotifier.new,
+        ),
+        supplierNotificationsUnreadCountProvider.overrideWith(
+          _ZeroSupplierUnreadCountNotifier.new,
+        ),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -213,4 +232,15 @@ class _TestAuthController extends AuthController {
       hasBootstrapped: true,
     );
   }
+}
+
+class _ZeroUnreadCountNotifier extends NotificationUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
+}
+
+class _ZeroSupplierUnreadCountNotifier
+    extends SupplierNotificationsUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
 }

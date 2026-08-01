@@ -872,6 +872,30 @@ abstract class AppLocalizations {
   /// **'Delivery update'**
   String get notificationChipDelivery;
 
+  /// No description provided for @notificationChipReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation'**
+  String get notificationChipReservation;
+
+  /// No description provided for @notificationChipMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Material'**
+  String get notificationChipMaterial;
+
+  /// No description provided for @notificationChipLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning'**
+  String get notificationChipLearning;
+
+  /// No description provided for @notificationChipMaterialRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Material request'**
+  String get notificationChipMaterialRequest;
+
   /// No description provided for @notificationChipAccount.
   ///
   /// In en, this message translates to:
@@ -883,6 +907,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update'**
   String get notificationChipUpdate;
+
+  /// No description provided for @notificationsBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get notificationsBack;
+
+  /// No description provided for @refreshNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh notifications'**
+  String get refreshNotifications;
 
   /// No description provided for @viewJobs.
   ///

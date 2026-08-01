@@ -506,6 +506,9 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // Keep browser URL aligned with imperative pushes (notifications inbox).
+  GoRouter.optionURLReflectsImperativeAPIs = true;
+
   final refreshListenable = ValueNotifier<int>(0);
   ref.onDispose(refreshListenable.dispose);
   ref.listen<AuthState>(authControllerProvider, (previous, next) {

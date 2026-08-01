@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:frontend/app/widgets/entry_nav_bar.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
+import 'package:frontend/features/notifications/application/notifications_provider.dart';
+import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_notifications_providers.dart';
+import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/shared/widgets/user_avatar.dart';
 
 void main() {
@@ -30,9 +34,22 @@ void main() {
                 ),
               ),
             ),
+            myNotificationUnreadCountProvider.overrideWith(
+              _ZeroUnreadCountNotifier.new,
+            ),
+            supplierNotificationsUnreadCountProvider.overrideWith(
+              _ZeroSupplierUnreadCountNotifier.new,
+            ),
           ],
-          child: const MaterialApp(
-            home: Scaffold(
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const Scaffold(
               body: EntryNavBar(
                 showSignIn: false,
                 showCreateAccount: false,
@@ -116,9 +133,22 @@ Future<void> _pumpEntryNavBar(WidgetTester tester, User user) async {
     ProviderScope(
       overrides: [
         authControllerProvider.overrideWith(() => _TestAuthController(user)),
+        myNotificationUnreadCountProvider.overrideWith(
+          _ZeroUnreadCountNotifier.new,
+        ),
+        supplierNotificationsUnreadCountProvider.overrideWith(
+          _ZeroSupplierUnreadCountNotifier.new,
+        ),
       ],
-      child: const MaterialApp(
-        home: Scaffold(
+      child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const Scaffold(
           body: EntryNavBar(
             showSignIn: false,
             showCreateAccount: false,
@@ -163,4 +193,15 @@ class _TestAuthController extends AuthController {
       hasBootstrapped: true,
     );
   }
+}
+
+class _ZeroUnreadCountNotifier extends NotificationUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
+}
+
+class _ZeroSupplierUnreadCountNotifier
+    extends SupplierNotificationsUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
 }

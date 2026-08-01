@@ -10,8 +10,10 @@ import 'package:frontend/app/theme/app_theme.dart';
 import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
+import 'package:frontend/features/notifications/application/notifications_provider.dart';
 import 'package:frontend/features/profile/presentation/pages/account_settings_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/account_settings_widgets.dart';
+import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_notifications_providers.dart';
 
 void main() {
   test('role access resolution follows active-role eligibility', () {
@@ -424,6 +426,12 @@ Future<_Harness> _pumpAccount(
         initialAppSettingsProvider.overrideWithValue(
           const AppSettings(themeMode: ThemeMode.system, languageCode: 'en'),
         ),
+        myNotificationUnreadCountProvider.overrideWith(
+          _ZeroUnreadCountNotifier.new,
+        ),
+        supplierNotificationsUnreadCountProvider.overrideWith(
+          _ZeroSupplierUnreadCountNotifier.new,
+        ),
       ],
       child: _SettingsAwareTestApp(router: router, textScaler: textScaler),
     ),
@@ -539,7 +547,6 @@ bool _isForbiddenFeatureProvider(String description) {
       normalized.contains('learningproject') ||
       normalized.contains('materialdiscovery') ||
       normalized.contains('notificationslist') ||
-      normalized.contains('unreadcount') ||
       normalized.contains('savedlocations') ||
       normalized.contains('impact');
 }
@@ -576,4 +583,15 @@ User _user({
     phoneVerifiedAt: phoneVerified ? DateTime(2026, 1, 1) : null,
     createdAt: DateTime(2026),
   );
+}
+
+class _ZeroUnreadCountNotifier extends NotificationUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
+}
+
+class _ZeroSupplierUnreadCountNotifier
+    extends SupplierNotificationsUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
 }

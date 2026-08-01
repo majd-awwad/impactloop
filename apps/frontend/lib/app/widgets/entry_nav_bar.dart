@@ -14,7 +14,9 @@ import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/presentation/widgets/portal_switch_menu.dart';
 import '../../features/auth/data/models/user.dart';
 import '../../features/profile/presentation/l10n/account_settings_l10n.dart';
+import '../../features/notifications/application/notifications_routes.dart';
 import '../../shared/widgets/app_feedback.dart';
+import '../../shared/widgets/notification_bell_button.dart';
 import '../../shared/widgets/user_avatar.dart';
 import 'impact_loop_logo.dart';
 import 'nav_pill_menu.dart';
@@ -31,6 +33,7 @@ class EntryNavBar extends ConsumerWidget {
     this.showPhoneAccountMenu = true,
     this.phoneTitle,
     this.showPublicNavLinks = true,
+    this.showNotificationBell,
   });
 
   final bool showSignIn;
@@ -42,6 +45,25 @@ class EntryNavBar extends ConsumerWidget {
   final bool showPhoneAccountMenu;
   final String? phoneTitle;
   final bool showPublicNavLinks;
+
+  /// When null, the bell is shown for authenticated users automatically.
+  final bool? showNotificationBell;
+
+  static List<Widget> resolveTrailingActions({
+    required bool isAuthenticated,
+    required bool? showNotificationBell,
+    required List<Widget> trailingActions,
+    User? user,
+  }) {
+    final shouldShowBell =
+        showNotificationBell ??
+        (isAuthenticated && userSupportsNotificationInbox(user));
+    if (!shouldShowBell || !isAuthenticated) {
+      return trailingActions;
+    }
+
+    return [const NotificationBellButton(compact: true), ...trailingActions];
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -58,6 +80,12 @@ class EntryNavBar extends ConsumerWidget {
         user != null;
     final effectiveShowSignIn = !isAuthenticated && showSignIn;
     final effectiveShowCreateAccount = !isAuthenticated && showCreateAccount;
+    final resolvedTrailing = resolveTrailingActions(
+      isAuthenticated: isAuthenticated,
+      showNotificationBell: showNotificationBell,
+      trailingActions: trailingActions,
+      user: user,
+    );
 
     if (isPhone) {
       return Padding(
@@ -82,6 +110,7 @@ class EntryNavBar extends ConsumerWidget {
             ref: ref,
             showAccountMenu: showPhoneAccountMenu,
             phoneTitle: phoneTitle,
+            trailingActions: resolvedTrailing,
           ),
         ),
       );
@@ -134,7 +163,7 @@ class EntryNavBar extends ConsumerWidget {
                       isAuthenticated: isAuthenticated,
                       isAuthLoading: authState.isLoading,
                       ref: ref,
-                      trailingActions: trailingActions,
+                      trailingActions: resolvedTrailing,
                     )
                   : _DesktopNavLayout(
                       showSignIn: effectiveShowSignIn,
@@ -148,7 +177,7 @@ class EntryNavBar extends ConsumerWidget {
                       isAuthLoading: authState.isLoading,
                       ref: ref,
                       condensed: useCondensedDesktop,
-                      trailingActions: trailingActions,
+                      trailingActions: resolvedTrailing,
                       showPublicNavLinks: showPublicNavLinks,
                     ),
             ),
@@ -172,6 +201,7 @@ class _PhoneAppBarLayout extends StatelessWidget {
     required this.isAuthLoading,
     required this.ref,
     required this.showAccountMenu,
+    required this.trailingActions,
     this.phoneTitle,
   });
 
@@ -186,6 +216,7 @@ class _PhoneAppBarLayout extends StatelessWidget {
   final bool isAuthLoading;
   final WidgetRef ref;
   final bool showAccountMenu;
+  final List<Widget> trailingActions;
   final String? phoneTitle;
 
   @override
@@ -215,15 +246,20 @@ class _PhoneAppBarLayout extends StatelessWidget {
           ),
         ] else
           const Spacer(),
-        if (isAuthenticated && user != null && showAccountMenu)
+        if (trailingActions.isNotEmpty) ...[
+          const SizedBox(width: AppSpacing.xs),
+          ...trailingActions,
+        ],
+        if (isAuthenticated && user != null && showAccountMenu) ...[
+          const SizedBox(width: AppSpacing.xs),
           _AccountMenu(
             user: user!,
             settings: settings,
             ref: ref,
             compact: true,
             isLoggingOut: isAuthLoading,
-          )
-        else if (!isAuthenticated)
+          ),
+        ] else if (!isAuthenticated)
           _GuestMobileMenu(
             showSignIn: showSignIn,
             showCreateAccount: showCreateAccount,

@@ -451,10 +451,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationChipDelivery => 'تحديث التوصيل';
 
   @override
+  String get notificationChipReservation => 'حجز';
+
+  @override
+  String get notificationChipMaterial => 'مادة';
+
+  @override
+  String get notificationChipLearning => 'تعلّم';
+
+  @override
+  String get notificationChipMaterialRequest => 'طلب مادة';
+
+  @override
   String get notificationChipAccount => 'الحساب';
 
   @override
   String get notificationChipUpdate => 'تحديث';
+
+  @override
+  String get notificationsBack => 'رجوع';
+
+  @override
+  String get refreshNotifications => 'تحديث الإشعارات';
 
   @override
   String get viewJobs => 'عرض المهام';

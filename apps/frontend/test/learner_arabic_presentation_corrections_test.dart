@@ -54,6 +54,11 @@ class _ArabicNotificationsNotifier extends NotificationsListNotifier {
   );
 }
 
+class _ArabicUnreadCountNotifier extends NotificationUnreadCountNotifier {
+  @override
+  Future<int> build() async => 1;
+}
+
 LearnerReservation _reservation(String status) {
   return LearnerReservation.fromJson({
     'id': 'reservation-$status',
@@ -79,6 +84,9 @@ Widget _arabicApp(Widget child) {
     overrides: [
       authControllerProvider.overrideWith(_LearnerAuthController.new),
       notificationsListProvider.overrideWith(_ArabicNotificationsNotifier.new),
+      myNotificationUnreadCountProvider.overrideWith(
+        _ArabicUnreadCountNotifier.new,
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('ar'),

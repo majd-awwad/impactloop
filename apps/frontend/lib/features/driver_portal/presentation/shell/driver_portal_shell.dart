@@ -8,7 +8,6 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../notifications/application/notifications_routes.dart';
 
@@ -41,9 +40,6 @@ class DriverPortalShell extends ConsumerWidget {
                   homeRoute: '/driver/jobs',
                   phoneTitle: l10n.driver,
                   showPublicNavLinks: false,
-                  trailingActions: const [
-                    NotificationBellButton(compact: true),
-                  ],
                 ),
                 Expanded(
                   child: useSidebar

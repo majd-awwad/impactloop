@@ -14,8 +14,11 @@ import 'package:frontend/features/profile/application/profile_providers.dart';
 import 'package:frontend/features/profile/data/models/learner_profile_summary.dart';
 import 'package:frontend/features/profile/data/profile_api.dart';
 import 'package:frontend/features/profile/data/profile_repository.dart';
+import 'package:frontend/l10n/app_localizations.dart';
+import 'package:frontend/features/notifications/application/notifications_provider.dart';
 import 'package:frontend/features/profile/presentation/pages/profile_page.dart';
 import 'package:frontend/features/profile/presentation/widgets/learner_profile_dashboard_widgets.dart';
+import 'package:frontend/shared/widgets/notification_bell_button.dart';
 
 void main() {
   testWidgets('renders the real dashboard contract and learning identity', (
@@ -41,7 +44,10 @@ void main() {
     expect(find.text('University student'), findsOneWidget);
     expect(find.text('Beginner'), findsOneWidget);
     expect(find.text('Robotics'), findsOneWidget);
-    expect(find.text('Building useful projects with reused parts.'), findsOneWidget);
+    expect(
+      find.text('Building useful projects with reused parts.'),
+      findsOneWidget,
+    );
     expect(find.text('Account and Settings'), findsOneWidget);
     expect(find.text('Saved locations'), findsOneWidget);
     expect(find.textContaining('CO₂'), findsNothing);
@@ -176,25 +182,26 @@ void main() {
     expect(find.text('Build route project-1'), findsOneWidget);
   });
 
-  testWidgets('liked return avoids duplicate fetch while other routes refresh', (
-    tester,
-  ) async {
-    final repository = _FakeProfileRepository.success();
-    final harness = await _pumpProfile(tester, repository: repository);
-    expect(repository.calls, 1);
+  testWidgets(
+    'liked return avoids duplicate fetch while other routes refresh',
+    (tester) async {
+      final repository = _FakeProfileRepository.success();
+      final harness = await _pumpProfile(tester, repository: repository);
+      expect(repository.calls, 1);
 
-    await _tapTextSurface(tester, 'Liked materials');
-    await tester.pumpAndSettle();
-    harness.router.pop();
-    await tester.pumpAndSettle();
-    expect(repository.calls, 1);
+      await _tapTextSurface(tester, 'Liked materials');
+      await tester.pumpAndSettle();
+      harness.router.pop();
+      await tester.pumpAndSettle();
+      expect(repository.calls, 1);
 
-    await _tapTextSurface(tester, 'Active reservations');
-    await tester.pumpAndSettle();
-    harness.router.pop();
-    await tester.pumpAndSettle();
-    expect(repository.calls, 2);
-  });
+      await _tapTextSurface(tester, 'Active reservations');
+      await tester.pumpAndSettle();
+      harness.router.pop();
+      await tester.pumpAndSettle();
+      expect(repository.calls, 2);
+    },
+  );
 
   testWidgets('learning profile appears once and quick actions stay compact', (
     tester,
@@ -214,16 +221,10 @@ void main() {
     var call = 0;
     final repository = _FakeProfileRepository(() {
       call += 1;
-      return call == 1
-          ? Future.value(_summary())
-          : secondSummary.future;
+      return call == 1 ? Future.value(_summary()) : secondSummary.future;
     });
     final controller = _TestAuthController(_testUser());
-    await _pumpProfile(
-      tester,
-      repository: repository,
-      controller: controller,
-    );
+    await _pumpProfile(tester, repository: repository, controller: controller);
     expect(find.text('67%'), findsOneWidget);
 
     controller.replaceUser(
@@ -235,9 +236,7 @@ void main() {
     expect(find.text('67%'), findsNothing);
     expect(find.byType(LearnerDashboardSkeleton), findsOneWidget);
 
-    secondSummary.complete(
-      _summary(percentage: 33, completedSteps: 2),
-    );
+    secondSummary.complete(_summary(percentage: 33, completedSteps: 2));
     await tester.pumpAndSettle();
     expect(find.text('33%'), findsOneWidget);
   });
@@ -328,7 +327,9 @@ Future<void> _tapTextSurface(WidgetTester tester, String text) async {
   final label = find.text(text);
   await tester.ensureVisible(label);
   await tester.pumpAndSettle();
-  final inkWell = find.ancestor(of: label, matching: find.byType(InkWell)).first;
+  final inkWell = find
+      .ancestor(of: label, matching: find.byType(InkWell))
+      .first;
   tester.widget<InkWell>(inkWell).onTap?.call();
 }
 
@@ -374,9 +375,8 @@ Future<_ProfileHarness> _pumpProfile(
       ),
       GoRoute(
         path: '/learning/:id/build',
-        builder: (_, state) => Scaffold(
-          body: Text('Build route ${state.pathParameters['id']}'),
-        ),
+        builder: (_, state) =>
+            Scaffold(body: Text('Build route ${state.pathParameters['id']}')),
       ),
       _stubRoute('/home', 'Home route'),
     ],
@@ -387,16 +387,16 @@ Future<_ProfileHarness> _pumpProfile(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        authControllerProvider.overrideWith(
-          () => authController,
-        ),
+        authControllerProvider.overrideWith(() => authController),
         profileRepositoryProvider.overrideWithValue(repository),
+        myNotificationUnreadCountProvider.overrideWith(_ProfileZeroUnread.new),
       ],
       child: MaterialApp.router(
         theme: AppTheme.light,
         locale: locale,
-        supportedLocales: const [Locale('en'), Locale('ar')],
+        supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: const [
+          AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
@@ -420,7 +420,10 @@ Future<_ProfileHarness> _pumpProfile(
 }
 
 GoRoute _stubRoute(String path, String label) {
-  return GoRoute(path: path, builder: (_, _) => Scaffold(body: Text(label)));
+  return GoRoute(
+    path: path,
+    builder: (_, _) => Scaffold(body: Text(label)),
+  );
 }
 
 class _TestAuthController extends AuthController {
@@ -464,6 +467,11 @@ class _FakeProfileRepository extends ProfileRepository {
     calls += 1;
     return loader();
   }
+}
+
+class _ProfileZeroUnread extends NotificationUnreadCountNotifier {
+  @override
+  Future<int> build() async => 0;
 }
 
 LearnerProfileSummary _summary({

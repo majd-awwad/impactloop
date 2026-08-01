@@ -447,10 +447,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationChipDelivery => 'Delivery update';
 
   @override
+  String get notificationChipReservation => 'Reservation';
+
+  @override
+  String get notificationChipMaterial => 'Material';
+
+  @override
+  String get notificationChipLearning => 'Learning';
+
+  @override
+  String get notificationChipMaterialRequest => 'Material request';
+
+  @override
   String get notificationChipAccount => 'Account';
 
   @override
   String get notificationChipUpdate => 'Update';
+
+  @override
+  String get notificationsBack => 'Back';
+
+  @override
+  String get refreshNotifications => 'Refresh notifications';
 
   @override
   String get viewJobs => 'View jobs';

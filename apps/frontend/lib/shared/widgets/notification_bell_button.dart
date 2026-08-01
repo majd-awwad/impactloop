@@ -9,6 +9,7 @@ import '../../features/auth/data/models/user.dart';
 import '../../features/notifications/application/notifications_provider.dart';
 import '../../features/notifications/application/notifications_routes.dart';
 import '../../features/supplier_portal/presentation/controllers/supplier_notifications_providers.dart';
+import '../../l10n/l10n.dart';
 import '../widgets/materials/materials_ui_palette.dart';
 
 String formatNotificationBadgeLabel(int count) {
@@ -32,8 +33,13 @@ class NotificationBellButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = MaterialsUiPalette.of(context);
     final user = ref.watch(authControllerProvider).user;
+    if (!userSupportsNotificationInbox(user)) {
+      return const SizedBox.shrink();
+    }
+
+    final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final isSupplier =
         user?.isSupplierMode == true && user?.hasRole('SUPPLIER') == true;
     final unreadAsync = isSupplier
@@ -46,53 +52,79 @@ class NotificationBellButton extends ConsumerWidget {
     final badgeLabel = formatNotificationBadgeLabel(unreadCount);
     final iconSize = compact ? 22.0 : 24.0;
     final buttonPadding = compact ? AppSpacing.xs : AppSpacing.sm;
+    final tooltip = unreadCount > 0
+        ? '${l10n.notificationsTitle} ($badgeLabel)'
+        : l10n.notificationsTitle;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          final route = notificationRouteForBell(user);
-          final isDriverInPortal =
-              user?.isDriverMode == true && user?.hasRole('DRIVER') == true;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            final route = notificationRouteForBell(user);
+            final isDriverInPortal =
+                user?.isDriverMode == true && user?.hasRole('DRIVER') == true;
 
-          if (isDriverInPortal) {
-            context.go(route);
-            return;
-          }
+            String currentPath = '';
+            try {
+              currentPath = GoRouterState.of(context).uri.path;
+            } catch (_) {
+              currentPath = '';
+            }
 
-          context.push(route);
-        },
-        borderRadius: AppRadius.pillAll,
-        child: Ink(
-          padding: EdgeInsets.all(buttonPadding),
-          decoration: BoxDecoration(
-            color: palette.cardSurfaceAlt,
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(color: palette.borderSubtle),
-          ),
-          child: SizedBox(
-            width: iconSize + 4,
-            height: iconSize + 4,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  Icons.notifications_none_rounded,
-                  size: iconSize,
-                  color: palette.textPrimary,
-                ),
-                if (badgeLabel.isNotEmpty)
-                  Positioned(
-                    right: -8,
-                    top: -8,
-                    child: _NotificationCountBadge(
-                      label: badgeLabel,
-                      backgroundColor: palette.mint,
-                      foregroundColor: palette.ctaForeground,
+            if (currentPath == route) {
+              return;
+            }
+
+            if (isDriverInPortal) {
+              context.go(route);
+              return;
+            }
+
+            // Learners/suppliers: push so browser back / in-app back return to
+            // the previous route (e.g. /profile/account → /notifications).
+            context.push(route);
+          },
+          borderRadius: AppRadius.pillAll,
+          child: Semantics(
+            button: true,
+            label: tooltip,
+            child: Ink(
+              padding: EdgeInsets.all(buttonPadding),
+              decoration: BoxDecoration(
+                color: palette.cardSurfaceAlt,
+                borderRadius: AppRadius.pillAll,
+                border: Border.all(color: palette.borderSubtle),
+              ),
+              child: SizedBox(
+                width: iconSize + 4,
+                height: iconSize + 4,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    ExcludeSemantics(
+                      child: Icon(
+                        Icons.notifications_none_rounded,
+                        size: iconSize,
+                        color: palette.textPrimary,
+                      ),
                     ),
-                  ),
-              ],
+                    if (badgeLabel.isNotEmpty)
+                      Positioned.directional(
+                        textDirection: Directionality.of(context),
+                        end: -8,
+                        top: -8,
+                        child: _NotificationCountBadge(
+                          label: badgeLabel,
+                          backgroundColor: palette.mint,
+                          foregroundColor: palette.ctaForeground,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

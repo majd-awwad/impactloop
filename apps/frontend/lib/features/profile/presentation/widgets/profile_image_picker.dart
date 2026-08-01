@@ -8,6 +8,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../data/models/uploaded_profile_image.dart';
 import 'profile_edit_widgets.dart';
 import 'profile_family_page_widgets.dart';
@@ -79,11 +80,9 @@ class ProfileImagePicker extends StatelessWidget {
         Text(
           qualityTip,
           textAlign: TextAlign.center,
-          style: AppTextStyles.body(context).copyWith(
-            color: colors.textSecondary,
-            fontSize: 13,
-            height: 1.4,
-          ),
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: colors.textSecondary, fontSize: 13, height: 1.4),
         ),
         const SizedBox(height: AppSpacing.md),
         Wrap(
@@ -113,10 +112,7 @@ class ProfileImagePicker extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        ProfileEditGuidelinesBox(
-          title: guidelinesTitle,
-          body: guidelinesBody,
-        ),
+        ProfileEditGuidelinesBox(title: guidelinesTitle, body: guidelinesBody),
       ],
     );
   }
@@ -195,6 +191,7 @@ class ProfileSubpageScaffold extends StatelessWidget {
     this.backFallbackRoute = '/profile',
     this.backTooltip = 'Back',
     this.headerAction,
+    this.showNotificationBell = true,
   });
 
   final String title;
@@ -202,6 +199,7 @@ class ProfileSubpageScaffold extends StatelessWidget {
   final String backFallbackRoute;
   final String backTooltip;
   final Widget? headerAction;
+  final bool showNotificationBell;
 
   @override
   Widget build(BuildContext context) {
@@ -235,15 +233,18 @@ class ProfileSubpageScaffold extends StatelessWidget {
                           title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.title(context).copyWith(
-                            color: colors.textPrimary,
-                            fontSize: 20,
-                          ),
+                          style: AppTextStyles.title(
+                            context,
+                          ).copyWith(color: colors.textPrimary, fontSize: 20),
                         ),
                       ),
                       if (headerAction != null) ...[
                         const SizedBox(width: AppSpacing.sm),
                         headerAction!,
+                      ],
+                      if (showNotificationBell) ...[
+                        const SizedBox(width: AppSpacing.xs),
+                        const NotificationBellButton(compact: true),
                       ],
                     ],
                   ),
