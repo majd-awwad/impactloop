@@ -321,28 +321,19 @@ void main() {
     expect(material.resolvedGalleryImages.length, 1);
   });
 
-<<<<<<< Updated upstream
   test('maps the optional recommendation impression id', () {
     final material = MaterialDiscoveryApiMapper.fromJson({
       'id': 'mat-recommended',
       'title': 'Recommended material',
       'description': 'Recommendation payload',
-=======
-  test('maps nested supplier summary when present', () {
-    final material = MaterialDiscoveryApiMapper.fromJson({
-      'id': 'mat-supplier',
-      'title': 'Supplier material',
-      'description': 'With supplier',
->>>>>>> Stashed changes
       'status': 'AVAILABLE',
       'quantity': 1,
       'unit': 'piece',
       'condition': 'GOOD',
       'isFree': true,
       'deliveryAvailable': false,
-<<<<<<< Updated upstream
       'recommendationImpressionId': 'imp-material-1',
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(material.recommendationImpressionId, 'imp-material-1');
@@ -353,48 +344,14 @@ void main() {
       'id': 'mat-plain',
       'title': 'Plain material',
       'description': 'Normal discovery payload',
-=======
-      'supplierName': 'Legacy Supplier',
-      'supplierType': 'WORKSHOP',
-      'supplierVerified': true,
-      'supplier': {
-        'id': 'sp-1',
-        'displayName': 'Workshop One',
-        'avatarUrl': '/uploads/profiles/avatar.jpg',
-        'city': 'Nablus',
-        'area': 'Industrial',
-        'isFollowedByViewer': true,
-      },
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
-    });
-
-    expect(material.supplier, isNotNull);
-    expect(material.supplier!.id, 'sp-1');
-    expect(material.supplier!.displayName, 'Workshop One');
-    expect(material.supplier!.avatarUrl, endsWith('/uploads/profiles/avatar.jpg'));
-    expect(material.supplier!.city, 'Nablus');
-    expect(material.supplier!.area, 'Industrial');
-    expect(material.supplier!.isFollowedByViewer, isTrue);
-    expect(material.supplierName.en, 'Legacy Supplier');
-    expect(material.supplierType, 'WORKSHOP');
-    expect(material.supplierVerified, isTrue);
-  });
-
-  test('omits nested supplier when absent and keeps flat supplier fields', () {
-    final material = MaterialDiscoveryApiMapper.fromJson({
-      'id': 'mat-flat',
-      'title': 'Flat supplier material',
-      'description': 'Without nested supplier',
->>>>>>> Stashed changes
       'status': 'AVAILABLE',
       'quantity': 1,
       'unit': 'piece',
       'condition': 'GOOD',
       'isFree': true,
       'deliveryAvailable': false,
-<<<<<<< Updated upstream
       'recommendationImpressionId': '   ',
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(material.recommendationImpressionId, isNull);
@@ -420,7 +377,7 @@ void main() {
         'isFree': true,
         'deliveryAvailable': false,
         'recommendationImpressionId': value,
-        'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+        'category': {'nameEn': 'Wood', 'nameAr': '???'},
       });
 
       expect(material.recommendationImpressionId, isNull);
@@ -432,50 +389,127 @@ void main() {
       'id': 'mat-copy',
       'title': 'Copyable material',
       'description': 'Recommendation payload',
-=======
-      'supplierName': 'Flat Supplier',
-      'supplierType': 'INDIVIDUAL_SUPPLIER',
-      'supplierVerified': false,
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
-    });
-
-    expect(material.supplier, isNull);
-    expect(material.supplierName.en, 'Flat Supplier');
-    expect(material.supplierType, 'INDIVIDUAL_SUPPLIER');
-    expect(material.supplierVerified, isFalse);
-  });
-
-  test('maps isFollowedByViewer false when nested supplier is not followed', () {
-    final material = MaterialDiscoveryApiMapper.fromJson({
-      'id': 'mat-unfollowed',
-      'title': 'Unfollowed supplier',
-      'description': 'Supplier not followed',
->>>>>>> Stashed changes
       'status': 'AVAILABLE',
       'quantity': 1,
       'unit': 'piece',
       'condition': 'GOOD',
       'isFree': true,
       'deliveryAvailable': false,
-<<<<<<< Updated upstream
       'recommendationImpressionId': 'imp-copy-material',
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(
       material.copyWith(likesCount: 1).recommendationImpressionId,
       'imp-copy-material',
     );
-=======
+  });
+
+  test('maps nested supplier summary when present', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-supplier',
+      'title': 'Supplier material',
+      'description': 'With supplier',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'supplierName': 'Legacy Supplier',
+      'supplierType': 'WORKSHOP',
+      'supplierVerified': true,
+      'supplier': {
+        'id': 'sp-1',
+        'displayName': 'Workshop One',
+        'avatarUrl': '/uploads/profiles/avatar.jpg',
+        'city': 'Nablus',
+        'area': 'Industrial',
+        'isFollowedByViewer': true,
+      },
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
+    });
+
+    expect(material.supplier, isNotNull);
+    expect(material.supplier!.id, 'sp-1');
+    expect(material.supplier!.displayName, 'Workshop One');
+    expect(material.supplier!.avatarUrl, endsWith('/uploads/profiles/avatar.jpg'));
+    expect(material.supplier!.city, 'Nablus');
+    expect(material.supplier!.area, 'Industrial');
+    expect(material.supplier!.isFollowedByViewer, isTrue);
+    expect(material.supplierName.en, 'Legacy Supplier');
+    expect(material.supplierType, 'WORKSHOP');
+    expect(material.supplierVerified, isTrue);
+  });
+
+  test('omits nested supplier when absent and keeps flat supplier fields', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-flat',
+      'title': 'Flat supplier material',
+      'description': 'Without nested supplier',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'supplierName': 'Flat Supplier',
+      'supplierType': 'INDIVIDUAL_SUPPLIER',
+      'supplierVerified': false,
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
+    });
+
+    expect(
+      material.copyWith(likesCount: 1).recommendationImpressionId,
+      'imp-copy-material',
+    );
+  });
+
+  test('maps nested supplier summary when present', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-unfollowed',
+      'title': 'Unfollowed supplier',
+      'description': 'Supplier not followed',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
       'supplier': {
         'id': 'sp-2',
         'displayName': 'Supplier Two',
         'isFollowedByViewer': false,
       },
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(material.supplier?.isFollowedByViewer, isFalse);
->>>>>>> Stashed changes
   });
+
+  test(
+    'maps isFollowedByViewer false when nested supplier is not followed',
+    () {
+      final material = MaterialDiscoveryApiMapper.fromJson({
+        'id': 'mat-unfollowed',
+        'title': 'Unfollowed supplier',
+        'description': 'Supplier not followed',
+        'status': 'AVAILABLE',
+        'quantity': 1,
+        'unit': 'piece',
+        'condition': 'GOOD',
+        'isFree': true,
+        'deliveryAvailable': false,
+        'supplier': {
+          'id': 'sp-2',
+          'displayName': 'Supplier Two',
+          'isFollowedByViewer': false,
+        },
+        'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      });
+
+      expect(material.supplier?.isFollowedByViewer, isFalse);
+    },
+  );
 }
+

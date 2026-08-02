@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/models/supplier_my_materials_models.dart';
+import '../data/models/supplier_related_projects.dart';
 import '../data/supplier_my_materials_repository.dart';
 import 'supplier_portal_session.dart';
 
@@ -58,6 +59,22 @@ final supplierMyMaterialByIdProvider = FutureProvider.autoDispose
       return ref
           .watch(supplierMyMaterialsRepositoryProvider)
           .getMaterial(materialId);
+    });
+
+final supplierMaterialRelatedProjectsProvider = FutureProvider.autoDispose
+    .family<SupplierRelatedProjectsResult, String>((ref, materialId) async {
+      final auth = ref.watch(authControllerProvider);
+
+      if (!auth.isAuthenticated) {
+        throw const ApiException(
+          message: 'Sign in as a supplier to view your materials.',
+          code: 'UNAUTHORIZED',
+        );
+      }
+
+      return ref
+          .watch(supplierMyMaterialsRepositoryProvider)
+          .getRelatedProjects(materialId);
     });
 
 void invalidateSupplierMyMaterials(WidgetRef ref) {

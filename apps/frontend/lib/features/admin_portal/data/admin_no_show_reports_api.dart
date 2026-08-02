@@ -1,8 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
+import 'admin_export_download.dart';
+import 'admin_reservations_api.dart'
+    show
+        AdminExportFormatEligibility,
+        parseContentDispositionFilename,
+        sanitizeAdminExportFilename;
 
 class AdminNoShowReportItem {
   const AdminNoShowReportItem({
@@ -478,15 +485,90 @@ class AdminNoShowReportActivityEntry {
   }
 }
 
+class AdminNoShowReportsExportPreflight {
+  const AdminNoShowReportsExportPreflight({
+    required this.count,
+    required this.filters,
+    required this.formats,
+  });
+
+  final int count;
+  final Map<String, dynamic> filters;
+  final Map<String, AdminExportFormatEligibility> formats;
+
+  factory AdminNoShowReportsExportPreflight.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    final rawFormats = json['formats'];
+    final formats = <String, AdminExportFormatEligibility>{};
+    if (rawFormats is Map) {
+      for (final entry in rawFormats.entries) {
+        final value = entry.value;
+        if (value is Map) {
+          formats[entry.key as String] = AdminExportFormatEligibility.fromJson(
+            Map<String, dynamic>.from(value),
+          );
+        }
+      }
+    }
+
+    return AdminNoShowReportsExportPreflight(
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      filters: json['filters'] is Map
+          ? Map<String, dynamic>.from(json['filters'] as Map)
+          : const <String, dynamic>{},
+      formats: formats,
+    );
+  }
+
+  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+}
+
 class AdminNoShowReportsApi {
   const AdminNoShowReportsApi(this._client);
 
   final Dio _client;
 
+  Map<String, dynamic> _exportQueryParameters({
+    String? status,
+    String? search,
+    String? workflow,
+    String? targetRole,
+    String? operationalState,
+    String? dateFrom,
+    String? dateTo,
+    String? format,
+  }) {
+    return {
+      if (status != null && status.trim().isNotEmpty && status != 'ALL')
+        'status': status,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      if (workflow != null && workflow.trim().isNotEmpty && workflow != 'ALL')
+        'workflow': workflow,
+      if (targetRole != null &&
+          targetRole.trim().isNotEmpty &&
+          targetRole != 'ALL')
+        'targetRole': targetRole,
+      if (operationalState != null &&
+          operationalState.trim().isNotEmpty &&
+          operationalState != 'ALL')
+        'operationalState': operationalState,
+      if (dateFrom != null && dateFrom.trim().isNotEmpty) 'dateFrom': dateFrom,
+      if (dateTo != null && dateTo.trim().isNotEmpty) 'dateTo': dateTo,
+      if (format != null && format.trim().isNotEmpty) 'format': format,
+    };
+  }
+
   Future<AdminNoShowReportsListResponse> fetchReports({
     String? status,
     int page = 1,
     int limit = 50,
+    String? search,
+    String? workflow,
+    String? targetRole,
+    String? operationalState,
+    String? dateFrom,
+    String? dateTo,
   }) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
@@ -495,9 +577,99 @@ class AdminNoShowReportsApi {
           if (status != null && status.trim().isNotEmpty) 'status': status,
           'page': page,
           'limit': limit,
+          if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+          if (workflow != null && workflow.trim().isNotEmpty)
+            'workflow': workflow,
+          if (targetRole != null && targetRole.trim().isNotEmpty)
+            'targetRole': targetRole,
+          if (operationalState != null && operationalState.trim().isNotEmpty)
+            'operationalState': operationalState,
+          if (dateFrom != null && dateFrom.trim().isNotEmpty)
+            'dateFrom': dateFrom,
+          if (dateTo != null && dateTo.trim().isNotEmpty) 'dateTo': dateTo,
         },
       ),
       AdminNoShowReportsListResponse.fromJson,
+    );
+  }
+
+  Future<AdminNoShowReportsExportPreflight> preflightExport({
+    String? status,
+    String? search,
+    String? workflow,
+    String? targetRole,
+    String? operationalState,
+    String? dateFrom,
+    String? dateTo,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/admin/no-show-reports/export/preflight',
+        queryParameters: _exportQueryParameters(
+          status: status,
+          search: search,
+          workflow: workflow,
+          targetRole: targetRole,
+          operationalState: operationalState,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
+        ),
+      ),
+      AdminNoShowReportsExportPreflight.fromJson,
+    );
+  }
+
+  Future<void> downloadExport({
+    String format = 'xlsx',
+    String? status,
+    String? search,
+    String? workflow,
+    String? targetRole,
+    String? operationalState,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    final response = await _client.get<List<int>>(
+      '/api/admin/no-show-reports/export',
+      queryParameters: _exportQueryParameters(
+        status: status,
+        search: search,
+        workflow: workflow,
+        targetRole: targetRole,
+        operationalState: operationalState,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        format: format,
+      ),
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw const ApiException(
+        message: 'Export file was empty.',
+        code: 'EXPORT_EMPTY',
+      );
+    }
+
+    final mimeType = switch (format) {
+      'xlsx' =>
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      _ => 'text/csv; charset=utf-8',
+    };
+    final fallbackExtension = format == 'xlsx' ? 'xlsx' : 'csv';
+    final filename =
+        sanitizeAdminExportFilename(
+          parseContentDispositionFilename(
+            response.headers.value('content-disposition'),
+          ),
+        ) ??
+        'impactloop-incident-reports.$fallbackExtension';
+
+    downloadAdminExportBytes(
+      bytes: bytes,
+      filename: filename,
+      mimeType: mimeType,
     );
   }
 

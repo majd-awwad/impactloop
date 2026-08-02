@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,8 @@ import 'package:frontend/features/supplier_portal/data/mock_supplier_requests_re
 import 'package:frontend/features/supplier_portal/data/models/supplier_incoming_request.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_requests_providers.dart';
 import 'package:frontend/features/supplier_portal/presentation/pages/supplier_reservation_detail_page.dart';
+import 'package:frontend/l10n/app_localizations.dart';
+import 'package:frontend/l10n/app_localizations_en.dart';
 
 class _DetailRepository extends MockSupplierRequestsRepository {
   _DetailRepository({Map<String, dynamic>? payload})
@@ -61,8 +64,9 @@ Map<String, dynamic> _pendingPayload() => {
 
 Future<void> _pumpDetail(
   WidgetTester tester,
-  SupplierReservationDetail detail,
-) async {
+  SupplierReservationDetail detail, {
+  Locale locale = const Locale('en'),
+}) async {
   final router = GoRouter(
     initialLocation: '/supplier/reservations/reservation-1',
     routes: [
@@ -120,7 +124,18 @@ Future<void> _pumpDetail(
           ),
         ),
       ],
-      child: MaterialApp.router(theme: AppTheme.light, routerConfig: router),
+      child: MaterialApp.router(
+        theme: AppTheme.light,
+        locale: locale,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -132,6 +147,8 @@ Map<String, dynamic> _windowJson(SupplierScheduleWindow window) => {
 };
 
 void main() {
+  final en = AppLocalizationsEn();
+
   testWidgets('deep-linked route renders the supplier workspace', (
     tester,
   ) async {
@@ -146,12 +163,12 @@ void main() {
       SupplierReservationDetail.fromJson(_pendingPayload()),
     );
 
-    expect(find.text('Request Details'), findsOneWidget);
+    expect(find.text(en.supplierRequestDetails), findsOneWidget);
     expect(find.text('SG90 Micro Servo Motors'), findsWidgets);
-    expect(find.text('Request summary'), findsOneWidget);
-    expect(find.text('Schedule & negotiation'), findsOneWidget);
-    expect(find.text('Reservation history'), findsOneWidget);
-    expect(find.textContaining('Messages'), findsOneWidget);
+    expect(find.text(en.supplierRequestSummary), findsOneWidget);
+    expect(find.text(en.supplierScheduleNegotiation), findsOneWidget);
+    expect(find.text(en.supplierReservationHistory), findsOneWidget);
+    expect(find.textContaining(en.supplierMessagesTitle), findsOneWidget);
   });
 
   testWidgets(
@@ -178,15 +195,18 @@ void main() {
       });
       await _pumpDetail(tester, detail);
 
-      expect(find.text('Outcome'), findsOneWidget);
-      expect(find.text('Schedule history'), findsOneWidget);
+      expect(find.text(en.statusCompleted), findsOneWidget);
+      expect(find.text(en.supplierCancelledBeforeFulfillment), findsOneWidget);
+      expect(find.text(en.supplierScheduleHistory), findsOneWidget);
       expect(
         find.text(
-          'No pickup window was confirmed before this request was cancelled.',
+          en.supplierNoWindowConfirmedBeforeTerminal(
+            en.supplierTerminalVerbCancelled,
+          ),
         ),
         findsOneWidget,
       );
-      expect(find.text('Not proposed'), findsNothing);
+      expect(find.text(en.supplierNotProposed), findsNothing);
     },
   );
 
@@ -213,10 +233,7 @@ void main() {
     });
     await _pumpDetail(tester, detail);
 
-    expect(find.text('Supplier delivery pickup window'), findsNothing);
-    expect(
-      find.text('No pickup or delivery window is currently proposed.'),
-      findsOneWidget,
-    );
+    expect(find.text(en.supplierSupplierDeliveryPickupWindow), findsNothing);
+    expect(find.text(en.supplierNoWindowProposed), findsOneWidget);
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../widgets/auth_entry_branding_panel.dart';
 import '../widgets/auth_form_card.dart';
 import '../widgets/auth_header.dart';
@@ -21,10 +22,9 @@ class ResetPasswordView extends StatelessWidget {
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AuthHeader(
-            title: 'Create a new password',
-            subtitle:
-                'Choose a new password for your account. The reset link can only be used once.',
+          AuthHeader(
+            title: context.l10n.createNewPassword,
+            subtitle: context.l10n.resetPasswordSubtitle,
           ),
           const SizedBox(height: AppSpacing.lg),
           AuthFormCard(child: ResetPasswordForm(token: token)),

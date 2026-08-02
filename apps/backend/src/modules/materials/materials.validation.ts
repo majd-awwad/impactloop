@@ -124,6 +124,8 @@ export const materialIdParamSchema = z.object({
   id: z.string().trim().min(1),
 });
 
+export const likedMaterialsQuerySchema = paginationQuerySchema;
+
 export const relatedMaterialsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(8).default(4),
 });
@@ -144,4 +146,5 @@ export const priceCheckSchema = z.object({
 });
 
 export type MaterialsQuery = z.infer<typeof materialsQuerySchema>;
+export type LikedMaterialsQuery = z.infer<typeof likedMaterialsQuerySchema>;
 export type PriceCheckInput = z.infer<typeof priceCheckSchema>;

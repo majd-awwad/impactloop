@@ -15,6 +15,7 @@ class AppSectionCard extends StatelessWidget {
     this.borderRadius,
     this.tone,
     this.emphasized = false,
+    this.showShadow = true,
   });
 
   final Widget child;
@@ -23,6 +24,7 @@ class AppSectionCard extends StatelessWidget {
   final BorderRadiusGeometry? borderRadius;
   final AppStatusTone? tone;
   final bool emphasized;
+  final bool showShadow;
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +39,17 @@ class AppSectionCard extends StatelessWidget {
         color: colors.cardSurface,
         borderRadius: borderRadius ?? AppRadius.lgAll,
         border: Border.all(color: statusStyle?.border ?? colors.borderSubtle),
-        boxShadow: [
-          BoxShadow(
-            color: colors.shadow.withValues(alpha: emphasized ? 0.12 : 0.08),
-            blurRadius: emphasized ? 18 : 16,
-            offset: Offset(0, emphasized ? 8 : 6),
-          ),
-        ],
+        boxShadow: showShadow
+            ? [
+                BoxShadow(
+                  color: colors.shadow.withValues(
+                    alpha: emphasized ? 0.12 : 0.08,
+                  ),
+                  blurRadius: emphasized ? 18 : 16,
+                  offset: Offset(0, emphasized ? 8 : 6),
+                ),
+              ]
+            : null,
       ),
       child: child,
     );

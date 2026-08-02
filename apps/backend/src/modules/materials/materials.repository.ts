@@ -1,7 +1,11 @@
 import { Prisma } from '../../generated/prisma/client.js';
 
 import { prisma } from '../../database/prisma.js';
-import type { MaterialsQuery } from './materials.validation.js';
+import type {
+  LikedMaterialsQuery,
+  MaterialsQuery,
+} from './materials.validation.js';
+import { buildPublicMaterialWhere } from './public-material-visibility.js';
 
 type PrismaClientLike = typeof prisma | Prisma.TransactionClient;
 
@@ -55,15 +59,7 @@ const buildSearchClauses = (q: string): Prisma.MaterialWhereInput[] => [
 const buildMaterialsWhere = (
   query: MaterialsQuery,
 ): Prisma.MaterialWhereInput => {
-  const where: Prisma.MaterialWhereInput = {
-    status: query.status,
-    category: {
-      isActive: true,
-      categoryType: {
-        in: ['MATERIAL', 'BOTH'],
-      },
-    },
-  };
+  const where = buildPublicMaterialWhere(query.status);
 
   if (query.categoryId) {
     where.categoryId = query.categoryId;
@@ -504,16 +500,8 @@ export const appendMaterialView = async (
 export const findMaterialById = async (id: string) => {
   return prisma.material.findFirst({
     where: {
+      ...buildPublicMaterialWhere(),
       id,
-      status: {
-        in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'],
-      },
-      category: {
-        isActive: true,
-        categoryType: {
-          in: ['MATERIAL', 'BOTH'],
-        },
-      },
     },
     include: materialDetailInclude,
   });
@@ -525,16 +513,8 @@ export const findPublicMaterialById = async (
 ) => {
   return client.material.findFirst({
     where: {
+      ...buildPublicMaterialWhere(),
       id,
-      status: {
-        in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'],
-      },
-      category: {
-        isActive: true,
-        categoryType: {
-          in: ['MATERIAL', 'BOTH'],
-        },
-      },
     },
     select: {
       id: true,
@@ -589,12 +569,8 @@ export const findRelatedMaterials = async (
   limit: number,
 ) => {
   const publicWhere: Prisma.MaterialWhereInput = {
+    ...buildPublicMaterialWhere(),
     id: { not: material.id },
-    status: { in: ['AVAILABLE', 'PENDING_RESERVATION', 'RESERVED'] },
-    category: {
-      isActive: true,
-      categoryType: { in: ['MATERIAL', 'BOTH'] },
-    },
   };
 
   const [category, nearby] = await Promise.all([
@@ -685,3 +661,35 @@ export const countLikesForMaterial = async (materialId: string) => {
     where: { materialId },
   });
 };
+
+const likedMaterialInclude = {
+  material: {
+    include: {
+      ...materialInclude,
+      _count: { select: { likes: true } },
+    },
+  },
+} satisfies Prisma.MaterialLikeInclude;
+
+export const findVisibleLikedMaterials = (
+  userId: string,
+  query: LikedMaterialsQuery,
+) =>
+  prisma.materialLike.findMany({
+    where: {
+      userId,
+      material: buildPublicMaterialWhere(),
+    },
+    include: likedMaterialInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    skip: (query.page - 1) * query.limit,
+    take: query.limit,
+  });
+
+export const countVisibleLikedMaterials = (userId: string): Promise<number> =>
+  prisma.materialLike.count({
+    where: {
+      userId,
+      material: buildPublicMaterialWhere(),
+    },
+  });

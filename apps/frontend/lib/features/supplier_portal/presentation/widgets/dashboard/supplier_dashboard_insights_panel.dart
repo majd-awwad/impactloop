@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_radius.dart';
 import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../shared/widgets/app_section_card.dart';
+import '../../../application/supplier_material_requests_providers.dart';
 import '../../../data/models/supplier_dashboard.dart';
 import '../../../data/models/supplier_dashboard_insights.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_dashboard_colors.dart';
 
 /// A concise, priority-ordered set of supplier actions derived from dashboard data.
-class SupplierDashboardInsightsPanel extends StatelessWidget {
+class SupplierDashboardInsightsPanel extends ConsumerWidget {
   const SupplierDashboardInsightsPanel({super.key, required this.dashboard});
 
   final SupplierDashboard dashboard;
 
   @override
-  Widget build(BuildContext context) {
-    final tiles = _buildTiles(context).take(3).toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unansweredCount = ref
+        .watch(supplierUnansweredMaterialRequestsCountProvider)
+        .maybeWhen(data: (count) => count, orElse: () => 0);
+    final tiles = _buildTiles(context, unansweredCount).take(3).toList();
     final colors = context.supplierColors;
 
     return AppSectionCard(
@@ -66,7 +71,7 @@ class SupplierDashboardInsightsPanel extends StatelessWidget {
     );
   }
 
-  List<_InsightSpec> _buildTiles(BuildContext context) {
+  List<_InsightSpec> _buildTiles(BuildContext context, int unansweredCount) {
     final stats = dashboard.stats;
     final activeMaterials = stats.materials.available;
     final reusedMaterials = stats.materials.reused;
@@ -91,6 +96,21 @@ class SupplierDashboardInsightsPanel extends StatelessWidget {
           route: '/supplier/reservations',
           icon: Icons.inbox_outlined,
           accent: SupplierDashboardColors.pending,
+        ),
+      );
+    }
+
+    if (unansweredCount > 0) {
+      tiles.add(
+        _InsightSpec(
+          title: context.s.learnerMaterialRequestsInsightTitle,
+          message: context.s.learnerMaterialRequestsInsightMessage(
+            unansweredCount,
+          ),
+          actionLabel: context.s.reviewLearnerMaterialRequests,
+          route: '/supplier/material-requests?unansweredByMe=true',
+          icon: Icons.handshake_outlined,
+          accent: SupplierDashboardColors.accepted,
         ),
       );
     }
@@ -226,7 +246,10 @@ class _InsightTile extends StatelessWidget {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+            icon: const Icon(
+              Icons.arrow_forward_rounded,
+              size: 14,
+            ),
             label: Text(
               spec.actionLabel,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -439,7 +462,10 @@ class _HighDemandMaterialRow extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 15),
+                  icon: const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 15,
+                  ),
                   label: Text(context.s.manageMaterial),
                 ),
               ],

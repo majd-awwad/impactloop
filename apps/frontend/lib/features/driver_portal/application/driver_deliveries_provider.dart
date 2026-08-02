@@ -5,6 +5,7 @@ import '../data/driver_deliveries_repository.dart';
 import '../data/models/driver_deliveries_list_result.dart';
 import '../data/models/driver_delivery_inactive_context.dart';
 import '../data/models/driver_delivery.dart';
+import '../data/models/driver_archive.dart';
 import 'driver_jobs_filter_helpers.dart';
 
 sealed class DriverDeliveryDetailState {
@@ -18,9 +19,10 @@ final class DriverDeliveryDetailActive extends DriverDeliveryDetailState {
 }
 
 final class DriverDeliveryDetailInactive extends DriverDeliveryDetailState {
-  const DriverDeliveryDetailInactive(this.context);
+  const DriverDeliveryDetailInactive(this.context, this.delivery);
 
   final DriverDeliveryInactiveContext context;
+  final DriverHistoricalDelivery delivery;
 }
 
 final class DriverDeliveryDetailNotFound extends DriverDeliveryDetailState {
@@ -130,13 +132,110 @@ final driverAvailableJobsFilterProvider =
       DriverAvailableJobsFilter
     >(DriverAvailableJobsFilterNotifier.new);
 
-final availableDriverDeliveriesProvider =
-    FutureProvider<DriverDeliveriesListResult>((ref) {
-      final filter = ref.watch(driverAvailableJobsFilterProvider);
-      return ref
+class DriverAvailableJobsPaginationErrorNotifier
+    extends Notifier<ApiException?> {
+  @override
+  ApiException? build() => null;
+
+  void show(ApiException error) => state = error;
+
+  void clear() => state = null;
+}
+
+final driverAvailableJobsPaginationErrorProvider =
+    NotifierProvider<DriverAvailableJobsPaginationErrorNotifier, ApiException?>(
+      DriverAvailableJobsPaginationErrorNotifier.new,
+    );
+
+class AvailableDriverDeliveriesNotifier
+    extends AsyncNotifier<DriverDeliveriesListResult> {
+  bool _loadingMore = false;
+  String? _failedCursor;
+
+  @override
+  Future<DriverDeliveriesListResult> build() async {
+    final filter = ref.watch(driverAvailableJobsFilterProvider);
+    final result = await ref
+        .read(driverDeliveriesRepositoryProvider)
+        .fetchAvailableDeliveries(filter: filter);
+    _failedCursor = null;
+    ref.read(driverAvailableJobsPaginationErrorProvider.notifier).clear();
+    return result;
+  }
+
+  Future<void> loadMore() async {
+    final current = state.value;
+    final pagination = current?.meta.pagination;
+    if (current == null ||
+        pagination?.hasMore != true ||
+        pagination?.nextCursor == null ||
+        pagination?.nextCursor == _failedCursor ||
+        _loadingMore) {
+      return;
+    }
+
+    _loadingMore = true;
+    final cursor = pagination!.nextCursor!;
+    try {
+      final next = await ref
           .read(driverDeliveriesRepositoryProvider)
-          .fetchAvailableDeliveries(filter: filter);
-    });
+          .fetchAvailableDeliveries(
+            filter: ref.read(driverAvailableJobsFilterProvider),
+            cursor: cursor,
+            limit: pagination.limit,
+          );
+      state = AsyncData(current.append(next));
+      _failedCursor = null;
+      ref.read(driverAvailableJobsPaginationErrorProvider.notifier).clear();
+    } on ApiException catch (error) {
+      // Keep the already-rendered page as stale data when a later page fails.
+      state = AsyncData(current);
+      if (error.code == 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID') {
+        _failedCursor = cursor;
+      }
+      ref.read(driverAvailableJobsPaginationErrorProvider.notifier).show(error);
+    } catch (error) {
+      state = AsyncData(current);
+      ref
+          .read(driverAvailableJobsPaginationErrorProvider.notifier)
+          .show(normalizeApiException(error));
+    } finally {
+      _loadingMore = false;
+    }
+  }
+
+  Future<void> restartPagination() async {
+    final current = state.value;
+    if (current == null || _loadingMore) {
+      return;
+    }
+
+    _failedCursor = null;
+    ref.read(driverAvailableJobsPaginationErrorProvider.notifier).clear();
+    _loadingMore = true;
+    try {
+      final restarted = await ref
+          .read(driverDeliveriesRepositoryProvider)
+          .fetchAvailableDeliveries(
+            filter: ref.read(driverAvailableJobsFilterProvider),
+          );
+      state = AsyncData(restarted);
+    } catch (error) {
+      state = AsyncData(current);
+      ref
+          .read(driverAvailableJobsPaginationErrorProvider.notifier)
+          .show(normalizeApiException(error));
+    } finally {
+      _loadingMore = false;
+    }
+  }
+}
+
+final availableDriverDeliveriesProvider =
+    AsyncNotifierProvider<
+      AvailableDriverDeliveriesNotifier,
+      DriverDeliveriesListResult
+    >(AvailableDriverDeliveriesNotifier.new);
 
 final activeDriverDeliveriesProvider =
     FutureProvider<DriverDeliveriesListResult>((ref) {
@@ -150,31 +249,26 @@ final driverDeliveryDetailProvider =
       ref,
       deliveryId,
     ) async {
-      final result = await ref.watch(activeDriverDeliveriesProvider.future);
-
-      for (final delivery in result.deliveries) {
-        if (delivery.id == deliveryId) {
-          return DriverDeliveryDetailActive(delivery);
-        }
-      }
-
       try {
-        final context = await ref
+        final result = await ref
             .read(driverDeliveriesRepositoryProvider)
-            .fetchInactiveContext(deliveryId);
+            .fetchDeliveryDetail(deliveryId);
 
-        if (context.isActive) {
-          final refreshed = await ref
-              .read(driverDeliveriesRepositoryProvider)
-              .fetchActiveDeliveries();
-          for (final delivery in refreshed.deliveries) {
-            if (delivery.id == deliveryId) {
-              return DriverDeliveryDetailActive(delivery);
-            }
-          }
+        if (result.isActive) {
+          return DriverDeliveryDetailActive(result.delivery);
         }
 
-        return DriverDeliveryDetailInactive(context);
+        return DriverDeliveryDetailInactive(
+          DriverDeliveryInactiveContext(
+            deliveryId: result.delivery.id,
+            isActive: false,
+            status: result.delivery.status,
+            closureReason: result.closureReason,
+          ),
+          await ref
+              .read(driverDeliveriesRepositoryProvider)
+              .fetchHistoricalDelivery(deliveryId),
+        );
       } on ApiException catch (error) {
         if (error.statusCode == 404) {
           return const DriverDeliveryDetailNotFound();
@@ -183,26 +277,11 @@ final driverDeliveryDetailProvider =
       }
     });
 
-final activeDriverDeliveryProvider =
-    FutureProvider.family<DriverDelivery?, String>((ref, deliveryId) async {
-      final result = await ref.watch(activeDriverDeliveriesProvider.future);
-
-      for (final delivery in result.deliveries) {
-        if (delivery.id == deliveryId) {
-          return delivery;
-        }
-      }
-
-      return null;
-    });
-
 void refreshDriverJobs(WidgetRef ref) {
   ref.invalidate(activeDriverDeliveriesProvider);
   ref.invalidate(availableDriverDeliveriesProvider);
 }
 
 void refreshActiveDriverDelivery(WidgetRef ref, String deliveryId) {
-  ref.invalidate(activeDriverDeliveriesProvider);
-  ref.invalidate(activeDriverDeliveryProvider(deliveryId));
   ref.invalidate(driverDeliveryDetailProvider(deliveryId));
 }

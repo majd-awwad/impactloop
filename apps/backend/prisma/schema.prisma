@@ -245,6 +245,20 @@ enum MaterialRequestStatus {
   REJECTED
 }
 
+enum LearnerMaterialRequestStatus {
+  OPEN
+  FULFILLED
+  CANCELLED
+  EXPIRED
+}
+
+enum LearnerMaterialRequestMatchStatus {
+  SUGGESTED
+  DISMISSED
+  RESERVATION_CREATED
+  UNAVAILABLE
+}
+
 enum AiLookupStatus {
   SUCCESS
   FAILED
@@ -556,6 +570,8 @@ model User {
   recommendationActions        RecommendationAction[]
   comments                     Comment[]                   @relation("CommentAuthor")
   commentsDeleted              Comment[]                   @relation("CommentDeletedBy")
+  learnerMaterialRequests      LearnerMaterialRequest[]    @relation("LearnerMaterialRequestLearner")
+  learnerMaterialRequestMatches LearnerMaterialRequestMatch[] @relation("LearnerMaterialRequestMatchSupplier")
 
   @@index([suspendedById])
   @@index([reactivatedById])
@@ -709,6 +725,7 @@ model DriverProfile {
   availabilityNote       String?                  @map("availability_note")
   status                 DriverProfileStatus      @default(ACTIVE)
   availability           DriverAvailabilityStatus @default(OFFLINE)
+  acceptingNewJobs       Boolean                  @default(false) @map("accepting_new_jobs")
   vehicleType            String                   @default("UNSPECIFIED") @map("vehicle_type")
   vehicleLabel           String?                  @map("vehicle_label")
   vehiclePlate           String?                  @map("vehicle_plate")
@@ -722,6 +739,7 @@ model DriverProfile {
   locationPings          DeliveryLocationPing[]
 
   @@index([status, availability])
+  @@index([status, acceptingNewJobs])
   @@map("driver_profiles")
 }
 
@@ -781,6 +799,7 @@ model UserSavedLocation {
   updatedAt  DateTime @updatedAt @map("updated_at")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  learnerMaterialRequests LearnerMaterialRequest[] @relation("LearnerMaterialRequestSourceSavedLocation")
 
   @@index([userId])
   @@index([userId, isDefault])
@@ -809,6 +828,7 @@ model Category {
   materialTypes             MaterialType[]
   approvedCategoryRequests  CategoryRequest[]          @relation("ApprovedCategoryRequests")
   priceRuleRequests         PriceRuleRequest[]
+  learnerMaterialRequests   LearnerMaterialRequest[]
 
   @@index([parentId])
   @@index([categoryType, isActive])
@@ -862,6 +882,7 @@ model LearningProject {
   adminAiReviews           LearningProjectAdminAiReview[] @relation("LearningProjectAdminAiReviews")
   taxonomyConcepts         LearningProjectConcept[]
   comments                 Comment[]
+  learnerMaterialRequests  LearnerMaterialRequest[]
 
   @@index([categoryId])
   @@index([createdBy])
@@ -1177,6 +1198,7 @@ model ProjectBuild {
   items              ProjectBuildItem[]
   stepProgress       ProjectBuildStepProgress[]
   guideConversations AiConversation[]           @relation("BuildGuideConversation")
+  learnerMaterialRequests LearnerMaterialRequest[]
 
   @@unique([projectId, learnerId])
   @@index([learnerId])
@@ -1217,6 +1239,7 @@ model ProjectBuildItem {
   requiredComponent   ProjectRequiredComponent @relation(fields: [requiredComponentId], references: [id], onDelete: Cascade)
   linkedMaterial      Material?                @relation("ProjectBuildLinkedMaterial", fields: [linkedMaterialId], references: [id], onDelete: SetNull)
   linkedReservation   Reservation?             @relation("ProjectBuildLinkedReservation", fields: [linkedReservationId], references: [id], onDelete: SetNull)
+  learnerMaterialRequests LearnerMaterialRequest[]
 
   @@unique([buildId, requiredComponentId])
   @@index([buildId])
@@ -1280,6 +1303,7 @@ model Material {
   linkedFromProjectBuildItems   ProjectBuildItem[] @relation("ProjectBuildLinkedMaterial")
   taxonomyConcepts              MaterialConcept[]
   comments                      Comment[]
+  learnerMaterialRequestMatches LearnerMaterialRequestMatch[]
 
   @@index([ownerId])
   @@index([moderatedById])
@@ -1456,6 +1480,7 @@ model Reservation {
   messages                          ReservationMessage[]
   noShowReports                     NoShowReport[]
   linkedFromProjectBuildItems       ProjectBuildItem[]           @relation("ProjectBuildLinkedReservation")
+  learnerMaterialRequestMatches     LearnerMaterialRequestMatch[] @relation("LearnerMaterialRequestMatchReservation")
   unitPriceAtReservation            Decimal?                     @map("unit_price_at_reservation") @db.Decimal(12, 2)
   materialSubtotal                  Decimal?                     @map("material_subtotal") @db.Decimal(12, 2)
   deliveryFee                       Decimal?                     @map("delivery_fee") @db.Decimal(12, 2)
@@ -1540,6 +1565,7 @@ model Delivery {
   statusHistory                   DeliveryStatusHistory[]
   locationPings                   DeliveryLocationPing[]
   incidentReports                 NoShowReport[]
+  pickupItems                     DeliveryPickupItem[]
 
   @@index([reservationId])
   @@index([status])
@@ -1547,7 +1573,28 @@ model Delivery {
   @@index([requestedByUserId])
   @@index([pickupLocationId])
   @@index([dropoffLocationId])
+  @@index([updatedAt(sort: Desc), id(sort: Desc)])
   @@map("deliveries")
+}
+
+model DeliveryPickupItem {
+  id             String   @id @default(cuid())
+  deliveryId     String   @map("delivery_id")
+  reservationId  String   @map("reservation_id")
+  materialId     String   @map("material_id")
+  materialTitle  String   @map("material_title")
+  quantity       Decimal  @db.Decimal(12, 3)
+  unit           String
+  condition      String?
+  wasPicked      Boolean  @map("was_picked")
+  unpickedReason String?  @map("unpicked_reason")
+  driverNote     String?  @map("driver_note")
+  recordedAt     DateTime @default(now()) @map("recorded_at")
+  delivery       Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryId, reservationId])
+  @@index([deliveryId, wasPicked])
+  @@map("delivery_pickup_items")
 }
 
 model DeliveryAssignment {
@@ -1566,6 +1613,7 @@ model DeliveryAssignment {
 
   @@index([deliveryId])
   @@index([driverProfileId, status])
+  @@index([driverProfileId, acceptedAt(sort: Desc), id(sort: Desc)])
   @@index([assignedByUserId])
   @@map("delivery_assignments")
 }
@@ -1647,12 +1695,20 @@ model NoShowReport {
   targetRole        NoShowReportTargetRole @map("target_role")
   reasonCode        NoShowReportReason     @map("reason_code")
   note              String?
+  reporterReasonDetail String?             @map("reporter_reason_detail")
+  reporterNote      String?                @map("reporter_note")
   pickupWindowStart DateTime?              @map("pickup_window_start")
   pickupWindowEnd   DateTime?              @map("pickup_window_end")
   status            NoShowReportStatus     @default(PENDING_REVIEW)
   reviewedById      String?                @map("reviewed_by_id")
   reviewedAt        DateTime?              @map("reviewed_at")
   reviewNote        String?                @map("review_note")
+  recoveryAction    String?                @map("recovery_action")
+  recoveryActionAt  DateTime?              @map("recovery_action_at")
+  recoveryDeliveryId String?               @map("recovery_delivery_id")
+  recoveryDeliveryGroupId String?          @map("recovery_delivery_group_id")
+  recoveryCompletedAt DateTime?            @map("recovery_completed_at")
+  holdReleasedAt    DateTime?              @map("hold_released_at")
   createdAt         DateTime               @default(now()) @map("created_at")
   reservation       Reservation            @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   delivery          Delivery?              @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
@@ -1660,10 +1716,10 @@ model NoShowReport {
   target            User?                  @relation("NoShowReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
   reviewedBy        User?                  @relation("NoShowReportReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
 
-  @@unique([reservationId, targetUserId])
   @@index([status, createdAt(sort: Desc)])
   @@index([targetUserId, status])
   @@index([reporterUserId])
+  @@index([reporterUserId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([deliveryId])
   @@map("no_show_reports")
 }
@@ -1834,6 +1890,73 @@ model CategoryRequest {
   @@index([status])
   @@index([normalizedRequestedName])
   @@map("category_requests")
+}
+
+model LearnerMaterialRequest {
+  id                          String                       @id @default(cuid())
+  learnerId                   String                       @map("learner_id")
+  categoryId                  String                       @map("category_id")
+  requestedItemName           String                       @map("requested_item_name")
+  normalizedRequestedItemName String                       @map("normalized_requested_item_name")
+  description                 String?
+  quantity                    Decimal                      @db.Decimal(12, 3)
+  unit                        String
+  alternativesAllowed         Boolean                      @default(true) @map("alternatives_allowed")
+  locationCountry             String                       @map("location_country")
+  locationCity                String                       @map("location_city")
+  locationArea                String?                      @map("location_area")
+  sourceSavedLocationId       String?                      @map("source_saved_location_id")
+  projectId                   String?                      @map("project_id")
+  projectBuildId              String?                      @map("project_build_id")
+  projectBuildItemId          String?                      @map("project_build_item_id")
+  status                      LearnerMaterialRequestStatus @default(OPEN)
+  neededBy                    DateTime?                    @map("needed_by")
+  expiresAt                   DateTime                     @map("expires_at")
+  fulfilledAt                 DateTime?                    @map("fulfilled_at")
+  cancelledAt                 DateTime?                    @map("cancelled_at")
+  createdAt                   DateTime                     @default(now()) @map("created_at")
+  updatedAt                   DateTime                     @updatedAt @map("updated_at")
+  learner                     User                         @relation("LearnerMaterialRequestLearner", fields: [learnerId], references: [id], onDelete: Cascade)
+  category                    Category                     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  sourceSavedLocation         UserSavedLocation?           @relation("LearnerMaterialRequestSourceSavedLocation", fields: [sourceSavedLocationId], references: [id], onDelete: SetNull)
+  project                     LearningProject?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectBuild                ProjectBuild?                @relation(fields: [projectBuildId], references: [id], onDelete: SetNull)
+  projectBuildItem            ProjectBuildItem?            @relation(fields: [projectBuildItemId], references: [id], onDelete: SetNull)
+  matches                     LearnerMaterialRequestMatch[]
+
+  @@index([learnerId, status])
+  @@index([status, expiresAt])
+  @@index([categoryId])
+  @@index([normalizedRequestedItemName, learnerId, status])
+  @@index([locationCity])
+  @@index([sourceSavedLocationId])
+  @@index([projectId])
+  @@index([projectBuildId])
+  @@index([projectBuildItemId])
+  @@map("learner_material_requests")
+}
+
+model LearnerMaterialRequestMatch {
+  id                String                            @id @default(cuid())
+  materialRequestId String                            @map("material_request_id")
+  materialId        String                            @map("material_id")
+  supplierUserId    String                            @map("supplier_user_id")
+  status            LearnerMaterialRequestMatchStatus @default(SUGGESTED)
+  matchReasonCode   String?                           @map("match_reason_code")
+  rankingScore      Int?                              @map("ranking_score")
+  reservationId     String?                           @map("reservation_id")
+  createdAt         DateTime                          @default(now()) @map("created_at")
+  updatedAt         DateTime                          @updatedAt @map("updated_at")
+  materialRequest   LearnerMaterialRequest            @relation(fields: [materialRequestId], references: [id], onDelete: Cascade)
+  material          Material                          @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  supplierUser      User                              @relation("LearnerMaterialRequestMatchSupplier", fields: [supplierUserId], references: [id], onDelete: Restrict)
+  reservation       Reservation?                      @relation("LearnerMaterialRequestMatchReservation", fields: [reservationId], references: [id], onDelete: SetNull)
+
+  @@unique([materialRequestId, materialId])
+  @@index([supplierUserId, status])
+  @@index([materialRequestId, status])
+  @@index([reservationId])
+  @@map("learner_material_request_matches")
 }
 
 model AiPriceLookupLog {

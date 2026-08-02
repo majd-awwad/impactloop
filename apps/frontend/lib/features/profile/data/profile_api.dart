@@ -5,6 +5,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_response.dart';
 import '../../auth/data/models/user.dart';
 import 'models/learner_interest_options.dart';
+import 'models/learner_profile_summary.dart';
 import 'models/uploaded_profile_image.dart';
 
 class ProfileApi {
@@ -54,6 +55,13 @@ class ProfileApi {
         '$_profileBasePath/learner/interests/options',
       ),
       (json) => LearnerInterestOptionsResponse.fromJson(json),
+    );
+  }
+
+  Future<LearnerProfileSummary> fetchLearnerProfileSummary() {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('/api/learner/profile-summary'),
+      LearnerProfileSummary.fromJson,
     );
   }
 

@@ -72,6 +72,7 @@ const createUser = async (input: {
                 city: 'Ramallah',
                 area: MARKER,
                 transportationType: 'BICYCLE',
+                acceptingNewJobs: true,
               },
             },
           }

@@ -10,7 +10,7 @@ typedef PeriodicTimerFactory =
 
 class DriverLocationAutoPingState {
   const DriverLocationAutoPingState({
-    this.enabled = true,
+    this.enabled = false,
     this.isSharing = false,
     this.lastSharedAt,
     this.inlineError,
@@ -43,15 +43,19 @@ class DriverLocationAutoPingState {
 
 typedef DriverLocationPingCallback = Future<void> Function();
 
+typedef DriverLocationErrorMessageResolver = String Function(Object error);
+
 class DriverLocationAutoPingController {
   DriverLocationAutoPingController({
     required DriverLocationPingCallback sendPing,
     this.interval = driverAutoPingInterval,
     void Function(DriverLocationAutoPingState state)? onStateChanged,
     PeriodicTimerFactory? periodicTimerFactory,
+    DriverLocationErrorMessageResolver? resolveErrorMessage,
   }) : _sendPing = sendPing,
        _onStateChanged = onStateChanged,
-       _periodicTimerFactory = periodicTimerFactory ?? Timer.periodic {
+       _periodicTimerFactory = periodicTimerFactory ?? Timer.periodic,
+       _resolveErrorMessage = resolveErrorMessage ?? _defaultErrorMessage {
     _emit(_state);
   }
 
@@ -59,12 +63,14 @@ class DriverLocationAutoPingController {
   final void Function(DriverLocationAutoPingState state)? _onStateChanged;
   final Duration interval;
   final PeriodicTimerFactory _periodicTimerFactory;
+  final DriverLocationErrorMessageResolver _resolveErrorMessage;
 
   DriverLocationAutoPingState _state = const DriverLocationAutoPingState();
   Timer? _timer;
   bool _disposed = false;
   bool _inFlight = false;
   String? _deliveryStatus;
+  bool? _canShareLocation;
 
   DriverLocationAutoPingState get state => _state;
 
@@ -77,12 +83,13 @@ class DriverLocationAutoPingController {
     _syncSharing();
   }
 
-  void updateDeliveryStatus(String? status) {
+  void updateDeliveryStatus(String? status, {bool? canShareLocation}) {
     if (_disposed) {
       return;
     }
 
     _deliveryStatus = status;
+    _canShareLocation = canShareLocation;
     _syncSharing();
   }
 
@@ -100,7 +107,7 @@ class DriverLocationAutoPingController {
 
   bool get _isEligible =>
       _deliveryStatus != null &&
-      isDriverAutoPingEligibleStatus(_deliveryStatus!);
+      (_canShareLocation ?? isDriverAutoPingEligibleStatus(_deliveryStatus!));
 
   void _syncSharing() {
     if (_disposed) {
@@ -158,7 +165,7 @@ class DriverLocationAutoPingController {
         return;
       }
 
-      final message = _errorMessage(error);
+      final message = _resolveErrorMessage(error);
       final permissionBlocked = _isPermissionFailure(error);
 
       _emit(
@@ -184,7 +191,7 @@ class DriverLocationAutoPingController {
   }
 }
 
-String _errorMessage(Object error) {
+String _defaultErrorMessage(Object error) {
   if (error is CurrentLocationException) {
     return error.message;
   }

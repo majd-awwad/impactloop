@@ -1,10 +1,71 @@
 import { z } from 'zod';
+import { PARTIAL_PICKUP_UNPICKED_REASONS } from './driver-partial-pickup.js';
+
+const nullableTrimmedString = (max: number) =>
+  z.preprocess(
+    (value) => {
+      if (value === null || value === undefined) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length === 0 ? null : trimmed;
+      }
+      return value;
+    },
+    z.union([z.string().max(max), z.null()]).optional(),
+  );
+
+export const updateDriverProfileSchema = z
+  .object({
+    city: z.string().trim().min(2).max(100).optional(),
+    area: z.string().trim().min(2).max(100).optional(),
+    transportationType: z
+      .enum(['CAR', 'MOTORCYCLE', 'BICYCLE', 'WALKING'])
+      .optional(),
+    vehicleLabel: nullableTrimmedString(120),
+    vehiclePlate: nullableTrimmedString(32),
+    capacityNotes: nullableTrimmedString(500),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (Object.values(value).every((field) => field === undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'At least one driver profile field is required.',
+        path: [],
+      });
+    }
+  });
+
+export type UpdateDriverProfileInput = z.infer<
+  typeof updateDriverProfileSchema
+>;
+
+export const updateDriverAvailabilitySchema = z
+  .object({ acceptingNewJobs: z.boolean() })
+  .strict();
+
+export type UpdateDriverAvailabilityInput = z.infer<
+  typeof updateDriverAvailabilitySchema
+>;
 
 export const deliveryIdParamsSchema = z.object({
   id: z.string().trim().min(1),
 });
 
 export type DeliveryIdParams = z.infer<typeof deliveryIdParamsSchema>;
+
+const partialPickupUnpickedSchema = z.object({
+  reservationId: z.string().trim().min(1),
+  reason: z.enum(
+    PARTIAL_PICKUP_UNPICKED_REASONS as unknown as [
+      (typeof PARTIAL_PICKUP_UNPICKED_REASONS)[number],
+      ...(typeof PARTIAL_PICKUP_UNPICKED_REASONS)[number][],
+    ],
+  ),
+  note: z.string().trim().max(1000).optional().nullable(),
+});
 
 export const updateDriverDeliveryStatusSchema = z
   .object({
@@ -17,6 +78,8 @@ export const updateDriverDeliveryStatusSchema = z
     ]),
     note: z.string().trim().max(1000).optional().nullable(),
     confirmationCode: z.string().trim().optional(),
+    pickedReservationIds: z.array(z.string().trim().min(1)).optional(),
+    unpicked: z.array(partialPickupUnpickedSchema).optional(),
   })
   .superRefine((value, ctx) => {
     if (
@@ -41,6 +104,27 @@ export const updateDriverDeliveryStatusSchema = z
         path: ['confirmationCode'],
       });
     }
+
+    const hasPicked = value.pickedReservationIds != null;
+    const hasUnpicked = value.unpicked != null;
+
+    if (value.status !== 'PICKED_UP' && (hasPicked || hasUnpicked)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Partial pickup selection is only allowed for PICKED_UP.',
+        path: ['pickedReservationIds'],
+      });
+    }
+
+    if (value.status === 'PICKED_UP' && hasPicked !== hasUnpicked) {
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Partial pickup requires both pickedReservationIds and unpicked.',
+        path: hasPicked ? ['unpicked'] : ['pickedReservationIds'],
+      });
+    }
+
   });
 
 export type UpdateDriverDeliveryStatusInput = z.infer<
@@ -65,8 +149,22 @@ export const listAvailableDeliveriesQuerySchema = z.object({
   area: z.string().trim().min(1).max(100).optional(),
   maxDistanceKm: z.coerce.number().positive().max(500).optional(),
   sortBy: z.enum(['nearest', 'newest']).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z.string().trim().min(1).optional(),
 });
 
-export type ListAvailableDeliveriesQuery = z.infer<
-  typeof listAvailableDeliveriesQuerySchema
->;
+export type ListAvailableDeliveriesQuery = {
+  city?: string;
+  area?: string;
+  maxDistanceKm?: number;
+  sortBy?: 'nearest' | 'newest';
+  limit?: number;
+  cursor?: string;
+};
+
+export const listDriverArchiveQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z.string().trim().min(1).max(2000).optional(),
+});
+
+export type ListDriverArchiveQuery = z.infer<typeof listDriverArchiveQuerySchema>;

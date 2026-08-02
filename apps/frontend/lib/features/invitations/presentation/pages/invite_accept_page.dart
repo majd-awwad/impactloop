@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/errors/api_exception.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_navigation.dart';
 import '../../data/invite_accept_providers.dart';
@@ -89,16 +93,20 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(localizedApiErrorMessage(error, context.l10n)),
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     if (widget.token.trim().isEmpty) {
-      return _InviteScaffold(child: const Text('Invalid invitation link.'));
+      return _InviteScaffold(child: Text(l10n.inviteInvalidLink));
     }
 
     if (_completed) {
@@ -106,10 +114,12 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Registration completed successfully.'),
+            Text(l10n.inviteRegistrationCompleted),
             if (_completedRole != null) ...[
               const SizedBox(height: 8),
-              Text('Role: $_completedRole'),
+              Text(
+                l10n.inviteRoleLabel(_inviteRoleLabel(_completedRole!, l10n)),
+              ),
             ],
             const SizedBox(height: 20),
             FilledButton(
@@ -118,7 +128,7 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
                 context,
                 AppStatusTone.primary,
               ),
-              child: const Text('Go to login'),
+              child: Text(l10n.goToSignIn),
             ),
           ],
         ),
@@ -130,16 +140,18 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
     return _InviteScaffold(
       child: validationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Text(error.toString()),
+        error: (error, _) =>
+            Text(localizedApiErrorMessage(error, context.l10n)),
         data: (validation) {
           if (!validation.valid || validation.role == null) {
             return Text(
-              validation.reason ??
-                  'This invitation link is invalid, expired, revoked, or already used.',
+              validation.reason ?? l10n.inviteInvalidOrExpired,
             );
           }
 
-          final expiresLabel = validation.expiresAt?.toLocal().toString();
+          final expiresLabel = validation.expiresAt == null
+              ? null
+              : LocalizedFormatters(l10n).dateTime(validation.expiresAt!);
 
           return _InviteForm(
             validation: validation,
@@ -165,6 +177,15 @@ class _InviteAcceptPageState extends ConsumerState<InviteAcceptPage> {
   }
 }
 
+String _inviteRoleLabel(String role, AppLocalizations l10n) {
+  return switch (role.trim().toUpperCase()) {
+    'DRIVER' => l10n.driver,
+    'SUPPLIER' => l10n.supplier,
+    'LEARNER' => l10n.learner,
+    _ => role,
+  };
+}
+
 class _InviteScaffold extends StatelessWidget {
   const _InviteScaffold({required this.child});
 
@@ -173,7 +194,7 @@ class _InviteScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Complete your ImpactLoop invitation')),
+      appBar: AppBar(title: Text(context.l10n.inviteAcceptTitle)),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -224,6 +245,8 @@ class _InviteForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final driverLabels = DriverUiLabels(l10n);
     final isDriver = validation.role == 'DRIVER';
 
     return Form(
@@ -231,50 +254,56 @@ class _InviteForm extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Invited role: ${validation.role}'),
+          Text(
+            l10n.inviteInvitedRole(
+              _inviteRoleLabel(validation.role!, l10n),
+            ),
+          ),
           if (expiresLabel != null) ...[
             const SizedBox(height: 8),
-            Text('Expires: $expiresLabel'),
+            Text(l10n.inviteExpires(expiresLabel!)),
           ],
           const SizedBox(height: 8),
           TextFormField(
             initialValue: validation.recipientEmail,
             readOnly: true,
-            decoration: const InputDecoration(labelText: 'Email'),
+            decoration: InputDecoration(labelText: l10n.email),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: fullNameController,
-            decoration: const InputDecoration(labelText: 'Full name'),
-            validator: (value) =>
-                (value == null || value.trim().length < 2) ? 'Required' : null,
+            decoration: InputDecoration(labelText: l10n.inviteFullName),
+            validator: (value) => (value == null || value.trim().length < 2)
+                ? l10n.inviteFieldRequired
+                : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: passwordController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Password'),
-            validator: (value) =>
-                (value == null || value.length < 8) ? 'Min 8 characters' : null,
+            decoration: InputDecoration(labelText: l10n.password),
+            validator: (value) => (value == null || value.length < 8)
+                ? l10n.passwordMinLength
+                : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: confirmPasswordController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Confirm password'),
+            decoration: InputDecoration(labelText: l10n.confirmPassword),
             validator: (value) => value != passwordController.text
-                ? 'Passwords must match'
+                ? l10n.passwordsDoNotMatch
                 : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: phoneController,
             decoration: InputDecoration(
-              labelText: isDriver ? 'Phone' : 'Phone (optional)',
+              labelText: isDriver ? l10n.invitePhone : l10n.invitePhoneOptional,
             ),
             validator: (value) {
               if (isDriver && (value == null || value.trim().length < 5)) {
-                return 'Required for drivers';
+                return l10n.driverPhoneRequired;
               }
               return null;
             },
@@ -283,32 +312,43 @@ class _InviteForm extends StatelessWidget {
             const SizedBox(height: 12),
             TextFormField(
               controller: cityController,
-              decoration: const InputDecoration(labelText: 'City'),
-              validator: (value) =>
-                  (value == null || value.trim().isEmpty) ? 'Required' : null,
+              decoration: InputDecoration(labelText: l10n.city),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? l10n.inviteFieldRequired
+                  : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: areaController,
-              decoration: const InputDecoration(labelText: 'Area'),
-              validator: (value) =>
-                  (value == null || value.trim().isEmpty) ? 'Required' : null,
+              decoration: InputDecoration(labelText: l10n.area),
+              validator: (value) => (value == null || value.trim().isEmpty)
+                  ? l10n.inviteFieldRequired
+                  : null,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               key: ValueKey('transport-$transportationType'),
               initialValue: transportationType,
-              decoration: const InputDecoration(
-                labelText: 'Transportation type',
+              decoration: InputDecoration(
+                labelText: l10n.driverTransportationType,
               ),
-              items: const [
-                DropdownMenuItem(value: 'CAR', child: Text('Car')),
+              items: [
+                DropdownMenuItem(
+                  value: 'CAR',
+                  child: Text(driverLabels.transportType('CAR')),
+                ),
                 DropdownMenuItem(
                   value: 'MOTORCYCLE',
-                  child: Text('Motorcycle'),
+                  child: Text(driverLabels.transportType('MOTORCYCLE')),
                 ),
-                DropdownMenuItem(value: 'BICYCLE', child: Text('Bicycle')),
-                DropdownMenuItem(value: 'WALKING', child: Text('Walking')),
+                DropdownMenuItem(
+                  value: 'BICYCLE',
+                  child: Text(driverLabels.transportType('BICYCLE')),
+                ),
+                DropdownMenuItem(
+                  value: 'WALKING',
+                  child: Text(driverLabels.transportType('WALKING')),
+                ),
               ],
               onChanged: submitting
                   ? null
@@ -319,15 +359,15 @@ class _InviteForm extends StatelessWidget {
             const SizedBox(height: 12),
             TextFormField(
               controller: addressController,
-              decoration: const InputDecoration(
-                labelText: 'Address line (optional)',
+              decoration: InputDecoration(
+                labelText: l10n.driverAddressLineOptional,
               ),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: availabilityController,
-              decoration: const InputDecoration(
-                labelText: 'Availability note (optional)',
+              decoration: InputDecoration(
+                labelText: l10n.driverAvailabilityNoteOptional,
               ),
               maxLines: 2,
             ),
@@ -342,7 +382,7 @@ class _InviteForm extends StatelessWidget {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Complete registration'),
+                : Text(l10n.inviteCompleteRegistration),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_controller.dart';
 import '../../application/auth_navigation.dart';
@@ -48,41 +49,29 @@ class _LoginFormState extends ConsumerState<LoginForm> {
   void _applyLoginError(ApiException error) {
     final emailIssue = firstFieldError(error, const ['email']);
     final passwordIssue = firstFieldError(error, const ['password']);
+    final l10n = context.l10n;
 
     setState(() {
-      _emailError = emailIssue;
-      _passwordError = passwordIssue;
+      _emailError = emailIssue == null ? null : l10n.validEmailRequired;
+      _passwordError = passwordIssue == null ? null : l10n.passwordRequired;
       _formError = null;
 
       if (error.code == 'UNAUTHENTICATED') {
-        _passwordError = _loginErrorMessage(error);
+        _passwordError = l10n.invalidCredentials;
         return;
       }
 
       if (_emailError == null &&
           _passwordError == null &&
           error.code == 'VALIDATION_ERROR') {
-        _formError = error.displayMessage;
+        _formError = l10n.validationError;
         return;
       }
 
       if (_emailError == null && _passwordError == null) {
-        _formError = error.displayMessage;
+        _formError = localizedApiErrorMessage(error, l10n);
       }
     });
-  }
-
-  String _loginErrorMessage(ApiException error) {
-    if (error.code == 'UNAUTHENTICATED') {
-      final message = error.message.trim();
-      if (message.isNotEmpty) {
-        return message;
-      }
-
-      return 'Invalid email or password.';
-    }
-
-    return error.displayMessage;
   }
 
   Future<void> _handleSubmit() async {
@@ -124,13 +113,14 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
       setState(() => _isSubmitting = false);
       setState(() {
-        _formError = 'Something went wrong. Please try again.';
+        _formError = context.l10n.somethingWentWrong;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Form(
       key: _formKey,
       child: Column(
@@ -138,8 +128,8 @@ class _LoginFormState extends ConsumerState<LoginForm> {
         children: [
           AuthTextField(
             controller: _emailController,
-            label: 'Email',
-            hint: 'you@example.com',
+            label: l10n.email,
+            hint: l10n.emailHint,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.email],
@@ -152,10 +142,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             validator: (value) {
               final trimmed = value?.trim() ?? '';
               if (trimmed.isEmpty) {
-                return 'Email is required';
+                return l10n.emailRequired;
               }
               if (!trimmed.contains('@')) {
-                return 'Enter a valid email address';
+                return l10n.validEmailRequired;
               }
               return null;
             },
@@ -163,7 +153,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           const AuthFieldGap(),
           AuthPasswordField(
             controller: _passwordController,
-            label: 'Password',
+            label: l10n.password,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.password],
             onFieldSubmitted: (_) => _handleSubmit(),
@@ -175,7 +165,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             },
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Password is required';
+                return l10n.passwordRequired;
               }
               return null;
             },
@@ -186,7 +176,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           ],
           const SizedBox(height: AppSpacing.xs),
           Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: TextButton(
               style: TextButton.styleFrom(
                 minimumSize: Size.zero,
@@ -205,7 +195,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
                 context.go(target);
               },
               child: Text(
-                'Forgot password?',
+                l10n.forgotPasswordQuestion,
                 style: TextStyle(
                   color: AuthUiPalette.of(context).primary,
                   fontWeight: FontWeight.w700,
@@ -215,7 +205,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
           ),
           const SizedBox(height: AppSpacing.md),
           AuthPrimaryButton(
-            label: 'Sign in',
+            label: l10n.signIn,
             isLoading: _isSubmitting,
             onPressed: _handleSubmit,
           ),

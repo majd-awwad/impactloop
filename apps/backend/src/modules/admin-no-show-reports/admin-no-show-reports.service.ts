@@ -33,8 +33,7 @@ const mapReport = (report: repository.AdminNoShowReportRecord) => ({
     reservation: report.reservation,
     delivery: report.delivery,
     isGroupedDelivery: report.delivery?.deliveryGroupId != null,
-    // Group-level recovery is intentionally unsupported by the mutation layer.
-    isGroupRecoverySupported: false,
+    isGroupRecoverySupported: true,
   }),
   id: report.id,
   reservationId: report.reservationId,
@@ -72,11 +71,7 @@ const throwActionUnavailable = (): never => {
 };
 
 export const listAdminNoShowReports = async (query: AdminNoShowReportsListQuery) => {
-  const result = await repository.listNoShowReportsForAdmin({
-    status: query.status,
-    page: query.page,
-    limit: query.limit,
-  });
+  const result = await repository.listNoShowReportsForAdmin(query);
 
   return {
     items: result.items.map(mapReport),

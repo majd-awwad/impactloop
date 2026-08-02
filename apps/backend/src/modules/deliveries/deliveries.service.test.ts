@@ -11,12 +11,20 @@ import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
   acceptDelivery,
   createDeliveryLocationPing,
+  getDriverDeliveryDetail,
+  getDriverProfile,
   listAvailableDeliveries,
   listActiveDriverDeliveries,
+  updateDriverAvailability,
   updateDriverDeliveryStatus,
+  updateDriverProfile,
 } from '../driver/driver.service.js';
 import { MAX_ACTIVE_DRIVER_DELIVERIES } from '../deliveries/deliveries.service.js';
-import { createDeliveryLocationPingSchema } from '../driver/driver.validation.js';
+import {
+  createDeliveryLocationPingSchema,
+  updateDriverAvailabilitySchema,
+  updateDriverProfileSchema,
+} from '../driver/driver.validation.js';
 import { completeSupplierReservation } from '../supplier-reservations/supplier-reservations.service.js';
 import {
   activeConfirmedDeliveryWindowUpdate,
@@ -51,6 +59,7 @@ async function createUser(input: {
   role: 'LEARNER' | 'SUPPLIER' | 'DRIVER';
   driverStatus?: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
   driverAvailability?: 'OFFLINE' | 'AVAILABLE' | 'ON_DELIVERY';
+  acceptingNewJobs?: boolean;
 }) {
   const passwordHash = await hashPassword('TestPassword123!');
 
@@ -102,6 +111,9 @@ async function createUser(input: {
                 vehicleType: 'BICYCLE',
                 status: input.driverStatus ?? 'ACTIVE',
                 availability: input.driverAvailability ?? 'AVAILABLE',
+                acceptingNewJobs:
+                  input.acceptingNewJobs ??
+                  input.driverAvailability !== 'OFFLINE',
               },
             },
           }
@@ -215,6 +227,7 @@ async function createDriver(
   input: {
     status?: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
     availability?: 'OFFLINE' | 'AVAILABLE' | 'ON_DELIVERY';
+    acceptingNewJobs?: boolean;
   } = {},
 ) {
   const driver = await createUser({
@@ -223,6 +236,7 @@ async function createDriver(
     role: 'DRIVER',
     driverStatus: input.status,
     driverAvailability: input.availability ?? 'AVAILABLE',
+    acceptingNewJobs: input.acceptingNewJobs,
   });
   ctx.createdUserIds.push(driver.id);
   return driver.id;
@@ -610,7 +624,7 @@ describe('internal delivery backend core', () => {
     assert.equal(rejected.reason.statusCode, 409);
   });
 
-  test('offline active driver can accept a waiting delivery from driver jobs', async () => {
+  test('offline active driver cannot browse or accept waiting deliveries', async () => {
     const driverId = await createDriver(ctx, 'offline-accept', {
       availability: 'OFFLINE',
     });
@@ -621,16 +635,136 @@ describe('internal delivery backend core', () => {
       deliveryInput(),
     );
 
-    const assigned = await acceptDelivery(driverId, delivery.id);
+    const available = await listAvailableDeliveries(driverId, {});
+    assert.equal(available.deliveries.length, 0);
+    assert.equal(available.totalAvailableCount, 0);
+    assert.equal(available.canBrowseAvailableJobs, false);
+    assert.equal(available.acceptingNewJobs, false);
 
-    assert.equal(assigned.id, delivery.id);
-    assert.equal(assigned.status, 'DRIVER_ASSIGNED');
+    await assert.rejects(
+      () => acceptDelivery(driverId, delivery.id),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, 'DRIVER_NOT_ACCEPTING_NEW_JOBS');
+        return true;
+      },
+    );
 
     const driverProfile = await prisma.driverProfile.findUnique({
       where: { userId: driverId },
       select: { availability: true },
     });
-    assert.equal(driverProfile?.availability, 'ON_DELIVERY');
+    assert.equal(driverProfile?.availability, 'OFFLINE');
+  });
+
+  test('driver profile exposes administrative state read-only and updates operational fields', async () => {
+    const driverId = await createAvailableDriver(ctx, 'profile-update');
+
+    const parsedInput = updateDriverProfileSchema.parse({
+      city: '  Nablus  ',
+      area: '  Rafidia  ',
+      transportationType: 'MOTORCYCLE',
+      vehicleLabel: '  Blue delivery bike  ',
+      vehiclePlate: '   ',
+      capacityNotes: '  Small boxed materials only  ',
+    });
+
+    const updated = await updateDriverProfile(driverId, parsedInput);
+
+    assert.equal(updated.city, 'Nablus');
+    assert.equal(updated.area, 'Rafidia');
+    assert.equal(updated.transportationType, 'MOTORCYCLE');
+    assert.equal(updated.vehiclePlate, null);
+
+    const stored = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: driverId },
+      select: { transportationType: true, vehicleType: true },
+    });
+    assert.equal(stored.transportationType, 'MOTORCYCLE');
+    assert.equal(stored.vehicleType, 'MOTORCYCLE');
+
+    assert.equal(
+      updateDriverProfileSchema.safeParse({ status: 'SUSPENDED' }).success,
+      false,
+    );
+    assert.equal(
+      updateDriverAvailabilitySchema.safeParse({ availability: 'AVAILABLE' })
+        .success,
+      false,
+    );
+  });
+
+  test('non-active driver can read profile state but cannot mutate it', async () => {
+    const driverId = await createDriver(ctx, 'inactive-profile', {
+      status: 'INACTIVE',
+      availability: 'OFFLINE',
+      acceptingNewJobs: false,
+    });
+
+    const profile = await getDriverProfile(driverId);
+    assert.equal(profile.status, 'INACTIVE');
+    assert.equal(profile.acceptingNewJobs, false);
+
+    await assert.rejects(
+      () => updateDriverAvailability(driverId, { acceptingNewJobs: true }),
+      (error: unknown) => {
+        assert.ok(error instanceof AppError);
+        assert.equal(error.statusCode, 403);
+        return true;
+      },
+    );
+  });
+
+  test('turning off new jobs preserves active work and restores offline after final delivery', async () => {
+    const driverId = await createAvailableDriver(ctx, 'preference-preserved');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    const paused = await updateDriverAvailability(driverId, {
+      acceptingNewJobs: false,
+    });
+    assert.equal(paused.acceptingNewJobs, false);
+    assert.equal(paused.availability, 'ON_DELIVERY');
+
+    const active = await listActiveDriverDeliveries(driverId);
+    assert.equal(active.deliveries.length, 1);
+
+    await progressToDelivered(driverId, delivery.id);
+
+    const finalProfile = await getDriverProfile(driverId);
+    assert.equal(finalProfile.activeDeliveryCount, 0);
+    assert.equal(finalProfile.acceptingNewJobs, false);
+    assert.equal(finalProfile.availability, 'OFFLINE');
+  });
+
+  test('delivery responses use canonical User identity after account edits', async () => {
+    const driverId = await createAvailableDriver(ctx, 'canonical-identity');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    const canonicalName = `${TEST_MARKER} Updated Driver Name`;
+    const canonicalPhone = `+97056${Math.floor(Math.random() * 1_000_000)
+      .toString()
+      .padStart(6, '0')}`;
+    await prisma.user.update({
+      where: { id: driverId },
+      data: { displayName: canonicalName, phone: canonicalPhone },
+    });
+
+    const learnerDelivery = await getMyDelivery(ctx.learnerId, delivery.id);
+    assert.equal(learnerDelivery.driver?.displayName, canonicalName);
+    assert.equal(learnerDelivery.driver?.phone, canonicalPhone);
   });
 
   test('driver can accept up to three active deliveries', async () => {
@@ -799,6 +933,55 @@ describe('internal delivery backend core', () => {
     assert.equal(activeAssignedCount, 2);
   });
 
+  test('concurrent accepts at count two cannot exceed the active limit', async () => {
+    const driverId = await createAvailableDriver(ctx, 'queue-boundary-race');
+    const deliveries: string[] = [];
+
+    for (let index = 0; index < 4; index += 1) {
+      const learnerId = index % 2 === 0 ? ctx.learnerId : ctx.otherLearnerId;
+      const { reservation } = await createAcceptedReservation(ctx, { learnerId });
+      const delivery = await requestDeliveryForReservation(
+        learnerId,
+        reservation.id,
+        deliveryInput(),
+      );
+      deliveries.push(delivery.id);
+    }
+
+    await acceptDelivery(driverId, deliveries[0]!);
+    await acceptDelivery(driverId, deliveries[1]!);
+
+    const results = await Promise.allSettled([
+      acceptDelivery(driverId, deliveries[2]!),
+      acceptDelivery(driverId, deliveries[3]!),
+    ]);
+
+    assert.equal(
+      results.filter((result) => result.status === 'fulfilled').length,
+      1,
+    );
+
+    const profile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: driverId },
+      select: { id: true },
+    });
+    const activeCount = await prisma.delivery.count({
+      where: {
+        assignedDriverProfileId: profile.id,
+        status: {
+          in: [
+            'DRIVER_ASSIGNED',
+            'ARRIVED_PICKUP',
+            'PICKED_UP',
+            'ON_THE_WAY',
+            'ARRIVED_DROPOFF',
+          ],
+        },
+      },
+    });
+    assert.equal(activeCount, MAX_ACTIVE_DRIVER_DELIVERIES);
+  });
+
   test('available jobs can filter by city', async () => {
     const { reservation } = await createAcceptedReservation(ctx);
     const delivery = await requestDeliveryForReservation(
@@ -954,7 +1137,7 @@ describe('internal delivery backend core', () => {
     );
   });
 
-  test('missing coordinates do not crash filtering', async () => {
+  test('unknown-distance jobs are excluded from a confirmed radius', async () => {
     const noCoordLocation = await prisma.location.create({
       data: {
         country: 'Palestine',
@@ -993,8 +1176,312 @@ describe('internal delivery backend core', () => {
       maxDistanceKm: 5,
       sortBy: 'nearest',
     });
-    assert.ok(jobs.deliveries.length >= 1);
-    assert.equal(jobs.deliveries[0]?.distanceKm ?? null, null);
+    assert.equal(jobs.deliveries.length, 0);
+    assert.equal(jobs.nearbyAvailableCount, 0);
+    assert.ok(jobs.totalAvailableCount >= 1);
+  });
+
+  test('newest ordering is descending and available jobs are bounded', async () => {
+    const uniqueCity = `NewestCity-${Date.now()}`;
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: uniqueCity,
+        area: TEST_MARKER,
+        visibility: 'PUBLIC_APPROXIMATE',
+        isApproximate: true,
+      },
+    });
+    const first = await createAcceptedReservation(ctx);
+    const older = await requestDeliveryForReservation(
+      ctx.learnerId,
+      first.reservation.id,
+      deliveryInput(),
+    );
+    const second = await createAcceptedReservation(ctx);
+    const newer = await requestDeliveryForReservation(
+      ctx.learnerId,
+      second.reservation.id,
+      deliveryInput(),
+    );
+
+    await prisma.delivery.update({
+      where: { id: older.id },
+      data: {
+        requestedAt: new Date(Date.now() - 60_000),
+        pickupLocationId: location.id,
+      },
+    });
+    await prisma.delivery.update({
+      where: { id: newer.id },
+      data: {
+        requestedAt: new Date(),
+        pickupLocationId: location.id,
+      },
+    });
+
+    const jobs = await listAvailableDeliveries(ctx.driverId, {
+      city: uniqueCity,
+      sortBy: 'newest',
+      limit: 1,
+    });
+
+    assert.equal(jobs.deliveries.length, 1);
+    assert.equal(jobs.deliveries[0]?.id, newer.id);
+    assert.equal(jobs.pagination.limit, 1);
+    assert.equal(jobs.pagination.hasMore, true);
+    assert.ok(jobs.pagination.nextCursor);
+    assert.notEqual(jobs.pagination.nextCursor, newer.id);
+
+    const page2 = await listAvailableDeliveries(ctx.driverId, {
+      city: uniqueCity,
+      sortBy: 'newest',
+      limit: 1,
+      cursor: jobs.pagination.nextCursor!,
+    });
+    assert.equal(page2.deliveries.length, 1);
+    assert.equal(page2.deliveries[0]?.id, older.id);
+    assert.notEqual(page2.deliveries[0]?.id, jobs.deliveries[0]?.id);
+
+    await prisma.delivery.updateMany({
+      where: { id: { in: [older.id, newer.id] } },
+      data: { status: 'CANCELLED', pickupLocationId: ctx.locationId },
+    });
+    await prisma.location.delete({ where: { id: location.id } });
+  });
+
+  test('available jobs reject invalid and incompatible cursors', async () => {
+    await assert.rejects(
+      () =>
+        listAvailableDeliveries(ctx.driverId, {
+          city: 'Nablus',
+          sortBy: 'newest',
+          cursor: 'not-a-valid-cursor',
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID',
+    );
+
+    const first = await createAcceptedReservation(ctx);
+    const older = await requestDeliveryForReservation(
+      ctx.learnerId,
+      first.reservation.id,
+      deliveryInput(),
+    );
+    const second = await createAcceptedReservation(ctx);
+    const newer = await requestDeliveryForReservation(
+      ctx.learnerId,
+      second.reservation.id,
+      deliveryInput(),
+    );
+    const stamp = new Date();
+    await prisma.delivery.update({
+      where: { id: older.id },
+      data: { requestedAt: new Date(stamp.getTime() - 60_000) },
+    });
+    await prisma.delivery.update({
+      where: { id: newer.id },
+      data: { requestedAt: stamp },
+    });
+
+    const page1 = await listAvailableDeliveries(ctx.driverId, {
+      city: 'Nablus',
+      sortBy: 'newest',
+      limit: 1,
+    });
+    assert.ok(page1.pagination.nextCursor);
+
+    await assert.rejects(
+      () =>
+        listAvailableDeliveries(ctx.driverId, {
+          city: 'Nablus',
+          sortBy: 'nearest',
+          limit: 1,
+          cursor: page1.pagination.nextCursor!,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID',
+    );
+
+    await prisma.delivery.update({
+      where: { id: newer.id },
+      data: { requestedAt: new Date(stamp.getTime() + 1) },
+    });
+
+    await assert.rejects(
+      () =>
+        listAvailableDeliveries(ctx.driverId, {
+          city: 'Nablus',
+          sortBy: 'newest',
+          limit: 1,
+          cursor: page1.pagination.nextCursor!,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID',
+    );
+
+    await prisma.delivery.update({
+      where: { id: newer.id },
+      data: { requestedAt: stamp },
+    });
+
+    await prisma.delivery.update({
+      where: { id: newer.id },
+      data: { status: 'CANCELLED' },
+    });
+
+    await assert.rejects(
+      () =>
+        listAvailableDeliveries(ctx.driverId, {
+          city: 'Nablus',
+          sortBy: 'newest',
+          limit: 1,
+          cursor: page1.pagination.nextCursor!,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID',
+    );
+  });
+
+  test('available jobs keyset keeps equal timestamps without duplicates', async () => {
+    const stamp = new Date();
+    const uniqueCity = `EqualStampCity-${Date.now()}`;
+    const location = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: uniqueCity,
+        area: TEST_MARKER,
+        visibility: 'PUBLIC_APPROXIMATE',
+        isApproximate: true,
+      },
+    });
+    const createdIds: string[] = [];
+    for (let index = 0; index < 3; index += 1) {
+      const accepted = await createAcceptedReservation(ctx);
+      const delivery = await requestDeliveryForReservation(
+        ctx.learnerId,
+        accepted.reservation.id,
+        deliveryInput(),
+      );
+      await prisma.delivery.update({
+        where: { id: delivery.id },
+        data: {
+          requestedAt: stamp,
+          pickupLocationId: location.id,
+        },
+      });
+      createdIds.push(delivery.id);
+    }
+
+    const page1 = await listAvailableDeliveries(ctx.driverId, {
+      city: uniqueCity,
+      sortBy: 'newest',
+      limit: 2,
+    });
+    assert.equal(page1.deliveries.length, 2);
+    assert.ok(page1.pagination.nextCursor);
+
+    const page2 = await listAvailableDeliveries(ctx.driverId, {
+      city: uniqueCity,
+      sortBy: 'newest',
+      limit: 2,
+      cursor: page1.pagination.nextCursor!,
+    });
+
+    const allIds = [
+      ...page1.deliveries.map((delivery) => delivery.id),
+      ...page2.deliveries.map((delivery) => delivery.id),
+    ];
+    assert.equal(new Set(allIds).size, allIds.length);
+    assert.equal(allIds.length, createdIds.length);
+    for (const id of createdIds) {
+      assert.equal(allIds.includes(id), true);
+    }
+
+    await prisma.delivery.updateMany({
+      where: { id: { in: createdIds } },
+      data: { status: 'CANCELLED', pickupLocationId: ctx.locationId },
+    });
+    await prisma.location.delete({ where: { id: location.id } });
+  });
+
+  test('nearest keyset keeps equal distances and timestamps without gaps', async () => {
+    const driverId = await createAvailableDriver(ctx, 'nearest-keyset');
+    const driverProfile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: driverId },
+      select: { id: true },
+    });
+    const stamp = new Date();
+    const uniqueCity = `EqualDistanceCity-${Date.now()}`;
+    const pickupLocation = await prisma.location.create({
+      data: {
+        country: 'Palestine',
+        city: uniqueCity,
+        area: TEST_MARKER,
+        latitude: 32.221,
+        longitude: 35.261,
+        visibility: 'ORDER_ONLY',
+        isApproximate: false,
+        locationType: 'DELIVERY_PICKUP',
+      },
+    });
+    const createdIds: string[] = [];
+
+    for (let index = 0; index < 3; index += 1) {
+      const accepted = await createAcceptedReservation(ctx);
+      const delivery = await requestDeliveryForReservation(
+        ctx.learnerId,
+        accepted.reservation.id,
+        deliveryInput(),
+      );
+      await prisma.delivery.update({
+        where: { id: delivery.id },
+        data: {
+          requestedAt: stamp,
+          pickupLocationId: pickupLocation.id,
+        },
+      });
+      createdIds.push(delivery.id);
+    }
+
+    await prisma.deliveryLocationPing.create({
+      data: {
+        deliveryId: createdIds[0]!,
+        driverProfileId: driverProfile.id,
+        latitude: 32.22,
+        longitude: 35.26,
+        capturedAt: new Date(),
+      },
+    });
+
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await listAvailableDeliveries(driverId, {
+        city: uniqueCity,
+        sortBy: 'nearest',
+        limit: 1,
+        cursor,
+      });
+      seen.push(...page.deliveries.map((delivery) => delivery.id));
+      cursor = page.pagination.nextCursor ?? undefined;
+    } while (cursor);
+
+    assert.equal(seen.length, createdIds.length);
+    assert.equal(new Set(seen).size, createdIds.length);
+    for (const id of createdIds) {
+      assert.equal(seen.includes(id), true);
+    }
+
+    await prisma.delivery.updateMany({
+      where: { id: { in: createdIds } },
+      data: { status: 'CANCELLED', pickupLocationId: ctx.locationId },
+    });
+    await prisma.location.delete({ where: { id: pickupLocation.id } });
   });
 
   test('only assigned driver can update delivery status', async () => {
@@ -1019,6 +1506,45 @@ describe('internal delivery backend core', () => {
         return true;
       },
     );
+  });
+
+  test('driver detail exposes exact operational data only while assignment is active', async () => {
+    const driverId = await createAvailableDriver(ctx, 'detail-privacy');
+    const { reservation } = await createAcceptedReservation(ctx);
+    const delivery = await requestDeliveryForReservation(
+      ctx.learnerId,
+      reservation.id,
+      deliveryInput(),
+    );
+    await acceptDelivery(driverId, delivery.id);
+
+    const active = await getDriverDeliveryDetail(driverId, delivery.id);
+    const activePayload = active.delivery as unknown as Record<string, unknown>;
+    assert.equal(active.isActive, true);
+    assert.equal('learner' in activePayload, true);
+
+    await prisma.$transaction([
+      prisma.delivery.update({
+        where: { id: delivery.id },
+        data: {
+          status: 'AWAITING_RESOLUTION',
+          assignedDriverProfileId: null,
+        },
+      }),
+      prisma.deliveryAssignment.updateMany({
+        where: { deliveryId: delivery.id, status: 'ACTIVE' },
+        data: { status: 'RELEASED', releasedAt: new Date() },
+      }),
+    ]);
+
+    const inactive = await getDriverDeliveryDetail(driverId, delivery.id);
+    const safePayload = inactive.delivery as unknown as Record<string, unknown>;
+    const safePickup = safePayload.pickupLocation as Record<string, unknown>;
+    assert.equal(inactive.isActive, false);
+    assert.equal(inactive.inactiveContext?.closureReason, 'MOVED_TO_ADMIN_REVIEW');
+    assert.equal('learner' in safePayload, false);
+    assert.equal('addressLine' in safePickup, false);
+    assert.equal(safePayload.learnerNote, null);
   });
 
   test('invalid status transitions are rejected', async () => {
@@ -1089,7 +1615,8 @@ describe('internal delivery backend core', () => {
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 404);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, 'DELIVERY_LOCATION_PING_NOT_ALLOWED');
         return true;
       },
     );
@@ -1365,7 +1892,8 @@ describe('internal delivery backend core', () => {
         }),
       (error: unknown) => {
         assert.ok(error instanceof AppError);
-        assert.equal(error.statusCode, 404);
+        assert.equal(error.statusCode, 409);
+        assert.equal(error.code, 'DELIVERY_LOCATION_PING_NOT_ALLOWED');
         return true;
       },
     );

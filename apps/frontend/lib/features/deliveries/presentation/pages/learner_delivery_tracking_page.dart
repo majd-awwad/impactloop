@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
+
+import '../../../../l10n/l10n.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../../app/theme/app_radius.dart';
@@ -12,6 +13,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../core/format/localized_formatters.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/deliveries_repository.dart';
@@ -180,10 +182,7 @@ class _LearnerDeliveryTrackingPageState
         });
         _stopPolling();
       } else if (silent || manual) {
-        setState(
-          () => _backgroundWarning =
-              'Could not refresh tracking. Showing the last known location.',
-        );
+        setState(() => _backgroundWarning = context.l10n.trackingRefreshFailed);
       }
     } finally {
       if (mounted) {
@@ -212,20 +211,20 @@ class _LearnerDeliveryTrackingPageState
             ),
             Expanded(
               child: _initialLoading
-                  ? const Center(
+                  ? Center(
                       child: _StatePanel(
                         icon: Icons.hourglass_empty_rounded,
-                        title: 'Loading delivery tracking…',
-                        subtitle: 'Fetching the latest delivery location.',
+                        title: context.l10n.loadingTracking,
+                        subtitle: context.l10n.fetchingTracking,
                       ),
                     )
                   : _error != null
                   ? Center(
                       child: _StatePanel(
                         icon: Icons.cloud_off_outlined,
-                        title: 'Could not load tracking.',
-                        subtitle: 'Please try again.',
-                        actionLabel: 'Retry',
+                        title: context.l10n.trackingLoadFailed,
+                        subtitle: context.l10n.tryAgain,
+                        actionLabel: context.l10n.retry,
                         onAction: () =>
                             unawaited(_fetchTracking(initial: true)),
                       ),
@@ -308,12 +307,15 @@ class _TrackingContent extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   AppStatusBadge(
-                    label: deliveryStatusLabel(tracking.status),
+                    label: deliveryStatusLabel(
+                      tracking.status,
+                      l10n: context.l10n,
+                    ),
                     tone: deliveryStatusAppTone(tracking.status),
                   ),
                   if (tracking.driverDisplayName?.trim().isNotEmpty == true)
                     Text(
-                      'Driver: ${tracking.driverDisplayName}',
+                      context.l10n.driverName(tracking.driverDisplayName!),
                       style: AppTextStyles.body(
                         context,
                       ).copyWith(color: palette.textSecondary),
@@ -322,12 +324,12 @@ class _TrackingContent extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
-                tracking.trackingMessage,
+                _localizedTrackingMessage(tracking, context.l10n),
                 style: AppTextStyles.body(context),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                tracking.routeLabel,
+                _localizedRouteLabel(tracking, context.l10n),
                 style: AppTextStyles.label(
                   context,
                 ).copyWith(color: palette.textMuted),
@@ -339,15 +341,14 @@ class _TrackingContent extends StatelessWidget {
         if (!tracking.canTrack)
           _StatePanel(
             icon: Icons.info_outline,
-            title: 'Tracking not available yet',
-            subtitle: tracking.trackingMessage,
+            title: context.l10n.trackingUnavailable,
+            subtitle: _localizedTrackingMessage(tracking, context.l10n),
           )
         else if (location == null)
           _StatePanel(
             icon: Icons.location_searching,
-            title: 'Waiting for driver location.',
-            subtitle:
-                'The driver has picked up your material. Location will appear here once shared.',
+            title: context.l10n.waitingDriverLocation,
+            subtitle: context.l10n.waitingDriverLocationDescription,
           )
         else ...[
           if (backgroundWarning != null)
@@ -401,7 +402,7 @@ class _TrackingContent extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Driver location has not updated recently.',
+                      context.l10n.driverLocationStale,
                       style: AppTextStyles.body(context),
                     ),
                   ),
@@ -415,7 +416,9 @@ class _TrackingContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Last updated: ${DateFormat.yMMMd().add_jm().format(location.capturedAt.toLocal())}',
+            context.l10n.lastUpdatedAt(
+              LocalizedFormatters(context.l10n).dateTime(location.capturedAt),
+            ),
             style: AppTextStyles.label(
               context,
             ).copyWith(color: palette.textMuted),
@@ -424,7 +427,7 @@ class _TrackingContent extends StatelessWidget {
         if (showAutoUpdateHint) ...[
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Auto-updates while this page is open.',
+            context.l10n.autoUpdateHint,
             style: AppTextStyles.label(
               context,
             ).copyWith(color: palette.textMuted),
@@ -443,7 +446,11 @@ class _TrackingContent extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh_outlined, size: 18),
-            label: Text(refreshing ? 'Refreshing…' : 'Refresh tracking'),
+            label: Text(
+              refreshing
+                  ? context.l10n.refreshing
+                  : context.l10n.refreshTracking,
+            ),
           ),
         ),
         TextButton.icon(
@@ -451,11 +458,51 @@ class _TrackingContent extends StatelessWidget {
               context.go('/learner/deliveries/${tracking.deliveryId}'),
           style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
           icon: const Icon(Icons.assignment_outlined),
-          label: const Text('View delivery details'),
+          label: Text(context.l10n.viewDeliveryDetails),
         ),
       ],
     );
   }
+}
+
+String _localizedTrackingMessage(
+  LearnerDeliveryTracking tracking,
+  AppLocalizations l10n,
+) {
+  if (tracking.canTrack) {
+    return tracking.latestDriverLocation == null
+        ? l10n.driverLocationNotShared
+        : deliveryStatusLabel(tracking.status, l10n: l10n);
+  }
+
+  return switch (tracking.status) {
+    'WAITING_FOR_DRIVER' => l10n.waitingForDriver,
+    'DRIVER_ASSIGNED' => l10n.driverAssigned,
+    'ARRIVED_PICKUP' => l10n.driverHeadingToPickup,
+    _ when tracking.isTerminal => l10n.trackingComplete,
+    _ => l10n.trackingAvailableAfterPickup,
+  };
+}
+
+String _localizedRouteLabel(
+  LearnerDeliveryTracking tracking,
+  AppLocalizations l10n,
+) {
+  final pickup = [tracking.pickupArea, tracking.pickupCity]
+      .whereType<String>()
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .join(', ');
+  final dropoff = [tracking.dropoffArea, tracking.dropoffCity]
+      .whereType<String>()
+      .map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .join(', ');
+
+  return l10n.deliveryRoute(
+    pickup.isEmpty ? l10n.pickupLocation : pickup,
+    dropoff.isEmpty ? l10n.dropoffLocation : dropoff,
+  );
 }
 
 class _TrackingMap extends StatefulWidget {

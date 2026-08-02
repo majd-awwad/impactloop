@@ -7,7 +7,11 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/app_feedback.dart';
+import '../../../../shared/widgets/bidi_text.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -31,8 +35,11 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final activeAsync = ref.watch(activeDriverDeliveriesProvider);
+    final l10n = context.l10n;
     final availableAsync = ref.watch(availableDriverDeliveriesProvider);
+    final paginationError = ref.watch(
+      driverAvailableJobsPaginationErrorProvider,
+    );
     final appliedFilter = ref.watch(driverAvailableJobsFilterProvider);
 
     ref.listen(availableDriverDeliveriesProvider, (previous, next) {
@@ -52,19 +59,11 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
       });
     });
 
-    final activeMeta = activeAsync.value?.meta;
     final availableMeta = availableAsync.value?.meta;
-    final headerMeta = availableMeta ?? activeMeta;
-    final canAcceptMore =
-        activeMeta?.canAcceptMore ?? availableMeta?.canAcceptMore ?? true;
-    final activeCount =
-        activeMeta?.activeDeliveryCount ??
-        availableMeta?.activeDeliveryCount ??
-        0;
-    final maxActive =
-        activeMeta?.maxActiveDeliveries ??
-        availableMeta?.maxActiveDeliveries ??
-        3;
+    final headerMeta = availableMeta;
+    final canAcceptMore = availableMeta?.canAcceptMore ?? true;
+    final activeCount = availableMeta?.activeDeliveryCount ?? 0;
+    final maxActive = availableMeta?.maxActiveDeliveries ?? 3;
     final nearbyCount =
         availableMeta?.nearbyAvailableCount ??
         availableAsync.value?.deliveries.length;
@@ -92,22 +91,8 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
                 areaLabel: _areaChipLabel(headerMeta),
               ),
               const SizedBox(height: AppSpacing.lg),
-              activeAsync.when(
-                loading: () => const _ActiveDeliveriesLoading(),
-                error: (error, _) => _StatePanel(
-                  icon: Icons.cloud_off_outlined,
-                  title: 'Could not load active deliveries',
-                  subtitle: kDebugMode
-                      ? '$error'
-                      : 'Refresh before accepting a new job.',
-                  actionLabel: 'Retry',
-                  onAction: () => refreshDriverJobs(ref),
-                ),
-                data: (result) => _ActiveDeliveriesSection(result: result),
-              ),
-              const SizedBox(height: AppSpacing.lg),
               Text(
-                'Available nearby jobs',
+                l10n.driverAvailableNearbyJobs,
                 style: AppTextStyles.title(context),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -115,12 +100,12 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
               const SizedBox(height: AppSpacing.md),
               if (!canAcceptMore) ...[
                 Text(
-                  'You reached the active delivery limit.',
+                  l10n.driverActiveLimitReached,
                   style: AppTextStyles.body(context),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Complete one delivery before accepting another.',
+                  l10n.driverActiveLimitHint,
                   style: AppTextStyles.body(context).copyWith(
                     color: MaterialsUiPalette.of(context).textSecondary,
                   ),
@@ -129,26 +114,28 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
               ],
               availableAsync.when(
                 skipLoadingOnReload: true,
-                loading: () => const _StatePanel(
+                loading: () => _StatePanel(
                   icon: Icons.inventory_2_outlined,
-                  title: 'Loading available jobs…',
-                  subtitle: 'Looking for waiting delivery requests.',
+                  title: l10n.driverLoadingAvailable,
+                  subtitle: l10n.driverLookingForWaiting,
                   compact: true,
                 ),
                 error: (error, _) => _StatePanel(
                   icon: Icons.cloud_off_outlined,
-                  title: 'Could not load available jobs.',
+                  title: l10n.driverCouldNotLoadAvailable,
                   subtitle: kDebugMode
                       ? '$error'
-                      : 'Check your connection and try again.',
-                  actionLabel: 'Retry',
-                  onAction: () => refreshDriverJobs(ref),
+                      : l10n.supplierPleaseCheckYourConnectionAndTry,
+                  actionLabel: l10n.retry,
+                  onAction: () =>
+                      ref.invalidate(availableDriverDeliveriesProvider),
                   compact: true,
                 ),
                 data: (result) {
                   if (result.deliveries.isEmpty) {
                     final emptyCopy = availableJobsEmptyStateCopy(
                       filter: appliedFilter,
+                      l10n: l10n,
                       nearbyCount: result.meta.nearbyAvailableCount ?? 0,
                       totalAvailableCount: result.meta.totalAvailableCount,
                     );
@@ -189,6 +176,45 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ],
+                      if (paginationError != null) ...[
+                        _StatePanel(
+                          icon: Icons.sync_problem_outlined,
+                          title: localizedApiErrorMessage(
+                            paginationError,
+                            l10n,
+                          ),
+                          subtitle: l10n.driverAvailableJobsCursorInvalid,
+                          actionLabel: l10n.retry,
+                          onAction: () => ref
+                              .read(availableDriverDeliveriesProvider.notifier)
+                              .restartPagination(),
+                          compact: true,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      if (result.meta.pagination?.hasMore == true)
+                        Align(
+                          alignment: AlignmentDirectional.center,
+                          child: OutlinedButton.icon(
+                            onPressed: availableAsync.isLoading
+                                ? null
+                                : () => ref
+                                      .read(
+                                        availableDriverDeliveriesProvider
+                                            .notifier,
+                                      )
+                                      .loadMore(),
+                            icon: availableAsync.isLoading
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.expand_more_rounded),
+                            label: Text(l10n.loadMore),
+                          ),
+                        ),
                     ],
                   );
                 },
@@ -246,6 +272,7 @@ class _JobsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final showTotal =
         nearbyCount != null &&
         totalAvailableCount != null &&
@@ -256,14 +283,14 @@ class _JobsHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Driver jobs',
+            l10n.driverJobsTitle,
             style: AppTextStyles.display(
               context,
             ).copyWith(color: palette.textPrimary),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            'Basic internal delivery coordination',
+            l10n.driverJobsSubtitle,
             style: AppTextStyles.subtitle(
               context,
             ).copyWith(color: palette.textSecondary),
@@ -275,23 +302,23 @@ class _JobsHeader extends StatelessWidget {
             children: [
               _StatChip(
                 icon: Icons.route_outlined,
-                label: 'Active deliveries: $activeCount/$maxActive',
+                label: l10n.driverActiveDeliveriesCount(activeCount, maxActive),
               ),
               _StatChip(
                 icon: Icons.near_me_outlined,
                 label: nearbyCount == null
-                    ? 'Available jobs: …'
-                    : 'Available jobs: $nearbyCount',
+                    ? l10n.driverAvailableJobsCountLoading
+                    : l10n.driverAvailableJobsCount(nearbyCount!),
               ),
               if (showTotal)
                 _StatChip(
                   icon: Icons.inventory_2_outlined,
-                  label: 'Total available: $totalAvailableCount',
+                  label: l10n.driverTotalAvailable(totalAvailableCount!),
                 ),
               if (areaLabel != null)
                 _StatChip(
                   icon: Icons.place_outlined,
-                  label: 'Area: $areaLabel',
+                  label: l10n.driverAreaChip(areaLabel!),
                 ),
             ],
           ),
@@ -338,210 +365,6 @@ class _StatChip extends StatelessWidget {
   }
 }
 
-class _ActiveDeliveriesLoading extends StatelessWidget {
-  const _ActiveDeliveriesLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('My active deliveries', style: AppTextStyles.title(context)),
-        const SizedBox(height: AppSpacing.md),
-        const _Panel(
-          child: Row(
-            children: [
-              SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              SizedBox(width: AppSpacing.md),
-              Expanded(child: Text('Loading active deliveries…')),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ActiveDeliveriesSection extends StatelessWidget {
-  const _ActiveDeliveriesSection({required this.result});
-
-  final DriverDeliveriesListResult result;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'My active deliveries',
-                style: AppTextStyles.title(context),
-              ),
-            ),
-            Text(
-              '${result.meta.activeDeliveryCount}/${result.meta.maxActiveDeliveries}',
-              style: AppTextStyles.label(context),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        if (result.deliveries.isEmpty)
-          const _StatePanel(
-            icon: Icons.check_circle_outline,
-            title: 'No active deliveries yet.',
-            subtitle: 'You can accept available jobs when you are ready.',
-            compact: true,
-          )
-        else
-          for (final delivery in result.deliveries) ...[
-            _ActiveDeliveryCard(delivery: delivery),
-            const SizedBox(height: AppSpacing.md),
-          ],
-      ],
-    );
-  }
-}
-
-class _ActiveDeliveryCard extends StatelessWidget {
-  const _ActiveDeliveryCard({required this.delivery});
-
-  final DriverDelivery delivery;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-    final pickup = _locationRouteLabel(
-      city: delivery.pickupCity ?? delivery.pickupLocation.city,
-      area: delivery.pickupArea ?? delivery.pickupLocation.area,
-      fallback: delivery.pickupLocation.exactSummary,
-    );
-    final dropoff = _locationRouteLabel(
-      city: delivery.dropoffCity ?? delivery.dropoffLocation.city,
-      area: delivery.dropoffArea ?? delivery.dropoffLocation.area,
-      fallback: delivery.dropoffLocation.exactSummary,
-    );
-
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      delivery.material.title,
-                      style: AppTextStyles.title(
-                        context,
-                      ).copyWith(color: palette.textPrimary),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    if (delivery.hasGroupedItems) ...[
-                      for (final line in delivery.groupedItemLines) ...[
-                        Text(
-                          line,
-                          style: AppTextStyles.body(
-                            context,
-                          ).copyWith(color: palette.textSecondary),
-                        ),
-                        const SizedBox(height: 2),
-                      ],
-                    ] else
-                      Text(
-                        delivery.material.quantityLabel,
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(color: palette.textSecondary),
-                      ),
-                  ],
-                ),
-              ),
-              AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status),
-                tone: deliveryStatusAppTone(delivery.status),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final compact = constraints.maxWidth < 480;
-              if (compact) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _RouteEndpoint(icon: Icons.trip_origin, label: pickup),
-                    const SizedBox(height: AppSpacing.xs),
-                    _RouteEndpoint(icon: Icons.place_outlined, label: dropoff),
-                  ],
-                );
-              }
-
-              return Row(
-                children: [
-                  Icon(Icons.trip_origin, size: 16, color: palette.textMuted),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(pickup, style: AppTextStyles.body(context)),
-                  ),
-                  Icon(Icons.arrow_forward, size: 16, color: palette.textMuted),
-                  const SizedBox(width: AppSpacing.xs),
-                  Icon(
-                    Icons.place_outlined,
-                    size: 16,
-                    color: palette.textMuted,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(dropoff, style: AppTextStyles.body(context)),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.md),
-          FilledButton.icon(
-            onPressed: () => context.push('/driver/deliveries/${delivery.id}'),
-            style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
-            icon: const Icon(Icons.route_outlined),
-            label: const Text('Open delivery'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RouteEndpoint extends StatelessWidget {
-  const _RouteEndpoint({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: palette.textMuted),
-        const SizedBox(width: AppSpacing.xs),
-        Expanded(child: Text(label, style: AppTextStyles.body(context))),
-      ],
-    );
-  }
-}
-
 class _AvailableJobsFilters extends ConsumerWidget {
   const _AvailableJobsFilters({required this.meta});
 
@@ -550,6 +373,8 @@ class _AvailableJobsFilters extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
+    final formatters = LocalizedFormatters(l10n);
     final filter = ref.watch(driverAvailableJobsFilterProvider);
     final notifier = ref.read(driverAvailableJobsFilterProvider.notifier);
     final radiusEnabled = hasUsableRadiusReference(meta);
@@ -573,12 +398,16 @@ class _AvailableJobsFilters extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                searchRadiusLabel(anyDistance: anyDistance, radiusKm: radiusKm),
+                searchRadiusLabel(
+                  anyDistance: anyDistance,
+                  radiusKm: radiusKm,
+                  l10n: l10n,
+                ),
                 style: AppTextStyles.label(context),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Distance is calculated to the pickup location.',
+                l10n.driverDistanceToPickupHint,
                 style: AppTextStyles.body(
                   context,
                 ).copyWith(color: palette.textSecondary, fontSize: 12),
@@ -603,8 +432,8 @@ class _AvailableJobsFilters extends ConsumerWidget {
                       .toDouble(),
                   divisions: DriverJobsFilterConstants.radiusStepsKm.length - 1,
                   label: anyDistance
-                      ? 'Any distance'
-                      : 'Within ${radiusKm.round()} km',
+                      ? l10n.driverAnyDistance
+                      : l10n.driverWithinKm(radiusKm.round()),
                   onChanged: !radiusEnabled
                       ? null
                       : (value) {
@@ -618,14 +447,15 @@ class _AvailableJobsFilters extends ConsumerWidget {
                 steps: DriverJobsFilterConstants.radiusStepsKm,
                 activeIndex: anyDistance ? null : radiusIndex,
                 muted: anyDistance,
+                formatters: formatters,
               ),
             ],
           );
 
           final sortSection = SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'nearest', label: Text('Nearest')),
-              ButtonSegment(value: 'newest', label: Text('Newest')),
+            segments: [
+              ButtonSegment(value: 'nearest', label: Text(l10n.driverNearest)),
+              ButtonSegment(value: 'newest', label: Text(l10n.driverNewest)),
             ],
             selected: {filter.sortBy},
             onSelectionChanged: (selection) {
@@ -639,40 +469,40 @@ class _AvailableJobsFilters extends ConsumerWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
-                'City:',
+                l10n.driverCityLabel,
                 style: AppTextStyles.label(
                   context,
                 ).copyWith(color: palette.textMuted),
               ),
               FilterChip(
-                label: const Text('All cities'),
+                label: Text(l10n.driverAllCities),
                 selected: filter.city == null,
                 showCheckmark: true,
                 onSelected: (_) => notifier.setCity(null),
               ),
               if (profileCity != null)
                 FilterChip(
-                  label: Text(profileCity),
+                  label: BidiText(profileCity),
                   selected:
                       filter.city?.toLowerCase() == profileCity.toLowerCase(),
                   showCheckmark: true,
                   onSelected: (_) => notifier.setCity(profileCity),
                 ),
               Text(
-                'Area:',
+                l10n.driverAreaLabel,
                 style: AppTextStyles.label(
                   context,
                 ).copyWith(color: palette.textMuted),
               ),
               FilterChip(
-                label: const Text('All areas'),
+                label: Text(l10n.driverAllAreas),
                 selected: filter.area == null,
                 showCheckmark: true,
                 onSelected: (_) => notifier.setArea(null),
               ),
               if (profileArea != null)
                 FilterChip(
-                  label: Text(profileArea),
+                  label: BidiText(profileArea),
                   selected:
                       filter.area?.toLowerCase() == profileArea.toLowerCase(),
                   showCheckmark: true,
@@ -682,7 +512,7 @@ class _AvailableJobsFilters extends ConsumerWidget {
                 avatar: anyDistance
                     ? Icon(Icons.check_circle, size: 16, color: palette.mint)
                     : null,
-                label: const Text('Any distance'),
+                label: Text(l10n.driverAnyDistance),
                 selected: anyDistance,
                 showCheckmark: false,
                 onSelected: !radiusEnabled
@@ -705,11 +535,11 @@ class _AvailableJobsFilters extends ConsumerWidget {
                   context,
                   AppStatusTone.neutral,
                 ),
-                child: const Text('Reset filters'),
+                child: Text(l10n.driverResetFilters),
               ),
               if (!radiusEnabled)
                 Text(
-                  'Location needed for distance filter.',
+                  l10n.driverLocationNeeded,
                   style: AppTextStyles.body(
                     context,
                   ).copyWith(color: palette.textSecondary, fontSize: 12),
@@ -721,7 +551,10 @@ class _AvailableJobsFilters extends ConsumerWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Find nearby jobs', style: AppTextStyles.title(context)),
+                Text(
+                  l10n.driverFindNearbyJobs,
+                  style: AppTextStyles.title(context),
+                ),
                 const SizedBox(height: AppSpacing.md),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -737,14 +570,14 @@ class _AvailableJobsFilters extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Location',
+                            l10n.driverLocationLabel,
                             style: AppTextStyles.label(
                               context,
                             ).copyWith(color: palette.textMuted),
                           ),
                           const SizedBox(height: AppSpacing.xs),
                           Text(
-                            driverLocationSummary(meta),
+                            driverLocationSummary(meta, l10n: l10n),
                             style: AppTextStyles.body(context),
                           ),
                         ],
@@ -764,7 +597,7 @@ class _AvailableJobsFilters extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Sort',
+                            l10n.driverSort,
                             style: AppTextStyles.label(
                               context,
                             ).copyWith(color: palette.textMuted),
@@ -785,7 +618,10 @@ class _AvailableJobsFilters extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Find nearby jobs', style: AppTextStyles.title(context)),
+              Text(
+                l10n.driverFindNearbyJobs,
+                style: AppTextStyles.title(context),
+              ),
               const SizedBox(height: AppSpacing.md),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -801,14 +637,14 @@ class _AvailableJobsFilters extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Location',
+                          l10n.driverLocationLabel,
                           style: AppTextStyles.label(
                             context,
                           ).copyWith(color: palette.textMuted),
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          driverLocationSummary(meta),
+                          driverLocationSummary(meta, l10n: l10n),
                           style: AppTextStyles.body(context),
                         ),
                       ],
@@ -820,7 +656,7 @@ class _AvailableJobsFilters extends ConsumerWidget {
               radiusSection,
               const SizedBox(height: AppSpacing.md),
               Text(
-                'Sort',
+                l10n.driverSort,
                 style: AppTextStyles.label(
                   context,
                 ).copyWith(color: palette.textMuted),
@@ -842,11 +678,13 @@ class _RadiusMarks extends StatelessWidget {
     required this.steps,
     required this.activeIndex,
     required this.muted,
+    required this.formatters,
   });
 
   final List<double> steps;
   final int? activeIndex;
   final bool muted;
+  final LocalizedFormatters formatters;
 
   @override
   Widget build(BuildContext context) {
@@ -857,7 +695,10 @@ class _RadiusMarks extends StatelessWidget {
         for (var index = 0; index < steps.length; index++) ...[
           if (index > 0) const Expanded(child: SizedBox()),
           Text(
-            '${steps[index].round()} km',
+            formatters.distanceKilometers(
+              steps[index].round(),
+              decimalDigits: 0,
+            ),
             style: AppTextStyles.label(context).copyWith(
               color: muted
                   ? palette.textMuted
@@ -912,6 +753,8 @@ class _AvailableJobsEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return AppEmptyStateCard(
       icon: Icons.local_shipping_outlined,
       title: copy.title,
@@ -922,7 +765,7 @@ class _AvailableJobsEmptyState extends StatelessWidget {
           FilledButton(
             onPressed: onIncreaseRadius,
             style: AppStatusButtonStyle.filled(context, AppStatusTone.primary),
-            child: const Text('Increase radius'),
+            child: Text(l10n.driverIncreaseRadius),
           ),
         if (onShowAnyDistance != null)
           OutlinedButton(
@@ -931,13 +774,13 @@ class _AvailableJobsEmptyState extends StatelessWidget {
               context,
               AppStatusTone.neutral,
             ),
-            child: const Text('Show any distance'),
+            child: Text(l10n.driverShowAnyDistance),
           ),
         if (onReset != null)
           TextButton(
             onPressed: onReset,
             style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
-            child: const Text('Reset filters'),
+            child: Text(l10n.driverResetFilters),
           ),
       ],
     );
@@ -956,20 +799,22 @@ class _AvailableJobCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
     final actionState = ref.watch(driverDeliveryActionControllerProvider);
     final isSubmitting = actionState.isLoading;
+    final labels = DriverUiLabels(l10n);
     final pickupSummary = _locationRouteLabel(
       city: delivery.pickupCity ?? delivery.pickupLocation.city,
       area: delivery.pickupArea ?? delivery.pickupLocation.area,
-      fallback: delivery.pickupLocation.safeSummary,
+      fallback: labels.locationSummary(delivery.pickupLocation.safeSummary),
     );
     final dropoffSummary = _locationRouteLabel(
       city: delivery.dropoffCity ?? delivery.dropoffLocation.city,
       area: delivery.dropoffArea ?? delivery.dropoffLocation.area,
-      fallback: delivery.dropoffLocation.safeSummary,
+      fallback: labels.locationSummary(delivery.dropoffLocation.safeSummary),
     );
-    final distanceText = distanceFromYouLabel(delivery.distanceKm);
-    final routeLabel = 'Pickup: $pickupSummary → Drop-off: $dropoffSummary';
+    final distanceText = distanceFromYouLabel(delivery.distanceKm, l10n: l10n);
+    final routeLabel = l10n.deliveryRoute(pickupSummary, dropoffSummary);
 
     return _Panel(
       child: Column(
@@ -982,17 +827,28 @@ class _AvailableJobCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      delivery.material.title,
+                    BidiText(
+                      DriverUiLabels(
+                        l10n,
+                      ).materialTitle(delivery.material.title),
                       style: AppTextStyles.title(
                         context,
                       ).copyWith(color: palette.textPrimary),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     if (delivery.hasGroupedItems) ...[
-                      for (final line in delivery.groupedItemLines) ...[
-                        Text(
-                          line,
+                      Text(
+                        DriverUiLabels(
+                          l10n,
+                        ).groupedItemsCount(delivery.itemCount),
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(color: palette.textSecondary),
+                      ),
+                      const SizedBox(height: 2),
+                      for (final item in delivery.items) ...[
+                        BidiText(
+                          '${bidiIsolate(DriverUiLabels(l10n).materialTitle(item.title))} × ${bidiIsolate(item.quantityLabel)}',
                           style: AppTextStyles.body(
                             context,
                           ).copyWith(color: palette.textSecondary),
@@ -1007,7 +863,7 @@ class _AvailableJobCard extends ConsumerWidget {
                         ).copyWith(color: palette.textSecondary),
                       ),
                     const SizedBox(height: AppSpacing.xs),
-                    Text(
+                    BidiText(
                       routeLabel,
                       style: AppTextStyles.label(
                         context,
@@ -1017,7 +873,7 @@ class _AvailableJobCard extends ConsumerWidget {
                 ),
               ),
               AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status),
+                label: deliveryStatusLabel(delivery.status, l10n: l10n),
                 tone: deliveryStatusAppTone(delivery.status),
               ),
             ],
@@ -1025,10 +881,11 @@ class _AvailableJobCard extends ConsumerWidget {
           const SizedBox(height: AppSpacing.md),
           _InfoGrid(
             items: [
-              _InfoItem('Pickup window', driverPickupWindowSummary(delivery)),
-              _InfoItem('Pickup', pickupSummary),
-              _InfoItem('Drop-off', dropoffSummary),
-              _InfoItem('Distance to pickup', distanceText),
+              _InfoItem(
+                l10n.pickupWindow,
+                driverPickupWindowSummary(delivery, l10n: l10n),
+              ),
+              _InfoItem(l10n.driverDistanceToPickup, distanceText),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1051,10 +908,10 @@ class _AvailableJobCard extends ConsumerWidget {
                   : const Icon(Icons.assignment_turned_in_outlined),
               label: Text(
                 acceptDisabled
-                    ? 'Active delivery limit reached'
+                    ? l10n.driverActiveLimitReachedButton
                     : isSubmitting
-                    ? 'Accepting…'
-                    : 'Accept job',
+                    ? l10n.driverAccepting
+                    : l10n.driverAcceptJob,
               ),
             ),
           ),
@@ -1064,6 +921,8 @@ class _AvailableJobCard extends ConsumerWidget {
   }
 
   Future<void> _acceptDelivery(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+
     try {
       final assigned = await ref
           .read(driverDeliveryActionControllerProvider.notifier)
@@ -1073,7 +932,7 @@ class _AvailableJobCard extends ConsumerWidget {
         return;
       }
 
-      showInfoSnackBar(context, 'Delivery accepted.');
+      showInfoSnackBar(context, l10n.driverDeliveryAccepted);
       context.push('/driver/deliveries/${assigned.id}');
     } on ApiException catch (error) {
       refreshDriverJobs(ref);
@@ -1082,16 +941,14 @@ class _AvailableJobCard extends ConsumerWidget {
         return;
       }
 
-      final message = error.statusCode == 409
-          ? _driverConflictMessage(error.message)
-          : error.displayMessage;
+      final message = _driverAcceptConflictMessage(error, l10n);
       showInfoSnackBar(context, message);
     } catch (error) {
       if (!context.mounted) {
         return;
       }
 
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, error, l10n: l10n);
     }
   }
 }
@@ -1108,19 +965,14 @@ String _locationRouteLabel({
   return parts.isEmpty ? fallback : parts.join(', ');
 }
 
-String _driverConflictMessage(String message) {
-  final lower = message.toLowerCase();
-  if (lower.contains('active delivery limit')) {
-    return 'You have reached the active delivery limit.';
+String _driverAcceptConflictMessage(ApiException error, AppLocalizations l10n) {
+  if (error.code == 'DRIVER_ACTIVE_LIMIT_REACHED') {
+    return l10n.driverReachedActiveLimit;
   }
-  if (lower.contains('active delivery')) {
-    return message;
+  if (error.code == 'DELIVERY_NOT_AVAILABLE') {
+    return l10n.driverDeliveryNoLongerAvailable;
   }
-  if (lower.contains('not available') || lower.contains('must be available')) {
-    return message;
-  }
-
-  return 'This delivery is no longer available.';
+  return localizedApiErrorMessage(error, l10n);
 }
 
 class _Panel extends StatelessWidget {
@@ -1133,7 +985,7 @@ class _Panel extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
 
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -1262,7 +1114,7 @@ class _InfoTile extends StatelessWidget {
             ).copyWith(color: palette.textMuted),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
+          BidiText(
             item.value,
             style: AppTextStyles.body(
               context,

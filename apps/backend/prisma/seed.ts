@@ -7448,6 +7448,7 @@ const createUsers = async (passwordHash: string, context: SeedContext) => {
             availabilityNote: "Available for ImpactLoop internal deliveries.",
             status: "ACTIVE",
             availability: "AVAILABLE",
+            acceptingNewJobs: true,
             vehicleType: driver.vehicleType,
             vehicleLabel: driver.vehicleLabel,
             vehiclePlate: driver.vehiclePlate,

@@ -9,6 +9,7 @@ import '../../../../app/theme/app_color_tokens.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import 'supplier_selected_coordinates_panel.dart';
+import '../../../../l10n/l10n.dart';
 
 /// Palestine fallback center when no coordinates and city is not Nablus.
 const palestineFallbackCenter = LatLng(31.9522, 35.2332);
@@ -553,19 +554,13 @@ class _MapUnavailable extends StatelessWidget {
               Icon(Icons.map_outlined, color: colors.textMuted, size: 28),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                context.s.t(
-                  'Pickup map unavailable',
-                  'خريطة الاستلام غير متاحة',
-                ),
+                context.l10n.supplierPickupMapUnavailable,
                 style: context.supplierLabel(),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 2),
               Text(
-                context.s.t(
-                  'Add a pickup location to display the map.',
-                  'أضف موقع استلام لعرض الخريطة.',
-                ),
+                context.l10n.supplierAddPickupLocationForMap,
                 style: context.supplierBody().copyWith(color: colors.textMuted),
                 textAlign: TextAlign.center,
               ),

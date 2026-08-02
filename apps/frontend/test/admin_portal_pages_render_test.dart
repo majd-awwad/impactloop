@@ -325,7 +325,7 @@ void main() {
 
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    expect(find.text('No reservations recorded yet.'), findsOneWidget);
+    expect(find.text('No reservations found'), findsOneWidget);
   });
 
   testWidgets('AdminDeliveriesPage renders empty state', (tester) async {

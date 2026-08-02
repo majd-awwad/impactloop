@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../data/models/supplier_incoming_request.dart';
+import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'incoming_request_status_style.dart';
 
@@ -19,8 +19,10 @@ abstract final class IncomingRequestDesktopGrid {
   static const columnGap = AppSpacing.md;
 }
 
-String formatPickupWindowShort(SupplierPickupWindow window) =>
-    '${DateFormat('MMM d, HH:mm').format(window.start.toLocal())}–${DateFormat('HH:mm').format(window.end.toLocal())}';
+String formatPickupWindowShort(
+  BuildContext context,
+  SupplierPickupWindow window,
+) => SupplierReservationUiHelpers.of(context).formatPickupWindow(window);
 
 class IncomingRequestCard extends StatelessWidget {
   const IncomingRequestCard({
@@ -40,6 +42,8 @@ class IncomingRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final ui = SupplierReservationUiHelpers.of(context);
     final isTerminal = _isQuietTerminal(request);
     final desktop =
         MediaQuery.sizeOf(context).width >=
@@ -49,15 +53,30 @@ class IncomingRequestCard extends StatelessWidget {
         (request.status == SupplierIncomingRequestStatus.accepted &&
                 request.canSupplierComplete &&
                 onMarkCompleted != null
-            ? 'Mark completed'
+            ? l.markCompleted
             : null);
     final effectivePrimary = onPrimaryAction ?? onMarkCompleted;
+    final detailsLabel = l.viewRequestDetailsForMaterial(
+      request.materialTitle,
+    );
     final content = desktop
-        ? _desktopContent(context, effectiveLabel, effectivePrimary)
-        : _cardContent(context, effectiveLabel, effectivePrimary);
+        ? _desktopContent(
+            context,
+            effectiveLabel,
+            effectivePrimary,
+            detailsLabel,
+            ui,
+          )
+        : _cardContent(
+            context,
+            effectiveLabel,
+            effectivePrimary,
+            detailsLabel,
+            ui,
+          );
     return Semantics(
       button: true,
-      label: 'View request details',
+      label: l.viewRequestDetails,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -66,7 +85,7 @@ class IncomingRequestCard extends StatelessWidget {
           child: Container(
             width: double.infinity,
             constraints: BoxConstraints(minHeight: isTerminal ? 96 : 108),
-            padding: const EdgeInsets.symmetric(
+            padding: const EdgeInsetsDirectional.symmetric(
               horizontal: AppSpacing.md,
               vertical: 12,
             ),
@@ -90,6 +109,8 @@ class IncomingRequestCard extends StatelessWidget {
     BuildContext context,
     String? label,
     VoidCallback? primary,
+    String detailsLabel,
+    SupplierReservationUiHelpers ui,
   ) => Row(
     crossAxisAlignment: CrossAxisAlignment.center,
     children: [
@@ -100,12 +121,12 @@ class IncomingRequestCard extends StatelessWidget {
       const SizedBox(width: IncomingRequestDesktopGrid.columnGap),
       Expanded(
         flex: IncomingRequestDesktopGrid.fulfillmentFlex,
-        child: _Schedule(request: request),
+        child: _Schedule(request: request, ui: ui),
       ),
       const SizedBox(width: IncomingRequestDesktopGrid.columnGap),
       Expanded(
         flex: IncomingRequestDesktopGrid.statusFlex,
-        child: _OperationalState(request: request),
+        child: _OperationalState(request: request, ui: ui),
       ),
       const SizedBox(width: IncomingRequestDesktopGrid.columnGap),
       SizedBox(
@@ -114,7 +135,7 @@ class IncomingRequestCard extends StatelessWidget {
           label: label,
           onPrimary: primary,
           onView: onView,
-          detailsLabel: 'View ${request.materialTitle} request details',
+          detailsLabel: detailsLabel,
         ),
       ),
     ],
@@ -124,6 +145,8 @@ class IncomingRequestCard extends StatelessWidget {
     BuildContext context,
     String? label,
     VoidCallback? primary,
+    String detailsLabel,
+    SupplierReservationUiHelpers ui,
   ) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -133,17 +156,20 @@ class IncomingRequestCard extends StatelessWidget {
         spacing: AppSpacing.md,
         runSpacing: AppSpacing.md,
         children: [
-          SizedBox(width: 260, child: _OperationalState(request: request)),
+          SizedBox(
+            width: 260,
+            child: _OperationalState(request: request, ui: ui),
+          ),
         ],
       ),
       const SizedBox(height: AppSpacing.md),
-      _Schedule(request: request),
+      _Schedule(request: request, ui: ui),
       const SizedBox(height: AppSpacing.md),
       _Actions(
         label: label,
         onPrimary: primary,
         onView: onView,
-        detailsLabel: 'View ${request.materialTitle} request details',
+        detailsLabel: detailsLabel,
         expanded: true,
       ),
     ],
@@ -237,18 +263,20 @@ class _Thumbnail extends StatelessWidget {
 }
 
 class _Schedule extends StatelessWidget {
-  const _Schedule({required this.request});
+  const _Schedule({required this.request, required this.ui});
   final SupplierIncomingRequest request;
+  final SupplierReservationUiHelpers ui;
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final summary = request.scheduleSummary;
     final window = summary?.effectiveWindow;
     final terminal = _isQuietTerminal(request);
     final isDelivery = request.isDeliveryFulfillment || request.hasDelivery;
-    final heading = isDelivery ? 'Delivery' : 'Self pickup';
+    final heading = isDelivery ? l.delivery : l.selfPickup;
     final date = window?.start == null || window?.end == null
         ? null
-        : _formatWindow(window!.start!, window.end!);
+        : ui.formatScheduleWindow(window!);
     final recovery = summary?.recoveryContext != null;
     final deliveryState =
         request.deliverySummary?.status ?? request.activeDelivery?.status;
@@ -264,13 +292,13 @@ class _Schedule extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           terminal
-              ? _terminalFulfillmentLine(request.status)
+              ? ui.terminalFulfillmentLine(request.status)
               : recovery
-              ? 'Admin recovery in progress'
+              ? l.adminRecoveryInProgress
               : isDelivery && deliveryState != null
-              ? _deliveryLabel(deliveryState)
+              ? ui.deliveryStatus(deliveryState)
               : date == null
-              ? 'No confirmed time yet'
+              ? l.noConfirmedTimeYet
               : '',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -292,8 +320,9 @@ class _Schedule extends StatelessWidget {
 }
 
 class _OperationalState extends StatelessWidget {
-  const _OperationalState({required this.request});
+  const _OperationalState({required this.request, required this.ui});
   final SupplierIncomingRequest request;
+  final SupplierReservationUiHelpers ui;
   @override
   Widget build(BuildContext context) {
     final style = IncomingRequestStatusStyle.forStatus(
@@ -306,24 +335,27 @@ class _OperationalState extends StatelessWidget {
             SupplierAttentionState.adminReviewRequired ||
         request.summaryBucket?.value == SupplierSummaryBucket.adminReview;
     final supporting = terminal
-        ? _terminalOutcome(request.status)
-        : isAdminReview
-        ? 'Recovery · Next: Admin'
-        : nextActor != null && nextActor != SupplierNextActor.none
-        ? '${_attentionLabel(request.attentionState?.value)} · Next: ${_actorLabel(nextActor)}'
-        : _attentionLabel(request.attentionState?.value);
+        ? ui.terminalOutcome(request.status)
+        : ui.attentionWithNextActor(
+            attention: request.attentionState?.value,
+            nextActor: nextActor,
+            adminReview: isAdminReview,
+          );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 8,
+            vertical: 4,
+          ),
           decoration: BoxDecoration(
             color: style.background,
             borderRadius: AppRadius.pillAll,
             border: Border.all(color: style.border),
           ),
           child: Text(
-            request.status.label,
+            ui.reservationStatus(request),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: context.supplierChip().copyWith(
@@ -372,7 +404,7 @@ class _Actions extends StatelessWidget {
     final style = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size(84, 40)),
       padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 8),
+        EdgeInsetsDirectional.symmetric(horizontal: 8),
       ),
       visualDensity: VisualDensity.compact,
     );
@@ -391,7 +423,9 @@ class _Actions extends StatelessWidget {
       child: IconButton(
         onPressed: onView,
         tooltip: detailsLabel,
-        icon: const Icon(Icons.chevron_right_rounded),
+        icon: Icon(
+          Icons.chevron_right_rounded,
+        ),
       ),
     );
     if (expanded)
@@ -412,38 +446,6 @@ class _Actions extends StatelessWidget {
 String _shortId(String id) =>
     id.length <= 8 ? id.toUpperCase() : id.substring(0, 8).toUpperCase();
 
-String _formatWindow(DateTime start, DateTime end) =>
-    '${DateFormat('MMM d · h:mm a').format(start.toLocal())}–${DateFormat('h:mm a').format(end.toLocal())}';
-
-String _attentionLabel(SupplierAttentionState? attention) =>
-    switch (attention) {
-      SupplierAttentionState.supplierActionRequired => 'Needs your response',
-      SupplierAttentionState.waitingForLearner => 'Waiting for learner',
-      SupplierAttentionState.fulfillmentInProgress => 'Fulfillment active',
-      SupplierAttentionState.adminReviewRequired => 'Admin review',
-      SupplierAttentionState.terminal => 'No further action',
-      _ => 'Review request',
-    };
-
-String? _terminalOutcome(SupplierIncomingRequestStatus status) =>
-    switch (status) {
-      SupplierIncomingRequestStatus.completed => 'Completed successfully',
-      SupplierIncomingRequestStatus.expired =>
-        'No response before the deadline',
-      _ => null,
-    };
-
-String _terminalFulfillmentLine(SupplierIncomingRequestStatus status) =>
-    switch (status) {
-      SupplierIncomingRequestStatus.completed => 'Completed fulfillment',
-      SupplierIncomingRequestStatus.cancelled => 'Cancelled before fulfillment',
-      SupplierIncomingRequestStatus.expired => 'Expired before fulfillment',
-      SupplierIncomingRequestStatus.noShow => 'Closed after no-show',
-      SupplierIncomingRequestStatus.fulfillmentFailed => 'Fulfillment failed',
-      SupplierIncomingRequestStatus.declined => 'Rejected before fulfillment',
-      _ => 'Final reservation outcome',
-    };
-
 bool _isQuietTerminal(SupplierIncomingRequest request) {
   final adminReview =
       request.attentionState?.value ==
@@ -453,21 +455,3 @@ bool _isQuietTerminal(SupplierIncomingRequest request) {
       (request.attentionState?.value == SupplierAttentionState.terminal ||
           request.isReadOnlyFinalState);
 }
-
-String _actorLabel(SupplierNextActor actor) => switch (actor) {
-  SupplierNextActor.supplier => 'Supplier',
-  SupplierNextActor.learner => 'Learner',
-  SupplierNextActor.driver => 'Driver',
-  SupplierNextActor.admin => 'Admin',
-  SupplierNextActor.system => 'System',
-  _ => '',
-};
-
-String _deliveryLabel(String value) => switch (value.toUpperCase()) {
-  'WAITING_FOR_DRIVER' => 'Waiting for driver',
-  'DRIVER_ASSIGNED' => 'Driver assigned',
-  'ARRIVED_PICKUP' => 'Driver at pickup',
-  'IN_TRANSIT' => 'On the way',
-  'DELIVERED' => 'Delivered',
-  _ => value.replaceAll('_', ' ').toLowerCase(),
-};

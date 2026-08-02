@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/l10n.dart';
+
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -29,6 +31,7 @@ import '../../../comments/domain/comment_models.dart';
 import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
+import '../../../profile/application/profile_providers.dart';
 import '../../../learning_hub/application/learning_hub_providers.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
@@ -74,6 +77,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
     this.returnTo,
     this.componentName,
     this.recommendationImpressionId,
+    this.materialRequestMatchId,
   });
 
   final String materialId;
@@ -83,6 +87,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
   final String? returnTo;
   final String? componentName;
   final String? recommendationImpressionId;
+  final String? materialRequestMatchId;
 
   @override
   ConsumerState<MaterialDetailsPage> createState() =>
@@ -465,6 +470,10 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
       }
 
       ref.invalidate(homeSuggestedMaterialsProvider);
+      final userId = ref.read(authControllerProvider).user?.id;
+      if (userId != null && userId.trim().isNotEmpty) {
+        ref.invalidate(learnerProfileSummaryProvider(userId));
+      }
       setState(() {
         _materialOverride = optimisticMaterial.copyWith(
           likesCount: engagement.likesCount,
@@ -518,13 +527,20 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
     CreateReservationRequest request,
   ) async {
     final buildItemId = widget.buildItemId?.trim();
-    final enrichedRequest = buildItemId != null && buildItemId.isNotEmpty
+    final materialRequestMatchId = widget.materialRequestMatchId?.trim();
+    final hasBuildItemId = buildItemId != null && buildItemId.isNotEmpty;
+    final hasMaterialRequestMatchId =
+        materialRequestMatchId != null && materialRequestMatchId.isNotEmpty;
+    final enrichedRequest = hasBuildItemId || hasMaterialRequestMatchId
         ? CreateReservationRequest(
             materialId: request.materialId,
             quantityRequested: request.quantityRequested,
             fulfillmentMethod: request.fulfillmentMethod,
             message: request.message,
-            buildItemId: buildItemId,
+            buildItemId: hasBuildItemId ? buildItemId : null,
+            materialRequestMatchId: hasMaterialRequestMatchId
+                ? materialRequestMatchId
+                : null,
             learnerPreferredPickupWindows:
                 request.learnerPreferredPickupWindows,
             learnerPreferredDeliveryWindows:
@@ -2131,7 +2147,7 @@ class _LearnerReservationStateCard extends StatelessWidget {
           if (delivery != null) ...[
             const SizedBox(height: AppSpacing.sm),
             AppStatusBadge(
-              label: deliveryStatusLabel(delivery!.status),
+              label: deliveryStatusLabel(delivery!.status, l10n: context.l10n),
               tone: deliveryStatusAppTone(delivery!.status),
             ),
           ],
@@ -2495,7 +2511,10 @@ class _ReportMaterialSection extends ConsumerWidget {
     } on ApiException catch (error) {
       noteController.dispose();
       if (!context.mounted) return;
-      showErrorSnackBar(context, error.displayMessage);
+      showErrorSnackBar(
+        context,
+        localizedApiErrorMessage(error, context.l10n),
+      );
     } catch (_) {
       noteController.dispose();
       if (!context.mounted) return;
@@ -2972,9 +2991,9 @@ class _ReserveMaterialDialogState
       setState(() {
         _quoteLoading = false;
         _quote = null;
-        _quoteError = error.message.toLowerCase().contains('delivery')
-            ? 'Could not calculate delivery price. Please check delivery location.'
-            : error.message;
+        _quoteError = error.code == 'NETWORK_ERROR' || error.code == 'TIMEOUT'
+            ? localizedApiErrorMessage(error, context.l10n)
+            : context.l10n.deliveryQuoteFailed;
       });
     } catch (_) {
       if (!mounted) {
@@ -2984,8 +3003,7 @@ class _ReserveMaterialDialogState
       setState(() {
         _quoteLoading = false;
         _quote = null;
-        _quoteError =
-            'Could not calculate delivery price. Please check delivery location.';
+        _quoteError = context.l10n.deliveryQuoteFailed;
       });
     }
   }
@@ -3224,7 +3242,10 @@ class _ReserveMaterialDialogState
 
         setState(() {
           _isSubmitting = false;
-          _errorMessage = reservationCreateErrorMessage(error);
+          _errorMessage = reservationCreateErrorMessage(
+            error,
+            l10n: context.l10n,
+          );
         });
         return;
       } catch (_) {
@@ -3296,7 +3317,10 @@ class _ReserveMaterialDialogState
 
         setState(() {
           _isSubmitting = false;
-          _errorMessage = reservationCreateErrorMessage(error);
+          _errorMessage = reservationCreateErrorMessage(
+            error,
+            l10n: context.l10n,
+          );
         });
         return;
       } catch (_) {

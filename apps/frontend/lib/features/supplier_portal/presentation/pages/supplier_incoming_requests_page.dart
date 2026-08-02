@@ -7,6 +7,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../controllers/supplier_requests_providers.dart';
+import '../supplier_reservation_ui_helpers.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/accept_incoming_request_dialog.dart';
 import '../widgets/complete_pickup_dialog.dart';
@@ -15,13 +16,12 @@ import '../widgets/incoming_request_card.dart';
 import '../widgets/reservation_follow_up_flow.dart';
 import '../widgets/supplier_delivery_incident_flow.dart';
 import '../widgets/supplier_feedback.dart';
+import '../../../../l10n/l10n.dart';
 
 const _contentMaxWidth = 1440.0;
 const _supplierPhoneBreakpoint = 600.0;
 const _mobileSummaryGridGap = AppSpacing.sm + AppSpacing.xs;
 const _mobileSummaryCardAspectRatio = 1.55;
-const _deliveryHandledCompleteMessage =
-    'This reservation is handled by delivery. The driver will mark it completed.';
 
 bool _isDeliveryCompleteConflict(Object error) =>
     error is ApiException &&
@@ -159,7 +159,7 @@ class _SupplierIncomingRequestsPageState
   }
 
   Widget _requestCard(BuildContext context, SupplierIncomingRequest request) {
-    final primary = _primaryAction(request);
+    final primary = _primaryAction(context, request);
     return IncomingRequestCard(
       request: request,
       primaryLabel: primary?.label,
@@ -170,24 +170,28 @@ class _SupplierIncomingRequestsPageState
     );
   }
 
-  _InboxAction? _primaryAction(SupplierIncomingRequest request) {
+  _InboxAction? _primaryAction(
+    BuildContext context,
+    SupplierIncomingRequest request,
+  ) {
+    final ui = SupplierReservationUiHelpers.of(context);
     final actions = request.availableActions
         .where((item) => item.isExecutable)
         .toList();
     if (request.isReadOnlyFinalState || actions.isEmpty) return null;
     if (actions.length > 1) {
       return _InboxAction(
-        'Review request',
+        context.s.reviewRequestAction,
         () => _openRequestActions(context, request),
       );
     }
     return switch (actions.single.value) {
       SupplierReservationAction.completeSelfPickup => _InboxAction(
-        'Confirm pickup',
+        context.s.confirmPickup,
         () => _handleComplete(context, request),
       ),
       SupplierReservationAction.acceptLearnerReschedule => _InboxAction(
-        'Review reschedule',
+        context.s.reviewReschedule,
         () => handleAcceptLearnerReschedule(
           context,
           ref,
@@ -195,7 +199,7 @@ class _SupplierIncomingRequestsPageState
         ),
       ),
       SupplierReservationAction.proposeReschedule => _InboxAction(
-        'Submit pickup window',
+        context.s.submitPickupWindow,
         () => handleRequestReschedulePickup(
           context,
           ref,
@@ -205,7 +209,7 @@ class _SupplierIncomingRequestsPageState
         ),
       ),
       SupplierReservationAction.submitRecoveryPickupWindow => _InboxAction(
-        'Submit pickup window',
+        context.s.submitPickupWindow,
         () => handleSubmitNoDriverPickupWindow(
           context,
           ref,
@@ -215,7 +219,7 @@ class _SupplierIncomingRequestsPageState
         ),
       ),
       _ => _InboxAction(
-        'Review request',
+        context.s.reviewRequestAction,
         () => _openRequestActions(context, request),
       ),
     };
@@ -225,6 +229,8 @@ class _SupplierIncomingRequestsPageState
     BuildContext context,
     SupplierIncomingRequest request,
   ) async {
+    final ui = SupplierReservationUiHelpers.of(context);
+    final l = context.s;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -238,7 +244,10 @@ class _SupplierIncomingRequestsPageState
               Text(request.materialTitle, style: sheetContext.supplierTitle()),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                'Request ${_shortId(request.id)} · ${request.status.label}',
+                l.requestLine(
+                  _shortId(request.id),
+                  ui.reservationStatus(request),
+                ),
                 style: sheetContext.supplierBody().copyWith(
                   color: sheetContext.supplierColors.textSecondary,
                 ),
@@ -256,14 +265,14 @@ class _SupplierIncomingRequestsPageState
                             Navigator.of(sheetContext).pop();
                             _runAction(context, request, action.value);
                           },
-                          child: Text(_actionLabel(action.value)),
+                          child: Text(ui.inboxActionLabel(action.value)),
                         ),
                       ),
                     ),
                   ),
               if (request.availableActions.isEmpty)
                 Text(
-                  'No further action is required for this request.',
+                  l.noFurtherActionRequired,
                   style: sheetContext.supplierBody(),
                 ),
             ],
@@ -339,10 +348,7 @@ class _SupplierIncomingRequestsPageState
         return;
       case SupplierReservationAction.sendMessage:
       case SupplierReservationAction.unknown:
-        showSupplierInfoSnackBar(
-          context,
-          'Request messages will remain available in the request workspace.',
-        );
+        showSupplierInfoSnackBar(context, context.s.messagesWorkspaceNote);
         return;
     }
   }
@@ -369,7 +375,7 @@ class _SupplierIncomingRequestsPageState
         showSupplierErrorSnackBar(
           context,
           error is ApiException
-              ? error.displayMessage
+              ? localizedApiErrorMessage(error, context.l10n)
               : context.s.requestAcceptFailed,
         );
       }
@@ -402,7 +408,7 @@ class _SupplierIncomingRequestsPageState
         showSupplierErrorSnackBar(
           context,
           error is ApiException
-              ? error.displayMessage
+              ? localizedApiErrorMessage(error, context.l10n)
               : context.s.requestDeclineFailed,
         );
       }
@@ -431,7 +437,7 @@ class _SupplierIncomingRequestsPageState
         showSupplierErrorSnackBar(
           context,
           _isDeliveryCompleteConflict(error)
-              ? _deliveryHandledCompleteMessage
+              ? context.s.deliveryHandledByDriver
               : context.s.pickupCompleteFailed,
         );
       }
@@ -452,7 +458,7 @@ class _OperationalIntroduction extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Operational overview', style: context.supplierLabel()),
+            Text(context.s.operationalOverview, style: context.supplierLabel()),
           ],
         ),
       ),
@@ -466,28 +472,29 @@ class _OperationalSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final cards = [
       (
         Icons.priority_high_rounded,
-        'Needs your response',
+        l.attentionNeedsYourResponse,
         summary?.needsSupplierResponse ?? 0,
         _SummaryTone.action,
       ),
       (
         Icons.hourglass_top_rounded,
-        'Waiting for learner',
+        l.attentionWaitingForLearner,
         summary?.waitingForLearner ?? 0,
         _SummaryTone.waiting,
       ),
       (
         Icons.local_shipping_outlined,
-        'In progress',
+        l.attentionInProgress,
         summary?.fulfillmentInProgress ?? 0,
         _SummaryTone.progress,
       ),
       (
         Icons.admin_panel_settings_outlined,
-        'Admin review',
+        l.attentionAdminReview,
         summary?.adminReview ?? 0,
         _SummaryTone.review,
       ),
@@ -642,29 +649,13 @@ class _FilterPanel extends StatefulWidget {
 
 class _FilterPanelState extends State<_FilterPanel> {
   bool _showAdvanced = false;
-  static const _attention = <String, String>{
-    'SUPPLIER_ACTION_REQUIRED': 'Needs your response',
-    'WAITING_FOR_LEARNER': 'Waiting for learner',
-    'FULFILLMENT_IN_PROGRESS': 'In progress',
-    'ADMIN_REVIEW_REQUIRED': 'Admin review',
-    'TERMINAL': 'Terminal',
-  };
-  static const _statuses = <String, String>{
-    'PENDING': 'Pending',
-    'AWAITING_LEARNER_CONFIRMATION': 'Awaiting learner',
-    'AWAITING_SUPPLIER_CONFIRMATION': 'Awaiting supplier',
-    'ACCEPTED': 'Accepted',
-    'REJECTED': 'Rejected',
-    'CANCELLED': 'Cancelled',
-    'COMPLETED': 'Completed',
-    'EXPIRED': 'Expired',
-    'NO_SHOW': 'Learner no-show',
-    'FULFILLMENT_FAILED': 'Fulfillment failed',
-    'AWAITING_RESOLUTION': 'Awaiting resolution',
-  };
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final ui = SupplierReservationUiHelpers.of(context);
+    final attention = ui.attentionFilterOptions();
+    final statuses = ui.statusFilterOptions();
     final query = widget.query;
     final advancedActive =
         query.status != null || query.dateFrom != null || query.dateTo != null;
@@ -682,10 +673,10 @@ class _FilterPanelState extends State<_FilterPanel> {
         ),
       ),
     );
-    final attention = _SelectField<String>(
+    final attentionField = _SelectField<String>(
       value: query.attentionState,
-      hint: 'All attention',
-      items: _attention,
+      hint: l.allAttention,
+      items: attention,
       onChanged: (value) => widget.onChanged(
         query.copyWith(
           attentionState: value,
@@ -696,8 +687,8 @@ class _FilterPanelState extends State<_FilterPanel> {
     );
     final fulfillment = _SelectField<String>(
       value: query.fulfillmentMethod,
-      hint: 'All fulfillment',
-      items: const {'PICKUP': 'Pickup', 'DELIVERY': 'Delivery'},
+      hint: l.allFulfillment,
+      items: {'PICKUP': l.pickupChip, 'DELIVERY': l.delivery},
       onChanged: (value) => widget.onChanged(
         query.copyWith(
           fulfillmentMethod: value,
@@ -713,8 +704,8 @@ class _FilterPanelState extends State<_FilterPanel> {
     );
     final status = _SelectField<String>(
       value: query.status,
-      hint: 'All statuses',
-      items: _statuses,
+      hint: l.allStatuses,
+      items: statuses,
       onChanged: (value) => widget.onChanged(
         query.copyWith(status: value, clearStatus: value == null, page: 1),
       ),
@@ -744,7 +735,7 @@ class _FilterPanelState extends State<_FilterPanel> {
       icon: const Icon(Icons.calendar_today_outlined, size: 17),
       label: Text(
         query.dateFrom == null
-            ? 'Date range'
+            ? l.dateRange
             : '${query.dateFrom!.month}/${query.dateFrom!.day} – ${query.dateTo!.month}/${query.dateTo!.day}',
       ),
     );
@@ -752,13 +743,13 @@ class _FilterPanelState extends State<_FilterPanel> {
       onPressed: () => setState(() => _showAdvanced = !_showAdvanced),
       icon: Icon(showAdvanced ? Icons.expand_less : Icons.tune, size: 17),
       label: Text(
-        advancedCount == 0 ? 'More filters' : 'Filters $advancedCount',
+        advancedCount == 0 ? l.moreFilters : l.filtersCount(advancedCount),
       ),
     );
     final reset = TextButton.icon(
       onPressed: query.hasActiveFilters ? widget.onReset : null,
       icon: const Icon(Icons.restart_alt, size: 17),
-      label: const Text('Reset'),
+      label: Text(l.reset),
     );
     return Container(
       width: double.infinity,
@@ -781,7 +772,7 @@ class _FilterPanelState extends State<_FilterPanel> {
                   children: [
                     Expanded(flex: 22, child: search),
                     const SizedBox(width: AppSpacing.sm),
-                    Expanded(flex: 10, child: attention),
+                    Expanded(flex: 10, child: attentionField),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(flex: 10, child: fulfillment),
                     const SizedBox(width: AppSpacing.sm),
@@ -819,7 +810,7 @@ class _FilterPanelState extends State<_FilterPanel> {
             runSpacing: AppSpacing.sm,
             children: [
               SizedBox(width: constraints.maxWidth, child: search),
-              SizedBox(width: half, child: attention),
+              SizedBox(width: half, child: attentionField),
               SizedBox(width: half, child: fulfillment),
               SizedBox(width: constraints.maxWidth, child: history),
               SizedBox(width: half, child: more),
@@ -857,13 +848,13 @@ class _SearchField extends StatelessWidget {
           textInputAction: TextInputAction.search,
           onSubmitted: onSubmitted,
           decoration: InputDecoration(
-            hintText: 'Search material, learner, or reservation ID',
+            hintText: context.s.searchRequestsHint,
             prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: value.text.isEmpty
                 ? null
                 : IconButton(
                     icon: const Icon(Icons.clear, size: 18),
-                    tooltip: 'Clear search',
+                    tooltip: context.s.clearSearch,
                     onPressed: controller.clear,
                   ),
             contentPadding: const EdgeInsets.symmetric(
@@ -882,6 +873,7 @@ class _HistoryScopeControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final colors = context.supplierColors;
     return Container(
       height: 44,
@@ -893,9 +885,9 @@ class _HistoryScopeControl extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _scopeButton(context, 'Active', 'ACTIVE'),
-          _scopeButton(context, 'History', 'TERMINAL'),
-          _scopeButton(context, 'All', 'ALL'),
+          _scopeButton(context, l.historyActive, 'ACTIVE'),
+          _scopeButton(context, l.historyTerminal, 'TERMINAL'),
+          _scopeButton(context, l.filterAll, 'ALL'),
         ],
       ),
     );
@@ -934,6 +926,7 @@ class _HistoryCounters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final colors = context.supplierColors;
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 4),
@@ -943,7 +936,7 @@ class _HistoryCounters extends StatelessWidget {
         children: [
           _counterDot(colors.accent),
           Text(
-            'Completed $completed',
+            l.completedCount(completed),
             style: context.supplierBody().copyWith(
               fontSize: 12,
               color: colors.textSecondary,
@@ -957,7 +950,7 @@ class _HistoryCounters extends StatelessWidget {
             Theme.of(context).colorScheme.error.withValues(alpha: .7),
           ),
           Text(
-            'Closed $closed',
+            l.closedCount(closed),
             style: context.supplierBody().copyWith(
               fontSize: 12,
               color: colors.textSecondary,
@@ -1016,6 +1009,7 @@ class _ResultsHeader extends StatelessWidget {
   final ValueChanged<SupplierRequestInboxQuery> onChanged;
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final total = pagination?.total ?? 0;
     final start = total == 0
         ? 0
@@ -1031,11 +1025,11 @@ class _ResultsHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Requests',
+                l.incomingRequestsTitle,
                 style: context.supplierTitle().copyWith(fontSize: 20),
               ),
               Text(
-                'Showing $start–$end of $total',
+                l.showingRange(start, end, total),
                 style: context.supplierBody().copyWith(
                   color: context.supplierColors.textSecondary,
                 ),
@@ -1045,7 +1039,7 @@ class _ResultsHeader extends StatelessWidget {
         ),
         if (query.activeFilterCount > 0)
           Text(
-            '${query.activeFilterCount} filters',
+            l.activeFiltersCount(query.activeFilterCount),
             style: context.supplierBody().copyWith(
               color: context.supplierColors.textSecondary,
             ),
@@ -1101,6 +1095,7 @@ class _DesktopRequestColumnHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final style = context.supplierBody().copyWith(
       fontSize: 12,
       fontWeight: FontWeight.w600,
@@ -1122,22 +1117,22 @@ class _DesktopRequestColumnHeader extends StatelessWidget {
           children: [
             Expanded(
               flex: IncomingRequestDesktopGrid.identityFlex,
-              child: label('Request'),
+              child: label(l.columnRequest),
             ),
             const SizedBox(width: IncomingRequestDesktopGrid.columnGap),
             Expanded(
               flex: IncomingRequestDesktopGrid.fulfillmentFlex,
-              child: label('Fulfillment & schedule'),
+              child: label(l.columnFulfillmentSchedule),
             ),
             const SizedBox(width: IncomingRequestDesktopGrid.columnGap),
             Expanded(
               flex: IncomingRequestDesktopGrid.statusFlex,
-              child: label('Status & attention'),
+              child: label(l.columnStatusAttention),
             ),
             const SizedBox(width: IncomingRequestDesktopGrid.columnGap),
             SizedBox(
               width: IncomingRequestDesktopGrid.detailsWidth,
-              child: label('Details', textAlign: TextAlign.center),
+              child: label(l.columnDetails, textAlign: TextAlign.center),
             ),
           ],
         ),
@@ -1157,6 +1152,7 @@ class _Pagination extends StatelessWidget {
   final ValueChanged<SupplierRequestInboxQuery> onChanged;
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final page = pagination?.page ?? 1;
     final pages = pagination?.totalPages ?? 1;
     if (pages <= 1) return const SizedBox.shrink();
@@ -1175,7 +1171,7 @@ class _Pagination extends StatelessWidget {
         runSpacing: AppSpacing.sm,
         children: [
           Text(
-            'Showing $start–$end of $total requests',
+            l.showingRangeRequests(start, end, total),
             style: context.supplierBody().copyWith(
               color: context.supplierColors.textSecondary,
             ),
@@ -1189,7 +1185,7 @@ class _Pagination extends StatelessWidget {
                       ? () => onChanged(query.copyWith(page: page - 1))
                       : null,
                   icon: const Icon(Icons.chevron_left),
-                  tooltip: 'Previous',
+                  tooltip: l.previousPage,
                 ),
                 ...visible.map(
                   (value) => Padding(
@@ -1211,7 +1207,7 @@ class _Pagination extends StatelessWidget {
                       ? () => onChanged(query.copyWith(page: page + 1))
                       : null,
                   icon: const Icon(Icons.chevron_right),
-                  tooltip: 'Next',
+                  tooltip: l.nextPage,
                 ),
               ],
             ),
@@ -1233,7 +1229,7 @@ class _Pagination extends StatelessWidget {
                     .map(
                       (value) => DropdownMenuItem(
                         value: value,
-                        child: Text('$value per page'),
+                        child: Text(l.perPage(value)),
                       ),
                     )
                     .toList(),
@@ -1255,29 +1251,18 @@ class _ContextEmpty extends StatelessWidget {
   final VoidCallback onReset;
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
     final (title, subtitle) = switch (query.attentionState) {
       'SUPPLIER_ACTION_REQUIRED' => (
-        'You’re all caught up',
-        'No requests currently need your response.',
+        l.emptyAllCaughtUp,
+        l.emptyNoWaitingLearnerSubtitle,
       ),
-      'WAITING_FOR_LEARNER' => (
-        'No requests are waiting for learner confirmation.',
-        '',
-      ),
-      'FULFILLMENT_IN_PROGRESS' => ('No active pickups or deliveries.', ''),
-      'ADMIN_REVIEW_REQUIRED' => (
-        'No requests are currently under admin review.',
-        '',
-      ),
-      _ when query.historyScope == 'TERMINAL' => (
-        'No completed or closed requests found.',
-        '',
-      ),
-      _ when query.hasActiveFilters => (
-        'No requests match the selected filters.',
-        '',
-      ),
-      _ => ('No incoming requests yet', ''),
+      'WAITING_FOR_LEARNER' => (l.emptyNoWaitingLearner, ''),
+      'FULFILLMENT_IN_PROGRESS' => (l.emptyNoActiveFulfillment, ''),
+      'ADMIN_REVIEW_REQUIRED' => (l.emptyNoAdminReview, ''),
+      _ when query.historyScope == 'TERMINAL' => (l.emptyNoTerminalHistory, ''),
+      _ when query.hasActiveFilters => (l.emptyNoFilterMatch, ''),
+      _ => (l.noRequests, ''),
     };
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -1307,7 +1292,7 @@ class _ContextEmpty extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onReset,
               icon: const Icon(Icons.restart_alt),
-              label: const Text('Reset filters'),
+              label: Text(l.resetFilters),
             ),
           ],
         ],
@@ -1377,40 +1362,24 @@ class _InboxError extends StatelessWidget {
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Text(
-            'We couldn’t refresh incoming requests.',
+            context.s.inboxRefreshFailed,
             style: context.supplierBody(),
           ),
         ),
-        OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+        OutlinedButton(
+          onPressed: onRetry,
+          child: Text(context.s.tryAgain),
+        ),
       ],
     ),
   );
 }
+
+String _shortId(String id) =>
+    id.length <= 8 ? id : id.substring(0, 8).toUpperCase();
 
 class _InboxAction {
   const _InboxAction(this.label, this.onPressed);
   final String label;
   final VoidCallback onPressed;
 }
-
-String _shortId(String id) =>
-    id.length <= 8 ? id : id.substring(0, 8).toUpperCase();
-
-String _actionLabel(SupplierReservationAction action) => switch (action) {
-  SupplierReservationAction.accept => 'Accept request',
-  SupplierReservationAction.decline => 'Decline request',
-  SupplierReservationAction.completeSelfPickup => 'Confirm pickup',
-  SupplierReservationAction.proposeReschedule => 'Propose a new time',
-  SupplierReservationAction.acceptLearnerReschedule =>
-    'Accept learner reschedule',
-  SupplierReservationAction.closeReservation => 'Close reservation',
-  SupplierReservationAction.markLearnerNoShow => 'Mark learner no-show',
-  SupplierReservationAction.reportIncident => 'Report to admin',
-  SupplierReservationAction.reportNoDriver => 'Report no driver',
-  SupplierReservationAction.markDeliveryPickupExpired => 'Mark pickup expired',
-  SupplierReservationAction.reportDriverNoShow => 'Report driver no-show',
-  SupplierReservationAction.submitRecoveryPickupWindow =>
-    'Submit pickup window',
-  SupplierReservationAction.sendMessage => 'Send message',
-  SupplierReservationAction.unknown => 'Review request',
-};

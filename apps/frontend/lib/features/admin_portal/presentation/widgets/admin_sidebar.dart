@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -64,6 +65,12 @@ class AdminSidebar extends ConsumerWidget {
         Icons.school_outlined,
         '/admin/learning-projects',
       ),
+      if (kIsWeb)
+        _NavDef(
+          l.navExportCenter,
+          Icons.download_outlined,
+          '/admin/exports',
+        ),
       _NavDef(l.navImpactAnalytics, Icons.insights_outlined, '/admin/impact'),
       _NavDef(l.navAuditLogs, Icons.receipt_long_outlined, '/admin/audit-logs'),
     ];

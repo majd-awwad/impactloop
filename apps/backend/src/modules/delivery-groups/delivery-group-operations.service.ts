@@ -420,6 +420,8 @@ export const completeReservationsForDeliveredDelivery = async (
       data: { status: 'COMPLETED' },
     });
   }
+
+  return reservations.map((reservation) => reservation.id);
 };
 
 export const syncDeliveryGroupOnDriverAssign = async (

@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -72,13 +73,15 @@ class _LearnerAwaitingConfirmationPanelState
         return;
       }
 
-      setState(() => _errorMessage = error.displayMessage);
-    } catch (error) {
+      setState(
+        () => _errorMessage = localizedApiErrorMessage(error, context.l10n),
+      );
+    } catch (_) {
       if (!mounted) {
         return;
       }
 
-      setState(() => _errorMessage = 'Something went wrong. Please try again.');
+      setState(() => _errorMessage = context.l10n.somethingWentWrong);
     } finally {
       ref.read(confirmingReservationIdProvider.notifier).setConfirming(null);
     }
@@ -89,27 +92,32 @@ class _LearnerAwaitingConfirmationPanelState
       () => ref
           .read(reservationConfirmationControllerProvider.notifier)
           .acceptProposedPickup(reservation.id),
-      successMessage: 'Pickup time accepted.',
+      successMessage: context.l10n.pickupTimeAccepted,
     );
   }
 
   Future<void> _submitDeliveryWindow() {
     final now = DateTime.now();
-    final validationError = _deliveryWindow.validationError(now: now);
+    final start = _deliveryWindow.start;
+    final end = _deliveryWindow.end;
+    final validationError = start == null || end == null
+        ? context.l10n.rescheduleReasonWindowRequired
+        : !end.isAfter(start)
+        ? context.l10n.endAfterStart
+        : !start.isAfter(now) || !end.isAfter(now)
+        ? context.l10n.invalidPickupWindow
+        : null;
     if (validationError != null) {
       setState(() => _errorMessage = validationError);
       return Future<void>.value();
     }
 
-    final start = _deliveryWindow.start!;
-    final end = _deliveryWindow.end!;
+    final validStart = start!;
+    final validEnd = end!;
 
     final earliestDelivery = reservation.earliestDeliveryStart;
-    if (earliestDelivery != null && !end.isAfter(earliestDelivery)) {
-      setState(
-        () => _errorMessage =
-            'Selected window must end after the earliest possible delivery time.',
-      );
+    if (earliestDelivery != null && !validEnd.isAfter(earliestDelivery)) {
+      setState(() => _errorMessage = context.l10n.deliveryWindowAfterEarliest);
       return Future<void>.value();
     }
 
@@ -118,10 +126,10 @@ class _LearnerAwaitingConfirmationPanelState
           .read(reservationConfirmationControllerProvider.notifier)
           .submitDeliveryWindow(
             reservationId: reservation.id,
-            start: start,
-            end: end,
+            start: validStart,
+            end: validEnd,
           ),
-      successMessage: 'Delivery window submitted.',
+      successMessage: context.l10n.deliveryWindowSubmitted,
     );
   }
 
@@ -130,7 +138,7 @@ class _LearnerAwaitingConfirmationPanelState
       () => ref
           .read(reservationConfirmationControllerProvider.notifier)
           .cancelAwaitingConfirmation(reservation.id),
-      successMessage: 'Reservation cancelled.',
+      successMessage: context.l10n.reservationCancelledFeedback,
     );
   }
 
@@ -151,14 +159,17 @@ class _LearnerAwaitingConfirmationPanelState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Action required',
+            context.l10n.actionRequired,
             style: AppTextStyles.label(
               context,
             ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: AppSpacing.sm),
           if (reservation.isPickupFulfillment) ...[
-            if (formatAwaitingPickupPreferredSummary(reservation)
+            if (formatAwaitingPickupPreferredSummary(
+                  reservation,
+                  l10n: context.l10n,
+                )
                 case final preferred?) ...[
               Text(
                 preferred,
@@ -168,7 +179,10 @@ class _LearnerAwaitingConfirmationPanelState
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            if (formatAwaitingPickupProposedSummary(reservation)
+            if (formatAwaitingPickupProposedSummary(
+                  reservation,
+                  l10n: context.l10n,
+                )
                 case final proposed?) ...[
               Text(
                 proposed,
@@ -194,7 +208,7 @@ class _LearnerAwaitingConfirmationPanelState
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Accept proposed time'),
+                      : Text(context.l10n.acceptProposedTime),
                 ),
                 OutlinedButton(
                   onPressed: _isSubmitting ? null : _cancelReservation,
@@ -202,12 +216,15 @@ class _LearnerAwaitingConfirmationPanelState
                     context,
                     AppStatusTone.danger,
                   ),
-                  child: const Text('Cancel reservation'),
+                  child: Text(context.l10n.cancelReservation),
                 ),
               ],
             ),
           ] else ...[
-            if (formatAwaitingDeliverySupplierPickupSummary(reservation)
+            if (formatAwaitingDeliverySupplierPickupSummary(
+                  reservation,
+                  l10n: context.l10n,
+                )
                 case final supplierPickup?) ...[
               Text(
                 supplierPickup,
@@ -217,7 +234,10 @@ class _LearnerAwaitingConfirmationPanelState
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            if (formatAwaitingDeliveryEarliestSummary(reservation)
+            if (formatAwaitingDeliveryEarliestSummary(
+                  reservation,
+                  l10n: context.l10n,
+                )
                 case final earliest?) ...[
               Text(
                 earliest,
@@ -227,7 +247,10 @@ class _LearnerAwaitingConfirmationPanelState
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            if (formatAwaitingDeliveryPreferredSummary(reservation)
+            if (formatAwaitingDeliveryPreferredSummary(
+                  reservation,
+                  l10n: context.l10n,
+                )
                 case final preferred?) ...[
               Text(
                 preferred,
@@ -237,7 +260,10 @@ class _LearnerAwaitingConfirmationPanelState
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            if (formatAwaitingDeliveryProposedSummary(reservation)
+            if (formatAwaitingDeliveryProposedSummary(
+                  reservation,
+                  l10n: context.l10n,
+                )
                 case final proposedDelivery?) ...[
               Text(
                 proposedDelivery,
@@ -247,7 +273,7 @@ class _LearnerAwaitingConfirmationPanelState
               ),
               const SizedBox(height: AppSpacing.xs),
             ],
-            if (formatSchedulingConflictReason(reservation)
+            if (formatSchedulingConflictReason(reservation, l10n: context.l10n)
                 case final conflict?) ...[
               Text(
                 conflict,
@@ -260,7 +286,7 @@ class _LearnerAwaitingConfirmationPanelState
             PreferredWindowInput(
               windows: [_deliveryWindow],
               enabled: !_isSubmitting,
-              label: 'New delivery window',
+              label: context.l10n.newDeliveryWindow,
               allowMultipleWindows: false,
               onChanged: (windows) {
                 setState(() {
@@ -275,12 +301,14 @@ class _LearnerAwaitingConfirmationPanelState
                 _deliveryWindow.end != null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
-                formatPreferredWindowRange(
-                  ReservationPreferredWindow(
-                    start: _deliveryWindow.start!,
-                    end: _deliveryWindow.end!,
+                context.l10n.selectedDeliveryWindow(
+                  formatPreferredWindowRange(
+                    ReservationPreferredWindow(
+                      start: _deliveryWindow.start!,
+                      end: _deliveryWindow.end!,
+                    ),
+                    l10n: context.l10n,
                   ),
-                  prefix: 'Selected delivery window',
                 ),
                 style: AppTextStyles.label(
                   context,
@@ -304,7 +332,7 @@ class _LearnerAwaitingConfirmationPanelState
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Submit new delivery window'),
+                      : Text(context.l10n.submitNewDeliveryWindow),
                 ),
                 OutlinedButton(
                   onPressed: _isSubmitting ? null : _cancelReservation,
@@ -312,7 +340,7 @@ class _LearnerAwaitingConfirmationPanelState
                     context,
                     AppStatusTone.danger,
                   ),
-                  child: const Text('Cancel reservation'),
+                  child: Text(context.l10n.cancelReservation),
                 ),
               ],
             ),

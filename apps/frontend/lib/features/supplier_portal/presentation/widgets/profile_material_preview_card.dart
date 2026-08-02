@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../shared/widgets/materials/material_price_badge.dart';
 import '../../../../shared/widgets/materials/material_status_badge.dart';
@@ -38,24 +39,21 @@ class _ProfileMaterialPreviewCardState
         (material.imageUrl != null && material.imageUrl!.trim().isNotEmpty)
         ? ApiConfig.resolveMediaUrl(material.imageUrl!)
         : null;
+    final l10n = context.l10n;
     final condition = SupplierMaterialLabelHelper.conditionMeta(
       material.condition,
     );
-    final priceLabel = SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.priceLabel(
-        isFree: material.isFree,
-        price: material.price,
-        currency: material.currency,
-      ),
-      isArabic,
+    final priceLabel = SupplierMaterialLabelHelper.priceText(
+      isFree: material.isFree,
+      price: material.price,
+      currency: material.currency,
+      l10n: l10n,
     );
     final categoryLabel = material.categoryName ?? '—';
-    final quantityLabel = SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.quantityLabel(
-        material.quantity,
-        material.unit,
-      ),
-      isArabic,
+    final quantityLabel = SupplierMaterialLabelHelper.quantityText(
+      material.quantity,
+      material.unit,
+      l10n,
     );
     final city = material.locationCity?.trim() ?? '';
     final locationLabel = city.isEmpty
@@ -140,8 +138,8 @@ class _ProfileMaterialPreviewCardState
                                         _ImagePlaceholder(colors: colors),
                                   ),
                           ),
-                          Positioned(
-                            left: 8,
+                          PositionedDirectional(
+                            start: 8,
                             bottom: 8,
                             child: Row(
                               children: [

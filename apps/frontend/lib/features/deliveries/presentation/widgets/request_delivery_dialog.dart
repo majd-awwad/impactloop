@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../../shared/widgets/bidi_text.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
@@ -107,17 +109,17 @@ class _RequestDeliveryDialogState
         _latitude = capture.latitude;
         _longitude = capture.longitude;
       });
-      showInfoSnackBar(context, 'Current location captured.');
-    } on CurrentLocationException catch (error) {
+      showInfoSnackBar(context, context.l10n.currentLocationCaptured);
+    } on CurrentLocationException {
       if (!mounted) {
         return;
       }
-      showErrorSnackBar(context, error.message);
-    } catch (error) {
+      showErrorSnackBar(context, context.l10n.currentLocationFailed);
+    } catch (_) {
       if (!mounted) {
         return;
       }
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, context.l10n.currentLocationFailed);
     } finally {
       if (mounted) {
         setState(() => _capturingLocation = false);
@@ -131,7 +133,7 @@ class _RequestDeliveryDialogState
     if (_inputMode == _DropoffInputMode.saved) {
       final savedId = _selectedSavedAddressId;
       if (savedId == null || savedId.isEmpty) {
-        showErrorSnackBar(context, 'Choose a saved dropoff address.');
+        showErrorSnackBar(context, context.l10n.chooseSavedDropoffAddress);
         return;
       }
 
@@ -145,12 +147,12 @@ class _RequestDeliveryDialogState
       final country = _countryController.text.trim();
       final city = _cityController.text.trim();
       if (country.isEmpty || city.isEmpty) {
-        showErrorSnackBar(context, 'Country and city are required.');
+        showErrorSnackBar(context, context.l10n.countryAndCityRequired);
         return;
       }
 
       if (_saveForLater && _saveLabelController.text.trim().isEmpty) {
-        showErrorSnackBar(context, 'Enter a label to save this address.');
+        showErrorSnackBar(context, context.l10n.addressLabelRequired);
         return;
       }
 
@@ -199,7 +201,7 @@ class _RequestDeliveryDialogState
         return;
       }
 
-      showInfoSnackBar(context, 'Delivery requested.');
+      showInfoSnackBar(context, context.l10n.deliveryRequested);
       final router = GoRouter.of(context);
       widget.onSubmitted();
       router.push('/learner/deliveries/${delivery.id}');
@@ -207,12 +209,12 @@ class _RequestDeliveryDialogState
       if (!mounted) {
         return;
       }
-      showErrorSnackBar(context, error.message);
+      showErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
     } catch (_) {
       if (!mounted) {
         return;
       }
-      showErrorSnackBar(context, 'Could not request delivery. Try again.');
+      showErrorSnackBar(context, context.l10n.deliveryRequestFailed);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -225,7 +227,7 @@ class _RequestDeliveryDialogState
     final savedAddressesAsync = ref.watch(savedDropoffAddressesProvider);
 
     return AppDialogShell(
-      title: const Text('Request delivery'),
+      title: Text(context.l10n.requestDelivery),
       maxWidth: 480,
       onClose: widget.onCancel,
       closeEnabled: !_submitting,
@@ -236,7 +238,9 @@ class _RequestDeliveryDialogState
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Choose where the driver should deliver ${widget.reservation.material.title}.',
+              context.l10n.requestDeliveryForMaterial(
+                widget.reservation.material.title,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             savedAddressesAsync.when(
@@ -247,7 +251,7 @@ class _RequestDeliveryDialogState
               error: (_, _) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('Could not load saved addresses.'),
+                  Text(context.l10n.savedAddressesLoadFailed),
                   TextButton(
                     onPressed: () =>
                         ref.invalidate(savedDropoffAddressesProvider),
@@ -255,7 +259,7 @@ class _RequestDeliveryDialogState
                       context,
                       AppStatusTone.primary,
                     ),
-                    child: const Text('Retry'),
+                    child: Text(context.l10n.retry),
                   ),
                 ],
               ),
@@ -268,7 +272,7 @@ class _RequestDeliveryDialogState
                       }
                     });
                   }
-                  return const Text('No saved addresses yet. Enter one below.');
+                  return Text(context.l10n.noSavedAddresses);
                 }
 
                 final selectedId =
@@ -285,14 +289,14 @@ class _RequestDeliveryDialogState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     SegmentedButton<_DropoffInputMode>(
-                      segments: const [
+                      segments: [
                         ButtonSegment(
                           value: _DropoffInputMode.saved,
-                          label: Text('Saved'),
+                          label: Text(context.l10n.saved),
                         ),
                         ButtonSegment(
                           value: _DropoffInputMode.manual,
-                          label: Text('New address'),
+                          label: Text(context.l10n.newAddress),
                         ),
                       ],
                       selected: {_inputMode},
@@ -305,8 +309,8 @@ class _RequestDeliveryDialogState
                       DropdownButtonFormField<String>(
                         isExpanded: true,
                         initialValue: selectedId,
-                        decoration: const InputDecoration(
-                          labelText: 'Saved dropoff address',
+                        decoration: InputDecoration(
+                          labelText: context.l10n.savedDropoffAddress,
                         ),
                         items: addresses
                             .map(
@@ -341,25 +345,25 @@ class _RequestDeliveryDialogState
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _countryController,
-                decoration: const InputDecoration(labelText: 'Country'),
+                decoration: InputDecoration(labelText: context.l10n.country),
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _cityController,
-                decoration: const InputDecoration(labelText: 'City'),
+                decoration: InputDecoration(labelText: context.l10n.city),
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _areaController,
-                decoration: const InputDecoration(labelText: 'Area'),
+                decoration: InputDecoration(labelText: context.l10n.area),
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _addressController,
-                decoration: const InputDecoration(labelText: 'Address'),
+                decoration: InputDecoration(labelText: context.l10n.address),
                 textInputAction: TextInputAction.next,
                 maxLines: 2,
               ),
@@ -379,44 +383,45 @@ class _RequestDeliveryDialogState
                     : const Icon(Icons.my_location_outlined),
                 label: Text(
                   _capturingLocation
-                      ? 'Getting location…'
-                      : 'Use current location',
+                      ? context.l10n.gettingLocation
+                      : context.l10n.useCurrentLocation,
                 ),
               ),
               if (_latitude != null && _longitude != null) ...[
                 const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Coordinates: ${_latitude!.toStringAsFixed(5)}, '
-                  '${_longitude!.toStringAsFixed(5)}',
+                BidiText(
+                  context.l10n.coordinatesValue(
+                    '${_latitude!.toStringAsFixed(5)}, '
+                    '${_longitude!.toStringAsFixed(5)}',
+                  ),
+                  technical: true,
                 ),
               ] else ...[
                 const SizedBox(height: AppSpacing.sm),
-                const Text(
-                  'Precise location helps drivers find you. You can still submit city and address only.',
-                ),
+                Text(context.l10n.preciseLocationHelp),
               ],
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _saveForLater,
                 onChanged: (value) =>
                     setState(() => _saveForLater = value ?? false),
-                title: const Text('Save this address for later'),
+                title: Text(context.l10n.saveAddressForLater),
                 controlAffinity: ListTileControlAffinity.leading,
               ),
               if (_saveForLater)
                 TextField(
                   controller: _saveLabelController,
-                  decoration: const InputDecoration(
-                    labelText: 'Address label',
-                    hintText: 'Home, campus, workshop...',
+                  decoration: InputDecoration(
+                    labelText: context.l10n.addressLabel,
+                    hintText: context.l10n.addressLabelHint,
                   ),
                 ),
             ],
             const SizedBox(height: AppSpacing.md),
             TextField(
               controller: _learnerNoteController,
-              decoration: const InputDecoration(
-                labelText: 'Note for driver (optional)',
+              decoration: InputDecoration(
+                labelText: context.l10n.driverNoteOptional,
               ),
               maxLines: 2,
             ),
@@ -433,7 +438,7 @@ class _RequestDeliveryDialogState
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Request delivery'),
+              : Text(context.l10n.requestDelivery),
         ),
       ),
     );

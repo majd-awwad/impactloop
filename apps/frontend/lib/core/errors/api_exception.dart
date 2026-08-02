@@ -1,3 +1,5 @@
+import '../../l10n/app_localizations.dart';
+
 class ApiFieldIssue {
   const ApiFieldIssue({required this.path, required this.message});
 
@@ -11,12 +13,14 @@ class ApiException implements Exception {
     this.code,
     this.statusCode,
     this.details,
+    this.requestId,
   });
 
   final String message;
   final String? code;
   final int? statusCode;
   final Map<String, dynamic>? details;
+  final String? requestId;
 
   bool get isCancellation => code == 'CANCELLED';
 
@@ -94,6 +98,90 @@ String userFriendlyErrorMessage(Object error) {
   }
 
   return 'Something went wrong. Please try again.';
+}
+
+String localizedApiErrorMessage(
+  Object error,
+  AppLocalizations l10n, {
+  String? operation,
+}) {
+  if (error is! ApiException) return l10n.somethingWentWrong;
+
+  switch (error.code) {
+    case 'NETWORK_ERROR':
+      return l10n.networkError;
+    case 'TIMEOUT':
+      return l10n.timeoutError;
+    case 'CONFLICT':
+      return l10n.conflictError;
+    case 'DRIVER_ACTIVE_LIMIT_REACHED':
+      return l10n.driverReachedActiveLimit;
+    case 'DELIVERY_NOT_AVAILABLE':
+      return l10n.driverDeliveryNoLongerAvailable;
+    case 'DRIVER_NOT_AVAILABLE':
+      return l10n.conflictError;
+    case 'DELIVERY_TERMINAL':
+      return l10n.driverNoLongerActive;
+    case 'INVALID_DELIVERY_TRANSITION':
+      return l10n.driverStatusChangedRefresh;
+    case 'DELIVERY_LOCATION_PING_NOT_ALLOWED':
+      return l10n.driverActionNotAvailable;
+    case 'DRIVER_PICKUP_FAILURE_NOT_ALLOWED':
+    case 'DRIVER_DELIVERY_FAILURE_NOT_ALLOWED':
+    case 'DRIVER_ISSUE_NOT_ALLOWED':
+      return l10n.driverActionNotAvailable;
+    case 'INVALID_CONFIRMATION_CODE':
+      return l10n.driverInvalidConfirmationCode;
+    case 'HANDOVER_WINDOW_NOT_STARTED':
+      return l10n.driverHandoverWindowNotStarted;
+    case 'HANDOVER_WINDOW_EXPIRED':
+      return l10n.driverHandoverWindowExpired;
+    case 'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID':
+      return l10n.driverPartialPickupSelectionInvalid;
+    case 'DRIVER_GROUPED_DELIVERY_SPLIT_CONFLICT':
+      return l10n.driverGroupedDeliverySplitConflict;
+    case 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID':
+      return l10n.driverAvailableJobsCursorInvalid;
+    case 'VALIDATION_ERROR':
+      return l10n.validationError;
+    case 'UNAUTHENTICATED':
+      return l10n.sessionExpired;
+    case 'FORBIDDEN':
+      return l10n.forbiddenError;
+    case 'ACCOUNT_SUSPENDED':
+      return l10n.accountSuspended;
+    case 'PICKUP_WINDOW_REQUIRED':
+      return l10n.pickupWindowRequired;
+    case 'RESERVATION_EXPIRED':
+      return l10n.reservationExpiredError;
+    case 'RESERVATION_ALREADY_ACCEPTED':
+      return l10n.reservationAlreadyAccepted;
+    case 'RESERVATION_ALREADY_DECLINED':
+      return l10n.reservationAlreadyDeclined;
+    case 'RESERVATION_CANCELLED':
+      return l10n.reservationCancelledError;
+    case 'RESERVATION_NOT_PENDING':
+      return l10n.reservationNotPending;
+    default:
+      final errorCode = error.code;
+      if (errorCode != null && errorCode.startsWith('PICKUP_')) {
+        return l10n.invalidPickupWindow;
+      }
+      if (error.statusCode != null && error.statusCode! >= 500) {
+        return _withRequestId(l10n.serverError, error.requestId);
+      }
+      if (error.message.trim().isNotEmpty) {
+        return _withRequestId(error.message, error.requestId);
+      }
+      return _withRequestId(l10n.somethingWentWrong, error.requestId);
+  }
+}
+
+String _withRequestId(String message, String? requestId) {
+  final normalized = requestId?.trim();
+  return normalized == null || normalized.isEmpty
+      ? message
+      : '$message [$normalized]';
 }
 
 ApiException normalizeApiException(Object error) {

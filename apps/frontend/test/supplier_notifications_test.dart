@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import 'package:frontend/app/theme/app_theme_colors.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
+import 'package:frontend/features/notifications/application/notifications_routes.dart';
 import 'package:frontend/features/supplier_portal/data/models/supplier_action_notification.dart';
 import 'package:frontend/features/supplier_portal/data/supplier_notifications_api.dart';
 import 'package:frontend/features/supplier_portal/presentation/widgets/supplier_notification_style.dart';
@@ -514,6 +515,18 @@ void main() {
       );
       expect(notificationRouteForBell(user('LEARNER')), '/notifications');
       expect(notificationRouteForBell(user('DRIVER')), '/driver/notifications');
+      expect(
+        notificationInboxRouteForUser(user('SUPPLIER')),
+        supplierNotificationsRoute,
+      );
+      expect(
+        notificationInboxRouteForUser(user('DRIVER')),
+        driverNotificationsRoute,
+      );
+      expect(
+        notificationInboxRouteForUser(user('LEARNER')),
+        sharedNotificationsRoute,
+      );
     },
   );
 

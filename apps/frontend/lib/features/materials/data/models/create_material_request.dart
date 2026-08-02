@@ -55,6 +55,7 @@ class CreateMaterialRequest {
     this.imageUrls = const [],
     this.sourceCategoryRequestId,
     this.sourcePriceRuleRequestId,
+    this.suggestToMaterialRequestId,
     this.useDefaultPickupLocation = true,
     this.pickupLocation,
   });
@@ -76,6 +77,7 @@ class CreateMaterialRequest {
   final List<String> imageUrls;
   final String? sourceCategoryRequestId;
   final String? sourcePriceRuleRequestId;
+  final String? suggestToMaterialRequestId;
   final bool useDefaultPickupLocation;
   final CreateMaterialPickupLocationRequest? pickupLocation;
 
@@ -103,6 +105,8 @@ class CreateMaterialRequest {
         'sourceCategoryRequestId': sourceCategoryRequestId,
       if (sourcePriceRuleRequestId != null)
         'sourcePriceRuleRequestId': sourcePriceRuleRequestId,
+      if (suggestToMaterialRequestId != null)
+        'suggestToMaterialRequestId': suggestToMaterialRequestId,
     };
   }
 }

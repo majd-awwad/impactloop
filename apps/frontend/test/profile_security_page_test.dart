@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -54,6 +55,46 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Arabic security copy and password semantics are localized', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(
+            () => _TestAuthController(_testUser()),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          supportedLocales: [Locale('en'), Locale('ar')],
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: ProfileSecurityPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('الأمان'), findsOneWidget);
+    expect(find.text('كلمة المرور الحالية'), findsOneWidget);
+    expect(find.text('كلمة المرور الجديدة'), findsOneWidget);
+    expect(find.text('تأكيد كلمة المرور الجديدة'), findsOneWidget);
+    expect(find.text('تحديث كلمة المرور'), findsOneWidget);
+    expect(find.byTooltip('إظهار كلمة المرور'), findsNWidgets(3));
+    expect(
+      Directionality.of(tester.element(find.text('الأمان'))),
+      TextDirection.rtl,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _TestAuthController extends AuthController {

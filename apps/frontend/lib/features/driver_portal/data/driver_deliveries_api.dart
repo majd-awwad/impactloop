@@ -4,24 +4,96 @@ import '../../../core/network/api_response.dart';
 import 'models/driver_delivery_inactive_context.dart';
 import 'models/driver_delivery_failure_request.dart';
 import 'models/driver_delivery.dart';
+import 'models/driver_delivery_detail_result.dart';
 import 'models/driver_deliveries_list_result.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
+import 'models/driver_archive.dart';
 
 class DriverDeliveriesApi {
   const DriverDeliveriesApi(this._client);
 
   final Dio _client;
 
+  Future<DriverArchivePage<DriverHistoricalDelivery>> fetchHistory({
+    String? cursor,
+    int limit = 20,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/driver/deliveries/history',
+        queryParameters: {'limit': limit, 'cursor': ?cursor},
+      ),
+      (json) => DriverArchivePage(
+        items: (json['deliveries'] as List? ?? const [])
+            .whereType<Map>()
+            .map(
+              (item) => DriverHistoricalDelivery.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList(growable: false),
+        pagination: DriverDeliveriesPagination.fromJson(
+          Map<String, dynamic>.from(json['pagination'] as Map? ?? const {}),
+        ),
+      ),
+    );
+  }
+
+  Future<DriverHistoricalDelivery> fetchHistoricalDelivery(String deliveryId) =>
+      unwrapApiResponse(
+        _client.get<Map<String, dynamic>>(
+          '/api/driver/deliveries/history/$deliveryId',
+        ),
+        DriverHistoricalDelivery.fromJson,
+      );
+
+  Future<DriverArchivePage<DriverIncident>> fetchIncidents({
+    String? cursor,
+    int limit = 20,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/driver/incidents',
+        queryParameters: {'limit': limit, 'cursor': ?cursor},
+      ),
+      (json) => DriverArchivePage(
+        items: (json['incidents'] as List? ?? const [])
+            .whereType<Map>()
+            .map(
+              (item) =>
+                  DriverIncident.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList(growable: false),
+        pagination: DriverDeliveriesPagination.fromJson(
+          Map<String, dynamic>.from(json['pagination'] as Map? ?? const {}),
+        ),
+      ),
+    );
+  }
+
   Future<DriverDeliveriesListResult> fetchAvailableDeliveries({
     DriverAvailableJobsFilter? filter,
+    String? cursor,
+    int limit = 20,
   }) {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>(
         '/api/driver/deliveries/available',
-        queryParameters: filter?.toQueryParameters(),
+        queryParameters: {
+          ...?filter?.toQueryParameters(),
+          'limit': limit,
+          'cursor': ?cursor,
+        },
       ),
       _parseDeliveriesListResult,
+    );
+  }
+
+  Future<DriverDeliveryDetailResult> fetchDeliveryDetail(String deliveryId) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>('/api/driver/deliveries/$deliveryId'),
+      DriverDeliveryDetailResult.fromJson,
     );
   }
 

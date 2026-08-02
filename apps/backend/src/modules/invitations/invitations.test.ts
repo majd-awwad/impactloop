@@ -401,6 +401,8 @@ describe('admin email invitations', () => {
     });
     assert.equal(profile?.city, 'Nablus');
     assert.equal(profile?.transportationType, 'CAR');
+    assert.equal(profile?.acceptingNewJobs, false);
+    assert.equal(profile?.availability, 'OFFLINE');
   });
 
   test('accept MODERATOR creates user and MODERATOR role', async () => {

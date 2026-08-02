@@ -121,11 +121,12 @@ class MaterialImagePickerSection extends StatelessWidget {
 
   static Future<List<MaterialDraftImage>?> pickImages({
     required int currentCount,
+    required SupplierL10n l,
     required void Function(String message) onError,
   }) async {
     final remaining = _maxImages - currentCount;
     if (remaining <= 0) {
-      onError('You can add up to $_maxImages photos.');
+      onError(l.youCanAddUpToPhotos(_maxImages));
       return null;
     }
 
@@ -143,26 +144,24 @@ class MaterialImagePickerSection extends StatelessWidget {
     final selected = <MaterialDraftImage>[];
     for (final file in result.files) {
       if (selected.length >= remaining) {
-        onError(
-          'Only $remaining more photo${remaining == 1 ? '' : 's'} can be added.',
-        );
+        onError(l.onlyMorePhotosCanBeAdded(remaining));
         break;
       }
 
       final bytes = file.bytes;
       if (bytes == null || bytes.isEmpty) {
-        onError('Could not read "${file.name}". Try another image.');
+        onError(l.couldNotReadImage(file.name));
         continue;
       }
 
       if (bytes.length > _maxBytes) {
-        onError('${file.name} is larger than 5 MB.');
+        onError(l.fileLargerThan5Mb(file.name));
         continue;
       }
 
       final mimeType = _mimeTypeForExtension(file.extension);
       if (mimeType == null) {
-        onError('${file.name} must be JPG, PNG, or WebP.');
+        onError(l.fileMustBeJpgPngWebp(file.name));
         continue;
       }
 
@@ -295,7 +294,7 @@ class _UploadDropZone extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  '$imageCount/$_maxImages photos',
+                  context.s.photosCount(imageCount, _maxImages),
                   style: context.supplierLabel().copyWith(
                     color: context.supplierColors.textSecondary,
                   ),
@@ -340,8 +339,8 @@ class _ThumbnailTile extends StatelessWidget {
           ),
         ),
         if (isCover)
-          Positioned(
-            left: 6,
+          PositionedDirectional(
+            start: 6,
             top: 6,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -358,8 +357,8 @@ class _ThumbnailTile extends StatelessWidget {
               ),
             ),
           ),
-        Positioned(
-          right: 4,
+        PositionedDirectional(
+          end: 4,
           top: 4,
           child: Material(
             color: AppColorTokens.supplierImageOverlay,

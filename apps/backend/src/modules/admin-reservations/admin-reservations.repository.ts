@@ -1,7 +1,10 @@
 import type { Prisma, ReservationStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 
-import type { AdminReservationsListQuery } from './admin-reservations.validation.js';
+import type {
+  AdminReservationsExportFilters,
+  AdminReservationsListQuery,
+} from './admin-reservations.validation.js';
 
 const startOfUtcDay = (date: Date) => {
   const copy = new Date(date);
@@ -207,7 +210,7 @@ const buildSearchWhere = (search?: string): Prisma.ReservationWhereInput | undef
 };
 
 const buildHasDeliveryWhere = (
-  hasDelivery?: AdminReservationsListQuery['hasDelivery'],
+  hasDelivery?: AdminReservationsExportFilters['hasDelivery'],
 ): Prisma.ReservationWhereInput | undefined => {
   if (hasDelivery === 'YES') {
     return { deliveries: { some: {} } };
@@ -219,7 +222,7 @@ const buildHasDeliveryWhere = (
 };
 
 export const buildAdminReservationsWhere = (
-  query: AdminReservationsListQuery,
+  query: AdminReservationsExportFilters,
 ): Prisma.ReservationWhereInput => {
   const and: Prisma.ReservationWhereInput[] = [];
 
@@ -274,5 +277,60 @@ export const findAdminReservationById = async (id: string) => {
   return prisma.reservation.findUnique({
     where: { id },
     include: adminReservationDetailInclude,
+  });
+};
+
+export const countAdminReservationsForExport = async (
+  query: AdminReservationsExportFilters,
+) => prisma.reservation.count({ where: buildAdminReservationsWhere(query) });
+
+export const groupAdminReservationsStatusForExport = async (
+  query: AdminReservationsExportFilters,
+) =>
+  prisma.reservation.groupBy({
+    by: ['status'],
+    where: buildAdminReservationsWhere(query),
+    _count: { _all: true },
+  });
+
+export type AdminReservationExportKeysetCursor = {
+  createdAt: Date;
+  id: string;
+};
+
+/**
+ * Keyset pagination: createdAt DESC, id DESC.
+ * Predicate: createdAt < cursor.createdAt OR (createdAt = cursor.createdAt AND id < cursor.id)
+ */
+export const listAdminReservationsExportBatch = async (input: {
+  query: AdminReservationsExportFilters;
+  cursor?: AdminReservationExportKeysetCursor;
+  take: number;
+}) => {
+  const baseWhere = buildAdminReservationsWhere(input.query);
+  const where: Prisma.ReservationWhereInput = input.cursor
+    ? {
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { createdAt: { lt: input.cursor.createdAt } },
+              {
+                AND: [
+                  { createdAt: input.cursor.createdAt },
+                  { id: { lt: input.cursor.id } },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
+
+  return prisma.reservation.findMany({
+    where,
+    include: adminReservationListInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: input.take,
   });
 };

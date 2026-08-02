@@ -3,8 +3,6 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { formatDistanceLabel, haversineDistanceKm } from '../../utils/haversine.js';
 import {
-  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
-  MAX_ACTIVE_DRIVER_DELIVERIES,
   LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES,
 } from '../deliveries/deliveries.service.js';
 import {
@@ -37,14 +35,73 @@ import {
 import type {
   CreateDeliveryLocationPingInput,
   ListAvailableDeliveriesQuery,
+  UpdateDriverAvailabilityInput,
   UpdateDriverDeliveryStatusInput,
+  UpdateDriverProfileInput,
 } from './driver.validation.js';
+import {
+  countActiveDriverDeliveries,
+  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
+  MAX_ACTIVE_DRIVER_DELIVERIES,
+  reconcileDriverAvailability,
+} from './driver-availability.js';
 import { resolveDriverReferencePoint } from './driver-location.js';
 import {
   completeReservationsForDeliveredDelivery,
   syncDeliveryGroupOnDriverAssign,
 } from '../delivery-groups/delivery-group-operations.service.js';
 import { invalidateLearnerHomeForReservationTransition } from '../learner-home/learner-home.service.js';
+import { runSerializableTransaction } from '../../utils/transaction-retry.js';
+import {
+  assertAvailableJobsCursorCompatible,
+  availableJobMatchesCursorPosition,
+  buildAvailableJobsCursorFilters,
+  buildNextAvailableJobsCursor,
+  compareAvailableJobs,
+  decodeAvailableJobsCursor,
+  isAvailableJobAfterCursor,
+  rejectInvalidAvailableJobsCursor,
+} from './driver-available-jobs-cursor.js';
+import {
+  applyPartialPickupSplit,
+  validatePartialPickupSelection,
+  type PartialPickupUnpickedItem,
+} from './driver-partial-pickup.js';
+
+const notifyMaterialRequestsFulfilledByReservations = async (
+  reservationIds: string[],
+) => {
+  if (reservationIds.length === 0) {
+    return;
+  }
+
+  const { fulfillRequestFromCompletedReservation } = await import(
+    '../learner-material-requests/learner-material-requests.service.js'
+  );
+  const { createNotificationIfMissing } = await import(
+    '../notifications/notifications.repository.js'
+  );
+
+  for (const reservationId of reservationIds) {
+    const fulfilled = await fulfillRequestFromCompletedReservation(reservationId);
+    if (!fulfilled) {
+      continue;
+    }
+
+    await createNotificationIfMissing({
+      userId: fulfilled.learnerId,
+      notificationType: 'MATERIAL_REQUEST_FULFILLED',
+      title: 'Material request fulfilled',
+      body: `Your request "${fulfilled.requestedItemName}" was marked fulfilled after a completed reservation.`,
+      relatedEntityType: 'MATERIAL_REQUEST',
+      relatedEntityId: fulfilled.id,
+      eventKey: `mr:fulfilled:${fulfilled.id}`,
+      entityType: 'MATERIAL_REQUEST',
+      entityId: fulfilled.id,
+      actionType: 'OPEN_ENTITY',
+    });
+  }
+};
 
 const terminalStatuses = [
   'DELIVERED',
@@ -264,9 +321,8 @@ const mapAvailableDelivery = (
     learnerNote: delivery.learnerNote,
     material: {
       id: delivery.reservation.material.id,
-      title: groupedDelivery
-        ? `${items.length} items from this supplier`
-        : delivery.reservation.material.title,
+      // Keep user-entered content verbatim; the client owns localized group labels.
+      title: delivery.reservation.material.title,
       quantityRequested: Number(delivery.reservation.quantityRequested),
       unit: delivery.reservation.material.unit,
     },
@@ -314,6 +370,9 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
     reservationStatus: delivery.reservation.status,
     deliveryStatus: delivery.status,
   }),
+  canShareLocation: (
+    LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES as readonly DeliveryStatus[]
+  ).includes(delivery.status),
   assignedAt: delivery.assignedAt?.toISOString() ?? null,
   arrivedPickupAt: delivery.arrivedPickupAt?.toISOString() ?? null,
   pickedUpAt: delivery.pickedUpAt?.toISOString() ?? null,
@@ -339,25 +398,28 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
 export const mapDriverDeliveryForResponse = (delivery: DriverDeliveryRecord) =>
   mapAssignedDelivery(delivery);
 
-const countActiveAssignedDeliveries = async (
-  driverProfileId: string,
-  tx: Prisma.TransactionClient | typeof prisma = prisma,
-) =>
-  tx.delivery.count({
-    where: {
-      assignedDriverProfileId: driverProfileId,
-      status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
-    },
-  });
-
 const buildDriverJobsMeta = (
-  profile: { city: string; area: string },
+  profile: {
+    city: string;
+    area: string;
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    availability: 'OFFLINE' | 'AVAILABLE' | 'ON_DELIVERY';
+    acceptingNewJobs: boolean;
+  },
   activeDeliveryCount: number,
   referencePoint: Awaited<ReturnType<typeof resolveDriverReferencePoint>>,
 ) => ({
   activeDeliveryCount,
   maxActiveDeliveries: MAX_ACTIVE_DRIVER_DELIVERIES,
-  canAcceptMore: activeDeliveryCount < MAX_ACTIVE_DRIVER_DELIVERIES,
+  canAcceptMore:
+    profile.status === 'ACTIVE' &&
+    profile.acceptingNewJobs &&
+    activeDeliveryCount < MAX_ACTIVE_DRIVER_DELIVERIES,
+  canBrowseAvailableJobs:
+    profile.status === 'ACTIVE' && profile.acceptingNewJobs,
+  status: profile.status,
+  availability: profile.availability,
+  acceptingNewJobs: profile.acceptingNewJobs,
   driverProfileCity: profile.city,
   driverProfileArea: profile.area,
   driverHasRecentLocation:
@@ -381,15 +443,113 @@ const findActiveDriverProfile = async (
   return profile;
 };
 
+const findDriverProfile = async (userId: string) => {
+  const profile = await prisma.driverProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new AppError('Driver profile required.', 404, 'NOT_FOUND');
+  }
+  return profile;
+};
+
+const mapDriverProfileResponse = async (
+  profile: Awaited<ReturnType<typeof findDriverProfile>>,
+) => {
+  const activeDeliveryCount = await countActiveDriverDeliveries(
+    prisma,
+    profile.id,
+  );
+  return {
+    status: profile.status,
+    availability: profile.availability,
+    acceptingNewJobs: profile.acceptingNewJobs,
+    activeDeliveryCount,
+    maxActiveDeliveries: MAX_ACTIVE_DRIVER_DELIVERIES,
+    canAcceptMore:
+      profile.status === 'ACTIVE' &&
+      profile.acceptingNewJobs &&
+      activeDeliveryCount < MAX_ACTIVE_DRIVER_DELIVERIES,
+    city: profile.city,
+    area: profile.area,
+    transportationType: profile.transportationType,
+    vehicleLabel: profile.vehicleLabel,
+    vehiclePlate: profile.vehiclePlate,
+    capacityNotes: profile.capacityNotes,
+    updatedAt: profile.updatedAt.toISOString(),
+  };
+};
+
+export const getDriverProfile = async (driverUserId: string) =>
+  mapDriverProfileResponse(await findDriverProfile(driverUserId));
+
+export const updateDriverProfile = async (
+  driverUserId: string,
+  input: UpdateDriverProfileInput,
+) => {
+  const profile = await findActiveDriverProfile(driverUserId);
+  await prisma.driverProfile.update({
+    where: { id: profile.id },
+    data: {
+      ...(input.city !== undefined ? { city: input.city } : {}),
+      ...(input.area !== undefined ? { area: input.area } : {}),
+      ...(input.transportationType !== undefined
+        ? {
+            transportationType: input.transportationType,
+            vehicleType: input.transportationType,
+          }
+        : {}),
+      ...(input.vehicleLabel !== undefined
+        ? { vehicleLabel: input.vehicleLabel }
+        : {}),
+      ...(input.vehiclePlate !== undefined
+        ? { vehiclePlate: input.vehiclePlate }
+        : {}),
+      ...(input.capacityNotes !== undefined
+        ? { capacityNotes: input.capacityNotes }
+        : {}),
+    },
+  });
+  return getDriverProfile(driverUserId);
+};
+
+export const updateDriverAvailability = async (
+  driverUserId: string,
+  input: UpdateDriverAvailabilityInput,
+) => {
+  await runSerializableTransaction(async (tx) => {
+    const profile = await findActiveDriverProfile(driverUserId, tx);
+    await tx.driverProfile.update({
+      where: { id: profile.id },
+      data: { acceptingNewJobs: input.acceptingNewJobs },
+    });
+    await reconcileDriverAvailability(tx, profile.id);
+  });
+  return getDriverProfile(driverUserId);
+};
+
 export const listAvailableDeliveries = async (
   driverUserId: string,
-  query: ListAvailableDeliveriesQuery = {},
+  query: ListAvailableDeliveriesQuery = { limit: 20 },
 ) => {
-  await syncDueDriverTimeRemindersForUser(driverUserId);
-
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
-  const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
+  const activeDeliveryCount = await countActiveDriverDeliveries(
+    prisma,
+    profile.id,
+  );
+
+  if (!profile.acceptingNewJobs) {
+    return {
+      deliveries: [],
+      nearbyAvailableCount: 0,
+      totalAvailableCount: 0,
+      pagination: {
+        limit: query.limit ?? 20,
+        hasMore: false,
+        nextCursor: null,
+      },
+      ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
+    };
+  }
 
   const explicitCity = query.city?.trim();
   const explicitArea = query.area?.trim();
@@ -450,48 +610,58 @@ export const listAvailableDeliveries = async (
   });
 
   let filtered = withDistance;
-  if (effectiveMaxDistanceKm != null && hasDriverCoordinates) {
+  if (effectiveMaxDistanceKm != null) {
     filtered = filtered.filter(
       (item) =>
-        item.distanceKm == null ||
+        item.distanceKm != null &&
         item.distanceKm <= effectiveMaxDistanceKm,
     );
   }
 
-  filtered.sort((left, right) => {
-    if (sortBy === 'nearest') {
-      if (left.distanceKm == null && right.distanceKm == null) {
-        return (
-          left.delivery.requestedAt.getTime() -
-          right.delivery.requestedAt.getTime()
-        );
+  filtered.sort((left, right) => compareAvailableJobs(left, right, sortBy));
+
+  const cursorFilters = buildAvailableJobsCursorFilters(query, sortBy);
+  let pageSource = filtered;
+
+  if (query.cursor) {
+    const cursor = decodeAvailableJobsCursor(query.cursor);
+    if (!cursor) {
+      rejectInvalidAvailableJobsCursor();
+    } else {
+      assertAvailableJobsCursorCompatible(cursor, cursorFilters);
+
+      const cursorItem = filtered.find(
+        (item) => item.delivery.id === cursor.id,
+      );
+      if (!cursorItem || !availableJobMatchesCursorPosition(cursorItem, cursor)) {
+        rejectInvalidAvailableJobsCursor();
       }
 
-      if (left.distanceKm == null) {
-        return 1;
-      }
-
-      if (right.distanceKm == null) {
-        return -1;
-      }
-
-      const distanceDiff = left.distanceKm - right.distanceKm;
-      if (distanceDiff !== 0) {
-        return distanceDiff;
-      }
+      pageSource = filtered.filter((item) =>
+        isAvailableJobAfterCursor(item, cursor, sortBy),
+      );
     }
+  }
 
-    return (
-      left.delivery.requestedAt.getTime() - right.delivery.requestedAt.getTime()
-    );
-  });
+  const pageLimit = query.limit ?? 20;
+  const page = pageSource.slice(0, pageLimit);
+  const hasMore = page.length < pageSource.length;
+  const lastPageItem = page.at(-1);
 
   return {
-    deliveries: filtered.map((item) =>
+    deliveries: page.map((item) =>
       mapAvailableDelivery(item.delivery, { distanceKm: item.distanceKm }),
     ),
     nearbyAvailableCount: filtered.length,
     totalAvailableCount: withDistance.length,
+    pagination: {
+      limit: pageLimit,
+      hasMore,
+      nextCursor:
+        hasMore && lastPageItem
+          ? buildNextAvailableJobsCursor(lastPageItem, cursorFilters)
+          : null,
+    },
     ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
   };
 };
@@ -501,7 +671,10 @@ export const listActiveDriverDeliveries = async (driverUserId: string) => {
 
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
-  const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
+  const activeDeliveryCount = await countActiveDriverDeliveries(
+    prisma,
+    profile.id,
+  );
 
   let deliveries = await prisma.delivery.findMany({
     where: {
@@ -531,6 +704,76 @@ export const listActiveDriverDeliveries = async (driverUserId: string) => {
   return {
     deliveries: deliveries.map(mapAssignedDelivery),
     ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
+  };
+};
+
+const mapInactiveDriverDelivery = (delivery: DriverDeliveryRecord) => ({
+  ...mapAvailableDelivery(delivery),
+  learnerNote: null,
+  confirmedDeliveryWindowStart:
+    delivery.reservation.confirmedDeliveryWindowStart?.toISOString() ?? null,
+  confirmedDeliveryWindowEnd:
+    delivery.reservation.confirmedDeliveryWindowEnd?.toISOString() ?? null,
+  assignedAt: delivery.assignedAt?.toISOString() ?? null,
+  arrivedPickupAt: delivery.arrivedPickupAt?.toISOString() ?? null,
+  pickedUpAt: delivery.pickedUpAt?.toISOString() ?? null,
+  onTheWayAt: delivery.onTheWayAt?.toISOString() ?? null,
+  arrivedDropoffAt: delivery.arrivedDropoffAt?.toISOString() ?? null,
+  deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+  canDriverReportPickupFailed: false,
+  canDriverReportDeliveryFailed: false,
+  canDriverReportDriverIssue: false,
+  canShareLocation: false,
+});
+
+/**
+ * Privacy-safe detail contract. Exact addresses and contact details are exposed
+ * only while this driver currently owns an active delivery. A previous
+ * assignment may still resolve notification deep links, but only to safe data.
+ */
+export const getDriverDeliveryDetail = async (
+  driverUserId: string,
+  deliveryId: string,
+) => {
+  const profile = await findActiveDriverProfile(driverUserId);
+  const assignment = await prisma.deliveryAssignment.findFirst({
+    where: { deliveryId, driverProfileId: profile.id },
+    orderBy: { acceptedAt: 'desc' },
+    select: { id: true },
+  });
+
+  if (!assignment) {
+    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  const delivery = await prisma.delivery.findUnique({
+    where: { id: deliveryId },
+    include: driverDeliveryInclude,
+  });
+
+  if (!delivery) {
+    throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  const isActive =
+    delivery.assignedDriverProfileId === profile.id &&
+    (DRIVER_IN_PROGRESS_ASSIGNED_STATUSES as readonly DeliveryStatus[]).includes(
+      delivery.status,
+    );
+
+  return {
+    isActive,
+    delivery: isActive
+      ? mapAssignedDelivery(delivery)
+      : mapInactiveDriverDelivery(delivery),
+    inactiveContext: isActive
+      ? null
+      : {
+          closureReason:
+            delivery.status === 'AWAITING_RESOLUTION'
+              ? ('MOVED_TO_ADMIN_REVIEW' as const)
+              : ('NO_LONGER_ACTIVE' as const),
+        },
   };
 };
 
@@ -609,54 +852,27 @@ export const acceptDelivery = async (
   driverUserId: string,
   deliveryId: string,
 ) => {
-  await prisma.$transaction(async (tx) => {
+  await runSerializableTransaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
 
-    const activeDriverDeliveryCount = await countActiveAssignedDeliveries(
-      profile.id,
+    if (!profile.acceptingNewJobs) {
+      throw new AppError(
+        'You are not accepting new delivery jobs.',
+        409,
+        'DRIVER_NOT_ACCEPTING_NEW_JOBS',
+      );
+    }
+
+    const activeDriverDeliveryCount = await countActiveDriverDeliveries(
       tx,
+      profile.id,
     );
 
     if (activeDriverDeliveryCount >= MAX_ACTIVE_DRIVER_DELIVERIES) {
       throw new AppError(
         'You have reached the active delivery limit.',
         409,
-        'CONFLICT',
-      );
-    }
-
-    if (
-      profile.availability === 'OFFLINE' ||
-      profile.availability === 'AVAILABLE'
-    ) {
-      const driverAvailabilityUpdate = await tx.driverProfile.updateMany({
-        where: {
-          id: profile.id,
-          status: 'ACTIVE',
-          availability: { in: ['OFFLINE', 'AVAILABLE'] },
-        },
-        data: { availability: 'ON_DELIVERY' },
-      });
-
-      if (driverAvailabilityUpdate.count !== 1) {
-        const refreshedProfile = await tx.driverProfile.findUnique({
-          where: { id: profile.id },
-          select: { availability: true },
-        });
-
-        if (refreshedProfile?.availability !== 'ON_DELIVERY') {
-          throw new AppError(
-            'Driver is not available to accept a delivery.',
-            409,
-            'CONFLICT',
-          );
-        }
-      }
-    } else if (profile.availability !== 'ON_DELIVERY') {
-      throw new AppError(
-        'Driver is not available to accept a delivery.',
-        409,
-        'CONFLICT',
+        'DRIVER_ACTIVE_LIMIT_REACHED',
       );
     }
 
@@ -677,7 +893,7 @@ export const acceptDelivery = async (
       throw new AppError(
         'Delivery is no longer available.',
         409,
-        'CONFLICT',
+        'DELIVERY_NOT_AVAILABLE',
       );
     }
 
@@ -709,6 +925,8 @@ export const acceptDelivery = async (
       deliveryGroupId: assignedDelivery.deliveryGroupId,
       driverProfileId: profile.id,
     });
+
+    await reconcileDriverAvailability(tx, profile.id);
   });
 
   const delivery = await prisma.delivery.findUniqueOrThrow({
@@ -727,7 +945,10 @@ export const updateDriverDeliveryStatus = async (
   deliveryId: string,
   input: UpdateDriverDeliveryStatusInput,
 ) => {
-  const result = await prisma.$transaction(async (tx) => {
+  const hasPartialSelection =
+    input.pickedReservationIds != null && input.unpicked != null;
+
+  const result = await runSerializableTransaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
     const delivery = await tx.delivery.findFirst({
       where: {
@@ -739,17 +960,51 @@ export const updateDriverDeliveryStatus = async (
         status: true,
         reservationId: true,
         deliveryGroupId: true,
+        assignedDriverProfileId: true,
         driverNote: true,
         reservation: {
           select: {
             status: true,
             materialId: true,
+            material: {
+              select: { title: true, unit: true, condition: true },
+            },
+            ownerId: true,
             quantityRequested: true,
             supplierPickupWindowStart: true,
             supplierPickupWindowEnd: true,
             confirmedDeliveryWindowStart: true,
             confirmedDeliveryWindowEnd: true,
           },
+        },
+        deliveryGroup: {
+          select: {
+            id: true,
+            status: true,
+            assignedDriverProfileId: true,
+            supplierProfile: {
+              select: { userId: true },
+            },
+            reservations: {
+              select: {
+                id: true,
+                status: true,
+                fulfillmentMethod: true,
+                materialId: true,
+                material: {
+                  select: { title: true, unit: true, condition: true },
+                },
+                quantityRequested: true,
+                ownerId: true,
+                supplierPickupWindowStart: true,
+                supplierPickupWindowEnd: true,
+              },
+            },
+          },
+        },
+        assignments: {
+          where: { status: 'ACTIVE' },
+          select: { driverProfileId: true },
         },
       },
     });
@@ -768,6 +1023,38 @@ export const updateDriverDeliveryStatus = async (
     }
 
     const now = new Date();
+    const isGroupedPickup =
+      input.status === 'PICKED_UP' && delivery.deliveryGroupId != null;
+
+    if (isGroupedPickup) {
+      const group = delivery.deliveryGroup;
+      const expectedSupplierUserId = group?.supplierProfile.userId;
+      const memberIds = new Set(
+        group?.reservations.map((reservation) => reservation.id) ?? [],
+      );
+
+      if (
+        !group ||
+        group.id !== delivery.deliveryGroupId ||
+        !memberIds.has(delivery.reservationId) ||
+        group.status !== 'ASSIGNED' ||
+        group.assignedDriverProfileId !== profile.id ||
+        delivery.assignedDriverProfileId !== profile.id ||
+        delivery.status !== 'ARRIVED_PICKUP' ||
+        delivery.assignments.length !== 1 ||
+        delivery.assignments[0]?.driverProfileId !== profile.id ||
+        !expectedSupplierUserId ||
+        group.reservations.length === 0 ||
+        group.reservations.some(
+          (reservation) =>
+            reservation.fulfillmentMethod !== 'DELIVERY' ||
+            reservation.status !== 'ACCEPTED' ||
+            reservation.ownerId !== expectedSupplierUserId,
+        )
+      ) {
+        return { outcome: 'SPLIT_CONFLICT' as const };
+      }
+    }
 
     if (input.status === 'PICKED_UP' || input.status === 'DELIVERED') {
       await ensureDeliveryHandoverCodesStored(tx, delivery.id);
@@ -827,6 +1114,121 @@ export const updateDriverDeliveryStatus = async (
       }
     }
 
+    if (input.status === 'PICKED_UP' && hasPartialSelection) {
+      const groupMembers = delivery.deliveryGroup?.reservations ?? [];
+
+      const members =
+        delivery.deliveryGroupId && groupMembers.length > 0
+          ? groupMembers
+          : [
+              {
+                id: delivery.reservationId,
+                status: delivery.reservation.status,
+                fulfillmentMethod: 'DELIVERY',
+                materialId: delivery.reservation.materialId,
+                material: delivery.reservation.material,
+                quantityRequested: delivery.reservation.quantityRequested,
+                ownerId: delivery.reservation.ownerId,
+                supplierPickupWindowStart:
+                  delivery.reservation.supplierPickupWindowStart,
+                supplierPickupWindowEnd:
+                  delivery.reservation.supplierPickupWindowEnd,
+              },
+            ];
+
+      if (
+        delivery.assignedDriverProfileId !== profile.id ||
+        delivery.status !== 'ARRIVED_PICKUP' ||
+        delivery.assignments.length !== 1 ||
+        delivery.assignments[0]?.driverProfileId !== profile.id
+      ) {
+        return { outcome: 'SPLIT_CONFLICT' as const };
+      }
+
+      const selection = validatePartialPickupSelection({
+        members,
+        pickedReservationIds: input.pickedReservationIds!,
+        unpicked: input.unpicked as PartialPickupUnpickedItem[],
+      });
+
+      if (!selection.ok) {
+        if (selection.code === 'EMPTY_PICKED') {
+          return { outcome: 'EMPTY_PICKED' as const };
+        }
+
+        return { outcome: 'SELECTION_INVALID' as const };
+      }
+
+      const pickedIdSet = new Set(selection.pickedIds);
+      const unpickedById = new Map(
+        selection.unpicked.map((item) => [item.reservationId, item]),
+      );
+      await tx.deliveryPickupItem.createMany({
+        data: members.map((member) => {
+          const unpickedItem = unpickedById.get(member.id);
+          return {
+            deliveryId: delivery.id,
+            reservationId: member.id,
+            materialId: member.materialId,
+            materialTitle: member.material.title,
+            quantity: member.quantityRequested,
+            unit: member.material.unit,
+            condition: member.material.condition,
+            wasPicked: pickedIdSet.has(member.id),
+            unpickedReason: unpickedItem?.reason ?? null,
+            driverNote: unpickedItem?.note?.trim() || null,
+            recordedAt: now,
+          };
+        }),
+        skipDuplicates: true,
+      });
+
+      if (selection.unpicked.length > 0) {
+        if (!delivery.deliveryGroupId) {
+          return { outcome: 'SELECTION_INVALID' as const };
+        }
+
+        await applyPartialPickupSplit(tx, {
+          deliveryId: delivery.id,
+          deliveryGroupId: delivery.deliveryGroupId,
+          currentReservationId: delivery.reservationId,
+          driverUserId,
+          driverProfileId: profile.id,
+          pickedIds: selection.pickedIds,
+          unpicked: selection.unpicked,
+          members,
+        });
+      }
+    }
+
+    if (input.status === 'PICKED_UP' && !hasPartialSelection) {
+      const members = delivery.deliveryGroup?.reservations.length
+        ? delivery.deliveryGroup.reservations
+        : [
+            {
+              id: delivery.reservationId,
+              materialId: delivery.reservation.materialId,
+              material: delivery.reservation.material,
+              quantityRequested: delivery.reservation.quantityRequested,
+            },
+          ];
+
+      await tx.deliveryPickupItem.createMany({
+        data: members.map((member) => ({
+          deliveryId: delivery.id,
+          reservationId: member.id,
+          materialId: member.materialId,
+          materialTitle: member.material.title,
+          quantity: member.quantityRequested,
+          unit: member.material.unit,
+          condition: member.material.condition,
+          wasPicked: true,
+          recordedAt: now,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     const statusData: Prisma.DeliveryUpdateInput = {
       status: input.status,
       driverNote: input.note?.trim() || delivery.driverNote,
@@ -844,34 +1246,58 @@ export const updateDriverDeliveryStatus = async (
       statusData.deliveredAt = now;
     }
 
-    await tx.delivery.update({
-      where: { id: delivery.id },
-      data: statusData,
-    });
+    if (
+      input.status === 'PICKED_UP' &&
+      (hasPartialSelection || delivery.deliveryGroupId != null)
+    ) {
+      const deliveryUpdate = await tx.delivery.updateMany({
+        where: {
+          id: delivery.id,
+          status: delivery.status,
+          assignedDriverProfileId: profile.id,
+          deliveryGroupId: delivery.deliveryGroupId,
+        },
+        data: statusData,
+      });
+
+      if (deliveryUpdate.count !== 1) {
+        throw new AppError(
+          'Grouped delivery state changed during partial pickup.',
+          409,
+          'DRIVER_GROUPED_DELIVERY_SPLIT_CONFLICT',
+        );
+      }
+    } else {
+      await tx.delivery.update({
+        where: { id: delivery.id },
+        data: statusData,
+      });
+    }
 
     if (input.status === 'DELIVERED') {
-      await completeReservationsForDeliveredDelivery(tx, {
-        delivery: {
-          id: delivery.id,
-          reservationId: delivery.reservationId,
-          deliveryGroupId: delivery.deliveryGroupId,
-          reservation: delivery.reservation,
+      const latestDelivery = await tx.delivery.findUniqueOrThrow({
+        where: { id: delivery.id },
+        select: {
+          id: true,
+          reservationId: true,
+          deliveryGroupId: true,
+          reservation: {
+            select: {
+              status: true,
+              materialId: true,
+              quantityRequested: true,
+            },
+          },
         },
+      });
+
+      await completeReservationsForDeliveredDelivery(tx, {
+        delivery: latestDelivery,
         driverUserId,
         completedAt: now,
       });
 
-      const remainingActive = await countActiveAssignedDeliveries(
-        profile.id,
-        tx,
-      );
-
-      if (remainingActive === 0) {
-        await tx.driverProfile.update({
-          where: { id: profile.id },
-          data: { availability: 'AVAILABLE' },
-        });
-      }
+      await reconcileDriverAvailability(tx, profile.id);
     }
 
     await tx.deliveryStatusHistory.create({
@@ -884,7 +1310,11 @@ export const updateDriverDeliveryStatus = async (
       },
     });
 
-    return { outcome: 'UPDATED' as const, deliveryId: delivery.id };
+    return {
+      outcome: 'UPDATED' as const,
+      deliveryId: delivery.id,
+      completedReservationIds,
+    };
   });
 
   switch (result.outcome) {
@@ -899,6 +1329,9 @@ export const updateDriverDeliveryStatus = async (
       }
       if (input.status === 'DELIVERED') {
         invalidateLearnerHomeForReservationTransition('ACCEPTED', 'COMPLETED');
+        await notifyMaterialRequestsFulfilledByReservations(
+          result.completedReservationIds,
+        );
       }
       return mapAssignedDelivery(updatedDelivery);
     }
@@ -908,15 +1341,19 @@ export const updateDriverDeliveryStatus = async (
       throw new AppError(
         'Terminal deliveries cannot be updated.',
         409,
-        'CONFLICT',
+        'DELIVERY_TERMINAL',
       );
     case 'INVALID_TRANSITION':
-      throw new AppError('Invalid delivery status transition.', 409, 'CONFLICT');
+      throw new AppError(
+        'Invalid delivery status transition.',
+        409,
+        'INVALID_DELIVERY_TRANSITION',
+      );
     case 'INVALID_CODE':
       throw new AppError(
         'The confirmation code is incorrect.',
         400,
-        'VALIDATION_ERROR',
+        'INVALID_CONFIRMATION_CODE',
       );
     case 'WINDOW_NOT_STARTED':
       throw new AppError(
@@ -924,7 +1361,7 @@ export const updateDriverDeliveryStatus = async (
           ? supplierPickupWindowNotStartedMessage()
           : deliveryWindowNotStartedMessage(),
         400,
-        'VALIDATION_ERROR',
+        'HANDOVER_WINDOW_NOT_STARTED',
       );
     case 'WINDOW_EXPIRED':
       throw new AppError(
@@ -932,7 +1369,25 @@ export const updateDriverDeliveryStatus = async (
           ? supplierPickupWindowPassedMessage()
           : deliveryWindowPassedMessage(),
         400,
-        'VALIDATION_ERROR',
+        'HANDOVER_WINDOW_EXPIRED',
+      );
+    case 'EMPTY_PICKED':
+      throw new AppError(
+        'Empty picked set is not allowed on partial pickup; use pickup failure.',
+        409,
+        'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID',
+      );
+    case 'SELECTION_INVALID':
+      throw new AppError(
+        'Partial pickup selection is invalid for this grouped delivery.',
+        409,
+        'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID',
+      );
+    case 'SPLIT_CONFLICT':
+      throw new AppError(
+        'Grouped delivery state changed during partial pickup.',
+        409,
+        'DRIVER_GROUPED_DELIVERY_SPLIT_CONFLICT',
       );
     default:
       throw new AppError('Unable to update delivery.', 500, 'INTERNAL_ERROR');
@@ -950,13 +1405,24 @@ export const createDeliveryLocationPing = async (
     where: {
       id: deliveryId,
       assignedDriverProfileId: profile.id,
-      status: { in: [...LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES] },
     },
-    select: { id: true },
+    select: { id: true, status: true },
   });
 
   if (!delivery) {
     throw new AppError('Active assigned delivery not found.', 404, 'NOT_FOUND');
+  }
+
+  if (
+    !(LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES as readonly DeliveryStatus[]).includes(
+      delivery.status,
+    )
+  ) {
+    throw new AppError(
+      'Location sharing is not available for this delivery status.',
+      409,
+      'DELIVERY_LOCATION_PING_NOT_ALLOWED',
+    );
   }
 
   const ping = await prisma.deliveryLocationPing.create({

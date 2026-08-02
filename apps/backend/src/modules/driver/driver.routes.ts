@@ -8,10 +8,17 @@ import { asyncHandler } from '../../utils/async-handler.js';
 import {
   acceptDriverDeliveryHandler,
   createDriverDeliveryLocationPingHandler,
+  getDriverProfileHandler,
+  getDriverDeliveryDetailHandler,
   getDriverDeliveryInactiveContextHandler,
   listActiveDriverDeliveriesHandler,
   listAvailableDriverDeliveriesHandler,
   updateDriverDeliveryStatusHandler,
+  getDriverHistoricalDeliveryHandler,
+  listDriverDeliveryHistoryHandler,
+  listDriverIncidentsHandler,
+  updateDriverAvailabilityHandler,
+  updateDriverProfileHandler,
 } from './driver.controller.js';
 import {
   markDriverDeliveryFailedHandler,
@@ -22,7 +29,10 @@ import {
   createDeliveryLocationPingSchema,
   deliveryIdParamsSchema,
   listAvailableDeliveriesQuerySchema,
+  updateDriverAvailabilitySchema,
   updateDriverDeliveryStatusSchema,
+  updateDriverProfileSchema,
+  listDriverArchiveQuerySchema,
 } from './driver.validation.js';
 import {
   markDriverDeliveryFailedSchema,
@@ -34,6 +44,20 @@ export const driverRouter = Router();
 
 driverRouter.use(authMiddleware, requireRoles('DRIVER'));
 
+driverRouter.get('/profile', asyncHandler(getDriverProfileHandler));
+
+driverRouter.patch(
+  '/profile',
+  validate(updateDriverProfileSchema),
+  asyncHandler(updateDriverProfileHandler),
+);
+
+driverRouter.patch(
+  '/profile/availability',
+  validate(updateDriverAvailabilitySchema),
+  asyncHandler(updateDriverAvailabilityHandler),
+);
+
 driverRouter.get(
   '/deliveries/available',
   validate(listAvailableDeliveriesQuerySchema, 'query'),
@@ -43,6 +67,30 @@ driverRouter.get(
 driverRouter.get(
   '/deliveries/active',
   asyncHandler(listActiveDriverDeliveriesHandler),
+);
+
+driverRouter.get(
+  '/deliveries/history',
+  validate(listDriverArchiveQuerySchema, 'query'),
+  asyncHandler(listDriverDeliveryHistoryHandler),
+);
+
+driverRouter.get(
+  '/deliveries/history/:id',
+  validate(deliveryIdParamsSchema, 'params'),
+  asyncHandler(getDriverHistoricalDeliveryHandler),
+);
+
+driverRouter.get(
+  '/incidents',
+  validate(listDriverArchiveQuerySchema, 'query'),
+  asyncHandler(listDriverIncidentsHandler),
+);
+
+driverRouter.get(
+  '/deliveries/:id',
+  validate(deliveryIdParamsSchema, 'params'),
+  asyncHandler(getDriverDeliveryDetailHandler),
 );
 
 driverRouter.get(

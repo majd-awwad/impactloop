@@ -261,6 +261,7 @@ export const acceptInvitationTransaction = async (input: {
                       vehicleType: input.driverProfile.transportationType,
                       status: 'ACTIVE',
                       availability: 'OFFLINE',
+                      acceptingNewJobs: false,
                     }
                   : {
                       displayName: input.displayName,
@@ -271,6 +272,7 @@ export const acceptInvitationTransaction = async (input: {
                       vehicleType: 'UNSPECIFIED',
                       status: 'ACTIVE',
                       availability: 'OFFLINE',
+                      acceptingNewJobs: false,
                     },
               },
             }

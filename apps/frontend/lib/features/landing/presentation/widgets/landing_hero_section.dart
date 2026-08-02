@@ -6,6 +6,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/landing_colors.dart';
 import '../../../../app/widgets/hero_workshop_visual.dart';
+import '../../../../l10n/l10n.dart';
 
 class LandingHeroSection extends StatelessWidget {
   const LandingHeroSection({super.key});
@@ -79,7 +80,7 @@ class _HeroContent extends StatelessWidget {
               Icon(Icons.eco_outlined, size: 16, color: chipAccent),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                'Build a better future',
+                context.l10n.landingFutureBadge,
                 style: AuthDarkTextStyles.chip(
                   context,
                 ).copyWith(color: chipAccent),
@@ -89,7 +90,7 @@ class _HeroContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
         Text(
-          'Learn. Reuse. Build.',
+          context.l10n.learnReuseBuild,
           style: AuthDarkTextStyles.brandingHeadline(context).copyWith(
             color: colors.textPrimary,
             fontSize: isNarrow ? 42 : 60,
@@ -103,8 +104,7 @@ class _HeroContent extends StatelessWidget {
             maxWidth: isCompactPhone ? double.infinity : 560,
           ),
           child: Text(
-            'Discover reusable materials, share surplus resources, and turn '
-            'surplus into projects with a cleaner, community-driven workflow.',
+            context.l10n.landingHeroSubtitle,
             style: AuthDarkTextStyles.brandingSubtitle(
               context,
             ).copyWith(fontSize: 18, color: colors.textSecondary),
@@ -126,14 +126,14 @@ class _HeroContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _LandingPrimaryCta(
-                        label: 'Create account',
+                        label: context.l10n.createAccount,
                         icon: Icons.arrow_outward_rounded,
                         onPressed: () => context.go('/register'),
                         fullWidth: true,
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       _LandingOutlinedCta(
-                        label: 'Sign in',
+                        label: context.l10n.signIn,
                         icon: Icons.login_rounded,
                         onPressed: onSignIn,
                         fullWidth: true,
@@ -146,17 +146,17 @@ class _HeroContent extends StatelessWidget {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       _LandingPrimaryCta(
-                        label: 'Create account',
+                        label: context.l10n.createAccount,
                         icon: Icons.arrow_outward_rounded,
                         onPressed: () => context.go('/register'),
                       ),
                       _LandingOutlinedCta(
-                        label: 'Sign in',
+                        label: context.l10n.signIn,
                         icon: Icons.login_rounded,
                         onPressed: onSignIn,
                       ),
                       Text(
-                        'No credit card. No noise. Just building.',
+                        context.l10n.landingCtaNote,
                         style: AuthDarkTextStyles.body(
                           context,
                         ).copyWith(color: colors.textMuted),
@@ -170,11 +170,11 @@ class _HeroContent extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth < 560) {
-                return const Row(
+                return Row(
                   children: [
                     Expanded(
                       child: _HeroMetricCard(
-                        label: 'Materials reused',
+                        label: context.l10n.materialsReused,
                         value: '12.5k+',
                         icon: Icons.recycling_rounded,
                       ),
@@ -182,7 +182,7 @@ class _HeroContent extends StatelessWidget {
                     SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: _HeroMetricCard(
-                        label: 'Active makers',
+                        label: context.l10n.activeMakers,
                         value: '420+',
                         icon: Icons.groups_rounded,
                       ),
@@ -191,11 +191,11 @@ class _HeroContent extends StatelessWidget {
                 );
               }
 
-              return const Row(
+              return Row(
                 children: [
                   Expanded(
                     child: _HeroMetricCard(
-                      label: 'Materials reused',
+                      label: context.l10n.materialsReused,
                       value: '12.5k+',
                       icon: Icons.recycling_rounded,
                     ),
@@ -203,7 +203,7 @@ class _HeroContent extends StatelessWidget {
                   SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: _HeroMetricCard(
-                      label: 'Active makers',
+                      label: context.l10n.activeMakers,
                       value: '420+',
                       icon: Icons.groups_rounded,
                     ),
@@ -232,8 +232,8 @@ class _HeroContent extends StatelessWidget {
                   child: Stack(
                     children: [
                       for (var index = 0; index < 4; index++)
-                        Positioned(
-                          left: index * 22.0,
+                        PositionedDirectional(
+                          start: index * 22.0,
                           child: CircleAvatar(
                             radius: 18,
                             backgroundColor: avatarColors[index],
@@ -250,8 +250,7 @@ class _HeroContent extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    'Join a growing community of students, makers, and suppliers '
-                    'who are building with less waste.',
+                    context.l10n.landingCommunity,
                     style: AuthDarkTextStyles.body(
                       context,
                     ).copyWith(color: colors.textSecondary),

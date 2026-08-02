@@ -23,6 +23,11 @@ const materialDiscoveryEmptySubtitle = LocalizedText(
   ar: 'جرّب بحثاً أوسع أو غيّر الفلاتر أو امسحها للبدء من جديد.',
 );
 
+const materialDiscoveryRequestCta = LocalizedText(
+  en: 'Ask suppliers for this material',
+  ar: 'اطلب هذه المادة من الموردين',
+);
+
 const materialQuickFilters = <LocalizedText>[
   LocalizedText(en: 'All results', ar: 'كل النتائج'),
   LocalizedText(en: 'Free only', ar: 'مجاني فقط'),

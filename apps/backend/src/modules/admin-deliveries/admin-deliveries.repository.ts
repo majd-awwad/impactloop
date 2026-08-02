@@ -1,9 +1,10 @@
 import type { Prisma, DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { reconcileDriverAvailability } from '../driver/driver-availability.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
-import type { AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
+import type { AdminDeliveriesExportFilters, AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
 
 const startOfUtcDay = (date: Date) => {
   const copy = new Date(date);
@@ -92,12 +93,12 @@ export const adminDeliveryListInclude = {
   assignedDriverProfile: {
     select: {
       id: true,
-      displayName: true,
-      phone: true,
       user: {
         select: {
           id: true,
+          displayName: true,
           email: true,
+          phone: true,
         },
       },
     },
@@ -125,8 +126,7 @@ export const adminDeliveryListInclude = {
       driverProfile: {
         select: {
           id: true,
-          displayName: true,
-          user: { select: { email: true } },
+          user: { select: { displayName: true, email: true } },
         },
       },
     },
@@ -171,12 +171,12 @@ export const adminDeliveryDetailInclude = {
   assignedDriverProfile: {
     select: {
       id: true,
-      displayName: true,
-      phone: true,
       user: {
         select: {
           id: true,
+          displayName: true,
           email: true,
+          phone: true,
         },
       },
     },
@@ -237,8 +237,7 @@ export const adminDeliveryDetailInclude = {
       driverProfile: {
         select: {
           id: true,
-          displayName: true,
-          user: { select: { email: true } },
+          user: { select: { displayName: true, email: true } },
         },
       },
     },
@@ -493,7 +492,16 @@ const buildSearchWhere = (search?: string): Prisma.DeliveryWhereInput | undefine
 };
 
 export const buildAdminDeliveriesWhere = (
-  query: AdminDeliveriesListQuery,
+  query: Pick<
+    AdminDeliveriesListQuery,
+    | 'search'
+    | 'status'
+    | 'assignment'
+    | 'scope'
+    | 'incidentState'
+    | 'dateFrom'
+    | 'dateTo'
+  >,
 ): Prisma.DeliveryWhereInput => {
   const and: Prisma.DeliveryWhereInput[] = [];
 
@@ -662,6 +670,134 @@ export const listAdminDeliveries = async (query: AdminDeliveriesListQuery) => {
   return { items, total };
 };
 
+/** Trimmed include for export — list-shaped, no phones/addressLine/group reservation lists. */
+const adminDeliveryExportInclude = {
+  reservation: {
+    select: {
+      id: true,
+      status: true,
+      fulfillmentMethod: true,
+      pendingRescheduleRequestedBy: true,
+      pendingRescheduleReason: true,
+      material: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+      requester: {
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+        },
+      },
+      owner: {
+        select: ownerSupplierSelect,
+      },
+    },
+  },
+  pickupLocation: {
+    select: {
+      country: true,
+      city: true,
+      area: true,
+    },
+  },
+  dropoffLocation: {
+    select: {
+      country: true,
+      city: true,
+      area: true,
+    },
+  },
+  assignedDriverProfile: {
+    select: {
+      id: true,
+      displayName: true,
+      user: {
+        select: {
+          email: true,
+        },
+      },
+    },
+  },
+  deliveryGroup: {
+    select: {
+      id: true,
+      status: true,
+    },
+  },
+  assignments: {
+    orderBy: [{ acceptedAt: 'desc' as const }, { id: 'desc' as const }],
+    take: 2,
+    select: {
+      id: true,
+      status: true,
+      acceptedAt: true,
+      releasedAt: true,
+      driverProfile: {
+        select: {
+          id: true,
+          displayName: true,
+          user: { select: { email: true } },
+        },
+      },
+    },
+  },
+  _count: { select: { incidentReports: true } },
+} satisfies Prisma.DeliveryInclude;
+
+export type AdminDeliveryExportKeysetCursor = {
+  requestedAt: Date;
+  id: string;
+};
+
+export type AdminDeliveryExportRecord = Prisma.DeliveryGetPayload<{
+  include: typeof adminDeliveryExportInclude;
+}>;
+
+export const countAdminDeliveriesForExport = async (
+  query: AdminDeliveriesExportFilters,
+) => prisma.delivery.count({ where: buildAdminDeliveriesWhere(query) });
+
+/**
+ * Keyset pagination: requestedAt DESC, id DESC.
+ * Predicate: requestedAt < cursor.requestedAt OR (requestedAt = cursor.requestedAt AND id < cursor.id)
+ */
+export const listAdminDeliveriesExportBatch = async (input: {
+  query: AdminDeliveriesExportFilters;
+  cursor?: AdminDeliveryExportKeysetCursor;
+  take: number;
+}): Promise<AdminDeliveryExportRecord[]> => {
+  const baseWhere = buildAdminDeliveriesWhere(input.query);
+  const where: Prisma.DeliveryWhereInput = input.cursor
+    ? {
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { requestedAt: { lt: input.cursor.requestedAt } },
+              {
+                AND: [
+                  { requestedAt: input.cursor.requestedAt },
+                  { id: { lt: input.cursor.id } },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
+
+  return prisma.delivery.findMany({
+    where,
+    include: adminDeliveryExportInclude,
+    orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+    take: input.take,
+  });
+};
+
 export const findAdminDeliveryById = async (id: string) => {
   return prisma.delivery.findUnique({
     where: { id },
@@ -786,23 +922,7 @@ export const reopenDriverAssignmentForAdmin = async (input: {
       }
     }
 
-    const remainingActive = await tx.delivery.count({
-      where: {
-        assignedDriverProfileId: delivery.assignedDriverProfileId,
-        status: { in: activeAssignedStatuses },
-      },
-    });
-
-    if (remainingActive === 0) {
-      await tx.driverProfile.updateMany({
-        where: {
-          id: delivery.assignedDriverProfileId,
-          status: 'ACTIVE',
-          availability: 'ON_DELIVERY',
-        },
-        data: { availability: 'AVAILABLE' },
-      });
-    }
+    await reconcileDriverAvailability(tx, delivery.assignedDriverProfileId);
 
     await tx.deliveryStatusHistory.create({
       data: {

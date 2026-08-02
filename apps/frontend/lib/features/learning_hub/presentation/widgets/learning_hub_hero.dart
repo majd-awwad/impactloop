@@ -79,7 +79,7 @@ class LearningHubHero extends StatelessWidget {
                       icon: Icons.search_rounded,
                       tooltip: const LocalizedText(
                         en: 'Search projects',
-                        ar: '╪د╪ذ╪ص╪س ┘┘è ╪د┘┘à╪┤╪د╪▒┘è╪╣',
+                        ar: 'البحث في المشاريع',
                       ).resolve(context),
                       onPressed: onSearchPressed,
                     ),
@@ -88,7 +88,7 @@ class LearningHubHero extends StatelessWidget {
                       icon: Icons.edit_note_rounded,
                       tooltip: const LocalizedText(
                         en: 'Submit a project',
-                        ar: '╪ح╪▒╪│╪د┘ ┘à╪┤╪▒┘ê╪╣',
+                        ar: 'إرسال مشروع',
                       ).resolve(context),
                       onPressed: onSubmitPressed,
                     ),

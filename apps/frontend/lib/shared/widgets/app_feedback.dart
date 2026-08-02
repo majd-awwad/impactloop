@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../core/errors/api_exception.dart';
+import '../../l10n/app_localizations.dart';
 
-void showErrorSnackBar(BuildContext context, Object error) {
+void showErrorSnackBar(
+  BuildContext context,
+  Object error, {
+  AppLocalizations? l10n,
+}) {
   _showFeedbackSnackBar(
     context,
-    message: userFriendlyErrorMessage(error),
+    message: l10n == null
+        ? userFriendlyErrorMessage(error)
+        : localizedApiErrorMessage(error, l10n),
     backgroundColor: Theme.of(context).colorScheme.errorContainer,
     foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
   );

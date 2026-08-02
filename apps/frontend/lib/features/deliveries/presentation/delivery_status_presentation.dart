@@ -1,10 +1,13 @@
-import 'package:intl/intl.dart';
-
+import '../../../core/format/localized_formatters.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../shared/l10n/learner_ui_labels.dart';
 import '../../../shared/widgets/app_status_badge.dart';
+import '../domain/delivery_status_contract.dart';
 
 String? formatDeliveryPickupWindow({
   required DateTime? pickupWindowStart,
   DateTime? pickupWindowEnd,
+  required AppLocalizations l10n,
 }) {
   if (pickupWindowStart == null) {
     return null;
@@ -12,29 +15,16 @@ String? formatDeliveryPickupWindow({
 
   final start = pickupWindowStart.toLocal();
   final end = pickupWindowEnd?.toLocal();
-  final dateFormat = DateFormat('MMM d');
-  final timeFormat = DateFormat('h:mm a');
-
-  if (end == null) {
-    return '${dateFormat.format(start)}, ${timeFormat.format(start)}';
-  }
-
-  final sameDay =
-      start.year == end.year &&
-      start.month == end.month &&
-      start.day == end.day;
-
-  if (sameDay) {
-    return '${dateFormat.format(start)}, '
-        '${timeFormat.format(start)} – ${timeFormat.format(end)}';
-  }
-
-  return '${dateFormat.format(start)}, ${timeFormat.format(start)} – '
-      '${dateFormat.format(end)}, ${timeFormat.format(end)}';
+  final formatter = LocalizedFormatters(l10n);
+  return end == null
+      ? formatter.dateTime(start)
+      : formatter.dateTimeRange(start, end);
 }
 
-String deliveryStatusLabel(String status) {
-  switch (status) {
+String deliveryStatusLabel(String status, {AppLocalizations? l10n}) {
+  final normalized = normalizeDeliveryStatus(status);
+  if (l10n != null) return LearnerUiLabels(l10n).deliveryStatus(status);
+  switch (normalized) {
     case 'WAITING_FOR_DRIVER':
       return 'Waiting for driver';
     case 'DRIVER_ASSIGNED':
@@ -62,13 +52,13 @@ String deliveryStatusLabel(String status) {
     case 'AWAITING_RESOLUTION':
       return 'Needs admin review';
     default:
-      return status;
+      return 'Unknown status';
   }
 }
 
 /// Maps delivery lifecycle states to the app-wide semantic status contract.
 AppStatusTone deliveryStatusAppTone(String status) {
-  switch (status) {
+  switch (normalizeDeliveryStatus(status)) {
     case 'WAITING_FOR_DRIVER':
       return AppStatusTone.warning;
     case 'DRIVER_ASSIGNED':

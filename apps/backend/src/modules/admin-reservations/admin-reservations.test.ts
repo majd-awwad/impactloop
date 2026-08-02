@@ -346,7 +346,7 @@ describe('admin reservations and deliveries monitoring', () => {
     assert.equal(detail.canReopenDriverAssignment, false);
   });
 
-  test('admin can reopen a pre-pickup assigned delivery to the driver pool', async () => {
+  test('admin reopen preserves the driver accepting-new-jobs preference', async () => {
     const reopenDriver = await createUser({
       suffix: 'reopen-driver',
       role: 'DRIVER',
@@ -366,7 +366,7 @@ describe('admin reservations and deliveries monitoring', () => {
 
     await prisma.driverProfile.update({
       where: { id: reopenDriverProfileId },
-      data: { availability: 'ON_DELIVERY' },
+      data: { availability: 'ON_DELIVERY', acceptingNewJobs: false },
     });
 
     const result = await reopenAdminDeliveryDriverAssignment(
@@ -407,9 +407,10 @@ describe('admin reservations and deliveries monitoring', () => {
 
     const driver = await prisma.driverProfile.findUniqueOrThrow({
       where: { id: reopenDriverProfileId },
-      select: { availability: true, userId: true },
+      select: { availability: true, acceptingNewJobs: true, userId: true },
     });
-    assert.equal(driver.availability, 'AVAILABLE');
+    assert.equal(driver.acceptingNewJobs, false);
+    assert.equal(driver.availability, 'OFFLINE');
 
     const notification = await prisma.notification.findFirst({
       where: {

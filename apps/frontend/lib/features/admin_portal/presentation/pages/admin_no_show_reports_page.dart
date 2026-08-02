@@ -1,32 +1,70 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/errors/api_exception.dart';
+import '../../../../shared/widgets/app_dialog_footer.dart';
+import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../data/admin_no_show_reports_api.dart';
+import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart';
+import '../widgets/admin_monitoring_utils.dart';
 
 const _pageSize = 10;
 const _tableBreakpoint = 1180.0;
 const _tableFlexes = <int>[37, 21, 23, 15, 15, 8];
 
 class _IncidentQuery {
-  const _IncidentQuery({required this.status, required this.page});
+  const _IncidentQuery({
+    required this.status,
+    required this.page,
+    required this.search,
+    required this.workflow,
+    required this.targetRole,
+    required this.operationalState,
+    required this.dateFrom,
+    required this.dateTo,
+  });
 
   final String? status;
   final int page;
+  final String? search;
+  final String? workflow;
+  final String? targetRole;
+  final String? operationalState;
+  final String? dateFrom;
+  final String? dateTo;
 
   @override
   bool operator ==(Object other) =>
-      other is _IncidentQuery && other.status == status && other.page == page;
+      other is _IncidentQuery &&
+      other.status == status &&
+      other.page == page &&
+      other.search == search &&
+      other.workflow == workflow &&
+      other.targetRole == targetRole &&
+      other.operationalState == operationalState &&
+      other.dateFrom == dateFrom &&
+      other.dateTo == dateTo;
 
   @override
-  int get hashCode => Object.hash(status, page);
+  int get hashCode => Object.hash(
+    status,
+    page,
+    search,
+    workflow,
+    targetRole,
+    operationalState,
+    dateFrom,
+    dateTo,
+  );
 }
 
 final _incidentReportsProvider = FutureProvider.autoDispose
@@ -37,6 +75,12 @@ final _incidentReportsProvider = FutureProvider.autoDispose
             status: query.status,
             page: query.page,
             limit: _pageSize,
+            search: query.search,
+            workflow: query.workflow,
+            targetRole: query.targetRole,
+            operationalState: query.operationalState,
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo,
           );
     });
 
@@ -125,12 +169,15 @@ class _AdminNoShowReportsPageState
     extends ConsumerState<AdminNoShowReportsPage> {
   final _searchController = TextEditingController();
   String _status = 'ALL';
+  String _search = '';
   String _workflow = 'ALL';
   String _target = 'ALL';
   String _operational = 'ALL';
   DateTimeRange? _dateRange;
   int _page = 1;
   var _initialOpenHandled = false;
+  var _isPreflightLoading = false;
+  var _isDialogOpen = false;
 
   @override
   void initState() {
@@ -151,13 +198,21 @@ class _AdminNoShowReportsPageState
     super.dispose();
   }
 
-  _IncidentQuery get _query =>
-      _IncidentQuery(status: _status == 'ALL' ? null : _status, page: _page);
+  _IncidentQuery get _query => _IncidentQuery(
+    status: _status == 'ALL' ? null : _status,
+    page: _page,
+    search: _search.trim().isEmpty ? null : _search.trim(),
+    workflow: _workflow == 'ALL' ? null : _workflow,
+    targetRole: _target == 'ALL' ? null : _target,
+    operationalState: _operational == 'ALL' ? null : _operational,
+    dateFrom: _dateRange == null ? null : formatIsoDate(_dateRange!.start),
+    dateTo: _dateRange == null ? null : formatIsoDate(_dateRange!.end),
+  );
 
   String? get _summaryStatus => _status == 'ALL' ? null : _status;
 
   bool get _hasLocalFilters =>
-      _searchController.text.trim().isNotEmpty ||
+      _search.trim().isNotEmpty ||
       _workflow != 'ALL' ||
       _target != 'ALL' ||
       _operational != 'ALL' ||
@@ -168,6 +223,7 @@ class _AdminNoShowReportsPageState
   void _resetFilters() {
     setState(() {
       _searchController.clear();
+      _search = '';
       _status = 'ALL';
       _workflow = 'ALL';
       _target = 'ALL';
@@ -189,7 +245,12 @@ class _AdminNoShowReportsPageState
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
     );
-    if (range != null && mounted) setState(() => _dateRange = range);
+    if (range != null && mounted) {
+      setState(() {
+        _dateRange = range;
+        _page = 1;
+      });
+    }
   }
 
   void _openIncident(String id, {bool replace = false}) {
@@ -201,32 +262,124 @@ class _AdminNoShowReportsPageState
     }
   }
 
-  List<AdminNoShowReportItem> _filteredItems(
-    List<AdminNoShowReportItem> reports,
-  ) {
-    final search = _searchController.text.trim().toLowerCase();
-    return reports
-        .where((report) {
-          final searchable = [
-            report.id,
-            report.materialTitle,
-            report.learnerName,
-            report.supplierName,
-            report.targetName,
-          ].join(' ').toLowerCase();
-          final date = report.createdAt.toLocal();
-          final matchesDate =
-              _dateRange == null ||
-              (!date.isBefore(_dateRange!.start) &&
-                  date.isBefore(_dateRange!.end.add(const Duration(days: 1))));
-          return (search.isEmpty || searchable.contains(search)) &&
-              (_workflow == 'ALL' || report.workflowType == _workflow) &&
-              (_target == 'ALL' || report.targetRole == _target) &&
-              (_operational == 'ALL' ||
-                  report.operationalState == _operational) &&
-              matchesDate;
-        })
-        .toList(growable: false);
+  String _activeFilterSummary() {
+    final parts = <String>[];
+    if (_search.trim().isNotEmpty) {
+      parts.add('Search: ${_search.trim()}');
+    }
+    if (_status != 'ALL') {
+      parts.add('Status: $_status');
+    }
+    if (_workflow != 'ALL') {
+      parts.add('Workflow: $_workflow');
+    }
+    if (_target != 'ALL') {
+      parts.add('Target role: $_target');
+    }
+    if (_operational != 'ALL') {
+      parts.add('Operational: $_operational');
+    }
+    if (_dateRange != null) {
+      parts.add(
+        'Dates: ${formatIsoDate(_dateRange!.start)} → ${formatIsoDate(_dateRange!.end)}',
+      );
+    }
+    return parts.isEmpty
+        ? 'No filters (all incident reports)'
+        : parts.join(' · ');
+  }
+
+  Future<void> _exportIncidentReports() async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export is available on Admin Web only.'),
+        ),
+      );
+      return;
+    }
+    if (_isPreflightLoading || _isDialogOpen) return;
+
+    final query = _query;
+    setState(() => _isPreflightLoading = true);
+    final api = ref.read(adminNoShowReportsApiProvider);
+
+    try {
+      final preflight = await api.preflightExport(
+        status: query.status,
+        search: query.search,
+        workflow: query.workflow,
+        targetRole: query.targetRole,
+        operationalState: query.operationalState,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      );
+
+      if (!mounted) return;
+
+      if (preflight.count == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No incident reports match the current filters.'),
+          ),
+        );
+        return;
+      }
+
+      _isDialogOpen = true;
+      final selectedFormat = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AdminIncidentReportsExportDialog(
+          count: preflight.count,
+          filterSummary: _activeFilterSummary(),
+          formats: preflight.formats,
+          onDownload: (format) => api.downloadExport(
+            format: format,
+            status: query.status,
+            search: query.search,
+            workflow: query.workflow,
+            targetRole: query.targetRole,
+            operationalState: query.operationalState,
+            dateFrom: query.dateFrom,
+            dateTo: query.dateTo,
+          ),
+        ),
+      );
+      _isDialogOpen = false;
+
+      if (!mounted) return;
+      if (selectedFormat == null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Incident reports ${selectedFormat.toUpperCase()} export downloaded.',
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreflightLoading = false;
+          _isDialogOpen = false;
+        });
+      } else {
+        _isPreflightLoading = false;
+        _isDialogOpen = false;
+      }
+    }
   }
 
   @override
@@ -234,6 +387,7 @@ class _AdminNoShowReportsPageState
     final isShellCompact = MediaQuery.sizeOf(context).width < 920;
     final reportsAsync = ref.watch(_incidentReportsProvider(_query));
     final summaryAsync = ref.watch(_incidentSummaryProvider(_summaryStatus));
+    final palette = context.adminPalette;
 
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
@@ -246,9 +400,39 @@ class _AdminNoShowReportsPageState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Review reservation and delivery incidents, determine accountability, and resolve blocked workflows.',
-              style: AdminTypography.pageSubtitle(context.adminPalette),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Review reservation and delivery incidents, determine accountability, and resolve blocked workflows.',
+                    style: AdminTypography.pageSubtitle(palette),
+                  ),
+                ),
+                if (kIsWeb) ...[
+                  const SizedBox(width: AppSpacing.md),
+                  OutlinedButton.icon(
+                    onPressed: _isPreflightLoading
+                        ? null
+                        : _exportIncidentReports,
+                    icon: _isPreflightLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.download_outlined, size: 18),
+                    label: Text(
+                      _isPreflightLoading ? 'Preparing…' : 'Export',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: palette.textPrimary,
+                      side: BorderSide(color: palette.cardBorder),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: AppSpacing.lg),
             _KpiSection(summary: summaryAsync, width: constraints.maxWidth),
@@ -262,15 +446,26 @@ class _AdminNoShowReportsPageState
               operational: _operational,
               dateRange: _dateRange,
               resetEnabled: _hasActiveFilters,
-              onSearchChanged: (_) => setState(() {}),
+              onSearchChanged: (value) => setState(() {
+                _search = value;
+                _page = 1;
+              }),
               onStatusChanged: (value) => setState(() {
                 _status = value;
                 _page = 1;
               }),
-              onWorkflowChanged: (value) => setState(() => _workflow = value),
-              onTargetChanged: (value) => setState(() => _target = value),
-              onOperationalChanged: (value) =>
-                  setState(() => _operational = value),
+              onWorkflowChanged: (value) => setState(() {
+                _workflow = value;
+                _page = 1;
+              }),
+              onTargetChanged: (value) => setState(() {
+                _target = value;
+                _page = 1;
+              }),
+              onOperationalChanged: (value) => setState(() {
+                _operational = value;
+                _page = 1;
+              }),
               onDateRangePressed: _pickDateRange,
               onReset: _resetFilters,
             ),
@@ -279,7 +474,7 @@ class _AdminNoShowReportsPageState
               loading: () => const _IncidentTableSkeleton(),
               error: (error, stackTrace) => _ErrorPanel(onRetry: _refresh),
               data: (response) {
-                final items = _filteredItems(response.items);
+                final items = response.items;
                 if (items.isEmpty) {
                   return _IncidentEmptyState(
                     hasFilters: _hasActiveFilters,
@@ -289,7 +484,7 @@ class _AdminNoShowReportsPageState
                 return _IncidentResults(
                   items: items,
                   response: response,
-                  localFiltersActive: _hasLocalFilters,
+                  localFiltersActive: false,
                   desktopTable: constraints.maxWidth >= _tableBreakpoint,
                   onView: _openIncident,
                   onPage: (page) => setState(() => _page = page),
@@ -1253,3 +1448,152 @@ String shortIdentifier(String id) {
       ? value
       : '${value.substring(0, 4)}…${value.substring(value.length - 4)}';
 }
+
+class AdminIncidentReportsExportDialog extends StatefulWidget {
+  const AdminIncidentReportsExportDialog({
+    super.key,
+    required this.count,
+    required this.filterSummary,
+    required this.formats,
+    required this.onDownload,
+  });
+
+  final int count;
+  final String filterSummary;
+  final Map<String, AdminExportFormatEligibility> formats;
+  final Future<void> Function(String format) onDownload;
+
+  @override
+  State<AdminIncidentReportsExportDialog> createState() =>
+      _AdminIncidentReportsExportDialogState();
+}
+
+class _AdminIncidentReportsExportDialogState
+    extends State<AdminIncidentReportsExportDialog> {
+  String _selectedFormat = 'xlsx';
+  bool _isDownloading = false;
+  String? _error;
+
+  AdminExportFormatEligibility? get _selectedEligibility =>
+      widget.formats[_selectedFormat];
+
+  bool get _canExport =>
+      !_isDownloading && (_selectedEligibility?.allowed ?? false);
+
+  String get _formatDescription {
+    switch (_selectedFormat) {
+      case 'csv':
+        return 'Raw data';
+      case 'xlsx':
+      default:
+        return 'Detailed editable data';
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (!_canExport) return;
+    setState(() {
+      _isDownloading = true;
+      _error = null;
+    });
+    try {
+      await widget.onDownload(_selectedFormat);
+      if (!mounted) return;
+      Navigator.of(context).pop(_selectedFormat);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.displayMessage;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
+        ? 'This export matches ${widget.count} incident reports, which exceeds '
+              'the limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow '
+              'your filters and try again.'
+        : null;
+
+    return AppDialogShell(
+      title: const Text('Export incident reports'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Export all ${widget.count} matching incident reports, including '
+            'results from all pages.',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.filterSummary,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          const Text('Format'),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'xlsx', label: Text('Excel')),
+              ButtonSegment(value: 'csv', label: Text('CSV')),
+            ],
+            selected: {_selectedFormat},
+            onSelectionChanged: _isDownloading
+                ? null
+                : (values) {
+                    if (values.isEmpty) return;
+                    setState(() => _selectedFormat = values.first);
+                  },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (limitMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              limitMessage,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: _isDownloading
+              ? null
+              : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: _canExport ? _confirm : null,
+          child: _isDownloading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Export'),
+        ),
+      ),
+    );
+  }
+}
+

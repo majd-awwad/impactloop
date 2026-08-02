@@ -8,6 +8,7 @@ import '../../data/models/supplier_dashboard.dart';
 import '../../data/models/supplier_dashboard_stats.dart';
 import '../controllers/supplier_dashboard_providers.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../widgets/dashboard/supplier_category_demand_panel.dart';
 import '../widgets/dashboard/supplier_dashboard_chart_card.dart';
 import '../widgets/dashboard/supplier_dashboard_hero.dart';
 import '../widgets/dashboard/supplier_dashboard_quick_actions_panel.dart';
@@ -101,12 +102,12 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Your supplier account has been approved. You can now publish materials.',
+                          context.s.accountApprovedBanner,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Dismiss',
+                        tooltip: context.s.dismiss,
                         onPressed: () =>
                             setState(() => _approvalBannerDismissed = true),
                         icon: const Icon(Icons.close, size: 20),
@@ -188,6 +189,8 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                   );
                 },
               ),
+              const SizedBox(height: AppSpacing.xl),
+              const SupplierCategoryDemandPanel(),
               const SizedBox(height: AppSpacing.xl),
               LayoutBuilder(
                 builder: (context, constraints) {

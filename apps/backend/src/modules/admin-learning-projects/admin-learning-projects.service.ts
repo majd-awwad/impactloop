@@ -293,12 +293,17 @@ const notifyAuthor = async (
   project: repository.AdminLearningProjectDetailRecord,
   title: string,
   body: string,
+  moderationEvent: string,
+  feedback?: string | null,
 ) => {
   await repository.createLearningProjectAuthorNotification({
     userId: project.createdBy,
     title,
     body,
     projectId: project.id,
+    projectTitle: project.title,
+    moderationEvent,
+    feedback,
   });
 };
 
@@ -535,6 +540,7 @@ export const approveAdminLearningProject = async (
     updated,
     'Learning project approved',
     `Your project "${updated.title}" was approved and is now published in the Learning Hub.`,
+    'APPROVED',
   );
 
   return mapDetail(updated);
@@ -567,6 +573,8 @@ export const requestChangesAdminLearningProject = async (
     updated,
     'Changes requested for your project',
     `Your project "${updated.title}" needs changes before it can be published. Reason: ${input.reason}`,
+    'CHANGES_REQUESTED',
+    input.reason,
   );
 
   return mapDetail(updated);
@@ -597,6 +605,8 @@ export const rejectAdminLearningProject = async (
     updated,
     'Learning project rejected',
     `Your project "${updated.title}" was not approved. Reason: ${input.reason}`,
+    'REJECTED',
+    input.reason,
   );
 
   return mapDetail(updated);
@@ -629,6 +639,8 @@ export const hideAdminLearningProject = async (
     updated,
     'Learning project unpublished',
     `Your project "${updated.title}" was hidden from the Learning Hub. Reason: ${input.reason}`,
+    'HIDDEN',
+    input.reason,
   );
 
   return mapDetail(updated);
@@ -661,6 +673,7 @@ export const restoreAdminLearningProject = async (
     updated,
     'Learning project restored',
     `Your project "${updated.title}" is published again in the Learning Hub.`,
+    'RESTORED',
   );
 
   return mapDetail(updated);
@@ -693,6 +706,8 @@ export const archiveAdminLearningProject = async (
     updated,
     'Learning project archived',
     `Your project "${updated.title}" was archived and removed from the Learning Hub. Reason: ${input.reason}`,
+    'ARCHIVED',
+    input.reason,
   );
 
   return mapDetail(updated);

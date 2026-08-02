@@ -1,3 +1,6 @@
+import '../../../../../core/format/localized_formatters.dart';
+import '../../../../../l10n/app_localizations.dart';
+import '../../../../../shared/l10n/material_ui_labels.dart';
 import '../../../../../shared/models/localized_text.dart';
 import '../../../../../shared/widgets/materials/material_condition_badge.dart';
 import '../../../../../shared/widgets/materials/material_status_badge.dart';
@@ -13,6 +16,57 @@ typedef SupplierStatusMeta = ({
 });
 
 abstract final class SupplierMaterialLabelHelper {
+  static String conditionText(String condition, AppLocalizations l10n) =>
+      MaterialUiLabels(l10n).condition(condition);
+
+  static String statusText(String status, AppLocalizations l10n) =>
+      MaterialUiLabels(l10n).materialStatus(status);
+
+  static String priceText({
+    required bool isFree,
+    double? price,
+    required String currency,
+    required AppLocalizations l10n,
+  }) {
+    if (isFree) {
+      return l10n.free;
+    }
+
+    final formatters = LocalizedFormatters(l10n);
+    final amount = price ?? 0;
+    if (currency.toUpperCase() == 'NIS') {
+      final decimalDigits = amount.truncateToDouble() == amount ? 0 : 2;
+      return formatters.nis(amount, decimalDigits: decimalDigits);
+    }
+
+    final decimalDigits = amount.truncateToDouble() == amount ? 0 : 2;
+    return '${formatters.number(amount, decimalDigits: decimalDigits)} $currency';
+  }
+
+  static String quantityText(
+    double quantity,
+    String unit,
+    AppLocalizations l10n,
+  ) => LocalizedFormatters(l10n).quantity(quantity, unit);
+
+  static String stockText({
+    required double quantity,
+    required double availableQuantity,
+    required String unit,
+    required AppLocalizations l10n,
+  }) {
+    final formatters = LocalizedFormatters(l10n);
+    if (availableQuantity < quantity) {
+      return l10n.supplierAvailableOfTotal(
+        formatters.number(availableQuantity),
+        formatters.number(quantity),
+        unit,
+      );
+    }
+
+    return formatters.quantity(quantity, unit);
+  }
+
   static SupplierConditionMeta conditionMeta(String condition) {
     switch (condition) {
       case 'LIKE_NEW':
@@ -80,50 +134,6 @@ abstract final class SupplierMaterialLabelHelper {
           tone: MaterialStatusBadgeTone.available,
         );
     }
-  }
-
-  static LocalizedText quantityLabel(double quantity, String unit) {
-    final qty = quantity % 1 == 0
-        ? quantity.toInt().toString()
-        : quantity.toString();
-    return LocalizedText(en: '$qty $unit', ar: '$qty $unit');
-  }
-
-  static LocalizedText stockLabel({
-    required double quantity,
-    required double availableQuantity,
-    required String unit,
-  }) {
-    final totalQty = quantity % 1 == 0
-        ? quantity.toInt().toString()
-        : quantity.toString();
-    final availableQty = availableQuantity % 1 == 0
-        ? availableQuantity.toInt().toString()
-        : availableQuantity.toString();
-
-    if (availableQuantity < quantity) {
-      return LocalizedText(
-        en: 'Available: $availableQty of $totalQty $unit',
-        ar: 'المتاح: $availableQty من $totalQty $unit',
-      );
-    }
-
-    return quantityLabel(quantity, unit);
-  }
-
-  static LocalizedText priceLabel({
-    required bool isFree,
-    double? price,
-    required String currency,
-  }) {
-    if (isFree) {
-      return const LocalizedText(en: 'Free', ar: 'مجاني');
-    }
-
-    final amount = price?.toStringAsFixed(
-      price.truncateToDouble() == price ? 0 : 2,
-    );
-    return LocalizedText(en: '$amount $currency', ar: '$amount $currency');
   }
 
   static LocalizedText locationLabel({required String city, String? area}) {

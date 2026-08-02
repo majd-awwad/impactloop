@@ -18,6 +18,7 @@ export type LearnerHomeMaterialItem = {
   type: 'material';
   score: number;
   reasons: string[];
+  reasonDetails?: LearnerHomeRecommendationReason[];
   material: Record<string, unknown>;
 };
 
@@ -25,6 +26,7 @@ export type LearnerHomeProjectItem = {
   type: 'project';
   score: number;
   reasons: string[];
+  reasonDetails?: LearnerHomeRecommendationReason[];
   project: Record<string, unknown>;
 };
 
@@ -32,7 +34,13 @@ export type LearnerHomeContinueProjectItem = {
   type: 'continue_project';
   score: number;
   reasons: string[];
+  reasonDetails?: LearnerHomeRecommendationReason[];
   build: Record<string, unknown>;
+};
+
+export type LearnerHomeRecommendationReason = {
+  code: string;
+  params: Record<string, string | number | boolean>;
 };
 
 export type LearnerHomeSectionItem =

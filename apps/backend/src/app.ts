@@ -20,10 +20,13 @@ import { adminRouter } from './modules/admin/admin.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { publicSuppliersRouter } from './modules/public-suppliers/public-suppliers.routes.js';
 import { supplierRouter } from './modules/supplier/supplier.routes.js';
+import { supplierMaterialRequestsRouter } from './modules/supplier-material-requests/supplier-material-requests.routes.js';
 import { locationsRouter } from './modules/locations/locations.routes.js';
 import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/saved-dropoff-addresses.routes.js';
 import { profileRouter } from './modules/profile/profile.routes.js';
 import { learnerHomeRouter } from './modules/learner-home/learner-home.routes.js';
+import { learnerMaterialRequestsRouter } from './modules/learner-material-requests/learner-material-requests.routes.js';
+import { learnerProfileSummaryRouter } from './modules/learner-profile-summary/learner-profile-summary.routes.js';
 import { aiRouter } from './modules/ai/ai.routes.js';
 import {
   bindRecommendationEventOriginMiddleware,
@@ -115,10 +118,13 @@ export const createApp = (options: CreateAppOptions): Express => {
     '/api/learner/saved-dropoff-addresses',
     savedDropoffAddressesRouter,
   );
+  app.use('/api/learner/material-requests', learnerMaterialRequestsRouter);
   app.use('/api/learner', learnerHomeRouter);
+  app.use('/api/learner', learnerProfileSummaryRouter);
   app.use('/api/ai/v1', aiRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/suppliers', publicSuppliersRouter);
+  app.use('/api/supplier/material-requests', supplierMaterialRequestsRouter);
   app.use('/api/supplier', supplierRouter);
   app.use('/api/admin', adminRouter);
 
