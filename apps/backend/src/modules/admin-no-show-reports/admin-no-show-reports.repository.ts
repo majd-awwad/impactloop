@@ -93,8 +93,7 @@ const toActionContext = (
   reservation: report.reservation,
   delivery: report.delivery,
   isGroupedDelivery: report.delivery?.deliveryGroupId != null,
-  // Group-level recovery mutations are intentionally not implemented yet.
-  isGroupRecoverySupported: false,
+  isGroupRecoverySupported: true,
 });
 
 const actionIsAvailable = (

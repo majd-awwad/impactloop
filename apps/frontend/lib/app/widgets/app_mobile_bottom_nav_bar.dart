@@ -6,6 +6,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text_styles.dart';
 import '../theme/app_theme_colors.dart';
+import '../../l10n/l10n.dart';
 import '../../features/ai/application/ai_assistant_shell_provider.dart';
 import '../../features/ai/application/ai_chat_controller.dart';
 import '../../features/ai/presentation/widgets/ai_assistant_launcher.dart';
@@ -44,15 +45,16 @@ class AppMobileBottomNavBar extends ConsumerWidget {
     final user = authState.user;
     final profileRoute = user == null ? '/login' : '/profile';
     final currentPath = _currentPath(context);
+    final labels = context.l10n;
     final items = [
       _MobileNavDestination(
-        label: 'Home',
+        label: labels.home,
         icon: Icons.home_rounded,
         route: '/home',
         selected: currentPath == '/home',
       ),
       _MobileNavDestination(
-        label: 'Materials',
+        label: labels.materials,
         icon: Icons.inventory_2_rounded,
         route: '/materials',
         selected:
@@ -60,14 +62,14 @@ class AppMobileBottomNavBar extends ConsumerWidget {
             currentPath.startsWith('/materials/'),
       ),
       _MobileNavDestination(
-        label: 'Learning',
+        label: labels.learning,
         icon: Icons.school_rounded,
         route: '/learning',
         selected:
             currentPath == '/learning' || currentPath.startsWith('/learning/'),
       ),
       _MobileNavDestination(
-        label: 'Reservations',
+        label: labels.reservations,
         icon: Icons.receipt_long_rounded,
         route: '/learner/reservations',
         selected:
@@ -76,7 +78,7 @@ class AppMobileBottomNavBar extends ConsumerWidget {
             currentPath.startsWith('/learner/deliveries/'),
       ),
       _MobileNavDestination(
-        label: 'Profile',
+        label: labels.profile,
         icon: Icons.person_rounded,
         route: profileRoute,
         selected:
@@ -92,8 +94,8 @@ class AppMobileBottomNavBar extends ConsumerWidget {
         AppSpacing.md,
         AppSpacing.sm,
       ),
-      child: SizedBox(
-        height: 72,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 72, maxHeight: 88),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
@@ -167,7 +169,9 @@ class AppMobileNavigationShell extends ConsumerWidget {
       }
     });
 
-    final shellOpen = ref.watch(aiAssistantShellProvider.select((s) => s.isOpen));
+    final shellOpen = ref.watch(
+      aiAssistantShellProvider.select((s) => s.isOpen),
+    );
     final isWide = MediaQuery.sizeOf(context).width >= 600;
 
     final shellContent = Stack(
@@ -252,7 +256,7 @@ class _MobileBottomNavItem extends StatelessWidget {
                   letterSpacing: 0,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],

@@ -10,6 +10,7 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../deliveries/application/learner_deliveries_provider.dart';
@@ -50,11 +51,11 @@ class LearnerReservationsPage extends ConsumerWidget {
                       maxWidth: _learnerReservationsMaxWidth,
                     ),
                     child: !isLearner
-                        ? const _StatePanel(
+                        ? _StatePanel(
                             icon: Icons.lock_outline,
-                            title: 'Learner account required',
+                            title: context.l10n.learnerAccountRequired,
                             subtitle:
-                                'Use a learner account to view material reservations.',
+                                context.l10n.learnerAccountRequiredReservations,
                           )
                         : const _ReservationsContent(),
                   ),
@@ -108,6 +109,7 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final reservationsAsync = ref.watch(myReservationsProvider);
     final deliveriesAsync = ref.watch(learnerDeliveriesProvider);
     final deliveriesByReservationId = deliveriesAsync.maybeWhen(
@@ -126,7 +128,7 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
             TextButton.icon(
               onPressed: _refreshReservations,
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Refresh'),
+              label: Text(l10n.refresh),
             ),
           ],
         ),
@@ -152,26 +154,25 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
           const SizedBox(height: AppSpacing.md),
         ],
         reservationsAsync.when(
-          loading: () => const _StatePanel(
+          loading: () => _StatePanel(
             icon: Icons.hourglass_empty_rounded,
-            title: 'Loading reservations',
-            subtitle: 'Checking your latest reservation activity.',
+            title: l10n.loadingReservations,
+            subtitle: l10n.loadingReservationsSubtitle,
           ),
           error: (_, _) => _StatePanel(
             icon: Icons.cloud_off_outlined,
-            title: 'Could not load reservations',
-            subtitle: 'Please try again.',
-            actionLabel: 'Try again',
+            title: l10n.reservationsLoadError,
+            subtitle: l10n.tryAgain,
+            actionLabel: l10n.tryAgainAction,
             onAction: () => ref.invalidate(myReservationsProvider),
           ),
           data: (reservations) {
             if (reservations.isEmpty) {
               return _StatePanel(
                 icon: Icons.assignment_turned_in_outlined,
-                title: 'No reservations yet',
-                subtitle:
-                    'Reserve an available material and supplier updates will appear here.',
-                actionLabel: 'Browse materials',
+                title: l10n.noReservations,
+                subtitle: l10n.noReservationsSubtitle,
+                actionLabel: l10n.browseMaterials,
                 onAction: () => context.go('/materials'),
               );
             }
@@ -188,10 +189,9 @@ class _ReservationsContentState extends ConsumerState<_ReservationsContent> {
             if (filtered.isEmpty) {
               return _StatePanel(
                 icon: Icons.filter_list_off_outlined,
-                title: 'No matching reservations',
-                subtitle:
-                    'Try another filter or browse materials to start a new request.',
-                actionLabel: 'Browse materials',
+                title: l10n.noMatchingReservations,
+                subtitle: l10n.noMatchingReservationsSubtitle,
+                actionLabel: l10n.browseMaterials,
                 onAction: () => context.go('/materials'),
               );
             }
@@ -237,7 +237,7 @@ class _PageHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'My Reservations',
+          context.l10n.myReservations,
           style:
               (compact
                       ? AppTextStyles.title(context)
@@ -246,7 +246,7 @@ class _PageHeader extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Track requests, pickup windows, and delivery updates.',
+          context.l10n.reservationsSubtitle,
           style: AppTextStyles.subtitle(
             context,
           ).copyWith(color: palette.textSecondary),
@@ -298,7 +298,7 @@ class _StatusFilterChips extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        filter.label,
+                        filter.labelFor(context.l10n),
                         style: AppTextStyles.label(context).copyWith(
                           color: isSelected
                               ? colors.primary
@@ -397,13 +397,13 @@ class _DeliveryLoadWarning extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'Delivery status could not be loaded. Refresh before requesting delivery.',
+              context.l10n.deliveryUpdatesUnavailable,
               style: AppTextStyles.body(
                 context,
               ).copyWith(color: palette.textSecondary),
             ),
           ),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
+          TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
         ],
       ),
     );

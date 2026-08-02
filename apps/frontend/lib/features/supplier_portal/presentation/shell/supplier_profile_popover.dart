@@ -7,7 +7,9 @@ import '../../../../app/theme/app_spacing.dart';
 import 'package:frontend/features/supplier_portal/presentation/theme/supplier_theme_extension.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../auth/application/portal_navigation.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../../../auth/presentation/widgets/portal_switch_menu.dart';
+import '../../../profile/presentation/l10n/account_settings_l10n.dart';
 import 'supplier_settings_controls.dart';
 import '../widgets/supplier_feedback.dart';
 import '../widgets/supplier_portal_avatar.dart';
@@ -69,7 +71,8 @@ class SupplierProfileButton extends ConsumerWidget {
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.only(top: 72, right: 24),
+          insetPadding: EdgeInsetsDirectional.only(top: 72, end: 24)
+              .resolve(Directionality.of(context)),
           alignment: AlignmentDirectional.topEnd,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
@@ -212,6 +215,11 @@ class SupplierProfilePopoverContent extends ConsumerWidget {
               label: context.s.viewSupplierProfile,
               icon: Icons.person_outline,
               onTap: () => onNavigate('/supplier/profile'),
+            ),
+            _PopoverAction(
+              label: AccountSettingsL10n.of(context).pageTitle,
+              icon: Icons.manage_accounts_outlined,
+              onTap: () => onNavigate(accountSettingsRoute),
             ),
             _PopoverAction(
               label: context.s.navMyMaterials,

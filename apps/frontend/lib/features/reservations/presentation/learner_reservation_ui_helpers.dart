@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
+import '../../../core/format/localized_formatters.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../shared/l10n/learner_ui_labels.dart';
 import '../../../shared/widgets/app_status_badge.dart';
 import '../../../shared/widgets/incident_report_status_presentation.dart';
 import '../../deliveries/presentation/delivery_status_presentation.dart';
+import '../../deliveries/domain/delivery_status_contract.dart';
 import '../data/models/learner_reservation.dart';
 import '../data/models/reservation_preferred_window.dart';
 
@@ -36,6 +38,9 @@ extension LearnerReservationStatusFilterX on LearnerReservationStatusFilter {
         return 'Closed';
     }
   }
+
+  String labelFor(AppLocalizations l10n) =>
+      LearnerUiLabels(l10n).reservationFilter(name);
 }
 
 const missedPickupExpiryReason = 'PICKUP_WINDOW_MISSED';
@@ -152,7 +157,10 @@ AppStatusTone learnerReservationStatusTone(
   }
 }
 
-String incidentReviewStatusLabel(String? status) {
+String incidentReviewStatusLabel(String? status, {AppLocalizations? l10n}) {
+  if (l10n != null) {
+    return LearnerUiLabels(l10n).incidentReviewStatus(status);
+  }
   switch (status) {
     case 'PENDING_REVIEW':
       return 'Pending admin review';
@@ -167,7 +175,16 @@ String incidentReviewStatusLabel(String? status) {
   }
 }
 
-String? incidentReviewStatusMessage(String? status) {
+String? incidentReviewStatusMessage(String? status, {AppLocalizations? l10n}) {
+  if (l10n != null) {
+    return switch (status) {
+      'PENDING_REVIEW' => l10n.reservationReportedAwaitingAdmin,
+      'VERIFIED' => l10n.reservationReportVerifiedMessage,
+      'REJECTED' => l10n.reservationReportDismissedMessage,
+      'RESOLVED_NO_STRIKE' => l10n.reservationIncidentResolvedMessage,
+      _ => null,
+    };
+  }
   switch (status) {
     case 'PENDING_REVIEW':
       return 'This reservation was reported and is awaiting admin review.';
@@ -192,7 +209,21 @@ String reservationStatusLabel(
   bool needsFollowUp = false,
   String? rejectionReason,
   String? pendingRescheduleReason,
+  AppLocalizations? l10n,
 }) {
+  if (l10n != null) {
+    return LearnerUiLabels(l10n).reservationStatus(
+      status,
+      fulfillmentMethod: fulfillmentMethod,
+      deliveryStatus: deliveryStatus,
+      pickupWindowEnd: pickupWindowEnd,
+      incidentReviewStatus: incidentReviewStatus,
+      isOverdue: isOverdue,
+      needsFollowUp: needsFollowUp,
+      rejectionReason: rejectionReason,
+      pendingRescheduleReason: pendingRescheduleReason,
+    );
+  }
   switch (status) {
     case 'PENDING':
       return 'Pending supplier response';
@@ -216,7 +247,8 @@ String reservationStatusLabel(
       return 'Rejected';
     case 'COMPLETED':
       if (fulfillmentMethod == 'DELIVERY' &&
-          deliveryStatus?.toUpperCase() == 'DELIVERED') {
+          (deliveryStatus != null &&
+              isSuccessfulLearnerDeliveryStatus(deliveryStatus))) {
         return 'Completed';
       }
       return 'Completed';
@@ -246,7 +278,7 @@ String reservationStatusLabel(
     case 'AWAITING_RESOLUTION':
       return incidentReviewStatusLabel(incidentReviewStatus);
     default:
-      return status;
+      return 'Unknown status';
   }
 }
 
@@ -286,6 +318,7 @@ class LearnerReservationStatusChipLabels {
 LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
   LearnerReservation reservation, {
   String? linkedDeliveryStatus,
+  AppLocalizations? l10n,
 }) {
   final deliveryStatus = resolveLearnerChipDeliveryStatus(
     reservation: reservation,
@@ -298,6 +331,7 @@ LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
         fulfillmentMethod: reservation.fulfillmentMethod,
         deliveryStatus: deliveryStatus,
         incidentReviewStatus: reservation.incidentReviewStatus,
+        l10n: l10n,
       ) ??
       reservationStatusLabel(
         reservation.status,
@@ -309,6 +343,7 @@ LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
         needsFollowUp: reservation.needsFollowUp,
         rejectionReason: reservation.rejectionReason,
         pendingRescheduleReason: reservation.pendingRescheduleReason,
+        l10n: l10n,
       );
 
   final secondary = learnerDeliverySecondaryStatusLabel(
@@ -320,6 +355,7 @@ LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
     assignedDriverPickupOverdue: reservation.assignedDriverPickupOverdue,
     pendingIncidentReasonCode: reservation.pendingIncidentReasonCode,
     activeDeliveryStatus: reservation.activeDelivery?.status,
+    l10n: l10n,
   );
 
   if (secondary != null && secondary != primary) {
@@ -332,7 +368,7 @@ LearnerReservationStatusChipLabels learnerReservationStatusChipLabels(
   if (reservation.status != 'AWAITING_RESOLUTION' &&
       reservation.isDeliveryFulfillment &&
       deliveryStatus != null) {
-    final fallback = deliveryStatusLabel(deliveryStatus);
+    final fallback = deliveryStatusLabel(deliveryStatus, l10n: l10n);
     if (fallback != primary) {
       return LearnerReservationStatusChipLabels(
         primary: primary,
@@ -353,6 +389,7 @@ String? learnerDeliverySecondaryStatusLabel({
   bool assignedDriverPickupOverdue = false,
   String? pendingIncidentReasonCode,
   String? activeDeliveryStatus,
+  AppLocalizations? l10n,
 }) {
   if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
     return null;
@@ -362,26 +399,26 @@ String? learnerDeliverySecondaryStatusLabel({
       ?.toUpperCase();
 
   if (reservationStatus == 'COMPLETED' ||
-      normalizedDeliveryStatus == 'DELIVERED') {
-    return 'Delivered';
+      isSuccessfulLearnerDeliveryStatus(normalizedDeliveryStatus)) {
+    return l10n?.statusDelivered ?? 'Delivered';
   }
 
   if (reservationStatus == 'AWAITING_RESOLUTION') {
     switch (pendingIncidentReasonCode) {
       case 'NO_DRIVER_AVAILABLE':
-        return 'No driver available';
+        return l10n?.statusNoDriverAvailable ?? 'No driver available';
       case 'NO_RESPONSE_AFTER_PICKUP_WINDOW':
-        return 'Driver pickup overdue';
+        return l10n?.statusDriverPickupOverdue ?? 'Driver pickup overdue';
     }
 
     switch (normalizedDeliveryStatus) {
       case 'FAILED_DELIVERY':
       case 'LEARNER_NO_SHOW':
-        return 'Delivery issue reported';
+        return l10n?.statusDeliveryIssueReported ?? 'Delivery issue reported';
       case 'FAILED_PICKUP':
-        return 'Pickup failed';
+        return l10n?.statusPickupFailed ?? 'Pickup failed';
       case 'DRIVER_NO_SHOW':
-        return 'Driver no-show';
+        return l10n?.statusDriverNoShow ?? 'Driver no-show';
       default:
         return null;
     }
@@ -394,20 +431,20 @@ String? learnerDeliverySecondaryStatusLabel({
   switch (normalizedDeliveryStatus) {
     case 'WAITING_FOR_DRIVER':
       return noDriverOverdue
-          ? 'Driver not assigned in time'
-          : 'Waiting for driver';
+          ? l10n?.statusDriverNotAssignedInTime ?? 'Driver not assigned in time'
+          : l10n?.statusWaitingDriver ?? 'Waiting for driver';
     case 'DRIVER_ASSIGNED':
       return assignedDriverPickupOverdue
-          ? 'Driver pickup overdue'
-          : 'Driver assigned';
+          ? l10n?.statusDriverPickupOverdue ?? 'Driver pickup overdue'
+          : l10n?.statusDriverAssigned ?? 'Driver assigned';
     case 'ARRIVED_PICKUP':
       return assignedDriverPickupOverdue
-          ? 'Pickup not completed'
-          : 'At supplier pickup';
+          ? l10n?.statusPickupNotCompleted ?? 'Pickup not completed'
+          : l10n?.statusAtSupplierPickup ?? 'At supplier pickup';
     case 'PICKED_UP':
     case 'ON_THE_WAY':
     case 'ARRIVED_DROPOFF':
-      return 'On the way';
+      return l10n?.statusOnTheWay ?? 'On the way';
     default:
       return null;
   }
@@ -418,6 +455,7 @@ String? learnerDeliveryPrimaryStatusLabel({
   required String fulfillmentMethod,
   String? deliveryStatus,
   String? incidentReviewStatus,
+  AppLocalizations? l10n,
 }) {
   if (fulfillmentMethod.toUpperCase() != 'DELIVERY') {
     return null;
@@ -426,36 +464,44 @@ String? learnerDeliveryPrimaryStatusLabel({
   final normalizedDeliveryStatus = deliveryStatus?.toUpperCase();
 
   if (reservationStatus == 'COMPLETED' ||
-      normalizedDeliveryStatus == 'DELIVERED') {
-    return 'Completed';
+      isSuccessfulLearnerDeliveryStatus(normalizedDeliveryStatus)) {
+    return l10n?.statusCompleted ?? 'Completed';
   }
 
   if (reservationStatus == 'AWAITING_LEARNER_CONFIRMATION') {
-    return 'Needs your confirmation';
+    return l10n?.statusNeedsConfirmation ?? 'Needs your confirmation';
   }
 
   if (reservationStatus == 'AWAITING_RESOLUTION') {
-    return incidentReviewStatusLabel(incidentReviewStatus);
+    return incidentReviewStatusLabel(incidentReviewStatus, l10n: l10n);
   }
 
   if (normalizedDeliveryStatus == 'PICKED_UP' ||
       normalizedDeliveryStatus == 'ON_THE_WAY' ||
       normalizedDeliveryStatus == 'ARRIVED_DROPOFF') {
-    return 'In delivery';
+    return l10n?.statusInDelivery ?? 'In delivery';
   }
 
   if (reservationStatus == 'ACCEPTED') {
-    return 'Accepted';
+    return l10n?.statusAccepted ?? 'Accepted';
   }
 
   return null;
 }
 
-String formatFulfillmentMethodLabel(LearnerReservation reservation) {
-  return reservation.isDeliveryFulfillment ? 'Delivery' : 'Pickup';
+String formatFulfillmentMethodLabel(
+  LearnerReservation reservation, {
+  AppLocalizations? l10n,
+}) {
+  return reservation.isDeliveryFulfillment
+      ? l10n?.delivery ?? 'Delivery'
+      : l10n?.pickup ?? 'Pickup';
 }
 
-String? formatPreferredWindowsSummary(LearnerReservation reservation) {
+String? formatPreferredWindowsSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   final windows = reservation.isDeliveryFulfillment
       ? reservation.learnerPreferredDeliveryWindows
       : reservation.learnerPreferredPickupWindows;
@@ -465,37 +511,19 @@ String? formatPreferredWindowsSummary(LearnerReservation reservation) {
   }
 
   final prefix = reservation.isDeliveryFulfillment
-      ? 'Preferred delivery'
-      : 'Requested pickup';
-  final dateFormat = DateFormat('MMM d');
-  final timeFormat = DateFormat('h:mm a');
-
-  String formatWindow(ReservationPreferredWindow window) {
-    final start = window.start.toLocal();
-    final end = window.end.toLocal();
-    final sameDay =
-        start.year == end.year &&
-        start.month == end.month &&
-        start.day == end.day;
-
-    if (sameDay) {
-      return '${dateFormat.format(start)}, '
-          '${timeFormat.format(start)} – ${timeFormat.format(end)}';
-    }
-
-    return '${dateFormat.format(start)}, ${timeFormat.format(start)} – '
-        '${dateFormat.format(end)}, ${timeFormat.format(end)}';
-  }
-
-  final first = formatWindow(windows.first);
-  if (windows.length == 1) {
-    return '$prefix: $first';
-  }
-
-  return '$prefix: $first (+${windows.length - 1} more)';
+      ? l10n.preferredDelivery
+      : l10n.requestedPickup;
+  final first = LocalizedFormatters(
+    l10n,
+  ).dateTimeRange(windows.first.start, windows.first.end);
+  if (windows.length == 1) return '$prefix: $first';
+  return '$prefix: $first (${l10n.additionalWindows(windows.length - 1)})';
 }
 
-String? formatDeliveryAddressSummary(LearnerReservation reservation) {
+String? formatDeliveryAddressSummary(
+  LearnerReservation reservation, {
+  AppLocalizations? l10n,
+}) {
   if (!reservation.isDeliveryFulfillment) {
     return null;
   }
@@ -505,254 +533,260 @@ String? formatDeliveryAddressSummary(LearnerReservation reservation) {
     return null;
   }
 
-  return 'Delivery address: $address';
+  return l10n?.deliveryAddressLabel(address) ?? 'Delivery address: $address';
 }
 
-String? formatSafeDropoffSummary(LearnerReservation reservation) {
+String? formatSafeDropoffSummary(
+  LearnerReservation reservation, {
+  AppLocalizations? l10n,
+}) {
   if (!reservation.isDeliveryFulfillment ||
       reservation.safeDropoffAllowed == null) {
     return null;
   }
 
   return reservation.safeDropoffAllowed == true
-      ? 'Safe drop-off allowed'
-      : 'Safe drop-off not allowed';
+      ? l10n?.safeDropoffAllowed ?? 'Safe drop-off allowed'
+      : l10n?.safeDropoffNotAllowed ?? 'Safe drop-off not allowed';
 }
 
-String formatReservationDate(DateTime value) {
-  return DateFormat.yMMMd().format(value.toLocal());
+String formatReservationDate(DateTime value, {required AppLocalizations l10n}) {
+  return LocalizedFormatters(l10n).date(value);
 }
 
 String formatPreferredWindowRange(
   ReservationPreferredWindow window, {
   String prefix = '',
+  required AppLocalizations l10n,
 }) {
-  final dateFormat = DateFormat('MMM d');
-  final timeFormat = DateFormat('h:mm a');
-  final start = window.start.toLocal();
-  final end = window.end.toLocal();
-  final sameDay =
-      start.year == end.year &&
-      start.month == end.month &&
-      start.day == end.day;
-
-  final range = sameDay
-      ? '${dateFormat.format(start)}, '
-            '${timeFormat.format(start)} – ${timeFormat.format(end)}'
-      : '${dateFormat.format(start)}, ${timeFormat.format(start)} – '
-            '${dateFormat.format(end)}, ${timeFormat.format(end)}';
-
-  if (prefix.isEmpty) {
-    return range;
-  }
-
-  return '$prefix: $range';
+  final range = LocalizedFormatters(
+    l10n,
+  ).dateTimeRange(window.start, window.end);
+  return prefix.isEmpty ? range : '$prefix: $range';
 }
 
-String? formatDateTimeRange({
-  required String prefix,
-  DateTime? start,
-  DateTime? end,
+String? formatAwaitingPickupPreferredSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
 }) {
-  if (start == null) {
-    return null;
-  }
-
-  return formatPreferredWindowRange(
-    ReservationPreferredWindow(start: start, end: end ?? start),
-    prefix: prefix,
-  );
-}
-
-String? formatAwaitingPickupPreferredSummary(LearnerReservation reservation) {
   if (reservation.learnerPreferredPickupWindows.isEmpty) {
     return null;
   }
 
-  return formatPreferredWindowRange(
+  final window = formatPreferredWindowRange(
     reservation.learnerPreferredPickupWindows.first,
-    prefix: 'Your preferred pickup',
+    l10n: l10n,
   );
+  return l10n.yourPreferredPickupWindow(window);
 }
 
-String? formatAwaitingPickupProposedSummary(LearnerReservation reservation) {
+String? formatAwaitingPickupProposedSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (reservation.supplierProposedPickupWindowStart == null ||
       reservation.supplierProposedPickupWindowEnd == null) {
     return null;
   }
 
-  return formatPreferredWindowRange(
+  final window = formatPreferredWindowRange(
     ReservationPreferredWindow(
       start: reservation.supplierProposedPickupWindowStart!,
       end: reservation.supplierProposedPickupWindowEnd!,
     ),
-    prefix: 'Supplier proposed pickup',
+    l10n: l10n,
   );
+  return l10n.supplierProposedPickupWindow(window);
 }
 
 String? formatAwaitingDeliverySupplierPickupSummary(
-  LearnerReservation reservation,
-) {
-  return formatDateTimeRange(
-    prefix: 'Supplier driver pickup window',
-    start: reservation.supplierPickupWindowStart,
-    end: reservation.supplierPickupWindowEnd,
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
+  final start = reservation.supplierPickupWindowStart;
+  if (start == null) return null;
+  final window = formatPreferredWindowRange(
+    ReservationPreferredWindow(
+      start: start,
+      end: reservation.supplierPickupWindowEnd ?? start,
+    ),
+    l10n: l10n,
   );
+  return l10n.supplierDriverPickupWindow(window);
 }
 
-String? formatAwaitingDeliveryEarliestSummary(LearnerReservation reservation) {
+String? formatAwaitingDeliveryEarliestSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (reservation.earliestDeliveryStart == null) {
     return null;
   }
 
-  final earliest = reservation.earliestDeliveryStart!.toLocal();
-  return 'Earliest possible delivery: '
-      '${DateFormat('MMM d, h:mm a').format(earliest)}';
+  final formatted = LocalizedFormatters(
+    l10n,
+  ).dateTime(reservation.earliestDeliveryStart!);
+  return l10n.earliestPossibleDelivery(formatted);
 }
 
-String? formatAwaitingDeliveryProposedSummary(LearnerReservation reservation) {
+String? formatAwaitingDeliveryProposedSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (reservation.confirmedDeliveryWindowStart == null ||
       reservation.confirmedDeliveryWindowEnd == null) {
     return null;
   }
 
-  return formatPreferredWindowRange(
+  final window = formatPreferredWindowRange(
     ReservationPreferredWindow(
       start: reservation.confirmedDeliveryWindowStart!,
       end: reservation.confirmedDeliveryWindowEnd!,
     ),
-    prefix: 'Supplier proposed delivery',
+    l10n: l10n,
   );
+  return l10n.supplierProposedDeliveryWindow(window);
 }
 
-String? formatConfirmedDeliveryWindowSummary(LearnerReservation reservation) {
+String? formatConfirmedDeliveryWindowSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (!reservation.isAccepted ||
       reservation.confirmedDeliveryWindowStart == null ||
       reservation.confirmedDeliveryWindowEnd == null) {
     return null;
   }
 
-  return formatPreferredWindowRange(
+  final window = formatPreferredWindowRange(
     ReservationPreferredWindow(
       start: reservation.confirmedDeliveryWindowStart!,
       end: reservation.confirmedDeliveryWindowEnd!,
     ),
-    prefix: 'Confirmed delivery',
+    l10n: l10n,
   );
+  return l10n.confirmedDeliveryWindow(window);
 }
 
-String? formatSupplierPickupWindowSummary(LearnerReservation reservation) {
+String? formatSupplierPickupWindowSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (reservation.supplierPickupWindowStart == null ||
       reservation.supplierPickupWindowEnd == null) {
     return null;
   }
 
-  return formatDateTimeRange(
-    prefix: 'Supplier pickup window',
-    start: reservation.supplierPickupWindowStart,
-    end: reservation.supplierPickupWindowEnd,
+  final window = formatPreferredWindowRange(
+    ReservationPreferredWindow(
+      start: reservation.supplierPickupWindowStart!,
+      end: reservation.supplierPickupWindowEnd!,
+    ),
+    l10n: l10n,
   );
+  return l10n.supplierPickupWindow(window);
 }
 
-String? formatAwaitingDeliveryPreferredSummary(LearnerReservation reservation) {
+String? formatAwaitingDeliveryPreferredSummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (reservation.learnerPreferredDeliveryWindows.isEmpty) {
     return null;
   }
 
-  return formatPreferredWindowRange(
+  final window = formatPreferredWindowRange(
     reservation.learnerPreferredDeliveryWindows.first,
-    prefix: 'Your previous preferred delivery',
+    l10n: l10n,
   );
+  return l10n.previousPreferredDeliveryWindow(window);
 }
 
-String? formatSchedulingConflictReason(LearnerReservation reservation) {
+String? formatSchedulingConflictReason(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   final reason = reservation.schedulingConflictReason?.trim();
   if (reason == null || reason.isEmpty) {
     return null;
   }
 
-  return 'Scheduling conflict: $reason';
+  return l10n.schedulingConflict(reason);
 }
 
-String? formatPickupWindow(LearnerReservation reservation) {
+String? formatPickupWindow(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (!reservation.isAccepted || reservation.pickupWindowStart == null) {
     return null;
   }
 
-  final start = reservation.pickupWindowStart!.toLocal();
-  final end = reservation.pickupWindowEnd?.toLocal();
-  final dateFormat = DateFormat('MMM d');
-  final timeFormat = DateFormat('h:mm a');
-
-  if (end == null) {
-    return 'Confirmed pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)}';
-  }
-
-  final sameDay =
-      start.year == end.year &&
-      start.month == end.month &&
-      start.day == end.day;
-
-  if (sameDay) {
-    return 'Confirmed pickup: ${dateFormat.format(start)}, '
-        '${timeFormat.format(start)} – ${timeFormat.format(end)}';
-  }
-
-  return 'Confirmed pickup: ${dateFormat.format(start)}, ${timeFormat.format(start)} – '
-      '${dateFormat.format(end)}, ${timeFormat.format(end)}';
+  final start = reservation.pickupWindowStart!;
+  final end = reservation.pickupWindowEnd;
+  final formatted = end == null
+      ? LocalizedFormatters(l10n).dateTime(start)
+      : LocalizedFormatters(l10n).dateTimeRange(start, end);
+  return l10n.confirmedPickupWindow(formatted);
 }
 
-String? reservationStatusMessage(LearnerReservation reservation) {
+String? reservationStatusMessage(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
   if (reservation.isPending) {
-    return 'Waiting for supplier response.';
+    return l10n.reservationWaitingSupplierMessage;
   }
 
   if (reservation.isAwaitingConfirmation) {
-    return 'The supplier proposed a schedule that needs your confirmation.';
+    return l10n.reservationScheduleNeedsConfirmation;
   }
 
   if (reservation.isAwaitingSupplierConfirmation) {
-    return 'You requested a new pickup time. Waiting for the supplier to respond.';
+    return l10n.reservationRescheduleWaitingSupplier;
   }
 
   if (reservation.isAwaitingResolution) {
-    return incidentReviewStatusMessage(reservation.incidentReviewStatus) ??
-        'This reservation was reported and is awaiting admin review.';
+    return incidentReviewStatusMessage(
+          reservation.incidentReviewStatus,
+          l10n: l10n,
+        ) ??
+        l10n.reservationReportedAwaitingAdmin;
   }
 
   if (reservation.isAccepted) {
     if (reservation.isOverdue || reservation.needsFollowUp) {
-      return 'Pickup window passed. Please contact the supplier or wait for follow-up.';
+      return l10n.pickupWindowPassedFollowup;
     }
 
     return reservation.supplierNote?.trim().isNotEmpty == true
         ? reservation.supplierNote
-        : 'Reservation accepted. Follow the pickup window from the supplier.';
+        : l10n.reservationAcceptedPickupMessage;
   }
 
   if (reservation.isRejected) {
     return reservation.rejectionReason?.trim().isNotEmpty == true
         ? reservation.rejectionReason
-        : 'The supplier rejected this reservation request.';
+        : l10n.reservationRejectedSupplierMessage;
   }
 
   if (reservation.isCompleted) {
-    return 'This reservation is completed.';
+    return l10n.reservationCompletedMessage;
   }
 
   if (reservation.isCancelled) {
-    return 'This reservation was cancelled.';
+    return l10n.reservationCancelledMessage;
   }
 
   if (reservation.isExpired) {
     if (isMissedPickupExpiry(reservation)) {
-      return 'This reservation expired after the pickup window passed without follow-up. Create a new reservation if you still need the material.';
+      return l10n.reservationMissedPickupExpiredMessage;
     }
     if (reservation.rejectionReason == null ||
         reservation.rejectionReason!.trim().isEmpty) {
-      return 'This request expired because the supplier did not respond in time.';
+      return l10n.reservationSupplierNoResponseExpired;
     }
-    return 'This reservation expired.';
+    return l10n.reservationExpiredMessage;
   }
 
   return null;
@@ -766,9 +800,14 @@ String formatRequestedQuantity(LearnerReservation reservation) {
   return '$formatted ${reservation.material.unit}';
 }
 
-String formatSupplierQuantityLine(LearnerReservation reservation) {
-  return 'Supplier: ${reservation.supplier.displayName} · '
-      'Requested: ${formatRequestedQuantity(reservation)}';
+String formatSupplierQuantityLine(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
+  return l10n.supplierQuantityLine(
+    reservation.supplier.displayName,
+    formatRequestedQuantity(reservation),
+  );
 }
 
 String? formatPickupAddress(LearnerReservation reservation) {
@@ -786,47 +825,55 @@ String? formatPickupAddress(LearnerReservation reservation) {
 
 String formatDeliveryAvailability(
   LearnerReservation reservation, {
+  required AppLocalizations l10n,
   bool hasDeliveryRecord = false,
 }) {
   if (hasDeliveryRecord) {
-    return 'Delivery in progress';
+    return l10n.deliveryInProgress;
   }
 
   if (reservation.isDeliveryFulfillment) {
     if (reservation.isAccepted) {
       return reservation.activeDelivery != null
-          ? 'Delivery scheduled'
-          : 'Delivery reservation';
+          ? l10n.deliveryScheduled
+          : l10n.deliveryReservation;
     }
 
     return reservation.isPending
-        ? 'Delivery selected at reservation'
-        : 'Delivery reservation';
+        ? l10n.deliverySelectedAtReservation
+        : l10n.deliveryReservation;
   }
 
   if (reservation.activeDelivery != null &&
       !reservation.isDeliveryFulfillment) {
-    return 'Delivery requested';
+    return l10n.deliveryRequestedStatus;
   }
 
   if (reservation.material.deliveryAllowed) {
-    return 'Delivery available';
+    return l10n.deliveryAvailable;
   }
 
-  return 'Pickup only';
+  return l10n.pickupOnly;
 }
 
 bool shouldShowAcceptedPickupInfo(LearnerReservation reservation) =>
     reservation.isAccepted;
 
-String combinedDeliverySummary(LearnerReservation reservation) {
+String combinedDeliverySummary(
+  LearnerReservation reservation, {
+  required AppLocalizations l10n,
+}) {
+  final formatters = LocalizedFormatters(l10n);
   final parts = <String>[
-    'Combined delivery',
+    l10n.combinedDelivery,
     if (reservation.groupItemCount != null && reservation.groupItemCount! > 0)
-      '${reservation.groupItemCount} items in this group',
+      l10n.combinedDeliveryItems(reservation.groupItemCount!),
     if (reservation.groupTotal != null)
-      'Group total ${reservation.currency ?? 'NIS'} ${reservation.groupTotal!.toStringAsFixed(2)}',
-    if (reservation.deliveryFee == 0) 'Delivery fee charged once for the group',
+      l10n.combinedDeliveryTotal(
+        reservation.currency ?? 'NIS',
+        formatters.number(reservation.groupTotal!, decimalDigits: 2),
+      ),
+    if (reservation.deliveryFee == 0) l10n.combinedDeliveryFeeOnce,
   ];
 
   return parts.join(' · ');

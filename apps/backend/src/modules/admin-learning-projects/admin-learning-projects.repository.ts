@@ -367,6 +367,9 @@ export const createLearningProjectAuthorNotification = async (input: {
   title: string;
   body: string;
   projectId: string;
+  projectTitle: string;
+  moderationEvent: string;
+  feedback?: string | null;
 }) =>
   prisma.notification.create({
     data: {
@@ -376,6 +379,12 @@ export const createLearningProjectAuthorNotification = async (input: {
       body: input.body,
       relatedEntityType: 'LEARNING_PROJECT',
       relatedEntityId: input.projectId,
+      actionType: 'OPEN_LEARNING_PROJECT_SUBMISSION',
+      metadata: {
+        projectTitle: input.projectTitle,
+        moderationEvent: input.moderationEvent,
+        feedback: input.feedback ?? null,
+      },
     },
   });
 

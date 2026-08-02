@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/reservations/data/models/learner_reservation.dart';
 import 'package:frontend/features/reservations/presentation/learner_reservation_ui_helpers.dart';
+import 'package:frontend/l10n/app_localizations_ar.dart';
+import 'package:frontend/l10n/app_localizations_en.dart';
 
 void main() {
   LearnerReservation reservationWithStatus(String status) {
@@ -77,12 +79,39 @@ void main() {
       'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
     });
 
-    final text = formatPickupWindow(reservation);
+    final text = formatPickupWindow(reservation, l10n: AppLocalizationsEn());
 
     expect(text, isNotNull);
     expect(text, contains('Confirmed pickup:'));
     expect(text, contains('Jun 27'));
     expect(text, contains('–'));
+  });
+
+  test('Arabic reservation windows use Arabic labels and Western digits', () {
+    final ar = AppLocalizationsAr();
+    final reservation = LearnerReservation.fromJson({
+      'id': 'res-ar-window',
+      'status': 'ACCEPTED',
+      'quantityRequested': 1,
+      'createdAt': '2026-01-01T00:00:00.000Z',
+      'updatedAt': '2026-01-01T00:00:00.000Z',
+      'pickupWindowStart': '2026-07-31T07:00:00.000Z',
+      'pickupWindowEnd': '2026-07-31T09:00:00.000Z',
+      'material': {
+        'id': 'mat-1',
+        'title': 'Wood panels',
+        'materialType': 'Wood',
+        'status': 'RESERVED',
+      },
+      'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
+    });
+
+    final text = formatPickupWindow(reservation, l10n: ar);
+
+    expect(text, startsWith('موعد الاستلام المؤكّد:'));
+    expect(text, contains('2026'));
+    expect(text, isNot(contains('Jul')));
+    expect(text, isNot(matches('[٠-٩]')));
   });
 
   test('formatDeliveryAvailability reflects reserve-time delivery choice', () {
@@ -104,7 +133,7 @@ void main() {
     });
 
     expect(
-      formatDeliveryAvailability(reservation),
+      formatDeliveryAvailability(reservation, l10n: AppLocalizationsEn()),
       'Delivery selected at reservation',
     );
   });
@@ -132,7 +161,10 @@ void main() {
       'supplier': {'id': 'sup-1', 'displayName': 'Supplier'},
     });
 
-    final summary = formatPreferredWindowsSummary(reservation);
+    final summary = formatPreferredWindowsSummary(
+      reservation,
+      l10n: AppLocalizationsEn(),
+    );
 
     expect(summary, isNotNull);
     expect(summary, contains('Requested pickup'));

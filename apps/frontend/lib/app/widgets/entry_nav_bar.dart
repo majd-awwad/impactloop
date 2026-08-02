@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/l10n.dart';
+
 import '../application/app_settings_notifier.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -11,6 +13,8 @@ import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/auth_navigation.dart';
 import '../../features/auth/presentation/widgets/portal_switch_menu.dart';
 import '../../features/auth/data/models/user.dart';
+import '../../features/profile/presentation/l10n/account_settings_l10n.dart';
+import '../../features/notifications/application/notifications_routes.dart';
 import '../../shared/widgets/app_feedback.dart';
 import '../../shared/widgets/notification_bell_button.dart';
 import '../../shared/widgets/user_avatar.dart';
@@ -30,6 +34,7 @@ class EntryNavBar extends ConsumerWidget {
     this.showPhoneAccountMenu = true,
     this.phoneTitle,
     this.showPublicNavLinks = true,
+    this.showNotificationBell,
   });
 
   final bool showSignIn;
@@ -41,6 +46,25 @@ class EntryNavBar extends ConsumerWidget {
   final bool showPhoneAccountMenu;
   final String? phoneTitle;
   final bool showPublicNavLinks;
+
+  /// When null, the bell is shown for authenticated users automatically.
+  final bool? showNotificationBell;
+
+  static List<Widget> resolveTrailingActions({
+    required bool isAuthenticated,
+    required bool? showNotificationBell,
+    required List<Widget> trailingActions,
+    User? user,
+  }) {
+    final shouldShowBell =
+        showNotificationBell ??
+        (isAuthenticated && userSupportsNotificationInbox(user));
+    if (!shouldShowBell || !isAuthenticated) {
+      return trailingActions;
+    }
+
+    return [const NotificationBellButton(compact: true), ...trailingActions];
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -57,13 +81,12 @@ class EntryNavBar extends ConsumerWidget {
         user != null;
     final effectiveShowSignIn = !isAuthenticated && showSignIn;
     final effectiveShowCreateAccount = !isAuthenticated && showCreateAccount;
-    // EntryNavBar owns the authenticated bell; ignore any caller-provided
-    // NotificationBellButton trailing actions to avoid duplicate bells.
-    final effectiveTrailingActions = isAuthenticated
-        ? trailingActions
-              .where((action) => action is! NotificationBellButton)
-              .toList(growable: false)
-        : trailingActions;
+    final resolvedTrailing = resolveTrailingActions(
+      isAuthenticated: isAuthenticated,
+      showNotificationBell: showNotificationBell,
+      trailingActions: trailingActions,
+      user: user,
+    );
 
     if (isPhone) {
       return Padding(
@@ -88,6 +111,7 @@ class EntryNavBar extends ConsumerWidget {
             ref: ref,
             showAccountMenu: showPhoneAccountMenu,
             phoneTitle: phoneTitle,
+            trailingActions: resolvedTrailing,
           ),
         ),
       );
@@ -140,7 +164,7 @@ class EntryNavBar extends ConsumerWidget {
                       isAuthenticated: isAuthenticated,
                       isAuthLoading: authState.isLoading,
                       ref: ref,
-                      trailingActions: effectiveTrailingActions,
+                      trailingActions: resolvedTrailing,
                     )
                   : _DesktopNavLayout(
                       showSignIn: effectiveShowSignIn,
@@ -154,7 +178,7 @@ class EntryNavBar extends ConsumerWidget {
                       isAuthLoading: authState.isLoading,
                       ref: ref,
                       condensed: useCondensedDesktop,
-                      trailingActions: effectiveTrailingActions,
+                      trailingActions: resolvedTrailing,
                       showPublicNavLinks: showPublicNavLinks,
                     ),
             ),
@@ -178,6 +202,7 @@ class _PhoneAppBarLayout extends StatelessWidget {
     required this.isAuthLoading,
     required this.ref,
     required this.showAccountMenu,
+    required this.trailingActions,
     this.phoneTitle,
   });
 
@@ -192,6 +217,7 @@ class _PhoneAppBarLayout extends StatelessWidget {
   final bool isAuthLoading;
   final WidgetRef ref;
   final bool showAccountMenu;
+  final List<Widget> trailingActions;
   final String? phoneTitle;
 
   @override
@@ -207,29 +233,34 @@ class _PhoneAppBarLayout extends StatelessWidget {
         ),
         if (phoneTitle != null) ...[
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            phoneTitle!,
-            style: AuthDarkTextStyles.label(context).copyWith(
-              color: colors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: Text(
+              phoneTitle!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AuthDarkTextStyles.label(context).copyWith(
+                color: colors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-        ],
-        const Spacer(),
-        if (isAuthenticated && user != null) ...[
-          const NotificationBellButton(compact: true),
+        ] else
+          const Spacer(),
+        if (trailingActions.isNotEmpty) ...[
           const SizedBox(width: AppSpacing.xs),
+          ...trailingActions,
         ],
-        if (isAuthenticated && user != null && showAccountMenu)
+        if (isAuthenticated && user != null && showAccountMenu) ...[
+          const SizedBox(width: AppSpacing.xs),
           _AccountMenu(
             user: user!,
             settings: settings,
             ref: ref,
             compact: true,
             isLoggingOut: isAuthLoading,
-          )
-        else if (!isAuthenticated)
+          ),
+        ] else if (!isAuthenticated)
           _GuestMobileMenu(
             showSignIn: showSignIn,
             showCreateAccount: showCreateAccount,
@@ -299,7 +330,7 @@ class _DesktopNavLayout extends StatelessWidget {
               border: Border.all(color: colors.borderSubtle),
             ),
             child: Text(
-              'Learn. Reuse. Build.',
+              context.l10n.learnReuseBuild,
               style: AuthDarkTextStyles.body(context).copyWith(
                 color: colors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -353,14 +384,13 @@ class _NavLinks extends StatelessWidget {
 
   final bool compact;
 
-  static const _items = [
-    ('Home', '/home', Icons.home_outlined),
-    ('Materials', '/materials', Icons.inventory_2_outlined),
-    ('Learning', '/learning', Icons.school_outlined),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final items = [
+      (context.l10n.home, '/home', Icons.home_outlined),
+      (context.l10n.materials, '/materials', Icons.inventory_2_outlined),
+      (context.l10n.learning, '/learning', Icons.school_outlined),
+    ];
     final isDark = Theme.of(context).brightness == Brightness.dark;
     var currentPath = '';
 
@@ -375,7 +405,7 @@ class _NavLinks extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (final item in _items) ...[
+          for (final item in items) ...[
             _NavLinkPill(
               label: item.$1,
               route: item.$2,
@@ -386,7 +416,7 @@ class _NavLinks extends StatelessWidget {
                   currentPath.startsWith('${item.$2}/'),
               isDark: isDark,
             ),
-            if (item != _items.last) const SizedBox(width: AppSpacing.xs),
+            if (item != items.last) const SizedBox(width: AppSpacing.xs),
           ],
         ],
       ),
@@ -505,7 +535,7 @@ class _MobileNavLayout extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Align(
-            alignment: Alignment.centerRight,
+            alignment: AlignmentDirectional.centerEnd,
             child: Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.xs,
@@ -523,12 +553,12 @@ class _MobileNavLayout extends StatelessWidget {
                   ),
                 ] else if (showCompactAction && showCreateAccount)
                   _CompactNavLink(
-                    label: 'Create account',
+                    label: context.l10n.createAccount,
                     onPressed: onCreateAccount ?? () => context.go('/register'),
                   )
                 else if (showCompactAction && showSignIn)
                   _CompactNavLink(
-                    label: 'Sign in',
+                    label: context.l10n.signIn,
                     onPressed: onSignIn ?? () => context.go('/login'),
                   ),
                 _UtilityPills(settings: settings, ref: ref, compact: true),
@@ -553,7 +583,7 @@ class _UtilityPills extends StatelessWidget {
   final WidgetRef ref;
   final bool compact;
 
-  static const _languageOptions = ['en', 'ar'];
+  static const _languageOptions = ['ar', 'en'];
 
   @override
   Widget build(BuildContext context) {
@@ -564,10 +594,10 @@ class _UtilityPills extends StatelessWidget {
       children: [
         NavPillMenu<ThemeMode>(
           icon: themeModeIcon(settings.themeMode),
-          label: themeModeLabel(settings.themeMode),
+          label: themeModeLabel(settings.themeMode, l10n: context.l10n),
           items: ThemeMode.values,
           selectedValue: settings.themeMode,
-          itemLabel: themeModeLabel,
+          itemLabel: (mode) => themeModeLabel(mode, l10n: context.l10n),
           onSelected: (mode) {
             ref.read(appSettingsProvider.notifier).setThemeMode(mode);
           },
@@ -624,7 +654,7 @@ class _GuestMobileMenu extends StatelessWidget {
       ),
       builder: (context, controller, child) {
         return IconButton.filledTonal(
-          tooltip: 'Menu',
+          tooltip: context.l10n.menu,
           onPressed: () {
             if (controller.isOpen) {
               controller.close();
@@ -644,13 +674,13 @@ class _GuestMobileMenu extends StatelessWidget {
         if (showSignIn)
           _AccountMenuItem(
             icon: Icons.login_rounded,
-            label: 'Sign in',
+            label: context.l10n.signIn,
             onPressed: onSignIn ?? () => context.go('/login'),
           ),
         if (showCreateAccount)
           _AccountMenuItem(
             icon: Icons.person_add_alt_1_rounded,
-            label: 'Create account',
+            label: context.l10n.createAccount,
             onPressed: onCreateAccount ?? () => context.go('/register'),
           ),
         if (showSignIn || showCreateAccount) const Divider(height: 1),
@@ -660,7 +690,7 @@ class _GuestMobileMenu extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Settings',
+                context.l10n.settings,
                 style: AuthDarkTextStyles.label(context).copyWith(
                   color: colors.textSecondary,
                   fontSize: 12,
@@ -719,10 +749,7 @@ class _AccountMenu extends StatelessWidget {
     context.go('/login');
 
     if (logoutError != null) {
-      showInfoSnackBar(
-        context,
-        'You were signed out locally, but the server could not be reached.',
-      );
+      showInfoSnackBar(context, context.l10n.signedOutOffline);
     }
   }
 
@@ -884,8 +911,13 @@ class _AccountMenu extends StatelessWidget {
                 const Divider(height: 1),
                 _AccountMenuItem(
                   icon: Icons.person_outline_rounded,
-                  label: 'Profile',
+                  label: context.l10n.profile,
                   onPressed: () => context.go('/profile'),
+                ),
+                _AccountMenuItem(
+                  icon: Icons.manage_accounts_outlined,
+                  label: AccountSettingsL10n.of(context).pageTitle,
+                  onPressed: () => context.go(accountSettingsRoute),
                 ),
                 if (_showLearnerActions)
                   _AccountMenuItem(
@@ -899,7 +931,7 @@ class _AccountMenu extends StatelessWidget {
                 if (_showLearnerActions)
                   _AccountMenuItem(
                     icon: Icons.receipt_long_outlined,
-                    label: 'My reservations',
+                    label: context.l10n.myReservations,
                     onPressed: () => context.go(learnerReservationsRoute),
                   ),
                 if (_isAdmin)
@@ -939,7 +971,7 @@ class _AccountMenu extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Settings',
+                        context.l10n.settings,
                         style: AuthDarkTextStyles.label(context).copyWith(
                           color: secondaryText,
                           fontSize: 12,
@@ -958,7 +990,9 @@ class _AccountMenu extends StatelessWidget {
                 const Divider(height: 1),
                 _AccountMenuItem(
                   icon: Icons.logout_rounded,
-                  label: isLoggingOut ? 'Logging out...' : 'Logout',
+                  label: isLoggingOut
+                      ? context.l10n.loggingOut
+                      : context.l10n.logout,
                   destructive: true,
                   onPressed: isLoggingOut ? null : () => _logout(context),
                 ),
@@ -1018,13 +1052,13 @@ class _ActionCluster extends StatelessWidget {
     final buttons = [
       if (showSignIn)
         _NavActionButton(
-          label: 'Sign in',
+          label: context.l10n.signIn,
           icon: Icons.login_rounded,
           onPressed: onSignIn ?? () => context.go('/login'),
         ),
       if (showCreateAccount)
         _NavActionButton(
-          label: 'Create account',
+          label: context.l10n.createAccount,
           icon: Icons.arrow_outward_rounded,
           onPressed: onCreateAccount ?? () => context.go('/register'),
           filled: true,

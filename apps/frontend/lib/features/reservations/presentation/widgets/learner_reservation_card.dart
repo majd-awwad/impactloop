@@ -7,6 +7,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
@@ -288,6 +290,7 @@ class _ReservationStatusRow extends StatelessWidget {
     final chipLabels = learnerReservationStatusChipLabels(
       reservation,
       linkedDeliveryStatus: delivery?.status,
+      l10n: context.l10n,
     );
     final deliveryTone = chipLabels.secondary != null && delivery != null
         ? deliveryStatusAppTone(delivery!.status)
@@ -308,7 +311,7 @@ class _ReservationStatusRow extends StatelessWidget {
             tone: deliveryTone ?? statusStyle.tone,
           ),
         Text(
-          formatReservationDate(reservation.createdAt),
+          formatReservationDate(reservation.createdAt, l10n: context.l10n),
           style: AppTextStyles.label(
             context,
           ).copyWith(color: palette.textMuted, fontWeight: FontWeight.w500),
@@ -330,10 +333,11 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final pickupWindow = formatPickupWindow(reservation);
+    final pickupWindow = formatPickupWindow(reservation, l10n: context.l10n);
     final pickupAddress = formatPickupAddress(reservation);
     final deliveryAvailability = formatDeliveryAvailability(
       reservation,
+      l10n: context.l10n,
       hasDeliveryRecord: hasDeliveryRecord,
     );
     final showPickupMap = shouldShowSelfPickupMap(
@@ -361,7 +365,7 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
             if (pickupWindow != null) const SizedBox(height: AppSpacing.xs),
             _AcceptedPickupInfoRow(
               icon: Icons.location_on_outlined,
-              label: 'Pickup address: $pickupAddress',
+              label: context.l10n.pickupAddressValue(pickupAddress),
             ),
           ],
           if (showPickupMap && pickupLocation != null) ...[
@@ -381,16 +385,14 @@ class _AcceptedPickupInfoBlock extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             HandoverConfirmationCodePanel(
               code: reservation.selfPickupCode!,
-              instructions:
-                  'Give this code to the supplier when you receive the material.',
+              instructions: context.l10n.supplierPickupCodeInstructions,
             ),
           ],
           if (reservation.shouldShowLearnerDeliveryCode) ...[
             const SizedBox(height: AppSpacing.sm),
             HandoverConfirmationCodePanel(
               code: reservation.activeDelivery!.learnerDeliveryCode!,
-              instructions:
-                  'Give this code to the driver when you receive the material.',
+              instructions: context.l10n.deliveryCodeInstructions,
             ),
           ],
         ],
@@ -445,7 +447,7 @@ class _OverdueWarningBanner extends StatelessWidget {
         border: Border.all(color: colors.warningBorder),
       ),
       child: Text(
-        'Pickup window passed. Please contact the supplier or wait for follow-up.',
+        context.l10n.pickupWindowPassedFollowup,
         style: AppTextStyles.label(
           context,
         ).copyWith(color: colors.warningText, fontWeight: FontWeight.w600),
@@ -502,7 +504,10 @@ class _ReservationCardSummaryLines extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-    final statusMessage = reservationStatusMessage(reservation);
+    final statusMessage = reservationStatusMessage(
+      reservation,
+      l10n: context.l10n,
+    );
     final showPickupInfo = shouldShowAcceptedPickupInfo(reservation);
     final showFollowUpMessages =
         reservation.isAccepted &&
@@ -534,7 +539,7 @@ class _ReservationCardSummaryLines extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          formatSupplierQuantityLine(reservation),
+          formatSupplierQuantityLine(reservation, l10n: context.l10n),
           style: AppTextStyles.label(
             context,
           ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
@@ -543,7 +548,7 @@ class _ReservationCardSummaryLines extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Fulfillment: ${formatFulfillmentMethodLabel(reservation)}',
+          '${context.l10n.fulfillmentMethod}: ${formatFulfillmentMethodLabel(reservation, l10n: context.l10n)}',
           style: AppTextStyles.label(
             context,
           ).copyWith(color: palette.textSecondary, fontWeight: FontWeight.w400),
@@ -553,14 +558,14 @@ class _ReservationCardSummaryLines extends StatelessWidget {
         if (reservation.groupedDelivery) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
-            combinedDeliverySummary(reservation),
+            combinedDeliverySummary(reservation, l10n: context.l10n),
             style: AppTextStyles.label(context).copyWith(
               color: palette.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
         ],
-        if (formatPreferredWindowsSummary(reservation)
+        if (formatPreferredWindowsSummary(reservation, l10n: context.l10n)
             case final preferredWindows?) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -573,7 +578,7 @@ class _ReservationCardSummaryLines extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
-        if (formatDeliveryAddressSummary(reservation)
+        if (formatDeliveryAddressSummary(reservation, l10n: context.l10n)
             case final deliveryAddress?) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -586,7 +591,8 @@ class _ReservationCardSummaryLines extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ],
-        if (formatSafeDropoffSummary(reservation) case final safeDropoff?) ...[
+        if (formatSafeDropoffSummary(reservation, l10n: context.l10n)
+            case final safeDropoff?) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
             safeDropoff,
@@ -648,7 +654,9 @@ class _ReservationCardSummaryLines extends StatelessWidget {
             reservation.pendingRescheduleReason?.trim().isNotEmpty == true) ...[
           const SizedBox(height: 12),
           Text(
-            'Your reschedule request: ${reservation.pendingRescheduleReason!.trim()}',
+            context.l10n.yourRescheduleRequest(
+              reservation.pendingRescheduleReason!.trim(),
+            ),
             style: AppTextStyles.label(context).copyWith(
               color: palette.textSecondary,
               fontWeight: FontWeight.w500,
@@ -680,7 +688,7 @@ class _ReservationCardActions extends ConsumerWidget {
     final isCancelling = cancellingId == reservation.id;
 
     final viewMaterial = _ReservationActionButton(
-      label: 'View material',
+      label: context.l10n.viewMaterial,
       onPressed: () => context.push('/materials/${reservation.material.id}'),
       desktopRail: desktopColumn,
       tone: AppStatusTone.neutral,
@@ -690,6 +698,8 @@ class _ReservationCardActions extends ConsumerWidget {
       reservation: reservation,
       delivery: delivery,
       desktopColumn: desktopColumn,
+      trackLabel: context.l10n.trackDelivery,
+      viewLabel: context.l10n.viewDelivery,
       onNavigate: (deliveryId) {
         final canTrack = delivery?.canTrack == true;
         if (canTrack) {
@@ -702,7 +712,7 @@ class _ReservationCardActions extends ConsumerWidget {
 
     final requestDelivery = reservation.canLearnerRequestDelivery
         ? _ReservationActionButton(
-            label: 'Request delivery',
+            label: context.l10n.requestDelivery,
             onPressed: () => showRequestDeliveryDialog(
               context: context,
               ref: ref,
@@ -715,7 +725,7 @@ class _ReservationCardActions extends ConsumerWidget {
 
     final cancelRequest = reservation.isPending
         ? _ReservationActionButton(
-            label: 'Cancel request',
+            label: context.l10n.cancelRequest,
             onPressed: isCancelling || cancelState.isLoading
                 ? null
                 : () => _confirmCancel(context, ref),
@@ -791,19 +801,19 @@ class _ReservationCardActions extends ConsumerWidget {
         return;
       }
 
-      showInfoSnackBar(context, 'Reservation cancelled.');
+      showInfoSnackBar(context, context.l10n.reservationCancelledFeedback);
     } on ApiException catch (error) {
       if (!context.mounted) {
         return;
       }
 
-      showInfoSnackBar(context, error.displayMessage);
-    } catch (error) {
+      showInfoSnackBar(context, localizedApiErrorMessage(error, context.l10n));
+    } catch (_) {
       if (!context.mounted) {
         return;
       }
 
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, context.l10n.somethingWentWrong);
     } finally {
       ref.read(cancellingReservationIdProvider.notifier).setCancelling(null);
     }
@@ -814,6 +824,8 @@ _ReservationActionButton? _resolveDeliveryAction({
   required LearnerReservation reservation,
   required LearnerDelivery? delivery,
   required bool desktopColumn,
+  required String trackLabel,
+  required String viewLabel,
   required ValueChanged<String> onNavigate,
 }) {
   final deliveryId = delivery?.id ?? reservation.activeDelivery?.id;
@@ -822,7 +834,7 @@ _ReservationActionButton? _resolveDeliveryAction({
   }
 
   return _ReservationActionButton(
-    label: delivery?.canTrack == true ? 'Track delivery' : 'View delivery',
+    label: delivery?.canTrack == true ? trackLabel : viewLabel,
     onPressed: () => onNavigate(deliveryId),
     desktopRail: desktopColumn,
     tone: AppStatusTone.info,
@@ -964,7 +976,7 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
               EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.lg),
             ),
           ),
-      child: const Text('Keep request'),
+      child: Text(context.l10n.keepRequest),
     );
 
     final cancelButton = FilledButton(
@@ -985,7 +997,7 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
                 color: colors.textOnPrimary,
               ),
             )
-          : const Text('Cancel request'),
+          : Text(context.l10n.cancelRequest),
     );
 
     return Dialog(
@@ -1012,7 +1024,7 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Cancel reservation?',
+                      context.l10n.cancelReservationQuestion,
                       style: AppTextStyles.body(context).copyWith(
                         color: palette.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -1022,7 +1034,7 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
                   ),
                   IconButton(
                     onPressed: _isSubmitting ? null : widget.onKeep,
-                    tooltip: 'Close',
+                    tooltip: context.l10n.close,
                     visualDensity: VisualDensity.compact,
                     constraints: const BoxConstraints(
                       minWidth: 36,
@@ -1045,7 +1057,7 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'This will release the requested quantity back to the listing.',
+                    context.l10n.cancelReleasesQuantity,
                     style: AppTextStyles.body(
                       context,
                     ).copyWith(color: palette.textSecondary),
@@ -1070,7 +1082,9 @@ class _CancelReservationDialogState extends State<_CancelReservationDialog> {
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'Requested: ${formatRequestedQuantity(widget.reservation)}',
+                          context.l10n.requestedQuantityLabel(
+                            formatRequestedQuantity(widget.reservation),
+                          ),
                           style: AppTextStyles.label(
                             context,
                           ).copyWith(color: palette.textMuted),
@@ -1192,7 +1206,7 @@ class _LearnerRequestRescheduleButtonState
             }
 
             return AppDialogShell(
-              title: const Text('Request reschedule'),
+              title: Text(context.l10n.requestReschedule),
               onClose: () => Navigator.of(dialogContext).pop(false),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1201,15 +1215,15 @@ class _LearnerRequestRescheduleButtonState
                   TextField(
                     controller: reasonController,
                     maxLength: 500,
-                    decoration: const InputDecoration(
-                      labelText: 'Reason (required)',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.reasonRequired,
                     ),
                   ),
                   TextField(
                     controller: noteController,
                     maxLength: 1000,
-                    decoration: const InputDecoration(
-                      labelText: 'Note (optional)',
+                    decoration: InputDecoration(
+                      labelText: context.l10n.noteOptional,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -1217,8 +1231,12 @@ class _LearnerRequestRescheduleButtonState
                     onPressed: pickStart,
                     child: Text(
                       start == null
-                          ? 'Pick proposed start'
-                          : 'Start: ${start!.toLocal()}',
+                          ? context.l10n.pickProposedStart
+                          : context.l10n.proposedStart(
+                              LocalizedFormatters(
+                                context.l10n,
+                              ).dateTime(start!),
+                            ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -1226,8 +1244,10 @@ class _LearnerRequestRescheduleButtonState
                     onPressed: pickEnd,
                     child: Text(
                       end == null
-                          ? 'Pick proposed end'
-                          : 'End: ${end!.toLocal()}',
+                          ? context.l10n.pickProposedEnd
+                          : context.l10n.proposedEnd(
+                              LocalizedFormatters(context.l10n).dateTime(end!),
+                            ),
                     ),
                   ),
                 ],
@@ -1239,9 +1259,9 @@ class _LearnerRequestRescheduleButtonState
                         start == null ||
                         end == null) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(
+                        SnackBar(
                           content: Text(
-                            'Enter a reason and choose a pickup window.',
+                            context.l10n.rescheduleReasonWindowRequired,
                           ),
                         ),
                       );
@@ -1250,9 +1270,7 @@ class _LearnerRequestRescheduleButtonState
 
                     if (!end!.isAfter(start!)) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(
-                          content: Text('End time must be after start time.'),
-                        ),
+                        SnackBar(content: Text(context.l10n.endAfterStart)),
                       );
                       return;
                     }
@@ -1261,8 +1279,8 @@ class _LearnerRequestRescheduleButtonState
                       DateTime.now().add(minRemainingPickupWindow),
                     )) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(
-                          content: Text(learnerPickupWindowTooCloseMessage),
+                        SnackBar(
+                          content: Text(context.l10n.pickupWindowTooClose),
                         ),
                       );
                       return;
@@ -1277,7 +1295,7 @@ class _LearnerRequestRescheduleButtonState
                     dialogContext,
                     AppStatusTone.warning,
                   ),
-                  child: const Text('Send request'),
+                  child: Text(context.l10n.sendRequest),
                 ),
               ),
             );
@@ -1313,13 +1331,13 @@ class _LearnerRequestRescheduleButtonState
         reservationId: widget.reservation.id,
       );
       if (!mounted) return;
-      showInfoSnackBar(context, 'Reschedule request sent to supplier.');
+      showInfoSnackBar(context, context.l10n.rescheduleSent);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, error);
-    } catch (error) {
+      showErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
+    } catch (_) {
       if (!mounted) return;
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, context.l10n.somethingWentWrong);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -1330,7 +1348,7 @@ class _LearnerRequestRescheduleButtonState
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
         style: AppStatusButtonStyle.outlined(context, AppStatusTone.warning),
@@ -1340,18 +1358,27 @@ class _LearnerRequestRescheduleButtonState
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('Request reschedule'),
+            : Text(context.l10n.requestReschedule),
       ),
     );
   }
 }
 
-const _learnerSupplierReportReasons = <String, String>{
-  'SUPPLIER_UNAVAILABLE': 'Supplier unavailable',
-  'SUPPLIER_MATERIAL_NOT_READY': 'Material not ready',
-  'WRONG_PICKUP_INFO': 'Wrong pickup information',
-  'OTHER': 'Other',
-};
+const _learnerSupplierReportReasons = <String>[
+  'SUPPLIER_UNAVAILABLE',
+  'SUPPLIER_MATERIAL_NOT_READY',
+  'WRONG_PICKUP_INFO',
+  'OTHER',
+];
+
+String _supplierReportReasonLabel(BuildContext context, String reason) {
+  return switch (reason) {
+    'SUPPLIER_UNAVAILABLE' => context.l10n.supplierUnavailable,
+    'SUPPLIER_MATERIAL_NOT_READY' => context.l10n.materialNotReady,
+    'WRONG_PICKUP_INFO' => context.l10n.wrongPickupInformation,
+    _ => context.l10n.other,
+  };
+}
 
 class _LearnerReportSupplierButton extends ConsumerStatefulWidget {
   const _LearnerReportSupplierButton({required this.reservation});
@@ -1375,24 +1402,24 @@ class _LearnerReportSupplierButtonState
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AppDialogShell(
-          title: const Text('Report supplier issue'),
+          title: Text(context.l10n.reportSupplierIssue),
           onClose: () => Navigator.of(context).pop(false),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Report a supplier issue for admin review. The reservation will be closed pending review.',
-              ),
+              Text(context.l10n.reportSupplierDescription),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: selectedReason,
-                decoration: const InputDecoration(labelText: 'Reason'),
-                items: _learnerSupplierReportReasons.entries
+                decoration: InputDecoration(labelText: context.l10n.reason),
+                items: _learnerSupplierReportReasons
                     .map(
-                      (entry) => DropdownMenuItem(
-                        value: entry.key,
-                        child: Text(entry.value),
+                      (reason) => DropdownMenuItem(
+                        value: reason,
+                        child: Text(
+                          _supplierReportReasonLabel(context, reason),
+                        ),
                       ),
                     )
                     .toList(),
@@ -1407,9 +1434,9 @@ class _LearnerReportSupplierButtonState
                 maxLength: 1000,
                 minLines: 3,
                 maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Note (optional)',
-                  hintText: 'Describe what happened',
+                decoration: InputDecoration(
+                  labelText: context.l10n.noteOptional,
+                  hintText: context.l10n.describeWhatHappened,
                 ),
               ),
             ],
@@ -1418,7 +1445,7 @@ class _LearnerReportSupplierButtonState
             primaryAction: FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-              child: const Text('Submit report'),
+              child: Text(context.l10n.submitReport),
             ),
           ),
         ),
@@ -1443,13 +1470,13 @@ class _LearnerReportSupplierButtonState
         reservationId: widget.reservation.id,
       );
       if (!mounted) return;
-      showInfoSnackBar(context, 'Supplier issue reported to admin.');
+      showInfoSnackBar(context, context.l10n.supplierIssueReportedAdmin);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showInfoSnackBar(context, error.displayMessage);
-    } catch (error) {
+      showInfoSnackBar(context, localizedApiErrorMessage(error, context.l10n));
+    } catch (_) {
       if (!mounted) return;
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, context.l10n.somethingWentWrong);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -1458,7 +1485,7 @@ class _LearnerReportSupplierButtonState
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
         style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
@@ -1468,7 +1495,7 @@ class _LearnerReportSupplierButtonState
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('Report supplier issue'),
+            : Text(context.l10n.reportSupplierIssue),
       ),
     );
   }
@@ -1493,21 +1520,19 @@ class _LearnerReportNoDriverButtonState
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AppDialogShell(
-        title: const Text('Report no driver available'),
+        title: Text(context.l10n.reportNoDriverAvailable),
         onClose: () => Navigator.of(context).pop(false),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'No driver accepted this delivery. Submit a report for admin review.',
-            ),
+            Text(context.l10n.reportNoDriverDescription),
             const SizedBox(height: 12),
             TextField(
               controller: noteController,
               maxLength: 1000,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Note (required)'),
+              decoration: InputDecoration(labelText: context.l10n.noteRequired),
             ),
           ],
         ),
@@ -1518,7 +1543,7 @@ class _LearnerReportNoDriverButtonState
               Navigator.of(context).pop(true);
             },
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-            child: const Text('Submit report'),
+            child: Text(context.l10n.submitReport),
           ),
         ),
       ),
@@ -1541,13 +1566,13 @@ class _LearnerReportNoDriverButtonState
         reservationId: widget.reservation.id,
       );
       if (!mounted) return;
-      showInfoSnackBar(context, 'No-driver case reported to admin.');
+      showInfoSnackBar(context, context.l10n.noDriverReportedAdmin);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showInfoSnackBar(context, error.displayMessage);
-    } catch (error) {
+      showInfoSnackBar(context, localizedApiErrorMessage(error, context.l10n));
+    } catch (_) {
       if (!mounted) return;
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, context.l10n.somethingWentWrong);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -1556,7 +1581,7 @@ class _LearnerReportNoDriverButtonState
   @override
   Widget build(BuildContext context) {
     return Align(
-      alignment: Alignment.centerLeft,
+      alignment: AlignmentDirectional.centerStart,
       child: OutlinedButton(
         onPressed: _submitting ? null : _submit,
         style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
@@ -1566,7 +1591,7 @@ class _LearnerReportNoDriverButtonState
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('Report no driver available'),
+            : Text(context.l10n.reportNoDriverAvailable),
       ),
     );
   }

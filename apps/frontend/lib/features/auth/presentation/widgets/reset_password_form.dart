@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_inline_error.dart';
 import '../../application/auth_navigation.dart';
 import '../../application/auth_providers.dart';
@@ -80,7 +81,12 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
       setState(() {
         _isSubmitting = false;
         _passwordError = firstFieldError(apiError, const ['newPassword']);
-        _formError = _passwordError == null ? apiError.displayMessage : null;
+        _passwordError = _passwordError == null
+            ? null
+            : context.l10n.passwordMinLength;
+        _formError = _passwordError == null
+            ? localizedApiErrorMessage(apiError, context.l10n)
+            : null;
       });
     }
   }
@@ -88,15 +94,16 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
   @override
   Widget build(BuildContext context) {
     final colors = AuthUiPalette.of(context);
+    final l10n = context.l10n;
 
     if (!_hasToken) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppInlineError(message: 'Reset link is missing or invalid.'),
+          AppInlineError(message: l10n.resetLinkInvalid),
           const SizedBox(height: AppSpacing.lg),
           AuthPrimaryButton(
-            label: 'Back to sign in',
+            label: l10n.backToSignIn,
             onPressed: () => context.go(loginRoute),
           ),
         ],
@@ -110,7 +117,7 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
           Icon(Icons.lock_reset_rounded, color: colors.primary, size: 38),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Your password has been updated. Sign in with your new password.',
+            l10n.passwordUpdated,
             style: TextStyle(
               color: colors.textSecondary,
               height: 1.5,
@@ -119,7 +126,7 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
           ),
           const SizedBox(height: AppSpacing.lg),
           AuthPrimaryButton(
-            label: 'Go to sign in',
+            label: l10n.goToSignIn,
             onPressed: () => context.go(loginRoute),
           ),
         ],
@@ -133,7 +140,7 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
         children: [
           AuthPasswordField(
             controller: _passwordController,
-            label: 'New password',
+            label: l10n.newPassword,
             textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.newPassword],
             errorText: _passwordError,
@@ -144,10 +151,10 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
             },
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'New password is required';
+                return l10n.newPasswordRequired;
               }
               if (value.length < 8) {
-                return 'Password must be at least 8 characters';
+                return l10n.passwordMinLength;
               }
               return null;
             },
@@ -155,7 +162,7 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
           const AuthFieldGap(),
           AuthPasswordField(
             controller: _confirmPasswordController,
-            label: 'Confirm password',
+            label: l10n.confirmPassword,
             textInputAction: TextInputAction.done,
             autofillHints: const [AutofillHints.newPassword],
             onFieldSubmitted: (_) => _handleSubmit(),
@@ -166,10 +173,10 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
             },
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Confirm your new password';
+                return l10n.confirmNewPassword;
               }
               if (value != _passwordController.text) {
-                return 'Passwords do not match';
+                return l10n.passwordsDoNotMatch;
               }
               return null;
             },
@@ -177,7 +184,7 @@ class _ResetPasswordFormState extends ConsumerState<ResetPasswordForm> {
           if (_formError != null) AppInlineError(message: _formError!),
           const SizedBox(height: AppSpacing.lg),
           AuthPrimaryButton(
-            label: 'Reset password',
+            label: l10n.resetPasswordAction,
             isLoading: _isSubmitting,
             onPressed: _handleSubmit,
           ),

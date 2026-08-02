@@ -1,4 +1,6 @@
 import '../data/models/app_notification.dart';
+import '../../supplier_portal/data/models/supplier_action_notification.dart';
+import '../../../l10n/app_localizations.dart';
 
 final RegExp _testTagPattern = RegExp(r'\[test[^\]]*\]', caseSensitive: false);
 
@@ -25,6 +27,10 @@ enum NotificationVisualCategory {
   job,
   reminder,
   deliveryUpdate,
+  reservation,
+  material,
+  learning,
+  materialRequest,
   account,
   general,
 }
@@ -32,7 +38,10 @@ enum NotificationVisualCategory {
 NotificationVisualCategory categoryForNotification(
   AppNotification notification,
 ) {
-  switch (notification.notificationType) {
+  final type = notification.notificationType;
+  final entity = notification.relatedEntityType;
+
+  switch (type) {
     case 'DRIVER_NEW_JOB':
       return NotificationVisualCategory.job;
     case 'DRIVER_PICKUP_TIME':
@@ -47,22 +56,75 @@ NotificationVisualCategory categoryForNotification(
     case 'DRIVER_DROPOFF_OVERDUE':
       return NotificationVisualCategory.reminder;
     case 'DRIVER_DELIVERY_REQUEST_CREATED':
-      return NotificationVisualCategory.deliveryUpdate;
     case 'DRIVER_DELIVERY_ACCEPTED':
     case 'DRIVER_DELIVERY_NEXT_STEP':
     case 'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW':
+    case 'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN':
     case 'DELIVERY_DRIVER_ASSIGNED':
       return NotificationVisualCategory.deliveryUpdate;
+    case 'RESERVATION_ACCEPTED':
+    case 'RESERVATION_SCHEDULING_PROPOSAL':
+    case 'RESERVATION_DECLINED':
+    case 'RESERVATION_EXPIRED':
+    case 'RESERVATION_REQUESTED':
+    case 'RESERVATION_CANCELLED':
+    case 'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED':
+    case 'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED':
+      return NotificationVisualCategory.reservation;
+    case 'MATERIAL_MODERATION_UPDATE':
+      return NotificationVisualCategory.material;
+    case 'CATEGORY_REQUEST_UPDATE':
+    case 'PRICE_REQUEST_UPDATE':
+      return NotificationVisualCategory.materialRequest;
+    case 'LEARNING_PROJECT_MODERATION':
+      return NotificationVisualCategory.learning;
+    case 'SUPPLIER_VERIFICATION_UPDATE':
+      return NotificationVisualCategory.account;
     default:
-      if (notification.notificationType.contains('VERIFICATION') ||
-          notification.notificationType.contains('ACCOUNT')) {
-        return NotificationVisualCategory.account;
-      }
-      return NotificationVisualCategory.general;
+      break;
   }
+
+  if (entity == 'RESERVATION' || type.contains('RESERVATION')) {
+    return NotificationVisualCategory.reservation;
+  }
+  if (entity == 'DELIVERY' || type.contains('DELIVERY')) {
+    return NotificationVisualCategory.deliveryUpdate;
+  }
+  if (entity == 'LEARNING_PROJECT' || type.contains('LEARNING_PROJECT')) {
+    return NotificationVisualCategory.learning;
+  }
+  if (entity == 'CATEGORY_REQUEST' || entity == 'PRICE_RULE_REQUEST') {
+    return NotificationVisualCategory.materialRequest;
+  }
+  if (entity == 'MATERIAL' || type.contains('MATERIAL')) {
+    return NotificationVisualCategory.material;
+  }
+  if (type.contains('VERIFICATION') || type.contains('ACCOUNT')) {
+    return NotificationVisualCategory.account;
+  }
+  return NotificationVisualCategory.general;
 }
 
-String notificationTypeChipLabel(NotificationVisualCategory category) {
+String notificationTypeChipLabel(
+  NotificationVisualCategory category, {
+  AppLocalizations? l10n,
+}) {
+  if (l10n != null) {
+    return switch (category) {
+      NotificationVisualCategory.job => l10n.notificationChipJob,
+      NotificationVisualCategory.reminder => l10n.notificationChipReminder,
+      NotificationVisualCategory.deliveryUpdate =>
+        l10n.notificationChipDelivery,
+      NotificationVisualCategory.reservation =>
+        l10n.notificationChipReservation,
+      NotificationVisualCategory.material => l10n.notificationChipMaterial,
+      NotificationVisualCategory.learning => l10n.notificationChipLearning,
+      NotificationVisualCategory.materialRequest =>
+        l10n.notificationChipMaterialRequest,
+      NotificationVisualCategory.account => l10n.notificationChipAccount,
+      NotificationVisualCategory.general => l10n.notificationChipUpdate,
+    };
+  }
   switch (category) {
     case NotificationVisualCategory.job:
       return 'Job';
@@ -70,6 +132,14 @@ String notificationTypeChipLabel(NotificationVisualCategory category) {
       return 'Reminder';
     case NotificationVisualCategory.deliveryUpdate:
       return 'Delivery update';
+    case NotificationVisualCategory.reservation:
+      return 'Reservation';
+    case NotificationVisualCategory.material:
+      return 'Material';
+    case NotificationVisualCategory.learning:
+      return 'Learning';
+    case NotificationVisualCategory.materialRequest:
+      return 'Material request';
     case NotificationVisualCategory.account:
       return 'Account';
     case NotificationVisualCategory.general:
@@ -77,38 +147,405 @@ String notificationTypeChipLabel(NotificationVisualCategory category) {
   }
 }
 
-String notificationActionLabel(AppNotification notification) {
+String notificationActionLabel(
+  AppNotification notification, {
+  AppLocalizations? l10n,
+  bool isSupplierMode = false,
+  bool isDriverMode = false,
+}) {
+  if (notificationOpenRoute(
+        notification,
+        isSupplierMode: isSupplierMode,
+        isDriverMode: isDriverMode,
+      ) ==
+      null) {
+    return l10n?.open ?? 'Open';
+  }
+
+  switch (notification.notificationType) {
+    case 'MATERIAL_MODERATION_UPDATE':
+      return l10n?.viewMaterial ?? 'View material';
+    case 'CATEGORY_REQUEST_UPDATE':
+    case 'PRICE_REQUEST_UPDATE':
+      return l10n?.open ?? 'Open';
+    default:
+      break;
+  }
+
   if (notification.relatedEntityType == 'DELIVERY') {
     if (notification.notificationType == 'DRIVER_NEW_JOB') {
-      return 'View jobs';
+      return l10n?.viewJobs ?? 'View jobs';
     }
     if (notification.notificationType ==
             'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
         notification.notificationType ==
             'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN') {
-      return 'View details';
+      return l10n?.viewDetails ?? 'View details';
     }
-    return 'View delivery';
+    return l10n?.viewDelivery ?? 'View delivery';
   }
   if (notification.relatedEntityType == 'RESERVATION') {
-    return 'View reservation';
+    return l10n?.viewReservation ?? 'View reservation';
   }
   if (notification.relatedEntityType == 'LEARNING_PROJECT') {
-    return 'View submission';
+    return l10n?.viewSubmission ?? 'View submission';
   }
-  if (notification.relatedEntityType == 'MATERIAL_REQUEST') {
-    return 'View request';
-  }
-  return 'Open';
+  return l10n?.open ?? 'Open';
 }
 
-bool notificationHasNavigationTarget(AppNotification notification) {
-  return (notification.relatedEntityType == 'DELIVERY' ||
-          notification.relatedEntityType == 'RESERVATION' ||
-          notification.relatedEntityType == 'LEARNING_PROJECT' ||
-          notification.relatedEntityType == 'MATERIAL_REQUEST') &&
+typedef LocalizedNotificationCopy = ({String title, String body});
+
+String _metadataString(Map<String, dynamic> metadata, String key) =>
+    metadata[key]?.toString().trim() ?? '';
+
+LocalizedNotificationCopy _localizedSupplierNotificationTemplates(
+  String rawType,
+  AppLocalizations l10n, {
+  required String materialTitle,
+  required String learnerName,
+}) {
+  final safeLearnerName = learnerName.isEmpty ? l10n.learner : learnerName;
+
+  return switch (rawType) {
+    'RESERVATION_REQUESTED' => (
+      title: l10n.notificationReservationRequestedTitle,
+      body: l10n.notificationReservationRequestedBody(
+        safeLearnerName,
+        materialTitle,
+      ),
+    ),
+    'RESERVATION_CANCELLED' => (
+      title: l10n.notificationReservationCancelledSupplierTitle,
+      body: l10n.notificationReservationCancelledSupplierBody(
+        safeLearnerName,
+        materialTitle,
+      ),
+    ),
+    'RESERVATION_EXPIRED' => (
+      title: l10n.notificationReservationExpiredSupplierTitle,
+      body: l10n.notificationReservationExpiredSupplierBody(materialTitle),
+    ),
+    'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED' => (
+      title: l10n.notificationChoosePickupWindowTitle,
+      body: l10n.notificationChoosePickupWindowBody(materialTitle),
+    ),
+    'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED' => (
+      title: l10n.notificationNewPickupWindowNeededTitle,
+      body: l10n.notificationNewPickupWindowNeededBody(materialTitle),
+    ),
+    'CATEGORY_REQUEST_UPDATE' => (
+      title: l10n.notificationCategoryRequestUpdateTitle,
+      body: l10n.notificationCategoryRequestUpdateBody,
+    ),
+    'PRICE_REQUEST_UPDATE' => (
+      title: l10n.notificationPriceRequestUpdateTitle,
+      body: l10n.notificationPriceRequestUpdateBody,
+    ),
+    'MATERIAL_MODERATION_UPDATE' => (
+      title: l10n.notificationMaterialModerationUpdateTitle,
+      body: l10n.notificationMaterialModerationUpdateBody,
+    ),
+    'SUPPLIER_VERIFICATION_UPDATE' => (
+      title: l10n.notificationSupplierVerificationUpdateTitle,
+      body: l10n.notificationSupplierVerificationUpdateBody,
+    ),
+    _ => (
+      title: l10n.notificationFallbackTitle,
+      body: l10n.notificationFallbackBody,
+    ),
+  };
+}
+
+LocalizedNotificationCopy localizedNotificationCopy(
+  AppNotification notification,
+  AppLocalizations l10n,
+) {
+  final contentTitle = _metadataString(notification.metadata, 'materialTitle');
+  final learnerName = _metadataString(notification.metadata, 'learnerName');
+  final projectTitle = _metadataString(notification.metadata, 'projectTitle');
+  final materialTitle = contentTitle.isEmpty ? l10n.material : contentTitle;
+  final safeProjectTitle = projectTitle.isEmpty
+      ? l10n.learningProject
+      : projectTitle;
+  final moderationEvent =
+      notification.metadata['moderationEvent']
+          ?.toString()
+          .trim()
+          .toUpperCase() ??
+      '';
+  final feedback = notification.metadata['feedback']?.toString().trim() ?? '';
+
+  String withFeedback(String summary) => feedback.isEmpty
+      ? summary
+      : l10n.projectModerationFeedback(summary, feedback);
+
+  final supplierTemplate = _localizedSupplierNotificationTemplates(
+    notification.notificationType,
+    l10n,
+    materialTitle: materialTitle,
+    learnerName: learnerName,
+  );
+
+  return switch (notification.notificationType) {
+    'RESERVATION_ACCEPTED' => (
+      title: l10n.reservationAcceptedTitle,
+      body: l10n.reservationAcceptedBody(materialTitle),
+    ),
+    'RESERVATION_SCHEDULING_PROPOSAL' => (
+      title: l10n.reservationProposalTitle,
+      body: l10n.reservationProposalBody(materialTitle),
+    ),
+    'RESERVATION_DECLINED' => (
+      title: l10n.reservationDeclinedTitle,
+      body: l10n.reservationDeclinedBody(materialTitle),
+    ),
+    'RESERVATION_EXPIRED' =>
+      learnerName.isNotEmpty
+          ? (
+              title: l10n.notificationReservationExpiredSupplierTitle,
+              body: l10n.notificationReservationExpiredSupplierBody(
+                materialTitle,
+              ),
+            )
+          : (
+              title: l10n.reservationExpiredTitle,
+              body: l10n.reservationExpiredBody(materialTitle),
+            ),
+    'RESERVATION_REQUESTED' ||
+    'RESERVATION_CANCELLED' ||
+    'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED' ||
+    'STALE_PICKUP_SUPPLIER_RESCHEDULE_REQUESTED' ||
+    'CATEGORY_REQUEST_UPDATE' ||
+    'PRICE_REQUEST_UPDATE' ||
+    'MATERIAL_MODERATION_UPDATE' ||
+    'SUPPLIER_VERIFICATION_UPDATE' => supplierTemplate,
+    'LEARNING_PROJECT_MODERATION' => switch (moderationEvent) {
+      'APPROVED' => (
+        title: l10n.projectApprovedTitle,
+        body: l10n.projectApprovedBody(safeProjectTitle),
+      ),
+      'CHANGES_REQUESTED' => (
+        title: l10n.projectChangesRequestedTitle,
+        body: withFeedback(l10n.projectChangesRequestedBody(safeProjectTitle)),
+      ),
+      'REJECTED' => (
+        title: l10n.projectRejectedTitle,
+        body: withFeedback(l10n.projectRejectedBody(safeProjectTitle)),
+      ),
+      'HIDDEN' => (
+        title: l10n.projectHiddenTitle,
+        body: withFeedback(l10n.projectHiddenBody(safeProjectTitle)),
+      ),
+      'RESTORED' => (
+        title: l10n.projectRestoredTitle,
+        body: l10n.projectRestoredBody(safeProjectTitle),
+      ),
+      'ARCHIVED' => (
+        title: l10n.projectArchivedTitle,
+        body: withFeedback(l10n.projectArchivedBody(safeProjectTitle)),
+      ),
+      _ => (
+        title: l10n.projectModerationTitle,
+        body: l10n.projectModerationBody(safeProjectTitle),
+      ),
+    },
+    'DRIVER_NEW_JOB' => (
+      title: l10n.notificationDriverNewJobTitle,
+      body: l10n.notificationDriverNewJobBody(materialTitle),
+    ),
+    'DRIVER_PICKUP_TIME' => (
+      title: l10n.notificationDriverPickupTimeTitle,
+      body: l10n.notificationDriverPickupTimeBody(materialTitle),
+    ),
+    'DRIVER_DROPOFF_TIME' => (
+      title: l10n.notificationDriverDropoffTimeTitle,
+      body: l10n.notificationDriverDropoffTimeBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN' => (
+      title: l10n.notificationDriverUnassignedTitle,
+      body: l10n.notificationDriverUnassignedBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' => (
+      title: l10n.notificationDriverMovedToAdminTitle,
+      body: l10n.notificationDriverMovedToAdminBody,
+    ),
+    _ when l10n.localeName == 'en' && notification.title.trim().isNotEmpty => (
+      title: notification.title,
+      body: notification.body,
+    ),
+    _ => (
+      title: l10n.notificationFallbackTitle,
+      body: l10n.notificationFallbackBody,
+    ),
+  };
+}
+
+LocalizedNotificationCopy localizedSupplierNotificationCopy(
+  SupplierActionNotification notification,
+  AppLocalizations l10n,
+) {
+  final materialTitle = _metadataString(notification.metadata, 'materialTitle');
+  final learnerName = _metadataString(notification.metadata, 'learnerName');
+  final safeMaterialTitle = materialTitle.isEmpty
+      ? l10n.material
+      : materialTitle;
+  final copy = _localizedSupplierNotificationTemplates(
+    notification.rawType.toUpperCase(),
+    l10n,
+    materialTitle: safeMaterialTitle,
+    learnerName: learnerName,
+  );
+
+  if (l10n.localeName == 'en' &&
+      copy.title == l10n.notificationFallbackTitle &&
+      notification.title.trim().isNotEmpty) {
+    return (title: notification.title, body: notification.body);
+  }
+
+  return copy;
+}
+
+bool notificationHasNavigationTarget(
+  AppNotification notification, {
+  bool isSupplierMode = false,
+  bool isDriverMode = false,
+}) {
+  return notificationOpenRoute(
+        notification,
+        isSupplierMode: isSupplierMode,
+        isDriverMode: isDriverMode,
+      ) !=
+      null;
+}
+
+String? _nonEmptyId(String? value) {
+  final id = value?.trim() ?? '';
+  return id.isEmpty ? null : id;
+}
+
+/// Explicit metadata material id only when the backend contract provides it.
+String? _metadataMaterialId(AppNotification notification) {
+  final materialId =
+      notification.metadata['materialId']?.toString().trim() ?? '';
+  return materialId.isEmpty ? null : materialId;
+}
+
+String? _metadataPublishedMaterialId(AppNotification notification) {
+  final materialId =
+      notification.metadata['publishedMaterialId']?.toString().trim() ?? '';
+  return materialId.isEmpty ? null : materialId;
+}
+
+/// Resolves the in-app route for a notification open action, or null when the
+/// notification is informational only.
+///
+/// Material-request / material routing is contract-driven only. There are
+/// currently no learner material-request notification producers in the
+/// backend; invented types must not invent destinations.
+String? notificationOpenRoute(
+  AppNotification notification, {
+  required bool isSupplierMode,
+  required bool isDriverMode,
+}) {
+  if (notification.relatedEntityType == 'RESERVATION' &&
       notification.relatedEntityId != null &&
-      notification.relatedEntityId!.isNotEmpty;
+      notification.relatedEntityId!.isNotEmpty) {
+    final reservationId = notification.relatedEntityId!;
+    if (isSupplierMode) {
+      return '/supplier/reservations?tab=pending&focus=$reservationId';
+    }
+    return '/learner/reservations/$reservationId';
+  }
+
+  if (notification.relatedEntityType == 'DELIVERY' &&
+      notification.relatedEntityId != null &&
+      notification.relatedEntityId!.isNotEmpty) {
+    if (isDriverMode) {
+      return driverDeliveryNotificationRoute(notification);
+    }
+    return null;
+  }
+
+  if (notification.relatedEntityType == 'LEARNING_PROJECT' &&
+      notification.relatedEntityId != null &&
+      notification.relatedEntityId!.isNotEmpty) {
+    return '/learning/submissions/${notification.relatedEntityId}';
+  }
+
+  return _supplierMaterialReviewOpenRoute(
+    notification,
+    isSupplierMode: isSupplierMode,
+  );
+}
+
+/// Routes for real supplier material-review notification producers only.
+String? _supplierMaterialReviewOpenRoute(
+  AppNotification notification, {
+  required bool isSupplierMode,
+}) {
+  if (!isSupplierMode) {
+    return null;
+  }
+
+  final type = notification.notificationType;
+  final entity = notification.relatedEntityType;
+  final relatedId = _nonEmptyId(notification.relatedEntityId);
+  final action = notification.actionType?.trim().toUpperCase();
+
+  switch (type) {
+    case 'MATERIAL_MODERATION_UPDATE':
+      // Backend: relatedEntityType=MATERIAL, relatedEntityId=materialId,
+      // actionType=OPEN_MATERIAL. Destination: supplier owned material.
+      if (entity != 'MATERIAL') {
+        return null;
+      }
+      final materialId = relatedId ?? _metadataMaterialId(notification);
+      if (materialId == null) {
+        return null;
+      }
+      if (action != null && action != 'OPEN_MATERIAL') {
+        return null;
+      }
+      return '/supplier/materials/$materialId';
+
+    case 'CATEGORY_REQUEST_UPDATE':
+      // Backend: relatedEntityType=CATEGORY_REQUEST,
+      // relatedEntityId=CategoryRequest.id. Never treat that id as a material.
+      if (entity != 'CATEGORY_REQUEST' || relatedId == null) {
+        return null;
+      }
+      if (action == 'NONE') {
+        // Listing-published updates carry metadata.publishedMaterialId but are
+        // resolved informational notices (actionType NONE).
+        return null;
+      }
+      if (action == 'CONTINUE_LISTING' || action == 'EDIT_LISTING') {
+        return '/supplier/materials/new?categoryRequestId=$relatedId';
+      }
+      return null;
+
+    case 'PRICE_REQUEST_UPDATE':
+      // Backend: relatedEntityType=PRICE_RULE_REQUEST,
+      // relatedEntityId=PriceRuleRequest.id.
+      if (entity != 'PRICE_RULE_REQUEST' || relatedId == null) {
+        return null;
+      }
+      if (action == 'NONE') {
+        return null;
+      }
+      if (action == 'CONTINUE_LISTING' || action == 'EDIT_LISTING') {
+        return '/supplier/materials/new?priceRuleRequestId=$relatedId';
+      }
+      return null;
+
+    default:
+      // No learner MATERIAL_REQUEST_* / MATCH_* producers exist. Do not guess.
+      // publishedMaterialId alone is never enough without an exact type contract.
+      if (_metadataPublishedMaterialId(notification) != null) {
+        return null;
+      }
+      return null;
+  }
 }
 
 /// Learner material-request notifications open the request detail route.

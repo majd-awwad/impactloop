@@ -99,13 +99,13 @@ class ReservationFollowUpActions extends StatelessWidget {
           children: [
             if (canAcceptLearnerReschedule && onAcceptLearnerReschedule != null)
               _ActionChip(
-                label: 'Accept new time',
+                label: l.acceptNewTime,
                 onPressed: onAcceptLearnerReschedule,
                 tone: AppStatusTone.success,
               ),
             if (canProposeDifferentTime && onProposeDifferentTime != null)
               _ActionChip(
-                label: 'Propose different time',
+                label: l.proposeNewTime,
                 onPressed: onProposeDifferentTime,
                 tone: AppStatusTone.warning,
               ),
@@ -121,7 +121,7 @@ class ReservationFollowUpActions extends StatelessWidget {
                 canRequestReschedule &&
                 onRequestReschedule != null)
               _ActionChip(
-                label: 'Request reschedule',
+                label: l.reschedulePickupAction,
                 onPressed: onRequestReschedule,
                 tone: AppStatusTone.warning,
               ),
@@ -130,7 +130,7 @@ class ReservationFollowUpActions extends StatelessWidget {
                 canCloseReservation &&
                 onCloseReservation != null)
               _ActionChip(
-                label: 'Close reservation',
+                label: l.cancelReservationAction,
                 onPressed: onCloseReservation,
                 tone: AppStatusTone.danger,
               ),
@@ -139,7 +139,7 @@ class ReservationFollowUpActions extends StatelessWidget {
                 canReportToAdmin &&
                 onReportToAdmin != null)
               _ActionChip(
-                label: hasAdminReport ? 'Reported to admin' : 'Report to admin',
+                label: hasAdminReport ? l.reportedToAdmin : l.reportToAdmin,
                 onPressed: hasAdminReport ? null : onReportToAdmin,
                 tone: AppStatusTone.danger,
               ),

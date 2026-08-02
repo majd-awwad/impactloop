@@ -6,6 +6,8 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../../auth/application/auth_route_helpers.dart';
+import '../../../profile/presentation/l10n/account_settings_l10n.dart';
 import '../theme/admin_decoration_set.dart';
 import 'admin_settings_controls.dart';
 
@@ -126,6 +128,15 @@ class AdminProfileButton extends ConsumerWidget {
                   const AdminSettingsControls(compact: true),
                 ],
                 const SizedBox(height: AppSpacing.md),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    context.go(accountSettingsRoute);
+                  },
+                  icon: const Icon(Icons.manage_accounts_outlined),
+                  label: Text(AccountSettingsL10n.of(context).pageTitle),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 FilledButton.icon(
                   onPressed: () {
                     Navigator.of(sheetContext).pop();

@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -14,6 +14,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/utils/content_text_direction.dart';
 import '../../../../shared/widgets/app_dropdown_field.dart';
@@ -165,22 +166,14 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         _isSavingDraft = false;
       });
 
-      showInfoSnackBar(
-        context,
-        const LocalizedText(
-          en:
-              'Draft saved. You can add images and submit it for review when it is ready.',
-          ar:
-              'تم حفظ المسودة. يمكنك إضافة الصور وإرسالها للمراجعة عندما تصبح جاهزة.',
-        ).resolve(context),
-      );
+      showInfoSnackBar(context, context.l10n.draftSavedMessage);
       context.go('/learning/submissions/$projectId');
     } catch (error) {
       if (!mounted) {
         return;
       }
       setState(() => _isSavingDraft = false);
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, error, l10n: context.l10n);
     }
   }
 
@@ -197,17 +190,11 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     final categories =
         ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
     if (_selectedProjectCategory(categories) == null) {
-      return const LocalizedText(
-        en: 'Select an available project category before saving.',
-        ar: 'اختر فئة مشروع متاحة قبل الحفظ.',
-      ).resolve(context);
+      return context.l10n.draftSelectAvailableCategoryBeforeSave;
     }
 
     if (_deriveIdeaText().length < 10) {
-      return const LocalizedText(
-        en: 'Add at least 10 characters of project content before saving.',
-        ar: 'أضف 10 أحرف على الأقل من محتوى المشروع قبل الحفظ.',
-      ).resolve(context);
+      return context.l10n.draftMinimumContentBeforeSave;
     }
 
     return null;
@@ -231,7 +218,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       'difficulty': _mapDifficulty(_selectedDifficulty),
       'estimatedDurationMinutes': _mapDurationMinutes(_selectedDuration),
       'requiredComponents': _buildSubmitComponents(),
-      'steps': LearningProjectStepText.parseStepsFromText(_stepsController.text),
+      'steps': LearningProjectStepText.parseStepsFromText(
+        _stepsController.text,
+      ),
       'links': _parseLinks(_linksController.text),
     };
   }
@@ -335,7 +324,9 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return LearningProjectSubmitSummary(
       componentCount: namedComponents.length,
       toolCount: namedComponents
-          .where((component) => component.role == LearningProjectComponentRole.tool)
+          .where(
+            (component) => component.role == LearningProjectComponentRole.tool,
+          )
           .length,
       stepCount: _nonEmptyLines(_stepsController.text).length,
     );
@@ -350,11 +341,11 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         .toList(growable: false);
 
     if (requireNamedComponents && namedComponents.isEmpty) {
-      return 'Add at least one component with a name.';
+      return context.l10n.draftComponentRequired;
     }
 
     if (_componentEntries.length > 50) {
-      return 'Use 50 components or fewer.';
+      return context.l10n.draftComponentLimit;
     }
 
     final seen = <String>{};
@@ -369,12 +360,12 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         materialCategories: materialCategories,
       );
       if (error != null) {
-        return error;
+        return _localizedComponentValidation(error);
       }
 
       final key = trimmedName.toLowerCase();
       if (seen.contains(key)) {
-        return 'Each component must have a unique name.';
+        return context.l10n.draftComponentUnique;
       }
       seen.add(key);
     }
@@ -382,11 +373,27 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     return null;
   }
 
+  String _localizedComponentValidation(String error) => switch (error) {
+    'Component name is required.' => context.l10n.draftComponentNameRequired,
+    'Keep each component name under 200 characters.' =>
+      context.l10n.draftComponentNameMaximum,
+    'Quantity must be greater than zero.' => context.l10n.draftQuantityPositive,
+    'Choose a valid unit.' => context.l10n.draftValidUnit,
+    'Keep notes under 1000 characters.' => context.l10n.draftNotesMaximum,
+    'Use up to 5 keywords per component.' => context.l10n.draftKeywordsMaximum,
+    'Keep each keyword under 80 characters.' =>
+      context.l10n.draftKeywordMaximum,
+    'Choose a valid material category or leave it as None.' =>
+      context.l10n.draftValidMaterialCategory,
+    _ => context.l10n.validationError,
+  };
+
   String? _validateComponentsField() {
     return _validateComponentEntries(
       requireNamedComponents: false,
       materialCategories: materialSelectableCategories(
-        ref.read(materialCategoriesProvider).value ?? const <MaterialCategory>[],
+        ref.read(materialCategoriesProvider).value ??
+            const <MaterialCategory>[],
       ),
     );
   }
@@ -405,10 +412,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       return null;
     }
     if (trimmed.length < 10) {
-      return 'Use at least 10 characters when adding a full description.';
+      return context.l10n.draftFullDescriptionMinimum;
     }
     if (trimmed.length > 10000) {
-      return 'Keep the full description under 10000 characters.';
+      return context.l10n.draftFullDescriptionMaximum;
     }
     return null;
   }
@@ -427,17 +434,19 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
 
   String? _validateTitle(String? value) {
     final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return 'Project title is required.';
-    if (trimmed.length < 3) return 'Use at least 3 characters.';
-    if (trimmed.length > 200) return 'Keep the title under 200 characters.';
+    if (trimmed.isEmpty) return context.l10n.draftTitleRequired;
+    if (trimmed.length < 3) return context.l10n.draftMinimumThreeCharacters;
+    if (trimmed.length > 200) return context.l10n.draftTitleMaximum;
     return null;
   }
 
   String? _validateSummary(String? value) {
     final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return 'Short description is required.';
-    if (trimmed.length < 10) return 'Use at least 10 characters.';
-    if (trimmed.length > 500) return 'Keep the short description under 500 characters.';
+    if (trimmed.isEmpty) return context.l10n.draftSummaryRequired;
+    if (trimmed.length < 10) return context.l10n.draftMinimumTenCharacters;
+    if (trimmed.length > 500) {
+      return context.l10n.draftSummaryMaximum;
+    }
     return null;
   }
 
@@ -446,28 +455,32 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     AsyncValue<List<MaterialCategory>> categoriesAsync,
   ) {
     final categories = categoriesAsync.value ?? const <MaterialCategory>[];
-    if (categoriesAsync.hasError) return 'Project categories could not load.';
-    if (categories.isEmpty) return 'Project categories are not available yet.';
-    if (value == null || value.trim().isEmpty) return 'Select a category.';
+    if (categoriesAsync.hasError) {
+      return context.l10n.draftCategoriesCouldNotLoad;
+    }
+    if (categories.isEmpty) return context.l10n.draftCategoriesUnavailable;
+    if (value == null || value.trim().isEmpty) {
+      return context.l10n.draftSelectCategory;
+    }
     final exists = categories.any((category) => category.id == value);
-    return exists ? null : 'Select an available category.';
+    return exists ? null : context.l10n.draftSelectAvailableCategory;
   }
 
   String? _validateSteps(String? value) {
     final steps = _nonEmptyLines(value ?? '');
-    if (steps.length > 100) return 'Use 100 steps or fewer.';
+    if (steps.length > 100) return context.l10n.draftStepsMaximum;
     for (final step in steps) {
-      if (step.length > 5000) return 'Keep each step under 5000 characters.';
+      if (step.length > 5000) return context.l10n.draftStepMaximum;
     }
     return null;
   }
 
   String? _validateLinks(String? value) {
     final links = _nonEmptyLines(value ?? '');
-    if (links.length > 20) return 'Use 20 links or fewer.';
+    if (links.length > 20) return context.l10n.draftLinksMaximum;
     for (final link in links) {
       if (!_isHttpUrl(link)) {
-        return 'Use valid http or https links, one per line.';
+        return context.l10n.draftLinksInvalid;
       }
     }
     return null;
@@ -523,8 +536,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       return;
     }
 
-    final categories = ref.read(projectCategoriesProvider).value ??
-        const <MaterialCategory>[];
+    final categories =
+        ref.read(projectCategoriesProvider).value ?? const <MaterialCategory>[];
     final locale = resolveAiLocale(context);
     final userTurn = _ManualDraftCopilotTurn(role: 'user', text: trimmed);
 
@@ -537,19 +550,16 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     _scheduleCopilotScroll();
 
     try {
-      final response = await ref.read(aiApiProvider).sendManualDraftCopilotMessage(
+      final response = await ref
+          .read(aiApiProvider)
+          .sendManualDraftCopilotMessage(
             text: trimmed,
             locale: locale,
             clientMessageId: createClientMessageId(),
             draftContext: _buildCopilotDraftContext(categories),
             history: _copilotMessages
                 .take(_copilotMessages.length - 1)
-                .map(
-                  (message) => {
-                    'role': message.role,
-                    'text': message.text,
-                  },
-                )
+                .map((message) => {'role': message.role, 'text': message.text})
                 .toList(growable: false),
           );
 
@@ -568,7 +578,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
       if (!mounted) return;
       setState(() {
         _copilotSending = false;
-        _copilotError = error.message;
+        _copilotError = localizedApiErrorMessage(error, context.l10n);
       });
     } catch (_) {
       if (!mounted) return;
@@ -601,10 +611,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
   Future<void> _copyCopilotText(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    showInfoSnackBar(
-      context,
-      _ManualDraftCopilotL10n.copied.resolve(context),
-    );
+    showInfoSnackBar(context, _ManualDraftCopilotL10n.copied.resolve(context));
   }
 
   @override
@@ -644,7 +651,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const EntryNavBar(homeRoute: '/home', phoneTitle: 'Add project'),
+            EntryNavBar(
+              homeRoute: '/home',
+              phoneTitle: context.l10n.addDraftPhoneTitle,
+            ),
             Expanded(
               child: Stack(
                 clipBehavior: Clip.none,
@@ -788,10 +798,10 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     final palette = LearningUiPalette.of(context);
     final summary = _submitSummary();
     final categoryHint = categoriesAsync.hasError
-        ? 'Could not load categories'
+        ? context.l10n.draftCategoryLoadError
         : categoriesAsync.isLoading && categories.isEmpty
-        ? 'Loading categories...'
-        : 'Select a category';
+        ? context.l10n.draftCategoryLoading
+        : context.l10n.draftSelectCategory;
 
     return _LearningPanel(
       child: Column(
@@ -800,11 +810,11 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           _SectionHeading(
             title: const LocalizedText(
               en: 'Project basics',
-              ar: '╪ث╪│╪د╪│┘è╪د╪ز ╪د┘┘à╪┤╪▒┘ê╪╣',
+              ar: 'أساسيات المشروع',
             ),
             subtitle: const LocalizedText(
               en: 'Share enough detail for admin review and future learners.',
-              ar: '╪ث╪╢┘ ╪ز┘╪د╪╡┘è┘ ┘â╪د┘┘è╪ر ┘┘à╪▒╪د╪ش╪╣╪ر ╪د┘╪ح╪»╪د╪▒╪ر ┘ê┘┘┘à╪ز╪╣┘┘à┘è┘ ┘╪د╪ص┘é╪د┘ï.',
+              ar: 'أضف تفاصيل كافية لمراجعة المسؤول وللمتعلّمين لاحقًا.',
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -823,8 +833,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                     width: fieldWidth,
                     child: AppTextField(
                       controller: _titleController,
-                      label: 'Project title',
-                      hint: 'Solar classroom weather station',
+                      label: context.l10n.draftProjectTitleLabel,
+                      hint: context.l10n.draftProjectTitleHint,
                       textInputAction: TextInputAction.next,
                       validator: _validateTitle,
                     ),
@@ -832,7 +842,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
                   SizedBox(
                     width: fieldWidth,
                     child: AppDropdownField<String>(
-                      label: 'Category',
+                      label: context.l10n.draftCategoryLabel,
                       value: selectedCategoryId,
                       hint: categoryHint,
                       items: categories.map((category) {
@@ -863,40 +873,40 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           ),
           const SizedBox(height: AppSpacing.lg),
           _LearningChoiceGroup(
-            title: const LocalizedText(en: 'Difficulty', ar: '╪د┘┘à╪│╪ز┘ê┘ë'),
+            title: const LocalizedText(en: 'Difficulty', ar: 'الصعوبة'),
             selectedValue: _selectedDifficulty,
             options: const [
               _ChoiceOption(
                 value: 'easy',
-                label: LocalizedText(en: 'Easy', ar: '╪│┘ç┘'),
+                label: LocalizedText(en: 'Easy', ar: 'سهل'),
               ),
               _ChoiceOption(
                 value: 'medium',
-                label: LocalizedText(en: 'Medium', ar: '┘à╪ز┘ê╪│╪╖'),
+                label: LocalizedText(en: 'Medium', ar: 'متوسط'),
               ),
               _ChoiceOption(
                 value: 'advanced',
-                label: LocalizedText(en: 'Advanced', ar: '┘à╪ز┘é╪»┘à'),
+                label: LocalizedText(en: 'Advanced', ar: 'متقدم'),
               ),
             ],
             onSelected: (value) => setState(() => _selectedDifficulty = value),
           ),
           const SizedBox(height: AppSpacing.lg),
           _LearningChoiceGroup(
-            title: const LocalizedText(en: 'Duration', ar: '╪د┘┘à╪»╪ر'),
+            title: const LocalizedText(en: 'Duration', ar: 'المدة'),
             selectedValue: _selectedDuration,
             options: const [
               _ChoiceOption(
                 value: 'short',
-                label: LocalizedText(en: '1-2 hours', ar: '1-2 ╪│╪د╪╣╪ر'),
+                label: LocalizedText(en: '1-2 hours', ar: '1-2 ساعة'),
               ),
               _ChoiceOption(
                 value: 'medium',
-                label: LocalizedText(en: '3-4 hours', ar: '3-4 ╪│╪د╪╣╪د╪ز'),
+                label: LocalizedText(en: '3-4 hours', ar: '3-4 ساعات'),
               ),
               _ChoiceOption(
                 value: 'long',
-                label: LocalizedText(en: '5+ hours', ar: '5+ ╪│╪د╪╣╪د╪ز'),
+                label: LocalizedText(en: '5+ hours', ar: '5 ساعات فأكثر'),
               ),
             ],
             onSelected: (value) => setState(() => _selectedDuration = value),
@@ -905,18 +915,18 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           _SectionHeading(
             title: const LocalizedText(
               en: 'Description and build notes',
-              ar: '╪د┘┘ê╪╡┘ ┘ê┘à┘╪د╪ص╪╕╪د╪ز ╪د┘╪ز┘┘┘è╪░',
+              ar: 'الوصف وملاحظات التنفيذ',
             ),
             subtitle: const LocalizedText(
               en: 'Components, steps, and links are optional, but they improve review quality.',
-              ar: '╪د┘┘à┘â┘ê┘╪د╪ز ┘ê╪د┘╪«╪╖┘ê╪د╪ز ┘ê╪د┘╪▒┘ê╪د╪ذ╪╖ ╪د╪«╪ز┘è╪د╪▒┘è╪ر╪î ┘┘â┘┘ç╪د ╪ز╪│╪د╪╣╪» ┘┘è ╪ز╪ص╪│┘è┘ ╪ش┘ê╪»╪ر ╪د┘┘à╪▒╪د╪ش╪╣╪ر.',
+              ar: 'المكوّنات والخطوات والروابط اختيارية، لكنها تساعد في تحسين جودة المراجعة.',
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
           AppTextArea(
             controller: _summaryController,
-            label: 'Short description',
-            hint: 'Summarize what the learner will build.',
+            label: context.l10n.draftShortDescriptionLabel,
+            hint: context.l10n.draftShortDescriptionHint,
             minLines: 2,
             maxLines: 4,
             validator: _validateSummary,
@@ -924,8 +934,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           const SizedBox(height: AppSpacing.md),
           AppTextArea(
             controller: _descriptionController,
-            label: 'Full description (optional)',
-            hint: 'Explain the project goal and expected outcome.',
+            label: context.l10n.draftFullDescriptionLabel,
+            hint: context.l10n.draftFullDescriptionHint,
             minLines: 4,
             maxLines: 8,
             validator: _validateDescription,
@@ -962,29 +972,26 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               _componentValidationMessage!,
-              style: AppTextStyles.body(context).copyWith(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: Theme.of(context).colorScheme.error),
             ),
           ],
           const SizedBox(height: AppSpacing.md),
           Text(
             const LocalizedText(
-              en:
-                  'Images are required before submitting for review. You can add them after saving the draft.',
-              ar:
-                  'الصور مطلوبة قبل الإرسال للمراجعة. يمكنك إضافتها بعد حفظ المسودة.',
+              en: 'Images are required before submitting for review. You can add them after saving the draft.',
+              ar: 'الصور مطلوبة قبل الإرسال للمراجعة. يمكنك إضافتها بعد حفظ المسودة.',
             ).resolve(context),
-            style: AppTextStyles.body(context).copyWith(
-              color: palette.textSecondary,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary),
           ),
           const SizedBox(height: AppSpacing.md),
           AppTextArea(
             controller: _stepsController,
-            label: 'Implementation steps',
-            hint:
-                'One step per line. No need to write Step 1.\nConnect the sensor to the board.\nMount the components.\nTest readings.',
+            label: context.l10n.draftStepsLabel,
+            hint: context.l10n.draftStepsHint,
             minLines: 5,
             maxLines: 8,
             validator: _validateSteps,
@@ -992,8 +999,8 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           const SizedBox(height: AppSpacing.md),
           AppTextArea(
             controller: _linksController,
-            label: 'Helpful links',
-            hint: 'https://example.com/reference-guide',
+            label: context.l10n.draftLinksLabel,
+            hint: context.l10n.draftLinksHint,
             minLines: 2,
             maxLines: 4,
             validator: _validateLinks,
@@ -1011,17 +1018,17 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
           ),
           const SizedBox(height: AppSpacing.md),
           AppPrimaryButton(
-            label: _isSavingDraft ? 'Saving draft...' : 'Save draft',
+            label: _isSavingDraft
+                ? context.l10n.draftSaving
+                : context.l10n.draftSave,
             isLoading: _isSavingDraft,
             onPressed: _isSavingDraft ? null : _saveCanonicalDraft,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             const LocalizedText(
-              en:
-                  'Saving creates a private draft. You can add images and submit it for admin review afterward.',
-              ar:
-                  'الحفظ ينشئ مسودة خاصة. يمكنك إضافة الصور وإرسالها لمراجعة الإدارة لاحقاً.',
+              en: 'Saving creates a private draft. You can add images and submit it for admin review afterward.',
+              ar: 'الحفظ ينشئ مسودة خاصة. يمكنك إضافة الصور وإرسالها لمراجعة الإدارة لاحقاً.',
             ).resolve(context),
             style: AppTextStyles.body(
               context,
@@ -1032,6 +1039,7 @@ class _LearningAddDraftPageState extends ConsumerState<LearningAddDraftPage> {
     );
   }
 }
+
 class _AddDraftHeader extends StatelessWidget {
   const _AddDraftHeader({required this.onBack});
 
@@ -1081,7 +1089,7 @@ class _AddDraftHeader extends StatelessWidget {
                 Text(
                   const LocalizedText(
                     en: 'Add project draft',
-                    ar: '╪ح╪╢╪د┘╪ر ┘à╪│┘ê╪»╪ر ┘à╪┤╪▒┘ê╪╣',
+                    ar: 'إضافة مسودة مشروع',
                   ).resolve(context),
                   style: AppTextStyles.brandingHeadline(context).copyWith(
                     color: palette.textPrimary,
@@ -1091,10 +1099,8 @@ class _AddDraftHeader extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   const LocalizedText(
-                    en:
-                        'Document your project, save it as a private draft, then add images and submit for review.',
-                    ar:
-                        'وثّق مشروعك، واحفظه كمسودة خاصة، ثم أضف الصور وأرسله للمراجعة.',
+                    en: 'Document your project, save it as a private draft, then add images and submit for review.',
+                    ar: 'وثّق مشروعك، واحفظه كمسودة خاصة، ثم أضف الصور وأرسله للمراجعة.',
                   ).resolve(context),
                   style: AppTextStyles.brandingSubtitle(
                     context,
@@ -1109,7 +1115,7 @@ class _AddDraftHeader extends StatelessWidget {
             label: Text(
               const LocalizedText(
                 en: 'Back to hub',
-                ar: '╪د┘╪╣┘ê╪»╪ر ┘┘┘à╪▒┘â╪▓',
+                ar: 'العودة إلى المركز',
               ).resolve(context),
             ),
           ),
@@ -1138,30 +1144,30 @@ class _SupportColumn extends StatelessWidget {
               _SectionHeading(
                 title: const LocalizedText(
                   en: 'Review checklist',
-                  ar: '┘é╪د╪خ┘à╪ر ╪د┘┘à╪▒╪د╪ش╪╣╪ر',
+                  ar: 'قائمة مراجعة المشروع',
                 ),
                 subtitle: const LocalizedText(
                   en: 'Required fields are title, category, summary, difficulty, and duration.',
-                  ar: '╪د┘╪ص┘é┘ê┘ ╪د┘┘à╪╖┘┘ê╪ذ╪ر ┘ç┘è ╪د┘╪╣┘┘ê╪د┘ ┘ê╪د┘┘╪خ╪ر ┘ê╪د┘┘à┘╪«╪╡ ┘ê╪د┘┘à╪│╪ز┘ê┘ë ┘ê╪د┘┘à╪»╪ر.',
+                  ar: 'الحقول المطلوبة هي العنوان والفئة والملخص والصعوبة والمدة.',
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
               _ChecklistItem(
                 text: const LocalizedText(
                   en: 'Use clear learner-facing language.',
-                  ar: '╪د╪│╪ز╪«╪»┘à ┘╪║╪ر ┘ê╪د╪╢╪ص╪ر ┘┘┘à╪ز╪╣┘┘à┘è┘.',
+                  ar: 'استخدم لغة واضحة ومناسبة للمتعلّمين.',
                 ),
               ),
               _ChecklistItem(
                 text: const LocalizedText(
                   en: 'Add components and steps when you have them.',
-                  ar: '╪ث╪╢┘ ╪د┘┘à┘â┘ê┘╪د╪ز ┘ê╪د┘╪«╪╖┘ê╪د╪ز ╪╣┘╪»┘à╪د ╪ز┘â┘ê┘ ┘à╪ز╪د╪ص╪ر.',
+                  ar: 'أضف المكوّنات والخطوات عندما تكون متاحة.',
                 ),
               ),
               _ChecklistItem(
                 text: const LocalizedText(
                   en: 'Links must be valid http or https URLs.',
-                  ar: '┘è╪ش╪ذ ╪ث┘ ╪ز┘â┘ê┘ ╪د┘╪▒┘ê╪د╪ذ╪╖ ╪ذ╪╡┘è╪║╪ر http ╪ث┘ê https ╪╡╪ص┘è╪ص╪ر.',
+                  ar: 'يجب أن تكون الروابط عناوين http أو https صالحة.',
                 ),
               ),
             ],
@@ -1176,7 +1182,7 @@ class _SupportColumn extends StatelessWidget {
           label: Text(
             const LocalizedText(
               en: 'Browse Learning Hub',
-              ar: '╪ز╪╡┘╪ص ┘à╪▒┘â╪▓ ╪د┘╪ز╪╣┘┘à',
+              ar: 'تصفّح مركز التعلّم',
             ).resolve(context),
           ),
         ),
@@ -1204,10 +1210,8 @@ class _DraftReviewScopePanel extends StatelessWidget {
               ar: 'ماذا يحدث بعد الحفظ؟',
             ),
             subtitle: const LocalizedText(
-              en:
-                  'Your draft is saved privately. Add project images on the draft details page, then submit for admin review when ready.',
-              ar:
-                  'تُحفظ مسودتك بشكل خاص. أضف صور المشروع في صفحة التفاصيل، ثم أرسلها لمراجعة الإدارة عندما تصبح جاهزة.',
+              en: 'Your draft is saved privately. Add project images on the draft details page, then submit for admin review when ready.',
+              ar: 'تُحفظ مسودتك بشكل خاص. أضف صور المشروع في صفحة التفاصيل، ثم أرسلها لمراجعة الإدارة عندما تصبح جاهزة.',
             ),
           ),
         ],
@@ -1386,10 +1390,8 @@ class _ManualDraftCopilotL10n {
     ar: 'مساعد كتابة المشروع',
   );
   static const intro = LocalizedText(
-    en:
-        'Tell me what you built, even in simple words. I can help you turn it into a clear project title, description, component list, and steps.',
-    ar:
-        'أخبرني ماذا بنيت، حتى بكلمات بسيطة. أستطيع مساعدتك في تحويل ذلك إلى عنوان مشروع ووصف وقائمة مكوّنات وخطوات واضحة.',
+    en: 'Tell me what you built, even in simple words. I can help you turn it into a clear project title, description, component list, and steps.',
+    ar: 'أخبرني ماذا بنيت، حتى بكلمات بسيطة. أستطيع مساعدتك في تحويل ذلك إلى عنوان مشروع ووصف وقائمة مكوّنات وخطوات واضحة.',
   );
   static const composerHint = LocalizedText(
     en: 'Ask about your project draft...',
@@ -1450,10 +1452,8 @@ class _CopilotImageReminderCard extends StatelessWidget {
             ar: 'أضف صورة مشروع واحدة على الأقل قبل الإرسال للمراجعة.',
           )
         : const LocalizedText(
-            en:
-                'Save the draft first. You can then add a project image before submitting it for review.',
-            ar:
-                'احفظ المسودة أولاً. يمكنك بعدها إضافة صورة مشروع قبل الإرسال للمراجعة.',
+            en: 'Save the draft first. You can then add a project image before submitting it for review.',
+            ar: 'احفظ المسودة أولاً. يمكنك بعدها إضافة صورة مشروع قبل الإرسال للمراجعة.',
           );
 
     return Container(
@@ -1469,7 +1469,11 @@ class _CopilotImageReminderCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.photo_library_outlined, color: colors.primary, size: 18),
+              Icon(
+                Icons.photo_library_outlined,
+                color: colors.primary,
+                size: 18,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
@@ -1486,9 +1490,9 @@ class _CopilotImageReminderCard extends StatelessWidget {
                 en: 'You can add it after saving the draft.',
                 ar: 'يمكنك إضافتها بعد حفظ المسودة.',
               ).resolve(context),
-              style: AppTextStyles.body(context).copyWith(
-                color: palette.textSecondary,
-              ),
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary),
             ),
           ],
         ],
@@ -1561,8 +1565,9 @@ class _ManualDraftCopilotPanel extends StatelessWidget {
                   child: Row(
                     children: [
                       IconButton(
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).closeButtonTooltip,
                         onPressed: onClose,
                         icon: const Icon(Icons.close_rounded),
                       ),
@@ -1591,9 +1596,9 @@ class _ManualDraftCopilotPanel extends StatelessWidget {
                         sliver: SliverToBoxAdapter(
                           child: Text(
                             _ManualDraftCopilotL10n.intro.resolve(context),
-                            style: AppTextStyles.body(context).copyWith(
-                              color: palette.textSecondary,
-                            ),
+                            style: AppTextStyles.body(
+                              context,
+                            ).copyWith(color: palette.textSecondary),
                           ),
                         ),
                       ),
@@ -1631,40 +1636,39 @@ class _ManualDraftCopilotPanel extends StatelessWidget {
                           AppSpacing.sm,
                         ),
                         sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              if (index >= messages.length) {
-                                return const Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            if (index >= messages.length) {
+                              return const Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
-                                );
-                              }
-
-                              final message = messages[index];
-                              return Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  bottom: AppSpacing.sm,
-                                ),
-                                child: LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    return _ManualDraftCopilotMessageBubble(
-                                      message: message,
-                                      onCopy: onCopy,
-                                      maxBubbleWidth:
-                                          constraints.maxWidth * 0.96,
-                                    );
-                                  },
                                 ),
                               );
-                            },
-                            childCount: messages.length + (sending ? 1 : 0),
-                          ),
+                            }
+
+                            final message = messages[index];
+                            return Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                bottom: AppSpacing.sm,
+                              ),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return _ManualDraftCopilotMessageBubble(
+                                    message: message,
+                                    onCopy: onCopy,
+                                    maxBubbleWidth: constraints.maxWidth * 0.96,
+                                  );
+                                },
+                              ),
+                            );
+                          }, childCount: messages.length + (sending ? 1 : 0)),
                         ),
                       ),
                     ],
@@ -1680,9 +1684,9 @@ class _ManualDraftCopilotPanel extends StatelessWidget {
                     ),
                     child: Text(
                       error!,
-                      style: AppTextStyles.label(context).copyWith(
-                        color: colors.danger,
-                      ),
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(color: colors.danger),
                     ),
                   ),
                 Padding(
@@ -1717,30 +1721,15 @@ class _ManualDraftCopilotPanel extends StatelessWidget {
         en: 'Help me describe my project',
         ar: 'ساعدني في وصف مشروعي',
       ),
-      LocalizedText(
-        en: 'Suggest a project title',
-        ar: 'اقترح عنواناً للمشروع',
-      ),
-      LocalizedText(
-        en: 'Write a short description',
-        ar: 'اكتب وصفاً قصيراً',
-      ),
-      LocalizedText(
-        en: 'Improve my full description',
-        ar: 'حسّن الوصف الكامل',
-      ),
-      LocalizedText(
-        en: 'Organize my components',
-        ar: 'نظّم المكوّنات',
-      ),
+      LocalizedText(en: 'Suggest a project title', ar: 'اقترح عنواناً للمشروع'),
+      LocalizedText(en: 'Write a short description', ar: 'اكتب وصفاً قصيراً'),
+      LocalizedText(en: 'Improve my full description', ar: 'حسّن الوصف الكامل'),
+      LocalizedText(en: 'Organize my components', ar: 'نظّم المكوّنات'),
       LocalizedText(
         en: 'Turn my notes into steps',
         ar: 'حوّل ملاحظاتي إلى خطوات',
       ),
-      LocalizedText(
-        en: 'Review my current draft',
-        ar: 'راجع مسودتي الحالية',
-      ),
+      LocalizedText(en: 'Review my current draft', ar: 'راجع مسودتي الحالية'),
       LocalizedText(
         en: 'What information is missing?',
         ar: 'ما المعلومات الناقصة؟',
@@ -1778,7 +1767,9 @@ class _ManualDraftCopilotMessageBubble extends StatelessWidget {
       alignment: alignment,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: maxBubbleWidth ?? min(MediaQuery.sizeOf(context).width * 0.82, 420),
+          maxWidth:
+              maxBubbleWidth ??
+              min(MediaQuery.sizeOf(context).width * 0.82, 420),
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
@@ -1844,10 +1835,7 @@ class _ManualDraftCopilotAssistantBody extends StatelessWidget {
       children: [
         for (final section in sections) ...[
           if (section.title != null)
-            Text(
-              section.title!,
-              style: AppTextStyles.label(context),
-            ),
+            Text(section.title!, style: AppTextStyles.label(context)),
           if (section.body.isNotEmpty) ...[
             if (section.title != null) const SizedBox(height: AppSpacing.xs),
             Text(
@@ -1877,8 +1865,7 @@ class _CopilotSection {
   final String? title;
   final String body;
 
-  String get copyText =>
-      title == null ? body : '$title\n$body'.trim();
+  String get copyText => title == null ? body : '$title\n$body'.trim();
 }
 
 List<_CopilotSection> _parseCopilotSections(String text) {
@@ -1949,7 +1936,9 @@ class _ManualDraftCopilotComposer extends StatelessWidget {
                 textInputAction: TextInputAction.newline,
                 onSubmitted: (_) => onSend(),
                 decoration: InputDecoration(
-                  hintText: _ManualDraftCopilotL10n.composerHint.resolve(context),
+                  hintText: _ManualDraftCopilotL10n.composerHint.resolve(
+                    context,
+                  ),
                   filled: true,
                   fillColor: palette.cardSurfaceAlt,
                   border: OutlineInputBorder(

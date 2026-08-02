@@ -6,6 +6,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
@@ -140,7 +141,10 @@ class _SupplierEditMaterialPageState
       if (!mounted) {
         return;
       }
-      showSupplierErrorSnackBar(context, error.message);
+      showSupplierErrorSnackBar(
+        context,
+        localizedApiErrorMessage(error, context.l10n),
+      );
     } catch (_) {
       if (!mounted) {
         return;
@@ -171,7 +175,7 @@ class _SupplierEditMaterialPageState
           ),
           error: (error, _) {
             final message = error is ApiException
-                ? error.message
+                ? localizedApiErrorMessage(error, context.l10n)
                 : l.myMaterialsLoadError;
 
             return Padding(
@@ -234,13 +238,11 @@ class _SupplierEditMaterialPageState
             final category = isArabic
                 ? material.category.nameAr
                 : material.category.nameEn;
-            final priceLabel = SupplierMaterialLabelHelper.resolveText(
-              SupplierMaterialLabelHelper.priceLabel(
-                isFree: material.isFree,
-                price: material.price,
-                currency: material.currency,
-              ),
-              isArabic,
+            final priceLabel = SupplierMaterialLabelHelper.priceText(
+              isFree: material.isFree,
+              price: material.price,
+              currency: material.currency,
+              l10n: context.l10n,
             );
             final locationLabel = SupplierMaterialLabelHelper.resolveText(
               SupplierMaterialLabelHelper.locationLabel(

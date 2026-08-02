@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
+import '../../../../l10n/l10n.dart';
 import '../theme/supplier_theme_extension.dart';
 
 class SupplierDeliveryIncidentActions extends StatelessWidget {
@@ -30,6 +31,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     final colors = context.supplierColors;
     final children = <Widget>[];
 
@@ -37,10 +39,8 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
       children.add(
         Text(
           canReportDriverNoShow && !canReportNoDriverAvailable
-              ? 'The assigned driver has not completed supplier pickup after '
-                    'the window ended. Report driver no-show so an admin can review.'
-              : 'No driver accepted this delivery before the supplier pickup window '
-                    'ended. Report it so an admin can review next steps.',
+              ? l.supplierIncidentsDriverNotCompletedPickup
+              : l.supplierIncidentsNoDriverBeforeWindow,
           style: context.supplierBody().copyWith(
             fontSize: 12,
             color: colors.textSecondary,
@@ -54,8 +54,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
         !canReportDriverNoShow) {
       children.add(
         Text(
-          'No driver yet. You can report no driver available 30 minutes '
-          'after the scheduled pickup window ends.',
+          l.supplierIncidentsNoDriverWaitHint,
           style: context.supplierBody().copyWith(
             fontSize: 12,
             color: colors.textSecondary,
@@ -69,7 +68,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
         OutlinedButton(
           onPressed: onReportNoDriverAvailable,
           style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
-          child: const Text('Report no driver available'),
+          child: Text(l.supplierIncidentsReportNoDriver),
         ),
       );
     } else if (canMarkDeliveryPickupExpired &&
@@ -78,7 +77,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
         OutlinedButton(
           onPressed: onMarkDeliveryPickupExpired,
           style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
-          child: const Text('Report no driver available'),
+          child: Text(l.supplierIncidentsReportNoDriver),
         ),
       );
     }
@@ -88,7 +87,7 @@ class SupplierDeliveryIncidentActions extends StatelessWidget {
         OutlinedButton(
           onPressed: onReportDriverNoShow,
           style: AppStatusButtonStyle.outlined(context, AppStatusTone.danger),
-          child: const Text('Report driver no-show'),
+          child: Text(l.supplierIncidentsReportDriverNoShow),
         ),
       );
     }

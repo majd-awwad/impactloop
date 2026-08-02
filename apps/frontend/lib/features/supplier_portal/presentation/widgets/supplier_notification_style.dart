@@ -4,6 +4,7 @@ import '../../../../app/theme/app_theme_colors.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../theme/supplier_theme_extension.dart';
+import '../../../../l10n/l10n.dart';
 
 class SupplierNotificationStyle {
   const SupplierNotificationStyle({
@@ -44,7 +45,7 @@ class SupplierNotificationStyle {
       icon: _categoryIcon(notification.category),
       accent: state.foreground,
       typeLabel: notification.isUnknown
-          ? l.t('Notification', 'إشعار')
+          ? context.l10n.notificationFallbackTitle
           : l.notificationTypeLabel(notification.kind),
       badgeBackground: state.background,
       badgeForeground: state.foreground,

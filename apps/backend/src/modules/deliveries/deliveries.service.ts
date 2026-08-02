@@ -17,6 +17,10 @@ import {
 import { notifyNewDriverJob } from '../notifications/driver-notification-events.service.js';
 import { escalateStaleAssignedDriverPickupsByIds } from '../reservations/reservations.stale-assigned-driver-auto-escalation.repository.js';
 import { isAssignedDriverPickupOverdue } from '../reservations/reservation-assigned-driver-pickup-overdue.js';
+export {
+  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
+  MAX_ACTIVE_DRIVER_DELIVERIES,
+} from '../driver/driver-availability.js';
 
 export const ACTIVE_DELIVERY_STATUSES = [
   'WAITING_FOR_DRIVER',
@@ -94,14 +98,6 @@ export const learnerTrackingMessage = (status: DeliveryStatus) => {
 };
 
 /** Assigned in-progress deliveries that count toward the driver active queue. */
-export const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
-  'DRIVER_ASSIGNED',
-  'ARRIVED_PICKUP',
-  ...LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES,
-] as const satisfies readonly DeliveryStatus[];
-
-export const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
-
 const deliveryScalarSelect = {
   id: true,
   reservationId: true,
@@ -163,11 +159,15 @@ const deliverySelect = {
   assignedDriverProfile: {
     select: {
       id: true,
-      displayName: true,
-      phone: true,
       vehicleType: true,
       vehicleLabel: true,
       vehiclePlate: true,
+      user: {
+        select: {
+          displayName: true,
+          phone: true,
+        },
+      },
     },
   },
   statusHistory: {
@@ -306,7 +306,16 @@ export const mapLearnerDelivery = (
   },
   pickupLocation: mapLocation(delivery.pickupLocation),
   dropoffLocation: mapLocation(delivery.dropoffLocation),
-  driver: delivery.assignedDriverProfile,
+  driver: delivery.assignedDriverProfile
+    ? {
+        id: delivery.assignedDriverProfile.id,
+        displayName: delivery.assignedDriverProfile.user.displayName,
+        phone: delivery.assignedDriverProfile.user.phone,
+        vehicleType: delivery.assignedDriverProfile.vehicleType,
+        vehicleLabel: delivery.assignedDriverProfile.vehicleLabel,
+        vehiclePlate: delivery.assignedDriverProfile.vehiclePlate,
+      }
+    : null,
   canTrack: canLearnerTrackDriver(delivery.status),
   assignedDriverPickupOverdue: isAssignedDriverPickupOverdue({
     supplierPickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
@@ -662,7 +671,8 @@ export const getLearnerDeliveryTracking = async (
     status: delivery.status,
     canTrack,
     trackingMessage,
-    driverDisplayName: delivery.assignedDriverProfile?.displayName ?? null,
+    driverDisplayName:
+      delivery.assignedDriverProfile?.user.displayName ?? null,
     latestDriverLocation,
     isLocationStale,
     pickupCity: delivery.pickupLocation.city,

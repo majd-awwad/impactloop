@@ -7,10 +7,12 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/app_mobile_bottom_nav_bar.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/learner_home_provider.dart';
 import '../../domain/learner_home_models.dart';
+import '../learner_home_localization.dart';
 import '../widgets/empty_activity_card.dart';
 import '../widgets/home_continue_project_card.dart';
 import '../widgets/home_material_recommendation_grid.dart';
@@ -131,8 +133,8 @@ class _LearnerHomeRecommendationsPageState
                     context,
                     AppStatusTone.neutral,
                   ),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  label: const Text('Back to home'),
+                  icon: const BackButtonIcon(),
+                  label: Text(context.l10n.backToHome),
                 ),
               ),
             ),
@@ -162,9 +164,9 @@ class _LearnerHomeRecommendationsPageState
           padding: appMobileAwareScrollPadding(context),
           child: EmptyActivityCard(
             icon: Icons.cloud_off_outlined,
-            title: 'Could not load recommendations',
-            description: 'Try again in a moment or return to your home feed.',
-            actionLabel: 'Retry',
+            title: context.l10n.recommendationsLoadError,
+            description: context.l10n.recommendationsLoadErrorSubtitle,
+            actionLabel: context.l10n.retry,
             onAction: () => _loadSection(reset: true),
           ),
         ),
@@ -176,11 +178,12 @@ class _LearnerHomeRecommendationsPageState
       return const SizedBox.shrink();
     }
 
+    final localizedCopy = learnerHomeSectionCopy(section.key, context.l10n);
     final displaySection = LearnerHomeSectionDetails(
       key: section.key,
-      title: section.title,
-      subtitle: section.subtitle,
-      emptyState: section.emptyState,
+      title: localizedCopy.title,
+      subtitle: localizedCopy.subtitle,
+      emptyState: localizedCopy.empty,
       items: _items,
       nextOffset: section.nextOffset,
       hasMore: section.hasMore,
@@ -225,7 +228,7 @@ class _LearnerHomeRecommendationsPageState
                             context,
                             AppStatusTone.neutral,
                           ),
-                          child: const Text('Load more'),
+                          child: Text(context.l10n.loadMore),
                         ),
                 ),
               ],
@@ -266,7 +269,7 @@ class _RecommendationsCountControl extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Show up to',
+            context.l10n.showUpTo,
             style: AppTextStyles.label(context).copyWith(
               color: palette.textSecondary,
               fontSize: 12.5,
@@ -318,7 +321,7 @@ class _SectionItemsView extends StatelessWidget {
         icon: _emptyIcon(section.key),
         title: section.title,
         description: section.emptyState,
-        actionLabel: 'Back to home',
+        actionLabel: context.l10n.backToHome,
         onAction: () => context.go('/home'),
       );
     }
@@ -397,7 +400,7 @@ class _ProjectRecommendationsList extends StatelessWidget {
               width: itemWidth,
               child: HomeLearningProjectCard(
                 project: item.project,
-                reason: item.reasons.isNotEmpty ? item.reasons.first : null,
+                reason: localizedLearnerHomeReason(item, context.l10n),
               ),
             );
           }).toList(),

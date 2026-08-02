@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../models/registration_intent.dart';
 import '../widgets/auth_entry_branding_panel.dart';
 import '../widgets/auth_form_card.dart';
@@ -24,10 +25,9 @@ class UnifiedRegisterView extends StatelessWidget {
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AuthHeader(
-            title: 'Create your account',
-            subtitle:
-                'Tell us how you want to use ImpactLoop and set up your profile in one step.',
+          AuthHeader(
+            title: context.l10n.createYourAccount,
+            subtitle: context.l10n.registerSubtitle,
           ),
           const SizedBox(height: AppSpacing.lg),
           AuthFormCard(

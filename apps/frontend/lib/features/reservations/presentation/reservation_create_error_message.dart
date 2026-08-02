@@ -1,24 +1,35 @@
 import '../../../core/errors/api_exception.dart';
+import '../../../l10n/app_localizations.dart';
 
-String reservationCreateErrorMessage(ApiException error) {
+String reservationCreateErrorMessage(
+  ApiException error, {
+  AppLocalizations? l10n,
+}) {
   final message = error.message.trim();
   final displayMessage = error.displayMessage.trim();
 
   if (_isSelfReservationError(message)) {
-    return 'You cannot reserve a material you listed yourself.';
+    return l10n?.cannotReserveOwnMaterial ??
+        'You cannot reserve a material you listed yourself.';
   }
 
   if (_isOpenReservationExistsError(message)) {
-    return 'You already have an open reservation for this material. Check My Reservations.';
+    return l10n?.openReservationAlreadyExists ??
+        'You already have an open reservation for this material. Check My Reservations.';
   }
 
   if (_isUnavailableError(message, error.statusCode)) {
-    return 'This material is no longer available for new reservations.';
+    return l10n?.materialUnavailableForReservation ??
+        'This material is no longer available for new reservations.';
   }
 
-  final invalidQuantityMessage = _invalidQuantityErrorMessage(error);
+  final invalidQuantityMessage = _invalidQuantityErrorMessage(error, l10n);
   if (invalidQuantityMessage != null) {
     return invalidQuantityMessage;
+  }
+
+  if (l10n != null) {
+    return localizedApiErrorMessage(error, l10n);
   }
 
   if (displayMessage.isNotEmpty && displayMessage != 'Validation failed') {
@@ -30,7 +41,8 @@ String reservationCreateErrorMessage(ApiException error) {
   }
 
   if (error.statusCode == 409) {
-    return 'This material is no longer available for new reservations.';
+    return l10n?.materialUnavailableForReservation ??
+        'This material is no longer available for new reservations.';
   }
 
   return error.displayMessage;
@@ -57,7 +69,10 @@ bool _isUnavailableError(String message, int? statusCode) {
       !lower.contains('already have');
 }
 
-String? _invalidQuantityErrorMessage(ApiException error) {
+String? _invalidQuantityErrorMessage(
+  ApiException error,
+  AppLocalizations? l10n,
+) {
   final message = error.message.trim().toLowerCase();
   final availableQuantity = error.details?['availableQuantity'];
 
@@ -65,10 +80,12 @@ String? _invalidQuantityErrorMessage(ApiException error) {
       availableQuantity != null) {
     if (availableQuantity != null) {
       final availableText = _formatAvailableQuantity(availableQuantity);
-      return 'That quantity is not available. You can request up to $availableText right now.';
+      return l10n?.reservationQuantityUpTo(availableText) ??
+          'That quantity is not available. You can request up to $availableText right now.';
     }
 
-    return 'Enter a quantity greater than zero and no more than what is available.';
+    return l10n?.invalidReservationQuantity ??
+        'Enter a quantity greater than zero and no more than what is available.';
   }
 
   return null;

@@ -464,6 +464,22 @@ describe('admin learning projects moderation', () => {
     assert.equal(approved.status, 'PUBLISHED');
     assert.ok(approved.reviewedAt);
 
+    const notification = await prisma.notification.findFirstOrThrow({
+      where: {
+        userId: author.id,
+        notificationType: 'LEARNING_PROJECT_MODERATION',
+        relatedEntityId: project.id,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    ids.notifications.push(notification.id);
+    assert.equal(notification.actionType, 'OPEN_LEARNING_PROJECT_SUBMISSION');
+    assert.deepEqual(notification.metadata, {
+      projectTitle: project.title,
+      moderationEvent: 'APPROVED',
+      feedback: null,
+    });
+
     const publicProject = await getLearningProjectById(project.id);
     assert.equal(publicProject.id, project.id);
   });

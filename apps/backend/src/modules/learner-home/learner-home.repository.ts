@@ -13,6 +13,10 @@ import {
   findSavedProjectIds,
 } from '../learning-projects/learning-projects.repository.js';
 import {
+  buildContinuableProjectBuildWhere,
+  CONTINUE_PROJECT_BUILD_ORDER_BY,
+} from '../learning-projects/project-build-continuation.js';
+import {
   buildLearnerAffinityProfile,
   extractAffinityTermsFromMaterial,
   getAffinityProfileTerms,
@@ -953,15 +957,9 @@ export const loadSavedProjectsForLearner = async (
 
 export const loadInProgressBuilds = async (userId: string, limit = 6) =>
   prisma.projectBuild.findMany({
-    where: {
-      learnerId: userId,
-      status: 'IN_PROGRESS',
-      project: publicProjectWhere,
-    },
+    where: buildContinuableProjectBuildWhere(userId),
     select: projectBuildSelect,
-    orderBy: {
-      updatedAt: 'desc',
-    },
+    orderBy: CONTINUE_PROJECT_BUILD_ORDER_BY,
     take: limit,
   });
 

@@ -3,11 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/app_material_card.dart';
 import '../../../material_discovery/domain/discovery_material.dart';
 import '../../../material_discovery/presentation/material_discovery_content.dart';
 import '../../domain/learner_home_models.dart';
+import '../learner_home_localization.dart';
 
 class HomeMaterialRecommendationGrid extends StatelessWidget {
   const HomeMaterialRecommendationGrid({
@@ -40,7 +42,9 @@ class HomeMaterialRecommendationGrid extends StatelessWidget {
           itemWidth,
           variant: AppMaterialCardVariant.compact,
         );
-        final includesReason = preview.any((item) => item.reasons.isNotEmpty);
+        final includesReason = preview.any(
+          (item) => item.reasons.isNotEmpty || item.reasonDetails.isNotEmpty,
+        );
         final tileHeight =
             cardHeight +
             (includesReason
@@ -120,10 +124,11 @@ class _HomeMaterialRecommendationTile extends StatelessWidget {
             ),
           ),
         ),
-        if (item.reasons.isNotEmpty) ...[
+        if (localizedLearnerHomeReason(item, context.l10n)
+            case final reason?) ...[
           const SizedBox(height: AppSpacing.xs),
           Text(
-            item.reasons.first,
+            reason,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(

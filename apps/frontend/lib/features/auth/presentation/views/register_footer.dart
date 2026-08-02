@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../widgets/auth_ui_palette.dart';
 
 class RegisterFooter extends StatelessWidget {
@@ -17,13 +18,13 @@ class RegisterFooter extends StatelessWidget {
       spacing: AppSpacing.xs,
       children: [
         Text(
-          'Already have an account?',
+          context.l10n.alreadyHaveAccount,
           style: TextStyle(color: colors.textSecondary, height: 1.45),
         ),
         TextButton(
           onPressed: () => context.go('/login'),
           child: Text(
-            'Sign in',
+            context.l10n.signIn,
             style: TextStyle(
               color: colors.primary,
               fontWeight: FontWeight.w700,

@@ -26,6 +26,7 @@ import { savedDropoffAddressesRouter } from './modules/saved-dropoff-addresses/s
 import { profileRouter } from './modules/profile/profile.routes.js';
 import { learnerHomeRouter } from './modules/learner-home/learner-home.routes.js';
 import { learnerMaterialRequestsRouter } from './modules/learner-material-requests/learner-material-requests.routes.js';
+import { learnerProfileSummaryRouter } from './modules/learner-profile-summary/learner-profile-summary.routes.js';
 import { aiRouter } from './modules/ai/ai.routes.js';
 import {
   bindRecommendationEventOriginMiddleware,
@@ -119,6 +120,7 @@ export const createApp = (options: CreateAppOptions): Express => {
   );
   app.use('/api/learner/material-requests', learnerMaterialRequestsRouter);
   app.use('/api/learner', learnerHomeRouter);
+  app.use('/api/learner', learnerProfileSummaryRouter);
   app.use('/api/ai/v1', aiRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api/suppliers', publicSuppliersRouter);

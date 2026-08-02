@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../notifications/application/notification_display.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_notification_style.dart';
@@ -24,6 +27,7 @@ class SupplierNotificationCard extends StatelessWidget {
       context,
       notification,
     );
+    final copy = localizedSupplierNotificationCopy(notification, context.l10n);
     final compact =
         MediaQuery.sizeOf(context).width < AppSpacing.supplierLayoutBreakpoint;
     final showAction = notification.action.canNavigate && onAction != null;
@@ -105,7 +109,7 @@ class SupplierNotificationCard extends StatelessWidget {
                                   ],
                                   Flexible(
                                     child: Text(
-                                      notification.title,
+                                      copy.title,
                                       style: context.supplierTitle().copyWith(
                                         fontSize: compact ? 14 : 15,
                                         fontWeight: notification.isRead
@@ -160,7 +164,7 @@ class SupplierNotificationCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      notification.body,
+                      copy.body,
                       style: context.supplierBody().copyWith(
                         color: muted ? colors.textMuted : colors.textSecondary,
                         fontSize: 13,
@@ -246,50 +250,23 @@ class SupplierNotificationCard extends StatelessWidget {
     SupplierActionNotification notification,
     SupplierNotificationStyle style,
   ) {
-    if (notification.isUnknown) return context.s.t('Notification', 'إشعار');
+    final l10n = context.l10n;
+    if (notification.isUnknown) return l10n.notificationFallbackTitle;
     return switch (notification.category) {
       SupplierNotificationCategory.reservation => context.s.filterReservations,
-      SupplierNotificationCategory.materialReview => context.s.t(
-        'Material review',
-        'مراجعة المواد',
-      ),
-      SupplierNotificationCategory.deliveryRecovery => context.s.t(
-        'Delivery recovery',
-        'معالجة التوصيل',
-      ),
-      SupplierNotificationCategory.account => context.s.t('Account', 'الحساب'),
-      SupplierNotificationCategory.system => context.s.t('System', 'النظام'),
+      SupplierNotificationCategory.materialReview =>
+        l10n.supplierNotifCategoryMaterialReview,
+      SupplierNotificationCategory.deliveryRecovery =>
+        l10n.supplierNotifCategoryDeliveryRecovery,
+      SupplierNotificationCategory.account => l10n.notificationChipAccount,
+      SupplierNotificationCategory.system =>
+        l10n.supplierNotifCategorySystem,
       SupplierNotificationCategory.unknown => style.typeLabel,
     };
   }
 
   String _formatTimestamp(BuildContext context, DateTime value) {
-    final local = value.toLocal();
-    final l = context.s;
-    if (l.isArabic) {
-      final hour = local.hour.toString().padLeft(2, '0');
-      final minute = local.minute.toString().padLeft(2, '0');
-      return '${local.day}/${local.month}/${local.year} · $hour:$minute';
-    }
-
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    final month = months[local.month - 1];
-    final hour = local.hour.toString().padLeft(2, '0');
-    final minute = local.minute.toString().padLeft(2, '0');
-    return '$month ${local.day}, ${local.year} · $hour:$minute';
+    return LocalizedFormatters(context.l10n).dateTime(value);
   }
 }
 
@@ -351,12 +328,13 @@ class _StatusBadge extends StatelessWidget {
       );
     }
 
+    final l10n = context.l10n;
     final label = switch (notification.state) {
       SupplierNotificationState.needsAction => l.actionNeeded,
-      SupplierNotificationState.waiting => context.s.t('Waiting', 'بانتظار'),
-      SupplierNotificationState.update => context.s.t('Update', 'تحديث'),
+      SupplierNotificationState.waiting => l10n.supplierNotifStateWaiting,
+      SupplierNotificationState.update => l10n.notificationChipUpdate,
       SupplierNotificationState.resolved => l.notificationCompleted,
-      SupplierNotificationState.unknown => context.s.t('Notification', 'إشعار'),
+      SupplierNotificationState.unknown => l10n.notificationFallbackTitle,
     };
     return _PillBadge(
       label: label,

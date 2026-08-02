@@ -45,6 +45,27 @@ export const STALE_PICKUP_SUPPLIER_RECONFIRM_REASON = 'STALE_PICKUP_ADMIN_REQUES
 /** Stored in reservations.rejection_reason when admin cancels after stale pickup failure. */
 export const STALE_PICKUP_CANCEL_REASON = 'PICKUP_NOT_COMPLETED';
 
+export const PARTIAL_PICKUP_SUPPLIER_RECONFIRM_REASONS = [
+  'DRIVER_PARTIAL_PICKUP_MATERIAL_NOT_READY',
+  'DRIVER_PARTIAL_PICKUP_MATERIAL_MISSING',
+  'DRIVER_PARTIAL_PICKUP_WRONG_ITEM',
+  'DRIVER_PARTIAL_PICKUP_QUANTITY_MISMATCH',
+  'DRIVER_PARTIAL_PICKUP_DAMAGED_ITEM',
+  'DRIVER_PARTIAL_PICKUP_SUPPLIER_REFUSED_HANDOVER',
+  'DRIVER_PARTIAL_PICKUP_OTHER',
+] as const;
+
+export type PartialPickupSupplierReconfirmReason =
+  (typeof PARTIAL_PICKUP_SUPPLIER_RECONFIRM_REASONS)[number];
+
+export const isPartialPickupSupplierReconfirmReason = (
+  value: string | null | undefined,
+): value is PartialPickupSupplierReconfirmReason =>
+  value != null &&
+  (
+    PARTIAL_PICKUP_SUPPLIER_RECONFIRM_REASONS as readonly string[]
+  ).includes(value);
+
 export const ADMIN_SUPPLIER_PICKUP_RECONFIRM_REASONS = [
   NO_DRIVER_SUPPLIER_RECONFIRM_REASON,
   STALE_PICKUP_SUPPLIER_RECONFIRM_REASON,
@@ -60,3 +81,9 @@ export const isAdminSupplierPickupReconfirmReason = (
   (ADMIN_SUPPLIER_PICKUP_RECONFIRM_REASONS as readonly string[]).includes(
     value,
   );
+
+export const isSupplierPickupReconfirmReason = (
+  value: string | null | undefined,
+) =>
+  isAdminSupplierPickupReconfirmReason(value) ||
+  isPartialPickupSupplierReconfirmReason(value);

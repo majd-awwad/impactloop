@@ -5,6 +5,7 @@ import '../../../../../app/theme/app_spacing.dart';
 import '../../../../../app/theme/app_theme_colors.dart';
 import '../../../../../core/config/api_config.dart';
 import '../../../../../shared/widgets/app_status_badge.dart';
+import '../../../../../l10n/l10n.dart';
 import '../../../data/models/supplier_my_materials_models.dart';
 import '../../theme/supplier_theme_extension.dart';
 import 'supplier_material_card.dart';
@@ -86,10 +87,15 @@ Widget buildSupplierMaterialCard({
   List<Widget>? actions,
   String? createdAtLabel,
 }) {
-  final condition = SupplierMaterialLabelHelper.conditionMeta(
+  final l10n = context.l10n;
+  final conditionLabel = SupplierMaterialLabelHelper.conditionText(
     material.condition,
+    l10n,
   );
-  final status = SupplierMaterialLabelHelper.statusMeta(material.status);
+  final statusLabel = SupplierMaterialLabelHelper.statusText(
+    material.status,
+    l10n,
+  );
   final category = isArabic
       ? material.category.nameAr
       : material.category.nameEn;
@@ -107,38 +113,30 @@ Widget buildSupplierMaterialCard({
   }
 
   final engagementParts = <String>[
-    if (material.viewsCount > 0) '${material.viewsCount} views',
-    if (material.likesCount > 0) '${material.likesCount} likes',
+    if (material.viewsCount > 0) context.s.viewsCount(material.viewsCount),
+    if (material.likesCount > 0) '${material.likesCount} ${context.s.likesLabel}',
   ];
 
   return SupplierMaterialCard(
     title: material.title,
     categoryLabel: category,
-    conditionLabel: SupplierMaterialLabelHelper.resolveText(
-      condition.label,
-      isArabic,
+    conditionLabel: conditionLabel,
+    conditionTone: SupplierMaterialLabelHelper.conditionMeta(
+      material.condition,
+    ).tone,
+    statusLabel: statusLabel,
+    statusTone: SupplierMaterialLabelHelper.statusMeta(material.status).tone,
+    quantityLabel: SupplierMaterialLabelHelper.stockText(
+      quantity: material.quantity,
+      availableQuantity: material.availableQuantity ?? material.quantity,
+      unit: material.unit,
+      l10n: l10n,
     ),
-    conditionTone: condition.tone,
-    statusLabel: SupplierMaterialLabelHelper.resolveText(
-      status.label,
-      isArabic,
-    ),
-    statusTone: status.tone,
-    quantityLabel: SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.stockLabel(
-        quantity: material.quantity,
-        availableQuantity: material.availableQuantity ?? material.quantity,
-        unit: material.unit,
-      ),
-      isArabic,
-    ),
-    priceLabel: SupplierMaterialLabelHelper.resolveText(
-      SupplierMaterialLabelHelper.priceLabel(
-        isFree: material.isFree,
-        price: material.price,
-        currency: material.currency,
-      ),
-      isArabic,
+    priceLabel: SupplierMaterialLabelHelper.priceText(
+      isFree: material.isFree,
+      price: material.price,
+      currency: material.currency,
+      l10n: l10n,
     ),
     locationLabel: SupplierMaterialLabelHelper.resolveText(
       SupplierMaterialLabelHelper.locationLabel(

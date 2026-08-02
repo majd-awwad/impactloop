@@ -5,6 +5,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../theme/supplier_theme_extension.dart';
 import 'supplier_nav_config.dart';
+import '../../../../l10n/l10n.dart';
 
 class SupplierMobileNav extends StatelessWidget {
   const SupplierMobileNav({super.key, required this.currentLocation});
@@ -71,7 +72,7 @@ class SupplierMobileNav extends StatelessWidget {
                     bottom: AppSpacing.xs,
                   ),
                   child: Text(
-                    context.s.t('More', 'المزيد'),
+                    context.l10n.supplierMore,
                     style: context.supplierSectionTitle(),
                   ),
                 ),
@@ -157,7 +158,7 @@ class _MobileMoreButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.supplierColors;
-    final label = context.s.t('More', 'المزيد');
+    final label = context.l10n.supplierMore;
 
     return Semantics(
       button: true,

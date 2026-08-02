@@ -26,11 +26,15 @@ import {
   getMaterialById,
   getMaterialViewerState,
   getMaterials,
+  getLikedMaterials,
   likeMaterialById,
   unlikeMaterialById,
   recordMaterialViewById,
 } from './materials.service.js';
-import { materialsQuerySchema } from './materials.validation.js';
+import {
+  likedMaterialsQuerySchema,
+  materialsQuerySchema,
+} from './materials.validation.js';
 
 const TEST_MARKER = '[test-materials-discovery]';
 
@@ -605,6 +609,101 @@ describe('public material discovery', () => {
     assert.equal(unliked.isLiked, false);
     assert.equal(unlikedAgain.likesCount, 0);
     assert.equal(unlikedAgain.isLiked, false);
+  });
+
+  test('liked collection is user-scoped, visible, ordered, and bounded', async () => {
+    const unique = `${TEST_MARKER}-collection-${Date.now()}`;
+    const learner = await createLearnerUser(`collection-${Date.now()}`);
+    const otherLearner = await createLearnerUser(
+      `collection-other-${Date.now()}`,
+    );
+    ctx.createdUserIds.push(learner.id, otherLearner.id);
+
+    const oldMaterial = await createMaterial(ctx, {
+      title: `${unique} old`,
+    });
+    const middleMaterial = await createMaterial(ctx, {
+      title: `${unique} middle`,
+      status: 'PENDING_RESERVATION',
+    });
+    const newestMaterial = await createMaterial(ctx, {
+      title: `${unique} newest`,
+      status: 'RESERVED',
+    });
+    const hiddenMaterial = await createMaterial(ctx, {
+      title: `${unique} unavailable`,
+    });
+    const otherMaterial = await createMaterial(ctx, {
+      title: `${unique} other learner`,
+    });
+
+    await prisma.materialLike.createMany({
+      data: [
+        {
+          userId: learner.id,
+          materialId: oldMaterial.id,
+          createdAt: new Date('2026-07-27T00:00:00.000Z'),
+        },
+        {
+          userId: learner.id,
+          materialId: middleMaterial.id,
+          createdAt: new Date('2026-07-28T00:00:00.000Z'),
+        },
+        {
+          userId: learner.id,
+          materialId: newestMaterial.id,
+          createdAt: new Date('2026-07-29T00:00:00.000Z'),
+        },
+        {
+          userId: learner.id,
+          materialId: hiddenMaterial.id,
+          createdAt: new Date('2026-07-30T00:00:00.000Z'),
+        },
+        {
+          userId: otherLearner.id,
+          materialId: otherMaterial.id,
+          createdAt: new Date('2026-07-31T00:00:00.000Z'),
+        },
+      ],
+    });
+    await prisma.material.update({
+      where: { id: hiddenMaterial.id },
+      data: { status: 'UNAVAILABLE' },
+    });
+
+    const firstPage = await getLikedMaterials(learner.id, {
+      page: 1,
+      limit: 2,
+    });
+    assert.deepEqual(
+      firstPage.items.map((item) => item.material.id),
+      [newestMaterial.id, middleMaterial.id],
+    );
+    assert.equal(firstPage.items.every((item) => item.material.isLiked), true);
+    assert.deepEqual(firstPage.pagination, {
+      page: 1,
+      limit: 2,
+      total: 3,
+      totalPages: 2,
+    });
+
+    const secondPage = await getLikedMaterials(learner.id, {
+      page: 2,
+      limit: 2,
+    });
+    assert.deepEqual(
+      secondPage.items.map((item) => item.material.id),
+      [oldMaterial.id],
+    );
+    assert.equal(
+      firstPage.items.some((item) => item.material.id === otherMaterial.id),
+      false,
+    );
+    assert.deepEqual(likedMaterialsQuerySchema.parse({}), {
+      page: 1,
+      limit: 20,
+    });
+    assert.throws(() => likedMaterialsQuerySchema.parse({ limit: 101 }));
   });
 
   test('material like and unlike invalidate only the acting learner home cache', async () => {

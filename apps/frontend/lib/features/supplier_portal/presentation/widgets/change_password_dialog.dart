@@ -11,6 +11,7 @@ import '../../../auth/application/auth_controller.dart';
 import '../../../../core/errors/api_exception.dart';
 import 'supplier_dark_form_field.dart';
 import 'supplier_feedback.dart';
+import '../../../../l10n/l10n.dart';
 
 Future<void> showChangePasswordDialog(BuildContext context) {
   final isCompact = MediaQuery.sizeOf(context).width < 600;
@@ -97,7 +98,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
 
       setState(() {
         _isSubmitting = false;
-        _formError = error.message;
+        _formError = localizedApiErrorMessage(error, context.l10n);
       });
     } catch (_) {
       if (!mounted) {

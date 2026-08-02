@@ -6,6 +6,8 @@ import 'package:frontend/features/supplier_portal/presentation/theme/supplier_th
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../core/config/api_config.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../materials/data/models/category.dart';
 
 enum AddMaterialPreviewPriceStatus {
@@ -53,7 +55,24 @@ class AddMaterialPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.s;
+    final l10n = context.l10n;
+    final formatters = LocalizedFormatters(l10n);
     final colors = context.supplierColors;
+    final categoryLabel = category == null
+        ? l.categorySectionTitle
+        : l.isArabic
+        ? category!.nameAr
+        : category!.nameEn;
+    final parsedQuantity = double.tryParse(quantity);
+    final quantityLabel = parsedQuantity != null && unit.isNotEmpty
+        ? formatters.quantity(parsedQuantity, unit)
+        : l.quantityPlaceholder;
+    final priceLabel = isFree
+        ? l.free
+        : price == null || price!.isEmpty
+        ? '—'
+        : formatters.nis(double.tryParse(price!) ?? 0);
 
     return Container(
       width: double.infinity,
@@ -68,7 +87,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
-                  context.s.listingPreview,
+                  l.listingPreview,
                   style: context.supplierTitle(),
                 ),
               ),
@@ -76,7 +95,7 @@ class AddMaterialPreviewCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'This is how your material will appear to learners.',
+            l.listingPreviewSubtitle,
             style: context.supplierBody().copyWith(color: colors.textMuted),
           ),
           const SizedBox(height: AppSpacing.md),
@@ -93,25 +112,19 @@ class AddMaterialPreviewCard extends StatelessWidget {
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
             children: [
-              _PreviewBadge(label: category?.nameEn ?? 'Category'),
-              _PreviewBadge(label: context.s.conditionLabel(condition)),
-              _PreviewBadge(
-                label: isFree
-                    ? context.s.free
-                    : '₪${price?.isEmpty ?? true ? '—' : price}',
-              ),
+              _PreviewBadge(label: categoryLabel),
+              _PreviewBadge(label: l.conditionLabel(condition)),
+              _PreviewBadge(label: priceLabel),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            title.isEmpty ? 'Material title will appear here' : title,
+            title.isEmpty ? l.materialTitlePlaceholder : title,
             style: context.supplierSectionTitle(),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            description.isEmpty
-                ? 'Short description of your material will appear here.'
-                : description,
+            description.isEmpty ? l.shortDescriptionPlaceholder : description,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: context.supplierBody().copyWith(color: colors.textMuted),
@@ -119,25 +132,23 @@ class AddMaterialPreviewCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           _PreviewMetadata(
             icon: Icons.grid_view_outlined,
-            value: quantity.isEmpty || unit.isEmpty
-                ? 'Quantity will appear here'
-                : '$quantity $unit',
+            value: quantityLabel,
           ),
           _PreviewMetadata(
             icon: Icons.location_on_outlined,
             value: pickupLabel?.isNotEmpty == true
                 ? pickupLabel!
-                : 'Pickup location will appear here',
+                : l.pickupLocationPlaceholder,
           ),
           _PreviewMetadata(
             icon: Icons.inventory_2_outlined,
-            value: pickupAllowed ? 'Pickup available' : 'Pickup unavailable',
+            value: pickupAllowed ? l.pickupAvailable : l.pickupUnavailable,
           ),
           _PreviewMetadata(
             icon: Icons.local_shipping_outlined,
             value: deliveryAllowed
-                ? 'Internal delivery available'
-                : 'Delivery unavailable',
+                ? l.internalDeliveryAvailable
+                : l.deliveryUnavailable,
           ),
           if (!isFree && priceStatus != null) ...[
             const SizedBox(height: AppSpacing.md),
@@ -161,8 +172,9 @@ class AddMaterialPreviewCard extends StatelessWidget {
   }
 
   Widget _coverImage(BuildContext context) {
-    if (coverImageBytes != null)
+    if (coverImageBytes != null) {
       return Image.memory(coverImageBytes!, fit: BoxFit.cover);
+    }
     if (coverImageUrl != null && coverImageUrl!.isNotEmpty) {
       return Image.network(
         ApiConfig.resolveMediaUrl(coverImageUrl!),
@@ -185,9 +197,9 @@ class AddMaterialPreviewCard extends StatelessWidget {
           size: 34,
         ),
         const SizedBox(height: AppSpacing.xs),
-        Text('No image yet', style: context.supplierLabel()),
+        Text(context.s.noImageYet, style: context.supplierLabel()),
         Text(
-          'Add photos to see preview',
+          context.s.addPhotosToSeePreview,
           style: context.supplierBody().copyWith(
             color: context.supplierColors.textMuted,
           ),

@@ -62,7 +62,7 @@ class _SupplierNotificationsPageState
                 alignment: AlignmentDirectional.centerEnd,
                 child: TextButton(
                   onPressed: () => _markAllRead(context, ref, query),
-                  child: Text(l.t('Mark all as read', 'وضع الكل كمقروء')),
+                  child: Text(l.markAllRead),
                 ),
               ),
               const SizedBox(height: 4),

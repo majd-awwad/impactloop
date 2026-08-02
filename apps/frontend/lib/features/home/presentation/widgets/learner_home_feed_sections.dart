@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../domain/learner_home_models.dart';
 import '../learner_home_browse_routes.dart';
+import '../learner_home_localization.dart';
 import 'empty_activity_card.dart';
 import 'home_continue_project_card.dart';
 import 'home_material_recommendation_grid.dart';
@@ -31,16 +33,13 @@ class LearnerHomeFeedSections extends StatelessWidget {
       children: [
         if (!feed.profileCompletion.hasInterests)
           _ProfilePromptBanner(
-            message: 'Add your interests to improve recommendations.',
-            actionLabel: 'Edit learner profile',
+            message: context.l10n.addInterestsPrompt,
+            actionLabel: context.l10n.editLearnerProfile,
             onPressed: () => context.push('/profile/learner/edit'),
           ),
         for (final section in sections) ...[
           const SizedBox(height: AppSpacing.xl),
-          _LearnerHomeSectionView(
-            section: section,
-            profileCompletion: feed.profileCompletion,
-          ),
+          _LearnerHomeSectionView(section: section),
         ],
       ],
     );
@@ -108,13 +107,9 @@ class _ProfilePromptBanner extends StatelessWidget {
 }
 
 class _LearnerHomeSectionView extends StatelessWidget {
-  const _LearnerHomeSectionView({
-    required this.section,
-    required this.profileCompletion,
-  });
+  const _LearnerHomeSectionView({required this.section});
 
   final LearnerHomeSection section;
-  final LearnerHomeProfileCompletion profileCompletion;
 
   @override
   Widget build(BuildContext context) {
@@ -123,13 +118,11 @@ class _LearnerHomeSectionView extends StatelessWidget {
       LearnerHomeSectionKey.materialsForSavedProjects ||
       LearnerHomeSectionKey.freeMaterialsNearYou => _MaterialSection(
         section: section,
-        profileCompletion: profileCompletion,
       ),
       LearnerHomeSectionKey.suggestedProjects ||
       LearnerHomeSectionKey.savedProjects ||
       LearnerHomeSectionKey.popularProjects => _ProjectSection(
         section: section,
-        profileCompletion: profileCompletion,
       ),
       LearnerHomeSectionKey.continueProjects => _ContinueProjectsSection(
         section: section,
@@ -139,109 +132,37 @@ class _LearnerHomeSectionView extends StatelessWidget {
 }
 
 class _MaterialSection extends StatelessWidget {
-  const _MaterialSection({
-    required this.section,
-    required this.profileCompletion,
-  });
+  const _MaterialSection({required this.section});
 
   final LearnerHomeSection section;
-  final LearnerHomeProfileCompletion profileCompletion;
-
-  String _subtitle(List<LearnerHomeMaterialRecommendation> materials) {
-    if (materials.isEmpty) {
-      return section.emptyState;
-    }
-
-    return switch (section.key) {
-      LearnerHomeSectionKey.suggestedMaterials => _suggestedMaterialsSubtitle(
-        materials,
-      ),
-      LearnerHomeSectionKey.materialsForSavedProjects =>
-        'Materials that match components in your saved learning projects.',
-      LearnerHomeSectionKey.freeMaterialsNearYou => _freeMaterialsSubtitle(
-        materials,
-      ),
-      _ => section.emptyState,
-    };
-  }
-
-  String _suggestedMaterialsSubtitle(
-    List<LearnerHomeMaterialRecommendation> materials,
-  ) {
-    if (!profileCompletion.hasInterests && !profileCompletion.hasActivity) {
-      return 'Starter suggestions from available materials. Add interests to personalize this feed.';
-    }
-
-    final hasPrimaryMatches = materials.any(
-      (item) => item.reasons.any(_isStrongMaterialReason),
-    );
-
-    if (!hasPrimaryMatches) {
-      return 'We could not find many direct matches yet. Showing useful available materials.';
-    }
-
-    if (!profileCompletion.hasInterests && profileCompletion.hasActivity) {
-      return 'Personalized from your recent activity.';
-    }
-
-    return 'Personalized from your interests, saved projects, and activity.';
-  }
-
-  bool _isStrongMaterialReason(String reason) {
-    final normalized = reason.toLowerCase();
-    return normalized.startsWith('matches your') ||
-        normalized.startsWith('related to your') ||
-        normalized.contains('useful for your saved') ||
-        normalized.contains('matches required component') ||
-        normalized.contains('based on materials you liked') ||
-        normalized.contains('similar to materials you reserved') ||
-        normalized.contains('related to your saved projects') ||
-        normalized.contains('matches your recent activity') ||
-        normalized.contains('because you are building');
-  }
-
-  String _freeMaterialsSubtitle(
-    List<LearnerHomeMaterialRecommendation> materials,
-  ) {
-    final hasNearReason = materials.any(
-      (item) => item.reasons.any(
-        (reason) => reason.toLowerCase().contains('near your saved location'),
-      ),
-    );
-
-    if (profileCompletion.hasSavedLocation && hasNearReason) {
-      return 'Free materials available near your saved location.';
-    }
-
-    return 'Free materials available on ImpactLoop.';
-  }
 
   @override
   Widget build(BuildContext context) {
     final materials = section.items
         .whereType<LearnerHomeMaterialRecommendation>()
         .toList(growable: false);
+    final copy = learnerHomeSectionCopy(section.key, context.l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HomeSectionHeader(
-          title: section.title,
-          subtitle: _subtitle(materials),
+          title: copy.title,
+          subtitle: materials.isEmpty ? copy.empty : copy.subtitle,
           action: HomeSectionActionButton(
             onPressed: () =>
                 context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
             icon: const Icon(Icons.arrow_forward_rounded),
-            label: 'Browse all',
+            label: context.l10n.browseAll,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         if (materials.isEmpty)
           EmptyActivityCard(
             icon: Icons.inventory_2_outlined,
-            title: section.title,
-            description: section.emptyState,
-            actionLabel: 'Open materials',
+            title: copy.title,
+            description: copy.empty,
+            actionLabel: context.l10n.openMaterials,
             onAction: () =>
                 context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
           )
@@ -253,62 +174,37 @@ class _MaterialSection extends StatelessWidget {
 }
 
 class _ProjectSection extends StatelessWidget {
-  const _ProjectSection({
-    required this.section,
-    required this.profileCompletion,
-  });
+  const _ProjectSection({required this.section});
 
   final LearnerHomeSection section;
-  final LearnerHomeProfileCompletion profileCompletion;
-
-  String _subtitle(List<LearnerHomeProjectRecommendation> projects) {
-    if (projects.isEmpty) {
-      return section.emptyState;
-    }
-
-    return switch (section.key) {
-      LearnerHomeSectionKey.savedProjects => 'Projects you saved for later.',
-      LearnerHomeSectionKey.popularProjects =>
-        profileCompletion.hasInterests
-            ? 'Popular learning projects across ImpactLoop.'
-            : 'Popular and beginner-friendly projects to help you start.',
-      LearnerHomeSectionKey.suggestedProjects =>
-        profileCompletion.hasInterests
-            ? 'Personalized from your interests and available matching materials.'
-            : 'Popular and beginner-friendly projects to help you start.',
-      _ =>
-        profileCompletion.hasInterests
-            ? 'Based on your interests and learner activity.'
-            : 'Popular and beginner-friendly projects to help you start.',
-    };
-  }
 
   @override
   Widget build(BuildContext context) {
     final projects = section.items
         .whereType<LearnerHomeProjectRecommendation>()
         .toList(growable: false);
+    final copy = learnerHomeSectionCopy(section.key, context.l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HomeSectionHeader(
-          title: section.title,
-          subtitle: _subtitle(projects),
+          title: copy.title,
+          subtitle: projects.isEmpty ? copy.empty : copy.subtitle,
           action: HomeSectionActionButton(
             onPressed: () =>
                 context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
             icon: const Icon(Icons.arrow_forward_rounded),
-            label: 'Browse all',
+            label: context.l10n.browseAll,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         if (projects.isEmpty)
           EmptyActivityCard(
             icon: Icons.school_outlined,
-            title: section.title,
-            description: section.emptyState,
-            actionLabel: 'Open Learning Hub',
+            title: copy.title,
+            description: copy.empty,
+            actionLabel: context.l10n.openLearningHub,
             onAction: () =>
                 context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
           )
@@ -329,9 +225,7 @@ class _ProjectSection extends StatelessWidget {
                     width: itemWidth,
                     child: HomeLearningProjectCard(
                       project: item.project,
-                      reason: item.reasons.isNotEmpty
-                          ? item.reasons.first
-                          : null,
+                      reason: localizedLearnerHomeReason(item, context.l10n),
                     ),
                   );
                 }).toList(),
@@ -353,20 +247,19 @@ class _ContinueProjectsSection extends StatelessWidget {
     final builds = section.items
         .whereType<LearnerHomeContinueProjectRecommendation>()
         .toList(growable: false);
+    final copy = learnerHomeSectionCopy(section.key, context.l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         HomeSectionHeader(
-          title: section.title,
-          subtitle: builds.isNotEmpty
-              ? 'Pick up where you left off.'
-              : section.emptyState,
+          title: copy.title,
+          subtitle: builds.isNotEmpty ? copy.subtitle : copy.empty,
           action: HomeSectionActionButton(
             onPressed: () =>
                 context.go(LearnerHomeBrowseRoutes.forSection(section.key)),
             icon: const Icon(Icons.arrow_forward_rounded),
-            label: 'Browse projects',
+            label: context.l10n.browseProjects,
           ),
         ),
         if (builds.isNotEmpty) ...[
@@ -381,7 +274,7 @@ class _ContinueProjectsSection extends StatelessWidget {
           ),
         ] else ...[
           const SizedBox(height: AppSpacing.sm),
-          _CompactContinueEmptyState(message: section.emptyState),
+          _CompactContinueEmptyState(message: copy.empty),
         ],
       ],
     );

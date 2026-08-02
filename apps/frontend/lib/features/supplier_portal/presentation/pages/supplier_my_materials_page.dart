@@ -10,6 +10,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../data/models/supplier_my_materials_models.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
 import '../theme/supplier_theme_extension.dart';
 import '../widgets/materials/supplier_material_category_filter.dart';
 import '../widgets/materials/supplier_material_filter_chips.dart';
@@ -17,6 +19,7 @@ import '../widgets/materials/supplier_material_delete_helper.dart';
 import '../widgets/materials/supplier_material_edit_helper.dart';
 import '../widgets/materials/supplier_materials_grid.dart';
 import '../widgets/materials/supplier_materials_summary_row.dart';
+import '../../../../core/errors/api_exception.dart';
 
 const _contentMaxWidth = 1200.0;
 
@@ -118,9 +121,9 @@ class _SupplierMyMaterialsPageState
       return null;
     }
 
-    final month = material.createdAt.month.toString().padLeft(2, '0');
-    final day = material.createdAt.day.toString().padLeft(2, '0');
-    return context.s.listedOn('${material.createdAt.year}-$month-$day');
+    return context.s.listedOn(
+      LocalizedFormatters(context.l10n).date(material.createdAt),
+    );
   }
 
   @override
@@ -193,7 +196,7 @@ class _SupplierMyMaterialsPageState
                       }
                       return _ErrorState(
                         message: l.myMaterialsLoadError,
-                        detail: error.toString(),
+                        detail: localizedApiErrorMessage(error, context.l10n),
                         onRetry: _retry,
                       );
                     },
@@ -356,7 +359,7 @@ class _PageHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Inventory overview',
+          context.s.inventoryOverview,
           style: context.supplierSectionTitle().copyWith(
             color: colors.textPrimary,
             fontSize: 18,
@@ -364,7 +367,7 @@ class _PageHeader extends StatelessWidget {
         ),
         const SizedBox(height: 3),
         Text(
-          'Monitor your material availability, requests, and listing status.',
+          context.s.monitorMaterialAvailability,
           style: context.supplierBody().copyWith(color: colors.textMuted),
         ),
       ],
@@ -465,7 +468,7 @@ class _FilterToolbar extends StatelessWidget {
                 suffixIcon: value.text.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: 'Clear search',
+                        tooltip: context.s.clearSearch,
                         onPressed: () {
                           searchController.clear();
                           onSearchChanged('');
@@ -508,11 +511,11 @@ class _FilterToolbar extends StatelessWidget {
             onSelected: onCategorySelected,
           );
           final reset = Tooltip(
-            message: 'Reset filters',
+            message: context.s.resetFilters,
             child: OutlinedButton.icon(
               onPressed: filtersActive ? onReset : null,
               icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: const Text('Reset'),
+              label: Text(context.s.reset),
             ),
           );
 
@@ -597,7 +600,7 @@ class _ResultsHeader extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Materials',
+          context.s.materialsSection,
           style: context.supplierSectionTitle().copyWith(
             color: colors.textPrimary,
             fontSize: 17,
@@ -605,7 +608,7 @@ class _ResultsHeader extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Text(
-          '$shownCount shown of $totalCount',
+          context.s.shownOfTotal(shownCount, totalCount),
           style: context.supplierBody().copyWith(color: colors.textMuted),
         ),
       ],
@@ -634,7 +637,10 @@ class _ResultsHeader extends StatelessWidget {
             ),
           ),
         if (onClearFilters != null)
-          TextButton(onPressed: onClearFilters, child: const Text('Clear all')),
+          TextButton(
+            onPressed: onClearFilters,
+            child: Text(context.s.clearAll),
+          ),
       ],
     );
 

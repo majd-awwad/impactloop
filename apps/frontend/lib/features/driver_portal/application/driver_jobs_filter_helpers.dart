@@ -1,3 +1,5 @@
+import '../../../core/format/localized_formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../data/models/driver_deliveries_list_result.dart';
 
 class DriverJobsFilterConstants {
@@ -62,56 +64,65 @@ bool hasUsableRadiusReference(DriverDeliveriesListMeta? meta) {
   return meta?.driverHasRecentLocation == true;
 }
 
-String driverLocationSummary(DriverDeliveriesListMeta? meta) {
+String driverLocationSummary(
+  DriverDeliveriesListMeta? meta, {
+  required AppLocalizations l10n,
+}) {
   if (meta == null) {
-    return 'Loading location…';
+    return l10n.driverLoadingLocation;
   }
 
   if (meta.driverHasRecentLocation) {
-    return 'Using your current location';
+    return l10n.driverUsingCurrentLocation;
   }
 
   final city = normalizeProfileField(meta.driverProfileCity);
   final area = distinctProfileArea(meta.driverProfileArea, city);
 
   if (area != null && city != null) {
-    return 'Using profile area: $area, $city';
+    return l10n.driverUsingProfileArea('$area, $city');
   }
   if (city != null) {
-    return 'Using profile area: $city';
+    return l10n.driverUsingProfileArea(city);
   }
   if (area != null) {
-    return 'Using profile area: $area';
+    return l10n.driverUsingProfileArea(area);
   }
 
-  return 'Location unavailable — showing all available jobs';
+  return l10n.driverLocationUnavailable;
 }
 
 String searchRadiusLabel({
   required bool anyDistance,
   required double radiusKm,
+  required AppLocalizations l10n,
 }) {
   if (anyDistance) {
-    return 'Search radius: Any distance';
+    return l10n.driverSearchRadiusAny;
   }
 
-  return 'Search radius: Within ${radiusKm.round()} km';
+  return l10n.driverSearchRadiusWithin(radiusKm.round());
 }
 
-String distanceFromYouLabel(double? distanceKm) {
+String distanceFromYouLabel(
+  double? distanceKm, {
+  required AppLocalizations l10n,
+}) {
   if (distanceKm == null || !distanceKm.isFinite) {
-    return 'Pickup distance unavailable';
+    return l10n.driverPickupDistanceUnavailable;
   }
 
   final rounded = distanceKm < 10
       ? (distanceKm * 10).round() / 10
       : distanceKm.round().toDouble();
 
-  final formatted = rounded == rounded.roundToDouble()
-      ? rounded.toInt().toString()
-      : rounded.toStringAsFixed(1);
+  final formatters = LocalizedFormatters(l10n);
+  final formatted = formatters.number(
+    rounded,
+    decimalDigits: rounded == rounded.roundToDouble() ? 0 : 1,
+  );
 
-  return '$formatted km to pickup';
+  return l10n.driverKmToPickup(formatted);
 }
 
 class AvailableJobsEmptyStateCopy {
@@ -130,10 +141,9 @@ class AvailableJobsEmptyStateCopy {
   final bool showReset;
 }
 
-String _jobsLabel(int count) => count == 1 ? '1 job is' : '$count jobs are';
-
 AvailableJobsEmptyStateCopy availableJobsEmptyStateCopy({
   required DriverAvailableJobsFilter filter,
+  required AppLocalizations l10n,
   int? nearbyCount,
   int? totalAvailableCount,
 }) {
@@ -149,9 +159,8 @@ AvailableJobsEmptyStateCopy availableJobsEmptyStateCopy({
     if (total > nearby) {
       final outside = total - nearby;
       return AvailableJobsEmptyStateCopy(
-        title: 'No jobs within $label km.',
-        subtitle:
-            '${_jobsLabel(outside)} available outside your current radius. Try increasing the radius or choosing Any distance.',
+        title: l10n.driverNoJobsWithinRadius(label),
+        subtitle: l10n.driverJobsAvailableOutsideRadius(outside),
         showIncreaseRadius: true,
         showAnyDistance: true,
         showReset: true,
@@ -159,8 +168,8 @@ AvailableJobsEmptyStateCopy availableJobsEmptyStateCopy({
     }
 
     return AvailableJobsEmptyStateCopy(
-      title: 'No jobs within $label km.',
-      subtitle: 'Try increasing the radius or choosing Any distance.',
+      title: l10n.driverNoJobsWithinRadius(label),
+      subtitle: l10n.driverTryIncreaseRadius,
       showIncreaseRadius: true,
       showAnyDistance: true,
       showReset: true,
@@ -170,23 +179,22 @@ AvailableJobsEmptyStateCopy availableJobsEmptyStateCopy({
   if (filter.city != null || filter.area != null) {
     if (total > 0) {
       return AvailableJobsEmptyStateCopy(
-        title: 'No jobs found in this area.',
-        subtitle:
-            '${_jobsLabel(total)} available with broader filters. Try all areas or reset filters.',
+        title: l10n.driverNoJobsInArea,
+        subtitle: l10n.driverJobsAvailableBroaderFilters(total),
         showReset: true,
       );
     }
 
-    return const AvailableJobsEmptyStateCopy(
-      title: 'No jobs found in this area.',
-      subtitle: 'Try all areas or reset filters.',
+    return AvailableJobsEmptyStateCopy(
+      title: l10n.driverNoJobsInArea,
+      subtitle: l10n.driverTryAllAreasOrReset,
       showReset: true,
     );
   }
 
-  return const AvailableJobsEmptyStateCopy(
-    title: 'No available jobs near you right now.',
-    subtitle: 'Try changing the city, area, or distance filter.',
+  return AvailableJobsEmptyStateCopy(
+    title: l10n.driverNoJobsNearby,
+    subtitle: l10n.driverTryChangeFilters,
     showReset: false,
   );
 }

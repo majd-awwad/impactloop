@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/auth_dark_text_styles.dart';
 import '../../../../app/theme/landing_colors.dart';
+import '../../../../l10n/l10n.dart';
 
 class LandingFooter extends StatelessWidget {
   const LandingFooter({super.key});
@@ -20,7 +21,7 @@ class LandingFooter extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Flexible(
             child: Text(
-              'Sustainable choices. Stronger communities. Smarter projects.',
+              context.l10n.landingFooter,
               textAlign: TextAlign.center,
               style: AuthDarkTextStyles.body(
                 context,

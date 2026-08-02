@@ -10,6 +10,7 @@ class DriverDeliveriesListMeta {
     this.driverHasRecentLocation = false,
     this.nearbyAvailableCount,
     this.totalAvailableCount,
+    this.pagination,
   });
 
   final int activeDeliveryCount;
@@ -20,6 +21,7 @@ class DriverDeliveriesListMeta {
   final bool driverHasRecentLocation;
   final int? nearbyAvailableCount;
   final int? totalAvailableCount;
+  final DriverDeliveriesPagination? pagination;
 
   factory DriverDeliveriesListMeta.fromJson(Map<String, dynamic> json) {
     return DriverDeliveriesListMeta(
@@ -31,6 +33,31 @@ class DriverDeliveriesListMeta {
       driverHasRecentLocation: json['driverHasRecentLocation'] == true,
       nearbyAvailableCount: json['nearbyAvailableCount'] as int?,
       totalAvailableCount: json['totalAvailableCount'] as int?,
+      pagination: json['pagination'] is Map
+          ? DriverDeliveriesPagination.fromJson(
+              Map<String, dynamic>.from(json['pagination'] as Map),
+            )
+          : null,
+    );
+  }
+}
+
+class DriverDeliveriesPagination {
+  const DriverDeliveriesPagination({
+    required this.limit,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  final int limit;
+  final bool hasMore;
+  final String? nextCursor;
+
+  factory DriverDeliveriesPagination.fromJson(Map<String, dynamic> json) {
+    return DriverDeliveriesPagination(
+      limit: (json['limit'] as num?)?.toInt() ?? 20,
+      hasMore: json['hasMore'] == true,
+      nextCursor: json['nextCursor'] as String?,
     );
   }
 }
@@ -43,6 +70,17 @@ class DriverDeliveriesListResult {
 
   final List<DriverDelivery> deliveries;
   final DriverDeliveriesListMeta meta;
+
+  DriverDeliveriesListResult append(DriverDeliveriesListResult next) {
+    final seen = deliveries.map((delivery) => delivery.id).toSet();
+    return DriverDeliveriesListResult(
+      deliveries: [
+        ...deliveries,
+        ...next.deliveries.where((delivery) => seen.add(delivery.id)),
+      ],
+      meta: next.meta,
+    );
+  }
 }
 
 class DriverAvailableJobsFilter {

@@ -38,6 +38,7 @@
     "clean-driver-notifications": "tsx ../../scripts/clean-driver-notifications.ts",
     "backfill-driver-new-job-notifications": "tsx ../../scripts/backfill-driver-new-job-notifications.ts",
     "verify-driver-notifications": "tsx ../../scripts/verify-driver-notifications.ts",
+    "verify:driver-profile-availability-migration": "tsx scripts/verify-driver-profile-availability-migration.ts",
     "backfill:material-thumbnails": "tsx scripts/backfill-material-thumbnails.ts"
   },
   "keywords": [],

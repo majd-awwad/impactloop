@@ -10,6 +10,7 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../l10n/l10n.dart';
 import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
@@ -99,7 +100,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
         setState(() {
           _supplier = null;
           _isProfileLoading = false;
-          _profileError = 'Supplier profile not found.';
+          _profileError = context.l10n.supplierProfileNotFound;
         });
         return;
       }
@@ -111,14 +112,14 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
       if (CancelToken.isCancel(error) || !mounted) return;
       setState(() {
         _isProfileLoading = false;
-        _profileError = error.toString();
+        _profileError = localizedApiErrorMessage(error, context.l10n);
       });
     } catch (error) {
       if (error is ApiException && error.isCancellation) return;
       if (!mounted) return;
       setState(() {
         _isProfileLoading = false;
-        _profileError = error.toString();
+        _profileError = localizedApiErrorMessage(error, context.l10n);
       });
     }
   }
@@ -165,7 +166,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
       setState(() {
         _isMaterialsLoading = false;
         _isLoadingMore = false;
-        _materialsError = error.toString();
+        _materialsError = localizedApiErrorMessage(error, context.l10n);
       });
     } catch (error) {
       if (error is ApiException && error.isCancellation) return;
@@ -173,7 +174,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
       setState(() {
         _isMaterialsLoading = false;
         _isLoadingMore = false;
-        _materialsError = error.toString();
+        _materialsError = localizedApiErrorMessage(error, context.l10n);
       });
     }
   }
@@ -263,7 +264,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
     }
 
     if (authState.user?.hasRole('LEARNER') != true) {
-      showInfoSnackBar(context, 'Use a learner account to follow suppliers.');
+      showInfoSnackBar(context, context.l10n.learnerAccountFollowRequired);
       return;
     }
 
@@ -308,7 +309,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
           isFollowedByViewer: previousFollowing,
         );
       });
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, localizedApiErrorMessage(error, context.l10n));
     } finally {
       if (mounted) {
         setState(() {
@@ -352,15 +353,11 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                 children: [
                   IconButton(
                     onPressed: () => context.popOrGo('/materials'),
-                    icon: const Icon(Icons.arrow_back_rounded),
+                    icon: const BackButtonIcon(),
                   ),
                   Expanded(
                     child: Text(
-                      supplier?.displayName ??
-                          const LocalizedText(
-                            en: 'Supplier profile',
-                            ar: 'ملف المورد',
-                          ).resolve(context),
+                      supplier?.displayName ?? context.l10n.supplierProfile,
                       style: AppTextStyles.title(
                         context,
                       ).copyWith(color: palette.textPrimary),
@@ -378,7 +375,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                   ? _ErrorState(message: _profileError!, onRetry: _loadProfile)
                   : supplier == null
                   ? _ErrorState(
-                      message: 'Supplier profile not found.',
+                      message: context.l10n.supplierProfileNotFound,
                       onRetry: _loadProfile,
                     )
                   : RefreshIndicator(
@@ -445,10 +442,7 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                                   ),
                                   sliver: SliverToBoxAdapter(
                                     child: Text(
-                                      LocalizedText(
-                                        en: '$_total public materials',
-                                        ar: '$_total مواد عامة',
-                                      ).resolve(context),
+                                      context.l10n.publicMaterialsCount(_total),
                                       style: AppTextStyles.subtitle(
                                         context,
                                       ).copyWith(color: palette.textSecondary),
@@ -473,11 +467,13 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                                     ),
                                   )
                                 else if (_materials.isEmpty)
-                                  const SliverToBoxAdapter(
+                                  SliverToBoxAdapter(
                                     child: Padding(
-                                      padding: EdgeInsets.all(AppSpacing.lg),
+                                      padding: const EdgeInsets.all(
+                                        AppSpacing.lg,
+                                      ),
                                       child: Text(
-                                        'No public materials are available right now.',
+                                        context.l10n.noPublicMaterials,
                                       ),
                                     ),
                                   )
@@ -515,7 +511,9 @@ class _PublicSupplierPageState extends ConsumerState<PublicSupplierPage> {
                                         onPressed: () =>
                                             _loadMaterials(reset: false),
                                         icon: const Icon(Icons.refresh_rounded),
-                                        label: const Text('Retry loading more'),
+                                        label: Text(
+                                          context.l10n.retryLoadingMore,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -553,20 +551,14 @@ class _OverviewSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          const LocalizedText(
-            en: 'About this supplier',
-            ar: 'عن هذا المورد',
-          ).resolve(context),
+          context.l10n.aboutSupplier,
           style: AppTextStyles.title(
             context,
           ).copyWith(color: palette.textPrimary, fontSize: 18),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          const LocalizedText(
-            en: 'Browse public materials from this supplier and follow updates when new stock is published.',
-            ar: 'تصفح المواد العامة من هذا المورد وتابع التحديثات عند نشر مخزون جديد.',
-          ).resolve(context),
+          context.l10n.aboutSupplierDescription,
           style: AppTextStyles.body(
             context,
           ).copyWith(color: palette.textSecondary, height: 1.5),

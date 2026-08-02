@@ -210,7 +210,7 @@ async function resetDriverState(ctx: TestContext) {
 
   await prisma.driverProfile.update({
     where: { id: profile.id },
-    data: { availability: 'AVAILABLE' },
+    data: { availability: 'AVAILABLE', acceptingNewJobs: true },
   });
 }
 
@@ -378,6 +378,7 @@ describe('fulfillment failures phase 5', () => {
             transportationType: 'BICYCLE',
             vehicleType: 'BICYCLE',
             status: 'ACTIVE',
+            acceptingNewJobs: true,
           },
         },
       },
@@ -401,6 +402,7 @@ describe('fulfillment failures phase 5', () => {
             transportationType: 'BICYCLE',
             vehicleType: 'BICYCLE',
             status: 'ACTIVE',
+            acceptingNewJobs: true,
           },
         },
       },
@@ -508,9 +510,13 @@ describe('fulfillment failures phase 5', () => {
     );
   });
 
-  test('driver can mark pickup failed after supplier pickup window + grace', async () => {
+  test('pickup failure restores offline when the driver stopped accepting new jobs', async () => {
     const { reservation, delivery } = await acceptDeliveryReservation(ctx);
     await acceptDelivery(ctx.driverId, delivery.id);
+    await prisma.driverProfile.update({
+      where: { userId: ctx.driverId },
+      data: { acceptingNewJobs: false },
+    });
     await setSupplierPickupWindowExpired(reservation.id);
 
     const mapped = await markDriverPickupFailed(ctx.driverId, delivery.id, {
@@ -519,6 +525,12 @@ describe('fulfillment failures phase 5', () => {
     });
 
     assert.equal(mapped.status, 'FAILED_PICKUP');
+    const profile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: ctx.driverId },
+      select: { availability: true, acceptingNewJobs: true },
+    });
+    assert.equal(profile.acceptingNewJobs, false);
+    assert.equal(profile.availability, 'OFFLINE');
   });
 
   test('pickup failed does not decrement material quantity', async () => {
@@ -553,6 +565,30 @@ describe('fulfillment failures phase 5', () => {
     });
     assert.equal(updated.status, 'AWAITING_RESOLUTION');
     assert.equal(updated.completedAt, null);
+  });
+
+  test('releasing one failed delivery preserves ON_DELIVERY for another active delivery', async () => {
+    const first = await acceptDeliveryReservation(ctx);
+    const second = await acceptDeliveryReservation(ctx);
+    await acceptDelivery(ctx.driverId, first.delivery.id);
+    await acceptDelivery(ctx.driverId, second.delivery.id);
+    await setSupplierPickupWindowExpired(first.reservation.id);
+
+    await markDriverPickupFailed(ctx.driverId, first.delivery.id, {
+      reason: 'OTHER',
+      note: 'First pickup could not be completed.',
+    });
+
+    const profile = await prisma.driverProfile.findUniqueOrThrow({
+      where: { userId: ctx.driverId },
+      select: { availability: true },
+    });
+    const stillActive = await prisma.delivery.findUniqueOrThrow({
+      where: { id: second.delivery.id },
+    });
+
+    assert.equal(profile.availability, 'ON_DELIVERY');
+    assert.equal(stillActive.status, 'DRIVER_ASSIGNED');
   });
 
   test('supplier cannot mark driver no-show before supplier pickup window expires', async () => {

@@ -320,7 +320,8 @@ void main() {
     expect(material.imageUrl, endsWith('/uploads/materials/legacy.jpg'));
     expect(material.resolvedGalleryImages.length, 1);
   });
-test('maps the optional recommendation impression id', () {
+
+  test('maps the optional recommendation impression id', () {
     final material = MaterialDiscoveryApiMapper.fromJson({
       'id': 'mat-recommended',
       'title': 'Recommended material',
@@ -458,13 +459,13 @@ test('maps the optional recommendation impression id', () {
       'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
-    expect(material.supplier, isNull);
-    expect(material.supplierName.en, 'Flat Supplier');
-    expect(material.supplierType, 'INDIVIDUAL_SUPPLIER');
-    expect(material.supplierVerified, isFalse);
+    expect(
+      material.copyWith(likesCount: 1).recommendationImpressionId,
+      'imp-copy-material',
+    );
   });
 
-  test('maps isFollowedByViewer false when nested supplier is not followed', () {
+  test('maps nested supplier summary when present', () {
     final material = MaterialDiscoveryApiMapper.fromJson({
       'id': 'mat-unfollowed',
       'title': 'Unfollowed supplier',
@@ -485,5 +486,30 @@ test('maps the optional recommendation impression id', () {
 
     expect(material.supplier?.isFollowedByViewer, isFalse);
   });
+
+  test(
+    'maps isFollowedByViewer false when nested supplier is not followed',
+    () {
+      final material = MaterialDiscoveryApiMapper.fromJson({
+        'id': 'mat-unfollowed',
+        'title': 'Unfollowed supplier',
+        'description': 'Supplier not followed',
+        'status': 'AVAILABLE',
+        'quantity': 1,
+        'unit': 'piece',
+        'condition': 'GOOD',
+        'isFree': true,
+        'deliveryAvailable': false,
+        'supplier': {
+          'id': 'sp-2',
+          'displayName': 'Supplier Two',
+          'isFollowedByViewer': false,
+        },
+        'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      });
+
+      expect(material.supplier?.isFollowedByViewer, isFalse);
+    },
+  );
 }
 

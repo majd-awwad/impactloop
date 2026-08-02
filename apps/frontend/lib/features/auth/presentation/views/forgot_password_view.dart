@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_spacing.dart';
+import '../../../../l10n/l10n.dart';
 import '../widgets/auth_entry_branding_panel.dart';
 import '../widgets/auth_form_card.dart';
 import '../widgets/auth_header.dart';
@@ -21,10 +22,9 @@ class ForgotPasswordView extends StatelessWidget {
       formContent: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AuthHeader(
-            title: 'Reset your password',
-            subtitle:
-                'Enter your account email and we will send reset instructions if an account exists.',
+          AuthHeader(
+            title: context.l10n.resetYourPassword,
+            subtitle: context.l10n.forgotPasswordSubtitle,
           ),
           const SizedBox(height: AppSpacing.lg),
           AuthFormCard(child: ForgotPasswordForm(initialEmail: initialEmail)),

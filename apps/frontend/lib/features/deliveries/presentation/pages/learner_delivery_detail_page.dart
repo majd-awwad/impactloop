@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../l10n/l10n.dart';
+import '../../../../core/format/localized_formatters.dart';
+
 import '../../../../app/router/navigation_extensions.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
@@ -49,16 +52,16 @@ class LearnerDeliveryDetailPage extends ConsumerWidget {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1040),
                     child: deliveryAsync.when(
-                      loading: () => const _StatePanel(
+                      loading: () => _StatePanel(
                         icon: Icons.hourglass_empty_rounded,
-                        title: 'Loading delivery',
-                        subtitle: 'Checking the latest delivery status.',
+                        title: context.l10n.loadingDelivery,
+                        subtitle: context.l10n.checkingDeliveryStatus,
                       ),
                       error: (_, _) => _StatePanel(
                         icon: Icons.cloud_off_outlined,
-                        title: 'Could not load delivery',
-                        subtitle: 'Please try again.',
-                        actionLabel: 'Try again',
+                        title: context.l10n.deliveryLoadFailed,
+                        subtitle: context.l10n.tryAgain,
+                        actionLabel: context.l10n.tryAgainAction,
                         onAction: () =>
                             ref.invalidate(learnerDeliveryProvider(deliveryId)),
                       ),
@@ -150,7 +153,7 @@ class _Header extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Delivery status',
+            context.l10n.deliveryStatusTitle,
             style: AppTextStyles.display(
               context,
             ).copyWith(color: palette.textPrimary),
@@ -162,11 +165,15 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status),
+                label: deliveryStatusLabel(delivery.status, l10n: context.l10n),
                 tone: deliveryStatusAppTone(delivery.status),
               ),
               Text(
-                'Requested ${_formatDateTime(delivery.requestedAt)}',
+                context.l10n.requestedAt(
+                  LocalizedFormatters(
+                    context.l10n,
+                  ).dateTime(delivery.requestedAt),
+                ),
                 style: AppTextStyles.label(
                   context,
                 ).copyWith(color: palette.textMuted),
@@ -177,10 +184,8 @@ class _Header extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               delivery.status.toUpperCase() == 'ARRIVED_PICKUP'
-                  ? 'Pickup was not completed before the supplier window ended. '
-                        'An admin may review if no one reports the issue.'
-                  : 'The assigned driver has not completed supplier pickup before '
-                        'the window ended. An admin may review if no one reports the issue.',
+                  ? context.l10n.pickupIncompleteAdminReview
+                  : context.l10n.driverPickupIncompleteAdminReview,
               style: AppTextStyles.label(context).copyWith(
                 color: colors.warningText,
                 fontWeight: FontWeight.w600,
@@ -210,51 +215,62 @@ class _DeliverySummaryPanel extends StatelessWidget {
         children: [
           _PanelTitle(
             icon: Icons.inventory_2_outlined,
-            title: 'Material',
+            title: context.l10n.material,
             body: delivery.reservation.material.title,
           ),
           const SizedBox(height: AppSpacing.lg),
           _InfoRow(
-            label: 'Supplier',
+            label: context.l10n.supplier,
             value: delivery.reservation.supplier.displayName,
           ),
           _InfoRow(
-            label: 'Pickup window',
-            value: learnerReservationPickupWindowDetail(delivery.reservation),
+            label: context.l10n.pickupWindow,
+            value: learnerReservationPickupWindowDetail(
+              delivery.reservation,
+              context.l10n,
+            ),
           ),
           _InfoRow(
-            label: 'Pickup area',
+            label: context.l10n.pickupArea,
             value: delivery.pickupLocation.summary,
           ),
-          _InfoRow(label: 'Dropoff', value: delivery.dropoffLocation.summary),
+          _InfoRow(
+            label: context.l10n.dropoff,
+            value: delivery.dropoffLocation.summary,
+          ),
           if (delivery.driver != null) ...[
             const SizedBox(height: AppSpacing.md),
             _PanelTitle(
               icon: Icons.badge_outlined,
-              title: 'Assigned driver',
+              title: context.l10n.assignedDriver,
               body: _driverSummary(delivery.driver!),
             ),
           ],
           const SizedBox(height: AppSpacing.md),
           _TrackingStatusCard(delivery: delivery, onRefresh: onRefresh),
           if (delivery.driverNote?.trim().isNotEmpty == true)
-            _InfoRow(label: 'Driver note', value: delivery.driverNote!),
+            _InfoRow(
+              label: context.l10n.driverNote,
+              value: delivery.driverNote!,
+            ),
           if (delivery.shouldShowLearnerDeliveryCode) ...[
             const SizedBox(height: AppSpacing.md),
             HandoverConfirmationCodePanel(
               code: delivery.learnerDeliveryCode!,
-              instructions:
-                  'Give this code to the driver when you receive the material.',
+              instructions: context.l10n.deliveryCodeInstructions,
             ),
           ],
           if (delivery.failureReason?.trim().isNotEmpty == true)
-            _InfoRow(label: 'Failure reason', value: delivery.failureReason!),
+            _InfoRow(
+              label: context.l10n.failureReason,
+              value: delivery.failureReason!,
+            ),
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             onPressed: () => context.popOrGo('/learner/reservations'),
             style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.assignment_turned_in_outlined),
-            label: const Text('Back to reservations'),
+            label: Text(context.l10n.backToReservations),
           ),
         ],
       ),
@@ -271,7 +287,7 @@ class _TrackingStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ping = delivery.latestDriverPing;
-    final body = _trackingStatusBody(delivery);
+    final body = _trackingStatusBody(delivery, context.l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,9 +296,9 @@ class _TrackingStatusCard extends StatelessWidget {
           icon: Icons.my_location_outlined,
           title: delivery.canTrack
               ? (ping?.hasCoordinates == true
-                    ? 'Driver location updated recently'
-                    : 'Live tracking')
-              : 'Delivery status',
+                    ? context.l10n.driverLocationUpdated
+                    : context.l10n.liveTracking)
+              : context.l10n.deliveryStatusTitle,
           body: body,
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -292,7 +308,7 @@ class _TrackingStatusCard extends StatelessWidget {
                 context.push('/learner/deliveries/${delivery.id}/track'),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
             icon: const Icon(Icons.map_outlined),
-            label: const Text('Track delivery'),
+            label: Text(context.l10n.trackDelivery),
           ),
         if (delivery.canTrack) const SizedBox(height: AppSpacing.sm),
         if (delivery.canTrack)
@@ -300,14 +316,14 @@ class _TrackingStatusCard extends StatelessWidget {
             onPressed: onRefresh,
             style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_outlined, size: 18),
-            label: const Text('Refresh status'),
+            label: Text(context.l10n.refreshStatus),
           )
         else
           TextButton.icon(
             onPressed: onRefresh,
             style: AppStatusButtonStyle.text(context, AppStatusTone.info),
             icon: const Icon(Icons.refresh_outlined, size: 18),
-            label: const Text('Refresh status'),
+            label: Text(context.l10n.refreshStatus),
           ),
       ],
     );
@@ -337,14 +353,14 @@ class _DeliveryTimelinePanel extends StatelessWidget {
         children: [
           _PanelTitle(
             icon: Icons.timeline_outlined,
-            title: 'Status timeline',
-            body: 'Updates from the internal delivery workflow.',
+            title: context.l10n.statusTimeline,
+            body: context.l10n.statusTimelineDescription,
           ),
           const SizedBox(height: AppSpacing.lg),
           ...history.map(
             (item) => _TimelineItem(
-              title: deliveryStatusLabel(item.newStatus),
-              time: _formatDateTime(item.createdAt),
+              title: deliveryStatusLabel(item.newStatus, l10n: context.l10n),
+              time: LocalizedFormatters(context.l10n).dateTime(item.createdAt),
               note: item.note,
             ),
           ),
@@ -590,44 +606,34 @@ String _driverSummary(LearnerDeliveryDriver driver) {
       : '${driver.displayName} • $details';
 }
 
-String _trackingStatusBody(LearnerDelivery delivery) {
+String _trackingStatusBody(LearnerDelivery delivery, AppLocalizations l10n) {
   if (!delivery.canTrack) {
-    final message = delivery.trackingMessage?.trim();
-    if (message != null && message.isNotEmpty) {
-      return message;
-    }
-
     return switch (delivery.status) {
-      'WAITING_FOR_DRIVER' => 'Waiting for driver.',
-      'DRIVER_ASSIGNED' => 'Driver assigned.',
-      'ARRIVED_PICKUP' => 'Driver is heading to supplier pickup.',
-      _ when delivery.isTerminal => 'Tracking is complete for this delivery.',
-      _ => 'Driver location is available after pickup.',
+      'WAITING_FOR_DRIVER' => l10n.waitingForDriver,
+      'DRIVER_ASSIGNED' => l10n.driverAssigned,
+      'ARRIVED_PICKUP' => l10n.driverHeadingToPickup,
+      _ when delivery.isTerminal => l10n.trackingComplete,
+      _ => l10n.trackingAvailableAfterPickup,
     };
   }
 
   final ping = delivery.latestDriverPing;
   if (ping == null) {
-    return 'Driver has not shared a location yet.\n'
-        'Location updates appear when the driver shares their position.';
+    return l10n.driverLocationNotShared;
   }
 
   final secondsAgo = DateTime.now().difference(ping.capturedAt).inSeconds;
-  final freshness = secondsAgo < 60
-      ? 'Last updated $secondsAgo seconds ago.'
-      : 'Last updated ${_formatDateTime(ping.capturedAt)}.';
+  final formatters = LocalizedFormatters(l10n);
+  final freshness = l10n.lastUpdatedAt(
+    secondsAgo < 60
+        ? formatters.relativeTime(ping.capturedAt)
+        : formatters.dateTime(ping.capturedAt),
+  );
 
   return [
-    deliveryStatusLabel(delivery.status),
+    deliveryStatusLabel(delivery.status, l10n: l10n),
     freshness,
     if (ping.accuracyMeters != null)
-      'Accuracy: about ${ping.accuracyMeters!.round()} m',
+      l10n.accuracyMeters(formatters.number(ping.accuracyMeters!.round())),
   ].join('\n');
 }
-
-String _formatDateTime(DateTime value) {
-  return '${value.year}-${_two(value.month)}-${_two(value.day)} '
-      '${_two(value.hour)}:${_two(value.minute)}';
-}
-
-String _two(int value) => value.toString().padLeft(2, '0');

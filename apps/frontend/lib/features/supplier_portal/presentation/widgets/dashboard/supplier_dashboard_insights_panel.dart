@@ -246,7 +246,10 @@ class _InsightTile extends StatelessWidget {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            icon: const Icon(Icons.arrow_forward_rounded, size: 14),
+            icon: const Icon(
+              Icons.arrow_forward_rounded,
+              size: 14,
+            ),
             label: Text(
               spec.actionLabel,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -459,7 +462,10 @@ class _HighDemandMaterialRow extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 15),
+                  icon: const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 15,
+                  ),
                   label: Text(context.s.manageMaterial),
                 ),
               ],

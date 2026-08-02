@@ -497,9 +497,9 @@ class MaterialDiscoveryApiMapper {
     String value, {
     required double availableQuantity,
   }) {
-    if (availableQuantity > 0 && value != 'REUSED' && value != 'UNAVAILABLE') {
+    if (availableQuantity > 0 && value == 'AVAILABLE') {
       return (
-        label: const LocalizedText(en: 'Available', ar: 'متاح'),
+        label: const LocalizedText(en: 'Available', ar: 'متاحة'),
         tone: MaterialStatusBadgeTone.available,
       );
     }
@@ -515,7 +515,7 @@ class MaterialDiscoveryApiMapper {
         );
       case 'RESERVED':
         return (
-          label: const LocalizedText(en: 'Reserved', ar: 'محجوز'),
+          label: const LocalizedText(en: 'Reserved', ar: 'محجوزة'),
           tone: materialLifecycleStatusTone(value),
         );
       case 'REUSED':
@@ -525,18 +525,18 @@ class MaterialDiscoveryApiMapper {
         );
       case 'UNAVAILABLE':
         return (
-          label: const LocalizedText(en: 'Unavailable', ar: 'غير متاح'),
+          label: const LocalizedText(en: 'Unavailable', ar: 'غير متاحة'),
           tone: materialLifecycleStatusTone(value),
         );
       case 'AVAILABLE':
         return (
-          label: const LocalizedText(en: 'Available', ar: 'متاح'),
+          label: const LocalizedText(en: 'Available', ar: 'متاحة'),
           tone: materialLifecycleStatusTone(value),
         );
       default:
         return (
-          label: const LocalizedText(en: 'Available', ar: 'متاح'),
-          tone: MaterialStatusBadgeTone.available,
+          label: const LocalizedText(en: 'Unknown status', ar: 'حالة غير معروفة'),
+          tone: MaterialStatusBadgeTone.neutral,
         );
     }
   }

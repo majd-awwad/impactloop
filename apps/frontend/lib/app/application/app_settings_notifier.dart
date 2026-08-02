@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'app_settings_storage.dart';
 
 class AppSettings {
@@ -19,18 +20,31 @@ class AppSettings {
   }
 }
 
+const supportedLanguageCodes = {'ar', 'en'};
+
+String normalizeLanguageCode(String? languageCode) {
+  return supportedLanguageCodes.contains(languageCode) ? languageCode! : 'ar';
+}
+
+Future<AppSettings> loadInitialAppSettings(AppSettingsStorage storage) async {
+  final values = await Future.wait<Object?>([
+    storage.readThemeMode(),
+    storage.readLanguageCode(),
+  ]);
+
+  return AppSettings(
+    themeMode: values[0] as ThemeMode? ?? ThemeMode.system,
+    languageCode: normalizeLanguageCode(values[1] as String?),
+  );
+}
+
+final initialAppSettingsProvider = Provider<AppSettings>((ref) {
+  return const AppSettings(themeMode: ThemeMode.system, languageCode: 'ar');
+});
+
 class AppSettingsNotifier extends Notifier<AppSettings> {
-  bool _loadedSettings = false;
-
   @override
-  AppSettings build() {
-    if (!_loadedSettings && !_isWidgetTestBinding()) {
-      _loadedSettings = true;
-      unawaited(_loadSettings());
-    }
-
-    return const AppSettings(themeMode: ThemeMode.system, languageCode: 'en');
-  }
+  AppSettings build() => ref.watch(initialAppSettingsProvider);
 
   void setThemeMode(ThemeMode themeMode) {
     state = state.copyWith(themeMode: themeMode);
@@ -38,26 +52,14 @@ class AppSettingsNotifier extends Notifier<AppSettings> {
   }
 
   void setLanguageCode(String languageCode) {
-    state = state.copyWith(languageCode: languageCode);
+    final normalizedLanguageCode = normalizeLanguageCode(languageCode);
+    state = state.copyWith(languageCode: normalizedLanguageCode);
     unawaited(
-      ref.read(appSettingsStorageProvider).saveLanguageCode(languageCode),
+      ref
+          .read(appSettingsStorageProvider)
+          .saveLanguageCode(normalizedLanguageCode),
     );
   }
-
-  Future<void> _loadSettings() async {
-    final storage = ref.read(appSettingsStorageProvider);
-    final storedThemeMode = await storage.readThemeMode();
-    final storedLanguage = await storage.readLanguageCode();
-
-    state = state.copyWith(
-      themeMode: storedThemeMode ?? state.themeMode,
-      languageCode: storedLanguage ?? state.languageCode,
-    );
-  }
-}
-
-bool _isWidgetTestBinding() {
-  return WidgetsBinding.instance.runtimeType.toString().contains('Test');
 }
 
 final appSettingsStorageProvider = Provider<AppSettingsStorage>((ref) {
@@ -68,11 +70,11 @@ final appSettingsProvider = NotifierProvider<AppSettingsNotifier, AppSettings>(
   AppSettingsNotifier.new,
 );
 
-String themeModeLabel(ThemeMode mode) {
+String themeModeLabel(ThemeMode mode, {AppLocalizations? l10n}) {
   return switch (mode) {
-    ThemeMode.system => 'System',
-    ThemeMode.light => 'Light',
-    ThemeMode.dark => 'Dark',
+    ThemeMode.system => l10n?.themeSystem ?? 'System',
+    ThemeMode.light => l10n?.themeLight ?? 'Light',
+    ThemeMode.dark => l10n?.themeDark ?? 'Dark',
   };
 }
 

@@ -16,6 +16,7 @@ import {
   getRelatedMaterialsHandler,
   recordMaterialViewHandler,
   likeMaterial,
+  listLikedMaterials,
   listMaterials,
   priceCheckHandler,
   unlikeMaterial,
@@ -23,6 +24,7 @@ import {
 import { submitMaterialReport } from '../admin-materials/admin-materials.controller.js';
 import {
   materialIdParamSchema,
+  likedMaterialsQuerySchema,
   materialsQuerySchema,
   relatedMaterialsQuerySchema,
   priceCheckSchema,
@@ -46,6 +48,15 @@ materialsRouter.get(
   optionalAuthMiddleware,
   validate(materialsQuerySchema, 'query'),
   asyncHandler(listMaterials),
+);
+
+materialsRouter.get(
+  '/me/liked',
+  privateNoStoreMiddleware,
+  authMiddleware,
+  requireRoles('LEARNER'),
+  validate(likedMaterialsQuerySchema, 'query'),
+  asyncHandler(listLikedMaterials),
 );
 
 materialsRouter.post(

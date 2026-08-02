@@ -8,21 +8,27 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/format/localized_formatters.dart';
+import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_ui_labels.dart';
+import '../../../../shared/location/current_location_service.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/app_text_area.dart';
-import '../../../../shared/location/current_location_service.dart';
+import '../../../../shared/widgets/bidi_text.dart';
+import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
-import '../../../deliveries/presentation/pickup_window_presentation.dart';
-import '../../../../shared/widgets/handover_confirmation_code_panel.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
+import '../../data/models/update_driver_delivery_status_request.dart';
 import '../driver_delivery_timing_presentation.dart';
+import '../widgets/partial_pickup_selection_dialog.dart';
+import 'driver_history_detail_page.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -31,6 +37,7 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final deliveryAsync = ref.watch(driverDeliveryDetailProvider(deliveryId));
 
     return SingleChildScrollView(
@@ -45,16 +52,16 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: 1040),
           child: deliveryAsync.when(
             skipLoadingOnReload: true,
-            loading: () => const _StatePanel(
+            loading: () => _StatePanel(
               icon: Icons.route_outlined,
-              title: 'Loading delivery',
-              subtitle: 'Checking your active assigned delivery.',
+              title: l10n.loadingDelivery,
+              subtitle: l10n.driverCheckingActiveDelivery,
             ),
             error: (_, _) => _StatePanel(
               icon: Icons.cloud_off_outlined,
-              title: 'Could not load delivery details.',
-              subtitle: 'Please try again.',
-              actionLabel: 'Retry',
+              title: l10n.driverCouldNotLoadDetails,
+              subtitle: l10n.tryAgain,
+              actionLabel: l10n.retry,
               actionTone: AppStatusTone.primary,
               onAction: () => refreshActiveDriverDelivery(ref, deliveryId),
             ),
@@ -64,28 +71,13 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                   delivery: delivery,
                   onRefresh: () => refreshActiveDriverDelivery(ref, deliveryId),
                 ),
-                DriverDeliveryDetailInactive(context: final inactiveContext) =>
-                  _StatePanel(
-                    icon: inactiveContext.movedToAdminReview
-                        ? Icons.admin_panel_settings_outlined
-                        : Icons.lock_outline,
-                    title: inactiveContext.movedToAdminReview
-                        ? 'Delivery moved to admin review'
-                        : 'Delivery no longer active',
-                    subtitle:
-                        inactiveContext.message ??
-                        'This delivery is no longer active. It was moved to admin review.',
-                    actionLabel: 'Back to jobs',
-                    actionTone: AppStatusTone.neutral,
-                    actionProminent: false,
-                    onAction: () => context.popOrGo('/driver/jobs'),
-                  ),
+                DriverDeliveryDetailInactive(delivery: final delivery) =>
+                  DriverHistoricalDeliveryContent(delivery: delivery),
                 DriverDeliveryDetailNotFound() => _StatePanel(
                   icon: Icons.lock_outline,
-                  title: 'Delivery not active or not assigned to you',
-                  subtitle:
-                      'Open the jobs board to view your current assigned delivery.',
-                  actionLabel: 'Back to jobs',
+                  title: l10n.driverNotAssigned,
+                  subtitle: l10n.driverOpenJobsBoard,
+                  actionLabel: l10n.driverBackToJobs,
                   actionTone: AppStatusTone.neutral,
                   actionProminent: false,
                   onAction: () => context.popOrGo('/driver/jobs'),
@@ -143,7 +135,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
+    final formatters = LocalizedFormatters(l10n);
 
     return _Panel(
       child: Column(
@@ -154,7 +148,7 @@ class _Header extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Active delivery',
+                  l10n.driverActiveDelivery,
                   style: AppTextStyles.display(
                     context,
                   ).copyWith(color: palette.textPrimary),
@@ -162,7 +156,7 @@ class _Header extends StatelessWidget {
               ),
               IconButton(
                 onPressed: onRefresh,
-                tooltip: 'Refresh',
+                tooltip: l10n.refresh,
                 icon: const Icon(Icons.refresh_rounded),
               ),
             ],
@@ -174,11 +168,15 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status),
+                label: deliveryStatusLabel(delivery.status, l10n: l10n),
                 tone: deliveryStatusAppTone(delivery.status),
               ),
               Text(
-                'Assigned ${_formatDateTime(delivery.assignedAt ?? delivery.requestedAt)}',
+                l10n.driverAssignedAt(
+                  formatters.dateTime(
+                    delivery.assignedAt ?? delivery.requestedAt,
+                  ),
+                ),
                 style: AppTextStyles.label(
                   context,
                 ).copyWith(color: palette.textMuted),
@@ -198,48 +196,68 @@ class _SummaryPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _PanelTitle(
             icon: Icons.inventory_2_outlined,
-            title: delivery.hasGroupedItems ? 'Materials' : 'Material',
+            title: delivery.hasGroupedItems ? l10n.materials : l10n.material,
             body: delivery.hasGroupedItems
-                ? delivery.groupedItemLines.join('\n')
-                : '${delivery.material.title} - ${delivery.material.quantityLabel}',
+                ? [
+                    DriverUiLabels(l10n).groupedItemsCount(delivery.itemCount),
+                    for (final item in delivery.items)
+                      '${bidiIsolate(DriverUiLabels(l10n).materialTitle(item.title))} × ${bidiIsolate(item.quantityLabel)}',
+                  ].join('\n')
+                : '${bidiIsolate(DriverUiLabels(l10n).materialTitle(delivery.material.title))} - ${bidiIsolate(delivery.material.quantityLabel)}',
           ),
           const SizedBox(height: AppSpacing.lg),
           _InfoRow(
-            label: 'Pickup window',
-            value: driverPickupWindowDetail(delivery),
+            label: l10n.pickupWindow,
+            value: _driverPickupWindowDetail(delivery, l10n),
           ),
-          _InfoRow(label: 'Supplier', value: _partySummary(delivery.supplier)),
           _InfoRow(
-            label: 'Pickup',
-            value: _locationDetail(delivery.pickupLocation),
+            label: l10n.supplier,
+            value: _partySummary(delivery.supplier, l10n),
+          ),
+          _InfoRow(
+            label: l10n.driverPickupLabel,
+            valueWidget: _locationDetail(
+              context,
+              delivery.pickupLocation,
+              l10n,
+            ),
           ),
           const Divider(height: AppSpacing.xl),
           _InfoRow(
-            label: 'Learner',
+            label: l10n.learner,
             value: delivery.learner == null
-                ? 'Learner unavailable'
-                : _partySummary(delivery.learner!),
+                ? l10n.driverLearnerUnavailable
+                : _partySummary(delivery.learner!, l10n),
           ),
           _InfoRow(
-            label: 'Drop-off',
-            value: _locationDetail(delivery.dropoffLocation),
+            label: l10n.dropoff,
+            valueWidget: _locationDetail(
+              context,
+              delivery.dropoffLocation,
+              l10n,
+            ),
           ),
           if (delivery.confirmedDeliveryWindowStart != null ||
               delivery.confirmedDeliveryWindowEnd != null)
             _InfoRow(
-              label: 'Delivery window',
-              value: _deliveryWindowDetail(delivery),
+              label: l10n.driverDeliveryWindow,
+              value: _deliveryWindowDetail(delivery, l10n),
             ),
           if (delivery.learnerNote?.trim().isNotEmpty == true)
-            _InfoRow(label: 'Learner note', value: delivery.learnerNote!),
+            _InfoRow(
+              label: l10n.driverLearnerNote,
+              value: delivery.learnerNote!,
+            ),
           if (delivery.driverNote?.trim().isNotEmpty == true)
-            _InfoRow(label: 'Driver note', value: delivery.driverNote!),
+            _InfoRow(label: l10n.driverNote, value: delivery.driverNote!),
         ],
       ),
     );
@@ -293,8 +311,9 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final actionState = ref.watch(driverDeliveryActionControllerProvider);
-    final guidance = buildDriverNextActionGuidance(widget.delivery);
+    final guidance = buildDriverNextActionGuidance(widget.delivery, l10n: l10n);
     final nextStatus = widget.delivery.nextStatus;
     final isSubmitting = actionState.isLoading;
     final canPressAction =
@@ -309,10 +328,10 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           _StepList(currentStatus: widget.delivery.status),
           const SizedBox(height: AppSpacing.lg),
           if (nextStatus == null)
-            const _InlineNotice(
+            _InlineNotice(
               icon: Icons.check_circle_outline,
-              title: 'No next action',
-              body: 'This delivery cannot be advanced from its current status.',
+              title: l10n.driverNoNextAction,
+              body: l10n.driverCannotAdvance,
             )
           else ...[
             if (guidance.timingGate != null)
@@ -322,7 +341,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                   icon: guidance.isBlockedByTiming
                       ? Icons.schedule_outlined
                       : Icons.info_outline,
-                  title: guidance.timingGate!.title ?? 'Timing note',
+                  title: guidance.timingGate!.title ?? l10n.driverTimingNote,
                   body: [
                     if (guidance.timingGate!.body != null)
                       guidance.timingGate!.body!,
@@ -338,31 +357,41 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             const SizedBox(height: AppSpacing.sm),
             AppTextArea(
               controller: _noteController,
-              label: 'Optional driver note',
-              hint: 'Add a short note for this status update',
+              label: l10n.driverOptionalNote,
+              hint: l10n.driverOptionalNoteHint,
               minLines: 2,
               maxLines: 3,
             ),
             const SizedBox(height: AppSpacing.md),
-            FilledButton.icon(
-              onPressed: canPressAction ? () => _advance(nextStatus) : null,
-              style: AppStatusButtonStyle.filled(
-                context,
-                deliveryStatusAppTone(nextStatus),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: canPressAction ? () => _advance(nextStatus) : null,
+                style: AppStatusButtonStyle.filled(
+                  context,
+                  deliveryStatusAppTone(nextStatus),
+                ),
+                icon: isSubmitting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        Directionality.of(context) == TextDirection.rtl
+                            ? Icons.arrow_back_rounded
+                            : Icons.arrow_forward_rounded,
+                      ),
+                label: Text(
+                  isSubmitting ? l10n.driverUpdating : guidance.actionLabel,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              icon: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.arrow_forward_rounded),
-              label: Text(isSubmitting ? 'Updating...' : guidance.actionLabel),
             ),
             if (!guidance.isActionEnabled) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
-                _disabledActionReason(widget.delivery, nextStatus),
+                _disabledActionReason(widget.delivery, nextStatus, l10n),
                 style: AppTextStyles.body(
                   context,
                 ).copyWith(color: MaterialsUiPalette.of(context).textMuted),
@@ -378,7 +407,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 AppStatusTone.danger,
               ),
               icon: const Icon(Icons.report_problem_outlined),
-              label: const Text('Report pickup failed'),
+              label: Text(l10n.driverReportPickupFailed),
             ),
           if (widget.delivery.canDriverReportDeliveryFailed) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -389,7 +418,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 AppStatusTone.danger,
               ),
               icon: const Icon(Icons.no_accounts_outlined),
-              label: const Text('Report delivery failed'),
+              label: Text(l10n.driverReportDeliveryFailed),
             ),
           ],
           if (widget.delivery.canDriverReportDriverIssue) ...[
@@ -401,7 +430,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 AppStatusTone.danger,
               ),
               icon: const Icon(Icons.car_crash_outlined),
-              label: const Text('Report driver issue'),
+              label: Text(l10n.driverReportDriverIssue),
             ),
           ],
           const SizedBox(height: AppSpacing.md),
@@ -411,7 +440,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             onPressed: () => context.popOrGo('/driver/jobs'),
             style: AppStatusButtonStyle.text(context, AppStatusTone.neutral),
             icon: const Icon(Icons.local_shipping_outlined),
-            label: const Text('Back to jobs'),
+            label: Text(l10n.driverBackToJobs),
           ),
         ],
       ),
@@ -419,14 +448,31 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
   }
 
   Future<void> _advance(String nextStatus) async {
+    final l10n = context.l10n;
     String? confirmationCode;
+    List<String>? pickedReservationIds;
+    List<UpdateDriverDeliveryUnpickedItem>? unpicked;
+
     if (nextStatus == 'PICKED_UP') {
+      final needsPartialPickupUi =
+          widget.delivery.hasGroupedItems && widget.delivery.items.length > 1;
+      if (needsPartialPickupUi) {
+        final selection = await showPartialPickupSelectionDialog(
+          context: context,
+          delivery: widget.delivery,
+        );
+        if (selection == null || !mounted) {
+          return;
+        }
+        pickedReservationIds = selection.pickedReservationIds;
+        unpicked = selection.unpicked;
+      }
+
       confirmationCode = await HandoverCodeInputDialog.show(
         context,
-        title: 'Supplier handover code',
-        message:
-            'Enter the code the supplier gives you after handing over the material.',
-        confirmLabel: 'Mark picked up',
+        title: l10n.driverSupplierHandoverCode,
+        message: l10n.driverSupplierHandoverCodeMessage,
+        confirmLabel: l10n.driverMarkPickedUp,
       );
       if (confirmationCode == null || !mounted) {
         return;
@@ -434,10 +480,9 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
     } else if (nextStatus == 'DELIVERED') {
       confirmationCode = await HandoverCodeInputDialog.show(
         context,
-        title: 'Learner delivery code',
-        message:
-            'Enter the code the learner gives you when they receive the material.',
-        confirmLabel: 'Mark delivered',
+        title: l10n.driverLearnerDeliveryCode,
+        message: l10n.driverLearnerDeliveryCodeMessage,
+        confirmLabel: l10n.driverMarkDelivered,
         confirmTone: AppStatusTone.success,
       );
       if (confirmationCode == null || !mounted) {
@@ -453,6 +498,8 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             status: nextStatus,
             note: _noteController.text,
             confirmationCode: confirmationCode,
+            pickedReservationIds: pickedReservationIds,
+            unpicked: unpicked,
           );
 
       if (!mounted) {
@@ -463,47 +510,47 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         if (!mounted) {
           return;
         }
-        context.popOrGo('/driver/jobs');
+        context.popOrGo('/driver/active');
         leaveDriverDeliveryDetail(ref);
-        showInfoSnackBar(context, 'Delivery marked delivered.');
+        showInfoSnackBar(context, l10n.driverDeliveryMarkedDelivered);
         return;
       }
 
-      showInfoSnackBar(context, 'Delivery status updated.');
+      showInfoSnackBar(context, l10n.driverStatusUpdated);
       _noteController.clear();
-      ref
-          .read(driverDeliveryActionControllerProvider.notifier)
-          .refreshActiveDelivery(widget.delivery.id);
     } on ApiException catch (error) {
       if (!mounted) {
         return;
       }
 
-      ref.invalidate(activeDriverDeliveryProvider(widget.delivery.id));
+      ref.invalidate(driverDeliveryDetailProvider(widget.delivery.id));
 
-      final message = error.statusCode == 409
-          ? 'Delivery status changed. Refresh and try the next valid action.'
-          : error.displayMessage;
+      final message = error.code == 'INVALID_DELIVERY_TRANSITION'
+          ? l10n.driverStatusChangedRefresh
+          : localizedApiErrorMessage(error, l10n);
       showInfoSnackBar(context, message);
     } catch (error) {
       if (!mounted) {
         return;
       }
 
-      showErrorSnackBar(context, error);
+      showErrorSnackBar(context, error, l10n: l10n);
     }
   }
 
   Future<void> _reportPickupFailed() async {
+    final l10n = context.l10n;
+    final labels = DriverUiLabels(l10n);
     final result = await _showDriverIncidentDialog(
       context,
-      title: 'Report pickup failed',
-      reasonOptions: const {
-        'SUPPLIER_UNAVAILABLE': 'Supplier unavailable',
-        'MATERIAL_NOT_READY': 'Material not ready',
-        'LOCATION_ISSUE': 'Location issue',
-        'OTHER': 'Other',
-      },
+      title: l10n.driverReportPickupFailed,
+      reasonCodes: const [
+        'SUPPLIER_UNAVAILABLE',
+        'MATERIAL_NOT_READY',
+        'LOCATION_ISSUE',
+        'OTHER',
+      ],
+      reasonLabel: labels.failurePickupReason,
     );
     if (result == null || !mounted) return;
 
@@ -516,25 +563,28 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             note: result.note,
           );
       if (!mounted) return;
-      showInfoSnackBar(context, 'Pickup failure reported.');
-      context.popOrGo('/driver/jobs');
+      showInfoSnackBar(context, l10n.driverPickupFailureReported);
+      context.popOrGo('/driver/active');
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, error.displayMessage);
+      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
     }
   }
 
   Future<void> _reportDeliveryFailed() async {
+    final l10n = context.l10n;
+    final labels = DriverUiLabels(l10n);
     final result = await _showDriverIncidentDialog(
       context,
-      title: 'Report delivery failed',
-      reasonOptions: const {
-        'LEARNER_UNAVAILABLE': 'Learner unavailable',
-        'ADDRESS_ISSUE': 'Address issue',
-        'ACCESS_ISSUE': 'Access issue',
-        'OTHER': 'Other',
-      },
+      title: l10n.driverReportDeliveryFailed,
+      reasonCodes: const [
+        'LEARNER_UNAVAILABLE',
+        'ADDRESS_ISSUE',
+        'ACCESS_ISSUE',
+        'OTHER',
+      ],
+      reasonLabel: labels.failureDeliveryReason,
     );
     if (result == null || !mounted) return;
 
@@ -547,29 +597,30 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             note: result.note,
           );
       if (!mounted) return;
-      showInfoSnackBar(context, 'Delivery failure reported.');
-      context.popOrGo('/driver/jobs');
+      showInfoSnackBar(context, l10n.driverDeliveryFailureReported);
+      context.popOrGo('/driver/active');
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, error.displayMessage);
+      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
     }
   }
 
   Future<void> _reportDriverIssue() async {
+    final l10n = context.l10n;
     final noteController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AppDialogShell(
-        title: const Text('Report driver issue'),
+        title: Text(l10n.driverReportDriverIssue),
         content: TextField(
           controller: noteController,
           maxLength: 1000,
           minLines: 3,
           maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: 'Note (required)',
-            hintText: 'Describe why you cannot continue delivery',
+          decoration: InputDecoration(
+            labelText: l10n.driverNoteRequired,
+            hintText: l10n.driverIssueNoteHint,
           ),
         ),
         footer: AppDialogFooter.form(
@@ -579,7 +630,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
               Navigator.of(context).pop(true);
             },
             style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-            child: const Text('Submit report'),
+            child: Text(l10n.driverSubmitReport),
           ),
         ),
       ),
@@ -593,21 +644,23 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
           .read(driverDeliveryActionControllerProvider.notifier)
           .reportDriverIssue(deliveryId: widget.delivery.id, note: note);
       if (!mounted) return;
-      showInfoSnackBar(context, 'Driver issue reported.');
-      context.popOrGo('/driver/jobs');
+      showInfoSnackBar(context, l10n.driverIssueReported);
+      context.popOrGo('/driver/active');
       leaveDriverDeliveryDetail(ref);
     } on ApiException catch (error) {
       if (!mounted) return;
-      showErrorSnackBar(context, error.displayMessage);
+      showErrorSnackBar(context, localizedApiErrorMessage(error, l10n));
     }
   }
 
   Future<_DriverIncidentFormResult?> _showDriverIncidentDialog(
     BuildContext context, {
     required String title,
-    required Map<String, String> reasonOptions,
+    required List<String> reasonCodes,
+    required String Function(String code) reasonLabel,
   }) async {
-    var selectedReason = reasonOptions.keys.first;
+    final l10n = context.l10n;
+    var selectedReason = reasonCodes.first;
     final noteController = TextEditingController();
 
     final confirmed = await showDialog<bool>(
@@ -620,12 +673,12 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
             children: [
               DropdownButtonFormField<String>(
                 initialValue: selectedReason,
-                decoration: const InputDecoration(labelText: 'Reason'),
-                items: reasonOptions.entries
+                decoration: InputDecoration(labelText: l10n.driverReason),
+                items: reasonCodes
                     .map(
-                      (entry) => DropdownMenuItem(
-                        value: entry.key,
-                        child: Text(entry.value),
+                      (code) => DropdownMenuItem(
+                        value: code,
+                        child: Text(reasonLabel(code)),
                       ),
                     )
                     .toList(),
@@ -640,7 +693,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 maxLength: 1000,
                 minLines: 3,
                 maxLines: 5,
-                decoration: const InputDecoration(labelText: 'Note (required)'),
+                decoration: InputDecoration(labelText: l10n.driverNoteRequired),
               ),
             ],
           ),
@@ -651,7 +704,7 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
                 Navigator.of(context).pop(true);
               },
               style: AppStatusButtonStyle.filled(context, AppStatusTone.danger),
-              child: const Text('Submit report'),
+              child: Text(l10n.driverSubmitReport),
             ),
           ),
         ),
@@ -701,7 +754,10 @@ class _LocationSharingSectionState
       _autoPingController?.dispose();
       _bindAutoPingController();
     } else {
-      _autoPingController?.updateDeliveryStatus(widget.delivery.status);
+      _autoPingController?.updateDeliveryStatus(
+        widget.delivery.status,
+        canShareLocation: widget.delivery.canShareLocation,
+      );
     }
   }
 
@@ -712,44 +768,51 @@ class _LocationSharingSectionState
   }
 
   void _bindAutoPingController() {
-    _autoPingController = DriverLocationAutoPingController(
-      sendPing: () => ref
-          .read(driverDeliveryActionControllerProvider.notifier)
-          .captureAndSendLocationPing(widget.delivery.id),
-      onStateChanged: (state) {
-        if (!mounted) {
-          return;
-        }
+    _autoPingController =
+        DriverLocationAutoPingController(
+          sendPing: () => ref
+              .read(driverDeliveryActionControllerProvider.notifier)
+              .captureAndSendLocationPing(widget.delivery.id),
+          resolveErrorMessage: (error) =>
+              DriverUiLabels(context.l10n).locationError(error),
+          onStateChanged: (state) {
+            if (!mounted) {
+              return;
+            }
 
-        setState(() => _autoPingState = state);
-      },
-    )..updateDeliveryStatus(widget.delivery.status);
+            setState(() => _autoPingState = state);
+          },
+        )..updateDeliveryStatus(
+          widget.delivery.status,
+          canShareLocation: widget.delivery.canShareLocation,
+        );
     _autoPingState = _autoPingController!.state;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
-    final eligible = widget.delivery.isAutoPingEligible;
+    final formatters = LocalizedFormatters(l10n);
+    final eligible = widget.delivery.canShareLocation;
     final sharingActive = _autoPingState.enabled && _autoPingState.isSharing;
     final isBusy = _autoPingState.isPinging || _isManualPinging;
 
     return _InlineNotice(
       icon: Icons.my_location_outlined,
-      title: 'Location sharing',
-      body:
-          'Share your location while this delivery is active. The learner can track you only after the material is picked up.',
+      title: l10n.driverLocationSharing,
+      body: l10n.driverLocationSharingBody,
       action: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (eligible)
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Share automatically'),
+              title: Text(l10n.driverShareAutomatically),
               subtitle: Text(
                 sharingActive
-                    ? 'Sharing every 45 seconds while this page is open.'
-                    : 'Location sharing paused',
+                    ? l10n.driverSharingEvery45Seconds
+                    : l10n.driverLocationSharingPaused,
                 style: AppTextStyles.body(
                   context,
                 ).copyWith(color: palette.textSecondary),
@@ -761,7 +824,7 @@ class _LocationSharingSectionState
             )
           else
             Text(
-              'Location sharing paused',
+              l10n.driverLocationSharingPaused,
               style: AppTextStyles.body(
                 context,
               ).copyWith(color: palette.textSecondary),
@@ -769,7 +832,9 @@ class _LocationSharingSectionState
           if (_autoPingState.lastSharedAt != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Last shared: ${_formatDateTime(_autoPingState.lastSharedAt!)}',
+              l10n.driverLastShared(
+                formatters.dateTime(_autoPingState.lastSharedAt!),
+              ),
               style: AppTextStyles.body(
                 context,
               ).copyWith(color: palette.textSecondary),
@@ -786,7 +851,9 @@ class _LocationSharingSectionState
           ],
           const SizedBox(height: AppSpacing.md),
           FilledButton.icon(
-            onPressed: isBusy ? null : () => _sendManualLocation(context),
+            onPressed: !eligible || isBusy
+                ? null
+                : () => _sendManualLocation(context),
             style: AppStatusButtonStyle.filled(context, AppStatusTone.info),
             icon: isBusy
                 ? const SizedBox(
@@ -795,7 +862,9 @@ class _LocationSharingSectionState
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.my_location_outlined),
-            label: Text(isBusy ? 'Sending...' : 'Send my location'),
+            label: Text(
+              isBusy ? l10n.driverSending : l10n.driverSendMyLocation,
+            ),
           ),
         ],
       ),
@@ -803,6 +872,7 @@ class _LocationSharingSectionState
   }
 
   Future<void> _sendManualLocation(BuildContext context) async {
+    final l10n = context.l10n;
     setState(() => _isManualPinging = true);
 
     try {
@@ -823,14 +893,16 @@ class _LocationSharingSectionState
       if (!context.mounted) {
         return;
       }
-      showInfoSnackBar(context, 'Location update sent.');
+      showInfoSnackBar(context, l10n.driverLocationUpdateSent);
     } on CurrentLocationException catch (error) {
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _autoPingState = _autoPingState.copyWith(inlineError: error.message);
+        _autoPingState = _autoPingState.copyWith(
+          inlineError: DriverUiLabels(l10n).locationError(error),
+        );
       });
     } on ApiException catch (error) {
       if (!mounted) {
@@ -839,7 +911,7 @@ class _LocationSharingSectionState
 
       setState(() {
         _autoPingState = _autoPingState.copyWith(
-          inlineError: error.displayMessage,
+          inlineError: localizedApiErrorMessage(error, l10n),
         );
       });
     } catch (error) {
@@ -847,7 +919,11 @@ class _LocationSharingSectionState
         return;
       }
 
-      showErrorSnackBar(context, error);
+      setState(() {
+        _autoPingState = _autoPingState.copyWith(
+          inlineError: DriverUiLabels(l10n).locationError(error),
+        );
+      });
     } finally {
       if (mounted) {
         setState(() => _isManualPinging = false);
@@ -864,19 +940,22 @@ class _StatusGuidanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final palette = MaterialsUiPalette.of(context);
 
     return _InlineNotice(
       icon: Icons.timeline_outlined,
-      title: 'Current stage: ${deliveryStatusLabel(delivery.status)}',
+      title: l10n.driverCurrentStage(
+        deliveryStatusLabel(delivery.status, l10n: l10n),
+      ),
       body: delivery.nextStatus == null
-          ? 'No further steps for this delivery.'
-          : 'Advance to: ${guidance.actionLabel}',
+          ? l10n.driverNoFurtherSteps
+          : l10n.driverAdvanceTo(guidance.actionLabel),
       action: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Next: ${guidance.actionLabel}',
+            l10n.driverNextAction(guidance.actionLabel),
             style: AppTextStyles.label(
               context,
             ).copyWith(color: palette.textPrimary),
@@ -884,15 +963,11 @@ class _StatusGuidanceCard extends StatelessWidget {
           if (delivery.status == 'ARRIVED_PICKUP' ||
               delivery.nextStatus == 'PICKED_UP') ...[
             const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Supplier handover code is required when marking picked up.',
-            ),
+            Text(l10n.driverSupplierCodeRequired),
           ],
           if (delivery.nextStatus == 'DELIVERED') ...[
             const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Learner delivery code is required when marking delivered.',
-            ),
+            Text(l10n.driverLearnerCodeRequired),
           ],
         ],
       ),
@@ -943,6 +1018,7 @@ class _StepList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final currentIndex = _steps.indexOf(currentStatus);
     final safeIndex = currentIndex < 0 ? 0 : currentIndex;
 
@@ -950,7 +1026,7 @@ class _StepList extends StatelessWidget {
       children: [
         for (var index = 0; index < _steps.length; index++)
           _StatusStep(
-            label: deliveryStatusLabel(_steps[index]),
+            label: deliveryStatusLabel(_steps[index], l10n: l10n),
             complete: currentIndex >= 0 && safeIndex >= index,
             current: currentIndex >= 0 && safeIndex == index,
           ),
@@ -1052,7 +1128,7 @@ class _PanelTitle extends StatelessWidget {
                 ).copyWith(color: palette.textPrimary),
               ),
               const SizedBox(height: AppSpacing.xs),
-              Text(
+              BidiText(
                 body,
                 style: AppTextStyles.body(
                   context,
@@ -1067,10 +1143,12 @@ class _PanelTitle extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({required this.label, this.value, this.valueWidget})
+    : assert(value != null || valueWidget != null);
 
   final String label;
-  final String value;
+  final String? value;
+  final Widget? valueWidget;
 
   @override
   Widget build(BuildContext context) {
@@ -1088,12 +1166,13 @@ class _InfoRow extends StatelessWidget {
             ).copyWith(color: palette.textMuted),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            value,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textPrimary),
-          ),
+          valueWidget ??
+              BidiText(
+                value!,
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textPrimary),
+              ),
         ],
       ),
     );
@@ -1207,8 +1286,12 @@ class _StatePanel extends StatelessWidget {
   }
 }
 
-String _disabledActionReason(DriverDelivery delivery, String nextStatus) {
-  final guidance = buildDriverNextActionGuidance(delivery);
+String _disabledActionReason(
+  DriverDelivery delivery,
+  String nextStatus,
+  AppLocalizations l10n,
+) {
+  final guidance = buildDriverNextActionGuidance(delivery, l10n: l10n);
   if (guidance.timingGate?.isBlocked == true) {
     final gate = guidance.timingGate!;
     return [
@@ -1218,58 +1301,87 @@ String _disabledActionReason(DriverDelivery delivery, String nextStatus) {
   }
 
   return switch (nextStatus) {
-    'PICKED_UP' => 'Complete "Arrive at pickup" before marking picked up.',
-    'ON_THE_WAY' => 'Mark picked up before starting delivery.',
-    'ARRIVED_DROPOFF' => 'Start delivery before arriving at drop-off.',
-    'DELIVERED' => 'Arrive at drop-off before marking delivered.',
-    _ => 'This action is not available yet.',
+    'PICKED_UP' => l10n.driverCompleteArriveBeforePickedUp,
+    'ON_THE_WAY' => l10n.driverMarkPickedUpBeforeDelivery,
+    'ARRIVED_DROPOFF' => l10n.driverStartDeliveryBeforeArrive,
+    'DELIVERED' => l10n.driverArriveBeforeDelivered,
+    _ => l10n.driverActionNotAvailable,
   };
 }
 
-String _deliveryWindowDetail(DriverDelivery delivery) {
+String _driverPickupWindowDetail(
+  DriverDelivery delivery,
+  AppLocalizations l10n,
+) {
+  final start =
+      delivery.supplierPickupWindowStart ?? delivery.pickupWindowStart;
+  final end = delivery.supplierPickupWindowEnd ?? delivery.pickupWindowEnd;
+
+  if (start == null && end == null) {
+    return l10n.driverNotSet;
+  }
+
+  final formatters = LocalizedFormatters(l10n);
+  if (start != null && end != null) {
+    return formatters.dateTimeRange(start, end);
+  }
+
+  return formatters.dateTime(start ?? end!);
+}
+
+String _deliveryWindowDetail(DriverDelivery delivery, AppLocalizations l10n) {
   final start = delivery.confirmedDeliveryWindowStart;
   final end = delivery.confirmedDeliveryWindowEnd;
   if (start == null && end == null) {
-    return 'Not set';
+    return l10n.driverNotSet;
   }
+
+  final formatters = LocalizedFormatters(l10n);
   if (start != null && end != null) {
-    return '${formatDriverDateTime(start)} – ${formatDriverDateTime(end)}';
+    return formatters.dateTimeRange(start, end);
   }
-  return formatDriverDateTime(start ?? end!);
+  return formatters.dateTime(start ?? end!);
 }
 
-String _partySummary(DriverDeliveryParty party) {
+String _partySummary(DriverDeliveryParty party, AppLocalizations l10n) {
   final details = [
-    party.displayName,
-    if (party.phone?.trim().isNotEmpty == true) party.phone!,
+    bidiIsolate(DriverUiLabels(l10n).partyDisplayName(party.displayName)),
+    if (party.phone?.trim().isNotEmpty == true) bidiIsolate(party.phone!),
   ];
   return details.join(' - ');
 }
 
-String _locationDetail(DriverSafeLocation location) {
-  final summary = location.exactSummary;
-  final lines = <String>[summary];
+Widget _locationDetail(
+  BuildContext context,
+  DriverSafeLocation location,
+  AppLocalizations l10n,
+) {
+  final palette = MaterialsUiPalette.of(context);
+  final bodyStyle = AppTextStyles.body(
+    context,
+  ).copyWith(color: palette.textPrimary);
+  final summary = DriverUiLabels(l10n).locationSummary(location.exactSummary);
 
-  if (location.isApproximate == true) {
-    lines.add('Approximate address — confirm with learner if needed.');
-  }
-  if (!location.hasExactCoordinates) {
-    lines.add('Exact coordinates are missing.');
-  } else {
-    lines.add(
-      '${location.latitude!.toStringAsFixed(5)}, '
-      '${location.longitude!.toStringAsFixed(5)}',
-    );
-  }
-
-  return lines.join('\n');
-}
-
-String _formatDateTime(DateTime dateTime) {
-  final local = dateTime.toLocal();
-  final month = local.month.toString().padLeft(2, '0');
-  final day = local.day.toString().padLeft(2, '0');
-  final hour = local.hour.toString().padLeft(2, '0');
-  final minute = local.minute.toString().padLeft(2, '0');
-  return '${local.year}-$month-$day $hour:$minute';
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      BidiText(summary, style: bodyStyle),
+      if (location.isApproximate == true) ...[
+        const SizedBox(height: AppSpacing.xs),
+        Text(l10n.driverApproximateAddress, style: bodyStyle),
+      ],
+      if (!location.hasExactCoordinates) ...[
+        const SizedBox(height: AppSpacing.xs),
+        Text(l10n.driverExactCoordinatesMissing, style: bodyStyle),
+      ] else ...[
+        const SizedBox(height: AppSpacing.xs),
+        BidiText(
+          '${location.latitude!.toStringAsFixed(5)}, '
+          '${location.longitude!.toStringAsFixed(5)}',
+          style: bodyStyle,
+          technical: true,
+        ),
+      ],
+    ],
+  );
 }

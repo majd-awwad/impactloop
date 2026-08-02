@@ -37,7 +37,12 @@ import {
   assertValidPickupWindow,
   validatePickupWindow,
 } from '../reservations/pickup-window-validation.js';
-import { PICKUP_WINDOW_TOO_CLOSE_MESSAGE, isAdminSupplierPickupReconfirmReason } from '../reservations/reservation-timing-policy.js';
+import {
+  PICKUP_WINDOW_TOO_CLOSE_MESSAGE,
+  isAdminSupplierPickupReconfirmReason,
+  isPartialPickupSupplierReconfirmReason,
+  isSupplierPickupReconfirmReason,
+} from '../reservations/reservation-timing-policy.js';
 import { submitNoDriverPickupWindowForSupplier } from './no-driver-supplier-pickup.repository.js';
 import { deriveHandoverCode } from '../../utils/handover-codes.js';
 import {
@@ -314,8 +319,10 @@ export const mapSupplierReservation = (
   const canSubmitNoDriverPickupWindow =
     reservation.status === 'AWAITING_SUPPLIER_CONFIRMATION' &&
     reservation.fulfillmentMethod === 'DELIVERY' &&
-    isAdminSupplierPickupReconfirmReason(reservation.pendingRescheduleReason) &&
-    latestDelivery?.status === 'AWAITING_RESOLUTION';
+    isSupplierPickupReconfirmReason(reservation.pendingRescheduleReason) &&
+    (isPartialPickupSupplierReconfirmReason(
+      reservation.pendingRescheduleReason,
+    ) || latestDelivery?.status === 'AWAITING_RESOLUTION');
   const canSupplierMarkDeliveryPickupExpired =
     !hasOpenIncident &&
     isSupplierDeliveryPickupExpiryAllowed({
@@ -379,7 +386,7 @@ export const mapSupplierReservation = (
         driver: driver
           ? {
               id: driver.id,
-              displayName: driver.displayName,
+              displayName: driver.user.displayName,
               userId: driver.user.id,
               profileImageUrl: driver.user.profileImageUrl,
             }
@@ -430,7 +437,7 @@ export const mapSupplierReservation = (
             }
           : null,
         isGroupedDelivery: groupItemCount > 1,
-        isGroupRecoverySupported: false,
+        isGroupRecoverySupported: true,
       })
     : null;
   const incidentSummary = primaryIncident && incidentContract
