@@ -95,6 +95,12 @@ class DriverDashboardPage extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(height: AppSpacing.lg),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/driver/history'),
+                    icon: const Icon(Icons.history_rounded),
+                    label: Text(l10n.driverHistoryTitle),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
                   Row(
                     children: [
                       Expanded(

@@ -5,6 +5,7 @@ import '../data/driver_deliveries_repository.dart';
 import '../data/models/driver_deliveries_list_result.dart';
 import '../data/models/driver_delivery_inactive_context.dart';
 import '../data/models/driver_delivery.dart';
+import '../data/models/driver_archive.dart';
 import 'driver_jobs_filter_helpers.dart';
 
 sealed class DriverDeliveryDetailState {
@@ -18,9 +19,10 @@ final class DriverDeliveryDetailActive extends DriverDeliveryDetailState {
 }
 
 final class DriverDeliveryDetailInactive extends DriverDeliveryDetailState {
-  const DriverDeliveryDetailInactive(this.context);
+  const DriverDeliveryDetailInactive(this.context, this.delivery);
 
   final DriverDeliveryInactiveContext context;
+  final DriverHistoricalDelivery delivery;
 }
 
 final class DriverDeliveryDetailNotFound extends DriverDeliveryDetailState {
@@ -263,6 +265,9 @@ final driverDeliveryDetailProvider =
             status: result.delivery.status,
             closureReason: result.closureReason,
           ),
+          await ref
+              .read(driverDeliveriesRepositoryProvider)
+              .fetchHistoricalDelivery(deliveryId),
         );
       } on ApiException catch (error) {
         if (error.statusCode == 404) {

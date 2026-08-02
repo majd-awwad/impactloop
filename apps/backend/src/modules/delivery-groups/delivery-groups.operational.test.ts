@@ -234,13 +234,14 @@ async function acceptDeliveryReservation(
 async function createGroupedReservations(
   ctx: TestContext,
   scheduling = buildFeasibleDeliveryScheduling(30),
+  overrides: Partial<CreateReservationInput> = {},
 ) {
   const materialA = await createMaterial(ctx, 'A');
   const materialB = await createMaterial(ctx, 'B');
 
   const first = await createReservation(
     ctx.learnerId,
-    deliveryPayload(materialA.id, scheduling),
+    deliveryPayload(materialA.id, scheduling, overrides),
   );
   ctx.createdReservationIds.push(first.id);
   if (first.deliveryGroupId) {
@@ -250,6 +251,7 @@ async function createGroupedReservations(
   const second = await createReservation(
     ctx.learnerId,
     deliveryPayload(materialB.id, scheduling, {
+      ...overrides,
       combineWithDeliveryGroupId: first.deliveryGroupId!,
     }),
   );
@@ -263,6 +265,7 @@ async function createGroupedReservations(
 async function createTripleGroupedReservations(
   ctx: TestContext,
   scheduling = buildFeasibleDeliveryScheduling(30),
+  overrides: Partial<CreateReservationInput> = {},
 ) {
   const materialA = await createMaterial(ctx, 'A');
   const materialB = await createMaterial(ctx, 'B');
@@ -270,7 +273,7 @@ async function createTripleGroupedReservations(
 
   const first = await createReservation(
     ctx.learnerId,
-    deliveryPayload(materialA.id, scheduling),
+    deliveryPayload(materialA.id, scheduling, overrides),
   );
   ctx.createdReservationIds.push(first.id);
   if (first.deliveryGroupId) {
@@ -280,6 +283,7 @@ async function createTripleGroupedReservations(
   const second = await createReservation(
     ctx.learnerId,
     deliveryPayload(materialB.id, scheduling, {
+      ...overrides,
       combineWithDeliveryGroupId: first.deliveryGroupId!,
     }),
   );
@@ -288,6 +292,7 @@ async function createTripleGroupedReservations(
   const third = await createReservation(
     ctx.learnerId,
     deliveryPayload(materialC.id, scheduling, {
+      ...overrides,
       combineWithDeliveryGroupId: first.deliveryGroupId!,
     }),
   );
@@ -332,6 +337,74 @@ async function prepareTripleGroupedPickup(ctx: TestContext) {
   });
 
   return { ...grouped, delivery, reservationIds };
+}
+
+async function prepareDetachedPartialPickupRecovery(
+  ctx: TestContext,
+  scenarioArea: string,
+) {
+  const scheduling = buildFeasibleDeliveryScheduling(36);
+  const grouped = await createTripleGroupedReservations(ctx, scheduling, {
+    dropoffArea: scenarioArea,
+  });
+  const reservationIds = [
+    grouped.first.id,
+    grouped.second.id,
+    grouped.third.id,
+  ];
+
+  await acceptDeliveryReservation(ctx, grouped.first.id, scheduling);
+  await acceptDeliveryReservation(ctx, grouped.second.id, scheduling);
+  await acceptDeliveryReservation(ctx, grouped.third.id, scheduling);
+
+  const originalDelivery = await prisma.delivery.findFirstOrThrow({
+    where: { deliveryGroupId: grouped.groupId },
+  });
+  ctx.createdDeliveryIds.push(originalDelivery.id);
+
+  await prisma.reservation.updateMany({
+    where: { id: { in: reservationIds } },
+    data: activePickupWindowReservationUpdate(),
+  });
+  await prisma.reservation.updateMany({
+    where: { id: { in: reservationIds } },
+    data: activeConfirmedDeliveryWindowUpdate(),
+  });
+  await acceptDelivery(ctx.driverUserId, originalDelivery.id);
+  await updateDriverDeliveryStatus(ctx.driverUserId, originalDelivery.id, {
+    status: 'ARRIVED_PICKUP',
+  });
+  await updateDriverDeliveryStatus(ctx.driverUserId, originalDelivery.id, {
+    status: 'PICKED_UP',
+    confirmationCode: deriveHandoverCode(
+      'supplier-handover',
+      originalDelivery.id,
+    ),
+    pickedReservationIds: [grouped.first.id, grouped.second.id],
+    unpicked: [
+      {
+        reservationId: grouped.third.id,
+        reason: 'WRONG_ITEM',
+        note: 'Focused recovery-link scenario.',
+      },
+    ],
+  });
+
+  const report = await prisma.noShowReport.findFirstOrThrow({
+    where: {
+      reservationId: grouped.third.id,
+      reasonCode: 'PICKUP_FAILED',
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  const requested = await requestSupplierRescheduleForPickupRecoveryReport({
+    reportId: report.id,
+    adminUserId: ctx.supplierId,
+    adminNote: 'Focused partial-pickup recovery test.',
+  });
+  assert.equal(requested.outcome, 'REQUESTED');
+
+  return { ...grouped, scheduling, originalDelivery, report };
 }
 
 async function groupedPickupStateSnapshot(input: {
@@ -1142,6 +1215,259 @@ describe('operational delivery groups', () => {
     assert.equal(
       afterComplete.find((row) => row.id === third.id)?.status,
       'ACCEPTED',
+    );
+  });
+
+  test('partial recovery joins an existing OPEN group and links its actual primary Delivery', async () => {
+    const scenarioArea = `${TEST_MARKER}-recovery-existing-${Date.now()}`;
+    const recovery = await prepareDetachedPartialPickupRecovery(
+      ctx,
+      scenarioArea,
+    );
+    const candidateMaterial = await createMaterial(ctx, 'recovery candidate');
+    const candidateReservation = await createReservation(
+      ctx.learnerId,
+      deliveryPayload(candidateMaterial.id, recovery.scheduling, {
+        dropoffArea: scenarioArea,
+      }),
+    );
+    ctx.createdReservationIds.push(candidateReservation.id);
+    assert.ok(candidateReservation.deliveryGroupId);
+    ctx.createdGroupIds.push(candidateReservation.deliveryGroupId);
+    await acceptDeliveryReservation(
+      ctx,
+      candidateReservation.id,
+      recovery.scheduling,
+    );
+
+    const candidateDelivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: candidateReservation.deliveryGroupId },
+    });
+    ctx.createdDeliveryIds.push(candidateDelivery.id);
+    assert.equal(candidateDelivery.reservationId, candidateReservation.id);
+    assert.notEqual(candidateDelivery.reservationId, recovery.third.id);
+
+    const originalBefore = await prisma.delivery.findUniqueOrThrow({
+      where: { id: recovery.originalDelivery.id },
+      select: {
+        status: true,
+        deliveryGroupId: true,
+        reservationId: true,
+        assignedDriverProfileId: true,
+        pickedUpAt: true,
+        updatedAt: true,
+      },
+    });
+    const originalHistoryBefore = await prisma.deliveryStatusHistory.count({
+      where: { deliveryId: recovery.originalDelivery.id },
+    });
+    const replacementStart = new Date(Date.now() + 60 * 60 * 60_000);
+    const replacementEnd = new Date(
+      replacementStart.getTime() + 2 * 60 * 60_000,
+    );
+    await submitNoDriverPickupWindow(ctx.supplierId, recovery.third.id, {
+      pickupWindowStart: replacementStart.toISOString(),
+      pickupWindowEnd: replacementEnd.toISOString(),
+      supplierNote: 'Join the compatible recovery group.',
+    });
+
+    const [detachedAfter, reportAfter, groupDeliveries, originalAfter] =
+      await Promise.all([
+        prisma.reservation.findUniqueOrThrow({
+          where: { id: recovery.third.id },
+        }),
+        prisma.noShowReport.findUniqueOrThrow({
+          where: { id: recovery.report.id },
+        }),
+        prisma.delivery.findMany({
+          where: { deliveryGroupId: candidateReservation.deliveryGroupId },
+        }),
+        prisma.delivery.findUniqueOrThrow({
+          where: { id: recovery.originalDelivery.id },
+          select: {
+            status: true,
+            deliveryGroupId: true,
+            reservationId: true,
+            assignedDriverProfileId: true,
+            pickedUpAt: true,
+            updatedAt: true,
+          },
+        }),
+      ]);
+
+    assert.equal(detachedAfter.deliveryGroupId, candidateReservation.deliveryGroupId);
+    assert.equal(groupDeliveries.length, 1);
+    assert.equal(groupDeliveries[0]!.id, candidateDelivery.id);
+    assert.equal(reportAfter.recoveryDeliveryId, candidateDelivery.id);
+    assert.equal(
+      reportAfter.recoveryDeliveryGroupId,
+      candidateReservation.deliveryGroupId,
+    );
+    assert.equal(reportAfter.recoveryAction, 'RESERVATION_REGROUPED');
+    assert.ok(reportAfter.recoveryCompletedAt);
+    assert.deepEqual(originalAfter, originalBefore);
+    assert.equal(
+      await prisma.deliveryStatusHistory.count({
+        where: { deliveryId: recovery.originalDelivery.id },
+      }),
+      originalHistoryBefore,
+    );
+  });
+
+  test('partial recovery creates a new group and persists its exact Delivery and group IDs', async () => {
+    const scenarioArea = `${TEST_MARKER}-recovery-new-${Date.now()}`;
+    const recovery = await prepareDetachedPartialPickupRecovery(
+      ctx,
+      scenarioArea,
+    );
+    const replacementStart = new Date(Date.now() + 60 * 60 * 60_000);
+    const replacementEnd = new Date(
+      replacementStart.getTime() + 2 * 60 * 60_000,
+    );
+    await submitNoDriverPickupWindow(ctx.supplierId, recovery.third.id, {
+      pickupWindowStart: replacementStart.toISOString(),
+      pickupWindowEnd: replacementEnd.toISOString(),
+    });
+
+    const detachedAfter = await prisma.reservation.findUniqueOrThrow({
+      where: { id: recovery.third.id },
+    });
+    assert.ok(detachedAfter.deliveryGroupId);
+    ctx.createdGroupIds.push(detachedAfter.deliveryGroupId);
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: { deliveryGroupId: detachedAfter.deliveryGroupId },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    const reportAfter = await prisma.noShowReport.findUniqueOrThrow({
+      where: { id: recovery.report.id },
+    });
+
+    assert.equal(reportAfter.recoveryDeliveryId, delivery.id);
+    assert.equal(reportAfter.recoveryDeliveryGroupId, detachedAfter.deliveryGroupId);
+    assert.equal(reportAfter.recoveryAction, 'RESERVATION_REGROUPED');
+    assert.ok(reportAfter.recoveryCompletedAt);
+  });
+
+  test('partial recovery persists the exact standalone Delivery when grouping is unavailable', async () => {
+    const scenarioArea = `${TEST_MARKER}-recovery-single-${Date.now()}`;
+    const recovery = await prepareDetachedPartialPickupRecovery(
+      ctx,
+      scenarioArea,
+    );
+    await prisma.reservation.update({
+      where: { id: recovery.third.id },
+      data: { deliveryZone: null },
+    });
+    const replacementStart = new Date(Date.now() + 60 * 60 * 60_000);
+    const replacementEnd = new Date(
+      replacementStart.getTime() + 2 * 60 * 60_000,
+    );
+    await submitNoDriverPickupWindow(ctx.supplierId, recovery.third.id, {
+      pickupWindowStart: replacementStart.toISOString(),
+      pickupWindowEnd: replacementEnd.toISOString(),
+    });
+
+    const detachedAfter = await prisma.reservation.findUniqueOrThrow({
+      where: { id: recovery.third.id },
+    });
+    assert.equal(detachedAfter.deliveryGroupId, null);
+    const delivery = await prisma.delivery.findFirstOrThrow({
+      where: {
+        reservationId: recovery.third.id,
+        deliveryGroupId: null,
+        status: 'WAITING_FOR_DRIVER',
+      },
+      orderBy: { requestedAt: 'desc' },
+    });
+    ctx.createdDeliveryIds.push(delivery.id);
+    const reportAfter = await prisma.noShowReport.findUniqueOrThrow({
+      where: { id: recovery.report.id },
+    });
+
+    assert.equal(reportAfter.recoveryDeliveryId, delivery.id);
+    assert.equal(reportAfter.recoveryDeliveryGroupId, null);
+    assert.equal(reportAfter.recoveryAction, 'REPLACEMENT_WINDOW_SUBMITTED');
+    assert.ok(reportAfter.recoveryCompletedAt);
+  });
+
+  test('partial recovery failure rolls back reservation, report, group, Delivery, and history writes', async () => {
+    const scenarioArea = `${TEST_MARKER}-recovery-rollback-${Date.now()}`;
+    const recovery = await prepareDetachedPartialPickupRecovery(
+      ctx,
+      scenarioArea,
+    );
+    await prisma.reservation.update({
+      where: { id: recovery.third.id },
+      data: { deliveryAddressText: null },
+    });
+    const [reservationBefore, reportBefore, reservationHistoryBefore,
+      originalHistoryBefore, scenarioGroupCountBefore, deliveryCountBefore] =
+      await Promise.all([
+        prisma.reservation.findUniqueOrThrow({
+          where: { id: recovery.third.id },
+        }),
+        prisma.noShowReport.findUniqueOrThrow({
+          where: { id: recovery.report.id },
+        }),
+        prisma.reservationStatusHistory.count({
+          where: { reservationId: recovery.third.id },
+        }),
+        prisma.deliveryStatusHistory.count({
+          where: { deliveryId: recovery.originalDelivery.id },
+        }),
+        prisma.deliveryGroup.count({
+          where: { dropoffArea: scenarioArea, status: 'OPEN' },
+        }),
+        prisma.delivery.count({
+          where: { reservationId: recovery.third.id },
+        }),
+      ]);
+    const replacementStart = new Date(Date.now() + 60 * 60 * 60_000);
+
+    await assert.rejects(
+      () =>
+        submitNoDriverPickupWindow(ctx.supplierId, recovery.third.id, {
+          pickupWindowStart: replacementStart.toISOString(),
+          pickupWindowEnd: new Date(
+            replacementStart.getTime() + 2 * 60 * 60_000,
+          ).toISOString(),
+        }),
+      /Delivery address is required/,
+    );
+
+    const [reservationAfter, reportAfter] = await Promise.all([
+      prisma.reservation.findUniqueOrThrow({
+        where: { id: recovery.third.id },
+      }),
+      prisma.noShowReport.findUniqueOrThrow({
+        where: { id: recovery.report.id },
+      }),
+    ]);
+    assert.deepEqual(reservationAfter, reservationBefore);
+    assert.deepEqual(reportAfter, reportBefore);
+    assert.equal(
+      await prisma.deliveryGroup.count({
+        where: { dropoffArea: scenarioArea, status: 'OPEN' },
+      }),
+      scenarioGroupCountBefore,
+    );
+    assert.equal(
+      await prisma.delivery.count({
+        where: { reservationId: recovery.third.id },
+      }),
+      deliveryCountBefore,
+    );
+    assert.equal(
+      await prisma.reservationStatusHistory.count({
+        where: { reservationId: recovery.third.id },
+      }),
+      reservationHistoryBefore,
+    );
+    assert.equal(
+      await prisma.deliveryStatusHistory.count({
+        where: { deliveryId: recovery.originalDelivery.id },
+      }),
+      originalHistoryBefore,
     );
   });
 

@@ -209,12 +209,12 @@ export const markLearnerPickupNoShow = async (input: {
       return { outcome: 'WINDOW_NOT_EXPIRED' as const };
     }
 
-    const duplicate = await tx.noShowReport.findUnique({
+    const duplicate = await tx.noShowReport.findFirst({
       where: {
-        reservationId_targetUserId: {
-          reservationId: existing.id,
-          targetUserId: existing.requesterId,
-        },
+        reservationId: existing.id,
+        deliveryId: null,
+        targetUserId: existing.requesterId,
+        reasonCode: input.reasonCode,
       },
     });
 
@@ -441,12 +441,12 @@ export const markDriverNoShow = async (input: {
 
     const driverUserId = delivery.assignedDriverProfile?.userId;
     if (driverUserId) {
-      const duplicate = await tx.noShowReport.findUnique({
+      const duplicate = await tx.noShowReport.findFirst({
         where: {
-          reservationId_targetUserId: {
-            reservationId: delivery.reservationId,
-            targetUserId: driverUserId,
-          },
+          reservationId: delivery.reservationId,
+          deliveryId: delivery.id,
+          targetUserId: driverUserId,
+          reasonCode: 'DRIVER_DID_NOT_ARRIVE',
         },
       });
 
@@ -614,6 +614,8 @@ export const markDriverPickupFailed = async (input: {
           targetRole: 'SUPPLIER',
           reasonCode: 'PICKUP_FAILED',
           note: failureNote,
+          reporterReasonDetail: input.reason,
+          reporterNote: input.note?.trim() || null,
           pickupWindowStart: delivery.reservation.supplierPickupWindowStart,
           pickupWindowEnd: delivery.reservation.supplierPickupWindowEnd,
         },
@@ -778,6 +780,8 @@ export const markDriverDeliveryFailed = async (input: {
             targetRole: 'LEARNER',
             reasonCode: 'DELIVERY_FAILED',
             note: failureNote,
+            reporterReasonDetail: input.reason,
+            reporterNote: input.note?.trim() || null,
             pickupWindowStart: delivery.reservation.confirmedDeliveryWindowStart,
             pickupWindowEnd: delivery.reservation.confirmedDeliveryWindowEnd,
           },
@@ -910,6 +914,8 @@ export const markDriverIssueAfterPickup = async (input: {
           targetRole: 'DRIVER',
           reasonCode: 'DRIVER_ISSUE',
           note: input.note.trim(),
+          reporterReasonDetail: 'DRIVER_ISSUE',
+          reporterNote: input.note.trim(),
           pickupWindowStart: delivery.reservation.confirmedDeliveryWindowStart,
           pickupWindowEnd: delivery.reservation.confirmedDeliveryWindowEnd,
         },

@@ -25,10 +25,10 @@ import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import '../../application/driver_location_auto_ping_controller.dart';
 import '../../data/models/driver_delivery.dart';
-import '../../data/models/driver_delivery_inactive_context.dart';
 import '../../data/models/update_driver_delivery_status_request.dart';
 import '../driver_delivery_timing_presentation.dart';
 import '../widgets/partial_pickup_selection_dialog.dart';
+import 'driver_history_detail_page.dart';
 
 class DriverDeliveryDetailPage extends ConsumerWidget {
   const DriverDeliveryDetailPage({super.key, required this.deliveryId});
@@ -71,20 +71,8 @@ class DriverDeliveryDetailPage extends ConsumerWidget {
                   delivery: delivery,
                   onRefresh: () => refreshActiveDriverDelivery(ref, deliveryId),
                 ),
-                DriverDeliveryDetailInactive(context: final inactiveContext) =>
-                  _StatePanel(
-                    icon: inactiveContext.movedToAdminReview
-                        ? Icons.admin_panel_settings_outlined
-                        : Icons.lock_outline,
-                    title: inactiveContext.movedToAdminReview
-                        ? l10n.driverMovedToAdminReview
-                        : l10n.driverNoLongerActive,
-                    subtitle: _inactiveDeliverySubtitle(inactiveContext, l10n),
-                    actionLabel: l10n.driverBackToJobs,
-                    actionTone: AppStatusTone.neutral,
-                    actionProminent: false,
-                    onAction: () => context.popOrGo('/driver/active'),
-                  ),
+                DriverDeliveryDetailInactive(delivery: final delivery) =>
+                  DriverHistoricalDeliveryContent(delivery: delivery),
                 DriverDeliveryDetailNotFound() => _StatePanel(
                   icon: Icons.lock_outline,
                   title: l10n.driverNotAssigned,
@@ -1296,17 +1284,6 @@ class _StatePanel extends StatelessWidget {
       ),
     );
   }
-}
-
-String _inactiveDeliverySubtitle(
-  DriverDeliveryInactiveContext inactiveContext,
-  AppLocalizations l10n,
-) {
-  final closureReason = inactiveContext.closureReason?.trim();
-  if (closureReason != null && closureReason.isNotEmpty) {
-    return DriverUiLabels(l10n).inactiveClosureReason(closureReason);
-  }
-  return l10n.driverNoLongerActiveDefault;
 }
 
 String _disabledActionReason(

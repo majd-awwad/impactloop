@@ -315,6 +315,14 @@ export const requestSupplierRescheduleForPickupRecoveryReport = async (input: {
           ).id
         : report.id;
 
+    await tx.noShowReport.update({
+      where: { id: reportId },
+      data: {
+        recoveryAction: 'SUPPLIER_RESCHEDULE_REQUESTED',
+        recoveryActionAt: new Date(),
+      },
+    });
+
     return {
       outcome: 'REQUESTED' as const,
       reportId,
@@ -477,6 +485,15 @@ export const cancelAndReleaseHoldForPickupRecoveryReport = async (input: {
             })
           ).id
         : report.id;
+
+    await tx.noShowReport.update({
+      where: { id: reportId },
+      data: {
+        recoveryAction: 'RESERVATION_CANCELLED_OR_EXPIRED',
+        recoveryActionAt: now,
+        holdReleasedAt: now,
+      },
+    });
 
     return {
       outcome: 'CANCELLED' as const,

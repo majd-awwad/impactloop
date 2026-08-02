@@ -142,6 +142,13 @@ class _DriverSidebar extends StatelessWidget {
             route: driverNotificationsRoute,
             selected: isDriverNotificationsPath(currentPath),
           ),
+          const SizedBox(height: AppSpacing.xs),
+          _DriverNavButton(
+            icon: Icons.history_rounded,
+            label: l10n.driverHistoryNav,
+            route: '/driver/history',
+            selected: _isHistoryPath(currentPath),
+          ),
           const Spacer(),
           InkWell(
             onTap: () => context.go('/profile/account'),
@@ -216,6 +223,9 @@ class _DriverBottomNav extends StatelessWidget {
 
 bool _isActivePath(String path) =>
     path == '/driver/active' || path.startsWith('/driver/deliveries/');
+
+bool _isHistoryPath(String path) =>
+    path == '/driver/incidents' || path.startsWith('/driver/history');
 
 class _DriverNavButton extends StatelessWidget {
   const _DriverNavButton({

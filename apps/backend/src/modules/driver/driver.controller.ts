@@ -1,6 +1,9 @@
 import type { Request, Response } from 'express';
 
-import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
+import {
+  readValidatedParams,
+  readValidatedQuery,
+} from '../../middlewares/validate.middleware.js';
 import { successResponse } from '../../utils/api-response.js';
 
 import {
@@ -12,12 +15,45 @@ import {
   listAvailableDeliveries,
   updateDriverDeliveryStatus,
 } from './driver.service.js';
+import {
+  getDriverHistoricalDelivery,
+  listDriverDeliveryHistory,
+  listDriverIncidents,
+} from './driver-history.service.js';
 import type {
   CreateDeliveryLocationPingInput,
   DeliveryIdParams,
   ListAvailableDeliveriesQuery,
   UpdateDriverDeliveryStatusInput,
+  ListDriverArchiveQuery,
 } from './driver.validation.js';
+
+export const listDriverDeliveryHistoryHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = readValidatedQuery<ListDriverArchiveQuery>(req);
+  const result = await listDriverDeliveryHistory(req.auth!.sub, query);
+  res.json(successResponse('Driver delivery history loaded.', result));
+};
+
+export const getDriverHistoricalDeliveryHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = readValidatedParams<DeliveryIdParams>(req);
+  const result = await getDriverHistoricalDelivery(req.auth!.sub, id);
+  res.json(successResponse('Historical delivery loaded.', result));
+};
+
+export const listDriverIncidentsHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = readValidatedQuery<ListDriverArchiveQuery>(req);
+  const result = await listDriverIncidents(req.auth!.sub, query);
+  res.json(successResponse('Driver incidents loaded.', result));
+};
 
 export const listAvailableDriverDeliveriesHandler = async (
   req: Request,

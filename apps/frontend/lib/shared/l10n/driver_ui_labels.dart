@@ -66,8 +66,7 @@ class DriverUiLabels {
       l10n.driverLocationServicesDisabled,
     CurrentLocationFailure.timeout ||
     CurrentLocationFailure.unsupported ||
-    CurrentLocationFailure.unavailable =>
-      l10n.driverCurrentLocationFailed,
+    CurrentLocationFailure.unavailable => l10n.driverCurrentLocationFailed,
   };
 
   String locationError(Object error) {
@@ -93,4 +92,57 @@ class DriverUiLabels {
     final value = raw?.trim() ?? '';
     return value.isEmpty ? l10n.material : value;
   }
+
+  String assignmentOutcome(String code) => switch (code.toUpperCase()) {
+    'MOVED_TO_ADMIN_REVIEW' => l10n.driverOutcomeAdminReview,
+    'REASSIGNED' => l10n.driverOutcomeReassigned,
+    'RELEASED_TO_POOL' => l10n.driverOutcomeReleased,
+    _ => l10n.driverOutcomeClosed,
+  };
+
+  String incidentReviewStatus(String code) => switch (code.toUpperCase()) {
+    'PENDING_REVIEW' => l10n.driverReviewPending,
+    'VERIFIED' => l10n.driverReviewVerified,
+    'REJECTED' => l10n.driverReviewRejected,
+    'RESOLVED_NO_STRIKE' => l10n.driverReviewResolvedNoStrike,
+    _ => l10n.unknownStatus,
+  };
+
+  String incidentType(String code) => switch (code.toUpperCase()) {
+    'PICKUP_FAILED' => l10n.driverIncidentPickupFailed,
+    'DELIVERY_FAILED' => l10n.driverIncidentDeliveryFailed,
+    'DRIVER_ISSUE' => l10n.driverIncidentDriverIssue,
+    _ => l10n.unknownStatus,
+  };
+
+  String incidentReason(String code) {
+    final normalized = code.toUpperCase();
+    if (normalized == 'LEARNER_UNAVAILABLE' ||
+        normalized == 'ADDRESS_ISSUE' ||
+        normalized == 'ACCESS_ISSUE') {
+      return failureDeliveryReason(normalized);
+    }
+    if (partialPickupUnpickedReasons.contains(normalized)) {
+      return partialPickupUnpickedReason(normalized);
+    }
+    return failurePickupReason(normalized);
+  }
+
+  String incidentOutcome(String code) => switch (code.toUpperCase()) {
+    'SUPPLIER_RESCHEDULE_REQUESTED' => l10n.driverOutcomeSupplierReschedule,
+    'REPLACEMENT_WINDOW_SUBMITTED' => l10n.driverOutcomeReplacementSubmitted,
+    'RESERVATION_REGROUPED' => l10n.driverOutcomeRegrouped,
+    'RESERVATION_CANCELLED_OR_EXPIRED' => l10n.driverOutcomeCancelledExpired,
+    'PENDING_RECOVERY' => l10n.driverOutcomePendingRecovery,
+    _ => l10n.driverOutcomeNoUpdate,
+  };
 }
+
+const partialPickupUnpickedReasons = {
+  'MATERIAL_NOT_READY',
+  'MATERIAL_MISSING',
+  'WRONG_ITEM',
+  'QUANTITY_MISMATCH',
+  'DAMAGED_ITEM',
+  'SUPPLIER_REFUSED_HANDOVER',
+};

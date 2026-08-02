@@ -844,6 +844,9 @@ export const updateDriverDeliveryStatus = async (
           select: {
             status: true,
             materialId: true,
+            material: {
+              select: { title: true, unit: true, condition: true },
+            },
             ownerId: true,
             quantityRequested: true,
             supplierPickupWindowStart: true,
@@ -866,6 +869,9 @@ export const updateDriverDeliveryStatus = async (
                 status: true,
                 fulfillmentMethod: true,
                 materialId: true,
+                material: {
+                  select: { title: true, unit: true, condition: true },
+                },
                 quantityRequested: true,
                 ownerId: true,
                 supplierPickupWindowStart: true,
@@ -998,6 +1004,7 @@ export const updateDriverDeliveryStatus = async (
                 status: delivery.reservation.status,
                 fulfillmentMethod: 'DELIVERY',
                 materialId: delivery.reservation.materialId,
+                material: delivery.reservation.material,
                 quantityRequested: delivery.reservation.quantityRequested,
                 ownerId: delivery.reservation.ownerId,
                 supplierPickupWindowStart:
@@ -1030,6 +1037,30 @@ export const updateDriverDeliveryStatus = async (
         return { outcome: 'SELECTION_INVALID' as const };
       }
 
+      const pickedIdSet = new Set(selection.pickedIds);
+      const unpickedById = new Map(
+        selection.unpicked.map((item) => [item.reservationId, item]),
+      );
+      await tx.deliveryPickupItem.createMany({
+        data: members.map((member) => {
+          const unpickedItem = unpickedById.get(member.id);
+          return {
+            deliveryId: delivery.id,
+            reservationId: member.id,
+            materialId: member.materialId,
+            materialTitle: member.material.title,
+            quantity: member.quantityRequested,
+            unit: member.material.unit,
+            condition: member.material.condition,
+            wasPicked: pickedIdSet.has(member.id),
+            unpickedReason: unpickedItem?.reason ?? null,
+            driverNote: unpickedItem?.note?.trim() || null,
+            recordedAt: now,
+          };
+        }),
+        skipDuplicates: true,
+      });
+
       if (selection.unpicked.length > 0) {
         if (!delivery.deliveryGroupId) {
           return { outcome: 'SELECTION_INVALID' as const };
@@ -1046,6 +1077,34 @@ export const updateDriverDeliveryStatus = async (
           members,
         });
       }
+    }
+
+    if (input.status === 'PICKED_UP' && !hasPartialSelection) {
+      const members = delivery.deliveryGroup?.reservations.length
+        ? delivery.deliveryGroup.reservations
+        : [
+            {
+              id: delivery.reservationId,
+              materialId: delivery.reservation.materialId,
+              material: delivery.reservation.material,
+              quantityRequested: delivery.reservation.quantityRequested,
+            },
+          ];
+
+      await tx.deliveryPickupItem.createMany({
+        data: members.map((member) => ({
+          deliveryId: delivery.id,
+          reservationId: member.id,
+          materialId: member.materialId,
+          materialTitle: member.material.title,
+          quantity: member.quantityRequested,
+          unit: member.material.unit,
+          condition: member.material.condition,
+          wasPicked: true,
+          recordedAt: now,
+        })),
+        skipDuplicates: true,
+      });
     }
 
     const statusData: Prisma.DeliveryUpdateInput = {

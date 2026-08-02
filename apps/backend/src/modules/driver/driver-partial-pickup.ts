@@ -227,38 +227,50 @@ export const applyPartialPickupSplit = async (
         .filter(Boolean)
         .join('; ');
 
-      await tx.noShowReport.upsert({
+      const existingReport = await tx.noShowReport.findFirst({
         where: {
-          reservationId_targetUserId: {
-            reservationId: member.id,
-            targetUserId: member.ownerId,
-          },
-        },
-        create: {
           reservationId: member.id,
           deliveryId: input.deliveryId,
-          reporterUserId: input.driverUserId,
           targetUserId: member.ownerId,
-          targetRole: 'SUPPLIER',
           reasonCode: 'PICKUP_FAILED',
-          note: structuredNote,
-          pickupWindowStart: member.supplierPickupWindowStart,
-          pickupWindowEnd: member.supplierPickupWindowEnd,
         },
-        update: {
-          deliveryId: input.deliveryId,
-          reporterUserId: input.driverUserId,
-          targetRole: 'SUPPLIER',
-          reasonCode: 'PICKUP_FAILED',
-          note: structuredNote,
-          pickupWindowStart: member.supplierPickupWindowStart,
-          pickupWindowEnd: member.supplierPickupWindowEnd,
-          status: 'PENDING_REVIEW',
-          reviewedById: null,
-          reviewedAt: null,
-          reviewNote: null,
-        },
+        select: { id: true },
       });
+      const reportData = {
+        reservationId: member.id,
+        deliveryId: input.deliveryId,
+        reporterUserId: input.driverUserId,
+        targetUserId: member.ownerId,
+        targetRole: 'SUPPLIER' as const,
+        reasonCode: 'PICKUP_FAILED' as const,
+        note: structuredNote,
+        reporterReasonDetail: item.reason,
+        reporterNote: item.note?.trim() || null,
+        pickupWindowStart: member.supplierPickupWindowStart,
+        pickupWindowEnd: member.supplierPickupWindowEnd,
+      };
+      if (existingReport) {
+        await tx.noShowReport.update({
+          where: { id: existingReport.id },
+          data: {
+            deliveryId: input.deliveryId,
+            reporterUserId: input.driverUserId,
+            targetRole: 'SUPPLIER',
+            reasonCode: 'PICKUP_FAILED',
+            note: structuredNote,
+            reporterReasonDetail: item.reason,
+            reporterNote: item.note?.trim() || null,
+            pickupWindowStart: member.supplierPickupWindowStart,
+            pickupWindowEnd: member.supplierPickupWindowEnd,
+            status: 'PENDING_REVIEW',
+            reviewedById: null,
+            reviewedAt: null,
+            reviewNote: null,
+          },
+        });
+      } else {
+        await tx.noShowReport.create({ data: reportData });
+      }
     }
   }
 

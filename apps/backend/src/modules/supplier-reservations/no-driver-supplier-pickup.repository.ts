@@ -63,7 +63,7 @@ const parsePreferredDeliveryWindows = (
 const createPartialPickupReplacementDelivery = async (
   tx: Prisma.TransactionClient,
   input: { reservationId: string; supplierUserId: string },
-) => {
+): Promise<{ deliveryId: string; deliveryGroupId: string | null }> => {
   const reservation = await tx.reservation.findUniqueOrThrow({
     where: { id: input.reservationId },
     include: {
@@ -165,8 +165,14 @@ const createPartialPickupReplacementDelivery = async (
   };
 
   if (deliveryGroupId) {
-    await ensureDeliveryForAcceptedReservation(tx, deliveryInput);
-    return;
+    const delivery = await ensureDeliveryForAcceptedReservation(
+      tx,
+      deliveryInput,
+    );
+    return {
+      deliveryId: delivery.id,
+      deliveryGroupId: delivery.deliveryGroupId,
+    };
   }
 
   const deliveryAddressText = reservation.deliveryAddressText?.trim();
@@ -174,7 +180,7 @@ const createPartialPickupReplacementDelivery = async (
     throw new Error('Delivery address is required to create a delivery.');
   }
 
-  await createOperationalDelivery(tx, {
+  const delivery = await createOperationalDelivery(tx, {
     reservationId: reservation.id,
     requesterId: reservation.requesterId,
     changedByUserId: input.supplierUserId,
@@ -185,6 +191,10 @@ const createPartialPickupReplacementDelivery = async (
     deliveryNote: reservation.deliveryNote,
     statusHistoryNote: deliveryInput.statusHistoryNote,
   });
+  return {
+    deliveryId: delivery.id,
+    deliveryGroupId: delivery.deliveryGroupId,
+  };
 };
 
 const loadSupplierReservationRecord = async (
@@ -356,6 +366,9 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
       });
     }
 
+    let recoveryDeliveryId: string;
+    let recoveryDeliveryGroupId: string | null;
+
     if (delivery) {
       const deliveryChanged = await tx.delivery.updateMany({
         where: {
@@ -406,10 +419,36 @@ export const submitNoDriverPickupWindowForSupplier = async (input: {
         existing.id,
         'Supplier provided new pickup window after no driver available',
       );
+      recoveryDeliveryId = delivery.id;
+      recoveryDeliveryGroupId = delivery.deliveryGroupId;
     } else {
-      await createPartialPickupReplacementDelivery(tx, {
+      const replacement = await createPartialPickupReplacementDelivery(tx, {
         reservationId: existing.id,
         supplierUserId: input.ownerId,
+      });
+      recoveryDeliveryId = replacement.deliveryId;
+      recoveryDeliveryGroupId = replacement.deliveryGroupId;
+    }
+
+    const recoveryReport = await tx.noShowReport.findFirst({
+      where: {
+        reservationId: existing.id,
+        recoveryAction: 'SUPPLIER_RESCHEDULE_REQUESTED',
+      },
+      orderBy: [{ recoveryActionAt: 'desc' }, { id: 'desc' }],
+      select: { id: true },
+    });
+    if (recoveryReport) {
+      await tx.noShowReport.update({
+        where: { id: recoveryReport.id },
+        data: {
+          recoveryAction: recoveryDeliveryGroupId
+            ? 'RESERVATION_REGROUPED'
+            : 'REPLACEMENT_WINDOW_SUBMITTED',
+          recoveryDeliveryId,
+          recoveryDeliveryGroupId,
+          recoveryCompletedAt: new Date(),
+        },
       });
     }
 

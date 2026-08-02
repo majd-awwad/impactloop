@@ -13,6 +13,9 @@ import {
   listActiveDriverDeliveriesHandler,
   listAvailableDriverDeliveriesHandler,
   updateDriverDeliveryStatusHandler,
+  getDriverHistoricalDeliveryHandler,
+  listDriverDeliveryHistoryHandler,
+  listDriverIncidentsHandler,
 } from './driver.controller.js';
 import {
   markDriverDeliveryFailedHandler,
@@ -24,6 +27,7 @@ import {
   deliveryIdParamsSchema,
   listAvailableDeliveriesQuerySchema,
   updateDriverDeliveryStatusSchema,
+  listDriverArchiveQuerySchema,
 } from './driver.validation.js';
 import {
   markDriverDeliveryFailedSchema,
@@ -44,6 +48,24 @@ driverRouter.get(
 driverRouter.get(
   '/deliveries/active',
   asyncHandler(listActiveDriverDeliveriesHandler),
+);
+
+driverRouter.get(
+  '/deliveries/history',
+  validate(listDriverArchiveQuerySchema, 'query'),
+  asyncHandler(listDriverDeliveryHistoryHandler),
+);
+
+driverRouter.get(
+  '/deliveries/history/:id',
+  validate(deliveryIdParamsSchema, 'params'),
+  asyncHandler(getDriverHistoricalDeliveryHandler),
+);
+
+driverRouter.get(
+  '/incidents',
+  validate(listDriverArchiveQuerySchema, 'query'),
+  asyncHandler(listDriverIncidentsHandler),
 );
 
 driverRouter.get(

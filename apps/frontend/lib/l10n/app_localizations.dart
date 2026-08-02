@@ -11665,6 +11665,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not get your current location. Please try again.'**
   String get driverCurrentLocationFailed;
+
+  /// No description provided for @driverHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'History and reports'**
+  String get driverHistoryTitle;
+
+  /// No description provided for @driverHistorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review deliveries you previously handled and follow up on reports you submitted.'**
+  String get driverHistorySubtitle;
+
+  /// No description provided for @driverDeliveriesTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Deliveries'**
+  String get driverDeliveriesTab;
+
+  /// No description provided for @driverReportsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get driverReportsTab;
+
+  /// No description provided for @driverHistoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No historical deliveries yet.'**
+  String get driverHistoryEmpty;
+
+  /// No description provided for @driverReportsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'You have not submitted any reports yet.'**
+  String get driverReportsEmpty;
+
+  /// No description provided for @driverArchiveLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this archive.'**
+  String get driverArchiveLoadFailed;
+
+  /// No description provided for @driverArchiveMoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier items could not be loaded. Your current results are still shown.'**
+  String get driverArchiveMoreFailed;
+
+  /// No description provided for @driverOpenHistoricalDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Open historical delivery'**
+  String get driverOpenHistoricalDelivery;
+
+  /// No description provided for @driverPartialPickupHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Partial pickup'**
+  String get driverPartialPickupHistory;
+
+  /// No description provided for @driverSubmittedNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Your submitted note'**
+  String get driverSubmittedNote;
+
+  /// No description provided for @driverResolutionOutcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolution'**
+  String get driverResolutionOutcome;
+
+  /// No description provided for @driverOpenRelatedDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Open related delivery'**
+  String get driverOpenRelatedDelivery;
+
+  /// No description provided for @driverHistoricalDeliveryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Historical delivery'**
+  String get driverHistoricalDeliveryTitle;
+
+  /// No description provided for @driverReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Read only'**
+  String get driverReadOnly;
+
+  /// No description provided for @driverDeliverySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery summary'**
+  String get driverDeliverySummary;
+
+  /// No description provided for @driverItemAudit.
+  ///
+  /// In en, this message translates to:
+  /// **'Item record'**
+  String get driverItemAudit;
+
+  /// No description provided for @driverLegacyItemAuditWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This older delivery has no pickup snapshot; current reservation records are shown.'**
+  String get driverLegacyItemAuditWarning;
+
+  /// No description provided for @driverFailureReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Failure reason'**
+  String get driverFailureReason;
+
+  /// No description provided for @driverDeliveryTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery timeline'**
+  String get driverDeliveryTimeline;
+
+  /// No description provided for @driverTimelineUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No timeline entries are available.'**
+  String get driverTimelineUnavailable;
+
+  /// No description provided for @driverHistoryNav.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get driverHistoryNav;
+
+  /// No description provided for @driverOutcomeAdminReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved to Admin review'**
+  String get driverOutcomeAdminReview;
+
+  /// No description provided for @driverOutcomeReassigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Reassigned to another driver'**
+  String get driverOutcomeReassigned;
+
+  /// No description provided for @driverOutcomeReleased.
+  ///
+  /// In en, this message translates to:
+  /// **'Released back to available jobs'**
+  String get driverOutcomeReleased;
+
+  /// No description provided for @driverOutcomeClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed delivery'**
+  String get driverOutcomeClosed;
+
+  /// No description provided for @driverReviewPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get driverReviewPending;
+
+  /// No description provided for @driverReviewVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get driverReviewVerified;
+
+  /// No description provided for @driverReviewRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get driverReviewRejected;
+
+  /// No description provided for @driverReviewResolvedNoStrike.
+  ///
+  /// In en, this message translates to:
+  /// **'Resolved without strike'**
+  String get driverReviewResolvedNoStrike;
+
+  /// No description provided for @driverIncidentPickupFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Pickup issue'**
+  String get driverIncidentPickupFailed;
+
+  /// No description provided for @driverIncidentDeliveryFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery issue'**
+  String get driverIncidentDeliveryFailed;
+
+  /// No description provided for @driverIncidentDriverIssue.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver issue'**
+  String get driverIncidentDriverIssue;
+
+  /// No description provided for @driverOutcomeSupplierReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Supplier reschedule requested'**
+  String get driverOutcomeSupplierReschedule;
+
+  /// No description provided for @driverOutcomeReplacementSubmitted.
+  ///
+  /// In en, this message translates to:
+  /// **'Replacement window submitted'**
+  String get driverOutcomeReplacementSubmitted;
+
+  /// No description provided for @driverOutcomeRegrouped.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation regrouped'**
+  String get driverOutcomeRegrouped;
+
+  /// No description provided for @driverOutcomeCancelledExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation cancelled or expired; hold released'**
+  String get driverOutcomeCancelledExpired;
+
+  /// No description provided for @driverOutcomePendingRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery remains pending'**
+  String get driverOutcomePendingRecovery;
+
+  /// No description provided for @driverOutcomeNoUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'No recovery update yet'**
+  String get driverOutcomeNoUpdate;
+
+  /// No description provided for @driverYes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get driverYes;
+
+  /// No description provided for @driverNotPickedUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Not picked up'**
+  String get driverNotPickedUpTitle;
+
+  /// No description provided for @driverArchiveCursorExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'This archive page changed or expired. Restart from the newest results.'**
+  String get driverArchiveCursorExpired;
+
+  /// No description provided for @driverRestartArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart from newest'**
+  String get driverRestartArchive;
+
+  /// No description provided for @driverOpenRecoveryDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'Open recovery delivery'**
+  String get driverOpenRecoveryDelivery;
 }
 
 class _AppLocalizationsDelegate
