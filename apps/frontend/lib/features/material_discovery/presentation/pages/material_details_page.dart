@@ -77,6 +77,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
     this.returnTo,
     this.componentName,
     this.recommendationImpressionId,
+    this.materialRequestMatchId,
   });
 
   final String materialId;
@@ -86,6 +87,7 @@ class MaterialDetailsPage extends ConsumerStatefulWidget {
   final String? returnTo;
   final String? componentName;
   final String? recommendationImpressionId;
+  final String? materialRequestMatchId;
 
   @override
   ConsumerState<MaterialDetailsPage> createState() =>
@@ -525,13 +527,20 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
     CreateReservationRequest request,
   ) async {
     final buildItemId = widget.buildItemId?.trim();
-    final enrichedRequest = buildItemId != null && buildItemId.isNotEmpty
+    final materialRequestMatchId = widget.materialRequestMatchId?.trim();
+    final hasBuildItemId = buildItemId != null && buildItemId.isNotEmpty;
+    final hasMaterialRequestMatchId =
+        materialRequestMatchId != null && materialRequestMatchId.isNotEmpty;
+    final enrichedRequest = hasBuildItemId || hasMaterialRequestMatchId
         ? CreateReservationRequest(
             materialId: request.materialId,
             quantityRequested: request.quantityRequested,
             fulfillmentMethod: request.fulfillmentMethod,
             message: request.message,
-            buildItemId: buildItemId,
+            buildItemId: hasBuildItemId ? buildItemId : null,
+            materialRequestMatchId: hasMaterialRequestMatchId
+                ? materialRequestMatchId
+                : null,
             learnerPreferredPickupWindows:
                 request.learnerPreferredPickupWindows,
             learnerPreferredDeliveryWindows:

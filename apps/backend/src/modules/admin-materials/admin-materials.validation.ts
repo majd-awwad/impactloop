@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { paginationQuerySchema } from '../../utils/zod-helpers.js';
+import { adminExportSpreadsheetFormatSchema } from '../admin-export/admin-export.validation.js';
 
 const materialStatusSchema = z.enum([
   'AVAILABLE',
@@ -112,3 +113,38 @@ export type AdminMaterialReportIdParams = z.infer<
 export type ResolveMaterialReportInput = z.infer<typeof resolveMaterialReportSchema>;
 export type RejectMaterialReportInput = z.infer<typeof rejectMaterialReportSchema>;
 export type HideMaterialFromReportInput = z.infer<typeof hideMaterialFromReportSchema>;
+
+export const adminMaterialsExportFiltersSchema = adminMaterialsListQuerySchema.omit({
+  page: true,
+  limit: true,
+});
+
+export const adminMaterialsExportDownloadQuerySchema =
+  adminMaterialsExportFiltersSchema.extend({
+    format: adminExportSpreadsheetFormatSchema.default('xlsx'),
+  });
+
+export type AdminMaterialsExportFilters = z.infer<
+  typeof adminMaterialsExportFiltersSchema
+>;
+export type AdminMaterialsExportDownloadQuery = z.infer<
+  typeof adminMaterialsExportDownloadQuerySchema
+>;
+
+export const adminMaterialReportsExportFiltersSchema =
+  adminMaterialReportsListQuerySchema.omit({
+    page: true,
+    limit: true,
+  });
+
+export const adminMaterialReportsExportDownloadQuerySchema =
+  adminMaterialReportsExportFiltersSchema.extend({
+    format: adminExportSpreadsheetFormatSchema.default('xlsx'),
+  });
+
+export type AdminMaterialReportsExportFilters = z.infer<
+  typeof adminMaterialReportsExportFiltersSchema
+>;
+export type AdminMaterialReportsExportDownloadQuery = z.infer<
+  typeof adminMaterialReportsExportDownloadQuerySchema
+>;

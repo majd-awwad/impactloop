@@ -4,6 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_response.dart';
+import 'admin_export_download.dart';
+import 'admin_reservations_api.dart'
+    show
+        AdminExportFormatEligibility,
+        parseContentDispositionFilename,
+        sanitizeAdminExportFilename;
 
 class AdminPeopleSummary {
   const AdminPeopleSummary({
@@ -183,6 +189,41 @@ class AdminPeopleListItem {
   }
 }
 
+class AdminPeopleExportPreflight {
+  const AdminPeopleExportPreflight({
+    required this.count,
+    required this.filters,
+    required this.formats,
+  });
+
+  final int count;
+  final Map<String, dynamic> filters;
+  final Map<String, AdminExportFormatEligibility> formats;
+
+  factory AdminPeopleExportPreflight.fromJson(Map<String, dynamic> json) {
+    final rawFormats = json['formats'];
+    final formats = <String, AdminExportFormatEligibility>{};
+    if (rawFormats is Map<String, dynamic>) {
+      for (final entry in rawFormats.entries) {
+        final value = entry.value;
+        if (value is Map<String, dynamic>) {
+          formats[entry.key] = AdminExportFormatEligibility.fromJson(value);
+        }
+      }
+    }
+
+    return AdminPeopleExportPreflight(
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      filters: json['filters'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['filters'] as Map<String, dynamic>)
+          : const <String, dynamic>{},
+      formats: formats,
+    );
+  }
+
+  AdminExportFormatEligibility? eligibilityFor(String format) => formats[format];
+}
+
 class AdminPeopleApi {
   const AdminPeopleApi(this._client);
 
@@ -256,6 +297,85 @@ class AdminPeopleApi {
     return unwrapApiResponse(
       _client.get<Map<String, dynamic>>('/api/admin/people/$userId'),
       (json) => json,
+    );
+  }
+
+  Map<String, dynamic> _exportQueryParameters({
+    String tab = 'ALL',
+    String search = '',
+    String? status,
+    String? format,
+  }) {
+    return {
+      'tab': tab,
+      if (search.isNotEmpty) 'search': search,
+      if (status != null && status.isNotEmpty && status != 'ALL')
+        'status': status,
+      'format': ?format,
+    };
+  }
+
+  Future<AdminPeopleExportPreflight> preflightExport({
+    String tab = 'ALL',
+    String search = '',
+    String? status,
+  }) {
+    return unwrapApiResponse(
+      _client.get<Map<String, dynamic>>(
+        '/api/admin/people/export/preflight',
+        queryParameters: _exportQueryParameters(
+          tab: tab,
+          search: search,
+          status: status,
+        ),
+      ),
+      AdminPeopleExportPreflight.fromJson,
+    );
+  }
+
+  Future<void> downloadExport({
+    String format = 'xlsx',
+    String tab = 'ALL',
+    String search = '',
+    String? status,
+  }) async {
+    final response = await _client.get<List<int>>(
+      '/api/admin/people/export',
+      queryParameters: _exportQueryParameters(
+        tab: tab,
+        search: search,
+        status: status,
+        format: format,
+      ),
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw const ApiException(
+        message: 'Export file was empty.',
+        code: 'EXPORT_EMPTY',
+      );
+    }
+
+    final mimeType = switch (format) {
+      'xlsx' =>
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      _ => 'text/csv; charset=utf-8',
+    };
+    final fallbackExtension = format == 'xlsx' ? 'xlsx' : 'csv';
+    final filename =
+        sanitizeAdminExportFilename(
+          parseContentDispositionFilename(
+            response.headers.value('content-disposition'),
+          ),
+        ) ??
+        'impactloop-users.$fallbackExtension';
+
+    downloadAdminExportBytes(
+      bytes: bytes,
+      filename: filename,
+      mimeType: mimeType,
     );
   }
 

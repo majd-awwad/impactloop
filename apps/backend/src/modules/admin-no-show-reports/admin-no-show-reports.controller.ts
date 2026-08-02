@@ -4,6 +4,10 @@ import { successResponse } from '../../utils/api-response.js';
 import { readValidatedParams, readValidatedQuery } from '../../middlewares/validate.middleware.js';
 
 import {
+  preflightAdminNoShowReportsExport,
+  streamAdminNoShowReportsExport,
+} from './admin-no-show-reports.export.js';
+import {
   cancelReleaseHoldAdminNoShowReport,
   getAdminNoShowReportById,
   listAdminNoShowReports,
@@ -14,6 +18,8 @@ import {
 } from './admin-no-show-reports.service.js';
 import type {
   AdminNoShowReportIdParams,
+  AdminNoShowReportsExportDownloadQuery,
+  AdminNoShowReportsExportFilters,
   AdminNoShowReportsListQuery,
   CancelReleaseHoldInput,
   RequestSupplierRescheduleInput,
@@ -29,6 +35,27 @@ export const listAdminNoShowReportsHandler = async (
   );
 
   res.json(successResponse('No-show reports loaded.', result));
+};
+
+export const preflightAdminNoShowReportsExportHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const filters = readValidatedQuery<AdminNoShowReportsExportFilters>(req);
+  const result = await preflightAdminNoShowReportsExport(filters);
+  res.json(successResponse('Incident reports export preflight loaded.', result));
+};
+
+export const exportAdminNoShowReportsHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = readValidatedQuery<AdminNoShowReportsExportDownloadQuery>(req);
+  await streamAdminNoShowReportsExport({
+    res,
+    filters: query,
+    actorUserId: req.auth!.sub,
+  });
 };
 
 export const getAdminNoShowReportHandler = async (

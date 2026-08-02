@@ -23,6 +23,7 @@ import '../../../materials/data/models/material_price_check_result.dart';
 import '../../../materials/data/models/material_type.dart' as material_models;
 import '../../../materials/data/models/price_rule_request.dart';
 import '../../../auth/application/auth_controller.dart';
+import '../../application/supplier_material_requests_providers.dart';
 import '../../application/supplier_my_materials_providers.dart';
 import '../../application/supplier_verification_access.dart';
 import '../../data/supplier_materials_repository.dart';
@@ -59,10 +60,12 @@ class AddMaterialPage extends ConsumerStatefulWidget {
     super.key,
     this.categoryRequestId,
     this.priceRuleRequestId,
+    this.materialRequestId,
   });
 
   final String? categoryRequestId;
   final String? priceRuleRequestId;
+  final String? materialRequestId;
 
   @override
   ConsumerState<AddMaterialPage> createState() => _AddMaterialPageState();
@@ -112,6 +115,8 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
   String? _resumeError;
   String? _sourceCategoryRequestId;
   String? _sourcePriceRuleRequestId;
+  String? _sourceMaterialRequestId;
+  bool _materialRequestPrefillApplied = false;
   String _createMaterialIdempotencyKey = _generateIdempotencyKey();
 
   @override
@@ -119,9 +124,56 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
     super.initState();
     _sourceCategoryRequestId = widget.categoryRequestId?.trim();
     _sourcePriceRuleRequestId = widget.priceRuleRequestId?.trim();
+    _sourceMaterialRequestId = widget.materialRequestId?.trim();
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _maybeResumeFromRoute(),
     );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _maybeApplyMaterialRequestPrefill(),
+    );
+  }
+
+  Future<void> _maybeApplyMaterialRequestPrefill() async {
+    final requestId = _sourceMaterialRequestId;
+    if (requestId == null || requestId.isEmpty || _materialRequestPrefillApplied) {
+      return;
+    }
+    _materialRequestPrefillApplied = true;
+    try {
+      final request = await ref.read(
+        supplierMaterialRequestDetailProvider(requestId).future,
+      );
+      if (!mounted) return;
+      setState(() {
+        if (_materialNameController.text.trim().isEmpty) {
+          _materialNameController.text = request.requestedItemName;
+        }
+        if (_titleController.text.trim().isEmpty) {
+          _titleController.text = request.requestedItemName;
+        }
+        if (_descriptionController.text.trim().isEmpty &&
+            request.description != null &&
+            request.description!.trim().isNotEmpty) {
+          _descriptionController.text = request.description!.trim();
+        }
+        if (_categoryId == null) {
+          _categoryId = request.categoryId;
+          _categoryManuallySelected = true;
+        }
+        if (_quantityController.text.trim().isEmpty ||
+            _quantityController.text.trim() == '1') {
+          _quantityController.text = request.quantity == request.quantity
+              .roundToDouble()
+              ? request.quantity.toStringAsFixed(0)
+              : request.quantity.toStringAsFixed(2);
+        }
+        if (!_unitEditedByUser && request.unit.trim().isNotEmpty) {
+          _unitController.text = request.unit.trim();
+        }
+      });
+    } catch (_) {
+      // Prefill is best-effort; the supplier can still fill the form manually.
+    }
   }
 
   @override
@@ -2169,6 +2221,7 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
               imageUrls: imageUrls,
               sourceCategoryRequestId: _sourceCategoryRequestId,
               sourcePriceRuleRequestId: _sourcePriceRuleRequestId,
+              suggestToMaterialRequestId: _sourceMaterialRequestId,
               useDefaultPickupLocation:
                   pickupSubmitData.useDefaultPickupLocation,
               pickupLocation: pickupSubmitData.pickupLocation,
@@ -2179,6 +2232,13 @@ class _AddMaterialPageState extends ConsumerState<AddMaterialPage> {
       invalidateSupplierMyMaterials(ref);
       ref.invalidate(supplierDashboardProvider);
       ref.invalidate(supplierNotificationsProvider);
+      if (_sourceMaterialRequestId != null &&
+          _sourceMaterialRequestId!.isNotEmpty) {
+        ref.invalidate(
+          supplierMaterialRequestDetailProvider(_sourceMaterialRequestId!),
+        );
+        ref.invalidate(supplierMaterialRequestsFeedProvider);
+      }
       if (!mounted) return;
       setState(() {
         _createdMaterial = material;

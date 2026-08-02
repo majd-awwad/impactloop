@@ -18,6 +18,7 @@ Public browse and detail view of surplus materials available for reuse. Guests a
 | Browse/detail error states | **Implemented** | Initial load retry, filtered/no-materials empty states, detail 404 and retry/back actions |
 | Nearby map | **Implemented** | Uses public approximate list pins only; no exact pickup coordinates |
 | Learner reserve from detail | **Partial** | Quantity dialog + `POST /api/reservations`; see [reservations.md](reservations.md) |
+| Learner material requests | **Implemented** | Empty-state CTA opens `/learner/material-requests/new`; build checklist MISSING items can prefill a request; suggestions reserve with optional `materialRequestMatchId` |
 | Learner material likes | **Implemented** | Detail-page optimistic like toggle + read-only list/home/related-card counts |
 | Report material | **Implemented** | Detail page only; unchanged in this slice |
 | Project handoff | **Implemented** | Detail page opens `/learning?q=<material title>` so Learning Hub search can show projects/components related to the material; no AI matching or persisted material-project relation |

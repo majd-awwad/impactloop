@@ -22,6 +22,7 @@ import '../widgets/materials/supplier_material_delete_helper.dart';
 import '../widgets/materials/supplier_material_edit_helper.dart';
 import '../widgets/materials/supplier_material_label_helper.dart';
 import '../widgets/materials/supplier_my_materials_colors.dart';
+import '../widgets/materials/supplier_related_projects_section.dart';
 
 const _contentMaxWidth = 1360.0;
 const _desktopBreakpoint = 980.0;
@@ -157,6 +158,8 @@ class _MaterialWorkspaceState extends ConsumerState<_MaterialWorkspace> {
                     _MetricGrid(material: material),
                     const SizedBox(height: AppSpacing.md),
                     _ManagementGrid(material: material, desktop: desktop),
+                    const SizedBox(height: AppSpacing.md),
+                    SupplierRelatedProjectsSection(materialId: material.id),
                     const SizedBox(height: AppSpacing.xl),
                   ],
                 ),

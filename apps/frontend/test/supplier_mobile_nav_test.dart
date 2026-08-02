@@ -22,6 +22,7 @@ void main() {
       supplierMobileMoreNavItems.map((item) => item.route).toList(),
       <String>[
         '/supplier/pickup-schedule',
+        '/supplier/material-requests',
         '/supplier/notifications',
         '/supplier/profile',
       ],
@@ -31,6 +32,7 @@ void main() {
   test('selects More for every grouped supplier route', () {
     for (final route in <String>[
       '/supplier/pickup-schedule',
+      '/supplier/material-requests',
       '/supplier/notifications',
       '/supplier/profile',
       '/supplier/profile/edit',

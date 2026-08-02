@@ -36,6 +36,9 @@ import '../../features/learning_hub/presentation/pages/learning_project_build_pa
 import '../../features/learning_hub/presentation/pages/learning_project_details_page.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_submissions_page.dart';
 import '../../features/landing/presentation/pages/landing_page.dart';
+import '../../features/learner_material_requests/presentation/pages/learner_material_request_detail_page.dart';
+import '../../features/learner_material_requests/presentation/pages/learner_material_request_form_page.dart';
+import '../../features/learner_material_requests/presentation/pages/learner_material_requests_page.dart';
 import '../../features/locations/presentation/pages/saved_locations_page.dart';
 import '../../features/material_discovery/domain/material_discovery_query.dart';
 import '../../features/material_discovery/presentation/pages/material_details_page.dart';
@@ -61,6 +64,8 @@ import '../../features/supplier_portal/presentation/pages/supplier_edit_material
 import '../../features/supplier_portal/presentation/pages/supplier_my_materials_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_owned_material_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_incoming_requests_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_material_request_detail_page.dart';
+import '../../features/supplier_portal/presentation/pages/supplier_material_requests_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_reservation_detail_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_notifications_page.dart';
 import '../../features/supplier_portal/presentation/pages/supplier_pickup_schedule_page.dart';
@@ -74,6 +79,7 @@ import '../../features/admin_portal/presentation/pages/admin_approvals_page.dart
 import '../../features/admin_portal/presentation/pages/admin_audit_logs_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_deliveries_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_delivery_detail_page.dart';
+import '../../features/admin_portal/presentation/pages/admin_export_center_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_learning_projects_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_no_show_report_detail_page.dart';
 import '../../features/admin_portal/presentation/pages/admin_no_show_reports_page.dart';
@@ -199,6 +205,8 @@ _RouteAccessLevel _routeAccessForPath(String path) {
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
       path.startsWith('/learner/deliveries/') ||
+      path == '/learner/material-requests' ||
+      path.startsWith('/learner/material-requests/') ||
       path.startsWith('/home/recommendations/') ||
       path == '/materials/liked' ||
       path == '/ai/assistant' ||
@@ -360,7 +368,9 @@ bool _isLearnerPortalHomePath(String path) {
       path == '/learning/add-draft' ||
       path == '/learner/reservations' ||
       path.startsWith('/learner/reservations/') ||
-      path.startsWith('/learner/deliveries/');
+      path.startsWith('/learner/deliveries/') ||
+      path == '/learner/material-requests' ||
+      path.startsWith('/learner/material-requests/');
 }
 
 String? _resolveActivePortalRedirect(AuthState authState, String path) {
@@ -647,6 +657,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/learner/material-requests',
+        builder: (context, state) => const LearnerMaterialRequestsPage(),
+      ),
+      GoRoute(
+        path: '/learner/material-requests/new',
+        builder: (context, state) {
+          final query = state.uri.queryParameters;
+          return LearnerMaterialRequestFormPage(
+            initialQuery: query['q'],
+            initialCategoryId: query['categoryId'],
+            initialProjectId: query['projectId'],
+            initialProjectBuildId: query['buildId'],
+            initialProjectBuildItemId: query['buildItemId'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/learner/material-requests/:id',
+        builder: (context, state) => LearnerMaterialRequestDetailPage(
+          requestId: state.pathParameters['id']!,
+        ),
+      ),
+      GoRoute(
         path: '/ai/general-learning',
         redirect: (context, state) {
           final conversationId = state.uri.queryParameters['conversationId'];
@@ -762,6 +795,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             buildItemId: query['buildItemId'],
             returnTo: query['returnTo'],
             componentName: query['componentName'],
+            materialRequestMatchId: query['materialRequestMatchId'],
           );
         },
       ),
@@ -905,6 +939,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               categoryRequestId: state.uri.queryParameters['categoryRequestId'],
               priceRuleRequestId:
                   state.uri.queryParameters['priceRuleRequestId'],
+              materialRequestId: state.uri.queryParameters['materialRequestId'],
             ),
           ),
           GoRoute(
@@ -944,6 +979,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/supplier/reservations/:reservationId',
             builder: (context, state) => SupplierReservationDetailPage(
               reservationId: state.pathParameters['reservationId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/material-requests',
+            builder: (context, state) => SupplierMaterialRequestsPage(
+              initialUnansweredByMe:
+                  state.uri.queryParameters['unansweredByMe'] == 'true',
+            ),
+          ),
+          GoRoute(
+            path: '/supplier/material-requests/:id',
+            builder: (context, state) => SupplierMaterialRequestDetailPage(
+              requestId: state.pathParameters['id']!,
             ),
           ),
           GoRoute(
@@ -1039,6 +1087,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin/learning-projects',
             builder: (context, state) => const AdminLearningProjectsPage(),
+          ),
+          GoRoute(
+            path: '/admin/exports',
+            builder: (context, state) => const AdminExportCenterPage(),
           ),
         ],
       ),

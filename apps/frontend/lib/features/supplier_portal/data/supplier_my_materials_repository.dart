@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import 'models/supplier_my_materials_models.dart';
+import 'models/supplier_related_projects.dart';
 import 'supplier_my_materials_api.dart';
 
 final supplierMyMaterialsApiProvider = Provider<SupplierMyMaterialsApi>((ref) {
@@ -28,6 +29,13 @@ class SupplierMyMaterialsRepository {
 
   Future<SupplierMyMaterial> getMaterial(String materialId) {
     return _api.getMaterial(materialId);
+  }
+
+  Future<SupplierRelatedProjectsResult> getRelatedProjects(
+    String materialId, {
+    int limit = 6,
+  }) {
+    return _api.getRelatedProjects(materialId, limit: limit);
   }
 
   Future<SupplierMyMaterial> updateMaterial(

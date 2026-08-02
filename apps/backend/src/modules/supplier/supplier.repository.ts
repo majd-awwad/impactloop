@@ -899,6 +899,27 @@ export const findSupplierOwnedMaterialById = async (
   });
 };
 
+export const findSupplierOwnedMaterialForRelatedProjects = async (
+  scope: SupplierMaterialScope,
+  materialId: string,
+) => {
+  return prisma.material.findFirst({
+    where: {
+      AND: [{ id: materialId }, buildSupplierMaterialWhere(scope)],
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      materialType: true,
+      categoryId: true,
+      tags: {
+        select: { tag: true },
+      },
+    },
+  });
+};
+
 export const countBlockingReservationsByMaterialIds = async (
   materialIds: string[],
 ) => {

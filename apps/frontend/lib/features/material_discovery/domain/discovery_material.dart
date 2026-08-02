@@ -289,7 +289,10 @@ class PublicSupplier {
   final int followersCount;
   final bool isFollowedByViewer;
 
-  PublicSupplier copyWith({int? followersCount, bool? isFollowedByViewer}) {
+  PublicSupplier copyWith({
+    int? followersCount,
+    bool? isFollowedByViewer,
+  }) {
     return PublicSupplier(
       id: id,
       displayName: displayName,

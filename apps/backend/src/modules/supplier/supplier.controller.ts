@@ -6,8 +6,10 @@ import { successResponse } from "../../utils/api-response.js";
 import {
   createSupplierMaterialIdempotent,
   deleteSupplierMaterial,
+  getSupplierCategoryDemandInsights,
   getSupplierDashboard,
   getSupplierMaterial,
+  getSupplierMaterialRelatedProjects,
   getSupplierMaterials,
   getSupplierProfile,
   getSupplierProfileManagement,
@@ -22,8 +24,10 @@ import { setSupplierPrivateCacheHeaders } from "./supplier-response-headers.js";
 import { validateIdempotencyKey } from "../../services/idempotency.service.js";
 import type {
   CreateSupplierMaterialInput,
+  SupplierCategoryDemandQuery,
   SupplierMaterialsQuery,
   SupplierFollowersQuery,
+  SupplierRelatedProjectsQuery,
   UpdateSupplierMaterialInput,
   UpdateSupplierProfileInput,
   UpdateSupplierProfileImagesInput,
@@ -37,6 +41,22 @@ export const getDashboard = async (
   const dashboard = await getSupplierDashboard(req.auth!.sub);
 
   res.json(successResponse("Supplier dashboard loaded", dashboard));
+};
+
+export const getCategoryDemand = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  setSupplierPrivateCacheHeaders(res);
+  const query = readValidatedQuery<SupplierCategoryDemandQuery>(req);
+  const categoryDemand = await getSupplierCategoryDemandInsights(
+    req.auth!.sub,
+    query.limit,
+  );
+
+  res.json(
+    successResponse("Supplier category demand insights loaded", categoryDemand),
+  );
 };
 
 export const getProfile = async (
@@ -118,6 +138,23 @@ export const getMaterial = async (
   );
 
   res.json(successResponse("Supplier material loaded", material));
+};
+
+export const getMaterialRelatedProjects = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  setSupplierPrivateCacheHeaders(res);
+  const query = readValidatedQuery<SupplierRelatedProjectsQuery>(req);
+  const relatedProjects = await getSupplierMaterialRelatedProjects(
+    req.auth!.sub,
+    req.params.id as string,
+    query.limit,
+  );
+
+  res.json(
+    successResponse("Supplier material related projects loaded", relatedProjects),
+  );
 };
 
 export const patchMaterial = async (

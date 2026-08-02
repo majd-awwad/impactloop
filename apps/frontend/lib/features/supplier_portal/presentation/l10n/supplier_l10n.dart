@@ -4,6 +4,8 @@ import '../../../../core/format/nis_price_format.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/l10n/material_ui_labels.dart';
 import '../../data/models/supplier_action_notification.dart';
+import '../../data/models/supplier_category_demand.dart';
+import '../theme/supplier_locale_scope.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 
@@ -20,6 +22,13 @@ class SupplierL10n {
   static SupplierL10n of(BuildContext context, [String? languageCode]) {
     return SupplierL10n(context.l10n);
   }
+
+  /// Test helper for localization assertions without a BuildContext.
+  @visibleForTesting
+  static SupplierL10n forLanguage(String languageCode) =>
+      SupplierL10n._(languageCode);
+
+  String t(String en, String ar) => isArabic ? ar : en;
 
   // —— Brand / shell ——
   String get brandName => _l10n.appTitle;
@@ -238,6 +247,9 @@ class SupplierL10n {
       return editMaterialTitle;
     }
     if (location.startsWith('/supplier/materials')) return navMyMaterials;
+    if (location.startsWith('/supplier/material-requests')) {
+      return navLearnerMaterialRequests;
+    }
     return navPortalFallback;
   }
 
@@ -263,6 +275,9 @@ class SupplierL10n {
     if (location.endsWith('/edit') &&
         location.startsWith('/supplier/materials/')) {
       return editMaterialSubtitle;
+    }
+    if (location.startsWith('/supplier/material-requests')) {
+      return learnerMaterialRequestsSubtitle;
     }
     return subtitleDefault;
   }

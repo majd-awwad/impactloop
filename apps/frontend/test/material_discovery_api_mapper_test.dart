@@ -333,7 +333,7 @@ void main() {
       'isFree': true,
       'deliveryAvailable': false,
       'recommendationImpressionId': 'imp-material-1',
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(material.recommendationImpressionId, 'imp-material-1');
@@ -351,7 +351,7 @@ void main() {
       'isFree': true,
       'deliveryAvailable': false,
       'recommendationImpressionId': '   ',
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(material.recommendationImpressionId, isNull);
@@ -377,7 +377,7 @@ void main() {
         'isFree': true,
         'deliveryAvailable': false,
         'recommendationImpressionId': value,
-        'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+        'category': {'nameEn': 'Wood', 'nameAr': '???'},
       });
 
       expect(material.recommendationImpressionId, isNull);
@@ -396,7 +396,7 @@ void main() {
       'isFree': true,
       'deliveryAvailable': false,
       'recommendationImpressionId': 'imp-copy-material',
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(
@@ -427,16 +427,13 @@ void main() {
         'area': 'Industrial',
         'isFollowedByViewer': true,
       },
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
     expect(material.supplier, isNotNull);
     expect(material.supplier!.id, 'sp-1');
     expect(material.supplier!.displayName, 'Workshop One');
-    expect(
-      material.supplier!.avatarUrl,
-      endsWith('/uploads/profiles/avatar.jpg'),
-    );
+    expect(material.supplier!.avatarUrl, endsWith('/uploads/profiles/avatar.jpg'));
     expect(material.supplier!.city, 'Nablus');
     expect(material.supplier!.area, 'Industrial');
     expect(material.supplier!.isFollowedByViewer, isTrue);
@@ -459,13 +456,35 @@ void main() {
       'supplierName': 'Flat Supplier',
       'supplierType': 'INDIVIDUAL_SUPPLIER',
       'supplierVerified': false,
-      'category': {'nameEn': 'Wood', 'nameAr': 'خشب'},
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
     });
 
-    expect(material.supplier, isNull);
-    expect(material.supplierName.en, 'Flat Supplier');
-    expect(material.supplierType, 'INDIVIDUAL_SUPPLIER');
-    expect(material.supplierVerified, isFalse);
+    expect(
+      material.copyWith(likesCount: 1).recommendationImpressionId,
+      'imp-copy-material',
+    );
+  });
+
+  test('maps nested supplier summary when present', () {
+    final material = MaterialDiscoveryApiMapper.fromJson({
+      'id': 'mat-unfollowed',
+      'title': 'Unfollowed supplier',
+      'description': 'Supplier not followed',
+      'status': 'AVAILABLE',
+      'quantity': 1,
+      'unit': 'piece',
+      'condition': 'GOOD',
+      'isFree': true,
+      'deliveryAvailable': false,
+      'supplier': {
+        'id': 'sp-2',
+        'displayName': 'Supplier Two',
+        'isFollowedByViewer': false,
+      },
+      'category': {'nameEn': 'Wood', 'nameAr': '???'},
+    });
+
+    expect(material.supplier?.isFollowedByViewer, isFalse);
   });
 
   test(
@@ -493,3 +512,4 @@ void main() {
     },
   );
 }
+

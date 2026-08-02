@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +17,7 @@ import '../../../../shared/widgets/materials/material_status_badge.dart';
 import '../../../../shared/widgets/review_status_presentation.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_materials_api.dart';
+import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
 import '../theme/admin_decoration_set.dart';
 import '../theme/admin_palette.dart';
 import '../utils/admin_material_moderation_policy.dart';
@@ -167,6 +169,8 @@ class AdminMaterialsPage extends ConsumerStatefulWidget {
 class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
   final _searchController = TextEditingController();
   var _appliedInitialStatus = false;
+  var _isPreflightLoading = false;
+  var _isDialogOpen = false;
 
   static const _validStatusFilters = {
     'AVAILABLE',
@@ -205,6 +209,210 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
     ref.invalidate(adminMaterialsSummaryProvider);
     ref.invalidate(adminMaterialsListProvider);
     ref.invalidate(adminMaterialReportsProvider);
+  }
+
+  String _activeFilterSummary(_MaterialsFilters filters) {
+    final parts = <String>[];
+    if (filters.search.trim().isNotEmpty) {
+      parts.add('Search: ${filters.search.trim()}');
+    }
+    if (filters.status != 'ALL') {
+      parts.add('Status: ${filters.status}');
+    }
+    if (filters.priceFilter != 'ALL') {
+      parts.add('Price: ${filters.priceFilter}');
+    }
+    if (filters.reportStatus != 'ALL') {
+      parts.add('Reports: ${filters.reportStatus}');
+    }
+    return parts.isEmpty ? 'No filters (all materials)' : parts.join(' · ');
+  }
+
+  String _activeReportsFilterSummary(_MaterialsFilters filters) {
+    final parts = <String>['Status: PENDING'];
+    if (filters.search.trim().isNotEmpty) {
+      parts.add('Search: ${filters.search.trim()}');
+    }
+    return parts.join(' · ');
+  }
+
+  Future<void> _exportMaterials() async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export is available on Admin Web only.'),
+        ),
+      );
+      return;
+    }
+    if (_isPreflightLoading || _isDialogOpen) return;
+
+    final filters = ref.read(_materialsFiltersProvider);
+    if (filters.tab != 'MATERIALS') return;
+
+    setState(() => _isPreflightLoading = true);
+    final api = ref.read(adminMaterialsApiProvider);
+
+    try {
+      final isFree = filters.priceFilter == 'FREE'
+          ? true
+          : filters.priceFilter == 'PAID'
+          ? false
+          : null;
+      final preflight = await api.preflightExport(
+        search: filters.search,
+        status: filters.status,
+        reportStatus: filters.reportStatus,
+        isFree: isFree,
+      );
+
+      if (!mounted) return;
+
+      if (preflight.count == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No materials match the current filters.'),
+          ),
+        );
+        return;
+      }
+
+      _isDialogOpen = true;
+      final selectedFormat = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AdminMaterialsExportDialog(
+          count: preflight.count,
+          filterSummary: _activeFilterSummary(filters),
+          formats: preflight.formats,
+          onDownload: (format) => api.downloadExport(
+            format: format,
+            search: filters.search,
+            status: filters.status,
+            reportStatus: filters.reportStatus,
+            isFree: isFree,
+          ),
+        ),
+      );
+      _isDialogOpen = false;
+
+      if (!mounted) return;
+      if (selectedFormat == null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Material ${selectedFormat.toUpperCase()} export downloaded.',
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreflightLoading = false;
+          _isDialogOpen = false;
+        });
+      } else {
+        _isPreflightLoading = false;
+        _isDialogOpen = false;
+      }
+    }
+  }
+
+  Future<void> _exportMaterialReports() async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export is available on Admin Web only.'),
+        ),
+      );
+      return;
+    }
+    if (_isPreflightLoading || _isDialogOpen) return;
+
+    final filters = ref.read(_materialsFiltersProvider);
+    if (filters.tab != 'REPORTS') return;
+
+    setState(() => _isPreflightLoading = true);
+    final api = ref.read(adminMaterialsApiProvider);
+
+    try {
+      final preflight = await api.preflightReportsExport(
+        search: filters.search,
+        status: 'PENDING',
+      );
+
+      if (!mounted) return;
+
+      if (preflight.count == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No material reports match the current filters.'),
+          ),
+        );
+        return;
+      }
+
+      _isDialogOpen = true;
+      final selectedFormat = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AdminMaterialReportsExportDialog(
+          count: preflight.count,
+          filterSummary: _activeReportsFilterSummary(filters),
+          formats: preflight.formats,
+          onDownload: (format) => api.downloadReportsExport(
+            format: format,
+            search: filters.search,
+            status: 'PENDING',
+          ),
+        ),
+      );
+      _isDialogOpen = false;
+
+      if (!mounted) return;
+      if (selectedFormat == null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Material reports ${selectedFormat.toUpperCase()} export downloaded.',
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreflightLoading = false;
+          _isDialogOpen = false;
+        });
+      } else {
+        _isPreflightLoading = false;
+        _isDialogOpen = false;
+      }
+    }
   }
 
   void _applyInitialStatusIfNeeded() {
@@ -289,6 +497,14 @@ class _AdminMaterialsPageState extends ConsumerState<AdminMaterialsPage> {
                 context.go('/admin/materials');
               },
               onRefresh: _refresh,
+              onExport: !kIsWeb
+                  ? null
+                  : filters.tab == 'MATERIALS'
+                  ? _exportMaterials
+                  : filters.tab == 'REPORTS'
+                  ? _exportMaterialReports
+                  : null,
+              exportLoading: _isPreflightLoading,
               showMaterialFilters: filters.tab == 'MATERIALS',
             ),
             const SizedBox(height: 16),
@@ -997,6 +1213,304 @@ class _TabSegment extends StatelessWidget {
   }
 }
 
+class AdminMaterialsExportDialog extends StatefulWidget {
+  const AdminMaterialsExportDialog({
+    super.key,
+    required this.count,
+    required this.filterSummary,
+    required this.formats,
+    required this.onDownload,
+  });
+
+  final int count;
+  final String filterSummary;
+  final Map<String, AdminExportFormatEligibility> formats;
+  final Future<void> Function(String format) onDownload;
+
+  @override
+  State<AdminMaterialsExportDialog> createState() =>
+      _AdminMaterialsExportDialogState();
+}
+
+class _AdminMaterialsExportDialogState
+    extends State<AdminMaterialsExportDialog> {
+  String _selectedFormat = 'xlsx';
+  bool _isDownloading = false;
+  String? _error;
+
+  AdminExportFormatEligibility? get _selectedEligibility =>
+      widget.formats[_selectedFormat];
+
+  bool get _canExport =>
+      !_isDownloading && (_selectedEligibility?.allowed ?? false);
+
+  String get _formatDescription {
+    switch (_selectedFormat) {
+      case 'csv':
+        return 'Raw data';
+      case 'xlsx':
+      default:
+        return 'Detailed editable data';
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (!_canExport) return;
+    setState(() {
+      _isDownloading = true;
+      _error = null;
+    });
+    try {
+      await widget.onDownload(_selectedFormat);
+      if (!mounted) return;
+      Navigator.of(context).pop(_selectedFormat);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.displayMessage;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
+        ? 'This export matches ${widget.count} materials, which exceeds the '
+              'limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow your '
+              'filters and try again.'
+        : null;
+
+    return AppDialogShell(
+      title: const Text('Export materials'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Export all ${widget.count} matching material'
+            '${widget.count == 1 ? '' : 's'}, including results not currently '
+            'visible.',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.filterSummary,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          const Text('Format'),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'xlsx', label: Text('Excel')),
+              ButtonSegment(value: 'csv', label: Text('CSV')),
+            ],
+            selected: {_selectedFormat},
+            onSelectionChanged: _isDownloading
+                ? null
+                : (values) {
+                    if (values.isEmpty) return;
+                    setState(() => _selectedFormat = values.first);
+                  },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (limitMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              limitMessage,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: _isDownloading
+              ? null
+              : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: _canExport ? _confirm : null,
+          child: _isDownloading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Export'),
+        ),
+      ),
+    );
+  }
+}
+
+class AdminMaterialReportsExportDialog extends StatefulWidget {
+  const AdminMaterialReportsExportDialog({
+    super.key,
+    required this.count,
+    required this.filterSummary,
+    required this.formats,
+    required this.onDownload,
+  });
+
+  final int count;
+  final String filterSummary;
+  final Map<String, AdminExportFormatEligibility> formats;
+  final Future<void> Function(String format) onDownload;
+
+  @override
+  State<AdminMaterialReportsExportDialog> createState() =>
+      _AdminMaterialReportsExportDialogState();
+}
+
+class _AdminMaterialReportsExportDialogState
+    extends State<AdminMaterialReportsExportDialog> {
+  String _selectedFormat = 'xlsx';
+  bool _isDownloading = false;
+  String? _error;
+
+  AdminExportFormatEligibility? get _selectedEligibility =>
+      widget.formats[_selectedFormat];
+
+  bool get _canExport =>
+      !_isDownloading && (_selectedEligibility?.allowed ?? false);
+
+  String get _formatDescription {
+    switch (_selectedFormat) {
+      case 'csv':
+        return 'Raw data';
+      case 'xlsx':
+      default:
+        return 'Detailed editable data';
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (!_canExport) return;
+    setState(() {
+      _isDownloading = true;
+      _error = null;
+    });
+    try {
+      await widget.onDownload(_selectedFormat);
+      if (!mounted) return;
+      Navigator.of(context).pop(_selectedFormat);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.displayMessage;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
+        ? 'This export matches ${widget.count} material reports, which '
+              'exceeds the limit of ${_selectedEligibility?.maxAllowed ?? 0}. '
+              'Narrow your filters and try again.'
+        : null;
+
+    return AppDialogShell(
+      title: const Text('Export material reports'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Export all ${widget.count} matching material report'
+            '${widget.count == 1 ? '' : 's'}, including results not currently '
+            'visible.',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.filterSummary,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          const Text('Format'),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'xlsx', label: Text('Excel')),
+              ButtonSegment(value: 'csv', label: Text('CSV')),
+            ],
+            selected: {_selectedFormat},
+            onSelectionChanged: _isDownloading
+                ? null
+                : (values) {
+                    if (values.isEmpty) return;
+                    setState(() => _selectedFormat = values.first);
+                  },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (limitMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              limitMessage,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: _isDownloading
+              ? null
+              : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: _canExport ? _confirm : null,
+          child: _isDownloading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Export'),
+        ),
+      ),
+    );
+  }
+}
+
 /// Dense rounded filter panel: search + supported dropdowns on one row,
 /// Reset/Refresh on a second row. Category/Location controls are omitted —
 /// they are not wired to the current materials API/filters state.
@@ -1011,6 +1525,8 @@ class _FiltersPanel extends StatelessWidget {
     required this.onReset,
     required this.onRefresh,
     required this.showMaterialFilters,
+    this.onExport,
+    this.exportLoading = false,
   });
 
   final TextEditingController searchController;
@@ -1022,6 +1538,8 @@ class _FiltersPanel extends StatelessWidget {
   final VoidCallback onReset;
   final VoidCallback onRefresh;
   final bool showMaterialFilters;
+  final VoidCallback? onExport;
+  final bool exportLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -1105,6 +1623,27 @@ class _FiltersPanel extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
+    final exportButton = onExport == null
+        ? null
+        : OutlinedButton.icon(
+            onPressed: exportLoading ? null : onExport,
+            icon: exportLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_outlined, size: 17),
+            label: Text(exportLoading ? 'Preparing…' : 'Export'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: palette.textPrimary,
+              side: BorderSide(color: palette.cardBorder),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          );
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1155,7 +1694,11 @@ class _FiltersPanel extends StatelessWidget {
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: [resetButton, refreshButton],
+            children: [
+              resetButton,
+              ?exportButton,
+              refreshButton,
+            ],
           ),
         ],
       ),

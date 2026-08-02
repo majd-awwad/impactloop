@@ -16,6 +16,8 @@ import {
   normalizeVerificationStatus,
 } from "./dto/supplier-dashboard.dto.js";
 import { getSupplierProjectSupportSummary } from "./supplier-project-impact.js";
+import { getRelatedProjectsForOwnedMaterial } from "./supplier-related-projects.js";
+import { getSupplierCategoryDemand } from "./supplier.category-demand.js";
 import {
   buildSupplierManagementVerification,
   calculateSupplierEssentialsCompletion,
@@ -1355,6 +1357,20 @@ export const createSupplierMaterialIdempotent = async (
   });
   const createdMaterial = created.response;
 
+  if (input.suggestToMaterialRequestId && !created.replayed) {
+    const { suggestMaterialForRequest } = await import(
+      "../supplier-material-requests/supplier-material-requests.service.js"
+    );
+    try {
+      await suggestMaterialForRequest(userId, input.suggestToMaterialRequestId, {
+        materialId: createdMaterial.id,
+        confirmWeakMatch: true,
+      });
+    } catch {
+      // Listing succeeds even if suggestion fails; supplier can suggest manually.
+    }
+  }
+
   const publishNotifications: Promise<unknown>[] = [];
   if (input.sourceCategoryRequestId) {
     publishNotifications.push(
@@ -2238,6 +2254,35 @@ export const getSupplierMaterial = async (
       mapMaterialReservationSummary(reservation, material.unit),
     ),
   };
+};
+
+export const getSupplierMaterialRelatedProjects = async (
+  userId: string,
+  materialId: string,
+  limit: number,
+) => {
+  const scope = await resolveSupplierContext(userId);
+  const material =
+    await supplierRepository.findSupplierOwnedMaterialForRelatedProjects(
+      scope,
+      materialId,
+    );
+
+  if (!material) {
+    throw new AppError("Material not found", 404, "NOT_FOUND");
+  }
+
+  return getRelatedProjectsForOwnedMaterial(material, limit);
+};
+
+export const getSupplierCategoryDemandInsights = async (
+  userId: string,
+  limit: number,
+) => {
+  // Auth/role already enforced by middleware; resolve context for supplier session validity.
+  // Aggregation is intentionally platform-wide and does not use supplier identity.
+  await resolveSupplierContext(userId);
+  return getSupplierCategoryDemand(limit);
 };
 
 export const updateSupplierMaterial = async (

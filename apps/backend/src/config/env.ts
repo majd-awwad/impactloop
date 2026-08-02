@@ -648,6 +648,12 @@ export const env = {
     process.env.AI_CHAT_MAX_HISTORY_MESSAGES,
     20,
   ),
+  adminExportMaxRows: parsePositiveInt(process.env.ADMIN_EXPORT_MAX_ROWS, 10_000),
+  adminExportChunkSize: parsePositiveInt(process.env.ADMIN_EXPORT_CHUNK_SIZE, 500),
+  adminExportPdfMaxRows: parsePositiveInt(
+    process.env.ADMIN_EXPORT_PDF_MAX_ROWS,
+    500,
+  ),
   aiChatRateLimitPerUser: parsePositiveInt(
     process.env.AI_CHAT_RATE_LIMIT_PER_USER,
     30,

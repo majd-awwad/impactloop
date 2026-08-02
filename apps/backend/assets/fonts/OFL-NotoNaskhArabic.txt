@@ -1,0 +1,12 @@
+Noto Naskh Arabic
+Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is available with a FAQ at: https://openfontlicense.org
+
+Font file in this directory:
+  NotoNaskhArabic-Regular.ttf
+
+Source: Google Fonts / notofonts (hinted TTF distribution).
+Used by ImpactLoop Admin Reservations PDF export for Arabic text runs only.
+Do not use this font for Latin letters — it lacks Latin glyphs.

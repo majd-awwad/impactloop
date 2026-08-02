@@ -20,6 +20,10 @@ apps/frontend/build/
 apps/backend/dist/
 apps/frontend/coverage/
 
+# Local Admin export verification artifacts
+apps/backend/tmp-exports/
+apps/backend/tmp/
+
 # Generated / machine-written
 apps/backend/src/generated/
 apps/backend/generated/

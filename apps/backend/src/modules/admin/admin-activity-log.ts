@@ -28,6 +28,7 @@ export const ADMIN_ACTIVITY_ACTIONS = {
   LEARNING_PROJECT_RESTORED: 'LEARNING_PROJECT_RESTORED',
   LEARNING_PROJECT_ARCHIVED: 'LEARNING_PROJECT_ARCHIVED',
   LEARNING_PROJECT_COMPONENT_ENRICHED: 'LEARNING_PROJECT_COMPONENT_ENRICHED',
+  DATA_EXPORTED: 'DATA_EXPORTED',
 } as const;
 
 export const ADMIN_ACTIVITY_TARGET_TYPES = {
@@ -39,6 +40,7 @@ export const ADMIN_ACTIVITY_TARGET_TYPES = {
   CATEGORY_REQUEST: 'CATEGORY_REQUEST',
   PRICE_RULE_REQUEST: 'PRICE_RULE_REQUEST',
   LEARNING_PROJECT: 'LEARNING_PROJECT',
+  DATA_EXPORT: 'DATA_EXPORT',
 } as const;
 
 export type AdminActivityAction =
@@ -73,6 +75,7 @@ const ACTION_LABELS: Record<AdminActivityAction, string> = {
   LEARNING_PROJECT_RESTORED: 'Learning project restored',
   LEARNING_PROJECT_ARCHIVED: 'Learning project archived',
   LEARNING_PROJECT_COMPONENT_ENRICHED: 'Learning project component enriched',
+  DATA_EXPORTED: 'Data exported',
 };
 
 const TARGET_TYPE_LABELS: Record<AdminActivityTargetType, string> = {
@@ -84,6 +87,7 @@ const TARGET_TYPE_LABELS: Record<AdminActivityTargetType, string> = {
   CATEGORY_REQUEST: 'Category request',
   PRICE_RULE_REQUEST: 'Price request',
   LEARNING_PROJECT: 'Learning project',
+  DATA_EXPORT: 'Data export',
 };
 
 export const getAdminActivityActionLabel = (action: string): string =>

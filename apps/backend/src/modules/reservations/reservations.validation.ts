@@ -38,6 +38,7 @@ export const createReservationSchema = z
     safeDropoffAllowed: z.boolean().optional(),
     deliveryNote: z.string().trim().max(1000).optional(),
     buildItemId: z.string().trim().min(1).optional(),
+    materialRequestMatchId: z.string().trim().min(1).optional(),
     combineWithDeliveryGroupId: z.string().trim().min(1).optional(),
   })
   .superRefine((value, ctx) => {

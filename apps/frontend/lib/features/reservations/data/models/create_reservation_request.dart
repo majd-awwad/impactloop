@@ -7,6 +7,7 @@ class CreateReservationRequest {
     required this.fulfillmentMethod,
     this.message,
     this.buildItemId,
+    this.materialRequestMatchId,
     this.learnerPreferredPickupWindows = const [],
     this.learnerPreferredDeliveryWindows = const [],
     this.deliveryAddressText,
@@ -22,6 +23,7 @@ class CreateReservationRequest {
   final String fulfillmentMethod;
   final String? message;
   final String? buildItemId;
+  final String? materialRequestMatchId;
   final List<ReservationPreferredWindow> learnerPreferredPickupWindows;
   final List<ReservationPreferredWindow> learnerPreferredDeliveryWindows;
   final String? deliveryAddressText;
@@ -38,6 +40,9 @@ class CreateReservationRequest {
       'fulfillmentMethod': fulfillmentMethod,
       if (buildItemId != null && buildItemId!.trim().isNotEmpty)
         'buildItemId': buildItemId!.trim(),
+      if (materialRequestMatchId != null &&
+          materialRequestMatchId!.trim().isNotEmpty)
+        'materialRequestMatchId': materialRequestMatchId!.trim(),
       if (message != null && message!.trim().isNotEmpty)
         'message': message!.trim(),
       if (fulfillmentMethod == 'PICKUP' &&

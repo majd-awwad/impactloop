@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../../../../shared/widgets/app_dialog_shell.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/supplier_verification_status_presentation.dart';
 import '../../data/admin_people_api.dart';
+import '../../data/admin_reservations_api.dart' show AdminExportFormatEligibility;
 import '../theme/admin_decoration_set.dart';
 import '../widgets/admin_empty_state.dart';
 import '../widgets/admin_kpi_card.dart' show AdminKpiCard, AdminTypography;
@@ -228,6 +230,8 @@ class AdminPeoplePage extends ConsumerStatefulWidget {
 class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
   final _searchController = TextEditingController();
   var _appliedInitialTab = false;
+  var _isPreflightLoading = false;
+  var _isDialogOpen = false;
 
   @override
   void initState() {
@@ -438,6 +442,105 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
     context.go('/admin/users');
   }
 
+  String _activeFilterSummary(_PeopleFilters filters) {
+    final parts = <String>[];
+    if (filters.tab != 'ALL') {
+      parts.add('Tab: ${filters.tab}');
+    }
+    if (filters.search.trim().isNotEmpty) {
+      parts.add('Search: ${filters.search.trim()}');
+    }
+    if (filters.status != 'ALL') {
+      parts.add('Status: ${filters.status}');
+    }
+    return parts.isEmpty ? 'No filters (all users)' : parts.join(' · ');
+  }
+
+  Future<void> _exportUsers() async {
+    if (!kIsWeb) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Export is available on Admin Web only.'),
+        ),
+      );
+      return;
+    }
+    if (_isPreflightLoading || _isDialogOpen) return;
+
+    final filters = ref.read(_peopleFiltersProvider);
+    setState(() => _isPreflightLoading = true);
+    final api = ref.read(adminPeopleApiProvider);
+
+    try {
+      final preflight = await api.preflightExport(
+        tab: filters.tab,
+        search: filters.search,
+        status: filters.status,
+      );
+
+      if (!mounted) return;
+
+      if (preflight.count == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No users match the current filters.'),
+          ),
+        );
+        return;
+      }
+
+      _isDialogOpen = true;
+      final selectedFormat = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AdminPeopleExportDialog(
+          count: preflight.count,
+          filterSummary: _activeFilterSummary(filters),
+          formats: preflight.formats,
+          onDownload: (format) => api.downloadExport(
+            format: format,
+            tab: filters.tab,
+            search: filters.search,
+            status: filters.status,
+          ),
+        ),
+      );
+      _isDialogOpen = false;
+
+      if (!mounted) return;
+      if (selectedFormat == null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Users ${selectedFormat.toUpperCase()} export downloaded.',
+          ),
+        ),
+      );
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.displayMessage)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreflightLoading = false;
+          _isDialogOpen = false;
+        });
+      } else {
+        _isPreflightLoading = false;
+        _isDialogOpen = false;
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = context.adminPalette;
@@ -460,6 +563,8 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
           children: [
             _UsersPageHeader(
               onInvite: () => context.push('/admin/invitations'),
+              onExport: kIsWeb ? _exportUsers : null,
+              exportLoading: _isPreflightLoading,
             ),
             const SizedBox(height: AppSpacing.md + AppSpacing.xs),
             summaryAsync.when(
@@ -546,9 +651,15 @@ class _AdminPeoplePageState extends ConsumerState<AdminPeoplePage> {
 }
 
 class _UsersPageHeader extends StatelessWidget {
-  const _UsersPageHeader({required this.onInvite});
+  const _UsersPageHeader({
+    required this.onInvite,
+    this.onExport,
+    this.exportLoading = false,
+  });
 
   final VoidCallback onInvite;
+  final VoidCallback? onExport;
+  final bool exportLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -578,6 +689,29 @@ class _UsersPageHeader extends StatelessWidget {
       ],
     );
 
+    final exportButton = onExport == null
+        ? null
+        : OutlinedButton.icon(
+            onPressed: exportLoading ? null : onExport,
+            icon: exportLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_outlined, size: 18),
+            label: Text(exportLoading ? 'Preparing…' : 'Export'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: palette.textPrimary,
+              side: BorderSide(color: palette.cardBorder),
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+            ),
+          );
+
     final inviteButton = FilledButton.icon(
       onPressed: onInvite,
       icon: const Icon(Icons.person_add_outlined, size: 18),
@@ -593,6 +727,17 @@ class _UsersPageHeader extends StatelessWidget {
       ),
     );
 
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (exportButton != null) ...[
+          exportButton,
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        inviteButton,
+      ],
+    );
+
     if (compact) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -601,7 +746,7 @@ class _UsersPageHeader extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Align(
             alignment: AlignmentDirectional.centerStart,
-            child: inviteButton,
+            child: actions,
           ),
         ],
       );
@@ -611,7 +756,7 @@ class _UsersPageHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: titleBlock),
-        inviteButton,
+        actions,
       ],
     );
   }
@@ -2020,6 +2165,153 @@ class _DetailRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: AppDialogInfoRow(label: label, value: text),
+    );
+  }
+}
+
+class AdminPeopleExportDialog extends StatefulWidget {
+  const AdminPeopleExportDialog({
+    super.key,
+    required this.count,
+    required this.filterSummary,
+    required this.formats,
+    required this.onDownload,
+  });
+
+  final int count;
+  final String filterSummary;
+  final Map<String, AdminExportFormatEligibility> formats;
+  final Future<void> Function(String format) onDownload;
+
+  @override
+  State<AdminPeopleExportDialog> createState() =>
+      _AdminPeopleExportDialogState();
+}
+
+class _AdminPeopleExportDialogState extends State<AdminPeopleExportDialog> {
+  String _selectedFormat = 'xlsx';
+  bool _isDownloading = false;
+  String? _error;
+
+  AdminExportFormatEligibility? get _selectedEligibility =>
+      widget.formats[_selectedFormat];
+
+  bool get _canExport =>
+      !_isDownloading && (_selectedEligibility?.allowed ?? false);
+
+  String get _formatDescription {
+    switch (_selectedFormat) {
+      case 'csv':
+        return 'Raw data';
+      case 'xlsx':
+      default:
+        return 'Detailed editable data';
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (!_canExport) return;
+    setState(() {
+      _isDownloading = true;
+      _error = null;
+    });
+    try {
+      await widget.onDownload(_selectedFormat);
+      if (!mounted) return;
+      Navigator.of(context).pop(_selectedFormat);
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.displayMessage;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _error = error.toString();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final limitMessage = (_selectedEligibility?.exceedsLimit ?? false)
+        ? 'This export matches ${widget.count} users, which exceeds the '
+              'limit of ${_selectedEligibility?.maxAllowed ?? 0}. Narrow your '
+              'filters and try again.'
+        : null;
+
+    return AppDialogShell(
+      title: const Text('Export users'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Export all ${widget.count} matching users, including results '
+            'from all pages.',
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.filterSummary,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          const Text('Format'),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'xlsx', label: Text('Excel')),
+              ButtonSegment(value: 'csv', label: Text('CSV')),
+            ],
+            selected: {_selectedFormat},
+            onSelectionChanged: _isDownloading
+                ? null
+                : (values) {
+                    if (values.isEmpty) return;
+                    setState(() => _selectedFormat = values.first);
+                  },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDescription,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (limitMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              limitMessage,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      footer: AppDialogFooter.decision(
+        secondaryAction: TextButton(
+          onPressed: _isDownloading
+              ? null
+              : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        primaryAction: FilledButton(
+          onPressed: _canExport ? _confirm : null,
+          child: _isDownloading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Export'),
+        ),
+      ),
     );
   }
 }

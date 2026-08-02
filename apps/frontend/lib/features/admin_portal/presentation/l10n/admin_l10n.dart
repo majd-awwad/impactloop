@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 class AdminL10n {
   AdminL10n._(this._lang);
 
+  @visibleForTesting
+  factory AdminL10n.forTest(String lang) => AdminL10n._(lang);
+
   final String _lang;
 
   bool get isArabic => _lang == 'ar';
@@ -27,6 +30,7 @@ class AdminL10n {
   String get navReservations => t('Reservations', 'الحجوزات');
   String get navDeliveries => t('Deliveries', 'التوصيل');
   String get navLearningProjects => t('Learning Projects', 'مشاريع التعلم');
+  String get navExportCenter => t('Export Center', 'مركز التصدير');
 
   String get accessDeniedTitle => t('Access denied', 'تم رفض الوصول');
   String get accessDeniedBody => t(

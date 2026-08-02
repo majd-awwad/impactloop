@@ -168,6 +168,7 @@ export const createSupplierMaterialSchema = z
     imageUrls: z.array(materialImageUrlSchema).min(1).max(5),
     sourceCategoryRequestId: z.string().trim().min(1).optional(),
     sourcePriceRuleRequestId: z.string().trim().min(1).optional(),
+    suggestToMaterialRequestId: z.string().trim().min(1).optional(),
     useDefaultPickupLocation: z.boolean().default(true),
     pickupLocation: locationSchema.optional(),
   })
@@ -239,3 +240,19 @@ export type UpdateSupplierMaterialInput = z.infer<
 >;
 
 export type SupplierFollowersQuery = z.infer<typeof supplierFollowersQuerySchema>;
+
+export const supplierRelatedProjectsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(12).default(6),
+});
+
+export type SupplierRelatedProjectsQuery = z.infer<
+  typeof supplierRelatedProjectsQuerySchema
+>;
+
+export const supplierCategoryDemandQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(15).default(8),
+});
+
+export type SupplierCategoryDemandQuery = z.infer<
+  typeof supplierCategoryDemandQuerySchema
+>;

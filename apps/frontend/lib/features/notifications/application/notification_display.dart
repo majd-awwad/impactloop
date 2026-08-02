@@ -548,6 +548,17 @@ String? _supplierMaterialReviewOpenRoute(
   }
 }
 
+/// Learner material-request notifications open the request detail route.
+String? materialRequestNotificationRoute(AppNotification notification) {
+  if (notification.relatedEntityType != 'MATERIAL_REQUEST' ||
+      notification.relatedEntityId == null ||
+      notification.relatedEntityId!.isEmpty) {
+    return null;
+  }
+
+  return '/learner/material-requests/${notification.relatedEntityId}';
+}
+
 /// Driver delivery notifications open the delivery detail route, which shows
 /// inactive-context messaging when the job is no longer active.
 String? driverDeliveryNotificationRoute(AppNotification notification) {

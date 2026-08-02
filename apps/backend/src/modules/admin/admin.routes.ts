@@ -57,6 +57,8 @@ import {
   rejectPriceRequestSchema,
 } from '../admin-approvals/admin-approvals.validation.js';
 import {
+  exportAdminMaterialReportsHandler,
+  exportAdminMaterialsHandler,
   getAdminMaterial,
   getAdminMaterialReport,
   getAdminMaterialsSummary,
@@ -65,6 +67,8 @@ import {
   listAdminMaterialReports,
   listAdminMaterials,
   markAdminMaterialUnavailable,
+  preflightAdminMaterialReportsExportHandler,
+  preflightAdminMaterialsExportHandler,
   rejectAdminMaterialReport,
   resolveAdminMaterialReport,
   restoreAdminMaterial,
@@ -73,7 +77,11 @@ import {
 import {
   adminMaterialIdParamSchema,
   adminMaterialReportIdParamSchema,
+  adminMaterialReportsExportDownloadQuerySchema,
+  adminMaterialReportsExportFiltersSchema,
   adminMaterialReportsListQuerySchema,
+  adminMaterialsExportDownloadQuerySchema,
+  adminMaterialsExportFiltersSchema,
   adminMaterialsListQuerySchema,
   hideMaterialFromReportSchema,
   hideMaterialSchema,
@@ -84,31 +92,43 @@ import {
 } from '../admin-materials/admin-materials.validation.js';
 
 import {
+  exportAdminPeopleHandler,
   getAdminPerson,
   getAdminPeopleSummary,
   listAdminPeople,
+  preflightAdminPeopleExportHandler,
   reactivateAdminPerson,
   suspendAdminPerson,
 } from '../admin-people/admin-people.controller.js';
 import {
+  adminPeopleExportDownloadQuerySchema,
+  adminPeopleExportFiltersSchema,
   adminPeopleListQuerySchema,
   adminPeopleUserIdParamSchema,
   suspendUserSchema,
 } from '../admin-people/admin-people.validation.js';
 import {
+  exportAdminReservationsHandler,
   getAdminReservationHandler,
   listAdminReservationsHandler,
+  preflightAdminReservationsExportHandler,
 } from '../admin-reservations/admin-reservations.controller.js';
 import {
   adminReservationIdParamSchema,
+  adminReservationsExportDownloadQuerySchema,
+  adminReservationsExportFiltersSchema,
   adminReservationsListQuerySchema,
 } from '../admin-reservations/admin-reservations.validation.js';
 import {
+  exportAdminDeliveriesHandler,
   getAdminDeliveryHandler,
   listAdminDeliveriesHandler,
+  preflightAdminDeliveriesExportHandler,
   reopenAdminDeliveryDriverAssignmentHandler,
 } from '../admin-deliveries/admin-deliveries.controller.js';
 import {
+  adminDeliveriesExportDownloadQuerySchema,
+  adminDeliveriesExportFiltersSchema,
   adminDeliveriesListQuerySchema,
   adminDeliveryIdParamSchema,
 } from '../admin-deliveries/admin-deliveries.validation.js';
@@ -136,6 +156,8 @@ import {
 import {
   getAdminNoShowReportHandler,
   listAdminNoShowReportsHandler,
+  preflightAdminNoShowReportsExportHandler,
+  exportAdminNoShowReportsHandler,
   rejectAdminNoShowReportHandler,
   requestSupplierRescheduleAdminNoShowReportHandler,
   cancelReleaseHoldAdminNoShowReportHandler,
@@ -144,6 +166,8 @@ import {
 } from '../admin-no-show-reports/admin-no-show-reports.controller.js';
 import {
   adminNoShowReportIdParamSchema,
+  adminNoShowReportsExportDownloadQuerySchema,
+  adminNoShowReportsExportFiltersSchema,
   adminNoShowReportsListQuerySchema,
   cancelReleaseHoldSchema,
   requestSupplierRescheduleSchema,
@@ -338,6 +362,22 @@ adminRouter.get(
 );
 
 adminRouter.get(
+  '/materials/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminMaterialsExportHandler),
+);
+
+adminRouter.get(
+  '/materials/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminMaterialsHandler),
+);
+
+adminRouter.get(
   '/materials',
   authMiddleware,
   requireRoles('ADMIN'),
@@ -385,6 +425,22 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminMaterialReportsListQuerySchema, 'query'),
   asyncHandler(listAdminMaterialReports),
+);
+
+adminRouter.get(
+  '/material-reports/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialReportsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminMaterialReportsExportHandler),
+);
+
+adminRouter.get(
+  '/material-reports/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminMaterialReportsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminMaterialReportsHandler),
 );
 
 adminRouter.get(
@@ -438,6 +494,22 @@ adminRouter.get(
 );
 
 adminRouter.get(
+  '/people/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminPeopleExportHandler),
+);
+
+adminRouter.get(
+  '/people/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminPeopleExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminPeopleHandler),
+);
+
+adminRouter.get(
   '/people/:id',
   authMiddleware,
   requireRoles('ADMIN'),
@@ -463,6 +535,22 @@ adminRouter.patch(
 );
 
 adminRouter.get(
+  '/reservations/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminReservationsExportHandler),
+);
+
+adminRouter.get(
+  '/reservations/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminReservationsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminReservationsHandler),
+);
+
+adminRouter.get(
   '/reservations',
   authMiddleware,
   requireRoles('ADMIN'),
@@ -484,6 +572,22 @@ adminRouter.get(
   requireRoles('ADMIN'),
   validate(adminDeliveriesListQuerySchema, 'query'),
   asyncHandler(listAdminDeliveriesHandler),
+);
+
+adminRouter.get(
+  '/deliveries/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminDeliveriesExportHandler),
+);
+
+adminRouter.get(
+  '/deliveries/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminDeliveriesExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminDeliveriesHandler),
 );
 
 adminRouter.post(
@@ -595,6 +699,22 @@ adminRouter.patch(
   validate(adminLearningProjectComponentParamsSchema, 'params'),
   validate(updateAdminLearningProjectComponentSchema),
   asyncHandler(updateAdminLearningProjectComponentHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports/export/preflight',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportsExportFiltersSchema, 'query'),
+  asyncHandler(preflightAdminNoShowReportsExportHandler),
+);
+
+adminRouter.get(
+  '/no-show-reports/export',
+  authMiddleware,
+  requireRoles('ADMIN'),
+  validate(adminNoShowReportsExportDownloadQuerySchema, 'query'),
+  asyncHandler(exportAdminNoShowReportsHandler),
 );
 
 adminRouter.get(

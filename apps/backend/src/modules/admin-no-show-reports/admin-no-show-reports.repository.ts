@@ -11,6 +11,8 @@ import {
   suspendUserForVerifiedStrikes,
   SUSPENSION_VERIFIED_THRESHOLD,
 } from '../reservations/account-suspension.js';
+import type { AdminNoShowReportsListQuery, AdminNoShowReportsExportFilters } from './admin-no-show-reports.validation.js';
+import { buildAdminNoShowReportsWhere } from './admin-no-show-reports.where.js';
 
 export const reportInclude = {
   reservation: {
@@ -99,27 +101,69 @@ const actionIsAvailable = (
   action: AdminReportAction,
 ) => classifyAdminReportContract(toActionContext(report)).availableActions.includes(action);
 
-export const listNoShowReportsForAdmin = async (input: {
-  status?: 'PENDING_REVIEW' | 'VERIFIED' | 'REJECTED' | 'RESOLVED_NO_STRIKE';
-  page: number;
-  limit: number;
-}) => {
-  const where: Prisma.NoShowReportWhereInput = input.status
-    ? { status: input.status }
-    : {};
+export const listNoShowReportsForAdmin = async (query: AdminNoShowReportsListQuery) => {
+  const where = buildAdminNoShowReportsWhere(query);
 
   const [items, total] = await Promise.all([
     prisma.noShowReport.findMany({
       where,
       include: reportInclude,
-      orderBy: { createdAt: 'desc' },
-      skip: (input.page - 1) * input.limit,
-      take: input.limit,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
     }),
     prisma.noShowReport.count({ where }),
   ]);
 
   return { items, total };
+};
+
+export type AdminNoShowReportExportKeysetCursor = {
+  createdAt: Date;
+  id: string;
+};
+
+export type AdminNoShowReportExportRecord = AdminNoShowReportRecord;
+
+export const countAdminNoShowReportsForExport = async (
+  query: AdminNoShowReportsExportFilters,
+) => prisma.noShowReport.count({ where: buildAdminNoShowReportsWhere(query) });
+
+/**
+ * Keyset pagination: createdAt DESC, id DESC.
+ * Predicate: createdAt < cursor.createdAt OR (createdAt = cursor.createdAt AND id < cursor.id)
+ */
+export const listAdminNoShowReportsExportBatch = async (input: {
+  query: AdminNoShowReportsExportFilters;
+  cursor?: AdminNoShowReportExportKeysetCursor;
+  take: number;
+}): Promise<AdminNoShowReportExportRecord[]> => {
+  const baseWhere = buildAdminNoShowReportsWhere(input.query);
+  const where: Prisma.NoShowReportWhereInput = input.cursor
+    ? {
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { createdAt: { lt: input.cursor.createdAt } },
+              {
+                AND: [
+                  { createdAt: input.cursor.createdAt },
+                  { id: { lt: input.cursor.id } },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+    : baseWhere;
+
+  return prisma.noShowReport.findMany({
+    where,
+    include: reportInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: input.take,
+  });
 };
 
 export const findNoShowReportByIdForAdmin = async (id: string) => {
