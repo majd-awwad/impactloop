@@ -9,7 +9,9 @@ import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../domain/models/project_build.dart';
 import '../../../../shared/models/localized_text.dart';
+import '../l10n/learning_project_build_l10n.dart';
 import '../theme/learning_ui_palette.dart';
+import 'project_build_acquisition_state.dart';
 
 String buildChecklistMaterialDetailUri({
   required String materialId,
@@ -290,7 +292,17 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
     final palette = LearningUiPalette.of(context);
     final colors = AppThemeColors.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final borderColor = isReadyForBuild
+    final isAcquired =
+        linkedReservation?.status.toUpperCase() == 'COMPLETED' &&
+        isReadyForBuild;
+    final showAvailabilityWarning =
+        ProjectBuildAcquisitionState.shouldShowAvailabilityWarning(
+          material: material,
+          linkedReservation: linkedReservation,
+        );
+    final borderColor = isAcquired
+        ? palette.lime.withValues(alpha: 0.42)
+        : isReadyForBuild
         ? palette.lime.withValues(alpha: 0.42)
         : palette.borderSubtle;
 
@@ -356,7 +368,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ],
           ),
-          if (material.availabilityWarning != null) ...[
+          if (showAvailabilityWarning) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               material.availabilityWarning!,
@@ -366,7 +378,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ),
           ],
-          if (linkedReservation != null) ...[
+          if (linkedReservation != null && !isAcquired) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               linkedReservation!.statusLabel,
@@ -377,16 +389,25 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            isReadyForBuild
-                ? readinessLabel
-                : 'Material selected — not ready yet. Reserve or acquire this material before using it in your build.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: isReadyForBuild ? palette.lime : palette.textSecondary,
-              height: 1.45,
+          if (isAcquired || isReadyForBuild || linkedReservation != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              isAcquired
+                  ? LearningProjectBuildL10n.readyForBuildMaterialAcquired
+                      .resolve(context)
+                  : isReadyForBuild
+                  ? readinessLabel
+                  : LearningProjectBuildL10n.materialSelectedNotReady.resolve(
+                      context,
+                    ),
+              style: textTheme.bodyMedium?.copyWith(
+                color: isAcquired || isReadyForBuild
+                    ? palette.lime
+                    : palette.textSecondary,
+                height: 1.45,
+              ),
             ),
-          ),
+          ],
           const SizedBox(height: AppSpacing.md),
           Wrap(
             spacing: AppSpacing.sm,

@@ -20,13 +20,17 @@ class SupplierL10n {
   bool get isArabic => _l10n.localeName.startsWith('ar');
 
   static SupplierL10n of(BuildContext context, [String? languageCode]) {
-    return SupplierL10n(context.l10n);
+    final code =
+        languageCode ??
+        SupplierLocaleScope.maybeOf(context)?.languageCode ??
+        Localizations.localeOf(context).languageCode;
+    return SupplierL10n(lookupAppLocalizations(Locale(code)));
   }
 
   /// Test helper for localization assertions without a BuildContext.
   @visibleForTesting
   static SupplierL10n forLanguage(String languageCode) =>
-      SupplierL10n._(languageCode);
+      SupplierL10n(lookupAppLocalizations(Locale(languageCode)));
 
   String t(String en, String ar) => isArabic ? ar : en;
 
@@ -46,6 +50,10 @@ class SupplierL10n {
   String get navIncomingRequests => _l10n.supplierIncomingRequests;
   String get navRequestsShort => _l10n.supplierRequests;
   String get navPickupSchedule => _l10n.supplierPickupSchedule;
+  String get navLearnerMaterialRequests => t(
+        'Learner Material Requests',
+        'طلبات المواد من المتعلمين',
+      );
   String get navBrowseMaterials => _l10n.browseMaterialsAction;
   String get navNotifications => _l10n.notificationsTitle;
   String get navProfile => _l10n.profile;
@@ -445,6 +453,231 @@ class SupplierL10n {
   String get lifecycleAvailable => _l10n.available;
   String get lifecycleReserved => _l10n.reserved;
   String get lifecycleReused => _l10n.reused;
+
+  // —— Category demand (SI-03) ——
+  String get categoryDemandTitle =>
+      t('Learner interest by category', 'اهتمام المتعلمين حسب الفئة');
+  String get categoryDemandSubtitle => t(
+        'Recent platform learner activity across material categories.',
+        'نشاط المتعلمين الأخير على مستوى المنصة حسب فئات المواد.',
+      );
+  String get categoryDemandPeriodLabel =>
+      t('Last 30 days', 'آخر 30 يومًا');
+  String get categoryDemandLoadError => t(
+        'Could not load category interest.',
+        'تعذّر تحميل اهتمام الفئات.',
+      );
+  String get categoryDemandRetry => t('Retry', 'إعادة المحاولة');
+  String get categoryDemandNoRecentActivity => t(
+        'There is not enough recent learner activity to identify category trends.',
+        'لا يوجد نشاط متعلمين حديث كافٍ لتحديد اتجاهات الفئات.',
+      );
+  String get categoryDemandNoActiveCategories => t(
+        'No active material categories are currently available.',
+        'لا توجد حالياً فئات مواد نشطة متاحة.',
+      );
+  String get categoryDemandUnknownLevel =>
+      t('Interest level unavailable', 'مستوى الاهتمام غير متاح');
+  String get categoryDemandUnknownReason =>
+      t('Recent learner activity', 'نشاط متعلمين حديث');
+
+  String categoryDemandLevelLabel(SupplierCategoryDemandLevel level) =>
+      switch (level) {
+        SupplierCategoryDemandLevel.high =>
+          t('High interest', 'اهتمام مرتفع'),
+        SupplierCategoryDemandLevel.moderate =>
+          t('Moderate interest', 'اهتمام متوسط'),
+        SupplierCategoryDemandLevel.emerging =>
+          t('Emerging interest', 'اهتمام ناشئ'),
+        SupplierCategoryDemandLevel.unknown => categoryDemandUnknownLevel,
+      };
+
+  String categoryDemandReason(SupplierCategoryDemandReason reason) =>
+      switch (reason) {
+        SupplierCategoryDemandReason.strongReservationActivity => t(
+              'Strong activity from recent reservations',
+              'نشاط قوي من الحجوزات الأخيرة',
+            ),
+        SupplierCategoryDemandReason.balancedEngagement => t(
+              'Consistent activity across views, likes, and reservations',
+              'نشاط متوازن عبر المشاهدات والإعجابات والحجوزات',
+            ),
+        SupplierCategoryDemandReason.likeEngagement => t(
+              'Strong recent like activity',
+              'نشاط إعجابات حديث قوي',
+            ),
+        SupplierCategoryDemandReason.viewEngagement => t(
+              'Strong recent view activity',
+              'نشاط مشاهدات حديث قوي',
+            ),
+        SupplierCategoryDemandReason.limitedRecentActivity => t(
+              'Limited recent activity',
+              'نشاط حديث محدود',
+            ),
+        SupplierCategoryDemandReason.unknown => categoryDemandUnknownReason,
+      };
+
+  String categoryDemandViewsChip(int count) =>
+      t('$count views', '$count مشاهدة');
+  String categoryDemandLikesChip(int count) =>
+      t('$count likes', '$count إعجاب');
+  String categoryDemandReservationsChip(int count) =>
+      t('$count reservations', '$count حجز');
+
+  String categoryDemandSummary(List<String> categoryNames) {
+    final names = categoryNames
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .take(3)
+        .toList(growable: false);
+    if (names.isEmpty) {
+      return categoryDemandNoRecentActivity;
+    }
+    if (isArabic) {
+      if (names.length == 1) {
+        return 'تحظى فئة ${names[0]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
+      }
+      if (names.length == 2) {
+        return 'تحظى فئتا ${names[0]} و${names[1]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
+      }
+      return 'تحظى فئات ${names[0]} و${names[1]} و${names[2]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
+    }
+    if (names.length == 1) {
+      return '${names[0]} is receiving the strongest learner interest during the last 30 days.';
+    }
+    if (names.length == 2) {
+      return '${names[0]} and ${names[1]} are receiving the strongest learner interest during the last 30 days.';
+    }
+    return '${names[0]}, ${names[1]}, and ${names[2]} are receiving the strongest learner interest during the last 30 days.';
+  }
+
+  // —— Related projects (SI-01) ——
+  String get relatedProjectsTitle =>
+      t('Related Projects', 'المشاريع ذات الصلة');
+  String get relatedProjectsSubtitle => t(
+        'Learning Hub projects that could use this material based on required components — not past handovers.',
+        'مشاريع مركز التعلم التي يمكن أن تستخدم هذه المادة حسب المكوّنات المطلوبة — وليست عمليات التسليم السابقة.',
+      );
+
+  String relatedProjectsCountSummary(int count) {
+    if (count == 1) {
+      return t(
+        'This material can be used in 1 project.',
+        'يمكن استخدام هذه المادة في مشروع واحد.',
+      );
+    }
+    return t(
+      'This material can be used in $count projects.',
+      'يمكن استخدام هذه المادة في $count مشاريع.',
+    );
+  }
+
+  String get relatedProjectsEmpty => t(
+        'No Learning Hub projects currently match this material.',
+        'لا توجد حالياً مشاريع في مركز التعلم تطابق هذه المادة.',
+      );
+  String get relatedProjectsLoadError => t(
+        'Could not load related projects.',
+        'تعذّر تحميل المشاريع ذات الصلة.',
+      );
+  String get relatedProjectsRetry => t('Retry', 'إعادة المحاولة');
+  String get relatedProjectsMatchedComponent =>
+      t('Matched component', 'المكوّن المطابق');
+
+  String relatedProjectsMatchReason(String code) => switch (code) {
+        'EXACT_NAME' => t('Exact name match', 'تطابق تام للاسم'),
+        'NAME_MATCH' => t('Name match', 'تطابق في الاسم'),
+        'STRONG_MATCH' => t('Strong match', 'تطابق قوي'),
+        'MATERIAL_TYPE_MATCH' =>
+          t('Material type match', 'تطابق نوع المادة'),
+        'CATEGORY_MATCH' => t('Category match', 'تطابق الفئة'),
+        'KEYWORD_MATCH' => t('Keyword match', 'تطابق بالكلمات المفتاحية'),
+        _ => t('Related match', 'تطابق ذو صلة'),
+      };
+
+  // —— Learner material requests ——
+  String get learnerMaterialRequestsTitle => navLearnerMaterialRequests;
+  String get learnerMaterialRequestsSubtitle => t(
+        'Browse what learners are looking for and suggest a matching material.',
+        'تصفح ما يبحث عنه المتعلمون واقترح مادة مطابقة.',
+      );
+  String get materialRequestsLoadError => t(
+        'We could not load material requests.',
+        'تعذّر تحميل طلبات المواد.',
+      );
+  String get materialRequestsEmptyTitle =>
+      t('No material requests right now', 'لا توجد طلبات مواد حالياً');
+  String get materialRequestsEmptySubtitle => t(
+        'When learners ask for materials you might have, they will show up here.',
+        'عندما يطلب المتعلمون مواداً قد تمتلكها، ستظهر هنا.',
+      );
+  String get materialRequestsFilteredEmptyTitle => t(
+        'No requests match your filters',
+        'لا توجد طلبات تطابق عوامل التصفية',
+      );
+  String get filterUnansweredByMe =>
+      t('Not answered by me', 'لم أرد عليها بعد');
+  String get learnerMaterialRequestsInsightTitle =>
+      t('Learner material requests', 'طلبات مواد من المتعلمين');
+
+  String learnerMaterialRequestsInsightMessage(int count) => t(
+        'You have $count unanswered learner material request${count == 1 ? '' : 's'}.',
+        count == 1
+            ? 'لديك طلب مادة واحد من متعلم لم ترد عليه بعد.'
+            : 'لديك $count طلبات مواد من متعلمين لم ترد عليها بعد.',
+      );
+
+  String get reviewLearnerMaterialRequests =>
+      t('Review requests', 'مراجعة الطلبات');
+  String get respondedBadge =>
+      t('You suggested a material', 'اقترحت مادة');
+
+  String materialRequestSuggestionsCount(int count) => t(
+        '$count supplier${count == 1 ? '' : 's'} responded',
+        count == 1 ? 'استجاب مورد واحد' : 'استجاب $count موردين',
+      );
+
+  String get materialRequestDetailsTitle =>
+      t('Request details', 'تفاصيل الطلب');
+  String get materialRequestLoadError => t(
+        'Could not load this material request.',
+        'تعذّر تحميل طلب المادة هذا.',
+      );
+  String get materialRequestPrivacyNote => t(
+        "You can only see the item, category, quantity, and general area for this request — never the learner's exact address or contact details.",
+        'يمكنك رؤية العنصر والفئة والكمية والمنطقة العامة فقط لهذا الطلب — ولن ترى عنوان المتعلم الدقيق أو بيانات التواصل أبداً.',
+      );
+  String get candidateMaterialsTitle =>
+      t('Your matching materials', 'موادك المطابقة');
+  String get candidateMaterialsEmpty => t(
+        'None of your listed materials match this request yet.',
+        'لا توجد أي من موادك المدرجة تطابق هذا الطلب حتى الآن.',
+      );
+  String get publishMatchingMaterial =>
+      t('Publish matching material', 'نشر مادة مطابقة');
+  String get suggestThisMaterial =>
+      t('Suggest this material', 'اقتراح هذه المادة');
+  String get suggestionSent =>
+      t('Suggestion sent to the learner.', 'تم إرسال الاقتراح إلى المتعلم.');
+  String get suggestionFailed => t(
+        'Could not send this suggestion. Please try again.',
+        'تعذّر إرسال هذا الاقتراح. يرجى المحاولة مرة أخرى.',
+      );
+  String get weakMatchTitle => t('Weak match', 'تطابق ضعيف');
+  String get weakMatchMessage => t(
+        'This material is only a weak match for the request. Suggest it anyway?',
+        'هذه المادة تطابق الطلب بشكل ضعيف فقط. هل تريد اقتراحها على أي حال؟',
+      );
+  String get suggestAnyway => t('Suggest anyway', 'اقتراح على أي حال');
+  String get alreadySuggestedLabel =>
+      t('Already suggested', 'تم اقتراحها بالفعل');
+  String get weakMatchBadge => t('Weak match', 'تطابق ضعيف');
+  String get requestNoLongerOpen => t(
+        'This request is no longer open.',
+        'هذا الطلب لم يعد مفتوحاً.',
+      );
+  String get alternativesAllowedBadge =>
+      t('Alternatives allowed', 'البدائل مسموحة');
 
   // —— Notifications ——
   String get notificationsTitle => navNotifications;

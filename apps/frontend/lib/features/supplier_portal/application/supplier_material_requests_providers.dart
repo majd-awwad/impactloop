@@ -149,6 +149,7 @@ Future<SupplierMaterialRequest> suggestSupplierMaterialForRequest(
         confirmWeakMatch: confirmWeakMatch,
       );
   ref.invalidate(supplierMaterialRequestDetailProvider(requestId));
+  ref.invalidate(supplierMaterialRequestCandidatesProvider(requestId));
   invalidateSupplierMaterialRequests(ref);
   return updated;
 }

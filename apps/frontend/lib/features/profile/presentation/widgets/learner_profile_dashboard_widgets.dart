@@ -1446,6 +1446,18 @@ class DashboardQuickActions extends StatelessWidget {
             children: [
               Expanded(
                 child: _QuickActionTile(
+                  icon: Icons.request_quote_outlined,
+                  label: l10n.materialRequests,
+                  semanticLabel: l10n.openMaterialRequests,
+                  onTap: () => onOpen(
+                    '/learner/material-requests',
+                    refreshOnReturn: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _QuickActionTile(
                   icon: Icons.manage_accounts_outlined,
                   label: l10n.accountSettingsDestination,
                   semanticLabel: l10n.openAccountSettings,
@@ -1453,7 +1465,14 @@ class DashboardQuickActions extends StatelessWidget {
                       onOpen('/profile/account', refreshOnReturn: true),
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Expanded(
                 child: _QuickActionTile(
                   icon: Icons.location_on_outlined,
@@ -1463,6 +1482,8 @@ class DashboardQuickActions extends StatelessWidget {
                       onOpen('/profile/locations', refreshOnReturn: true),
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(child: SizedBox.shrink()),
             ],
           ),
         ),

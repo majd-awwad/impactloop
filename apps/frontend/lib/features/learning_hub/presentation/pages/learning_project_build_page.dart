@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,10 +17,18 @@ import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../ai/application/ai_assistant_shell_provider.dart';
 import '../../../ai/application/ai_chat_controller.dart';
 import '../../../ai/presentation/widgets/ai_assistant_shell.dart';
+import '../../../../shared/models/localized_text.dart';
+import '../../../home/application/learner_home_provider.dart';
+import '../../../learner_material_requests/application/learner_material_requests_providers.dart';
+import '../../../notifications/application/notifications_provider.dart';
 import '../../application/learning_hub_providers.dart';
+import '../../application/project_build_refresh.dart';
 import '../../domain/models/learning_project.dart';
 import '../../domain/models/project_build.dart';
 import '../theme/learning_ui_palette.dart';
+import '../l10n/learning_project_build_l10n.dart';
+import '../widgets/project_build_acquisition_state.dart';
+import '../widgets/project_build_item_display.dart';
 import '../widgets/project_build_material_linking.dart';
 
 class LearningProjectBuildPage extends ConsumerStatefulWidget {
@@ -37,7 +47,8 @@ class LearningProjectBuildPage extends ConsumerStatefulWidget {
 }
 
 class _LearningProjectBuildPageState
-    extends ConsumerState<LearningProjectBuildPage> {
+    extends ConsumerState<LearningProjectBuildPage>
+    with WidgetsBindingObserver {
   static const double _buildGuideLayoutBreakpoint = 840;
   static const double _buildGuidePanelMinWidth = 380;
   static const double _buildGuidePanelMaxWidth = 460;
@@ -53,6 +64,43 @@ class _LearningProjectBuildPageState
   Future<void>? _guideRestoreRequest;
   final Set<String> _updatingItemIds = <String>{};
   final Set<String> _completingStepIds = <String>{};
+  late final ProjectBuildRefreshController _buildRefreshController =
+      ProjectBuildRefreshController(onRefresh: _refreshBuild);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    _buildRefreshController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      _refreshBuild();
+    }
+  }
+
+  void _syncBuildRefreshPolling(ProjectBuild? build) {
+    _buildRefreshController.syncPolling(build);
+  }
+
+  void _handleNotificationUnreadChange(int? previous, int? next) {
+    if (next == null || previous == null || next <= previous) {
+      return;
+    }
+
+    _refreshBuild();
+    invalidateLearnerMaterialRequests(ref);
+    ref.invalidate(learnerHomeFeedProvider);
+    ref.invalidate(learnerHomeSectionDetailsProvider);
+  }
 
   void _refreshBuild() {
     ref.invalidate(projectBuildProvider(widget.projectId));
@@ -198,7 +246,11 @@ class _LearningProjectBuildPageState
         path: '/learner/material-requests/new',
         queryParameters: params,
       ).toString(),
-    );
+    ).then((_) {
+      if (mounted) {
+        _refreshBuild();
+      }
+    });
   }
 
   Future<void> _showMaterialCandidates(ProjectBuildItem item) async {
@@ -354,7 +406,11 @@ class _LearningProjectBuildPageState
       context.push(
         '/learning/${widget.projectId}/build/guide?conversationId=${Uri.encodeComponent(conversationId)}',
         extra: result.buildContext,
-      );
+      ).then((_) {
+        if (mounted) {
+          _refreshBuild();
+        }
+      });
     } catch (error) {
       if (mounted) {
         showErrorSnackBar(context, error);
@@ -516,7 +572,28 @@ class _LearningProjectBuildPageState
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
+
+    ref.listen(projectBuildProvider(widget.projectId), (previous, next) {
+      next.whenData((build) {
+        if (mounted) {
+          _syncBuildRefreshPolling(build);
+        }
+      });
+    });
+
+    ref.listen(myNotificationUnreadCountProvider, (previous, next) {
+      _handleNotificationUnreadChange(previous?.value, next.value);
+    });
+    ref.watch(myNotificationUnreadCountProvider);
+
     final buildAsync = ref.watch(projectBuildProvider(widget.projectId));
+    buildAsync.whenData((build) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _syncBuildRefreshPolling(build);
+        }
+      });
+    });
 
     return Scaffold(
       backgroundColor: palette.pageBackground,
@@ -1189,8 +1266,12 @@ class _BuildItemCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LearningUiPalette.of(context);
-    final statusMeta = _BuildStatusMeta.fromStatus(item.status);
-    final statusStyle = AppStatusStyle.of(context, statusMeta.tone);
+    final displayMeta = ProjectBuildItemDisplayMeta.forItem(item);
+    final statusStyle = AppStatusStyle.of(context, displayMeta.tone);
+    final isAcquired =
+        ProjectBuildAcquisitionState.isAcquiredViaCompletedReservation(item);
+    final showClassificationControls =
+        ProjectBuildAcquisitionState.shouldShowClassificationControls(item);
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
@@ -1251,10 +1332,10 @@ class _BuildItemCard extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               else
-                _BuildStatusChip(status: item.status),
+                _BuildStatusChip(meta: displayMeta),
             ],
           ),
-          if (!item.isReadyForBuild) ...[
+          if (!item.isReadyForBuild && !isAcquired) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
               item.readinessLabel,
@@ -1263,43 +1344,75 @@ class _BuildItemCard extends StatelessWidget {
               ).copyWith(color: palette.textSecondary, height: 1.35),
             ),
           ],
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: ProjectBuildItemStatus.values
-                .map((status) {
-                  final selected = status == item.status;
-                  final meta = _BuildStatusMeta.fromStatus(status);
-                  final style = AppStatusStyle.of(context, meta.tone);
+          if (isAcquired) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: statusStyle.background,
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(color: statusStyle.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    LearningProjectBuildL10n.materialAcquired.resolve(context),
+                    style: AppTextStyles.subtitle(
+                      context,
+                    ).copyWith(color: statusStyle.foreground),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    LearningProjectBuildL10n.acquiredSummary.resolve(context),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (showClassificationControls) ...[
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: ProjectBuildItemStatus.values
+                  .map((status) {
+                    final selected = status == item.status;
+                    final meta = _BuildStatusMeta.fromStatus(status);
+                    final style = AppStatusStyle.of(context, meta.tone);
 
-                  return ChoiceChip(
-                    selected: selected,
-                    label: Text(meta.label),
-                    avatar: Icon(
-                      meta.icon,
-                      size: 18,
-                      color: selected
-                          ? style.foreground
-                          : palette.textSecondary,
-                    ),
-                    onSelected: isUpdating
-                        ? null
-                        : (_) => onStatusChanged(status),
-                    selectedColor: style.background,
-                    backgroundColor: palette.mutedChip,
-                    side: BorderSide(
-                      color: selected ? style.border : palette.borderSubtle,
-                    ),
-                    labelStyle: AppTextStyles.label(context).copyWith(
-                      color: selected
-                          ? style.foreground
-                          : palette.textSecondary,
-                    ),
-                  );
-                })
-                .toList(growable: false),
-          ),
+                    return ChoiceChip(
+                      selected: selected,
+                      label: Text(meta.label),
+                      avatar: Icon(
+                        meta.icon,
+                        size: 18,
+                        color: selected
+                            ? style.foreground
+                            : palette.textSecondary,
+                      ),
+                      onSelected: isUpdating
+                          ? null
+                          : (_) => onStatusChanged(status),
+                      selectedColor: style.background,
+                      backgroundColor: palette.mutedChip,
+                      side: BorderSide(
+                        color: selected ? style.border : palette.borderSubtle,
+                      ),
+                      labelStyle: AppTextStyles.label(context).copyWith(
+                        color: selected
+                            ? style.foreground
+                            : palette.textSecondary,
+                      ),
+                    );
+                  })
+                  .toList(growable: false),
+            ),
+          ],
           if (item.learnerNote != null) ...[
             const SizedBox(height: AppSpacing.md),
             Container(
@@ -1352,7 +1465,8 @@ class _BuildItemCard extends StatelessWidget {
                 icon: const Icon(Icons.travel_explore_rounded),
                 label: const Text('Browse all materials'),
               ),
-              if (item.status == ProjectBuildItemStatus.missing)
+              if (!isAcquired &&
+                  item.status == ProjectBuildItemStatus.missing)
                 OutlinedButton.icon(
                   onPressed: isUpdating ? null : onRequestMaterial,
                   icon: const Icon(Icons.campaign_outlined),
@@ -1382,13 +1496,12 @@ class _BuildItemCard extends StatelessWidget {
 }
 
 class _BuildStatusChip extends StatelessWidget {
-  const _BuildStatusChip({required this.status});
+  const _BuildStatusChip({required this.meta});
 
-  final ProjectBuildItemStatus status;
+  final ProjectBuildItemDisplayMeta meta;
 
   @override
   Widget build(BuildContext context) {
-    final meta = _BuildStatusMeta.fromStatus(status);
     final style = AppStatusStyle.of(context, meta.tone);
 
     return Container(
@@ -1407,7 +1520,7 @@ class _BuildStatusChip extends StatelessWidget {
           Icon(meta.icon, size: 16, color: style.foreground),
           const SizedBox(width: AppSpacing.xs),
           Text(
-            meta.label,
+            meta.label.resolve(context),
             style: AppTextStyles.label(
               context,
             ).copyWith(color: style.foreground),

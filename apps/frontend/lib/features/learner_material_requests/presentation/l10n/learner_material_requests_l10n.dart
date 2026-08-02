@@ -201,9 +201,94 @@ class LearnerMaterialRequestsL10n {
 
   // —— Detail page ——
   static const matchesTitle = LocalizedText(
-    en: 'Supplier suggestions',
-    ar: 'اقتراحات الموردين',
+    en: 'Material suggestions',
+    ar: 'اقتراحات المواد',
   );
+
+  static const materialSuggestion = LocalizedText(
+    en: 'Material suggestion',
+    ar: 'اقتراح مادة',
+  );
+
+  static const suggestedBy = LocalizedText(
+    en: 'Suggested by',
+    ar: 'مقترحة من',
+  );
+
+  static const reviewAndReserve = LocalizedText(
+    en: 'Review and reserve',
+    ar: 'عرض المادة وحجزها',
+  );
+
+  static const reviewMaterial = LocalizedText(
+    en: 'Review material',
+    ar: 'عرض المادة',
+  );
+
+  static const reservationInProgress = LocalizedText(
+    en: 'Reservation in progress',
+    ar: 'الحجز قيد المتابعة',
+  );
+
+  static const noLongerAvailable = LocalizedText(
+    en: 'No longer available',
+    ar: 'لم تعد متاحة',
+  );
+
+  static const viewReservation = LocalizedText(
+    en: 'View reservation',
+    ar: 'عرض الحجز',
+  );
+
+  static const freeLabel = LocalizedText(en: 'Free', ar: 'مجاني');
+
+  static const pickupSupported = LocalizedText(
+    en: 'Pickup',
+    ar: 'استلام',
+  );
+
+  static const deliverySupported = LocalizedText(
+    en: 'Delivery',
+    ar: 'توصيل',
+  );
+
+  static const verifiedSupplier = LocalizedText(
+    en: 'Verified supplier',
+    ar: 'مورد موثّق',
+  );
+
+  static LocalizedText matchStatusLabel(String status) {
+    return switch (status) {
+      'SUGGESTED' => const LocalizedText(en: 'Suggested', ar: 'مقترح'),
+      'RESERVATION_CREATED' => reservationInProgress,
+      'UNAVAILABLE' => noLongerAvailable,
+      'DISMISSED' => const LocalizedText(en: 'Dismissed', ar: 'تم التجاهل'),
+      _ => LocalizedText(en: status, ar: status),
+    };
+  }
+
+  static LocalizedText reservationStatusLabel(String? status) {
+    return switch (status?.toUpperCase()) {
+      'COMPLETED' => reservationCompleted,
+      'ACCEPTED' => const LocalizedText(en: 'Accepted', ar: 'مقبول'),
+      'PENDING' => const LocalizedText(en: 'Pending', ar: 'قيد الانتظار'),
+      _ => status == null || status.isEmpty
+          ? reservationInProgress
+          : LocalizedText(en: status, ar: status),
+    };
+  }
+
+  static LocalizedText unavailableReasonLabel(String? reason) {
+    return switch (reason) {
+      'NO_LONGER_AVAILABLE' => noLongerAvailable,
+      'DISMISSED' => const LocalizedText(en: 'Dismissed', ar: 'تم التجاهل'),
+      'REQUEST_CLOSED' => const LocalizedText(
+        en: 'Request is no longer open',
+        ar: 'الطلب لم يعد مفتوحاً',
+      ),
+      _ => noLongerAvailable,
+    };
+  }
 
   static const noMatchesYet = LocalizedText(
     en: 'No suppliers have suggested a material yet.',
@@ -288,6 +373,31 @@ class LearnerMaterialRequestsL10n {
   static const projectContextLabel = LocalizedText(
     en: 'From your build checklist',
     ar: 'من قائمة البناء الخاصة بك',
+  );
+
+  static const acquiredMaterialTitle = LocalizedText(
+    en: 'Acquired material',
+    ar: 'المادة المكتسبة',
+  );
+
+  static const acquiredLabel = LocalizedText(
+    en: 'Acquired',
+    ar: 'مكتسبة',
+  );
+
+  static const reservationCompleted = LocalizedText(
+    en: 'Reservation completed',
+    ar: 'اكتمل الحجز',
+  );
+
+  static const returnToProjectBuild = LocalizedText(
+    en: 'Return to project build',
+    ar: 'العودة إلى بناء المشروع',
+  );
+
+  static const fulfilledMatchesTitle = LocalizedText(
+    en: 'Fulfilled with',
+    ar: 'تم التلبية بـ',
   );
 
   static LocalizedText quantityUnitLine(String quantity, String unit) {

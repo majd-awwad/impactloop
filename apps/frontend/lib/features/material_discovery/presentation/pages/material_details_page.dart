@@ -33,6 +33,7 @@ import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../profile/application/profile_providers.dart';
 import '../../../learning_hub/application/learning_hub_providers.dart';
+import '../../../learner_material_requests/application/learner_material_requests_providers.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
 import '../../../reservations/data/models/create_reservation_request.dart';
@@ -570,9 +571,20 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
       ref.invalidate(projectBuildProvider(projectId));
     }
 
+    if (hasMaterialRequestMatchId) {
+      invalidateLearnerMaterialRequests(ref);
+    }
+
     final returnTo = widget.returnTo?.trim();
     if (returnTo != null && returnTo.isNotEmpty) {
-      showInfoSnackBar(context, 'Reservation linked to your build checklist.');
+      if (hasMaterialRequestMatchId) {
+        showInfoSnackBar(
+          context,
+          'Reservation linked to your material request.',
+        );
+      } else if (hasBuildItemId) {
+        showInfoSnackBar(context, 'Reservation linked to your build checklist.');
+      }
       context.go(Uri.decodeComponent(returnTo));
       return;
     }
