@@ -120,6 +120,8 @@ String localizedApiErrorMessage(
       return l10n.driverDeliveryNoLongerAvailable;
     case 'DRIVER_NOT_AVAILABLE':
       return l10n.conflictError;
+    case 'DRIVER_NOT_ACCEPTING_NEW_JOBS':
+      return l10n.driverNotAcceptingNewJobsError;
     case 'DELIVERY_TERMINAL':
       return l10n.driverNoLongerActive;
     case 'INVALID_DELIVERY_TRANSITION':

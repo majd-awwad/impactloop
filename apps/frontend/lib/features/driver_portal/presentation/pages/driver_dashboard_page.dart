@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/driver_deliveries_provider.dart';
+import '../../application/driver_profile_provider.dart';
 import '../widgets/driver_active_delivery_card.dart';
+import '../widgets/driver_availability_summary_card.dart';
 
 class DriverDashboardPage extends ConsumerWidget {
   const DriverDashboardPage({super.key});
@@ -18,6 +21,7 @@ class DriverDashboardPage extends ConsumerWidget {
     final l10n = context.l10n;
     final active = ref.watch(activeDriverDeliveriesProvider);
     final available = ref.watch(availableDriverDeliveriesProvider);
+    final profile = ref.watch(driverProfileProvider);
     final activeResult = active.value;
     final availableResult = available.value;
 
@@ -25,9 +29,11 @@ class DriverDashboardPage extends ConsumerWidget {
       onRefresh: () async {
         ref.invalidate(activeDriverDeliveriesProvider);
         ref.invalidate(availableDriverDeliveriesProvider);
+        ref.invalidate(driverProfileProvider);
         await Future.wait([
           ref.read(activeDriverDeliveriesProvider.future),
           ref.read(availableDriverDeliveriesProvider.future),
+          ref.read(driverProfileProvider.future),
         ]);
       },
       child: ListView(
@@ -53,6 +59,51 @@ class DriverDashboardPage extends ConsumerWidget {
                   Text(
                     l10n.driverJobsSubtitle,
                     style: AppTextStyles.body(context),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  profile.when(
+                    loading: () => const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppSpacing.lg),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                    error: (error, _) => _DashboardNotice(
+                      text: localizedApiErrorMessage(error, l10n),
+                      onRetry: () => ref.invalidate(driverProfileProvider),
+                    ),
+                    data: (state) => DriverAvailabilitySummaryCard(
+                      profile: state.profile,
+                      isMutating: state.isMutating,
+                      isUpdatingAvailability: state.isUpdatingAvailability,
+                      compact: true,
+                      onPreferenceChanged: (value) async {
+                        if (!await confirmDriverAvailabilityPreference(
+                              context,
+                              value,
+                            ) ||
+                            !context.mounted) {
+                          return;
+                        }
+                        final changed = await ref
+                            .read(driverProfileProvider.notifier)
+                            .setAcceptingNewJobs(value);
+                        if (!context.mounted || changed) return;
+                        final error = ref
+                            .read(driverProfileProvider)
+                            .value
+                            ?.availabilityError;
+                        if (error != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                localizedApiErrorMessage(error, l10n),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   LayoutBuilder(

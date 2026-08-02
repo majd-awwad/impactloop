@@ -7010,4 +7010,236 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driverOpenRecoveryDelivery => 'Open recovery delivery';
+
+  @override
+  String get driverProfileTitle => 'Driver Profile';
+
+  @override
+  String get driverProfileSubtitle =>
+      'Manage the operational details used for delivery work and control whether you receive new job offers.';
+
+  @override
+  String get driverAdministrativeProfileStatus => 'Profile status';
+
+  @override
+  String get driverOperationalState => 'Operational state';
+
+  @override
+  String get driverProfileStatusActive => 'Active';
+
+  @override
+  String get driverProfileStatusInactive => 'Inactive';
+
+  @override
+  String get driverProfileStatusSuspended => 'Suspended';
+
+  @override
+  String get driverProfileStatusUnknown => 'Status unavailable';
+
+  @override
+  String get driverProfileActiveExplanation => 'Your Driver profile is active.';
+
+  @override
+  String get driverProfileInactiveExplanation =>
+      'Your Driver profile is inactive. Profile changes and new-job acceptance are unavailable.';
+
+  @override
+  String get driverProfileSuspendedExplanation =>
+      'Your Driver profile is suspended. Contact support if you need help.';
+
+  @override
+  String get driverProfileUnknownExplanation =>
+      'Your Driver profile status could not be confirmed. Refresh before changing availability.';
+
+  @override
+  String get driverAvailabilityAvailable => 'Available';
+
+  @override
+  String get driverAvailabilityOffline => 'Offline';
+
+  @override
+  String get driverAvailabilityOnDelivery => 'On delivery';
+
+  @override
+  String get driverAvailabilityUnknown => 'State unavailable';
+
+  @override
+  String get driverAvailabilityUnknownExplanation =>
+      'Your operational state is managed by the system and is currently unavailable.';
+
+  @override
+  String get driverSystemManagedState => 'System-managed operational state';
+
+  @override
+  String get driverAcceptingNewJobs => 'Accepting new jobs';
+
+  @override
+  String get driverAcceptingNewJobsOn => 'New delivery offers are enabled.';
+
+  @override
+  String get driverAcceptingNewJobsOff => 'New delivery offers are paused.';
+
+  @override
+  String get driverActiveDeliveriesContinueNoOffers =>
+      'Your active deliveries continue. You will not receive new job offers.';
+
+  @override
+  String get driverOnDeliveryAcceptingExplanation =>
+      'You are completing active deliveries and may accept more work up to the current limit.';
+
+  @override
+  String get driverAvailableExplanation =>
+      'You can browse and accept new delivery jobs.';
+
+  @override
+  String get driverOfflineExplanation =>
+      'You are not receiving new delivery offers.';
+
+  @override
+  String get driverDashboardAvailabilityTitle => 'Availability and status';
+
+  @override
+  String get driverActiveDeliveryCountLabel => 'Active deliveries';
+
+  @override
+  String get driverPauseNewJobsConfirmationTitle => 'Pause new job offers?';
+
+  @override
+  String get driverPauseNewJobsConfirmationBody =>
+      'Assigned deliveries, reminders, and operational notifications will continue. Only new job offers will be paused.';
+
+  @override
+  String get driverPauseNewJobsAction => 'Pause new jobs';
+
+  @override
+  String get driverResumeNewJobs => 'Resume new jobs';
+
+  @override
+  String get driverOperationalProfileDetails => 'Operational profile details';
+
+  @override
+  String get driverProfileCity => 'City';
+
+  @override
+  String get driverProfileArea => 'Area';
+
+  @override
+  String get driverTransportationCar => 'Car';
+
+  @override
+  String get driverTransportationMotorcycle => 'Motorcycle';
+
+  @override
+  String get driverTransportationBicycle => 'Bicycle';
+
+  @override
+  String get driverTransportationWalking => 'Walking';
+
+  @override
+  String get driverTransportationUnknown => 'Not specified';
+
+  @override
+  String get driverChooseTransportation => 'Choose transportation';
+
+  @override
+  String get driverVehicleDescription => 'Vehicle description';
+
+  @override
+  String get driverVehiclePlate => 'Vehicle plate';
+
+  @override
+  String get driverCapacityNotes => 'Capacity notes';
+
+  @override
+  String get driverCapacityNotesHint =>
+      'Optional information about item size or carrying capacity';
+
+  @override
+  String get driverOptionalField => 'Optional';
+
+  @override
+  String get driverCityValidation =>
+      'Enter a city between 2 and 100 characters.';
+
+  @override
+  String get driverAreaValidation =>
+      'Enter an area between 2 and 100 characters.';
+
+  @override
+  String get driverTransportationValidation =>
+      'Choose a supported transportation type.';
+
+  @override
+  String get driverVehicleLabelValidation =>
+      'Vehicle description must be 120 characters or fewer.';
+
+  @override
+  String get driverVehiclePlateValidation =>
+      'Vehicle plate must be 32 characters or fewer.';
+
+  @override
+  String get driverCapacityNotesValidation =>
+      'Capacity notes must be 500 characters or fewer.';
+
+  @override
+  String get driverSaveProfile => 'Save profile';
+
+  @override
+  String get driverSavingProfile => 'Saving…';
+
+  @override
+  String get driverProfileSaved => 'Driver profile saved.';
+
+  @override
+  String get driverProfileLoadError => 'Could not load Driver Profile';
+
+  @override
+  String get driverAccountSettingsTitle => 'Account Settings';
+
+  @override
+  String get driverAccountSettingsExplanation =>
+      'Your name and phone are managed in Account Settings.';
+
+  @override
+  String get driverOpenAccountSettings => 'Open Account Settings';
+
+  @override
+  String get driverUnsavedChangesTitle => 'Discard unsaved changes?';
+
+  @override
+  String get driverUnsavedChangesBody =>
+      'Your Driver Profile changes have not been saved.';
+
+  @override
+  String get driverKeepEditing => 'Keep editing';
+
+  @override
+  String get driverDiscardChanges => 'Discard changes';
+
+  @override
+  String get driverJobsPausedTitle => 'New job offers are paused';
+
+  @override
+  String get driverJobsPausedExplanation =>
+      'Turn on accepting new jobs to browse available deliveries again.';
+
+  @override
+  String get driverJobsInactiveTitle => 'Driver Profile is inactive';
+
+  @override
+  String get driverJobsSuspendedTitle => 'Driver Profile is suspended';
+
+  @override
+  String get driverJobsUnavailableTitle => 'Available jobs are unavailable';
+
+  @override
+  String get driverAssignedDeliveriesContinue =>
+      'Assigned deliveries, reminders, reports, and notification history remain available.';
+
+  @override
+  String get driverNotAcceptingNewJobsError =>
+      'Resume accepting new jobs before accepting this delivery.';
+
+  @override
+  String get driverCancelAction => 'Cancel';
 }

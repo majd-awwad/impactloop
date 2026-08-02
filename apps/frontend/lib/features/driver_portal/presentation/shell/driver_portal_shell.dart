@@ -149,9 +149,16 @@ class _DriverSidebar extends StatelessWidget {
             route: '/driver/history',
             selected: _isHistoryPath(currentPath),
           ),
+          const SizedBox(height: AppSpacing.xs),
+          _DriverNavButton(
+            icon: Icons.badge_outlined,
+            label: l10n.driverProfileTitle,
+            route: '/driver/profile',
+            selected: currentPath == '/driver/profile',
+          ),
           const Spacer(),
           InkWell(
-            onTap: () => context.go('/profile/account'),
+            onTap: () => context.go('/driver/profile'),
             borderRadius: AppRadius.mdAll,
             child: _DriverProfileSummary(name: driverName, email: email),
           ),
@@ -170,6 +177,9 @@ class _DriverBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final l10n = context.l10n;
+    if (currentPath == '/driver/profile') {
+      return _UnselectedDriverBottomNav(currentPath: currentPath);
+    }
     final selectedIndex = isDriverNotificationsPath(currentPath)
         ? 3
         : currentPath == '/driver/jobs'
@@ -215,6 +225,76 @@ class _DriverBottomNav extends StatelessWidget {
               label: l10n.notificationsTitle,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UnselectedDriverBottomNav extends StatelessWidget {
+  const _UnselectedDriverBottomNav({required this.currentPath});
+
+  final String currentPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final items = [
+      (Icons.dashboard_outlined, l10n.driverPortal, '/driver'),
+      (Icons.work_outline_rounded, l10n.driverJobs, '/driver/jobs'),
+      (
+        Icons.local_shipping_outlined,
+        l10n.driverMyActiveDeliveries,
+        '/driver/active',
+      ),
+      (
+        Icons.notifications_none_rounded,
+        l10n.notificationsTitle,
+        driverNotificationsRoute,
+      ),
+    ];
+
+    return Material(
+      key: const ValueKey('driver-unselected-bottom-nav'),
+      color: palette.cardSurface,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height:
+              kBottomNavigationBarHeight + ((textScale - 1).clamp(0, 0.8) * 24),
+          child: Row(
+            children: [
+              for (var index = 0; index < items.length; index++)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: false,
+                    label: items[index].$2,
+                    child: InkWell(
+                      key: ValueKey('driver-mobile-nav-$index'),
+                      onTap: () => context.go(items[index].$3),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(items[index].$1, color: palette.textSecondary),
+                          const SizedBox(height: 2),
+                          Text(
+                            items[index].$2,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: palette.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

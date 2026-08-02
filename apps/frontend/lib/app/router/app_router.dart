@@ -24,6 +24,7 @@ import '../../features/driver_portal/presentation/pages/driver_delivery_detail_p
 import '../../features/driver_portal/presentation/pages/driver_dashboard_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_active_deliveries_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_profile_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_history_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_history_detail_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
@@ -860,6 +861,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/driver/jobs',
             builder: (context, state) => const DriverJobsPage(),
+          ),
+          GoRoute(
+            path: '/driver/profile',
+            builder: (context, state) => const DriverProfilePage(),
           ),
           GoRoute(
             path: '/driver/history',

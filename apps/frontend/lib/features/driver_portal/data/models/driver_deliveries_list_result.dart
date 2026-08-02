@@ -1,10 +1,15 @@
 import 'driver_delivery.dart';
+import 'driver_operational_profile.dart';
 
 class DriverDeliveriesListMeta {
   const DriverDeliveriesListMeta({
     required this.activeDeliveryCount,
     required this.maxActiveDeliveries,
     required this.canAcceptMore,
+    this.canBrowseAvailableJobs,
+    this.status,
+    this.availability,
+    this.acceptingNewJobs,
     this.driverProfileCity,
     this.driverProfileArea,
     this.driverHasRecentLocation = false,
@@ -16,6 +21,10 @@ class DriverDeliveriesListMeta {
   final int activeDeliveryCount;
   final int maxActiveDeliveries;
   final bool canAcceptMore;
+  final bool? canBrowseAvailableJobs;
+  final DriverProfileStatus? status;
+  final DriverOperationalAvailability? availability;
+  final bool? acceptingNewJobs;
   final String? driverProfileCity;
   final String? driverProfileArea;
   final bool driverHasRecentLocation;
@@ -28,6 +37,14 @@ class DriverDeliveriesListMeta {
       activeDeliveryCount: json['activeDeliveryCount'] as int? ?? 0,
       maxActiveDeliveries: json['maxActiveDeliveries'] as int? ?? 3,
       canAcceptMore: json['canAcceptMore'] as bool? ?? true,
+      canBrowseAvailableJobs: json['canBrowseAvailableJobs'] as bool?,
+      status: json.containsKey('status')
+          ? parseDriverProfileStatus(json['status'])
+          : null,
+      availability: json.containsKey('availability')
+          ? parseDriverOperationalAvailability(json['availability'])
+          : null,
+      acceptingNewJobs: json['acceptingNewJobs'] as bool?,
       driverProfileCity: json['driverProfileCity'] as String?,
       driverProfileArea: json['driverProfileArea'] as String?,
       driverHasRecentLocation: json['driverHasRecentLocation'] == true,
