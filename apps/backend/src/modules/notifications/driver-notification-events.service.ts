@@ -1,5 +1,9 @@
 import type { DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
+import {
+  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
+  MAX_ACTIVE_DRIVER_DELIVERIES,
+} from '../driver/driver-availability.js';
 import { DRIVER_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
 import { createNotificationIfMissing } from './notifications.repository.js';
 
@@ -13,16 +17,6 @@ type ReminderSyncEntry = {
 };
 
 const reminderSyncByUser = new Map<string, ReminderSyncEntry>();
-
-const DRIVER_IN_PROGRESS_ASSIGNED_STATUSES = [
-  'DRIVER_ASSIGNED',
-  'ARRIVED_PICKUP',
-  'PICKED_UP',
-  'ON_THE_WAY',
-  'ARRIVED_DROPOFF',
-] as const satisfies readonly DeliveryStatus[];
-
-const MAX_ACTIVE_DRIVER_DELIVERIES = 3;
 
 const TERMINAL_DELIVERY_STATUSES = [
   'DELIVERED',
@@ -178,7 +172,11 @@ const loadDeliveryContext = async (deliveryId: string) =>
 
 const listEligibleDriverUserIds = async () => {
   const profiles = await prisma.driverProfile.findMany({
-    where: { status: 'ACTIVE' },
+    where: {
+      status: 'ACTIVE',
+      acceptingNewJobs: true,
+      user: { accountStatus: 'ACTIVE' },
+    },
     select: { id: true, userId: true },
   });
 

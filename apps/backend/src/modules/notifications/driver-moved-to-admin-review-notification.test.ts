@@ -43,6 +43,7 @@ async function createDriver(suffix: string) {
           area: 'Center',
           transportationType: 'BICYCLE',
           vehicleType: 'BICYCLE',
+          acceptingNewJobs: true,
         },
       },
     },

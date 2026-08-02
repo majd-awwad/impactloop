@@ -133,6 +133,7 @@ async function createUser(input: {
                   vehicleType: 'BICYCLE',
                   status: 'ACTIVE',
                   availability: 'AVAILABLE',
+                  acceptingNewJobs: true,
                 },
               },
             }),

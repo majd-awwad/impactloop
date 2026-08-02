@@ -9,11 +9,14 @@ import { successResponse } from '../../utils/api-response.js';
 import {
   acceptDelivery,
   createDeliveryLocationPing,
+  getDriverProfile,
   getDriverDeliveryDetail,
   getDriverDeliveryInactiveContext,
   listActiveDriverDeliveries,
   listAvailableDeliveries,
+  updateDriverAvailability,
   updateDriverDeliveryStatus,
+  updateDriverProfile,
 } from './driver.service.js';
 import {
   getDriverHistoricalDelivery,
@@ -24,9 +27,41 @@ import type {
   CreateDeliveryLocationPingInput,
   DeliveryIdParams,
   ListAvailableDeliveriesQuery,
+  UpdateDriverAvailabilityInput,
   UpdateDriverDeliveryStatusInput,
+  UpdateDriverProfileInput,
   ListDriverArchiveQuery,
 } from './driver.validation.js';
+
+export const getDriverProfileHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const profile = await getDriverProfile(req.auth!.sub);
+  res.json(successResponse('Driver profile loaded.', profile));
+};
+
+export const updateDriverProfileHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const profile = await updateDriverProfile(
+    req.auth!.sub,
+    req.body as UpdateDriverProfileInput,
+  );
+  res.json(successResponse('Driver profile updated.', profile));
+};
+
+export const updateDriverAvailabilityHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const profile = await updateDriverAvailability(
+    req.auth!.sub,
+    req.body as UpdateDriverAvailabilityInput,
+  );
+  res.json(successResponse('Driver availability updated.', profile));
+};
 
 export const listDriverDeliveryHistoryHandler = async (
   req: Request,

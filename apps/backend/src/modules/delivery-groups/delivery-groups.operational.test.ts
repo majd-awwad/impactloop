@@ -137,6 +137,7 @@ async function createUser(input: {
                   city: 'Nablus',
                   area: TEST_MARKER,
                   transportationType: 'CAR',
+                  acceptingNewJobs: true,
                 },
               },
             }),

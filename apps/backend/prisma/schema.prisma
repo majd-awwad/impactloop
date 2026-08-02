@@ -709,6 +709,7 @@ model DriverProfile {
   availabilityNote       String?                  @map("availability_note")
   status                 DriverProfileStatus      @default(ACTIVE)
   availability           DriverAvailabilityStatus @default(OFFLINE)
+  acceptingNewJobs       Boolean                  @default(false) @map("accepting_new_jobs")
   vehicleType            String                   @default("UNSPECIFIED") @map("vehicle_type")
   vehicleLabel           String?                  @map("vehicle_label")
   vehiclePlate           String?                  @map("vehicle_plate")
@@ -722,6 +723,7 @@ model DriverProfile {
   locationPings          DeliveryLocationPing[]
 
   @@index([status, availability])
+  @@index([status, acceptingNewJobs])
   @@map("driver_profiles")
 }
 

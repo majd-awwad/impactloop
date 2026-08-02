@@ -1,6 +1,55 @@
 import { z } from 'zod';
 import { PARTIAL_PICKUP_UNPICKED_REASONS } from './driver-partial-pickup.js';
 
+const nullableTrimmedString = (max: number) =>
+  z.preprocess(
+    (value) => {
+      if (value === null || value === undefined) {
+        return value;
+      }
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed.length === 0 ? null : trimmed;
+      }
+      return value;
+    },
+    z.union([z.string().max(max), z.null()]).optional(),
+  );
+
+export const updateDriverProfileSchema = z
+  .object({
+    city: z.string().trim().min(2).max(100).optional(),
+    area: z.string().trim().min(2).max(100).optional(),
+    transportationType: z
+      .enum(['CAR', 'MOTORCYCLE', 'BICYCLE', 'WALKING'])
+      .optional(),
+    vehicleLabel: nullableTrimmedString(120),
+    vehiclePlate: nullableTrimmedString(32),
+    capacityNotes: nullableTrimmedString(500),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (Object.values(value).every((field) => field === undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'At least one driver profile field is required.',
+        path: [],
+      });
+    }
+  });
+
+export type UpdateDriverProfileInput = z.infer<
+  typeof updateDriverProfileSchema
+>;
+
+export const updateDriverAvailabilitySchema = z
+  .object({ acceptingNewJobs: z.boolean() })
+  .strict();
+
+export type UpdateDriverAvailabilityInput = z.infer<
+  typeof updateDriverAvailabilitySchema
+>;
+
 export const deliveryIdParamsSchema = z.object({
   id: z.string().trim().min(1),
 });

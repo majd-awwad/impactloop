@@ -16,6 +16,7 @@ import {
   groupedDeliveryStateConflict,
   loadAndAssertGroupedDeliveryState,
 } from '../delivery-groups/grouped-delivery-state.js';
+import { reconcileDriverAvailability } from '../driver/driver-availability.js';
 
 const prePickupDeliveryStatuses = [
   'WAITING_FOR_DRIVER',
@@ -61,22 +62,6 @@ export const releaseDriverFromDelivery = async (
     },
   });
 
-  const remainingActiveDeliveries = await tx.delivery.count({
-    where: {
-      id: { not: input.deliveryId },
-      assignedDriverProfileId: input.driverProfileId,
-      status: {
-        in: [
-          'DRIVER_ASSIGNED',
-          'ARRIVED_PICKUP',
-          'PICKED_UP',
-          'ON_THE_WAY',
-          'ARRIVED_DROPOFF',
-        ],
-      },
-    },
-  });
-
   if (
     input.expectedActiveCount != null &&
     released.count !== input.expectedActiveCount
@@ -84,12 +69,8 @@ export const releaseDriverFromDelivery = async (
     groupedDeliveryStateConflict();
   }
 
-  await tx.driverProfile.update({
-    where: { id: input.driverProfileId },
-    data: {
-      availability:
-        remainingActiveDeliveries > 0 ? 'ON_DELIVERY' : 'AVAILABLE',
-    },
+  await reconcileDriverAvailability(tx, input.driverProfileId, {
+    excludeDeliveryId: input.deliveryId,
   });
 };
 

@@ -3,8 +3,6 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
 import { formatDistanceLabel, haversineDistanceKm } from '../../utils/haversine.js';
 import {
-  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
-  MAX_ACTIVE_DRIVER_DELIVERIES,
   LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES,
 } from '../deliveries/deliveries.service.js';
 import {
@@ -37,8 +35,16 @@ import {
 import type {
   CreateDeliveryLocationPingInput,
   ListAvailableDeliveriesQuery,
+  UpdateDriverAvailabilityInput,
   UpdateDriverDeliveryStatusInput,
+  UpdateDriverProfileInput,
 } from './driver.validation.js';
+import {
+  countActiveDriverDeliveries,
+  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
+  MAX_ACTIVE_DRIVER_DELIVERIES,
+  reconcileDriverAvailability,
+} from './driver-availability.js';
 import { resolveDriverReferencePoint } from './driver-location.js';
 import {
   completeReservationsForDeliveredDelivery,
@@ -357,25 +363,28 @@ const mapAssignedDelivery = (delivery: DriverDeliveryRecord) => ({
 export const mapDriverDeliveryForResponse = (delivery: DriverDeliveryRecord) =>
   mapAssignedDelivery(delivery);
 
-const countActiveAssignedDeliveries = async (
-  driverProfileId: string,
-  tx: Prisma.TransactionClient | typeof prisma = prisma,
-) =>
-  tx.delivery.count({
-    where: {
-      assignedDriverProfileId: driverProfileId,
-      status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
-    },
-  });
-
 const buildDriverJobsMeta = (
-  profile: { city: string; area: string },
+  profile: {
+    city: string;
+    area: string;
+    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+    availability: 'OFFLINE' | 'AVAILABLE' | 'ON_DELIVERY';
+    acceptingNewJobs: boolean;
+  },
   activeDeliveryCount: number,
   referencePoint: Awaited<ReturnType<typeof resolveDriverReferencePoint>>,
 ) => ({
   activeDeliveryCount,
   maxActiveDeliveries: MAX_ACTIVE_DRIVER_DELIVERIES,
-  canAcceptMore: activeDeliveryCount < MAX_ACTIVE_DRIVER_DELIVERIES,
+  canAcceptMore:
+    profile.status === 'ACTIVE' &&
+    profile.acceptingNewJobs &&
+    activeDeliveryCount < MAX_ACTIVE_DRIVER_DELIVERIES,
+  canBrowseAvailableJobs:
+    profile.status === 'ACTIVE' && profile.acceptingNewJobs,
+  status: profile.status,
+  availability: profile.availability,
+  acceptingNewJobs: profile.acceptingNewJobs,
   driverProfileCity: profile.city,
   driverProfileArea: profile.area,
   driverHasRecentLocation:
@@ -399,13 +408,113 @@ const findActiveDriverProfile = async (
   return profile;
 };
 
+const findDriverProfile = async (userId: string) => {
+  const profile = await prisma.driverProfile.findUnique({ where: { userId } });
+  if (!profile) {
+    throw new AppError('Driver profile required.', 404, 'NOT_FOUND');
+  }
+  return profile;
+};
+
+const mapDriverProfileResponse = async (
+  profile: Awaited<ReturnType<typeof findDriverProfile>>,
+) => {
+  const activeDeliveryCount = await countActiveDriverDeliveries(
+    prisma,
+    profile.id,
+  );
+  return {
+    status: profile.status,
+    availability: profile.availability,
+    acceptingNewJobs: profile.acceptingNewJobs,
+    activeDeliveryCount,
+    maxActiveDeliveries: MAX_ACTIVE_DRIVER_DELIVERIES,
+    canAcceptMore:
+      profile.status === 'ACTIVE' &&
+      profile.acceptingNewJobs &&
+      activeDeliveryCount < MAX_ACTIVE_DRIVER_DELIVERIES,
+    city: profile.city,
+    area: profile.area,
+    transportationType: profile.transportationType,
+    vehicleLabel: profile.vehicleLabel,
+    vehiclePlate: profile.vehiclePlate,
+    capacityNotes: profile.capacityNotes,
+    updatedAt: profile.updatedAt.toISOString(),
+  };
+};
+
+export const getDriverProfile = async (driverUserId: string) =>
+  mapDriverProfileResponse(await findDriverProfile(driverUserId));
+
+export const updateDriverProfile = async (
+  driverUserId: string,
+  input: UpdateDriverProfileInput,
+) => {
+  const profile = await findActiveDriverProfile(driverUserId);
+  await prisma.driverProfile.update({
+    where: { id: profile.id },
+    data: {
+      ...(input.city !== undefined ? { city: input.city } : {}),
+      ...(input.area !== undefined ? { area: input.area } : {}),
+      ...(input.transportationType !== undefined
+        ? {
+            transportationType: input.transportationType,
+            vehicleType: input.transportationType,
+          }
+        : {}),
+      ...(input.vehicleLabel !== undefined
+        ? { vehicleLabel: input.vehicleLabel }
+        : {}),
+      ...(input.vehiclePlate !== undefined
+        ? { vehiclePlate: input.vehiclePlate }
+        : {}),
+      ...(input.capacityNotes !== undefined
+        ? { capacityNotes: input.capacityNotes }
+        : {}),
+    },
+  });
+  return getDriverProfile(driverUserId);
+};
+
+export const updateDriverAvailability = async (
+  driverUserId: string,
+  input: UpdateDriverAvailabilityInput,
+) => {
+  await runSerializableTransaction(async (tx) => {
+    const profile = await findActiveDriverProfile(driverUserId, tx);
+    await tx.driverProfile.update({
+      where: { id: profile.id },
+      data: { acceptingNewJobs: input.acceptingNewJobs },
+    });
+    await reconcileDriverAvailability(tx, profile.id);
+  });
+  return getDriverProfile(driverUserId);
+};
+
 export const listAvailableDeliveries = async (
   driverUserId: string,
   query: ListAvailableDeliveriesQuery = { limit: 20 },
 ) => {
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
-  const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
+  const activeDeliveryCount = await countActiveDriverDeliveries(
+    prisma,
+    profile.id,
+  );
+
+  if (!profile.acceptingNewJobs) {
+    return {
+      deliveries: [],
+      nearbyAvailableCount: 0,
+      totalAvailableCount: 0,
+      pagination: {
+        limit: query.limit ?? 20,
+        hasMore: false,
+        nextCursor: null,
+      },
+      ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
+    };
+  }
 
   const explicitCity = query.city?.trim();
   const explicitArea = query.area?.trim();
@@ -527,7 +636,10 @@ export const listActiveDriverDeliveries = async (driverUserId: string) => {
 
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
-  const activeDeliveryCount = await countActiveAssignedDeliveries(profile.id);
+  const activeDeliveryCount = await countActiveDriverDeliveries(
+    prisma,
+    profile.id,
+  );
 
   let deliveries = await prisma.delivery.findMany({
     where: {
@@ -705,12 +817,20 @@ export const acceptDelivery = async (
   driverUserId: string,
   deliveryId: string,
 ) => {
-  await prisma.$transaction(async (tx) => {
+  await runSerializableTransaction(async (tx) => {
     const profile = await findActiveDriverProfile(driverUserId, tx);
 
-    const activeDriverDeliveryCount = await countActiveAssignedDeliveries(
-      profile.id,
+    if (!profile.acceptingNewJobs) {
+      throw new AppError(
+        'You are not accepting new delivery jobs.',
+        409,
+        'DRIVER_NOT_ACCEPTING_NEW_JOBS',
+      );
+    }
+
+    const activeDriverDeliveryCount = await countActiveDriverDeliveries(
       tx,
+      profile.id,
     );
 
     if (activeDriverDeliveryCount >= MAX_ACTIVE_DRIVER_DELIVERIES) {
@@ -718,41 +838,6 @@ export const acceptDelivery = async (
         'You have reached the active delivery limit.',
         409,
         'DRIVER_ACTIVE_LIMIT_REACHED',
-      );
-    }
-
-    if (
-      profile.availability === 'OFFLINE' ||
-      profile.availability === 'AVAILABLE'
-    ) {
-      const driverAvailabilityUpdate = await tx.driverProfile.updateMany({
-        where: {
-          id: profile.id,
-          status: 'ACTIVE',
-          availability: { in: ['OFFLINE', 'AVAILABLE'] },
-        },
-        data: { availability: 'ON_DELIVERY' },
-      });
-
-      if (driverAvailabilityUpdate.count !== 1) {
-        const refreshedProfile = await tx.driverProfile.findUnique({
-          where: { id: profile.id },
-          select: { availability: true },
-        });
-
-        if (refreshedProfile?.availability !== 'ON_DELIVERY') {
-          throw new AppError(
-            'Driver is not available to accept a delivery.',
-            409,
-            'DRIVER_NOT_AVAILABLE',
-          );
-        }
-      }
-    } else if (profile.availability !== 'ON_DELIVERY') {
-      throw new AppError(
-        'Driver is not available to accept a delivery.',
-        409,
-        'DRIVER_NOT_AVAILABLE',
       );
     }
 
@@ -805,6 +890,8 @@ export const acceptDelivery = async (
       deliveryGroupId: assignedDelivery.deliveryGroupId,
       driverProfileId: profile.id,
     });
+
+    await reconcileDriverAvailability(tx, profile.id);
   });
 
   const delivery = await prisma.delivery.findUniqueOrThrow({
@@ -1175,17 +1262,7 @@ export const updateDriverDeliveryStatus = async (
         completedAt: now,
       });
 
-      const remainingActive = await countActiveAssignedDeliveries(
-        profile.id,
-        tx,
-      );
-
-      if (remainingActive === 0) {
-        await tx.driverProfile.update({
-          where: { id: profile.id },
-          data: { availability: 'AVAILABLE' },
-        });
-      }
+      await reconcileDriverAvailability(tx, profile.id);
     }
 
     await tx.deliveryStatusHistory.create({

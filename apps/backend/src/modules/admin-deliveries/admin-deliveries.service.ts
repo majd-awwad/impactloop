@@ -248,7 +248,7 @@ const mapDeliveryContract = (
       driver: assignment.driverProfile
         ? {
             id: assignment.driverProfile.id,
-            displayName: assignment.driverProfile.displayName,
+            displayName: assignment.driverProfile.user.displayName,
             email: assignment.driverProfile.user.email,
           }
         : null,
@@ -304,7 +304,7 @@ const mapListItem = (
   driver: delivery.assignedDriverProfile
     ? {
         id: delivery.assignedDriverProfile.id,
-        displayName: delivery.assignedDriverProfile.displayName,
+        displayName: delivery.assignedDriverProfile.user.displayName,
         email: delivery.assignedDriverProfile.user.email,
       }
     : null,
@@ -429,9 +429,9 @@ const mapDetail = (
     driver: delivery.assignedDriverProfile
       ? {
           id: delivery.assignedDriverProfile.id,
-          displayName: delivery.assignedDriverProfile.displayName,
+          displayName: delivery.assignedDriverProfile.user.displayName,
           email: delivery.assignedDriverProfile.user.email,
-          phone: delivery.assignedDriverProfile.phone,
+          phone: delivery.assignedDriverProfile.user.phone,
           acceptedAt:
             delivery.assignments.find(
               (assignment) =>
@@ -466,14 +466,15 @@ const mapDetail = (
     currentDriver: contract.assignmentState === 'ACTIVE' && delivery.assignedDriverProfile
       ? {
           id: delivery.assignedDriverProfile.id,
-          displayName: delivery.assignedDriverProfile.displayName,
+          displayName: delivery.assignedDriverProfile.user.displayName,
           email: delivery.assignedDriverProfile.user.email,
         }
       : null,
     lastAssignedDriver: delivery.assignments[0]?.driverProfile
       ? {
           id: delivery.assignments[0].driverProfile.id,
-          displayName: delivery.assignments[0].driverProfile.displayName,
+          displayName:
+            delivery.assignments[0].driverProfile.user.displayName,
           email: delivery.assignments[0].driverProfile.user.email,
         }
       : null,

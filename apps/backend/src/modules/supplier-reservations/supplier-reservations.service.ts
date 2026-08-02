@@ -386,7 +386,7 @@ export const mapSupplierReservation = (
         driver: driver
           ? {
               id: driver.id,
-              displayName: driver.displayName,
+              displayName: driver.user.displayName,
               userId: driver.user.id,
               profileImageUrl: driver.user.profileImageUrl,
             }
