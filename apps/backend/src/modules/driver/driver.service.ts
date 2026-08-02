@@ -84,7 +84,7 @@ const notifyMaterialRequestsFulfilledByReservations = async (
 
   for (const reservationId of reservationIds) {
     const fulfilled = await fulfillRequestFromCompletedReservation(reservationId);
-    if (!fulfilled) {
+    if (!fulfilled?.transitionedToFulfilled) {
       continue;
     }
 
@@ -101,6 +101,41 @@ const notifyMaterialRequestsFulfilledByReservations = async (
       actionType: 'OPEN_ENTITY',
     });
   }
+};
+
+const collectCompletedReservationIdsForDelivery = async (
+  deliveryId: string,
+) => {
+  const delivery = await prisma.delivery.findUnique({
+    where: { id: deliveryId },
+    select: {
+      reservationId: true,
+      deliveryGroupId: true,
+    },
+  });
+
+  if (!delivery) {
+    return [] as string[];
+  }
+
+  if (delivery.deliveryGroupId) {
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        deliveryGroupId: delivery.deliveryGroupId,
+        status: 'COMPLETED',
+        fulfillmentMethod: 'DELIVERY',
+      },
+      select: { id: true },
+    });
+    return reservations.map((reservation) => reservation.id);
+  }
+
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: delivery.reservationId },
+    select: { id: true, status: true },
+  });
+
+  return reservation?.status === 'COMPLETED' ? [reservation.id] : [];
 };
 
 const terminalStatuses = [
@@ -1274,6 +1309,8 @@ export const updateDriverDeliveryStatus = async (
       });
     }
 
+    let completedReservationIds: string[] = [];
+
     if (input.status === 'DELIVERED') {
       const latestDelivery = await tx.delivery.findUniqueOrThrow({
         where: { id: delivery.id },
@@ -1291,11 +1328,14 @@ export const updateDriverDeliveryStatus = async (
         },
       });
 
-      await completeReservationsForDeliveredDelivery(tx, {
-        delivery: latestDelivery,
-        driverUserId,
-        completedAt: now,
-      });
+      completedReservationIds = await completeReservationsForDeliveredDelivery(
+        tx,
+        {
+          delivery: latestDelivery,
+          driverUserId,
+          completedAt: now,
+        },
+      );
 
       await reconcileDriverAvailability(tx, profile.id);
     }
@@ -1337,12 +1377,29 @@ export const updateDriverDeliveryStatus = async (
     }
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
-    case 'TERMINAL':
+    case 'TERMINAL': {
+      if (input.status === 'DELIVERED') {
+        const completedReservationIds =
+          await collectCompletedReservationIdsForDelivery(deliveryId);
+        if (completedReservationIds.length > 0) {
+          await notifyMaterialRequestsFulfilledByReservations(
+            completedReservationIds,
+          );
+        }
+
+        const updatedDelivery = await prisma.delivery.findUniqueOrThrow({
+          where: { id: deliveryId },
+          include: driverDeliveryInclude,
+        });
+        return mapAssignedDelivery(updatedDelivery);
+      }
+
       throw new AppError(
         'Terminal deliveries cannot be updated.',
         409,
         'DELIVERY_TERMINAL',
       );
+    }
     case 'INVALID_TRANSITION':
       throw new AppError(
         'Invalid delivery status transition.',

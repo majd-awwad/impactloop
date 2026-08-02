@@ -17,6 +17,9 @@ export const requestInclude = {
   },
   matches: {
     include: {
+      reservation: {
+        select: { id: true, status: true },
+      },
       material: {
         select: {
           id: true,
@@ -24,13 +27,30 @@ export const requestInclude = {
           status: true,
           quantity: true,
           unit: true,
+          condition: true,
+          isFree: true,
+          price: true,
+          currency: true,
           pickupAllowed: true,
           deliveryAllowed: true,
           location: { select: { city: true, area: true } },
+          images: {
+            select: { imageUrl: true, isCover: true },
+            orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }],
+            take: 1,
+          },
+          supplierProfile: {
+            select: {
+              publicName: true,
+              avatarImageUrl: true,
+              verificationStatus: true,
+              defaultPickupLocation: { select: { city: true, area: true } },
+            },
+          },
           owner: {
             select: {
               displayName: true,
-              supplierProfile: { select: { publicName: true } },
+              profileImageUrl: true,
             },
           },
         },
@@ -128,13 +148,30 @@ export const findMatchById = (matchId: string) =>
           status: true,
           quantity: true,
           unit: true,
+          condition: true,
+          isFree: true,
+          price: true,
+          currency: true,
           pickupAllowed: true,
           deliveryAllowed: true,
           location: { select: { city: true, area: true } },
+          images: {
+            select: { imageUrl: true, isCover: true },
+            orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }],
+            take: 1,
+          },
+          supplierProfile: {
+            select: {
+              publicName: true,
+              avatarImageUrl: true,
+              verificationStatus: true,
+              defaultPickupLocation: { select: { city: true, area: true } },
+            },
+          },
           owner: {
             select: {
               displayName: true,
-              supplierProfile: { select: { publicName: true } },
+              profileImageUrl: true,
             },
           },
         },

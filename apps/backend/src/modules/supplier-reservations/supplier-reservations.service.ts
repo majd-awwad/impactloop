@@ -1104,6 +1104,41 @@ export const completeSupplierReservation = async (
   }
 
   if (result.conflict) {
+    if (result.reservation.status === 'COMPLETED') {
+      const { fulfillRequestFromCompletedReservation } = await import(
+        '../learner-material-requests/learner-material-requests.service.js'
+      );
+      const { createNotificationIfMissing } = await import(
+        '../notifications/notifications.repository.js'
+      );
+      const reconciled = await fulfillRequestFromCompletedReservation(
+        result.reservation.id,
+      );
+      if (reconciled?.transitionedToFulfilled) {
+        await createNotificationIfMissing({
+          userId: reconciled.learnerId,
+          notificationType: 'MATERIAL_REQUEST_FULFILLED',
+          title: 'Material request fulfilled',
+          body: `Your request “${reconciled.requestedItemName}” was marked fulfilled after a completed reservation.`,
+          relatedEntityType: 'MATERIAL_REQUEST',
+          relatedEntityId: reconciled.id,
+          eventKey: `mr:fulfilled:${reconciled.id}`,
+          entityType: 'MATERIAL_REQUEST',
+          entityId: reconciled.id,
+          actionType: 'OPEN_ENTITY',
+        });
+      }
+      const existingReservation =
+        await supplierReservationsRepository.findSupplierReservationForOwner(
+          ownerId,
+          result.reservation.id,
+        );
+      if (!existingReservation) {
+        throw new AppError('Reservation not found.', 404, 'NOT_FOUND');
+      }
+      return mapSupplierReservation(existingReservation);
+    }
+
     throw new AppError(
       'Only accepted self-pickup reservations can be completed by the supplier.',
       409,
@@ -1121,7 +1156,7 @@ export const completeSupplierReservation = async (
   const fulfilled = await fulfillRequestFromCompletedReservation(
     result.reservation.id,
   );
-  if (fulfilled) {
+  if (fulfilled?.transitionedToFulfilled) {
     await createNotificationIfMissing({
       userId: fulfilled.learnerId,
       notificationType: 'MATERIAL_REQUEST_FULFILLED',

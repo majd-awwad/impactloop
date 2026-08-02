@@ -478,7 +478,9 @@ const mapProjectBuildItem = (
     requiredComponentId: item.requiredComponentId,
     status: item.status,
     learnerNote: item.learnerNote,
-    linkedMaterial: mapLinkedMaterialSummary(item.linkedMaterial),
+    linkedMaterial: mapLinkedMaterialSummary(item.linkedMaterial, {
+      linkedReservationStatus: item.linkedReservation?.status ?? null,
+    }),
     linkedReservation: mapLinkedReservationSummary(item.linkedReservation),
     isReadyForBuild: readiness.isReadyForBuild,
     readinessLabel: readiness.readinessLabel,
@@ -1084,7 +1086,28 @@ export const getMyProjectBuildById = async (
     throw new AppError('Learning project not found', 404, 'NOT_FOUND');
   }
 
-  const build = await learningProjectsRepository.findProjectBuild(id, userId);
+  let build = await learningProjectsRepository.findProjectBuild(id, userId);
+
+  if (build) {
+    const { reconcileProjectBuildMaterialRequestSync } = await import(
+      '../material-requests/material-requests.build-sync-reconciliation.js'
+    );
+    const { fulfillRequestFromCompletedReservation } = await import(
+      '../learner-material-requests/learner-material-requests.service.js'
+    );
+
+    const { repairedCount } = await reconcileProjectBuildMaterialRequestSync(
+      build.id,
+      userId,
+      fulfillRequestFromCompletedReservation,
+    );
+
+    if (repairedCount > 0) {
+      build =
+        (await learningProjectsRepository.findProjectBuild(id, userId)) ??
+        build;
+    }
+  }
 
   return build ? hydrateLearnerProjectBuild(build, userId) : null;
 };

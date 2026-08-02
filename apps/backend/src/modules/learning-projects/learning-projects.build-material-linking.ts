@@ -124,12 +124,16 @@ const resolvePublicSupplierVerified = (
 
 export const mapLinkedMaterialSummary = (
   material: LinkedMaterialRecord | null | undefined,
+  options?: {
+    linkedReservationStatus?: string | null;
+  },
 ) => {
   if (!material) {
     return null;
   }
 
   const isPubliclyAvailable = material.status === 'AVAILABLE';
+  const isAcquired = options?.linkedReservationStatus === 'COMPLETED';
 
   return {
     id: material.id,
@@ -143,9 +147,10 @@ export const mapLinkedMaterialSummary = (
     condition: material.condition,
     status: material.status,
     isPubliclyAvailable,
-    availabilityWarning: isPubliclyAvailable
-      ? null
-      : 'This linked material is no longer available on the platform.',
+    availabilityWarning:
+      isPubliclyAvailable || isAcquired
+        ? null
+        : 'This linked material is no longer available on the platform.',
     isFree: material.isFree,
     price: decimalToNumber(material.price),
     currency: material.currency,

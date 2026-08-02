@@ -275,12 +275,26 @@ after(async () => {
     });
   }
 
+  if (ids.reservations.length > 0) {
+    await prisma.reservation.deleteMany({
+      where: { id: { in: ids.reservations } },
+    });
+  }
+
   if (ids.builds.length > 0) {
     await prisma.projectBuild.deleteMany({ where: { id: { in: ids.builds } } });
   }
 
   if (ids.projects.length > 0) {
     await prisma.learningProject.deleteMany({ where: { id: { in: ids.projects } } });
+  }
+
+  if (ids.materials.length > 0) {
+    await prisma.material.deleteMany({ where: { id: { in: ids.materials } } });
+  }
+
+  if (ids.locations.length > 0) {
+    await prisma.location.deleteMany({ where: { id: { in: ids.locations } } });
   }
 
   if (ids.categories.length > 0) {
