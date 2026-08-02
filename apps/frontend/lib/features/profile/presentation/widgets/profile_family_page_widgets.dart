@@ -5,6 +5,7 @@ import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/app_theme_colors.dart';
+import '../../../../shared/widgets/notification_bell_button.dart';
 
 const double profileFamilyMaxWidth = 920;
 const double profileFamilyWideBreakpoint = 840;
@@ -82,6 +83,7 @@ class ProfileFamilyPageScaffold extends StatelessWidget {
     required this.backFallbackRoute,
     required this.child,
     this.headerAction,
+    this.showNotificationBell = true,
   });
 
   final String title;
@@ -89,6 +91,7 @@ class ProfileFamilyPageScaffold extends StatelessWidget {
   final String backFallbackRoute;
   final Widget child;
   final Widget? headerAction;
+  final bool showNotificationBell;
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +100,10 @@ class ProfileFamilyPageScaffold extends StatelessWidget {
     final pagePadding = width >= profileFamilyWideBreakpoint
         ? AppSpacing.lg
         : AppSpacing.md;
+    final endActions = <Widget>[
+      ?headerAction,
+      if (showNotificationBell) const NotificationBellButton(compact: true),
+    ];
 
     return Scaffold(
       backgroundColor: colors.pageBackground,
@@ -156,10 +163,19 @@ class ProfileFamilyPageScaffold extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (headerAction != null)
+                        if (endActions.isNotEmpty)
                           Align(
                             alignment: AlignmentDirectional.centerEnd,
-                            child: headerAction,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (var i = 0; i < endActions.length; i++) ...[
+                                  if (i > 0)
+                                    const SizedBox(width: AppSpacing.xs),
+                                  endActions[i],
+                                ],
+                              ],
+                            ),
                           ),
                       ],
                     ),

@@ -33,8 +33,7 @@ const mapReport = (report: repository.AdminNoShowReportRecord) => ({
     reservation: report.reservation,
     delivery: report.delivery,
     isGroupedDelivery: report.delivery?.deliveryGroupId != null,
-    // Group-level recovery is intentionally unsupported by the mutation layer.
-    isGroupRecoverySupported: false,
+    isGroupRecoverySupported: true,
   }),
   id: report.id,
   reservationId: report.reservationId,

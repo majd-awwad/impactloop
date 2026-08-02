@@ -21,7 +21,11 @@ import '../../features/home/domain/learner_home_models.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_detail_page.dart';
 import '../../features/deliveries/presentation/pages/learner_delivery_tracking_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_delivery_detail_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_dashboard_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_active_deliveries_page.dart';
 import '../../features/driver_portal/presentation/pages/driver_jobs_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_history_page.dart';
+import '../../features/driver_portal/presentation/pages/driver_history_detail_page.dart';
 import '../../features/driver_portal/presentation/shell/driver_portal_shell.dart';
 import '../../features/learning_hub/presentation/pages/learning_project_authoring_pages.dart';
 import '../../features/learning_hub/presentation/pages/learning_add_draft_page.dart';
@@ -506,6 +510,9 @@ String? _resolveRouteRedirect(Ref ref, GoRouterState state) {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
+  // Keep browser URL aligned with imperative pushes (notifications inbox).
+  GoRouter.optionURLReflectsImperativeAPIs = true;
+
   final refreshListenable = ValueNotifier<int>(0);
   ref.onDispose(refreshListenable.dispose);
   ref.listen<AuthState>(authControllerProvider, (previous, next) {
@@ -844,11 +851,29 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/driver',
-            redirect: (context, state) => '/driver/jobs',
+            builder: (context, state) => const DriverDashboardPage(),
+          ),
+          GoRoute(
+            path: '/driver/active',
+            builder: (context, state) => const DriverActiveDeliveriesPage(),
           ),
           GoRoute(
             path: '/driver/jobs',
             builder: (context, state) => const DriverJobsPage(),
+          ),
+          GoRoute(
+            path: '/driver/history',
+            builder: (context, state) => const DriverHistoryPage(),
+          ),
+          GoRoute(
+            path: '/driver/incidents',
+            builder: (context, state) => const DriverHistoryPage(initialTab: 1),
+          ),
+          GoRoute(
+            path: '/driver/history/:id',
+            builder: (context, state) => DriverHistoryDetailPage(
+              deliveryId: state.pathParameters['id']!,
+            ),
           ),
           GoRoute(
             path: '/driver/deliveries/:id',

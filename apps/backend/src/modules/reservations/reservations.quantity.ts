@@ -26,6 +26,8 @@ export const MATERIAL_IN_CUSTODY_DELIVERY_STATUSES = [
   'FAILED_DELIVERY',
 ] as const;
 
+export const PARTIAL_PICKUP_HOLD_REASON_PREFIX = 'DRIVER_PARTIAL_PICKUP_';
+
 /** Reservation statuses that reduce public availableQuantity. COMPLETED consumes stock instead. */
 
 export { runSerializableTransaction } from '../../utils/transaction-retry.js';
@@ -125,17 +127,26 @@ export const sumHeldQuantityForMaterial = async (
       select: {
         id: true,
         quantityRequested: true,
+        pendingRescheduleReason: true,
       },
     });
 
+    const awaitingIds = awaitingResolutionReservations.map(
+      (reservation) => reservation.id,
+    );
     const reservationIdsWithCustodyDeliveries =
-      await loadReservationIdsWithCustodyDeliveries(
-        tx,
-        awaitingResolutionReservations.map((reservation) => reservation.id),
-      );
+      await loadReservationIdsWithCustodyDeliveries(tx, awaitingIds);
 
     for (const reservation of awaitingResolutionReservations) {
-      if (reservationIdsWithCustodyDeliveries.has(reservation.id)) {
+      // Custody deliveries keep material held while the driver still carries it.
+      // A reservation explicitly detached before handover also keeps its hold
+      // until supplier/admin recovery moves it into the next lifecycle state.
+      if (
+        reservationIdsWithCustodyDeliveries.has(reservation.id) ||
+        reservation.pendingRescheduleReason?.startsWith(
+          PARTIAL_PICKUP_HOLD_REASON_PREFIX,
+        )
+      ) {
         held = held.plus(toDecimal(reservation.quantityRequested));
       }
     }

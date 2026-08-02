@@ -1,6 +1,7 @@
 import type { Prisma, DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
+import { reconcileDriverAvailability } from '../driver/driver-availability.js';
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 
 import type { AdminDeliveriesListQuery } from './admin-deliveries.validation.js';
@@ -92,12 +93,12 @@ export const adminDeliveryListInclude = {
   assignedDriverProfile: {
     select: {
       id: true,
-      displayName: true,
-      phone: true,
       user: {
         select: {
           id: true,
+          displayName: true,
           email: true,
+          phone: true,
         },
       },
     },
@@ -125,8 +126,7 @@ export const adminDeliveryListInclude = {
       driverProfile: {
         select: {
           id: true,
-          displayName: true,
-          user: { select: { email: true } },
+          user: { select: { displayName: true, email: true } },
         },
       },
     },
@@ -171,12 +171,12 @@ export const adminDeliveryDetailInclude = {
   assignedDriverProfile: {
     select: {
       id: true,
-      displayName: true,
-      phone: true,
       user: {
         select: {
           id: true,
+          displayName: true,
           email: true,
+          phone: true,
         },
       },
     },
@@ -237,8 +237,7 @@ export const adminDeliveryDetailInclude = {
       driverProfile: {
         select: {
           id: true,
-          displayName: true,
-          user: { select: { email: true } },
+          user: { select: { displayName: true, email: true } },
         },
       },
     },
@@ -786,23 +785,7 @@ export const reopenDriverAssignmentForAdmin = async (input: {
       }
     }
 
-    const remainingActive = await tx.delivery.count({
-      where: {
-        assignedDriverProfileId: delivery.assignedDriverProfileId,
-        status: { in: activeAssignedStatuses },
-      },
-    });
-
-    if (remainingActive === 0) {
-      await tx.driverProfile.updateMany({
-        where: {
-          id: delivery.assignedDriverProfileId,
-          status: 'ACTIVE',
-          availability: 'ON_DELIVERY',
-        },
-        data: { availability: 'AVAILABLE' },
-      });
-    }
+    await reconcileDriverAvailability(tx, delivery.assignedDriverProfileId);
 
     await tx.deliveryStatusHistory.create({
       data: {

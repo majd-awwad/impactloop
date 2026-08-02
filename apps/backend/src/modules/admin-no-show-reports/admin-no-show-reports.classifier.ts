@@ -63,6 +63,11 @@ const RECOVERY_DELIVERY_STATUSES = new Set([
 
 const STRIKE_TARGET_ROLES = new Set(['LEARNER', 'SUPPLIER', 'DRIVER']);
 
+const isPartialPickupRecovery = (context: AdminReportClassifierContext) =>
+  context.reservation.pendingRescheduleReason?.startsWith(
+    'DRIVER_PARTIAL_PICKUP_',
+  ) === true;
+
 const isRecoveryFamily = (context: AdminReportClassifierContext) =>
   context.report.deliveryId != null &&
   context.reservation.fulfillmentMethod === 'DELIVERY' &&
@@ -96,7 +101,7 @@ export const classifyOperationalState = (
 
   if (
     context.reservation.status === 'AWAITING_RESOLUTION' &&
-    deliveryRequiresResolution
+    (deliveryRequiresResolution || isPartialPickupRecovery(context))
   ) {
     return 'REQUIRES_RESOLUTION';
   }
@@ -115,20 +120,22 @@ export const classifyStrikeImpact = (
     : 'NONE';
 
 const recoveryActions = (context: AdminReportClassifierContext): AdminReportAction[] => {
+  const delivery = context.delivery;
+
   if (context.isGroupedDelivery && !context.isGroupRecoverySupported) {
     return [];
   }
 
   if (
-    context.delivery == null ||
-    !RECOVERY_DELIVERY_STATUSES.has(context.delivery.status)
+    !isPartialPickupRecovery(context) &&
+    (delivery == null || !RECOVERY_DELIVERY_STATUSES.has(delivery.status))
   ) {
     return [];
   }
 
   if (
     context.report.reasonCode === 'NO_DRIVER_AVAILABLE' &&
-    context.delivery.assignedDriverProfileId
+    delivery?.assignedDriverProfileId
   ) {
     return [];
   }

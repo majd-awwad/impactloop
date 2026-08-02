@@ -8,7 +8,6 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/widgets/entry_nav_bar.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../../shared/widgets/notification_bell_button.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../../notifications/application/notifications_routes.dart';
 
@@ -38,12 +37,9 @@ class DriverPortalShell extends ConsumerWidget {
                 EntryNavBar(
                   showSignIn: false,
                   showCreateAccount: false,
-                  homeRoute: '/driver/jobs',
+                  homeRoute: '/driver',
                   phoneTitle: l10n.driver,
                   showPublicNavLinks: false,
-                  trailingActions: const [
-                    NotificationBellButton(compact: true),
-                  ],
                 ),
                 Expanded(
                   child: useSidebar
@@ -120,10 +116,24 @@ class _DriverSidebar extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           _DriverNavButton(
-            icon: Icons.local_shipping_outlined,
-            label: l10n.driverJobs,
+            icon: Icons.dashboard_outlined,
+            label: l10n.driverPortal,
+            route: '/driver',
+            selected: currentPath == '/driver',
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _DriverNavButton(
+            icon: Icons.work_outline_rounded,
+            label: l10n.driverAvailableNearbyJobs,
             route: '/driver/jobs',
-            selected: _isJobsPath(currentPath),
+            selected: currentPath == '/driver/jobs',
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _DriverNavButton(
+            icon: Icons.local_shipping_outlined,
+            label: l10n.driverMyActiveDeliveries,
+            route: '/driver/active',
+            selected: _isActivePath(currentPath),
           ),
           const SizedBox(height: AppSpacing.xs),
           _DriverNavButton(
@@ -132,8 +142,19 @@ class _DriverSidebar extends StatelessWidget {
             route: driverNotificationsRoute,
             selected: isDriverNotificationsPath(currentPath),
           ),
+          const SizedBox(height: AppSpacing.xs),
+          _DriverNavButton(
+            icon: Icons.history_rounded,
+            label: l10n.driverHistoryNav,
+            route: '/driver/history',
+            selected: _isHistoryPath(currentPath),
+          ),
           const Spacer(),
-          _DriverProfileSummary(name: driverName, email: email),
+          InkWell(
+            onTap: () => context.go('/profile/account'),
+            borderRadius: AppRadius.mdAll,
+            child: _DriverProfileSummary(name: driverName, email: email),
+          ),
         ],
       ),
     );
@@ -149,7 +170,13 @@ class _DriverBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final l10n = context.l10n;
-    final selectedIndex = isDriverNotificationsPath(currentPath) ? 1 : 0;
+    final selectedIndex = isDriverNotificationsPath(currentPath)
+        ? 3
+        : currentPath == '/driver/jobs'
+        ? 1
+        : _isActivePath(currentPath)
+        ? 2
+        : 0;
 
     return Material(
       color: palette.cardSurface,
@@ -159,16 +186,29 @@ class _DriverBottomNav extends StatelessWidget {
         child: NavigationBar(
           selectedIndex: selectedIndex,
           onDestinationSelected: (index) {
-            if (index == 0) {
-              context.go('/driver/jobs');
-            } else {
-              context.go(driverNotificationsRoute);
+            switch (index) {
+              case 0:
+                context.go('/driver');
+              case 1:
+                context.go('/driver/jobs');
+              case 2:
+                context.go('/driver/active');
+              default:
+                context.go(driverNotificationsRoute);
             }
           },
           destinations: [
             NavigationDestination(
-              icon: const Icon(Icons.local_shipping_outlined),
+              icon: const Icon(Icons.dashboard_outlined),
+              label: l10n.driverPortal,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.work_outline_rounded),
               label: l10n.driverJobs,
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.local_shipping_outlined),
+              label: l10n.driverMyActiveDeliveries,
             ),
             NavigationDestination(
               icon: const Icon(Icons.notifications_none_rounded),
@@ -181,9 +221,11 @@ class _DriverBottomNav extends StatelessWidget {
   }
 }
 
-bool _isJobsPath(String path) {
-  return path == '/driver/jobs' || path.startsWith('/driver/deliveries/');
-}
+bool _isActivePath(String path) =>
+    path == '/driver/active' || path.startsWith('/driver/deliveries/');
+
+bool _isHistoryPath(String path) =>
+    path == '/driver/incidents' || path.startsWith('/driver/history');
 
 class _DriverNavButton extends StatelessWidget {
   const _DriverNavButton({

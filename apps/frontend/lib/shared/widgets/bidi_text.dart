@@ -43,3 +43,6 @@ final _technicalValue = RegExp(
   r'^(?:https?://|www\.|[^\s@]+@[^\s@]+\.[^\s@]+|\+?[\d\s().-]{6,}|-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?)',
   caseSensitive: false,
 );
+
+/// Isolates a user-entered or technical fragment inside localized text.
+String bidiIsolate(String value) => '\u2068$value\u2069';

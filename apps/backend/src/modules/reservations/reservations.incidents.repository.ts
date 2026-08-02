@@ -273,12 +273,12 @@ export const escalateStaleAssignedDriverPickupInTransaction = async (
   const targetUserId = isDriverAssignedNoArrival ? driverProfile.userId : null;
 
   const duplicate = isDriverAssignedNoArrival
-    ? await tx.noShowReport.findUnique({
+    ? await tx.noShowReport.findFirst({
         where: {
-          reservationId_targetUserId: {
-            reservationId: input.reservation.id,
-            targetUserId: driverProfile.userId,
-          },
+          reservationId: input.reservation.id,
+          deliveryId: input.delivery.id,
+          targetUserId: driverProfile.userId,
+          reasonCode: 'NO_RESPONSE_AFTER_PICKUP_WINDOW',
         },
       })
     : await tx.noShowReport.findFirst({

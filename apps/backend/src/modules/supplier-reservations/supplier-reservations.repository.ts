@@ -1441,12 +1441,12 @@ export const createSupplierNoShowReport = async (input: {
       }
     }
 
-    const duplicate = await tx.noShowReport.findUnique({
+    const duplicate = await tx.noShowReport.findFirst({
       where: {
-        reservationId_targetUserId: {
-          reservationId: existing.id,
-          targetUserId,
-        },
+        reservationId: existing.id,
+        deliveryId: latestDelivery?.id ?? null,
+        targetUserId,
+        reasonCode: input.reasonCode,
       },
     });
 

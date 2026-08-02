@@ -447,10 +447,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationChipDelivery => 'Delivery update';
 
   @override
+  String get notificationChipReservation => 'Reservation';
+
+  @override
+  String get notificationChipMaterial => 'Material';
+
+  @override
+  String get notificationChipLearning => 'Learning';
+
+  @override
+  String get notificationChipMaterialRequest => 'Material request';
+
+  @override
   String get notificationChipAccount => 'Account';
 
   @override
   String get notificationChipUpdate => 'Update';
+
+  @override
+  String get notificationsBack => 'Back';
+
+  @override
+  String get refreshNotifications => 'Refresh notifications';
 
   @override
   String get viewJobs => 'View jobs';
@@ -6308,6 +6326,77 @@ class AppLocalizationsEn extends AppLocalizations {
       'Delivery status changed. Refresh and try the next valid action.';
 
   @override
+  String get driverInvalidConfirmationCode =>
+      'That confirmation code is incorrect. Check the code and try again.';
+
+  @override
+  String get driverHandoverWindowNotStarted =>
+      'The handover window has not started yet.';
+
+  @override
+  String get driverHandoverWindowExpired =>
+      'The handover window has already ended.';
+
+  @override
+  String get driverPartialPickupSelectionInvalid =>
+      'The selected pickup items are invalid. Refresh and try again.';
+
+  @override
+  String get driverGroupedDeliverySplitConflict =>
+      'This grouped delivery changed. Refresh and try again.';
+
+  @override
+  String get driverAvailableJobsCursorInvalid =>
+      'Job list paging is out of date. Refresh available jobs.';
+
+  @override
+  String get driverPartialPickupTitle => 'Confirm what was picked up';
+
+  @override
+  String get driverPartialPickupBody =>
+      'Select every reservation item the supplier handed over now.';
+
+  @override
+  String get driverPartialPickupPickedSection => 'Will be delivered now';
+
+  @override
+  String get driverPartialPickupPendingSection => 'Will remain pending';
+
+  @override
+  String get driverPartialPickupReasonRequired =>
+      'Choose a reason for each pending item.';
+
+  @override
+  String driverPartialPickupSummary(int pickedCount, int pendingCount) {
+    return '$pickedCount items will be delivered now. $pendingCount items will remain pending.';
+  }
+
+  @override
+  String get driverPartialPickupContinue => 'Continue to confirmation code';
+
+  @override
+  String get driverPartialPickupReasonMaterialNotReady => 'Material not ready';
+
+  @override
+  String get driverPartialPickupReasonMaterialMissing => 'Material missing';
+
+  @override
+  String get driverPartialPickupReasonWrongItem => 'Wrong item';
+
+  @override
+  String get driverPartialPickupReasonQuantityMismatch => 'Quantity mismatch';
+
+  @override
+  String get driverPartialPickupReasonDamagedItem => 'Damaged item';
+
+  @override
+  String get driverPartialPickupReasonSupplierRefused =>
+      'Supplier refused handover';
+
+  @override
+  String get driverPartialPickupReasonOther => 'Other';
+
+  @override
   String get driverPickupFailureReported => 'Pickup failure reported.';
 
   @override
@@ -6783,4 +6872,142 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get driverCurrentLocationFailed =>
       'Could not get your current location. Please try again.';
+
+  @override
+  String get driverHistoryTitle => 'History and reports';
+
+  @override
+  String get driverHistorySubtitle =>
+      'Review deliveries you previously handled and follow up on reports you submitted.';
+
+  @override
+  String get driverDeliveriesTab => 'Deliveries';
+
+  @override
+  String get driverReportsTab => 'Reports';
+
+  @override
+  String get driverHistoryEmpty => 'No historical deliveries yet.';
+
+  @override
+  String get driverReportsEmpty => 'You have not submitted any reports yet.';
+
+  @override
+  String get driverArchiveLoadFailed => 'Could not load this archive.';
+
+  @override
+  String get driverArchiveMoreFailed =>
+      'Earlier items could not be loaded. Your current results are still shown.';
+
+  @override
+  String get driverOpenHistoricalDelivery => 'Open historical delivery';
+
+  @override
+  String get driverPartialPickupHistory => 'Partial pickup';
+
+  @override
+  String get driverSubmittedNote => 'Your submitted note';
+
+  @override
+  String get driverResolutionOutcome => 'Resolution';
+
+  @override
+  String get driverOpenRelatedDelivery => 'Open related delivery';
+
+  @override
+  String get driverHistoricalDeliveryTitle => 'Historical delivery';
+
+  @override
+  String get driverReadOnly => 'Read only';
+
+  @override
+  String get driverDeliverySummary => 'Delivery summary';
+
+  @override
+  String get driverItemAudit => 'Item record';
+
+  @override
+  String get driverLegacyItemAuditWarning =>
+      'This older delivery has no pickup snapshot; current reservation records are shown.';
+
+  @override
+  String get driverFailureReason => 'Failure reason';
+
+  @override
+  String get driverDeliveryTimeline => 'Delivery timeline';
+
+  @override
+  String get driverTimelineUnavailable => 'No timeline entries are available.';
+
+  @override
+  String get driverHistoryNav => 'History';
+
+  @override
+  String get driverOutcomeAdminReview => 'Moved to Admin review';
+
+  @override
+  String get driverOutcomeReassigned => 'Reassigned to another driver';
+
+  @override
+  String get driverOutcomeReleased => 'Released back to available jobs';
+
+  @override
+  String get driverOutcomeClosed => 'Closed delivery';
+
+  @override
+  String get driverReviewPending => 'Pending review';
+
+  @override
+  String get driverReviewVerified => 'Verified';
+
+  @override
+  String get driverReviewRejected => 'Rejected';
+
+  @override
+  String get driverReviewResolvedNoStrike => 'Resolved without strike';
+
+  @override
+  String get driverIncidentPickupFailed => 'Pickup issue';
+
+  @override
+  String get driverIncidentDeliveryFailed => 'Delivery issue';
+
+  @override
+  String get driverIncidentDriverIssue => 'Driver issue';
+
+  @override
+  String get driverOutcomeSupplierReschedule => 'Supplier reschedule requested';
+
+  @override
+  String get driverOutcomeReplacementSubmitted =>
+      'Replacement window submitted';
+
+  @override
+  String get driverOutcomeRegrouped => 'Reservation regrouped';
+
+  @override
+  String get driverOutcomeCancelledExpired =>
+      'Reservation cancelled or expired; hold released';
+
+  @override
+  String get driverOutcomePendingRecovery => 'Recovery remains pending';
+
+  @override
+  String get driverOutcomeNoUpdate => 'No recovery update yet';
+
+  @override
+  String get driverYes => 'Yes';
+
+  @override
+  String get driverNotPickedUpTitle => 'Not picked up';
+
+  @override
+  String get driverArchiveCursorExpired =>
+      'This archive page changed or expired. Restart from the newest results.';
+
+  @override
+  String get driverRestartArchive => 'Restart from newest';
+
+  @override
+  String get driverOpenRecoveryDelivery => 'Open recovery delivery';
 }

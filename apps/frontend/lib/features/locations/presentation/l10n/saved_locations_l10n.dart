@@ -14,16 +14,30 @@ class SavedLocationsL10n {
   String t(String en, String ar) => isArabic ? ar : en;
 
   String get pageTitle => t('Saved locations', 'المواقع المحفوظة');
+  String get pageSubtitle => t(
+    'Save your preferred addresses for faster booking, pickup, or delivery.',
+    'احفظ عناوينك المفضلة للوصول السريع عند الحجز أو الاستلام أو التوصيل.',
+  );
   String get back => t('Back', 'رجوع');
   String get addLocation => t('Add location', 'إضافة موقع');
+  String get addNewLocation => t('Add new location', 'إضافة موقع جديد');
   String get edit => t('Edit', 'تعديل');
+  String get editLocationAction => t('Edit location', 'تعديل الموقع');
   String get delete => t('Delete', 'حذف');
+  String get deleteLocationAction => t('Delete location', 'حذف الموقع');
   String get cancel => t('Cancel', 'إلغاء');
   String get retry => t('Retry', 'إعادة المحاولة');
   String get setDefault => t('Set default', 'تعيين كافتراضي');
+  String get setAsDefault => t('Set as default', 'تعيين كافتراضي');
   String get defaultLabel => t('Default', 'افتراضي');
   String get privateExactDetails =>
       t('Private exact details', 'تفاصيل دقيقة خاصة');
+  String get mySavedLocations => t('My saved locations', 'مواقعي المحفوظة');
+  String locationCount(int count) => t('$count', '$count');
+  String locationCountLabel(int count) => t(
+    count == 1 ? '1 saved location' : '$count saved locations',
+    count == 1 ? 'موقع محفوظ واحد' : '$count مواقع محفوظة',
+  );
   String get created => t('Saved location created.', 'تم إنشاء الموقع المحفوظ.');
   String get updated => t('Saved location updated.', 'تم تحديث الموقع المحفوظ.');
   String get defaultUpdated =>
@@ -144,15 +158,98 @@ class SavedLocationsL10n {
     'This removes "$label" from your private saved locations.',
     'سيؤدي هذا إلى إزالة "$label" من مواقعك المحفوظة الخاصة.',
   );
-  String get privacyTitle => t('Private location data', 'بيانات موقع خاصة');
+
+  String get privacyTitle => t('Your location privacy', 'خصوصية موقعك');
   String get privacyBody => t(
-    'Exact address and coordinates are private account data. Public material browsing uses only safe approximate location fields.',
-    'العنوان الدقيق والإحداثيات بيانات حساب خاصة. يستخدم تصفح المواد العام حقول موقع تقريبية وآمنة فقط.',
+    'Addresses and coordinates support reservation, pickup, delivery, and related platform functions. They stay private to your account and are not publicly exposed.',
+    'تُستخدم العناوين والإحداثيات لدعم الحجز والاستلام والتوصيل ووظائف المنصة المرتبطة بالموقع. تبقى بيانات خاصة بحسابك ولا تُعرض للعامة.',
   );
+
   String get emptyTitle =>
       t('No saved locations yet', 'لا توجد مواقع محفوظة بعد');
   String get emptyBody => t(
-    'Add a private location to reuse it when sorting materials by nearest first.',
-    'أضف موقعاً خاصاً لإعادة استخدامه عند ترتيب المواد حسب الأقرب.',
+    'Add a private location to reuse for booking, pickup, or delivery — or start from your current GPS position.',
+    'أضف موقعاً خاصاً لإعادة استخدامه عند الحجز أو الاستلام أو التوصيل، أو ابدأ من موقعك الحالي عبر GPS.',
   );
+
+  String get useCurrentLocation =>
+      t('Use my current location', 'استخدام موقعي الحالي');
+  String get useCurrentLocationDescription => t(
+    'We will ask for device location permission, then prefill a new saved location. Review the details and save only when you are ready.',
+    'سنطلب إذن الموقع من الجهاز ثم نملأ موقعًا محفوظًا جديدًا. راجع التفاصيل واحفظ فقط عندما تكون جاهزًا.',
+  );
+  String get useCurrentLocationLoading => t(
+    'Getting your current location...',
+    'جارٍ الحصول على موقعك الحالي...',
+  );
+  String get locationServicesDisabled => t(
+    'Location services are turned off. Enable them, then try again.',
+    'خدمات الموقع معطّلة. فعّلها ثم حاول مرة أخرى.',
+  );
+  String get locationPermissionDenied => t(
+    'Location permission was denied. Allow location access to continue.',
+    'تم رفض إذن الموقع. اسمح بالوصول إلى الموقع للمتابعة.',
+  );
+  String get locationPermissionDeniedForever => t(
+    'Location permission is permanently denied. Enable it in browser or device settings.',
+    'إذن الموقع مرفوض بشكل دائم. فعّله من إعدادات المتصفح أو الجهاز.',
+  );
+  String get locationUnavailable => t(
+    'Could not get your current position. Try again or enter the address manually.',
+    'تعذّر الحصول على موقعك الحالي. حاول مرة أخرى أو أدخل العنوان يدويًا.',
+  );
+  String get locationTimeout => t(
+    'Getting your location timed out. Try again or enter the address manually.',
+    'انتهت مهلة الحصول على موقعك. حاول مرة أخرى أو أدخل العنوان يدويًا.',
+  );
+  String get locationUnsupported => t(
+    'Current location is not supported in this browser or device.',
+    'الموقع الحالي غير مدعوم في هذا المتصفح أو الجهاز.',
+  );
+  String get locationGenericFailure => t(
+    'Something went wrong while getting your location. Please try again.',
+    'حدث خطأ أثناء الحصول على موقعك. حاول مرة أخرى.',
+  );
+  String get reverseGeocodePartialFailure => t(
+    'Coordinates were captured, but address lookup failed. You can complete the address manually.',
+    'تم التقاط الإحداثيات، لكن تعذّر العثور على العنوان. يمكنك إكمال العنوان يدويًا.',
+  );
+
+  String get sidePanelTitle => t('Why save locations?', 'لماذا تحفظ المواقع؟');
+  String get sideFasterAccessTitle => t('Faster access', 'الوصول بسرعة');
+  String get sideFasterAccessBody => t(
+    'Reuse preferred addresses when booking, picking up, or arranging delivery.',
+    'أعد استخدام عناوينك المفضلة عند الحجز أو الاستلام أو ترتيب التوصيل.',
+  );
+  String get sidePrivacyFirstTitle => t('Privacy first', 'الأمان أولاً');
+  String get sidePrivacyFirstBody => t(
+    'Exact addresses stay private to your account and are not shown publicly.',
+    'تبقى العناوين الدقيقة خاصة بحسابك ولا تُعرض للعامة.',
+  );
+  String get sideFullControlTitle => t('Full control', 'تحكم كامل');
+  String get sideFullControlBody => t(
+    'Add, edit, set a default, or delete any saved location anytime.',
+    'أضف أو عدّل أو عيّن افتراضيًا أو احذف أي موقع محفوظ في أي وقت.',
+  );
+
+  String get loadingLocations =>
+      t('Loading saved locations...', 'جارٍ تحميل المواقع المحفوظة...');
+  String get loadFailed => t(
+    'Could not load saved locations.',
+    'تعذّر تحميل المواقع المحفوظة.',
+  );
+
+  String locationCardSemantics({
+    required String label,
+    required String summary,
+    required bool isDefault,
+  }) {
+    final defaultPart = isDefault
+        ? t(', default location', '، الموقع الافتراضي')
+        : '';
+    return t(
+      'Saved location $label. $summary$defaultPart',
+      'موقع محفوظ $label. $summary$defaultPart',
+    );
+  }
 }

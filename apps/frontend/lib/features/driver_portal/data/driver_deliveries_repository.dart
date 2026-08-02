@@ -6,8 +6,10 @@ import 'models/driver_delivery_inactive_context.dart';
 import 'models/driver_delivery_failure_request.dart';
 import 'models/driver_deliveries_list_result.dart';
 import 'models/driver_delivery.dart';
+import 'models/driver_delivery_detail_result.dart';
 import 'models/driver_location_ping_request.dart';
 import 'models/update_driver_delivery_status_request.dart';
+import 'models/driver_archive.dart';
 
 final driverDeliveriesApiProvider = Provider<DriverDeliveriesApi>((ref) {
   return DriverDeliveriesApi(ref.read(apiClientProvider));
@@ -24,10 +26,29 @@ class DriverDeliveriesRepository {
 
   final DriverDeliveriesApi _api;
 
+  Future<DriverArchivePage<DriverHistoricalDelivery>> fetchHistory({String? cursor, int limit = 20}) =>
+      _api.fetchHistory(cursor: cursor, limit: limit);
+
+  Future<DriverHistoricalDelivery> fetchHistoricalDelivery(String deliveryId) =>
+      _api.fetchHistoricalDelivery(deliveryId);
+
+  Future<DriverArchivePage<DriverIncident>> fetchIncidents({String? cursor, int limit = 20}) =>
+      _api.fetchIncidents(cursor: cursor, limit: limit);
+
   Future<DriverDeliveriesListResult> fetchAvailableDeliveries({
     DriverAvailableJobsFilter? filter,
+    String? cursor,
+    int limit = 20,
   }) {
-    return _api.fetchAvailableDeliveries(filter: filter);
+    return _api.fetchAvailableDeliveries(
+      filter: filter,
+      cursor: cursor,
+      limit: limit,
+    );
+  }
+
+  Future<DriverDeliveryDetailResult> fetchDeliveryDetail(String deliveryId) {
+    return _api.fetchDeliveryDetail(deliveryId);
   }
 
   Future<DriverDeliveriesListResult> fetchActiveDeliveries() {

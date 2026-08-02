@@ -28,24 +28,61 @@ void main() {
   });
 
   group('DriverLocationAutoPingController', () {
-    test('starts sharing for PICKED_UP and pings immediately', () async {
-      final pingTimes = <DateTime>[];
-      late DriverLocationAutoPingController controller;
+    test(
+      'defaults to off until the driver explicitly enables sharing',
+      () async {
+        var pingCount = 0;
+        final controller = DriverLocationAutoPingController(
+          sendPing: () async => pingCount += 1,
+        )..updateDeliveryStatus('PICKED_UP');
 
-      controller = DriverLocationAutoPingController(
-        sendPing: () async {
-          pingTimes.add(DateTime.now());
-        },
-        onStateChanged: (_) {},
-      )..updateDeliveryStatus('PICKED_UP');
+        await pumpEventQueue();
+        expect(controller.state.enabled, isFalse);
+        expect(controller.state.isSharing, isFalse);
+        expect(pingCount, 0);
+        controller.dispose();
+      },
+    );
+
+    test('explicit backend false blocks an eligible status', () async {
+      var pingCount = 0;
+      final controller =
+          DriverLocationAutoPingController(sendPing: () async => pingCount += 1)
+            ..updateDeliveryStatus('ON_THE_WAY', canShareLocation: false)
+            ..setEnabled(true);
 
       await pumpEventQueue();
 
-      expect(controller.state.isSharing, isTrue);
-      expect(pingTimes, hasLength(1));
-
+      expect(controller.state.enabled, isTrue);
+      expect(controller.state.isSharing, isFalse);
+      expect(pingCount, 0);
       controller.dispose();
     });
+
+    test(
+      'starts sharing after explicit action and pings immediately',
+      () async {
+        final pingTimes = <DateTime>[];
+        late DriverLocationAutoPingController controller;
+
+        controller =
+            DriverLocationAutoPingController(
+                sendPing: () async {
+                  pingTimes.add(DateTime.now());
+                },
+                onStateChanged: (_) {},
+              )
+              ..updateDeliveryStatus('PICKED_UP')
+              ..setEnabled(true);
+
+        await pumpEventQueue();
+
+        expect(controller.state.isSharing, isTrue);
+        expect(pingTimes, hasLength(1));
+
+        controller.dispose();
+      },
+    );
 
     test('does not start for DRIVER_ASSIGNED', () async {
       final pingTimes = <int>[];
@@ -113,14 +150,17 @@ void main() {
 
     test('stops sharing on dispose', () async {
       final timers = <Timer>[];
-      final controller = DriverLocationAutoPingController(
-        sendPing: () async {},
-        periodicTimerFactory: (duration, callback) {
-          final timer = Timer.periodic(duration, callback);
-          timers.add(timer);
-          return timer;
-        },
-      )..updateDeliveryStatus('ON_THE_WAY');
+      final controller =
+          DriverLocationAutoPingController(
+              sendPing: () async {},
+              periodicTimerFactory: (duration, callback) {
+                final timer = Timer.periodic(duration, callback);
+                timers.add(timer);
+                return timer;
+              },
+            )
+            ..updateDeliveryStatus('ON_THE_WAY')
+            ..setEnabled(true);
 
       await pumpEventQueue();
       expect(controller.state.isSharing, isTrue);
@@ -136,22 +176,25 @@ void main() {
       final completer = Completer<void>();
       var pingCount = 0;
 
-      final controller = DriverLocationAutoPingController(
-        sendPing: () async {
-          pingCount += 1;
-          if (pingCount == 1) {
-            await completer.future;
-          }
-        },
-        periodicTimerFactory: (duration, callback) {
-          final timer = Timer.periodic(
-            const Duration(milliseconds: 10),
-            callback,
-          );
-          return timer;
-        },
-        interval: const Duration(milliseconds: 10),
-      )..updateDeliveryStatus('PICKED_UP');
+      final controller =
+          DriverLocationAutoPingController(
+              sendPing: () async {
+                pingCount += 1;
+                if (pingCount == 1) {
+                  await completer.future;
+                }
+              },
+              periodicTimerFactory: (duration, callback) {
+                final timer = Timer.periodic(
+                  const Duration(milliseconds: 10),
+                  callback,
+                );
+                return timer;
+              },
+              interval: const Duration(milliseconds: 10),
+            )
+            ..updateDeliveryStatus('PICKED_UP')
+            ..setEnabled(true);
 
       await pumpEventQueue();
       expect(pingCount, 1);
@@ -170,15 +213,21 @@ void main() {
 
     test('periodic timer sends additional pings', () async {
       var pingCount = 0;
-      final controller = DriverLocationAutoPingController(
-        sendPing: () async {
-          pingCount += 1;
-        },
-        periodicTimerFactory: (duration, callback) {
-          return Timer.periodic(const Duration(milliseconds: 20), callback);
-        },
-        interval: const Duration(milliseconds: 20),
-      )..updateDeliveryStatus('PICKED_UP');
+      final controller =
+          DriverLocationAutoPingController(
+              sendPing: () async {
+                pingCount += 1;
+              },
+              periodicTimerFactory: (duration, callback) {
+                return Timer.periodic(
+                  const Duration(milliseconds: 20),
+                  callback,
+                );
+              },
+              interval: const Duration(milliseconds: 20),
+            )
+            ..updateDeliveryStatus('PICKED_UP')
+            ..setEnabled(true);
 
       await pumpEventQueue();
       expect(pingCount, 1);
@@ -192,19 +241,22 @@ void main() {
     test('permission failure disables sharing and stops timer', () async {
       final timers = <Timer>[];
       final states = <DriverLocationAutoPingState>[];
-      final controller = DriverLocationAutoPingController(
-        sendPing: () async {
-          throw const CurrentLocationException(
-            CurrentLocationFailure.permissionDenied,
-          );
-        },
-        onStateChanged: states.add,
-        periodicTimerFactory: (duration, callback) {
-          final timer = Timer.periodic(duration, callback);
-          timers.add(timer);
-          return timer;
-        },
-      )..updateDeliveryStatus('PICKED_UP');
+      final controller =
+          DriverLocationAutoPingController(
+              sendPing: () async {
+                throw const CurrentLocationException(
+                  CurrentLocationFailure.permissionDenied,
+                );
+              },
+              onStateChanged: states.add,
+              periodicTimerFactory: (duration, callback) {
+                final timer = Timer.periodic(duration, callback);
+                timers.add(timer);
+                return timer;
+              },
+            )
+            ..updateDeliveryStatus('PICKED_UP')
+            ..setEnabled(true);
 
       await pumpEventQueue();
 
@@ -218,7 +270,8 @@ void main() {
 
     test('setEnabled false pauses sharing', () async {
       final controller = DriverLocationAutoPingController(sendPing: () async {})
-        ..updateDeliveryStatus('ON_THE_WAY');
+        ..updateDeliveryStatus('ON_THE_WAY')
+        ..setEnabled(true);
 
       await pumpEventQueue();
       expect(controller.state.isSharing, isTrue);

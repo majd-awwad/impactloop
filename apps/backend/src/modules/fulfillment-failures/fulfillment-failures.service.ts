@@ -12,6 +12,7 @@ import {
   invalidateLearnerHomeCache,
   invalidateLearnerHomeForReservationTransition,
 } from '../learner-home/learner-home.service.js';
+import { notifyDriverDeliveryMovedToAdminReview } from '../notifications/driver-notification-events.service.js';
 
 import * as fulfillmentFailuresRepository from './fulfillment-failures.repository.js';
 import type {
@@ -209,6 +210,10 @@ export const markDriverPickupFailed = async (
   });
 
   if (result.outcome === 'UPDATED') {
+    await notifyDriverDeliveryMovedToAdminReview({
+      deliveryId,
+      driverUserId,
+    });
     invalidateLearnerHomeForReservationTransition(
       'ACCEPTED',
       'AWAITING_RESOLUTION',
@@ -223,16 +228,20 @@ export const markDriverPickupFailed = async (
       throw new AppError(
         'Only active reservations can be updated.',
         409,
-        'CONFLICT',
+        'DRIVER_PICKUP_FAILURE_NOT_ALLOWED',
       );
     case 'INVALID_DELIVERY_STATUS':
       throw new AppError(
         'Pickup failed applies only before pickup.',
         409,
-        'CONFLICT',
+        'DRIVER_PICKUP_FAILURE_NOT_ALLOWED',
       );
     case 'MISSING_WINDOW':
-      throw new AppError('Supplier pickup window is not set.', 409, 'CONFLICT');
+      throw new AppError(
+        'Supplier pickup window is not set.',
+        409,
+        'DRIVER_PICKUP_FAILURE_NOT_ALLOWED',
+      );
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(supplierPickupWindowNotExpiredMessage());
     default:
@@ -257,6 +266,10 @@ export const markDriverDeliveryFailed = async (
   });
 
   if (result.outcome === 'UPDATED') {
+    await notifyDriverDeliveryMovedToAdminReview({
+      deliveryId,
+      driverUserId,
+    });
     // FAILED_DELIVERY keeps the material in custody, so the shared hold is
     // unchanged. Only the affected learner's reservation behavior is freshened.
     invalidateLearnerHomeCache(result.reservation.requesterId);
@@ -270,16 +283,20 @@ export const markDriverDeliveryFailed = async (
       throw new AppError(
         'Completed reservations cannot be marked failed.',
         409,
-        'CONFLICT',
+        'DRIVER_DELIVERY_FAILURE_NOT_ALLOWED',
       );
     case 'INVALID_DELIVERY_STATUS':
       throw new AppError(
         'Delivery failed applies only after pickup.',
         409,
-        'CONFLICT',
+        'DRIVER_DELIVERY_FAILURE_NOT_ALLOWED',
       );
     case 'MISSING_WINDOW':
-      throw new AppError('Delivery window is not set.', 409, 'CONFLICT');
+      throw new AppError(
+        'Delivery window is not set.',
+        409,
+        'DRIVER_DELIVERY_FAILURE_NOT_ALLOWED',
+      );
     case 'WINDOW_NOT_EXPIRED':
       throwWindowNotExpired(deliveryWindowNotExpiredMessage());
     default:
@@ -302,6 +319,13 @@ export const markDriverIssueAfterPickup = async (
     note: input.note,
   });
 
+  if (result.outcome === 'UPDATED') {
+    await notifyDriverDeliveryMovedToAdminReview({
+      deliveryId,
+      driverUserId,
+    });
+  }
+
   switch (result.outcome) {
     case 'NOT_FOUND':
       throw new AppError('Delivery not found.', 404, 'NOT_FOUND');
@@ -309,13 +333,13 @@ export const markDriverIssueAfterPickup = async (
       throw new AppError(
         'Completed reservations cannot be updated.',
         409,
-        'CONFLICT',
+        'DRIVER_ISSUE_NOT_ALLOWED',
       );
     case 'INVALID_DELIVERY_STATUS':
       throw new AppError(
         'Driver issue reports apply only after pickup.',
         409,
-        'CONFLICT',
+        'DRIVER_ISSUE_NOT_ALLOWED',
       );
     default:
       invalidateLearnerHomeForReservationTransition(

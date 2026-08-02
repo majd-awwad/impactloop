@@ -13,12 +13,14 @@ class ApiException implements Exception {
     this.code,
     this.statusCode,
     this.details,
+    this.requestId,
   });
 
   final String message;
   final String? code;
   final int? statusCode;
   final Map<String, dynamic>? details;
+  final String? requestId;
 
   bool get isCancellation => code == 'CANCELLED';
 
@@ -112,6 +114,34 @@ String localizedApiErrorMessage(
       return l10n.timeoutError;
     case 'CONFLICT':
       return l10n.conflictError;
+    case 'DRIVER_ACTIVE_LIMIT_REACHED':
+      return l10n.driverReachedActiveLimit;
+    case 'DELIVERY_NOT_AVAILABLE':
+      return l10n.driverDeliveryNoLongerAvailable;
+    case 'DRIVER_NOT_AVAILABLE':
+      return l10n.conflictError;
+    case 'DELIVERY_TERMINAL':
+      return l10n.driverNoLongerActive;
+    case 'INVALID_DELIVERY_TRANSITION':
+      return l10n.driverStatusChangedRefresh;
+    case 'DELIVERY_LOCATION_PING_NOT_ALLOWED':
+      return l10n.driverActionNotAvailable;
+    case 'DRIVER_PICKUP_FAILURE_NOT_ALLOWED':
+    case 'DRIVER_DELIVERY_FAILURE_NOT_ALLOWED':
+    case 'DRIVER_ISSUE_NOT_ALLOWED':
+      return l10n.driverActionNotAvailable;
+    case 'INVALID_CONFIRMATION_CODE':
+      return l10n.driverInvalidConfirmationCode;
+    case 'HANDOVER_WINDOW_NOT_STARTED':
+      return l10n.driverHandoverWindowNotStarted;
+    case 'HANDOVER_WINDOW_EXPIRED':
+      return l10n.driverHandoverWindowExpired;
+    case 'DRIVER_PARTIAL_PICKUP_SELECTION_INVALID':
+      return l10n.driverPartialPickupSelectionInvalid;
+    case 'DRIVER_GROUPED_DELIVERY_SPLIT_CONFLICT':
+      return l10n.driverGroupedDeliverySplitConflict;
+    case 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID':
+      return l10n.driverAvailableJobsCursorInvalid;
     case 'VALIDATION_ERROR':
       return l10n.validationError;
     case 'UNAUTHENTICATED':
@@ -138,10 +168,20 @@ String localizedApiErrorMessage(
         return l10n.invalidPickupWindow;
       }
       if (error.statusCode != null && error.statusCode! >= 500) {
-        return l10n.serverError;
+        return _withRequestId(l10n.serverError, error.requestId);
       }
-      return l10n.somethingWentWrong;
+      if (error.message.trim().isNotEmpty) {
+        return _withRequestId(error.message, error.requestId);
+      }
+      return _withRequestId(l10n.somethingWentWrong, error.requestId);
   }
+}
+
+String _withRequestId(String message, String? requestId) {
+  final normalized = requestId?.trim();
+  return normalized == null || normalized.isEmpty
+      ? message
+      : '$message [$normalized]';
 }
 
 ApiException normalizeApiException(Object error) {

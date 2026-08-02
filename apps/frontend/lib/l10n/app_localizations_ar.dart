@@ -451,10 +451,28 @@ class AppLocalizationsAr extends AppLocalizations {
   String get notificationChipDelivery => 'تحديث التوصيل';
 
   @override
+  String get notificationChipReservation => 'حجز';
+
+  @override
+  String get notificationChipMaterial => 'مادة';
+
+  @override
+  String get notificationChipLearning => 'تعلّم';
+
+  @override
+  String get notificationChipMaterialRequest => 'طلب مادة';
+
+  @override
   String get notificationChipAccount => 'الحساب';
 
   @override
   String get notificationChipUpdate => 'تحديث';
+
+  @override
+  String get notificationsBack => 'رجوع';
+
+  @override
+  String get refreshNotifications => 'تحديث الإشعارات';
 
   @override
   String get viewJobs => 'عرض المهام';
@@ -6231,6 +6249,72 @@ class AppLocalizationsAr extends AppLocalizations {
       'تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.';
 
   @override
+  String get driverInvalidConfirmationCode =>
+      'رمز التأكيد غير صحيح. تحقّق من الرمز وحاول مرة أخرى.';
+
+  @override
+  String get driverHandoverWindowNotStarted => 'لم تبدأ نافذة التسليم بعد.';
+
+  @override
+  String get driverHandoverWindowExpired => 'انتهت نافذة التسليم بالفعل.';
+
+  @override
+  String get driverPartialPickupSelectionInvalid =>
+      'عناصر الاستلام المحددة غير صالحة. حدّث الصفحة وحاول مرة أخرى.';
+
+  @override
+  String get driverGroupedDeliverySplitConflict =>
+      'تغيّر هذا التوصيل المجمّع. حدّث الصفحة وحاول مرة أخرى.';
+
+  @override
+  String get driverAvailableJobsCursorInvalid =>
+      'ترقيم قائمة المهام غير محدّث. حدّث المهام المتاحة.';
+
+  @override
+  String get driverPartialPickupTitle => 'تأكيد ما تم استلامه';
+
+  @override
+  String get driverPartialPickupBody => 'حدّد كل عنصر حجز سلّمه المورّد الآن.';
+
+  @override
+  String get driverPartialPickupPickedSection => 'سيُسلَّم الآن';
+
+  @override
+  String get driverPartialPickupPendingSection => 'سيبقى معلّقًا';
+
+  @override
+  String get driverPartialPickupReasonRequired => 'اختر سببًا لكل عنصر معلّق.';
+
+  @override
+  String driverPartialPickupSummary(int pickedCount, int pendingCount) {
+    return 'سيُسلَّم $pickedCount عناصر الآن. سيبقى $pendingCount عناصر معلّقة.';
+  }
+
+  @override
+  String get driverPartialPickupContinue => 'المتابعة إلى رمز التأكيد';
+
+  @override
+  String get driverPartialPickupReasonMaterialNotReady => 'المادة غير جاهزة';
+
+  @override
+  String get driverPartialPickupReasonMaterialMissing => 'المادة مفقودة';
+
+  @override
+  String get driverPartialPickupReasonWrongItem => 'عنصر خاطئ';
+
+  @override
+  String get driverPartialPickupReasonQuantityMismatch => 'عدم تطابق الكمية';
+
+  @override
+  String get driverPartialPickupReasonDamagedItem => 'عنصر تالف';
+
+  @override
+  String get driverPartialPickupReasonSupplierRefused => 'المورّد رفض التسليم';
+
+  @override
+  String get driverPartialPickupReasonOther => 'أخرى';
+
+  @override
   String get driverPickupFailureReported => 'تم الإبلاغ عن فشل الاستلام.';
 
   @override
@@ -6691,4 +6775,141 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get driverCurrentLocationFailed =>
       'تعذّر الحصول على موقعك الحالي. يُرجى المحاولة مرة أخرى.';
+
+  @override
+  String get driverHistoryTitle => 'السجل والبلاغات';
+
+  @override
+  String get driverHistorySubtitle =>
+      'راجع عمليات التوصيل السابقة وتابع البلاغات التي قدّمتها.';
+
+  @override
+  String get driverDeliveriesTab => 'التوصيلات';
+
+  @override
+  String get driverReportsTab => 'البلاغات';
+
+  @override
+  String get driverHistoryEmpty => 'لا توجد توصيلات سابقة حتى الآن.';
+
+  @override
+  String get driverReportsEmpty => 'لم تقدّم أي بلاغات حتى الآن.';
+
+  @override
+  String get driverArchiveLoadFailed => 'تعذّر تحميل هذا السجل.';
+
+  @override
+  String get driverArchiveMoreFailed =>
+      'تعذّر تحميل عناصر أقدم. ما زالت النتائج الحالية ظاهرة.';
+
+  @override
+  String get driverOpenHistoricalDelivery => 'فتح التوصيل السابق';
+
+  @override
+  String get driverPartialPickupHistory => 'استلام جزئي';
+
+  @override
+  String get driverSubmittedNote => 'ملاحظتك المقدّمة';
+
+  @override
+  String get driverResolutionOutcome => 'النتيجة';
+
+  @override
+  String get driverOpenRelatedDelivery => 'فتح التوصيل المرتبط';
+
+  @override
+  String get driverHistoricalDeliveryTitle => 'توصيل سابق';
+
+  @override
+  String get driverReadOnly => 'للقراءة فقط';
+
+  @override
+  String get driverDeliverySummary => 'ملخص التوصيل';
+
+  @override
+  String get driverItemAudit => 'سجل المواد';
+
+  @override
+  String get driverLegacyItemAuditWarning =>
+      'لا تحتوي عملية التوصيل القديمة هذه على لقطة استلام؛ تظهر سجلات الحجز الحالية.';
+
+  @override
+  String get driverFailureReason => 'سبب التعذّر';
+
+  @override
+  String get driverDeliveryTimeline => 'الخط الزمني للتوصيل';
+
+  @override
+  String get driverTimelineUnavailable => 'لا تتوفر أحداث في الخط الزمني.';
+
+  @override
+  String get driverHistoryNav => 'السجل';
+
+  @override
+  String get driverOutcomeAdminReview => 'نُقل إلى مراجعة الإدارة';
+
+  @override
+  String get driverOutcomeReassigned => 'أُعيد إسناده إلى سائق آخر';
+
+  @override
+  String get driverOutcomeReleased => 'أُعيد إلى الوظائف المتاحة';
+
+  @override
+  String get driverOutcomeClosed => 'توصيل مغلق';
+
+  @override
+  String get driverReviewPending => 'قيد المراجعة';
+
+  @override
+  String get driverReviewVerified => 'تم التحقق';
+
+  @override
+  String get driverReviewRejected => 'مرفوض';
+
+  @override
+  String get driverReviewResolvedNoStrike => 'حُلّ دون مخالفة';
+
+  @override
+  String get driverIncidentPickupFailed => 'مشكلة استلام';
+
+  @override
+  String get driverIncidentDeliveryFailed => 'مشكلة توصيل';
+
+  @override
+  String get driverIncidentDriverIssue => 'مشكلة لدى السائق';
+
+  @override
+  String get driverOutcomeSupplierReschedule => 'طُلب من المورّد إعادة الجدولة';
+
+  @override
+  String get driverOutcomeReplacementSubmitted => 'تم تقديم موعد بديل';
+
+  @override
+  String get driverOutcomeRegrouped => 'أُعيد تجميع الحجز';
+
+  @override
+  String get driverOutcomeCancelledExpired =>
+      'أُلغي الحجز أو انتهت صلاحيته ورُفع الحجز';
+
+  @override
+  String get driverOutcomePendingRecovery => 'إجراء المعالجة ما زال معلقًا';
+
+  @override
+  String get driverOutcomeNoUpdate => 'لا يوجد تحديث للمعالجة بعد';
+
+  @override
+  String get driverYes => 'نعم';
+
+  @override
+  String get driverNotPickedUpTitle => 'لم يتم استلامها';
+
+  @override
+  String get driverArchiveCursorExpired =>
+      'تغيّرت صفحة السجل هذه أو انتهت صلاحيتها. ابدأ مجددًا من أحدث النتائج.';
+
+  @override
+  String get driverRestartArchive => 'البدء من الأحدث';
+
+  @override
+  String get driverOpenRecoveryDelivery => 'فتح توصيل المعالجة';
 }

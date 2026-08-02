@@ -232,6 +232,7 @@ describe('admin stale assigned-driver pickup recovery', () => {
             area: 'Center',
             transportationType: 'BICYCLE',
             vehicleType: 'BICYCLE',
+            acceptingNewJobs: true,
           },
         },
       },

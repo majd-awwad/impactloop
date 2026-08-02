@@ -51,10 +51,24 @@ void main() {
           deliveryId: 'delivery-42',
         );
 
-        expect(notificationHasNavigationTarget(notification), isTrue);
-        expect(notificationActionLabel(notification), 'View details');
+        expect(
+          notificationHasNavigationTarget(notification, isDriverMode: true),
+          isTrue,
+        );
+        expect(
+          notificationActionLabel(notification, isDriverMode: true),
+          'View details',
+        );
         expect(
           driverDeliveryNotificationRoute(notification),
+          '/driver/deliveries/delivery-42',
+        );
+        expect(
+          notificationOpenRoute(
+            notification,
+            isSupplierMode: false,
+            isDriverMode: true,
+          ),
           '/driver/deliveries/delivery-42',
         );
       },
@@ -66,8 +80,19 @@ void main() {
         deliveryId: 'delivery-99',
       );
 
-      expect(notificationActionLabel(notification), 'View jobs');
+      expect(
+        notificationActionLabel(notification, isDriverMode: true),
+        'View jobs',
+      );
       expect(driverDeliveryNotificationRoute(notification), '/driver/jobs');
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: false,
+          isDriverMode: true,
+        ),
+        '/driver/jobs',
+      );
     });
 
     test('unknown notification types keep safe fallback labels', () {
@@ -91,6 +116,71 @@ void main() {
       expect(notificationActionLabel(notification), 'Open');
       expect(notificationHasNavigationTarget(notification), isFalse);
       expect(driverDeliveryNotificationRoute(notification), isNull);
+    });
+
+    test(
+      'supplier material moderation resolves to supplier material detail',
+      () {
+        final notification = AppNotification(
+          id: 'mod-1',
+          notificationType: 'MATERIAL_MODERATION_UPDATE',
+          title: 'Listing updated',
+          body: 'Your material was updated by moderation.',
+          relatedEntityType: 'MATERIAL',
+          relatedEntityId: 'material-42',
+          actionType: 'OPEN_MATERIAL',
+          isRead: false,
+          createdAt: DateTime.utc(2026),
+        );
+
+        expect(
+          notificationHasNavigationTarget(notification, isSupplierMode: true),
+          isTrue,
+        );
+        expect(
+          notificationActionLabel(notification, isSupplierMode: true),
+          'View material',
+        );
+        expect(
+          notificationOpenRoute(
+            notification,
+            isSupplierMode: true,
+            isDriverMode: false,
+          ),
+          '/supplier/materials/material-42',
+        );
+        expect(
+          notificationOpenRoute(
+            notification,
+            isSupplierMode: false,
+            isDriverMode: false,
+          ),
+          isNull,
+        );
+      },
+    );
+
+    test('invented material-request match types do not invent routes', () {
+      final notification = AppNotification(
+        id: 'match-1',
+        notificationType: 'MATERIAL_REQUEST_MATCH',
+        title: 'Match ready',
+        body: 'A material matches your request.',
+        relatedEntityType: 'MATERIAL',
+        relatedEntityId: 'material-42',
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(notificationHasNavigationTarget(notification), isFalse);
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: false,
+          isDriverMode: false,
+        ),
+        isNull,
+      );
     });
   });
 
@@ -210,7 +300,8 @@ void main() {
     test('localizes every supplier notification type in Arabic', () {
       final expectedTitles = <String, String>{
         'RESERVATION_REQUESTED': ar.notificationReservationRequestedTitle,
-        'RESERVATION_CANCELLED': ar.notificationReservationCancelledSupplierTitle,
+        'RESERVATION_CANCELLED':
+            ar.notificationReservationCancelledSupplierTitle,
         'RESERVATION_EXPIRED': ar.notificationReservationExpiredSupplierTitle,
         'NO_DRIVER_SUPPLIER_RESCHEDULE_REQUESTED':
             ar.notificationChoosePickupWindowTitle,
@@ -271,29 +362,32 @@ void main() {
       expect(copy.body, contains('Arduino Uno'));
     });
 
-    test('reservation expired uses supplier body when learnerName is present', () {
-      final copy = localizedNotificationCopy(
-        AppNotification(
-          id: 'expired-supplier',
-          notificationType: 'RESERVATION_EXPIRED',
-          title: 'Legacy English title',
-          body: 'Legacy English body',
-          relatedEntityType: 'RESERVATION',
-          relatedEntityId: 'reservation-1',
-          metadata: const {
-            'materialTitle': 'Arduino Uno',
-            'learnerName': 'Majd Learner',
-          },
-          isRead: false,
-          createdAt: DateTime.utc(2026),
-        ),
-        ar,
-      );
+    test(
+      'reservation expired uses supplier body when learnerName is present',
+      () {
+        final copy = localizedNotificationCopy(
+          AppNotification(
+            id: 'expired-supplier',
+            notificationType: 'RESERVATION_EXPIRED',
+            title: 'Legacy English title',
+            body: 'Legacy English body',
+            relatedEntityType: 'RESERVATION',
+            relatedEntityId: 'reservation-1',
+            metadata: const {
+              'materialTitle': 'Arduino Uno',
+              'learnerName': 'Majd Learner',
+            },
+            isRead: false,
+            createdAt: DateTime.utc(2026),
+          ),
+          ar,
+        );
 
-      expect(copy.title, ar.notificationReservationExpiredSupplierTitle);
-      expect(copy.body, contains('Arduino Uno'));
-      expect(copy.body, isNot(contains('Legacy')));
-    });
+        expect(copy.title, ar.notificationReservationExpiredSupplierTitle);
+        expect(copy.body, contains('Arduino Uno'));
+        expect(copy.body, isNot(contains('Legacy')));
+      },
+    );
   });
 
   group('Driver notification localization', () {
@@ -353,6 +447,105 @@ void main() {
       expect(
         categoryForNotification(notification),
         NotificationVisualCategory.deliveryUpdate,
+      );
+    });
+  });
+
+  group('supplier material-review notification contracts', () {
+    final ar = AppLocalizationsAr();
+
+    test('category and price updates never treat request ids as materials', () {
+      final category = AppNotification(
+        id: 'cat-1',
+        notificationType: 'CATEGORY_REQUEST_UPDATE',
+        title: 'Category request approved',
+        body: 'Continue listing.',
+        relatedEntityType: 'CATEGORY_REQUEST',
+        relatedEntityId: 'category-request-1',
+        actionType: 'CONTINUE_LISTING',
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+      final price = AppNotification(
+        id: 'price-1',
+        notificationType: 'PRICE_REQUEST_UPDATE',
+        title: 'Price request rejected',
+        body: 'Edit listing.',
+        relatedEntityType: 'PRICE_RULE_REQUEST',
+        relatedEntityId: 'price-request-1',
+        actionType: 'EDIT_LISTING',
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(
+        notificationOpenRoute(
+          category,
+          isSupplierMode: true,
+          isDriverMode: false,
+        ),
+        '/supplier/materials/new?categoryRequestId=category-request-1',
+      );
+      expect(
+        notificationOpenRoute(price, isSupplierMode: true, isDriverMode: false),
+        '/supplier/materials/new?priceRuleRequestId=price-request-1',
+      );
+      expect(
+        notificationOpenRoute(
+          category,
+          isSupplierMode: true,
+          isDriverMode: false,
+        ),
+        isNot(contains('/materials/category-request-1')),
+      );
+      expect(
+        notificationOpenRoute(price, isSupplierMode: true, isDriverMode: false),
+        isNot(contains('/learner/material-requests/')),
+      );
+    });
+
+    test('Arabic and English action labels for material moderation', () {
+      final notification = AppNotification(
+        id: 'mod-1',
+        notificationType: 'MATERIAL_MODERATION_UPDATE',
+        title: 'Listing updated',
+        body: 'Body',
+        relatedEntityType: 'MATERIAL',
+        relatedEntityId: 'material-1',
+        actionType: 'OPEN_MATERIAL',
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(
+        notificationActionLabel(notification, isSupplierMode: true),
+        'View material',
+      );
+      expect(
+        notificationActionLabel(notification, isSupplierMode: true, l10n: ar),
+        ar.viewMaterial,
+      );
+    });
+
+    test('missing material id yields no navigation target', () {
+      final notification = AppNotification(
+        id: 'mod-missing',
+        notificationType: 'MATERIAL_MODERATION_UPDATE',
+        title: 'Listing updated',
+        body: 'Body',
+        relatedEntityType: 'MATERIAL',
+        actionType: 'OPEN_MATERIAL',
+        isRead: false,
+        createdAt: DateTime.utc(2026),
+      );
+
+      expect(
+        notificationOpenRoute(
+          notification,
+          isSupplierMode: true,
+          isDriverMode: false,
+        ),
+        isNull,
       );
     });
   });
