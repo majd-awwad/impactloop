@@ -1,7 +1,7 @@
 import type { DeliveryStatus, Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../utils/app-error.js';
-import { formatDistanceLabel, haversineDistanceKm } from '../../utils/haversine.js';
+import { formatDistanceLabel } from '../../utils/haversine.js';
 import {
   LOCATION_PING_ELIGIBLE_DELIVERY_STATUSES,
 } from '../deliveries/deliveries.service.js';
@@ -54,14 +54,23 @@ import { invalidateLearnerHomeForReservationTransition } from '../learner-home/l
 import { runSerializableTransaction } from '../../utils/transaction-retry.js';
 import {
   assertAvailableJobsCursorCompatible,
-  availableJobMatchesCursorPosition,
   buildAvailableJobsCursorFilters,
   buildNextAvailableJobsCursor,
-  compareAvailableJobs,
   decodeAvailableJobsCursor,
-  isAvailableJobAfterCursor,
   rejectInvalidAvailableJobsCursor,
+  rejectStaleAvailableJobsPage,
+  type AvailableJobsSortBy,
 } from './driver-available-jobs-cursor.js';
+import {
+  countAvailableDeliveries,
+  fetchAvailableJobPageNearest,
+  fetchAvailableJobPageNewest,
+  loadAvailableListDeliveriesByIds,
+  paginateHydratedAvailableJobs,
+  verifyAvailableJobsCursorAnchor,
+  type AvailableJobPageRow,
+  type AvailableListDelivery,
+} from './driver-available-jobs.query.js';
 import {
   applyPartialPickupSplit,
   validatePartialPickupSelection,
@@ -166,42 +175,20 @@ type DriverDeliveryRecord = Prisma.DeliveryGetPayload<{
   include: typeof driverDeliveryInclude;
 }>;
 
-const resolveSupplierDisplayName = (
-  owner: DriverDeliveryRecord['reservation']['owner'],
-) =>
+type AvailableSupplierOwner = AvailableListDelivery['reservation']['owner'];
+
+const resolveSupplierDisplayName = (owner: AvailableSupplierOwner) =>
   owner.supplierProfile?.organizationProfile?.organizationName ??
   owner.supplierProfile?.publicName ??
   owner.displayName;
 
-const mapSafeLocation = (location: DriverDeliveryRecord['pickupLocation']) => ({
+const mapSafeLocation = (
+  location: AvailableListDelivery['pickupLocation'],
+) => ({
   country: location.country,
   city: location.city,
   area: location.area,
 });
-
-const locationCoordinate = (
-  location: DriverDeliveryRecord['pickupLocation'],
-): number | null => {
-  if (location.latitude == null) {
-    return null;
-  }
-
-  return typeof location.latitude === 'number'
-    ? location.latitude
-    : location.latitude.toNumber();
-};
-
-const locationLongitude = (
-  location: DriverDeliveryRecord['pickupLocation'],
-): number | null => {
-  if (location.longitude == null) {
-    return null;
-  }
-
-  return typeof location.longitude === 'number'
-    ? location.longitude
-    : location.longitude.toNumber();
-};
 
 const mapExactLocation = (location: DriverDeliveryRecord['pickupLocation']) => ({
   id: location.id,
@@ -224,7 +211,9 @@ const mapExactLocation = (location: DriverDeliveryRecord['pickupLocation']) => (
   isApproximate: location.isApproximate,
 });
 
-const buildDriverDeliveryItems = (delivery: DriverDeliveryRecord) => {
+const buildDriverDeliveryItems = (
+  delivery: AvailableListDelivery | DriverDeliveryRecord,
+) => {
   if (delivery.deliveryGroup?.reservations.length) {
     return delivery.deliveryGroup.reservations.map((reservation) => ({
       reservationId: reservation.id,
@@ -254,7 +243,7 @@ const buildDriverDeliveryItems = (delivery: DriverDeliveryRecord) => {
 };
 
 const mapAvailableDelivery = (
-  delivery: DriverDeliveryRecord,
+  delivery: AvailableListDelivery | DriverDeliveryRecord,
   options?: { distanceKm?: number | null },
 ) => {
   const distanceKm = options?.distanceKm ?? null;
@@ -518,113 +507,136 @@ export const listAvailableDeliveries = async (
 
   const explicitCity = query.city?.trim();
   const explicitArea = query.area?.trim();
+  const filters = {
+    city: explicitCity,
+    area: explicitArea,
+    maxDistanceKm: query.maxDistanceKm,
+  };
 
   const hasDriverCoordinates =
     referencePoint.latitude != null && referencePoint.longitude != null;
 
-  let sortBy = query.sortBy;
-  if (!sortBy) {
+  let sortBy: AvailableJobsSortBy = query.sortBy ?? 'newest';
+  if (!query.sortBy) {
     sortBy = hasDriverCoordinates ? 'nearest' : 'newest';
   }
 
-  const effectiveMaxDistanceKm = query.maxDistanceKm;
-
-  const deliveries = await prisma.delivery.findMany({
-    where: {
-      status: 'WAITING_FOR_DRIVER',
-      assignedDriverProfileId: null,
-      ...(explicitCity
-        ? {
-            pickupLocation: {
-              city: { equals: explicitCity, mode: 'insensitive' },
-            },
-          }
-        : {}),
-      ...(explicitArea
-        ? {
-            pickupLocation: {
-              area: { equals: explicitArea, mode: 'insensitive' },
-            },
-          }
-        : {}),
-    },
-    include: driverDeliveryInclude,
-  });
-
-  const withDistance = deliveries.map((delivery) => {
-    const pickupLat = locationCoordinate(delivery.pickupLocation);
-    const pickupLng = locationLongitude(delivery.pickupLocation);
-    let distanceKm: number | null = null;
-
-    if (
-      hasDriverCoordinates &&
-      pickupLat != null &&
-      pickupLng != null &&
-      referencePoint.latitude != null &&
-      referencePoint.longitude != null
-    ) {
-      distanceKm = haversineDistanceKm(
-        referencePoint.latitude,
-        referencePoint.longitude,
-        pickupLat,
-        pickupLng,
-      );
-    }
-
-    return { delivery, distanceKm };
-  });
-
-  let filtered = withDistance;
-  if (effectiveMaxDistanceKm != null) {
-    filtered = filtered.filter(
-      (item) =>
-        item.distanceKm != null &&
-        item.distanceKm <= effectiveMaxDistanceKm,
-    );
-  }
-
-  filtered.sort((left, right) => compareAvailableJobs(left, right, sortBy));
-
-  const cursorFilters = buildAvailableJobsCursorFilters(query, sortBy);
-  let pageSource = filtered;
-
-  if (query.cursor) {
-    const cursor = decodeAvailableJobsCursor(query.cursor);
-    if (!cursor) {
-      rejectInvalidAvailableJobsCursor();
-    } else {
-      assertAvailableJobsCursorCompatible(cursor, cursorFilters);
-
-      const cursorItem = filtered.find(
-        (item) => item.delivery.id === cursor.id,
-      );
-      if (!cursorItem || !availableJobMatchesCursorPosition(cursorItem, cursor)) {
-        rejectInvalidAvailableJobsCursor();
+  // Nearest without a coordinate reference degrades to newest ordering while
+  // preserving sortBy=nearest in the cursor contract (all distances null).
+  const useNearestSql = sortBy === 'nearest' && hasDriverCoordinates;
+  const reference = hasDriverCoordinates
+    ? {
+        latitude: referencePoint.latitude!,
+        longitude: referencePoint.longitude!,
       }
+    : null;
+  const cursorFilters = buildAvailableJobsCursorFilters(
+    query,
+    sortBy,
+    reference,
+  );
+  const pageLimit = query.limit ?? 20;
 
-      pageSource = filtered.filter((item) =>
-        isAvailableJobAfterCursor(item, cursor, sortBy),
-      );
+  let cursor: ReturnType<typeof decodeAvailableJobsCursor> = null;
+  if (query.cursor) {
+    const decoded = decodeAvailableJobsCursor(query.cursor);
+    if (!decoded) {
+      return rejectInvalidAvailableJobsCursor();
+    }
+    assertAvailableJobsCursorCompatible(decoded, cursorFilters);
+
+    const anchorOk = await verifyAvailableJobsCursorAnchor({
+      cursor: decoded,
+      filters,
+      reference,
+      sortBy,
+    });
+    if (!anchorOk) {
+      return rejectInvalidAvailableJobsCursor();
+    }
+    cursor = decoded;
+  }
+
+  const [initialPageRows, counts] = await Promise.all([
+    useNearestSql && reference
+      ? fetchAvailableJobPageNearest({
+          filters,
+          reference,
+          cursor,
+          limit: pageLimit,
+        })
+      : fetchAvailableJobPageNewest({
+          filters,
+          cursor,
+          limit: pageLimit,
+          reference,
+        }),
+    countAvailableDeliveries(filters, reference),
+  ]);
+
+  const { totalAvailableCount, nearbyAvailableCount } = counts;
+
+  const loadHydratedPage = async (pageRows: AvailableJobPageRow[]) => {
+    const hydrated = await loadAvailableListDeliveriesByIds(
+      pageRows.map((row) => row.id),
+    );
+    return paginateHydratedAvailableJobs(pageRows, hydrated, pageLimit);
+  };
+
+  // Hydrate the full limit+1 fetch, then paginate from survivors only so
+  // nextCursor never anchors a row excluded by the availability race.
+  // hasMore follows raw limit+1 evidence so a mid-page claim cannot hide
+  // later waiting rows beyond the fetched sentinel.
+  let { page, hasMore, needsRetry } = await loadHydratedPage(initialPageRows);
+
+  if (needsRetry) {
+    // One bounded retry from the original request/cursor after a race emptied
+    // the page while SQL still indicated continuation.
+    const retryRows =
+      useNearestSql && reference
+        ? await fetchAvailableJobPageNearest({
+            filters,
+            reference,
+            cursor,
+            limit: pageLimit,
+          })
+        : await fetchAvailableJobPageNewest({
+            filters,
+            cursor,
+            limit: pageLimit,
+            reference,
+          });
+    ({ page, hasMore, needsRetry } = await loadHydratedPage(retryRows));
+    if (needsRetry) {
+      return rejectStaleAvailableJobsPage();
     }
   }
 
-  const pageLimit = query.limit ?? 20;
-  const page = pageSource.slice(0, pageLimit);
-  const hasMore = page.length < pageSource.length;
   const lastPageItem = page.at(-1);
 
   return {
-    deliveries: page.map((item) =>
-      mapAvailableDelivery(item.delivery, { distanceKm: item.distanceKm }),
+    deliveries: page.map(({ row, delivery }) =>
+      mapAvailableDelivery(delivery, {
+        distanceKm: row.distanceKm,
+      }),
     ),
-    nearbyAvailableCount: filtered.length,
-    totalAvailableCount: withDistance.length,
+    nearbyAvailableCount,
+    totalAvailableCount,
     pagination: {
       limit: pageLimit,
       hasMore,
       nextCursor:
         hasMore && lastPageItem
-          ? buildNextAvailableJobsCursor(lastPageItem, cursorFilters)
+          ? buildNextAvailableJobsCursor(
+              {
+                delivery: {
+                  id: lastPageItem.row.id,
+                  requestedAt: lastPageItem.row.requestedAt,
+                },
+                distanceMeters: lastPageItem.row.distanceMeters,
+              },
+              cursorFilters,
+            )
           : null,
     },
     ...buildDriverJobsMeta(profile, activeDeliveryCount, referencePoint),
@@ -636,12 +648,25 @@ export const listActiveDriverDeliveries = async (driverUserId: string) => {
 
   const profile = await findActiveDriverProfile(driverUserId);
   const referencePoint = await resolveDriverReferencePoint(profile.id);
-  const activeDeliveryCount = await countActiveDriverDeliveries(
-    prisma,
-    profile.id,
-  );
 
-  let deliveries = await prisma.delivery.findMany({
+  // Light reservation-id scan for escalation, then one final include read.
+  const escalationCandidates = await prisma.delivery.findMany({
+    where: {
+      assignedDriverProfileId: profile.id,
+      status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
+    },
+    select: { reservationId: true },
+  });
+
+  const reservationIds = [
+    ...new Set(escalationCandidates.map((delivery) => delivery.reservationId)),
+  ];
+
+  if (reservationIds.length > 0) {
+    await escalateStaleAssignedDriverPickupsByIds(reservationIds);
+  }
+
+  const deliveries = await prisma.delivery.findMany({
     where: {
       assignedDriverProfileId: profile.id,
       status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
@@ -650,21 +675,7 @@ export const listActiveDriverDeliveries = async (driverUserId: string) => {
     orderBy: { updatedAt: 'desc' },
   });
 
-  const reservationIds = [
-    ...new Set(deliveries.map((delivery) => delivery.reservationId)),
-  ];
-
-  if (reservationIds.length > 0) {
-    await escalateStaleAssignedDriverPickupsByIds(reservationIds);
-    deliveries = await prisma.delivery.findMany({
-      where: {
-        assignedDriverProfileId: profile.id,
-        status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
-      },
-      include: driverDeliveryInclude,
-      orderBy: { updatedAt: 'desc' },
-    });
-  }
+  const activeDeliveryCount = deliveries.length;
 
   return {
     deliveries: deliveries.map(mapAssignedDelivery),

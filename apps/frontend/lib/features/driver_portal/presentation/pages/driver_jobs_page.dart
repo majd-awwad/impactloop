@@ -591,7 +591,13 @@ class _AvailableJobsFilters extends ConsumerWidget {
               ButtonSegment(value: 'nearest', label: Text(l10n.driverNearest)),
               ButtonSegment(value: 'newest', label: Text(l10n.driverNewest)),
             ],
-            selected: {filter.sortBy},
+            selected: {
+              filter.sortBy.isNotEmpty
+                  ? filter.sortBy
+                  : (meta?.driverHasRecentLocation == true
+                        ? 'nearest'
+                        : 'newest'),
+            },
             onSelectionChanged: (selection) {
               notifier.setSortBy(selection.first);
             },

@@ -105,7 +105,8 @@ class DriverAvailableJobsFilter {
     this.city,
     this.area,
     this.maxDistanceKm,
-    this.sortBy = 'newest',
+    // Empty means omit sortBy so the backend can choose nearest/newest.
+    this.sortBy = '',
   });
 
   final String? city;

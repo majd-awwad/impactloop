@@ -57,7 +57,32 @@ DriverAvailableJobsFilter openJobsFilter(DriverDeliveriesListMeta? meta) {
     return const DriverAvailableJobsFilter(sortBy: 'nearest');
   }
 
-  return const DriverAvailableJobsFilter();
+  return const DriverAvailableJobsFilter(sortBy: 'newest');
+}
+
+/// Whether two filters produce the same Available Jobs API query semantics.
+///
+/// An omitted sortBy is equivalent to the backend default implied by [meta]:
+/// nearest when a recent location exists, otherwise newest.
+bool availableJobsFiltersApiEquivalent({
+  required DriverAvailableJobsFilter previous,
+  required DriverAvailableJobsFilter next,
+  required DriverDeliveriesListMeta meta,
+}) {
+  if (previous.city != next.city ||
+      previous.area != next.area ||
+      previous.maxDistanceKm != next.maxDistanceKm) {
+    return false;
+  }
+
+  String effectiveSort(DriverAvailableJobsFilter filter) {
+    if (filter.sortBy.isNotEmpty) {
+      return filter.sortBy;
+    }
+    return meta.driverHasRecentLocation ? 'nearest' : 'newest';
+  }
+
+  return effectiveSort(previous) == effectiveSort(next);
 }
 
 bool hasUsableRadiusReference(DriverDeliveriesListMeta? meta) {

@@ -10,7 +10,7 @@ This document is for **local development and local ML only**. It does not claim 
 |-------------|----------------------|
 | Node.js | CI pin `22.12.0` in `.github/workflows/recommendation-ci.yml`. Root and backend `package.json` do not declare an `engines` field; do not invent other versions. |
 | npm | Use the root workspace lockfile via `npm ci` (same as recommendation CI). |
-| PostgreSQL (+ PostGIS) | Backend stack uses Prisma + PostgreSQL + PostGIS (`README.md`, ADR 0001). Provide a local database reachable through `DATABASE_URL`. |
+| PostgreSQL (+ PostGIS) | Backend stack uses Prisma + PostgreSQL + PostGIS (`README.md`, ADR 0001). Provide a local database reachable through `DATABASE_URL`. Confirm `CREATE EXTENSION postgis` works; DR-04 Available Jobs nearest/radius queries require PostGIS geography + GiST on `locations.location`. |
 | Prisma client | Generated with `npm run prisma:generate` into `apps/backend/src/generated/prisma` (gitignored). |
 | Flutter | `apps/frontend/pubspec.yaml` requires Dart SDK `^3.10.7`. Install Flutter tooling that satisfies that SDK constraint. |
 | WSL/Linux (training only) | Native LightFM training requires a Linux Python 3.11 environment. Authority: `ml/recommendation/requirements-linux-lock.txt`, `ml/recommendation/pyproject.toml` (`requires-python = ">=3.11,<3.12"`, `lightfm==1.17`), and `ml/recommendation/slice-0c-linux-viability-report.md`. |

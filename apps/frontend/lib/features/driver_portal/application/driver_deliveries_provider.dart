@@ -151,13 +151,31 @@ class AvailableDriverDeliveriesNotifier
     extends AsyncNotifier<DriverDeliveriesListResult> {
   bool _loadingMore = false;
   String? _failedCursor;
+  DriverAvailableJobsFilter? _lastFetchedFilter;
 
   @override
   Future<DriverDeliveriesListResult> build() async {
     final filter = ref.watch(driverAvailableJobsFilterProvider);
+    final existing = state.asData?.value;
+    // Skip only when the filter changed solely to align UI sort with the
+    // backend default after the first page (empty sortBy → nearest/newest).
+    // Do not skip on provider invalidation with an unchanged filter.
+    if (existing != null &&
+        _lastFetchedFilter != null &&
+        filter != _lastFetchedFilter &&
+        availableJobsFiltersApiEquivalent(
+          previous: _lastFetchedFilter!,
+          next: filter,
+          meta: existing.meta,
+        )) {
+      _lastFetchedFilter = filter;
+      return existing;
+    }
+
     final result = await ref
         .read(driverDeliveriesRepositoryProvider)
         .fetchAvailableDeliveries(filter: filter);
+    _lastFetchedFilter = filter;
     _failedCursor = null;
     ref.read(driverAvailableJobsPaginationErrorProvider.notifier).clear();
     return result;
