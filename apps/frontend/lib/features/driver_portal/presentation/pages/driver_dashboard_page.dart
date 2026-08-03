@@ -64,10 +64,13 @@ class DriverDashboardPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   profile.when(
-                    loading: () => const Center(
+                    loading: () => Center(
                       child: Padding(
-                        padding: EdgeInsets.all(AppSpacing.lg),
-                        child: CircularProgressIndicator(),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Semantics(
+                          label: l10n.driverLoadingActive,
+                          child: const CircularProgressIndicator(),
+                        ),
                       ),
                     ),
                     error: (error, _) => _DashboardNotice(
@@ -237,10 +240,9 @@ class _ActiveDeliveryPreview extends StatelessWidget {
         children: [
           Text(
             driverDeliveryStatusLabel(delivery.status, l10n),
-            style: AppTextStyles.label(context).copyWith(
-              color: palette.textPrimary,
-              fontWeight: FontWeight.w700,
-            ),
+            style: AppTextStyles.label(
+              context,
+            ).copyWith(color: palette.textPrimary, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: AppSpacing.xs),
           Row(

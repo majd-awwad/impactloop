@@ -6094,6 +6094,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driverNewest => 'Newest';
 
   @override
+  String get driverDone => 'Done';
+
+  @override
   String get driverCityLabel => 'City:';
 
   @override
@@ -6321,6 +6324,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driverStatusUpdated => 'Delivery status updated.';
+
+  @override
+  String get driverStatusArrivedPickupSuccess => 'Arrived at pickup.';
+
+  @override
+  String get driverStatusPickedUpSuccess => 'Marked as picked up.';
+
+  @override
+  String get driverStatusOnTheWaySuccess => 'On the way to the learner.';
+
+  @override
+  String get driverStatusArrivedDropoffSuccess => 'Arrived at drop-off.';
 
   @override
   String get driverStatusChangedRefresh =>

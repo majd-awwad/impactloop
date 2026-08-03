@@ -523,7 +523,14 @@ class _StatusActionPanelState extends ConsumerState<_StatusActionPanel> {
         return;
       }
 
-      showInfoSnackBar(context, l10n.driverStatusUpdated);
+      final successMessage = switch (nextStatus) {
+        'ARRIVED_PICKUP' => l10n.driverStatusArrivedPickupSuccess,
+        'PICKED_UP' => l10n.driverStatusPickedUpSuccess,
+        'ON_THE_WAY' => l10n.driverStatusOnTheWaySuccess,
+        'ARRIVED_DROPOFF' => l10n.driverStatusArrivedDropoffSuccess,
+        _ => l10n.driverStatusUpdated,
+      };
+      showInfoSnackBar(context, successMessage);
       _noteController.clear();
     } on ApiException catch (error) {
       if (!mounted) return;

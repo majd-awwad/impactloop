@@ -20,6 +20,7 @@ import '../../../deliveries/presentation/pickup_window_presentation.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import '../../application/driver_jobs_filter_helpers.dart';
+import '../../application/driver_jobs_sort_labels.dart';
 import '../../application/driver_profile_provider.dart';
 import '../../data/models/driver_deliveries_list_result.dart';
 import '../../data/models/driver_delivery.dart';
@@ -259,6 +260,20 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
   }
 }
 
+class _FilterChipData {
+  const _FilterChipData({
+    required this.label,
+    this.onDeleted,
+    this.opensSheet = false,
+  });
+
+  final String label;
+  final VoidCallback? onDeleted;
+
+  /// When true, chip is not removable; use Edit filters to change it.
+  final bool opensSheet;
+}
+
 // ---------------------------------------------------------------------------
 // Filter: responsive — mobile bottom-sheet vs desktop inline
 // ---------------------------------------------------------------------------
@@ -289,14 +304,41 @@ class _MobileFilterBar extends ConsumerWidget {
         ? null
         : radiusKmForStepIndex(radiusStepIndex(filter.maxDistanceKm));
 
-    final chips = <String>[
-      if (filter.city != null) filter.city!,
-      if (filter.area != null) filter.area!,
+    final chips = <_FilterChipData>[
+      if (filter.city != null)
+        _FilterChipData(
+          label: filter.city!,
+          onDeleted: () => ref
+              .read(driverAvailableJobsFilterProvider.notifier)
+              .setCity(null),
+        ),
+      if (filter.area != null)
+        _FilterChipData(
+          label: filter.area!,
+          onDeleted: () => ref
+              .read(driverAvailableJobsFilterProvider.notifier)
+              .setArea(null),
+        ),
       if (anyDistance)
-        l10n.driverAnyDistance
+        _FilterChipData(
+          label: l10n.driverAnyDistance,
+          onDeleted:
+              null, // opens sheet via Edit filters — distance needs location context
+          opensSheet: true,
+        )
       else
-        l10n.driverWithinKm(radiusKm!.round()),
-      if (filter.sortBy.isNotEmpty) filter.sortBy,
+        _FilterChipData(
+          label: l10n.driverWithinKm(radiusKm!.round()),
+          onDeleted: () => ref
+              .read(driverAvailableJobsFilterProvider.notifier)
+              .setAnyDistance(),
+        ),
+      if (filter.sortBy.isNotEmpty)
+        _FilterChipData(
+          label: driverJobsSortChipLabel(l10n, filter.sortBy),
+          onDeleted: null,
+          opensSheet: true,
+        ),
     ];
 
     return Row(
@@ -309,11 +351,12 @@ class _MobileFilterBar extends ConsumerWidget {
                 for (final chip in chips) ...[
                   Chip(
                     label: Text(
-                      chip,
+                      chip.label,
                       style: AppTextStyles.label(
                         context,
                       ).copyWith(fontSize: 12),
                     ),
+                    onDeleted: chip.onDeleted,
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -325,6 +368,7 @@ class _MobileFilterBar extends ConsumerWidget {
           ),
         ),
         TextButton.icon(
+          key: const ValueKey('driver-edit-filters'),
           onPressed: () => _showFilterSheet(context, ref),
           icon: const Icon(Icons.tune_rounded, size: 18),
           label: Text(l10n.driverEditFilters),
@@ -568,8 +612,9 @@ class _FilterSheetContent extends ConsumerWidget {
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: FilledButton(
+                key: const ValueKey('driver-filter-done'),
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.supplierApply),
+                child: Text(l10n.driverDone),
               ),
             ),
           ],

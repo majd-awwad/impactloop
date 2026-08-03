@@ -119,10 +119,9 @@ class _RouteEndpoint extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconSize = compact ? 16.0 : 18.0;
     final labelStyle = compact
-        ? AppTextStyles.label(context).copyWith(
-            color: palette.textMuted,
-            fontSize: 11,
-          )
+        ? AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted, fontSize: 11)
         : AppTextStyles.label(context).copyWith(color: palette.textMuted);
     final summaryStyle = compact
         ? AppTextStyles.body(context).copyWith(fontSize: 13)

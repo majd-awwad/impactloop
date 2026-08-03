@@ -1,5 +1,6 @@
 import '../../features/deliveries/presentation/delivery_status_presentation.dart';
 import '../../l10n/app_localizations.dart';
+import '../widgets/app_status_badge.dart';
 
 /// Driver-perspective delivery status labels. Falls back to learner-oriented
 /// [deliveryStatusLabel] only for unknown backend statuses.
@@ -27,4 +28,16 @@ String driverDeliveryStatusLabel(String status, AppLocalizations l10n) {
   }
 
   return deliveryStatusLabel(status, l10n: l10n);
+}
+
+/// Production mapping for Driver archive incident review badge tones.
+AppStatusTone driverIncidentReviewTone(String reviewStatus) {
+  final normalized = reviewStatus.trim().toUpperCase();
+  return switch (normalized) {
+    'PENDING_REVIEW' => AppStatusTone.warning,
+    'VERIFIED' => AppStatusTone.success,
+    'REJECTED' => AppStatusTone.danger,
+    'RESOLVED_NO_STRIKE' => AppStatusTone.info,
+    _ => AppStatusTone.neutral,
+  };
 }

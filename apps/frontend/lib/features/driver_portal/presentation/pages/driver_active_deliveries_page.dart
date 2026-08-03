@@ -44,10 +44,13 @@ class DriverActiveDeliveriesPage extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.lg),
                   deliveriesAsync.when(
                     skipLoadingOnReload: true,
-                    loading: () => const Center(
+                    loading: () => Center(
                       child: Padding(
-                        padding: EdgeInsets.all(AppSpacing.xl),
-                        child: CircularProgressIndicator(),
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        child: Semantics(
+                          label: l10n.driverLoadingActive,
+                          child: const CircularProgressIndicator(),
+                        ),
                       ),
                     ),
                     error: (error, _) => AppEmptyStateCard(

@@ -6021,6 +6021,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverNewest => 'الأحدث';
 
   @override
+  String get driverDone => 'تم';
+
+  @override
   String get driverCityLabel => 'المدينة:';
 
   @override
@@ -6254,6 +6257,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverStatusUpdated => 'تم تحديث حالة التوصيل.';
 
   @override
+  String get driverStatusArrivedPickupSuccess => 'تم الوصول إلى موقع الاستلام.';
+
+  @override
+  String get driverStatusPickedUpSuccess => 'تم تأكيد الاستلام.';
+
+  @override
+  String get driverStatusOnTheWaySuccess => 'أنت في الطريق إلى المتعلّم.';
+
+  @override
+  String get driverStatusArrivedDropoffSuccess => 'تم الوصول إلى موقع التسليم.';
+
+  @override
   String get driverStatusChangedRefresh =>
       'تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.';
 
@@ -6302,7 +6317,7 @@ class AppLocalizationsAr extends AppLocalizations {
       other: 'سيُسلَّم $pickedCount عنصر الآن.',
       many: 'سيُسلَّم $pickedCount عنصرًا الآن.',
       few: 'سيُسلَّم $pickedCount عناصر الآن.',
-      two: 'سيُسلَّمان عنصران الآن.',
+      two: 'سيُسلَّم عنصران الآن.',
       one: 'سيُسلَّم عنصر واحد الآن.',
       zero: 'لن يُسلَّم أي عنصر الآن.',
     );
@@ -6642,10 +6657,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverTransportMotorcycle => 'دراجة نارية';
 
   @override
-  String get driverTransportBicycle => 'دراجة';
+  String get driverTransportBicycle => 'دراجة هوائية';
 
   @override
-  String get driverTransportWalking => 'مشيًا';
+  String get driverTransportWalking => 'سيرًا على الأقدام';
 
   @override
   String get driverPhoneRequired => 'مطلوب للسائقين';

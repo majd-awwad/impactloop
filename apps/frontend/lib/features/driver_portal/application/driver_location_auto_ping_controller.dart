@@ -196,6 +196,7 @@ String _defaultErrorMessage(Object error) {
     return error.message;
   }
 
+  // Fallback only when no localized resolver was provided by the UI.
   return 'Could not share location. Try again or use Send my location.';
 }
 

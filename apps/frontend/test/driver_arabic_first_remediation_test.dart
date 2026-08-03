@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/features/deliveries/presentation/delivery_status_presentation.dart';
+import 'package:frontend/features/driver_portal/application/driver_jobs_sort_labels.dart';
 import 'package:frontend/features/driver_portal/presentation/widgets/driver_route_block.dart';
 import 'package:frontend/features/notifications/application/notification_display.dart';
 import 'package:frontend/features/notifications/data/models/app_notification.dart';
@@ -60,12 +61,46 @@ void main() {
   });
 
   test('partial pickup and grouped item plurals cover Arabic dual forms', () {
+    expect(
+      ar.driverPartialPickupSummary(2, 2),
+      'سيُسلَّم عنصران الآن. سيبقى عنصران معلّقان.',
+    );
     expect(ar.driverPartialPickupSummary(0, 0), contains('أي عنصر'));
     expect(ar.driverPartialPickupSummary(1, 1), contains('عنصر واحد'));
-    expect(ar.driverPartialPickupSummary(2, 2), contains('عنصران'));
-    expect(ar.driverGroupedItemsCount(2), contains('عنصران'));
+    expect(ar.driverGroupedItemsCount(2), 'عنصران');
     expect(ar.driverArriveBeforeDelivered, startsWith('صل'));
   });
+
+  test(
+    'legacy transport ARB keys stay aligned with canonical Driver terms',
+    () {
+      expect(ar.driverTransportBicycle, ar.driverTransportationBicycle);
+      expect(ar.driverTransportWalking, ar.driverTransportationWalking);
+      expect(ar.driverTransportCar, ar.driverTransportationCar);
+    },
+  );
+
+  test('jobs sort chip labels never expose raw nearest/newest codes', () {
+    expect(driverJobsSortChipLabel(ar, 'nearest'), ar.driverNearest);
+    expect(driverJobsSortChipLabel(ar, 'newest'), ar.driverNewest);
+    expect(driverJobsSortChipLabel(ar, 'nearest'), isNot(contains('nearest')));
+    expect(driverJobsSortChipLabel(ar, 'newest'), isNot(contains('newest')));
+    expect(ar.driverDone, isNot(ar.supplierApply));
+  });
+
+  test(
+    'incident review tones use production driverIncidentReviewTone mapping',
+    () {
+      expect(driverIncidentReviewTone('PENDING_REVIEW'), AppStatusTone.warning);
+      expect(driverIncidentReviewTone('VERIFIED'), AppStatusTone.success);
+      expect(driverIncidentReviewTone('REJECTED'), AppStatusTone.danger);
+      expect(
+        driverIncidentReviewTone('RESOLVED_NO_STRIKE'),
+        AppStatusTone.info,
+      );
+      expect(driverIncidentReviewTone('UNKNOWN'), AppStatusTone.neutral);
+    },
+  );
 
   test('transport terminology is canonical across DriverUiLabels', () {
     final labels = DriverUiLabels(ar);
@@ -148,20 +183,5 @@ void main() {
     expect(icon.icon, Icons.arrow_back_rounded);
     expect(find.text('الاستلام'), findsOneWidget);
     expect(find.text('التسليم'), findsOneWidget);
-  });
-
-  test('incident review tones stay distinct for driver archive', () {
-    AppStatusTone toneFor(String code) => switch (code.toUpperCase()) {
-      'PENDING_REVIEW' => AppStatusTone.warning,
-      'VERIFIED' => AppStatusTone.success,
-      'REJECTED' => AppStatusTone.danger,
-      'RESOLVED_NO_STRIKE' => AppStatusTone.info,
-      _ => AppStatusTone.neutral,
-    };
-
-    expect(toneFor('PENDING_REVIEW'), AppStatusTone.warning);
-    expect(toneFor('VERIFIED'), AppStatusTone.success);
-    expect(toneFor('REJECTED'), AppStatusTone.danger);
-    expect(toneFor('RESOLVED_NO_STRIKE'), AppStatusTone.info);
   });
 }

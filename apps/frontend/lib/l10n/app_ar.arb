@@ -2885,6 +2885,7 @@
   },
   "driverNearest": "الأقرب",
   "driverNewest": "الأحدث",
+  "driverDone": "تم",
   "driverCityLabel": "المدينة:",
   "driverAllCities": "كل المدن",
   "driverAreaLabel": "المنطقة:",
@@ -2979,6 +2980,10 @@
   "driverMarkDelivered": "تأكيد التسليم",
   "driverDeliveryMarkedDelivered": "تم تأكيد التسليم.",
   "driverStatusUpdated": "تم تحديث حالة التوصيل.",
+  "driverStatusArrivedPickupSuccess": "تم الوصول إلى موقع الاستلام.",
+  "driverStatusPickedUpSuccess": "تم تأكيد الاستلام.",
+  "driverStatusOnTheWaySuccess": "أنت في الطريق إلى المتعلّم.",
+  "driverStatusArrivedDropoffSuccess": "تم الوصول إلى موقع التسليم.",
   "driverStatusChangedRefresh": "تغيّرت حالة التوصيل. حدّث الصفحة وجرّب الإجراء التالي الصالح.",
   "driverInvalidConfirmationCode": "رمز التأكيد غير صحيح. تحقّق من الرمز وحاول مرة أخرى.",
   "driverHandoverWindowNotStarted": "لم تبدأ نافذة التسليم بعد.",
@@ -2991,7 +2996,7 @@
   "driverPartialPickupPickedSection": "سيُسلَّم الآن",
   "driverPartialPickupPendingSection": "سيبقى معلّقًا",
   "driverPartialPickupReasonRequired": "اختر سببًا لكل عنصر معلّق.",
-  "driverPartialPickupSummary": "{pickedCount, plural, =0{لن يُسلَّم أي عنصر الآن.} =1{سيُسلَّم عنصر واحد الآن.} =2{سيُسلَّمان عنصران الآن.} few{سيُسلَّم {pickedCount} عناصر الآن.} many{سيُسلَّم {pickedCount} عنصرًا الآن.} other{سيُسلَّم {pickedCount} عنصر الآن.}} {pendingCount, plural, =0{لن يبقى أي عنصر معلّق.} =1{سيبقى عنصر واحد معلّق.} =2{سيبقى عنصران معلّقان.} few{ستبقى {pendingCount} عناصر معلّقة.} many{ستبقى {pendingCount} عنصرًا معلّقًا.} other{سيبقى {pendingCount} عنصر معلّق.}}",
+  "driverPartialPickupSummary": "{pickedCount, plural, =0{لن يُسلَّم أي عنصر الآن.} =1{سيُسلَّم عنصر واحد الآن.} =2{سيُسلَّم عنصران الآن.} few{سيُسلَّم {pickedCount} عناصر الآن.} many{سيُسلَّم {pickedCount} عنصرًا الآن.} other{سيُسلَّم {pickedCount} عنصر الآن.}} {pendingCount, plural, =0{لن يبقى أي عنصر معلّق.} =1{سيبقى عنصر واحد معلّق.} =2{سيبقى عنصران معلّقان.} few{ستبقى {pendingCount} عناصر معلّقة.} many{ستبقى {pendingCount} عنصرًا معلّقًا.} other{سيبقى {pendingCount} عنصر معلّق.}}",
   "@driverPartialPickupSummary": {
     "placeholders": {
       "pickedCount": {
@@ -3168,8 +3173,8 @@
   "driverInactiveNoLongerActive": "لم يعد نشطًا",
   "driverTransportCar": "سيارة",
   "driverTransportMotorcycle": "دراجة نارية",
-  "driverTransportBicycle": "دراجة",
-  "driverTransportWalking": "مشيًا",
+  "driverTransportBicycle": "دراجة هوائية",
+  "driverTransportWalking": "سيرًا على الأقدام",
   "driverPhoneRequired": "مطلوب للسائقين",
   "driverTransportationType": "نوع النقل",
   "driverAddressLineOptional": "سطر العنوان (اختياري)",

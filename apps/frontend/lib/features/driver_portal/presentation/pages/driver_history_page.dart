@@ -135,10 +135,13 @@ class _ArchiveAsync<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => value.when(
     skipLoadingOnReload: true,
-    loading: () => const Center(
+    loading: () => Center(
       child: Padding(
-        padding: EdgeInsets.all(AppSpacing.xl),
-        child: CircularProgressIndicator(),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Semantics(
+          label: context.l10n.driverLoadingActive,
+          child: const CircularProgressIndicator(),
+        ),
       ),
     ),
     error: (_, _) => _ArchiveNotice(
@@ -264,7 +267,9 @@ class _HistoryCard extends StatelessWidget {
                       label: labels.incidentReviewStatus(
                         delivery.incidentReviewStatus!,
                       ),
-                      tone: _incidentReviewTone(delivery.incidentReviewStatus!),
+                      tone: driverIncidentReviewTone(
+                        delivery.incidentReviewStatus!,
+                      ),
                     ),
                 ],
               ),
@@ -302,7 +307,7 @@ class _IncidentCard extends StatelessWidget {
             children: [
               AppStatusBadge(
                 label: labels.incidentReviewStatus(incident.reviewStatus),
-                tone: _incidentReviewTone(incident.reviewStatus),
+                tone: driverIncidentReviewTone(incident.reviewStatus),
               ),
               Text(
                 LocalizedFormatters(l10n).dateTime(incident.createdAt),
@@ -358,17 +363,6 @@ class _IncidentCard extends StatelessWidget {
       ),
     );
   }
-}
-
-AppStatusTone _incidentReviewTone(String reviewStatus) {
-  final normalized = reviewStatus.trim().toUpperCase();
-  return switch (normalized) {
-    'PENDING_REVIEW' => AppStatusTone.warning,
-    'VERIFIED' => AppStatusTone.success,
-    'REJECTED' => AppStatusTone.danger,
-    'RESOLVED_NO_STRIKE' => AppStatusTone.info,
-    _ => AppStatusTone.neutral,
-  };
 }
 
 class _ArchiveNotice extends StatelessWidget {

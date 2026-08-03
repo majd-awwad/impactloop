@@ -13,6 +13,7 @@ import 'package:frontend/core/errors/api_exception.dart';
 import 'package:frontend/features/auth/application/auth_controller.dart';
 import 'package:frontend/features/auth/data/models/user.dart';
 import 'package:frontend/features/driver_portal/application/driver_deliveries_provider.dart';
+import 'package:frontend/features/driver_portal/application/driver_jobs_sort_labels.dart';
 import 'package:frontend/features/driver_portal/application/driver_profile_provider.dart';
 import 'package:frontend/features/driver_portal/data/driver_deliveries_api.dart';
 import 'package:frontend/features/driver_portal/data/driver_deliveries_repository.dart';
@@ -29,6 +30,7 @@ import 'package:frontend/features/driver_portal/presentation/widgets/driver_avai
 import 'package:frontend/features/notifications/application/notifications_provider.dart';
 import 'package:frontend/features/supplier_portal/presentation/controllers/supplier_notifications_providers.dart';
 import 'package:frontend/l10n/app_localizations.dart';
+import 'package:frontend/l10n/l10n.dart';
 import 'package:frontend/shared/widgets/user_avatar.dart';
 
 void main() {
@@ -589,17 +591,37 @@ void main() {
     testWidgets('Profile exposes read-only states and account settings route', (
       tester,
     ) async {
+      final rootNavigatorKey = GlobalKey<NavigatorState>();
+      GoRouter.optionURLReflectsImperativeAPIs = true;
       final router = GoRouter(
+        navigatorKey: rootNavigatorKey,
         initialLocation: '/driver/profile',
         routes: [
-          GoRoute(
-            path: '/driver/profile',
-            builder: (_, _) => const Scaffold(body: DriverProfilePage()),
+          ShellRoute(
+            builder: (context, state, child) => child,
+            routes: [
+              GoRoute(
+                path: '/driver/profile',
+                builder: (_, _) => const Scaffold(body: DriverProfilePage()),
+              ),
+            ],
           ),
           GoRoute(
             path: '/profile/account',
-            builder: (_, _) =>
-                const Scaffold(body: Text('Account destination')),
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (_, _) => Scaffold(
+              body: Builder(
+                builder: (context) => Column(
+                  children: [
+                    const Text('Account destination'),
+                    TextButton(
+                      onPressed: () => context.pop(),
+                      child: const Text('Back from account'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       );
@@ -626,10 +648,15 @@ void main() {
         find.byKey(const ValueKey('driver-account-settings-link')),
       );
       await tester.pumpAndSettle();
+      expect(find.text('Account destination'), findsOneWidget);
       expect(
         router.routeInformationProvider.value.uri.path,
         '/profile/account',
       );
+      await tester.tap(find.text('Back from account'));
+      await tester.pumpAndSettle();
+      expect(find.text('Account destination'), findsNothing);
+      expect(router.routeInformationProvider.value.uri.path, '/driver/profile');
     });
 
     testWidgets('ON_DELIVERY plus paused preference explains continuation', (
@@ -777,6 +804,69 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'Arabic mobile filter chips localize sort and Done dismisses without draft',
+      (tester) async {
+        final ar = lookupAppLocalizations(const Locale('ar'));
+        expect(driverJobsSortChipLabel(ar, 'nearest'), ar.driverNearest);
+        expect(driverJobsSortChipLabel(ar, 'newest'), ar.driverNewest);
+        expect(find.text('nearest'), findsNothing);
+
+        var closed = false;
+        await tester.binding.setSurfaceSize(const Size(390, 844));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: const Locale('ar'),
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            home: Scaffold(
+              body: Builder(
+                builder: (context) {
+                  final l10n = context.l10n;
+                  return Column(
+                    children: [
+                      Chip(
+                        label: Text(driverJobsSortChipLabel(l10n, 'nearest')),
+                      ),
+                      Chip(
+                        label: Text(driverJobsSortChipLabel(l10n, 'newest')),
+                      ),
+                      FilledButton(
+                        key: const ValueKey('driver-filter-done'),
+                        onPressed: () {
+                          closed = true;
+                          Navigator.of(context).maybePop();
+                        },
+                        child: Text(l10n.driverDone),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('nearest'), findsNothing);
+        expect(find.text('newest'), findsNothing);
+        expect(find.text(ar.driverNearest), findsOneWidget);
+        expect(find.text(ar.driverNewest), findsOneWidget);
+        expect(find.text(ar.supplierApply), findsNothing);
+        expect(find.text(ar.driverDone), findsOneWidget);
+
+        await tester.tap(find.byKey(const ValueKey('driver-filter-done')));
+        await tester.pumpAndSettle();
+        expect(closed, isTrue);
+      },
+    );
 
     testWidgets('Toggle and Save controls are mutually disabled', (
       tester,

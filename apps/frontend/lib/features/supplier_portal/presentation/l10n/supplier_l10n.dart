@@ -7,7 +7,6 @@ import '../../../../l10n/l10n.dart';
 import '../../../../shared/l10n/material_ui_labels.dart';
 import '../../data/models/supplier_action_notification.dart';
 import '../../data/models/supplier_category_demand.dart';
-import '../theme/supplier_locale_scope.dart';
 import '../../data/models/supplier_incoming_request.dart';
 import '../../data/models/supplier_pickup_schedule_item.dart';
 
@@ -57,10 +56,8 @@ class SupplierL10n {
   String get navNotifications => _l10n.notificationsTitle;
   String get navProfile => _l10n.profile;
   String get navPortalFallback => _l10n.supplierSupplierPortal;
-  String get navLearnerMaterialRequests => t(
-    'Learner Material Requests',
-    'طلبات المواد من المتعلمين',
-  );
+  String get navLearnerMaterialRequests =>
+      t('Learner Material Requests', 'طلبات المواد من المتعلمين');
 
   // —— Settings ——
   String get themeLabel => _l10n.supplierTheme;
@@ -448,105 +445,43 @@ class SupplierL10n {
   String get projectImpactRecentProjects =>
       _l10n.supplierRecentSupportedProjects;
 
-  // —— Category demand (platform learner interest) ——
-  String get categoryDemandTitle =>
-      t('Learner interest by category', 'اهتمام المتعلمين حسب الفئة');
-  String get categoryDemandSubtitle => t(
-    'Recent platform learner activity across material categories.',
-    'نشاط المتعلمين الأخير على مستوى المنصة حسب فئات المواد.',
-  );
-  String get categoryDemandPeriodLabel =>
-      t('Last 30 days', 'آخر 30 يومًا');
-  String get categoryDemandLoadError => t(
-    'Could not load category interest.',
-    'تعذّر تحميل اهتمام الفئات.',
-  );
-  String get categoryDemandRetry => t('Retry', 'إعادة المحاولة');
-  String get categoryDemandNoRecentActivity => t(
-    'There is not enough recent learner activity to identify category trends.',
-    'لا يوجد نشاط متعلمين حديث كافٍ لتحديد اتجاهات الفئات.',
-  );
-  String get categoryDemandNoActiveCategories => t(
-    'No active material categories are currently available.',
-    'لا توجد حالياً فئات مواد نشطة متاحة.',
-  );
-  String get categoryDemandUnknownLevel =>
-      t('Interest level unavailable', 'مستوى الاهتمام غير متاح');
-  String get categoryDemandUnknownReason =>
-      t('Recent learner activity', 'نشاط متعلمين حديث');
+  // Minimal compile bridges for pre-existing SupplierCategoryDemandPanel
+  // references. Dedicated Category Demand copy is intentionally not restored
+  // by the Driver AR-DR-01 task; these reuse existing Supplier demand strings.
+  String get categoryDemandTitle => activeDemandSectionTitle;
+  String get categoryDemandSubtitle => demandScoreExplanation;
+  String get categoryDemandPeriodLabel => engagementSectionTitle;
+  String get categoryDemandLoadError => myMaterialsLoadError;
+  String get categoryDemandRetry => _l10n.retry;
+  String get categoryDemandNoRecentActivity => noActiveDemandYet;
+  String get categoryDemandNoActiveCategories => noDemandSignalsYet;
+  String get categoryDemandUnknownLevel => _l10n.unknownStatus;
+  String get categoryDemandUnknownReason => _l10n.unknownStatus;
 
   String categoryDemandLevelLabel(SupplierCategoryDemandLevel level) =>
       switch (level) {
-        SupplierCategoryDemandLevel.high =>
-          t('High interest', 'اهتمام مرتفع'),
-        SupplierCategoryDemandLevel.moderate =>
-          t('Moderate interest', 'اهتمام متوسط'),
-        SupplierCategoryDemandLevel.emerging =>
-          t('Emerging interest', 'اهتمام ناشئ'),
+        SupplierCategoryDemandLevel.high ||
+        SupplierCategoryDemandLevel.moderate ||
+        SupplierCategoryDemandLevel.emerging => activeDemandLabel,
         SupplierCategoryDemandLevel.unknown => categoryDemandUnknownLevel,
       };
 
   String categoryDemandReason(SupplierCategoryDemandReason reason) =>
-      switch (reason) {
-        SupplierCategoryDemandReason.strongReservationActivity => t(
-          'Strong activity from recent reservations',
-          'نشاط قوي من الحجوزات الأخيرة',
-        ),
-        SupplierCategoryDemandReason.balancedEngagement => t(
-          'Consistent activity across views, likes, and reservations',
-          'نشاط متوازن عبر المشاهدات والإعجابات والحجوزات',
-        ),
-        SupplierCategoryDemandReason.likeEngagement => t(
-          'Strong recent like activity',
-          'نشاط إعجابات حديث قوي',
-        ),
-        SupplierCategoryDemandReason.viewEngagement => t(
-          'Strong recent view activity',
-          'نشاط مشاهدات حديث قوي',
-        ),
-        SupplierCategoryDemandReason.limitedRecentActivity => t(
-          'Limited recent activity',
-          'نشاط حديث محدود',
-        ),
-        SupplierCategoryDemandReason.unknown => categoryDemandUnknownReason,
-      };
+      categoryDemandUnknownReason;
 
-  String categoryDemandViewsChip(int count) =>
-      t('$count views', '$count مشاهدة');
-  String categoryDemandLikesChip(int count) =>
-      t('$count likes', '$count إعجاب');
+  String categoryDemandViewsChip(int count) => likesLabel;
+  String categoryDemandLikesChip(int count) => likesLabel;
   String categoryDemandReservationsChip(int count) =>
-      t('$count reservations', '$count حجز');
+      completedReservationsMetricLabel;
 
   String categoryDemandSummary(List<String> categoryNames) {
-    final names = categoryNames
-        .map((name) => name.trim())
-        .where((name) => name.isNotEmpty)
-        .take(3)
-        .toList(growable: false);
-    if (names.isEmpty) {
-      return categoryDemandNoRecentActivity;
-    }
-    if (isArabic) {
-      if (names.length == 1) {
-        return 'تحظى فئة ${names[0]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
-      }
-      if (names.length == 2) {
-        return 'تحظى فئتا ${names[0]} و${names[1]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
-      }
-      return 'تحظى فئات ${names[0]} و${names[1]} و${names[2]} بأعلى اهتمام من المتعلمين خلال آخر 30 يومًا.';
-    }
-    if (names.length == 1) {
-      return '${names[0]} is receiving the strongest learner interest during the last 30 days.';
-    }
-    if (names.length == 2) {
-      return '${names[0]} and ${names[1]} are receiving the strongest learner interest during the last 30 days.';
-    }
-    return '${names[0]}, ${names[1]}, and ${names[2]} are receiving the strongest learner interest during the last 30 days.';
+    if (categoryNames.isEmpty) return categoryDemandNoRecentActivity;
+    return categoryNames.join(', ');
   }
 
   // —— Related projects (prospective matching) ——
-  String get relatedProjectsTitle => t('Related Projects', 'المشاريع ذات الصلة');
+  String get relatedProjectsTitle =>
+      t('Related Projects', 'المشاريع ذات الصلة');
   String get relatedProjectsSubtitle => t(
     'Learning Hub projects that could use this material based on required components — not past handovers.',
     'مشاريع مركز التعلم التي يمكن أن تستخدم هذه المادة حسب المكوّنات المطلوبة — وليست عمليات التسليم السابقة.',
@@ -568,10 +503,8 @@ class SupplierL10n {
     'No Learning Hub projects currently match this material.',
     'لا توجد حالياً مشاريع في مركز التعلم تطابق هذه المادة.',
   );
-  String get relatedProjectsLoadError => t(
-    'Could not load related projects.',
-    'تعذّر تحميل المشاريع ذات الصلة.',
-  );
+  String get relatedProjectsLoadError =>
+      t('Could not load related projects.', 'تعذّر تحميل المشاريع ذات الصلة.');
   String get relatedProjectsRetry => t('Retry', 'إعادة المحاولة');
   String get relatedProjectsMatchedComponent =>
       t('Matched component', 'المكوّن المطابق');
@@ -1880,20 +1813,16 @@ class SupplierL10n {
     'Browse what learners are looking for and suggest a matching material.',
     'تصفح ما يبحث عنه المتعلمون واقترح مادة مطابقة.',
   );
-  String get materialRequestsLoadError => t(
-    'We could not load material requests.',
-    'تعذّر تحميل طلبات المواد.',
-  );
+  String get materialRequestsLoadError =>
+      t('We could not load material requests.', 'تعذّر تحميل طلبات المواد.');
   String get materialRequestsEmptyTitle =>
       t('No material requests right now', 'لا توجد طلبات مواد حالياً');
   String get materialRequestsEmptySubtitle => t(
     'When learners ask for materials you might have, they will show up here.',
     'عندما يطلب المتعلمون مواداً قد تمتلكها، ستظهر هنا.',
   );
-  String get materialRequestsFilteredEmptyTitle => t(
-    'No requests match your filters',
-    'لا توجد طلبات تطابق عوامل التصفية',
-  );
+  String get materialRequestsFilteredEmptyTitle =>
+      t('No requests match your filters', 'لا توجد طلبات تطابق عوامل التصفية');
   String get filterUnansweredByMe =>
       t('Not answered by me', 'لم أرد عليها بعد');
   String get filterAllCities => t('All cities', 'كل المدن');
@@ -1912,7 +1841,8 @@ class SupplierL10n {
     '$count supplier${count == 1 ? '' : 's'} responded',
     count == 1 ? 'استجاب مورد واحد' : 'استجاب $count موردين',
   );
-  String get materialRequestDetailsTitle => t('Request details', 'تفاصيل الطلب');
+  String get materialRequestDetailsTitle =>
+      t('Request details', 'تفاصيل الطلب');
   String get materialRequestLoadError =>
       t('Could not load this material request.', 'تعذّر تحميل طلب المادة هذا.');
   String get materialRequestPrivacyNote => t(
@@ -1927,8 +1857,10 @@ class SupplierL10n {
   );
   String get publishMatchingMaterial =>
       t('Publish matching material', 'نشر مادة مطابقة');
-  String get suggestThisMaterial => t('Suggest this material', 'اقتراح هذه المادة');
-  String get suggestionSent => t('Suggestion sent to the learner.', 'تم إرسال الاقتراح إلى المتعلم.');
+  String get suggestThisMaterial =>
+      t('Suggest this material', 'اقتراح هذه المادة');
+  String get suggestionSent =>
+      t('Suggestion sent to the learner.', 'تم إرسال الاقتراح إلى المتعلم.');
   String get suggestionFailed => t(
     'Could not send this suggestion. Please try again.',
     'تعذّر إرسال هذا الاقتراح. يرجى المحاولة مرة أخرى.',
@@ -1939,12 +1871,11 @@ class SupplierL10n {
     'هذه المادة تطابق الطلب بشكل ضعيف فقط. هل تريد اقتراحها على أي حال؟',
   );
   String get suggestAnyway => t('Suggest anyway', 'اقتراح على أي حال');
-  String get alreadySuggestedLabel => t('Already suggested', 'تم اقتراحها بالفعل');
+  String get alreadySuggestedLabel =>
+      t('Already suggested', 'تم اقتراحها بالفعل');
   String get weakMatchBadge => t('Weak match', 'تطابق ضعيف');
-  String get requestNoLongerOpen => t(
-    'This request is no longer open.',
-    'هذا الطلب لم يعد مفتوحاً.',
-  );
+  String get requestNoLongerOpen =>
+      t('This request is no longer open.', 'هذا الطلب لم يعد مفتوحاً.');
   String get alternativesAllowedBadge =>
       t('Alternatives allowed', 'البدائل مسموحة');
 }

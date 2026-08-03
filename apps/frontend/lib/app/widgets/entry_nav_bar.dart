@@ -62,7 +62,13 @@ class EntryNavBar extends ConsumerWidget {
       return trailingActions;
     }
 
-    return [const NotificationBellButton(compact: true), ...trailingActions];
+    final withoutDuplicateBells = trailingActions
+        .where((action) => action is! NotificationBellButton)
+        .toList(growable: false);
+    return [
+      const NotificationBellButton(compact: true),
+      ...withoutDuplicateBells,
+    ];
   }
 
   @override

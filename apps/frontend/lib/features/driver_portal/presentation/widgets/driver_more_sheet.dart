@@ -70,7 +70,10 @@ class DriverMoreSheet extends ConsumerWidget {
               icon: Icons.manage_accounts_outlined,
               label: l10n.driverMoreAccountSettings,
               selected: currentPath == accountSettingsRoute,
-              onTap: () => _navigateFromSheet(context, accountSettingsRoute),
+              onTap: () {
+                Navigator.of(context).pop();
+                context.push(accountSettingsRoute);
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             Text(

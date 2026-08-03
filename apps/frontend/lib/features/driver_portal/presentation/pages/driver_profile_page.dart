@@ -11,6 +11,7 @@ import '../../../../shared/l10n/driver_profile_ui_labels.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../auth/application/auth_route_helpers.dart';
 import '../../application/driver_profile_provider.dart';
 import '../../data/models/driver_operational_profile.dart';
 import '../widgets/driver_availability_summary_card.dart';
@@ -207,9 +208,14 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1120),
                 child: profileAsync.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.all(AppSpacing.xl),
-                    child: Center(child: CircularProgressIndicator()),
+                  loading: () => Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Center(
+                      child: Semantics(
+                        label: context.l10n.driverLoadingActive,
+                        child: const CircularProgressIndicator(),
+                      ),
+                    ),
                   ),
                   error: (error, _) => AppEmptyStateCard(
                     icon: Icons.person_off_outlined,
@@ -450,7 +456,9 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
         const SizedBox(height: AppSpacing.lg),
 
         // Account settings card
-        _AccountSettingsCard(onOpen: () => context.go('/profile/account')),
+        _AccountSettingsCard(
+          onOpen: () => context.push(accountSettingsRoute),
+        ),
       ],
     );
   }

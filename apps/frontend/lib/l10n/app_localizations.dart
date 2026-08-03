@@ -10452,6 +10452,12 @@ abstract class AppLocalizations {
   /// **'Newest'**
   String get driverNewest;
 
+  /// No description provided for @driverDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get driverDone;
+
   /// No description provided for @driverCityLabel.
   ///
   /// In en, this message translates to:
@@ -10835,6 +10841,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Delivery status updated.'**
   String get driverStatusUpdated;
+
+  /// No description provided for @driverStatusArrivedPickupSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived at pickup.'**
+  String get driverStatusArrivedPickupSuccess;
+
+  /// No description provided for @driverStatusPickedUpSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked as picked up.'**
+  String get driverStatusPickedUpSuccess;
+
+  /// No description provided for @driverStatusOnTheWaySuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'On the way to the learner.'**
+  String get driverStatusOnTheWaySuccess;
+
+  /// No description provided for @driverStatusArrivedDropoffSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrived at drop-off.'**
+  String get driverStatusArrivedDropoffSuccess;
 
   /// No description provided for @driverStatusChangedRefresh.
   ///
