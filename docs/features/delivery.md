@@ -82,10 +82,11 @@ Flutter driver portal:
 Driver assignment:
 
 - Requires `DRIVER` role and active `DriverProfile`.
-- Driver may accept from `OFFLINE` or `AVAILABLE`; accepting moves the profile to `ON_DELIVERY`. This matches the current driver portal, which does not yet expose a separate availability toggle.
+- Drivers control `acceptingNewJobs` (Flutter Profile / Dashboard toggle). Effective `availability` is system-managed: `ON_DELIVERY` while any in-progress assignment exists; otherwise `AVAILABLE` when accepting and `OFFLINE` when paused.
+- Browse and accept require an active profile with `acceptingNewJobs=true`. Active assigned work remains reachable while future jobs are paused.
 - Driver cannot exceed the active delivery limit of three assigned in-progress deliveries.
-- Accept uses transactional `updateMany` guards: the driver profile must move from `OFFLINE`/`AVAILABLE` to `ON_DELIVERY`, and only `WAITING_FOR_DRIVER` unassigned deliveries can be assigned.
-- Sets driver availability to `ON_DELIVERY`.
+- Accept uses transactional `updateMany` guards: only `WAITING_FOR_DRIVER` unassigned deliveries can be assigned, and the driver must still be under the active limit while accepting.
+- Accept moves effective availability to `ON_DELIVERY`.
 - Accept clears unread `DRIVER_NEW_JOB` notifications for that delivery and may create a pickup-time reminder if the pickup window is due.
 
 Admin driver assignment reopen:
@@ -96,7 +97,7 @@ Admin driver assignment reopen:
 - For grouped deliveries, the delivery group must still be `ASSIGNED` to the same driver and all delivery reservations in the group must still be `ACCEPTED`; the group is reopened to `OPEN` with no assigned driver.
 - Reservation status, quantity hold, delivery fee, pickup/dropoff locations, delivery windows, handover codes, and grouping membership are preserved.
 - The removed driver receives a persisted `DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN` notification. This admin reopen does not explicitly assign a replacement driver; eligible drivers see the job through the normal waiting-job pool.
-- If the removed driver has no remaining active assigned deliveries, their profile availability is moved from `ON_DELIVERY` back to `AVAILABLE`.
+- If the removed driver has no remaining active assigned deliveries, availability is reconciled from `acceptingNewJobs` (`AVAILABLE` when true, `OFFLINE` when false).
 
 Completion:
 

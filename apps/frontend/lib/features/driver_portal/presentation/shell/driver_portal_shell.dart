@@ -101,57 +101,73 @@ class _DriverSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.driverPortal,
-            style: AppTextStyles.title(
-              context,
-            ).copyWith(color: palette.textPrimary),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.driverPortal,
+                    style: AppTextStyles.title(
+                      context,
+                    ).copyWith(color: palette.textPrimary),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.driverInternalDelivery,
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  _DriverNavButton(
+                    icon: Icons.dashboard_outlined,
+                    label: l10n.driverPortal,
+                    route: '/driver',
+                    selected: currentPath == '/driver',
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _DriverNavButton(
+                    icon: Icons.work_outline_rounded,
+                    label: l10n.driverAvailableNearbyJobs,
+                    route: '/driver/jobs',
+                    selected: currentPath == '/driver/jobs',
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _DriverNavButton(
+                    icon: Icons.local_shipping_outlined,
+                    label: l10n.driverMyActiveDeliveries,
+                    route: '/driver/active',
+                    selected: _isActivePath(currentPath),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _DriverNavButton(
+                    icon: Icons.notifications_none_rounded,
+                    label: l10n.notificationsTitle,
+                    route: driverNotificationsRoute,
+                    selected: isDriverNotificationsPath(currentPath),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _DriverNavButton(
+                    icon: Icons.history_rounded,
+                    label: l10n.driverHistoryNav,
+                    route: '/driver/history',
+                    selected: _isHistoryPath(currentPath),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  _DriverNavButton(
+                    icon: Icons.badge_outlined,
+                    label: l10n.driverProfileTitle,
+                    route: '/driver/profile',
+                    selected: currentPath == '/driver/profile',
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            l10n.driverInternalDelivery,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _DriverNavButton(
-            icon: Icons.dashboard_outlined,
-            label: l10n.driverPortal,
-            route: '/driver',
-            selected: currentPath == '/driver',
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _DriverNavButton(
-            icon: Icons.work_outline_rounded,
-            label: l10n.driverAvailableNearbyJobs,
-            route: '/driver/jobs',
-            selected: currentPath == '/driver/jobs',
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _DriverNavButton(
-            icon: Icons.local_shipping_outlined,
-            label: l10n.driverMyActiveDeliveries,
-            route: '/driver/active',
-            selected: _isActivePath(currentPath),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _DriverNavButton(
-            icon: Icons.notifications_none_rounded,
-            label: l10n.notificationsTitle,
-            route: driverNotificationsRoute,
-            selected: isDriverNotificationsPath(currentPath),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _DriverNavButton(
-            icon: Icons.history_rounded,
-            label: l10n.driverHistoryNav,
-            route: '/driver/history',
-            selected: _isHistoryPath(currentPath),
-          ),
-          const Spacer(),
+          const SizedBox(height: AppSpacing.sm),
           InkWell(
-            onTap: () => context.go('/profile/account'),
+            onTap: () => context.go('/driver/profile'),
             borderRadius: AppRadius.mdAll,
             child: _DriverProfileSummary(name: driverName, email: email),
           ),
@@ -170,6 +186,9 @@ class _DriverBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
     final l10n = context.l10n;
+    if (currentPath == '/driver/profile') {
+      return _UnselectedDriverBottomNav(currentPath: currentPath);
+    }
     final selectedIndex = isDriverNotificationsPath(currentPath)
         ? 3
         : currentPath == '/driver/jobs'
@@ -185,6 +204,7 @@ class _DriverBottomNav extends StatelessWidget {
         top: false,
         child: NavigationBar(
           selectedIndex: selectedIndex,
+          height: _driverMobileNavHeight(context),
           onDestinationSelected: (index) {
             switch (index) {
               case 0:
@@ -208,7 +228,7 @@ class _DriverBottomNav extends StatelessWidget {
             ),
             NavigationDestination(
               icon: const Icon(Icons.local_shipping_outlined),
-              label: l10n.driverMyActiveDeliveries,
+              label: l10n.driverActiveDelivery,
             ),
             NavigationDestination(
               icon: const Icon(Icons.notifications_none_rounded),
@@ -219,6 +239,80 @@ class _DriverBottomNav extends StatelessWidget {
       ),
     );
   }
+}
+
+class _UnselectedDriverBottomNav extends StatelessWidget {
+  const _UnselectedDriverBottomNav({required this.currentPath});
+
+  final String currentPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
+    final items = [
+      (Icons.dashboard_outlined, l10n.driverPortal, '/driver'),
+      (Icons.work_outline_rounded, l10n.driverJobs, '/driver/jobs'),
+      (
+        Icons.local_shipping_outlined,
+        l10n.driverActiveDelivery,
+        '/driver/active',
+      ),
+      (
+        Icons.notifications_none_rounded,
+        l10n.notificationsTitle,
+        driverNotificationsRoute,
+      ),
+    ];
+
+    return Material(
+      key: const ValueKey('driver-unselected-bottom-nav'),
+      color: palette.cardSurface,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: _driverMobileNavHeight(context),
+          child: Row(
+            children: [
+              for (var index = 0; index < items.length; index++)
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    selected: false,
+                    label: items[index].$2,
+                    child: InkWell(
+                      key: ValueKey('driver-mobile-nav-$index'),
+                      onTap: () => context.go(items[index].$3),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(items[index].$1, color: palette.textSecondary),
+                          const SizedBox(height: 2),
+                          Text(
+                            items[index].$2,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: palette.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+double _driverMobileNavHeight(BuildContext context) {
+  final textScale = MediaQuery.textScalerOf(context).scale(1);
+  return kBottomNavigationBarHeight + ((textScale - 1).clamp(0, 0.8) * 28);
 }
 
 bool _isActivePath(String path) =>
@@ -259,7 +353,12 @@ class _DriverNavButton extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
       ),
       icon: Icon(icon),
-      label: Text(label),
+      label: Text(
+        label,
+        maxLines: 2,
+        softWrap: true,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 }

@@ -14,6 +14,7 @@ class NavPillMenu<T> extends StatelessWidget {
     required this.selectedValue,
     required this.onSelected,
     required this.itemLabel,
+    this.compact = false,
   });
 
   final IconData icon;
@@ -22,6 +23,7 @@ class NavPillMenu<T> extends StatelessWidget {
   final T selectedValue;
   final ValueChanged<T> onSelected;
   final String Function(T value) itemLabel;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +53,7 @@ class NavPillMenu<T> extends StatelessWidget {
         return _NavPillButton(
           icon: icon,
           label: label,
+          compact: compact,
           isOpen: controller.isOpen,
           onTap: () {
             if (controller.isOpen) {
@@ -110,12 +113,14 @@ class _NavPillButton extends StatelessWidget {
   const _NavPillButton({
     required this.icon,
     required this.label,
+    required this.compact,
     required this.isOpen,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
+  final bool compact;
   final bool isOpen;
   final VoidCallback onTap;
 
@@ -129,14 +134,14 @@ class _NavPillButton extends StatelessWidget {
     final border = colors.borderSubtle;
     final focusedBorder = colors.primary;
 
-    return Material(
+    final button = Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: AppRadius.pillAll,
         child: Ink(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? AppSpacing.sm : AppSpacing.md,
             vertical: AppSpacing.sm,
           ),
           height: 42,
@@ -149,13 +154,15 @@ class _NavPillButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 18, color: accent),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
-                label,
-                style: AuthDarkTextStyles.body(
-                  context,
-                ).copyWith(color: primaryText, fontWeight: FontWeight.w500),
-              ),
+              if (!compact) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  label,
+                  style: AuthDarkTextStyles.body(
+                    context,
+                  ).copyWith(color: primaryText, fontWeight: FontWeight.w500),
+                ),
+              ],
               const SizedBox(width: AppSpacing.xs),
               Icon(
                 isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
@@ -167,5 +174,10 @@ class _NavPillButton extends StatelessWidget {
         ),
       ),
     );
+
+    if (!compact) {
+      return button;
+    }
+    return Semantics(label: label, button: true, child: button);
   }
 }

@@ -1,7 +1,6 @@
 import type { DeliveryStatus } from '../../generated/prisma/client.js';
 import { prisma } from '../../database/prisma.js';
 import {
-  DRIVER_IN_PROGRESS_ASSIGNED_STATUSES,
   MAX_ACTIVE_DRIVER_DELIVERIES,
 } from '../driver/driver-availability.js';
 import { DRIVER_NOTIFICATION_TYPES } from './driver-delivery-notification-types.js';
@@ -170,32 +169,33 @@ const loadDeliveryContext = async (deliveryId: string) =>
     select: deliveryContextSelect,
   });
 
-const listEligibleDriverUserIds = async () => {
-  const profiles = await prisma.driverProfile.findMany({
-    where: {
-      status: 'ACTIVE',
-      acceptingNewJobs: true,
-      user: { accountStatus: 'ACTIVE' },
-    },
-    select: { id: true, userId: true },
-  });
+export const listEligibleDriverUserIds = async () => {
+  const rows = await prisma.$queryRaw<Array<{ user_id: string }>>`
+    SELECT dp."user_id"
+    FROM "driver_profiles" dp
+    INNER JOIN "users" u ON u."id" = dp."user_id"
+    LEFT JOIN (
+      SELECT
+        d."assigned_driver_profile_id" AS driver_profile_id,
+        COUNT(*)::int AS active_count
+      FROM "deliveries" d
+      WHERE d."assigned_driver_profile_id" IS NOT NULL
+        AND d."status" IN (
+          'DRIVER_ASSIGNED'::"DeliveryStatus",
+          'ARRIVED_PICKUP'::"DeliveryStatus",
+          'PICKED_UP'::"DeliveryStatus",
+          'ON_THE_WAY'::"DeliveryStatus",
+          'ARRIVED_DROPOFF'::"DeliveryStatus"
+        )
+      GROUP BY d."assigned_driver_profile_id"
+    ) active ON active.driver_profile_id = dp."id"
+    WHERE dp."status" = 'ACTIVE'::"DriverProfileStatus"
+      AND dp."accepting_new_jobs" = true
+      AND u."account_status" = 'ACTIVE'::"AccountStatus"
+      AND COALESCE(active.active_count, 0) < ${MAX_ACTIVE_DRIVER_DELIVERIES}
+  `;
 
-  const eligible: string[] = [];
-
-  for (const profile of profiles) {
-    const activeCount = await prisma.delivery.count({
-      where: {
-        assignedDriverProfileId: profile.id,
-        status: { in: [...DRIVER_IN_PROGRESS_ASSIGNED_STATUSES] },
-      },
-    });
-
-    if (activeCount < MAX_ACTIVE_DRIVER_DELIVERIES) {
-      eligible.push(profile.userId);
-    }
-  }
-
-  return eligible;
+  return rows.map((row) => row.user_id);
 };
 
 const isReminderDue = (windowStart: Date, windowEnd: Date | null, now: Date) => {

@@ -10,6 +10,8 @@ import {
   decodeAvailableJobsCursor,
   encodeAvailableJobsCursor,
   isAvailableJobAfterCursor,
+  referenceAffectsAvailableJobsQuery,
+  rejectStaleAvailableJobsPage,
 } from './driver-available-jobs-cursor.js';
 import {
   reservationStatusForUnpickedReason,
@@ -137,34 +139,58 @@ describe('driver partial pickup selection', () => {
 });
 
 describe('driver available jobs cursor', () => {
-  test('encodes and decodes keyset cursor', () => {
+  test('encodes and decodes v2 keyset cursor with meters', () => {
     const encoded = encodeAvailableJobsCursor({
-      v: 1,
+      v: 2,
       sortBy: 'newest',
       city: 'Nablus',
       area: null,
       maxDistanceKm: null,
       requestedAt: '2026-08-01T10:00:00.000Z',
+      distanceMeters: null,
       distanceKm: null,
       id: 'delivery-1',
+      refLat: null,
+      refLng: null,
     });
     const decoded = decodeAvailableJobsCursor(encoded);
     assert.ok(decoded);
+    assert.equal(decoded?.v, 2);
     assert.equal(decoded?.id, 'delivery-1');
     assert.equal(decoded?.sortBy, 'newest');
+  });
+
+  test('rejects v1 cursors fail-closed', () => {
+    const v1 = Buffer.from(
+      JSON.stringify({
+        v: 1,
+        sortBy: 'nearest',
+        city: null,
+        area: null,
+        maxDistanceKm: null,
+        requestedAt: '2026-08-01T10:00:00.000Z',
+        distanceKm: 1.5,
+        id: 'delivery-1',
+      }),
+      'utf8',
+    ).toString('base64url');
+    assert.equal(decodeAvailableJobsCursor(v1), null);
   });
 
   test('rejects incompatible cursor filters', () => {
     const cursor = decodeAvailableJobsCursor(
       encodeAvailableJobsCursor({
-        v: 1,
+        v: 2,
         sortBy: 'newest',
         city: 'Nablus',
         area: null,
         maxDistanceKm: null,
         requestedAt: '2026-08-01T10:00:00.000Z',
+        distanceMeters: null,
         distanceKm: null,
         id: 'delivery-1',
+        refLat: null,
+        refLng: null,
       }),
     )!;
 
@@ -173,6 +199,8 @@ describe('driver available jobs cursor', () => {
         assertAvailableJobsCursorCompatible(cursor, {
           sortBy: 'nearest',
           city: 'Nablus',
+          refLat: 32.22,
+          refLng: 35.26,
         }),
       (error: unknown) =>
         error instanceof AppError &&
@@ -184,25 +212,28 @@ describe('driver available jobs cursor', () => {
     const stamp = new Date('2026-08-01T10:00:00.000Z');
     const left = {
       delivery: { id: 'a', requestedAt: stamp },
-      distanceKm: null as number | null,
+      distanceMeters: null as number | null,
     };
     const right = {
       delivery: { id: 'b', requestedAt: stamp },
-      distanceKm: null as number | null,
+      distanceMeters: null as number | null,
     };
     assert.ok(compareAvailableJobs(left, right, 'newest') > 0);
     assert.equal(
       isAvailableJobAfterCursor(
         left,
         {
-          v: 1,
+          v: 2,
           sortBy: 'newest',
           city: null,
           area: null,
           maxDistanceKm: null,
           requestedAt: stamp.toISOString(),
+          distanceMeters: null,
           distanceKm: null,
           id: 'b',
+          refLat: null,
+          refLng: null,
         },
         'newest',
       ),
@@ -214,26 +245,33 @@ describe('driver available jobs cursor', () => {
     const stamp = new Date('2026-08-01T10:00:00.000Z');
     const left = {
       delivery: { id: 'a', requestedAt: stamp },
-      distanceKm: 1.5,
+      distanceMeters: 1500,
     };
     const right = {
       delivery: { id: 'b', requestedAt: stamp },
-      distanceKm: 1.5,
+      distanceMeters: 1500,
     };
     assert.ok(compareAvailableJobs(left, right, 'nearest') > 0);
     const cursor = {
-      v: 1 as const,
+      v: 2 as const,
       sortBy: 'nearest' as const,
       city: null,
       area: null,
       maxDistanceKm: null,
       requestedAt: stamp.toISOString(),
+      distanceMeters: 1500,
       distanceKm: 1.5,
       id: 'b',
+      refLat: 32.22,
+      refLng: 35.26,
     };
     assert.equal(isAvailableJobAfterCursor(left, cursor, 'nearest'), true);
     assert.equal(
-      buildNextAvailableJobsCursor(left, { sortBy: 'nearest' }).length > 0,
+      buildNextAvailableJobsCursor(left, {
+        sortBy: 'nearest',
+        refLat: 32.22,
+        refLng: 35.26,
+      }).length > 0,
       true,
     );
   });
@@ -241,21 +279,24 @@ describe('driver available jobs cursor', () => {
   test('rejects a cursor whose ordering position became stale', () => {
     const stamp = new Date('2026-08-01T10:00:00.000Z');
     const cursor = {
-      v: 1 as const,
+      v: 2 as const,
       sortBy: 'nearest' as const,
       city: null,
       area: null,
       maxDistanceKm: null,
       requestedAt: stamp.toISOString(),
+      distanceMeters: 1500,
       distanceKm: 1.5,
       id: 'delivery-1',
+      refLat: 32.22,
+      refLng: 35.26,
     };
 
     assert.equal(
       availableJobMatchesCursorPosition(
         {
           delivery: { id: 'delivery-1', requestedAt: stamp },
-          distanceKm: 1.6,
+          distanceMeters: 1600,
         },
         cursor,
       ),
@@ -268,7 +309,7 @@ describe('driver available jobs cursor', () => {
             id: 'delivery-1',
             requestedAt: new Date(stamp.getTime() + 1),
           },
-          distanceKm: 1.5,
+          distanceMeters: 1500,
         },
         cursor,
       ),
@@ -279,5 +320,157 @@ describe('driver available jobs cursor', () => {
   test('rejects malformed cursor payloads', () => {
     assert.equal(decodeAvailableJobsCursor('not-a-cursor'), null);
     assert.equal(decodeAvailableJobsCursor(''), null);
+  });
+
+  test('referenceAffectsAvailableJobsQuery covers nearest and radius', () => {
+    assert.equal(
+      referenceAffectsAvailableJobsQuery({ sortBy: 'nearest' }),
+      true,
+    );
+    assert.equal(
+      referenceAffectsAvailableJobsQuery({
+        sortBy: 'newest',
+        maxDistanceKm: 10,
+      }),
+      true,
+    );
+    assert.equal(
+      referenceAffectsAvailableJobsQuery({ sortBy: 'newest' }),
+      false,
+    );
+  });
+
+  test('nearest without reference allows null/null pagination', () => {
+    const cursor = decodeAvailableJobsCursor(
+      encodeAvailableJobsCursor({
+        v: 2,
+        sortBy: 'nearest',
+        city: 'Nablus',
+        area: null,
+        maxDistanceKm: null,
+        requestedAt: '2026-08-01T10:00:00.000Z',
+        distanceMeters: null,
+        distanceKm: null,
+        id: 'delivery-1',
+        refLat: null,
+        refLng: null,
+      }),
+    )!;
+
+    assert.doesNotThrow(() =>
+      assertAvailableJobsCursorCompatible(cursor, {
+        sortBy: 'nearest',
+        city: 'Nablus',
+        refLat: null,
+        refLng: null,
+      }),
+    );
+  });
+
+  test('newest with radius requires matching reference', () => {
+    const cursor = decodeAvailableJobsCursor(
+      encodeAvailableJobsCursor({
+        v: 2,
+        sortBy: 'newest',
+        city: null,
+        area: null,
+        maxDistanceKm: 10,
+        requestedAt: '2026-08-01T10:00:00.000Z',
+        distanceMeters: null,
+        distanceKm: null,
+        id: 'delivery-1',
+        refLat: 32.22,
+        refLng: 35.26,
+      }),
+    )!;
+
+    assert.throws(
+      () =>
+        assertAvailableJobsCursorCompatible(cursor, {
+          sortBy: 'newest',
+          maxDistanceKm: 10,
+          refLat: 32.23,
+          refLng: 35.26,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID',
+    );
+
+    assert.doesNotThrow(() =>
+      assertAvailableJobsCursorCompatible(cursor, {
+        sortBy: 'newest',
+        maxDistanceKm: 10,
+        refLat: 32.22,
+        refLng: 35.26,
+      }),
+    );
+  });
+
+  test('newest without radius ignores driver reference movement', () => {
+    const cursor = decodeAvailableJobsCursor(
+      encodeAvailableJobsCursor({
+        v: 2,
+        sortBy: 'newest',
+        city: 'Nablus',
+        area: null,
+        maxDistanceKm: null,
+        requestedAt: '2026-08-01T10:00:00.000Z',
+        distanceMeters: null,
+        distanceKm: null,
+        id: 'delivery-1',
+        refLat: null,
+        refLng: null,
+      }),
+    )!;
+
+    assert.doesNotThrow(() =>
+      assertAvailableJobsCursorCompatible(cursor, {
+        sortBy: 'newest',
+        city: 'Nablus',
+        refLat: 32.22,
+        refLng: 35.26,
+      }),
+    );
+  });
+
+  test('null-to-valid reference conflicts when reference affects the query', () => {
+    const cursor = decodeAvailableJobsCursor(
+      encodeAvailableJobsCursor({
+        v: 2,
+        sortBy: 'nearest',
+        city: null,
+        area: null,
+        maxDistanceKm: null,
+        requestedAt: '2026-08-01T10:00:00.000Z',
+        distanceMeters: null,
+        distanceKm: null,
+        id: 'delivery-1',
+        refLat: null,
+        refLng: null,
+      }),
+    )!;
+
+    assert.throws(
+      () =>
+        assertAvailableJobsCursorCompatible(cursor, {
+          sortBy: 'nearest',
+          refLat: 32.22,
+          refLng: 35.26,
+        }),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.code === 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID',
+    );
+  });
+
+  test('stale emptied page rejects with refreshable conflict code', () => {
+    assert.throws(
+      () => rejectStaleAvailableJobsPage(),
+      (error: unknown) =>
+        error instanceof AppError &&
+        error.statusCode === 409 &&
+        error.code === 'DRIVER_AVAILABLE_JOBS_CURSOR_INVALID',
+    );
   });
 });

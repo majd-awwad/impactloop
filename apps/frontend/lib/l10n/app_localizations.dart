@@ -11929,6 +11929,426 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open recovery delivery'**
   String get driverOpenRecoveryDelivery;
+
+  /// No description provided for @driverProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver Profile'**
+  String get driverProfileTitle;
+
+  /// No description provided for @driverProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage the operational details used for delivery work and control whether you receive new job offers.'**
+  String get driverProfileSubtitle;
+
+  /// No description provided for @driverAdministrativeProfileStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile status'**
+  String get driverAdministrativeProfileStatus;
+
+  /// No description provided for @driverOperationalState.
+  ///
+  /// In en, this message translates to:
+  /// **'Operational state'**
+  String get driverOperationalState;
+
+  /// No description provided for @driverProfileStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get driverProfileStatusActive;
+
+  /// No description provided for @driverProfileStatusInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get driverProfileStatusInactive;
+
+  /// No description provided for @driverProfileStatusSuspended.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get driverProfileStatusSuspended;
+
+  /// No description provided for @driverProfileStatusUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Status unavailable'**
+  String get driverProfileStatusUnknown;
+
+  /// No description provided for @driverProfileActiveExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Driver profile is active.'**
+  String get driverProfileActiveExplanation;
+
+  /// No description provided for @driverProfileInactiveExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Driver profile is inactive. Profile changes and new-job acceptance are unavailable.'**
+  String get driverProfileInactiveExplanation;
+
+  /// No description provided for @driverProfileSuspendedExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Driver profile is suspended. Contact support if you need help.'**
+  String get driverProfileSuspendedExplanation;
+
+  /// No description provided for @driverProfileUnknownExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Driver profile status could not be confirmed. Refresh before changing availability.'**
+  String get driverProfileUnknownExplanation;
+
+  /// No description provided for @driverAvailabilityAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get driverAvailabilityAvailable;
+
+  /// No description provided for @driverAvailabilityOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get driverAvailabilityOffline;
+
+  /// No description provided for @driverAvailabilityOnDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'On delivery'**
+  String get driverAvailabilityOnDelivery;
+
+  /// No description provided for @driverAvailabilityUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'State unavailable'**
+  String get driverAvailabilityUnknown;
+
+  /// No description provided for @driverAvailabilityUnknownExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your operational state is managed by the system and is currently unavailable.'**
+  String get driverAvailabilityUnknownExplanation;
+
+  /// No description provided for @driverSystemManagedState.
+  ///
+  /// In en, this message translates to:
+  /// **'System-managed operational state'**
+  String get driverSystemManagedState;
+
+  /// No description provided for @driverAcceptingNewJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepting new jobs'**
+  String get driverAcceptingNewJobs;
+
+  /// No description provided for @driverAcceptingNewJobsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'New delivery offers are enabled.'**
+  String get driverAcceptingNewJobsOn;
+
+  /// No description provided for @driverAcceptingNewJobsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'New delivery offers are paused.'**
+  String get driverAcceptingNewJobsOff;
+
+  /// No description provided for @driverActiveDeliveriesContinueNoOffers.
+  ///
+  /// In en, this message translates to:
+  /// **'Your active deliveries continue. You will not receive new job offers.'**
+  String get driverActiveDeliveriesContinueNoOffers;
+
+  /// No description provided for @driverOnDeliveryAcceptingExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'You are completing active deliveries and may accept more work up to the current limit.'**
+  String get driverOnDeliveryAcceptingExplanation;
+
+  /// No description provided for @driverAvailableExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'You can browse and accept new delivery jobs.'**
+  String get driverAvailableExplanation;
+
+  /// No description provided for @driverOfflineExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'You are not receiving new delivery offers.'**
+  String get driverOfflineExplanation;
+
+  /// No description provided for @driverDashboardAvailabilityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability and status'**
+  String get driverDashboardAvailabilityTitle;
+
+  /// No description provided for @driverActiveDeliveryCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Active deliveries'**
+  String get driverActiveDeliveryCountLabel;
+
+  /// No description provided for @driverPauseNewJobsConfirmationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause new job offers?'**
+  String get driverPauseNewJobsConfirmationTitle;
+
+  /// No description provided for @driverPauseNewJobsConfirmationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned deliveries, reminders, and operational notifications will continue. Only new job offers will be paused.'**
+  String get driverPauseNewJobsConfirmationBody;
+
+  /// No description provided for @driverPauseNewJobsAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause new jobs'**
+  String get driverPauseNewJobsAction;
+
+  /// No description provided for @driverResumeNewJobs.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume new jobs'**
+  String get driverResumeNewJobs;
+
+  /// No description provided for @driverOperationalProfileDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Operational profile details'**
+  String get driverOperationalProfileDetails;
+
+  /// No description provided for @driverProfileCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get driverProfileCity;
+
+  /// No description provided for @driverProfileArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get driverProfileArea;
+
+  /// No description provided for @driverTransportationCar.
+  ///
+  /// In en, this message translates to:
+  /// **'Car'**
+  String get driverTransportationCar;
+
+  /// No description provided for @driverTransportationMotorcycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Motorcycle'**
+  String get driverTransportationMotorcycle;
+
+  /// No description provided for @driverTransportationBicycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bicycle'**
+  String get driverTransportationBicycle;
+
+  /// No description provided for @driverTransportationWalking.
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get driverTransportationWalking;
+
+  /// No description provided for @driverTransportationUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not specified'**
+  String get driverTransportationUnknown;
+
+  /// No description provided for @driverChooseTransportation.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose transportation'**
+  String get driverChooseTransportation;
+
+  /// No description provided for @driverVehicleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle description'**
+  String get driverVehicleDescription;
+
+  /// No description provided for @driverVehiclePlate.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle plate'**
+  String get driverVehiclePlate;
+
+  /// No description provided for @driverCapacityNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity notes'**
+  String get driverCapacityNotes;
+
+  /// No description provided for @driverCapacityNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional information about item size or carrying capacity'**
+  String get driverCapacityNotesHint;
+
+  /// No description provided for @driverOptionalField.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get driverOptionalField;
+
+  /// No description provided for @driverCityValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a city between 2 and 100 characters.'**
+  String get driverCityValidation;
+
+  /// No description provided for @driverAreaValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an area between 2 and 100 characters.'**
+  String get driverAreaValidation;
+
+  /// No description provided for @driverTransportationValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a supported transportation type.'**
+  String get driverTransportationValidation;
+
+  /// No description provided for @driverVehicleLabelValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle description must be 120 characters or fewer.'**
+  String get driverVehicleLabelValidation;
+
+  /// No description provided for @driverVehiclePlateValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Vehicle plate must be 32 characters or fewer.'**
+  String get driverVehiclePlateValidation;
+
+  /// No description provided for @driverCapacityNotesValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Capacity notes must be 500 characters or fewer.'**
+  String get driverCapacityNotesValidation;
+
+  /// No description provided for @driverSaveProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Save profile'**
+  String get driverSaveProfile;
+
+  /// No description provided for @driverSavingProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get driverSavingProfile;
+
+  /// No description provided for @driverProfileSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver profile saved.'**
+  String get driverProfileSaved;
+
+  /// No description provided for @driverProfileLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load Driver Profile'**
+  String get driverProfileLoadError;
+
+  /// No description provided for @driverAccountSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Settings'**
+  String get driverAccountSettingsTitle;
+
+  /// No description provided for @driverAccountSettingsExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Your name and phone are managed in Account Settings.'**
+  String get driverAccountSettingsExplanation;
+
+  /// No description provided for @driverOpenAccountSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Account Settings'**
+  String get driverOpenAccountSettings;
+
+  /// No description provided for @driverUnsavedChangesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard unsaved changes?'**
+  String get driverUnsavedChangesTitle;
+
+  /// No description provided for @driverUnsavedChangesBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Driver Profile changes have not been saved.'**
+  String get driverUnsavedChangesBody;
+
+  /// No description provided for @driverKeepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep editing'**
+  String get driverKeepEditing;
+
+  /// No description provided for @driverDiscardChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes'**
+  String get driverDiscardChanges;
+
+  /// No description provided for @driverJobsPausedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New job offers are paused'**
+  String get driverJobsPausedTitle;
+
+  /// No description provided for @driverJobsPausedExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on accepting new jobs to browse available deliveries again.'**
+  String get driverJobsPausedExplanation;
+
+  /// No description provided for @driverJobsInactiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver Profile is inactive'**
+  String get driverJobsInactiveTitle;
+
+  /// No description provided for @driverJobsSuspendedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Driver Profile is suspended'**
+  String get driverJobsSuspendedTitle;
+
+  /// No description provided for @driverJobsUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Available jobs are unavailable'**
+  String get driverJobsUnavailableTitle;
+
+  /// No description provided for @driverAssignedDeliveriesContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned deliveries, reminders, reports, and notification history remain available.'**
+  String get driverAssignedDeliveriesContinue;
+
+  /// No description provided for @driverNotAcceptingNewJobsError.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume accepting new jobs before accepting this delivery.'**
+  String get driverNotAcceptingNewJobsError;
+
+  /// No description provided for @driverCancelAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get driverCancelAction;
 }
 
 class _AppLocalizationsDelegate

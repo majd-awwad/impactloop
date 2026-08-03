@@ -595,6 +595,7 @@ class _UtilityPills extends StatelessWidget {
         NavPillMenu<ThemeMode>(
           icon: themeModeIcon(settings.themeMode),
           label: themeModeLabel(settings.themeMode, l10n: context.l10n),
+          compact: compact,
           items: ThemeMode.values,
           selectedValue: settings.themeMode,
           itemLabel: (mode) => themeModeLabel(mode, l10n: context.l10n),
@@ -605,6 +606,7 @@ class _UtilityPills extends StatelessWidget {
         NavPillMenu<String>(
           icon: Icons.language,
           label: languageLabel(settings.languageCode),
+          compact: compact,
           items: _languageOptions,
           selectedValue: settings.languageCode,
           itemLabel: languageLabel,
@@ -736,6 +738,8 @@ class _AccountMenu extends StatelessWidget {
   bool get _showLearnerActions => _isLearner && user.isLearnerMode;
 
   bool get _showSupplierDashboard => _isSupplier && user.isSupplierMode;
+
+  bool get _showDriverProfile => user.hasRole('DRIVER') && user.isDriverMode;
 
   Future<void> _logout(BuildContext context) async {
     final logoutError = await ref
@@ -909,6 +913,12 @@ class _AccountMenu extends StatelessWidget {
                   ),
                 ),
                 const Divider(height: 1),
+                if (_showDriverProfile)
+                  _AccountMenuItem(
+                    icon: Icons.badge_outlined,
+                    label: context.l10n.driverProfileTitle,
+                    onPressed: () => context.go('/driver/profile'),
+                  ),
                 _AccountMenuItem(
                   icon: Icons.person_outline_rounded,
                   label: context.l10n.profile,

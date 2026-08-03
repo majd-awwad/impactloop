@@ -6610,7 +6610,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get driverPhoneRequired => 'مطلوب للسائقين';
 
   @override
-  String get driverTransportationType => 'نوع النقل';
+  String get driverTransportationType => 'وسيلة النقل';
 
   @override
   String get driverAddressLineOptional => 'سطر العنوان (اختياري)';
@@ -6912,4 +6912,232 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get driverOpenRecoveryDelivery => 'فتح توصيل المعالجة';
+
+  @override
+  String get driverProfileTitle => 'الملف التشغيلي للسائق';
+
+  @override
+  String get driverProfileSubtitle =>
+      'أدر تفاصيل العمل المستخدمة في التوصيل وتحكّم في استقبال عروض توصيل جديدة.';
+
+  @override
+  String get driverAdministrativeProfileStatus => 'حالة الملف';
+
+  @override
+  String get driverOperationalState => 'الحالة التشغيلية';
+
+  @override
+  String get driverProfileStatusActive => 'نشط';
+
+  @override
+  String get driverProfileStatusInactive => 'غير نشط';
+
+  @override
+  String get driverProfileStatusSuspended => 'موقوف';
+
+  @override
+  String get driverProfileStatusUnknown => 'الحالة غير متاحة';
+
+  @override
+  String get driverProfileActiveExplanation => 'ملف السائق نشط.';
+
+  @override
+  String get driverProfileInactiveExplanation =>
+      'ملف السائق غير نشط. لا يمكن تعديل الملف أو استقبال وظائف جديدة.';
+
+  @override
+  String get driverProfileSuspendedExplanation =>
+      'ملف السائق موقوف. تواصل مع الدعم إذا احتجت إلى المساعدة.';
+
+  @override
+  String get driverProfileUnknownExplanation =>
+      'تعذّر تأكيد حالة ملف السائق. حدّث الصفحة قبل تغيير التوفر.';
+
+  @override
+  String get driverAvailabilityAvailable => 'متاح';
+
+  @override
+  String get driverAvailabilityOffline => 'غير متصل';
+
+  @override
+  String get driverAvailabilityOnDelivery => 'في مهمة توصيل';
+
+  @override
+  String get driverAvailabilityUnknown => 'الحالة غير متاحة';
+
+  @override
+  String get driverAvailabilityUnknownExplanation =>
+      'يدير النظام حالتك التشغيلية، وهي غير متاحة حاليًا.';
+
+  @override
+  String get driverSystemManagedState => 'حالة تشغيلية يديرها النظام';
+
+  @override
+  String get driverAcceptingNewJobs => 'استقبال وظائف جديدة';
+
+  @override
+  String get driverAcceptingNewJobsOn => 'عروض التوصيل الجديدة مفعّلة.';
+
+  @override
+  String get driverAcceptingNewJobsOff => 'عروض التوصيل الجديدة متوقفة مؤقتًا.';
+
+  @override
+  String get driverActiveDeliveriesContinueNoOffers =>
+      'تستمر توصيلاتك النشطة، ولن تستقبل عروض وظائف جديدة.';
+
+  @override
+  String get driverOnDeliveryAcceptingExplanation =>
+      'أنت تنفّذ توصيلات نشطة ويمكنك قبول عمل إضافي ضمن الحد الحالي.';
+
+  @override
+  String get driverAvailableExplanation =>
+      'يمكنك تصفح وظائف التوصيل الجديدة وقبولها.';
+
+  @override
+  String get driverOfflineExplanation => 'لا تستقبل عروض توصيل جديدة.';
+
+  @override
+  String get driverDashboardAvailabilityTitle => 'التوفر والحالة';
+
+  @override
+  String get driverActiveDeliveryCountLabel => 'التوصيلات النشطة';
+
+  @override
+  String get driverPauseNewJobsConfirmationTitle =>
+      'إيقاف عروض الوظائف الجديدة؟';
+
+  @override
+  String get driverPauseNewJobsConfirmationBody =>
+      'ستستمر التوصيلات المسندة والتذكيرات والإشعارات التشغيلية. سيتوقف استقبال عروض الوظائف الجديدة فقط.';
+
+  @override
+  String get driverPauseNewJobsAction => 'إيقاف الوظائف الجديدة';
+
+  @override
+  String get driverResumeNewJobs => 'استئناف الوظائف الجديدة';
+
+  @override
+  String get driverOperationalProfileDetails => 'تفاصيل الملف التشغيلي';
+
+  @override
+  String get driverProfileCity => 'المدينة';
+
+  @override
+  String get driverProfileArea => 'المنطقة';
+
+  @override
+  String get driverTransportationCar => 'سيارة';
+
+  @override
+  String get driverTransportationMotorcycle => 'دراجة نارية';
+
+  @override
+  String get driverTransportationBicycle => 'دراجة هوائية';
+
+  @override
+  String get driverTransportationWalking => 'سيرًا على الأقدام';
+
+  @override
+  String get driverTransportationUnknown => 'غير محدد';
+
+  @override
+  String get driverChooseTransportation => 'اختر وسيلة النقل';
+
+  @override
+  String get driverVehicleDescription => 'وصف المركبة';
+
+  @override
+  String get driverVehiclePlate => 'لوحة المركبة';
+
+  @override
+  String get driverCapacityNotes => 'ملاحظات السعة';
+
+  @override
+  String get driverCapacityNotesHint =>
+      'معلومات اختيارية عن حجم المواد أو سعة الحمل';
+
+  @override
+  String get driverOptionalField => 'اختياري';
+
+  @override
+  String get driverCityValidation => 'أدخل مدينة من حرفين إلى 100 حرف.';
+
+  @override
+  String get driverAreaValidation => 'أدخل منطقة من حرفين إلى 100 حرف.';
+
+  @override
+  String get driverTransportationValidation => 'اختر وسيلة نقل مدعومة.';
+
+  @override
+  String get driverVehicleLabelValidation =>
+      'يجب ألا يتجاوز وصف المركبة 120 حرفًا.';
+
+  @override
+  String get driverVehiclePlateValidation =>
+      'يجب ألا تتجاوز لوحة المركبة 32 حرفًا.';
+
+  @override
+  String get driverCapacityNotesValidation =>
+      'يجب ألا تتجاوز ملاحظات السعة 500 حرف.';
+
+  @override
+  String get driverSaveProfile => 'حفظ الملف';
+
+  @override
+  String get driverSavingProfile => 'جارٍ الحفظ…';
+
+  @override
+  String get driverProfileSaved => 'تم حفظ ملف السائق.';
+
+  @override
+  String get driverProfileLoadError => 'تعذّر تحميل ملف السائق';
+
+  @override
+  String get driverAccountSettingsTitle => 'إعدادات الحساب';
+
+  @override
+  String get driverAccountSettingsExplanation =>
+      'تتم إدارة الاسم ورقم الهاتف من إعدادات الحساب.';
+
+  @override
+  String get driverOpenAccountSettings => 'فتح إعدادات الحساب';
+
+  @override
+  String get driverUnsavedChangesTitle => 'تجاهل التغييرات غير المحفوظة؟';
+
+  @override
+  String get driverUnsavedChangesBody => 'لم تُحفظ تغييرات ملف السائق بعد.';
+
+  @override
+  String get driverKeepEditing => 'متابعة التعديل';
+
+  @override
+  String get driverDiscardChanges => 'تجاهل التغييرات';
+
+  @override
+  String get driverJobsPausedTitle => 'عروض الوظائف الجديدة متوقفة';
+
+  @override
+  String get driverJobsPausedExplanation =>
+      'فعّل استقبال الوظائف الجديدة لتصفح التوصيلات المتاحة مجددًا.';
+
+  @override
+  String get driverJobsInactiveTitle => 'ملف السائق غير نشط';
+
+  @override
+  String get driverJobsSuspendedTitle => 'ملف السائق موقوف';
+
+  @override
+  String get driverJobsUnavailableTitle => 'الوظائف المتاحة غير متوفرة';
+
+  @override
+  String get driverAssignedDeliveriesContinue =>
+      'تبقى التوصيلات المسندة والتذكيرات والبلاغات وسجل الإشعارات متاحة.';
+
+  @override
+  String get driverNotAcceptingNewJobsError =>
+      'استأنف استقبال الوظائف الجديدة قبل قبول هذا التوصيل.';
+
+  @override
+  String get driverCancelAction => 'إلغاء';
 }

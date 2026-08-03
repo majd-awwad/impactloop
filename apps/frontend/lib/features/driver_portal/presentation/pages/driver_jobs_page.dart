@@ -20,8 +20,10 @@ import '../../../deliveries/presentation/pickup_window_presentation.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
 import '../../application/driver_jobs_filter_helpers.dart';
+import '../../application/driver_profile_provider.dart';
 import '../../data/models/driver_deliveries_list_result.dart';
 import '../../data/models/driver_delivery.dart';
+import '../../data/models/driver_operational_profile.dart';
 
 class DriverJobsPage extends ConsumerStatefulWidget {
   const DriverJobsPage({super.key});
@@ -37,6 +39,7 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final availableAsync = ref.watch(availableDriverDeliveriesProvider);
+    final profileAsync = ref.watch(driverProfileProvider);
     final paginationError = ref.watch(
       driverAvailableJobsPaginationErrorProvider,
     );
@@ -69,6 +72,10 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
         availableAsync.value?.deliveries.length;
     final totalAvailableCount =
         availableMeta?.totalAvailableCount ?? nearbyCount;
+    final blocker = _resolveJobsBlocker(
+      profileAsync.value?.profile,
+      availableMeta,
+    );
 
     return SingleChildScrollView(
       padding: EdgeInsetsDirectional.fromSTEB(
@@ -91,138 +98,265 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
                 areaLabel: _areaChipLabel(headerMeta),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Text(
-                l10n.driverAvailableNearbyJobs,
-                style: AppTextStyles.title(context),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              _AvailableJobsFilters(meta: headerMeta),
-              const SizedBox(height: AppSpacing.md),
-              if (!canAcceptMore) ...[
+              if (blocker != null)
+                _DriverJobsBlockedState(
+                  blocker: blocker,
+                  isUpdating: profileAsync.value?.isMutating == true,
+                  onResume: blocker == _DriverJobsBlocker.paused
+                      ? () async {
+                          final changed = await ref
+                              .read(driverProfileProvider.notifier)
+                              .setAcceptingNewJobs(true);
+                          if (!context.mounted || changed) return;
+                          final error = ref
+                              .read(driverProfileProvider)
+                              .value
+                              ?.availabilityError;
+                          if (error != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  localizedApiErrorMessage(error, l10n),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      : null,
+                )
+              else ...[
                 Text(
-                  l10n.driverActiveLimitReached,
-                  style: AppTextStyles.body(context),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  l10n.driverActiveLimitHint,
-                  style: AppTextStyles.body(context).copyWith(
-                    color: MaterialsUiPalette.of(context).textSecondary,
-                  ),
+                  l10n.driverAvailableNearbyJobs,
+                  style: AppTextStyles.title(context),
                 ),
                 const SizedBox(height: AppSpacing.md),
-              ],
-              availableAsync.when(
-                skipLoadingOnReload: true,
-                loading: () => _StatePanel(
-                  icon: Icons.inventory_2_outlined,
-                  title: l10n.driverLoadingAvailable,
-                  subtitle: l10n.driverLookingForWaiting,
-                  compact: true,
-                ),
-                error: (error, _) => _StatePanel(
-                  icon: Icons.cloud_off_outlined,
-                  title: l10n.driverCouldNotLoadAvailable,
-                  subtitle: kDebugMode
-                      ? '$error'
-                      : l10n.supplierPleaseCheckYourConnectionAndTry,
-                  actionLabel: l10n.retry,
-                  onAction: () =>
-                      ref.invalidate(availableDriverDeliveriesProvider),
-                  compact: true,
-                ),
-                data: (result) {
-                  if (result.deliveries.isEmpty) {
-                    final emptyCopy = availableJobsEmptyStateCopy(
-                      filter: appliedFilter,
-                      l10n: l10n,
-                      nearbyCount: result.meta.nearbyAvailableCount ?? 0,
-                      totalAvailableCount: result.meta.totalAvailableCount,
-                    );
+                _AvailableJobsFilters(meta: headerMeta),
+                const SizedBox(height: AppSpacing.md),
+                if (!canAcceptMore) ...[
+                  Text(
+                    l10n.driverActiveLimitReached,
+                    style: AppTextStyles.body(context),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.driverActiveLimitHint,
+                    style: AppTextStyles.body(context).copyWith(
+                      color: MaterialsUiPalette.of(context).textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                availableAsync.when(
+                  skipLoadingOnReload: true,
+                  loading: () => _StatePanel(
+                    icon: Icons.inventory_2_outlined,
+                    title: l10n.driverLoadingAvailable,
+                    subtitle: l10n.driverLookingForWaiting,
+                    compact: true,
+                  ),
+                  error: (error, _) => _StatePanel(
+                    icon: Icons.cloud_off_outlined,
+                    title: l10n.driverCouldNotLoadAvailable,
+                    subtitle: kDebugMode
+                        ? '$error'
+                        : l10n.supplierPleaseCheckYourConnectionAndTry,
+                    actionLabel: l10n.retry,
+                    onAction: () =>
+                        ref.invalidate(availableDriverDeliveriesProvider),
+                    compact: true,
+                  ),
+                  data: (result) {
+                    if (result.deliveries.isEmpty) {
+                      final emptyCopy = availableJobsEmptyStateCopy(
+                        filter: appliedFilter,
+                        l10n: l10n,
+                        nearbyCount: result.meta.nearbyAvailableCount ?? 0,
+                        totalAvailableCount: result.meta.totalAvailableCount,
+                      );
 
-                    return _AvailableJobsEmptyState(
-                      copy: emptyCopy,
-                      onIncreaseRadius: emptyCopy.showIncreaseRadius
-                          ? () => ref
-                                .read(
-                                  driverAvailableJobsFilterProvider.notifier,
-                                )
-                                .increaseRadius()
-                          : null,
-                      onShowAnyDistance: emptyCopy.showAnyDistance
-                          ? () => ref
-                                .read(
-                                  driverAvailableJobsFilterProvider.notifier,
-                                )
-                                .setAnyDistance()
-                          : null,
-                      onReset: emptyCopy.showReset && headerMeta != null
-                          ? () => ref
-                                .read(
-                                  driverAvailableJobsFilterProvider.notifier,
-                                )
-                                .resetToProfileDefaults(headerMeta)
-                          : null,
-                    );
-                  }
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final delivery in result.deliveries) ...[
-                        _AvailableJobCard(
-                          delivery: delivery,
-                          acceptDisabled: !canAcceptMore,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      if (paginationError != null) ...[
-                        _StatePanel(
-                          icon: Icons.sync_problem_outlined,
-                          title: localizedApiErrorMessage(
-                            paginationError,
-                            l10n,
-                          ),
-                          subtitle: l10n.driverAvailableJobsCursorInvalid,
-                          actionLabel: l10n.retry,
-                          onAction: () => ref
-                              .read(availableDriverDeliveriesProvider.notifier)
-                              .restartPagination(),
-                          compact: true,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                      ],
-                      if (result.meta.pagination?.hasMore == true)
-                        Align(
-                          alignment: AlignmentDirectional.center,
-                          child: OutlinedButton.icon(
-                            onPressed: availableAsync.isLoading
-                                ? null
-                                : () => ref
-                                      .read(
-                                        availableDriverDeliveriesProvider
-                                            .notifier,
-                                      )
-                                      .loadMore(),
-                            icon: availableAsync.isLoading
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
+                      return _AvailableJobsEmptyState(
+                        copy: emptyCopy,
+                        onIncreaseRadius: emptyCopy.showIncreaseRadius
+                            ? () => ref
+                                  .read(
+                                    driverAvailableJobsFilterProvider.notifier,
                                   )
-                                : const Icon(Icons.expand_more_rounded),
-                            label: Text(l10n.loadMore),
+                                  .increaseRadius()
+                            : null,
+                        onShowAnyDistance: emptyCopy.showAnyDistance
+                            ? () => ref
+                                  .read(
+                                    driverAvailableJobsFilterProvider.notifier,
+                                  )
+                                  .setAnyDistance()
+                            : null,
+                        onReset: emptyCopy.showReset && headerMeta != null
+                            ? () => ref
+                                  .read(
+                                    driverAvailableJobsFilterProvider.notifier,
+                                  )
+                                  .resetToProfileDefaults(headerMeta)
+                            : null,
+                      );
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (final delivery in result.deliveries) ...[
+                          _AvailableJobCard(
+                            delivery: delivery,
+                            acceptDisabled: !canAcceptMore,
                           ),
-                        ),
-                    ],
-                  );
-                },
-              ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                        if (paginationError != null) ...[
+                          _StatePanel(
+                            icon: Icons.sync_problem_outlined,
+                            title: localizedApiErrorMessage(
+                              paginationError,
+                              l10n,
+                            ),
+                            subtitle: l10n.driverAvailableJobsCursorInvalid,
+                            actionLabel: l10n.retry,
+                            onAction: () => ref
+                                .read(
+                                  availableDriverDeliveriesProvider.notifier,
+                                )
+                                .restartPagination(),
+                            compact: true,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                        if (result.meta.pagination?.hasMore == true)
+                          Align(
+                            alignment: AlignmentDirectional.center,
+                            child: OutlinedButton.icon(
+                              onPressed: availableAsync.isLoading
+                                  ? null
+                                  : () => ref
+                                        .read(
+                                          availableDriverDeliveriesProvider
+                                              .notifier,
+                                        )
+                                        .loadMore(),
+                              icon: availableAsync.isLoading
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.expand_more_rounded),
+                              label: Text(l10n.loadMore),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+enum _DriverJobsBlocker { paused, inactive, suspended, unknownStatus }
+
+_DriverJobsBlocker? _resolveJobsBlocker(
+  DriverOperationalProfile? profile,
+  DriverDeliveriesListMeta? meta,
+) {
+  final status = profile?.status ?? meta?.status;
+  if (status == DriverProfileStatus.inactive) {
+    return _DriverJobsBlocker.inactive;
+  }
+  if (status == DriverProfileStatus.suspended) {
+    return _DriverJobsBlocker.suspended;
+  }
+  if (status == DriverProfileStatus.unknown && profile != null) {
+    return _DriverJobsBlocker.unknownStatus;
+  }
+
+  final accepting = profile?.acceptingNewJobs ?? meta?.acceptingNewJobs;
+  if (status == DriverProfileStatus.active && accepting == false) {
+    return _DriverJobsBlocker.paused;
+  }
+  if (profile == null && meta?.canBrowseAvailableJobs == false) {
+    return _DriverJobsBlocker.paused;
+  }
+  return null;
+}
+
+class _DriverJobsBlockedState extends StatelessWidget {
+  const _DriverJobsBlockedState({
+    required this.blocker,
+    required this.isUpdating,
+    this.onResume,
+  });
+
+  final _DriverJobsBlocker blocker;
+  final bool isUpdating;
+  final VoidCallback? onResume;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final (icon, title, subtitle) = switch (blocker) {
+      _DriverJobsBlocker.paused => (
+        Icons.pause_circle_outline_rounded,
+        l10n.driverJobsPausedTitle,
+        l10n.driverJobsPausedExplanation,
+      ),
+      _DriverJobsBlocker.inactive => (
+        Icons.person_off_outlined,
+        l10n.driverJobsInactiveTitle,
+        l10n.driverProfileInactiveExplanation,
+      ),
+      _DriverJobsBlocker.suspended => (
+        Icons.gpp_bad_outlined,
+        l10n.driverJobsSuspendedTitle,
+        l10n.driverProfileSuspendedExplanation,
+      ),
+      _DriverJobsBlocker.unknownStatus => (
+        Icons.help_outline_rounded,
+        l10n.driverJobsUnavailableTitle,
+        l10n.driverProfileUnknownExplanation,
+      ),
+    };
+    final operationalAccessAvailable = blocker == _DriverJobsBlocker.paused;
+
+    return AppEmptyStateCard(
+      key: const ValueKey('driver-jobs-blocked-state'),
+      icon: icon,
+      title: title,
+      subtitle: operationalAccessAvailable
+          ? '$subtitle\n${l10n.driverAssignedDeliveriesContinue}'
+          : subtitle,
+      actions: [
+        if (onResume != null)
+          FilledButton.icon(
+            key: const ValueKey('driver-resume-new-jobs'),
+            onPressed: isUpdating ? null : onResume,
+            icon: isUpdating
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.play_circle_outline_rounded),
+            label: Text(l10n.driverResumeNewJobs),
+          ),
+        if (operationalAccessAvailable)
+          OutlinedButton.icon(
+            key: const ValueKey('driver-open-active-deliveries'),
+            onPressed: () => context.go('/driver/active'),
+            icon: const Icon(Icons.local_shipping_outlined),
+            label: Text(l10n.driverMyActiveDeliveries),
+          ),
+      ],
     );
   }
 }
@@ -338,28 +472,41 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
 
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: (MediaQuery.sizeOf(context).width - AppSpacing.md * 4).clamp(
+          120.0,
+          420.0,
+        ),
       ),
-      decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: palette.mint),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-        ],
+      child: Container(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: palette.cardSurfaceAlt,
+          borderRadius: AppRadius.pillAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: palette.mint),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -457,7 +604,13 @@ class _AvailableJobsFilters extends ConsumerWidget {
               ButtonSegment(value: 'nearest', label: Text(l10n.driverNearest)),
               ButtonSegment(value: 'newest', label: Text(l10n.driverNewest)),
             ],
-            selected: {filter.sortBy},
+            selected: {
+              filter.sortBy.isNotEmpty
+                  ? filter.sortBy
+                  : (meta?.driverHasRecentLocation == true
+                        ? 'nearest'
+                        : 'newest'),
+            },
             onSelectionChanged: (selection) {
               notifier.setSortBy(selection.first);
             },
@@ -692,26 +845,29 @@ class _RadiusMarks extends StatelessWidget {
 
     return Row(
       children: [
-        for (var index = 0; index < steps.length; index++) ...[
-          if (index > 0) const Expanded(child: SizedBox()),
-          Text(
-            formatters.distanceKilometers(
-              steps[index].round(),
-              decimalDigits: 0,
-            ),
-            style: AppTextStyles.label(context).copyWith(
-              color: muted
-                  ? palette.textMuted
-                  : activeIndex == index
-                  ? palette.mint
-                  : palette.textSecondary,
-              fontSize: 11,
-              fontWeight: activeIndex == index
-                  ? FontWeight.w700
-                  : FontWeight.w500,
+        for (var index = 0; index < steps.length; index++)
+          Expanded(
+            child: Text(
+              formatters.distanceKilometers(
+                steps[index].round(),
+                decimalDigits: 0,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.label(context).copyWith(
+                color: muted
+                    ? palette.textMuted
+                    : activeIndex == index
+                    ? palette.mint
+                    : palette.textSecondary,
+                fontSize: 11,
+                fontWeight: activeIndex == index
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+              ),
             ),
           ),
-        ],
       ],
     );
   }
@@ -872,9 +1028,15 @@ class _AvailableJobCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status, l10n: l10n),
-                tone: deliveryStatusAppTone(delivery.status),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Align(
+                  alignment: AlignmentDirectional.topEnd,
+                  child: AppStatusBadge(
+                    label: deliveryStatusLabel(delivery.status, l10n: l10n),
+                    tone: deliveryStatusAppTone(delivery.status),
+                  ),
+                ),
               ),
             ],
           ),

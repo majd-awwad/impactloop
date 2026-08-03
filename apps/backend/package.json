@@ -39,6 +39,9 @@
     "backfill-driver-new-job-notifications": "tsx ../../scripts/backfill-driver-new-job-notifications.ts",
     "verify-driver-notifications": "tsx ../../scripts/verify-driver-notifications.ts",
     "verify:driver-profile-availability-migration": "tsx scripts/verify-driver-profile-availability-migration.ts",
+    "verify:driver-available-jobs-waiting-index": "tsx scripts/verify-driver-available-jobs-waiting-index.ts",
+    "test:driver-e2e": "tsx scripts/run-driver-e2e.ts",
+    "bench:driver-query-scale": "tsx scripts/bench-driver-query-scale.ts",
     "backfill:material-thumbnails": "tsx scripts/backfill-material-thumbnails.ts"
   },
   "keywords": [],
