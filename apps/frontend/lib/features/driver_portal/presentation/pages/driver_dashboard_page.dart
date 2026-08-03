@@ -158,6 +158,8 @@ class DriverDashboardPage extends ConsumerWidget {
                         child: Text(
                           l10n.driverMyActiveDeliveries,
                           style: AppTextStyles.title(context),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       TextButton(

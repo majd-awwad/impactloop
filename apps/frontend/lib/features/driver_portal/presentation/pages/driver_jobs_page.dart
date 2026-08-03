@@ -472,28 +472,41 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
 
-    return Container(
-      padding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: (MediaQuery.sizeOf(context).width - AppSpacing.md * 4).clamp(
+          120.0,
+          420.0,
+        ),
       ),
-      decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
-        borderRadius: AppRadius.pillAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: palette.mint),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textSecondary),
-          ),
-        ],
+      child: Container(
+        padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: palette.cardSurfaceAlt,
+          borderRadius: AppRadius.pillAll,
+          border: Border.all(color: palette.borderSubtle),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: palette.mint),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textSecondary),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -832,26 +845,29 @@ class _RadiusMarks extends StatelessWidget {
 
     return Row(
       children: [
-        for (var index = 0; index < steps.length; index++) ...[
-          if (index > 0) const Expanded(child: SizedBox()),
-          Text(
-            formatters.distanceKilometers(
-              steps[index].round(),
-              decimalDigits: 0,
-            ),
-            style: AppTextStyles.label(context).copyWith(
-              color: muted
-                  ? palette.textMuted
-                  : activeIndex == index
-                  ? palette.mint
-                  : palette.textSecondary,
-              fontSize: 11,
-              fontWeight: activeIndex == index
-                  ? FontWeight.w700
-                  : FontWeight.w500,
+        for (var index = 0; index < steps.length; index++)
+          Expanded(
+            child: Text(
+              formatters.distanceKilometers(
+                steps[index].round(),
+                decimalDigits: 0,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.label(context).copyWith(
+                color: muted
+                    ? palette.textMuted
+                    : activeIndex == index
+                    ? palette.mint
+                    : palette.textSecondary,
+                fontSize: 11,
+                fontWeight: activeIndex == index
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+              ),
             ),
           ),
-        ],
       ],
     );
   }
@@ -1012,9 +1028,15 @@ class _AvailableJobCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              AppStatusBadge(
-                label: deliveryStatusLabel(delivery.status, l10n: l10n),
-                tone: deliveryStatusAppTone(delivery.status),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Align(
+                  alignment: AlignmentDirectional.topEnd,
+                  child: AppStatusBadge(
+                    label: deliveryStatusLabel(delivery.status, l10n: l10n),
+                    tone: deliveryStatusAppTone(delivery.status),
+                  ),
+                ),
               ),
             ],
           ),

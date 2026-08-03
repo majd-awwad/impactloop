@@ -220,6 +220,9 @@ class _StatusWithIcon extends StatelessWidget {
               Flexible(
                 child: Text(
                   label,
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: style.foreground,
                     fontWeight: FontWeight.w700,

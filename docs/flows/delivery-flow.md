@@ -135,7 +135,7 @@ Admin driver-assignment reopen:
 - `DRIVER` users are protected by `/driver` route guards and land on `/driver/jobs` after login unless they also have `SUPPLIER`.
 - `/driver/jobs` shows active delivery first and available waiting jobs below it.
 - Available jobs show safe city/area pickup and dropoff data only.
-- The current portal does not expose a separate availability toggle; an active driver profile can accept a waiting job from `OFFLINE` or `AVAILABLE`, and accept moves the profile to `ON_DELIVERY`.
+- Drivers control `acceptingNewJobs` from Profile / Dashboard. Effective `availability` is system-managed (`ON_DELIVERY` / `AVAILABLE` / `OFFLINE`). Browse and accept require accepting new jobs; active work continues while future jobs are paused.
 - A driver may carry up to three active in-progress deliveries.
 - `/driver/deliveries/:id` is resolved from active assigned deliveries. If the id is not active or not assigned to the driver, the page shows a back-to-jobs state.
 - The detail page exposes one next action at a time, matching the backend transition order.

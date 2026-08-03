@@ -153,13 +153,12 @@ Public registration supports only learners and suppliers. Driver, moderator, and
 
 - No background GPS.
 - No realtime stream.
-- No driver availability toggle in Flutter beyond accept/status behavior.
 - No full Uber-style tracking.
+- Driver `acceptingNewJobs` preference is exposed in Flutter; effective availability remains system-managed.
 
 **Planned / future:**
 
 - Better operational controls for failed deliveries, reassignment, cancellation, and proof of delivery.
-- Optional availability management if the driver workflow needs it.
 
 **Strongest product feature:** Basic internal delivery coordination with explicit delivery status.
 
