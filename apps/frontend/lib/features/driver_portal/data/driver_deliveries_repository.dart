@@ -26,14 +26,18 @@ class DriverDeliveriesRepository {
 
   final DriverDeliveriesApi _api;
 
-  Future<DriverArchivePage<DriverHistoricalDelivery>> fetchHistory({String? cursor, int limit = 20}) =>
-      _api.fetchHistory(cursor: cursor, limit: limit);
+  Future<DriverArchivePage<DriverHistoricalDelivery>> fetchHistory({
+    String? cursor,
+    int limit = 20,
+  }) => _api.fetchHistory(cursor: cursor, limit: limit);
 
   Future<DriverHistoricalDelivery> fetchHistoricalDelivery(String deliveryId) =>
       _api.fetchHistoricalDelivery(deliveryId);
 
-  Future<DriverArchivePage<DriverIncident>> fetchIncidents({String? cursor, int limit = 20}) =>
-      _api.fetchIncidents(cursor: cursor, limit: limit);
+  Future<DriverArchivePage<DriverIncident>> fetchIncidents({
+    String? cursor,
+    int limit = 20,
+  }) => _api.fetchIncidents(cursor: cursor, limit: limit);
 
   Future<DriverDeliveriesListResult> fetchAvailableDeliveries({
     DriverAvailableJobsFilter? filter,

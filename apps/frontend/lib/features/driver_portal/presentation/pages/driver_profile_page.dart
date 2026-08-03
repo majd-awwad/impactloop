@@ -9,10 +9,12 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../l10n/l10n.dart';
 import '../../../../shared/l10n/driver_profile_ui_labels.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
+import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../application/driver_profile_provider.dart';
 import '../../data/models/driver_operational_profile.dart';
 import '../widgets/driver_availability_summary_card.dart';
+import '../widgets/driver_page_header.dart';
 
 class DriverProfilePage extends ConsumerStatefulWidget {
   const DriverProfilePage({super.key});
@@ -236,19 +238,21 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
 
   Widget _buildContent(DriverProfileState state) {
     final l10n = context.l10n;
+    final palette = MaterialsUiPalette.of(context);
     final profile = state.profile;
     final editable = profile.isAdministrativelyActive && !state.isMutating;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.driverProfileTitle, style: AppTextStyles.display(context)),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          l10n.driverProfileSubtitle,
-          style: AppTextStyles.subtitle(context),
+        DriverPageHeader(
+          title: l10n.driverProfileTitle,
+          subtitle: l10n.driverProfileSubtitle,
+          maxWidth: 1120,
         ),
         const SizedBox(height: AppSpacing.lg),
+
+        // Availability section
         DriverAvailabilitySummaryCard(
           profile: profile,
           isMutating: state.isMutating,
@@ -256,7 +260,9 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
           onPreferenceChanged: _changePreference,
         ),
         const SizedBox(height: AppSpacing.lg),
-        _ProfilePanel(
+
+        // Operating details section
+        _ProfileSection(
           title: l10n.driverOperationalProfileDetails,
           child: Form(
             key: _formKey,
@@ -310,6 +316,8 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
+
+                // Transportation
                 DropdownButtonFormField<DriverTransportationType>(
                   key: const ValueKey('driver-profile-transportation'),
                   isExpanded: true,
@@ -351,7 +359,16 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
                       ? l10n.driverTransportationValidation
                       : null,
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Vehicle section
+                Text(
+                  l10n.driverVehicleDescription,
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textMuted),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 _textField(
                   key: const ValueKey('driver-profile-vehicle-label'),
                   controller: _vehicleLabelController,
@@ -373,7 +390,16 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
                   textDirection: TextDirection.ltr,
                   textAlign: TextAlign.left,
                 ),
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Capacity section
+                Text(
+                  l10n.driverCapacityNotes,
+                  style: AppTextStyles.label(
+                    context,
+                  ).copyWith(color: palette.textMuted),
+                ),
+                const SizedBox(height: AppSpacing.sm),
                 _textField(
                   key: const ValueKey('driver-profile-capacity-notes'),
                   controller: _capacityNotesController,
@@ -385,6 +411,8 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
                   maxLines: 4,
                 ),
                 const SizedBox(height: AppSpacing.lg),
+
+                // Save button
                 FilledButton.icon(
                   key: const ValueKey('driver-profile-save'),
                   onPressed: editable && _isDirty ? _save : null,
@@ -399,12 +427,29 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
                         ? l10n.driverSavingProfile
                         : l10n.driverSaveProfile,
                   ),
+                  style: _isDirty && editable
+                      ? AppStatusButtonStyle.filled(
+                          context,
+                          AppStatusTone.primary,
+                        )
+                      : null,
                 ),
+                if (!editable && !state.isMutating) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    driverProfileStatusExplanation(l10n, profile.status),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textMuted, fontSize: 12),
+                  ),
+                ],
               ],
             ),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
+
+        // Account settings card
         _AccountSettingsCard(onOpen: () => context.go('/profile/account')),
       ],
     );
@@ -447,8 +492,8 @@ class _DriverProfilePageState extends ConsumerState<DriverProfilePage> {
   }
 }
 
-class _ProfilePanel extends StatelessWidget {
-  const _ProfilePanel({required this.title, required this.child});
+class _ProfileSection extends StatelessWidget {
+  const _ProfileSection({required this.title, required this.child});
 
   final String title;
   final Widget child;

@@ -198,6 +198,87 @@ typedef LocalizedNotificationCopy = ({String title, String body});
 String _metadataString(Map<String, dynamic> metadata, String key) =>
     metadata[key]?.toString().trim() ?? '';
 
+LocalizedNotificationCopy _localizedDriverNotificationTemplates(
+  String rawType,
+  AppLocalizations l10n, {
+  required String materialTitle,
+}) {
+  return switch (rawType) {
+    'DRIVER_NEW_JOB' => (
+      title: l10n.notificationDriverNewJobTitle,
+      body: l10n.notificationDriverNewJobBody(materialTitle),
+    ),
+    'DRIVER_PICKUP_TIME' => (
+      title: l10n.notificationDriverPickupTimeTitle,
+      body: l10n.notificationDriverPickupTimeBody(materialTitle),
+    ),
+    'DRIVER_PICKUP_REMINDER' => (
+      title: l10n.notificationDriverPickupReminderTitle,
+      body: l10n.notificationDriverPickupReminderBody(materialTitle),
+    ),
+    'DRIVER_PICKUP_STARTING_SOON' => (
+      title: l10n.notificationDriverPickupStartingSoonTitle,
+      body: l10n.notificationDriverPickupStartingSoonBody(materialTitle),
+    ),
+    'DRIVER_PICKUP_WINDOW_STARTED' => (
+      title: l10n.notificationDriverPickupWindowStartedTitle,
+      body: l10n.notificationDriverPickupWindowStartedBody(materialTitle),
+    ),
+    'DRIVER_PICKUP_OVERDUE' => (
+      title: l10n.notificationDriverPickupOverdueTitle,
+      body: l10n.notificationDriverPickupOverdueBody(materialTitle),
+    ),
+    'DRIVER_DROPOFF_TIME' => (
+      title: l10n.notificationDriverDropoffTimeTitle,
+      body: l10n.notificationDriverDropoffTimeBody(materialTitle),
+    ),
+    'DRIVER_DROPOFF_REMINDER' => (
+      title: l10n.notificationDriverDropoffReminderTitle,
+      body: l10n.notificationDriverDropoffReminderBody(materialTitle),
+    ),
+    'DRIVER_DROPOFF_STARTING_SOON' => (
+      title: l10n.notificationDriverDropoffStartingSoonTitle,
+      body: l10n.notificationDriverDropoffStartingSoonBody(materialTitle),
+    ),
+    'DRIVER_DROPOFF_WINDOW_STARTED' => (
+      title: l10n.notificationDriverDropoffWindowStartedTitle,
+      body: l10n.notificationDriverDropoffWindowStartedBody(materialTitle),
+    ),
+    'DRIVER_DROPOFF_OVERDUE' => (
+      title: l10n.notificationDriverDropoffOverdueTitle,
+      body: l10n.notificationDriverDropoffOverdueBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_REQUEST_CREATED' => (
+      title: l10n.notificationDriverDeliveryRequestCreatedTitle,
+      body: l10n.notificationDriverDeliveryRequestCreatedBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_ACCEPTED' => (
+      title: l10n.notificationDriverDeliveryAcceptedTitle,
+      body: l10n.notificationDriverDeliveryAcceptedBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_NEXT_STEP' => (
+      title: l10n.notificationDriverDeliveryNextStepTitle,
+      body: l10n.notificationDriverDeliveryNextStepBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN' => (
+      title: l10n.notificationDriverUnassignedTitle,
+      body: l10n.notificationDriverUnassignedBody(materialTitle),
+    ),
+    'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' => (
+      title: l10n.notificationDriverMovedToAdminTitle,
+      body: l10n.notificationDriverMovedToAdminBody,
+    ),
+    'DELIVERY_DRIVER_ASSIGNED' => (
+      title: l10n.notificationDeliveryDriverAssignedTitle,
+      body: l10n.notificationDeliveryDriverAssignedBody(materialTitle),
+    ),
+    _ => (
+      title: l10n.notificationFallbackTitle,
+      body: l10n.notificationFallbackBody,
+    ),
+  };
+}
+
 LocalizedNotificationCopy _localizedSupplierNotificationTemplates(
   String rawType,
   AppLocalizations l10n, {
@@ -286,6 +367,12 @@ LocalizedNotificationCopy localizedNotificationCopy(
     learnerName: learnerName,
   );
 
+  final driverTemplate = _localizedDriverNotificationTemplates(
+    notification.notificationType,
+    l10n,
+    materialTitle: materialTitle,
+  );
+
   return switch (notification.notificationType) {
     'RESERVATION_ACCEPTED' => (
       title: l10n.reservationAcceptedTitle,
@@ -349,26 +436,23 @@ LocalizedNotificationCopy localizedNotificationCopy(
         body: l10n.projectModerationBody(safeProjectTitle),
       ),
     },
-    'DRIVER_NEW_JOB' => (
-      title: l10n.notificationDriverNewJobTitle,
-      body: l10n.notificationDriverNewJobBody(materialTitle),
-    ),
-    'DRIVER_PICKUP_TIME' => (
-      title: l10n.notificationDriverPickupTimeTitle,
-      body: l10n.notificationDriverPickupTimeBody(materialTitle),
-    ),
-    'DRIVER_DROPOFF_TIME' => (
-      title: l10n.notificationDriverDropoffTimeTitle,
-      body: l10n.notificationDriverDropoffTimeBody(materialTitle),
-    ),
-    'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN' => (
-      title: l10n.notificationDriverUnassignedTitle,
-      body: l10n.notificationDriverUnassignedBody(materialTitle),
-    ),
-    'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' => (
-      title: l10n.notificationDriverMovedToAdminTitle,
-      body: l10n.notificationDriverMovedToAdminBody,
-    ),
+    'DRIVER_NEW_JOB' ||
+    'DRIVER_PICKUP_TIME' ||
+    'DRIVER_PICKUP_REMINDER' ||
+    'DRIVER_PICKUP_STARTING_SOON' ||
+    'DRIVER_PICKUP_WINDOW_STARTED' ||
+    'DRIVER_PICKUP_OVERDUE' ||
+    'DRIVER_DROPOFF_TIME' ||
+    'DRIVER_DROPOFF_REMINDER' ||
+    'DRIVER_DROPOFF_STARTING_SOON' ||
+    'DRIVER_DROPOFF_WINDOW_STARTED' ||
+    'DRIVER_DROPOFF_OVERDUE' ||
+    'DRIVER_DELIVERY_REQUEST_CREATED' ||
+    'DRIVER_DELIVERY_ACCEPTED' ||
+    'DRIVER_DELIVERY_NEXT_STEP' ||
+    'DRIVER_DELIVERY_UNASSIGNED_BY_ADMIN' ||
+    'DRIVER_DELIVERY_MOVED_TO_ADMIN_REVIEW' ||
+    'DELIVERY_DRIVER_ASSIGNED' => driverTemplate,
     _ when l10n.localeName == 'en' && notification.title.trim().isNotEmpty => (
       title: notification.title,
       body: notification.body,

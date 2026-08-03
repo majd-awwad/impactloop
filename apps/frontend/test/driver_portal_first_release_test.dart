@@ -23,6 +23,7 @@ import 'package:frontend/l10n/app_localizations.dart';
 import 'package:frontend/l10n/app_localizations_ar.dart';
 import 'package:frontend/shared/l10n/driver_ui_labels.dart';
 import 'package:frontend/shared/widgets/bidi_text.dart';
+import 'package:frontend/shared/widgets/notification_bell_button.dart';
 
 DriverDelivery _activeDelivery({String status = 'ON_THE_WAY'}) {
   return DriverDelivery.fromJson({
@@ -417,6 +418,7 @@ void main() {
           ),
           GoRoute(path: '/driver/jobs', builder: (_, _) => const SizedBox()),
           GoRoute(path: '/driver/active', builder: (_, _) => const SizedBox()),
+          GoRoute(path: '/driver/history', builder: (_, _) => const SizedBox()),
           GoRoute(
             path: '/driver/notifications',
             builder: (_, _) => const SizedBox(),
@@ -458,8 +460,81 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.byType(NavigationDestination), findsNWidgets(4));
+      for (var i = 0; i < 5; i++) {
+        expect(find.byKey(ValueKey('driver-mobile-nav-$i')), findsOneWidget);
+      }
+    },
+  );
+
+  testWidgets(
+    'Driver shell renders exactly one notification bell on phone and desktop',
+    (tester) async {
+      Future<void> pumpAt(Size size) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        final router = GoRouter(
+          initialLocation: '/driver',
+          routes: [
+            GoRoute(
+              path: '/driver',
+              builder: (_, _) => const DriverPortalShell(
+                child: Center(child: Text('Driver dashboard')),
+              ),
+            ),
+            GoRoute(path: '/driver/jobs', builder: (_, _) => const SizedBox()),
+            GoRoute(
+              path: '/driver/active',
+              builder: (_, _) => const SizedBox(),
+            ),
+            GoRoute(
+              path: '/driver/history',
+              builder: (_, _) => const SizedBox(),
+            ),
+            GoRoute(
+              path: '/driver/notifications',
+              builder: (_, _) => const SizedBox(),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authControllerProvider.overrideWith(
+                _DriverTestAuthController.new,
+              ),
+              myNotificationUnreadCountProvider.overrideWith(
+                _ZeroUnreadCountNotifier.new,
+              ),
+              supplierNotificationsUnreadCountProvider.overrideWith(
+                _ZeroSupplierUnreadCountNotifier.new,
+              ),
+            ],
+            child: MaterialApp.router(
+              locale: const Locale('ar'),
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              routerConfig: router,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await pumpAt(const Size(390, 844));
+      expect(find.byType(NotificationBellButton), findsOneWidget);
+
+      await pumpAt(const Size(1100, 900));
+      expect(find.byType(NotificationBellButton), findsOneWidget);
     },
   );
 }

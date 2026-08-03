@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -8,6 +9,8 @@ import '../../../../l10n/l10n.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../widgets/driver_active_delivery_card.dart';
+import '../widgets/driver_asset_image.dart';
+import '../widgets/driver_page_header.dart';
 
 class DriverActiveDeliveriesPage extends ConsumerWidget {
   const DriverActiveDeliveriesPage({super.key});
@@ -34,9 +37,9 @@ class DriverActiveDeliveriesPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.driverMyActiveDeliveries,
-                    style: AppTextStyles.display(context),
+                  DriverPageHeader(
+                    title: l10n.driverMyActiveDeliveries,
+                    maxWidth: 1120,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   deliveriesAsync.when(
@@ -61,10 +64,30 @@ class DriverActiveDeliveriesPage extends ConsumerWidget {
                     ),
                     data: (result) {
                       if (result.deliveries.isEmpty) {
-                        return AppEmptyStateCard(
-                          icon: Icons.local_shipping_outlined,
-                          title: l10n.driverNoActiveDeliveries,
-                          subtitle: l10n.driverNoActiveDeliveriesHint,
+                        return Column(
+                          children: [
+                            DriverAssetImage(
+                              assetPath: DriverAssetPaths.emptyDeliveries,
+                              height: 100,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              l10n.driverEmptyActiveTitle,
+                              style: AppTextStyles.title(context),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              l10n.driverEmptyActiveBody,
+                              style: AppTextStyles.body(context),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            FilledButton(
+                              onPressed: () => context.go('/driver/jobs'),
+                              child: Text(l10n.driverEmptyActiveCta),
+                            ),
+                          ],
                         );
                       }
 

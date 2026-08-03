@@ -7,6 +7,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_quantity_labels.dart';
+import '../../../../shared/l10n/driver_status_labels.dart';
 import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/bidi_text.dart';
@@ -14,6 +16,8 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../application/driver_archive_provider.dart';
 import '../../data/models/driver_archive.dart';
+import '../widgets/driver_page_header.dart';
+import '../widgets/driver_route_block.dart';
 
 class DriverHistoryPage extends ConsumerWidget {
   const DriverHistoryPage({super.key, this.initialTab = 0});
@@ -51,14 +55,10 @@ class DriverHistoryPage extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.driverHistoryTitle,
-                    style: AppTextStyles.display(context),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.driverHistorySubtitle,
-                    style: AppTextStyles.body(context),
+                  DriverPageHeader(
+                    title: l10n.driverHistoryTitle,
+                    subtitle: l10n.driverHistorySubtitle,
+                    maxWidth: 1040,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   SegmentedButton<int>(
@@ -185,6 +185,13 @@ class _HistoryCard extends StatelessWidget {
     final palette = MaterialsUiPalette.of(context);
     final labels = DriverUiLabels(l10n);
     final date = LocalizedFormatters(l10n).dateTime(delivery.historicalAt);
+    final pickupSummary = labels.locationSummary(
+      delivery.pickupLocation.safeSummary,
+    );
+    final dropoffSummary = labels.locationSummary(
+      delivery.dropoffLocation.safeSummary,
+    );
+
     return Semantics(
       button: true,
       label: l10n.driverOpenHistoricalDelivery,
@@ -192,7 +199,7 @@ class _HistoryCard extends StatelessWidget {
         onTap: () => context.go('/driver/history/${delivery.id}'),
         borderRadius: AppRadius.lgAll,
         child: Container(
-          padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+          padding: const EdgeInsetsDirectional.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: palette.cardSurface,
             borderRadius: AppRadius.lgAll,
@@ -203,48 +210,61 @@ class _HistoryCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: AppStatusBadge(
-                      label: deliveryStatusLabel(delivery.status, l10n: l10n),
-                      tone: deliveryStatusAppTone(delivery.status),
-                    ),
+                  AppStatusBadge(
+                    label: driverDeliveryStatusLabel(delivery.status, l10n),
+                    tone: deliveryStatusAppTone(delivery.status),
                   ),
+                  const Spacer(),
                   Flexible(
                     child: Text(
                       date,
                       textAlign: TextAlign.end,
                       style: AppTextStyles.body(
                         context,
-                      ).copyWith(color: palette.textMuted),
+                      ).copyWith(color: palette.textMuted, fontSize: 12),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                labels.partyDisplayName(delivery.supplier.displayName),
-                style: AppTextStyles.title(context),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                '${labels.locationSummary(delivery.pickupLocation.safeSummary)} → ${labels.locationSummary(delivery.dropoffLocation.safeSummary)}',
+              const SizedBox(height: AppSpacing.sm),
+              DriverRouteBlock(
+                pickupSummary: pickupSummary,
+                dropoffSummary: dropoffSummary,
+                compact: true,
               ),
               const SizedBox(height: AppSpacing.sm),
               for (final item in delivery.carriedItems.take(3))
-                Text(
-                  '${bidiIsolate(labels.materialTitle(item.materialTitle))} × ${bidiIsolate(item.quantityLabel)}',
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    '${bidiIsolate(labels.materialTitle(item.materialTitle))} × ${bidiIsolate(driverQuantityLabel(l10n, item.quantity, item.unit))}',
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary, fontSize: 13),
+                  ),
                 ),
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.xs,
                 children: [
-                  Text(labels.assignmentOutcome(delivery.assignmentOutcome)),
+                  Text(
+                    labels.assignmentOutcome(delivery.assignmentOutcome),
+                    style: AppTextStyles.label(context).copyWith(fontSize: 12),
+                  ),
                   if (delivery.partialPickupOccurred)
-                    Text('• ${l10n.driverPartialPickupHistory}'),
-                  if (delivery.incidentReviewStatus != null)
                     Text(
-                      '• ${labels.incidentReviewStatus(delivery.incidentReviewStatus!)}',
+                      '• ${l10n.driverPartialPickupHistory}',
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(fontSize: 12),
+                    ),
+                  if (delivery.incidentReviewStatus != null)
+                    AppStatusBadge(
+                      label: labels.incidentReviewStatus(
+                        delivery.incidentReviewStatus!,
+                      ),
+                      tone: _incidentReviewTone(delivery.incidentReviewStatus!),
                     ),
                 ],
               ),
@@ -266,7 +286,7 @@ class _IncidentCard extends StatelessWidget {
     final labels = DriverUiLabels(l10n);
     final palette = MaterialsUiPalette.of(context);
     return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: palette.cardSurface,
         borderRadius: AppRadius.lgAll,
@@ -282,12 +302,17 @@ class _IncidentCard extends StatelessWidget {
             children: [
               AppStatusBadge(
                 label: labels.incidentReviewStatus(incident.reviewStatus),
-                tone: AppStatusTone.neutral,
+                tone: _incidentReviewTone(incident.reviewStatus),
               ),
-              Text(LocalizedFormatters(l10n).dateTime(incident.createdAt)),
+              Text(
+                LocalizedFormatters(l10n).dateTime(incident.createdAt),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: palette.textMuted, fontSize: 12),
+              ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             labels.incidentType(incident.type),
             style: AppTextStyles.title(context),
@@ -333,6 +358,17 @@ class _IncidentCard extends StatelessWidget {
       ),
     );
   }
+}
+
+AppStatusTone _incidentReviewTone(String reviewStatus) {
+  final normalized = reviewStatus.trim().toUpperCase();
+  return switch (normalized) {
+    'PENDING_REVIEW' => AppStatusTone.warning,
+    'VERIFIED' => AppStatusTone.success,
+    'REJECTED' => AppStatusTone.danger,
+    'RESOLVED_NO_STRIKE' => AppStatusTone.info,
+    _ => AppStatusTone.neutral,
+  };
 }
 
 class _ArchiveNotice extends StatelessWidget {

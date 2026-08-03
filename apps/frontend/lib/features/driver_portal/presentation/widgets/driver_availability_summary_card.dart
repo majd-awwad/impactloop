@@ -8,6 +8,7 @@ import '../../../../shared/l10n/driver_profile_ui_labels.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../data/models/driver_operational_profile.dart';
+import 'driver_asset_image.dart';
 
 Future<bool> confirmDriverAvailabilityPreference(
   BuildContext context,
@@ -43,6 +44,7 @@ class DriverAvailabilitySummaryCard extends StatelessWidget {
     required this.isUpdatingAvailability,
     required this.onPreferenceChanged,
     this.compact = false,
+    this.heroAssetPath,
   });
 
   final DriverOperationalProfile profile;
@@ -50,6 +52,7 @@ class DriverAvailabilitySummaryCard extends StatelessWidget {
   final bool isUpdatingAvailability;
   final ValueChanged<bool>? onPreferenceChanged;
   final bool compact;
+  final String? heroAssetPath;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +62,6 @@ class DriverAvailabilitySummaryCard extends StatelessWidget {
     final enabled = profile.isAdministrativelyActive && !isMutating;
     final activeCount = profile.activeDeliveryCount;
     final maxActive = profile.maxActiveDeliveries;
-
     return Semantics(
       container: true,
       label: l10n.driverDashboardAvailabilityTitle,
@@ -75,95 +77,121 @@ class DriverAvailabilitySummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              l10n.driverDashboardAvailabilityTitle,
-              style: AppTextStyles.title(context),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.driverDashboardAvailabilityTitle,
+                              style: AppTextStyles.title(
+                                context,
+                              ).copyWith(color: palette.textPrimary),
+                            ),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isUpdatingAvailability)
+                                const Padding(
+                                  padding: EdgeInsetsDirectional.only(
+                                    end: AppSpacing.sm,
+                                  ),
+                                  child: SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                              Switch.adaptive(
+                                key: const ValueKey(
+                                  'driver-accepting-new-jobs-switch',
+                                ),
+                                value: accepting,
+                                onChanged: enabled && !isUpdatingAvailability
+                                    ? onPreferenceChanged
+                                    : null,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        accepting
+                            ? l10n.driverAcceptingJobsOnExplicit
+                            : l10n.driverAcceptingJobsOffExplicit,
+                        style: AppTextStyles.body(context).copyWith(
+                          color: accepting
+                              ? palette.textPrimary
+                              : palette.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (heroAssetPath != null) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  DriverAssetImage(
+                    assetPath: heroAssetPath!,
+                    height: compact ? 100 : 120,
+                    width: compact ? 100 : 120,
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: AppSpacing.md),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                _StatusWithIcon(
+                _CompactBadge(
                   icon: profile.isAdministrativelyActive
                       ? Icons.verified_user_outlined
                       : Icons.admin_panel_settings_outlined,
-                  label:
-                      '${l10n.driverAdministrativeProfileStatus}: ${driverProfileStatusLabel(l10n, profile.status)}',
+                  label: driverProfileStatusLabel(l10n, profile.status),
                   tone: _profileTone(profile.status),
                 ),
-                _StatusWithIcon(
+                _CompactBadge(
                   icon: _availabilityIcon(profile.availability),
-                  label:
-                      '${l10n.driverOperationalState}: ${driverAvailabilityLabel(l10n, profile.availability)}',
+                  label: driverAvailabilityLabel(l10n, profile.availability),
                   tone: _availabilityTone(profile.availability),
                 ),
                 if (activeCount != null)
-                  _StatusWithIcon(
+                  _CompactBadge(
                     icon: Icons.local_shipping_outlined,
                     label:
-                        '${l10n.driverActiveDeliveryCountLabel}: $activeCount${maxActive == null ? '' : '/$maxActive'}',
+                        '$activeCount${maxActive == null ? '' : '/$maxActive'}',
                     tone: AppStatusTone.info,
                   ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
                   Icons.info_outline_rounded,
-                  color: palette.textSecondary,
-                  semanticLabel: l10n.driverSystemManagedState,
+                  size: 16,
+                  color: palette.textMuted,
                 ),
-                const SizedBox(width: AppSpacing.sm),
+                const SizedBox(width: AppSpacing.xs),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.driverSystemManagedState,
-                        style: AppTextStyles.label(context),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        driverAvailabilityExplanation(l10n, profile),
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(color: palette.textSecondary),
-                      ),
-                    ],
+                  child: Text(
+                    driverAvailabilityExplanation(l10n, profile),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary, fontSize: 12),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Semantics(
-              toggled: accepting,
-              enabled: enabled,
-              label: l10n.driverAcceptingNewJobs,
-              child: SwitchListTile.adaptive(
-                key: const ValueKey('driver-accepting-new-jobs-switch'),
-                contentPadding: EdgeInsets.zero,
-                value: accepting,
-                onChanged: enabled ? onPreferenceChanged : null,
-                title: Text(l10n.driverAcceptingNewJobs),
-                subtitle: Text(
-                  accepting
-                      ? l10n.driverAcceptingNewJobsOn
-                      : l10n.driverAcceptingNewJobsOff,
-                ),
-                secondary: isUpdatingAvailability
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        accepting
-                            ? Icons.notifications_active_outlined
-                            : Icons.notifications_paused_outlined,
-                      ),
-              ),
             ),
             if (!profile.isAdministrativelyActive) ...[
               const SizedBox(height: AppSpacing.xs),
@@ -181,8 +209,8 @@ class DriverAvailabilitySummaryCard extends StatelessWidget {
   }
 }
 
-class _StatusWithIcon extends StatelessWidget {
-  const _StatusWithIcon({
+class _CompactBadge extends StatelessWidget {
+  const _CompactBadge({
     required this.icon,
     required this.label,
     required this.tone,
@@ -195,43 +223,31 @@ class _StatusWithIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = AppStatusStyle.of(context, tone);
-    final availableWidth =
-        MediaQuery.sizeOf(context).width - (AppSpacing.md * 4);
-    final maxWidth = availableWidth.clamp(160.0, 420.0);
-    return Semantics(
-      label: label,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Container(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 3,
+      ),
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: style.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: style.foreground),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: style.foreground,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          decoration: BoxDecoration(
-            color: style.background,
-            borderRadius: AppRadius.pillAll,
-            border: Border.all(color: style.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: style.foreground),
-              const SizedBox(width: AppSpacing.xs),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  softWrap: true,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: style.foreground,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

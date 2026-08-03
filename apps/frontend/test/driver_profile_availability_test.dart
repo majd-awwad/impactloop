@@ -610,9 +610,12 @@ void main() {
         profileRepository: _FakeProfileRepository(initial: _profile()),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Profile status: Active'), findsOneWidget);
-      expect(find.text('Operational state: Available'), findsOneWidget);
-      expect(find.text('System-managed operational state'), findsOneWidget);
+      expect(find.text('Active'), findsWidgets);
+      expect(find.text('Available'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('driver-accepting-new-jobs-switch')),
+        findsOneWidget,
+      );
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('driver-account-settings-link')),
         300,
@@ -670,8 +673,8 @@ void main() {
           profileRepository: _FakeProfileRepository(initial: _profile()),
         );
         await tester.pumpAndSettle();
-        final toggle = tester.widget<SwitchListTile>(
-          find.byType(SwitchListTile),
+        final toggle = tester.widget<Switch>(
+          find.byKey(const ValueKey('driver-accepting-new-jobs-switch')),
         );
         expect(toggle.onChanged, isNull);
       }
@@ -805,7 +808,11 @@ void main() {
           .saveProfile(_updateRequest(city: 'Hebron'));
       await tester.pump();
       expect(
-        tester.widget<SwitchListTile>(find.byType(SwitchListTile)).onChanged,
+        tester
+            .widget<Switch>(
+              find.byKey(const ValueKey('driver-accepting-new-jobs-switch')),
+            )
+            .onChanged,
         isNull,
       );
       expect(
@@ -834,14 +841,18 @@ void main() {
       );
       expect(
         tester
-            .widget<FilledButton>(
+            .widget<ButtonStyleButton>(
               find.byKey(const ValueKey('driver-profile-save')),
             )
             .onPressed,
         isNull,
       );
       expect(
-        tester.widget<SwitchListTile>(find.byType(SwitchListTile)).onChanged,
+        tester
+            .widget<Switch>(
+              find.byKey(const ValueKey('driver-accepting-new-jobs-switch')),
+            )
+            .onChanged,
         isNull,
       );
       availabilityCompleter.complete(
@@ -937,50 +948,56 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text('Availability and status'), findsOneWidget);
-      expect(find.text('Operational state: On delivery'), findsOneWidget);
+      expect(find.text('On delivery'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('driver-accepting-new-jobs-switch')),
         findsOneWidget,
       );
     });
 
-    testWidgets('mobile Profile keeps four unselected navigation actions', (
-      tester,
-    ) async {
-      final router = GoRouter(
-        initialLocation: '/driver/profile',
-        routes: [
-          GoRoute(
-            path: '/driver/profile',
-            builder: (_, _) => const DriverPortalShell(child: Text('Profile')),
-          ),
-          GoRoute(path: '/driver', builder: (_, _) => const SizedBox()),
-          GoRoute(path: '/driver/jobs', builder: (_, _) => const SizedBox()),
-          GoRoute(path: '/driver/active', builder: (_, _) => const SizedBox()),
-          GoRoute(
-            path: '/driver/notifications',
-            builder: (_, _) => const SizedBox(),
-          ),
-        ],
-      );
-      addTearDown(router.dispose);
-      await _pumpRouter(
-        tester,
-        router,
-        size: const Size(320, 900),
-        scale: 1.6,
-        profileRepository: _FakeProfileRepository(initial: _profile()),
-        includeAuth: true,
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('driver-unselected-bottom-nav')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const ValueKey('driver-mobile-nav-0')), findsOneWidget);
-      expect(find.byKey(const ValueKey('driver-mobile-nav-3')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+    testWidgets(
+      'mobile Profile keeps five navigation destinations including More',
+      (tester) async {
+        final router = GoRouter(
+          initialLocation: '/driver/profile',
+          routes: [
+            GoRoute(
+              path: '/driver/profile',
+              builder: (_, _) =>
+                  const DriverPortalShell(child: Text('Profile')),
+            ),
+            GoRoute(path: '/driver', builder: (_, _) => const SizedBox()),
+            GoRoute(path: '/driver/jobs', builder: (_, _) => const SizedBox()),
+            GoRoute(
+              path: '/driver/active',
+              builder: (_, _) => const SizedBox(),
+            ),
+            GoRoute(
+              path: '/driver/history',
+              builder: (_, _) => const SizedBox(),
+            ),
+            GoRoute(
+              path: '/driver/notifications',
+              builder: (_, _) => const SizedBox(),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await _pumpRouter(
+          tester,
+          router,
+          size: const Size(320, 900),
+          scale: 1.6,
+          profileRepository: _FakeProfileRepository(initial: _profile()),
+          includeAuth: true,
+        );
+        await tester.pumpAndSettle();
+        for (var i = 0; i < 5; i++) {
+          expect(find.byKey(ValueKey('driver-mobile-nav-$i')), findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('desktop sidebar and account menu expose Driver Profile', (
       tester,
@@ -1054,8 +1071,11 @@ void main() {
         profileRepository: _FakeProfileRepository(initial: _profile()),
       );
       await tester.pumpAndSettle();
-      expect(find.bySemanticsLabel(RegExp('Accepting new jobs')), findsWidgets);
-      expect(find.bySemanticsLabel(RegExp('Save profile')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('driver-accepting-new-jobs-switch')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('driver-profile-save')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

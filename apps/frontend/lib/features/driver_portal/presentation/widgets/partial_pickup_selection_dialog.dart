@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/l10n/driver_quantity_labels.dart';
 import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/app_dialog_footer.dart';
 import '../../../../shared/widgets/app_dialog_shell.dart';
@@ -61,124 +62,148 @@ Future<PartialPickupSelection?> showPartialPickupSelectionDialog({
 
             return AppDialogShell(
               title: Text(l10n.driverPartialPickupTitle),
-              content: SizedBox(
-                width: 480,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        l10n.driverPartialPickupBody,
-                        style: AppTextStyles.body(context),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        l10n.driverPartialPickupPickedSection,
-                        style: Theme.of(context).textTheme.titleSmall,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      for (final item in items)
-                        CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: selected.contains(item.reservationId),
-                          title: Text(labels.materialTitle(item.title)),
-                          subtitle: Text(item.quantityLabel),
-                          onChanged: (value) {
-                            setState(() {
-                              if (value == true) {
-                                selected.add(item.reservationId);
-                                reasons.remove(item.reservationId);
-                              } else {
-                                selected.remove(item.reservationId);
-                              }
-                            });
-                          },
-                        ),
-                      if (pendingCount > 0) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          l10n.driverPartialPickupPendingSection,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        for (final item in items)
-                          if (!selected.contains(item.reservationId)) ...[
-                            Text(
-                              labels.materialTitle(item.title),
-                              style: AppTextStyles.body(context),
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            DropdownButtonFormField<String>(
-                              initialValue: reasons[item.reservationId],
-                              decoration: InputDecoration(
-                                labelText: l10n.driverReason,
+              content: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SizedBox(
+                    width: constraints.maxWidth < 520
+                        ? double.infinity
+                        : constraints.maxWidth.clamp(320.0, 520.0),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.driverPartialPickupBody,
+                            style: AppTextStyles.body(context),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            l10n.driverPartialPickupPickedSection,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          for (final item in items)
+                            CheckboxListTile(
+                              contentPadding: EdgeInsets.zero,
+                              value: selected.contains(item.reservationId),
+                              title: Text(labels.materialTitle(item.title)),
+                              subtitle: Text(
+                                driverQuantityLabel(
+                                  l10n,
+                                  item.quantity,
+                                  item.unit,
+                                ),
                               ),
-                              items: partialPickupUnpickedReasonCodes
-                                  .map(
-                                    (code) => DropdownMenuItem(
-                                      value: code,
-                                      child: Text(
-                                        labels.partialPickupUnpickedReason(
-                                          code,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
                               onChanged: (value) {
-                                if (value == null) return;
                                 setState(() {
-                                  reasons[item.reservationId] = value;
+                                  if (value == true) {
+                                    selected.add(item.reservationId);
+                                    reasons.remove(item.reservationId);
+                                  } else {
+                                    selected.remove(item.reservationId);
+                                  }
                                 });
                               },
                             ),
+                          if (pendingCount > 0) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              l10n.driverPartialPickupPendingSection,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
                             const SizedBox(height: AppSpacing.sm),
-                            TextField(
-                              controller: notes[item.reservationId],
-                              maxLength: 1000,
-                              minLines: 1,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                labelText: l10n.driverOptionalNote,
+                            for (final item in items)
+                              if (!selected.contains(item.reservationId)) ...[
+                                Text(
+                                  labels.materialTitle(item.title),
+                                  style: AppTextStyles.body(context),
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                DropdownButtonFormField<String>(
+                                  initialValue: reasons[item.reservationId],
+                                  decoration: InputDecoration(
+                                    labelText: l10n.driverReason,
+                                  ),
+                                  items: partialPickupUnpickedReasonCodes
+                                      .map(
+                                        (code) => DropdownMenuItem(
+                                          value: code,
+                                          child: Text(
+                                            labels.partialPickupUnpickedReason(
+                                              code,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    setState(() {
+                                      reasons[item.reservationId] = value;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                TextField(
+                                  controller: notes[item.reservationId],
+                                  maxLength: 1000,
+                                  minLines: 1,
+                                  maxLines: 3,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.driverOptionalNote,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                              ],
+                          ],
+                          Text(
+                            l10n.driverPartialPickupSummary(
+                              pickedCount,
+                              pendingCount,
+                            ),
+                            style: AppTextStyles.body(context),
+                          ),
+                          if (pickedCount == 0) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              l10n.driverPartialPickupSelectAtLeastOne,
+                              style: AppTextStyles.body(context).copyWith(
+                                color: Theme.of(context).colorScheme.error,
                               ),
                             ),
-                            const SizedBox(height: AppSpacing.md),
+                          ] else if (pendingMissingReason) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              l10n.driverPartialPickupReasonRequired,
+                              style: AppTextStyles.body(context).copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
                           ],
-                      ],
-                      Text(
-                        l10n.driverPartialPickupSummary(
-                          pickedCount,
-                          pendingCount,
-                        ),
-                        style: AppTextStyles.body(context),
+                        ],
                       ),
-                      if (pickedCount == 0 || pendingMissingReason) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          pickedCount == 0
-                              ? l10n.driverReportPickupFailed
-                              : l10n.driverPartialPickupReasonRequired,
-                          style: AppTextStyles.body(context).copyWith(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
-              footer: AppDialogFooter.form(
-                primaryAction: FilledButton(
-                  onPressed: pickedCount == 0 || pendingMissingReason
-                      ? null
-                      : () => Navigator.of(context).pop(true),
-                  style: AppStatusButtonStyle.filled(
-                    context,
-                    AppStatusTone.primary,
+              footer: AppDialogFooter.actions(
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(l10n.driverCancelAction),
                   ),
-                  child: Text(l10n.driverPartialPickupContinue),
-                ),
+                  FilledButton(
+                    onPressed: pickedCount == 0 || pendingMissingReason
+                        ? null
+                        : () => Navigator.of(context).pop(true),
+                    style: AppStatusButtonStyle.filled(
+                      context,
+                      AppStatusTone.primary,
+                    ),
+                    child: Text(l10n.driverPartialPickupContinue),
+                  ),
+                ],
               ),
             );
           },

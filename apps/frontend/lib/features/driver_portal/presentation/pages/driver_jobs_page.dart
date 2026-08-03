@@ -9,13 +9,13 @@ import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/api_exception.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_quantity_labels.dart';
 import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/bidi_text.dart';
 import '../../../../shared/widgets/app_empty_state_card.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
-import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../deliveries/presentation/pickup_window_presentation.dart';
 import '../../application/driver_deliveries_provider.dart';
 import '../../application/driver_delivery_action_controller.dart';
@@ -24,6 +24,7 @@ import '../../application/driver_profile_provider.dart';
 import '../../data/models/driver_deliveries_list_result.dart';
 import '../../data/models/driver_delivery.dart';
 import '../../data/models/driver_operational_profile.dart';
+import '../widgets/driver_route_block.dart';
 
 class DriverJobsPage extends ConsumerStatefulWidget {
   const DriverJobsPage({super.key});
@@ -47,16 +48,12 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
 
     ref.listen(availableDriverDeliveriesProvider, (previous, next) {
       next.whenData((result) {
-        if (_defaultsSeedScheduled) {
-          return;
-        }
-
+        if (_defaultsSeedScheduled) return;
         final notifier = ref.read(driverAvailableJobsFilterProvider.notifier);
         if (notifier.hasSeededDefaults || notifier.userModified) {
           _defaultsSeedScheduled = true;
           return;
         }
-
         _defaultsSeedScheduled = true;
         notifier.seedDefaultsFromMeta(result.meta);
       });
@@ -130,7 +127,7 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
                   style: AppTextStyles.title(context),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                _AvailableJobsFilters(meta: headerMeta),
+                _ResponsiveFilters(meta: headerMeta),
                 const SizedBox(height: AppSpacing.md),
                 if (!canAcceptMore) ...[
                   Text(
@@ -173,7 +170,6 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
                         nearbyCount: result.meta.nearbyAvailableCount ?? 0,
                         totalAvailableCount: result.meta.totalAvailableCount,
                       );
-
                       return _AvailableJobsEmptyState(
                         copy: emptyCopy,
                         onIncreaseRadius: emptyCopy.showIncreaseRadius
@@ -199,7 +195,6 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
                             : null,
                       );
                     }
-
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -264,6 +259,548 @@ class _DriverJobsPageState extends ConsumerState<DriverJobsPage> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Filter: responsive — mobile bottom-sheet vs desktop inline
+// ---------------------------------------------------------------------------
+
+class _ResponsiveFilters extends ConsumerWidget {
+  const _ResponsiveFilters({required this.meta});
+  final DriverDeliveriesListMeta? meta;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wide = MediaQuery.sizeOf(context).width >= 720;
+    if (wide) return _DesktopFilters(meta: meta);
+    return _MobileFilterBar(meta: meta);
+  }
+}
+
+class _MobileFilterBar extends ConsumerWidget {
+  const _MobileFilterBar({required this.meta});
+  final DriverDeliveriesListMeta? meta;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final palette = MaterialsUiPalette.of(context);
+    final filter = ref.watch(driverAvailableJobsFilterProvider);
+    final anyDistance = filter.maxDistanceKm == null;
+    final radiusKm = anyDistance
+        ? null
+        : radiusKmForStepIndex(radiusStepIndex(filter.maxDistanceKm));
+
+    final chips = <String>[
+      if (filter.city != null) filter.city!,
+      if (filter.area != null) filter.area!,
+      if (anyDistance)
+        l10n.driverAnyDistance
+      else
+        l10n.driverWithinKm(radiusKm!.round()),
+      if (filter.sortBy.isNotEmpty) filter.sortBy,
+    ];
+
+    return Row(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final chip in chips) ...[
+                  Chip(
+                    label: Text(
+                      chip,
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(fontSize: 12),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ],
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: () => _showFilterSheet(context, ref),
+          icon: const Icon(Icons.tune_rounded, size: 18),
+          label: Text(l10n.driverEditFilters),
+          style: TextButton.styleFrom(
+            foregroundColor: palette.mint,
+            visualDensity: VisualDensity.compact,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showFilterSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetCtx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.92,
+        minChildSize: 0.4,
+        expand: false,
+        builder: (context, scrollController) =>
+            _FilterSheetContent(meta: meta, scrollController: scrollController),
+      ),
+    );
+  }
+}
+
+class _FilterSheetContent extends ConsumerWidget {
+  const _FilterSheetContent({
+    required this.meta,
+    required this.scrollController,
+  });
+  final DriverDeliveriesListMeta? meta;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final palette = MaterialsUiPalette.of(context);
+    final formatters = LocalizedFormatters(l10n);
+    final filter = ref.watch(driverAvailableJobsFilterProvider);
+    final notifier = ref.read(driverAvailableJobsFilterProvider.notifier);
+    final radiusEnabled = hasUsableRadiusReference(meta);
+    final anyDistance = filter.maxDistanceKm == null;
+    final radiusIndex = radiusStepIndex(filter.maxDistanceKm);
+    final radiusKm = anyDistance
+        ? DriverJobsFilterConstants.defaultRadiusKm
+        : radiusKmForStepIndex(radiusIndex);
+    final profileCity = normalizeProfileField(meta?.driverProfileCity);
+    final profileArea = distinctProfileArea(
+      meta?.driverProfileArea,
+      meta?.driverProfileCity,
+    );
+
+    return ListView(
+      controller: scrollController,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
+      children: [
+        Center(
+          child: Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: palette.borderSubtle,
+              borderRadius: AppRadius.pillAll,
+            ),
+          ),
+        ),
+        Text(l10n.driverEditFilters, style: AppTextStyles.title(context)),
+        const SizedBox(height: AppSpacing.lg),
+
+        // City
+        Text(
+          l10n.driverCityLabel,
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            FilterChip(
+              label: Text(l10n.driverAllCities),
+              selected: filter.city == null,
+              showCheckmark: true,
+              onSelected: (_) => notifier.setCity(null),
+            ),
+            if (profileCity != null)
+              FilterChip(
+                label: BidiText(profileCity),
+                selected:
+                    filter.city?.toLowerCase() == profileCity.toLowerCase(),
+                showCheckmark: true,
+                onSelected: (_) => notifier.setCity(profileCity),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Area
+        Text(
+          l10n.driverAreaLabel,
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            FilterChip(
+              label: Text(l10n.driverAllAreas),
+              selected: filter.area == null,
+              showCheckmark: true,
+              onSelected: (_) => notifier.setArea(null),
+            ),
+            if (profileArea != null)
+              FilterChip(
+                label: BidiText(profileArea),
+                selected:
+                    filter.area?.toLowerCase() == profileArea.toLowerCase(),
+                showCheckmark: true,
+                onSelected: (_) => notifier.setArea(profileArea),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Radius
+        Text(
+          searchRadiusLabel(
+            anyDistance: anyDistance,
+            radiusKm: radiusKm,
+            l10n: l10n,
+          ),
+          style: AppTextStyles.label(context),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          l10n.driverDistanceToPickupHint,
+          style: AppTextStyles.body(
+            context,
+          ).copyWith(color: palette.textSecondary, fontSize: 12),
+        ),
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 3,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
+            inactiveTrackColor: anyDistance
+                ? palette.borderSubtle.withValues(alpha: 0.5)
+                : null,
+          ),
+          child: Slider(
+            value: radiusIndex.toDouble(),
+            min: 0,
+            max: (DriverJobsFilterConstants.radiusStepsKm.length - 1)
+                .toDouble(),
+            divisions: DriverJobsFilterConstants.radiusStepsKm.length - 1,
+            label: anyDistance
+                ? l10n.driverAnyDistance
+                : l10n.driverWithinKm(radiusKm.round()),
+            onChanged: !radiusEnabled
+                ? null
+                : (value) =>
+                      notifier.setRadiusKm(radiusKmForStepIndex(value.round())),
+          ),
+        ),
+        _RadiusMarks(
+          steps: DriverJobsFilterConstants.radiusStepsKm,
+          activeIndex: anyDistance ? null : radiusIndex,
+          muted: anyDistance,
+          formatters: formatters,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        FilterChip(
+          avatar: anyDistance
+              ? Icon(Icons.check_circle, size: 16, color: palette.mint)
+              : null,
+          label: Text(l10n.driverAnyDistance),
+          selected: anyDistance,
+          showCheckmark: false,
+          onSelected: !radiusEnabled
+              ? null
+              : (selected) {
+                  if (selected) {
+                    notifier.setAnyDistance();
+                  } else {
+                    notifier.setRadiusKm(
+                      DriverJobsFilterConstants.defaultRadiusKm,
+                    );
+                  }
+                },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Sort
+        Text(
+          l10n.driverSort,
+          style: AppTextStyles.label(
+            context,
+          ).copyWith(color: palette.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SegmentedButton<String>(
+          segments: [
+            ButtonSegment(value: 'nearest', label: Text(l10n.driverNearest)),
+            ButtonSegment(value: 'newest', label: Text(l10n.driverNewest)),
+          ],
+          selected: {
+            filter.sortBy.isNotEmpty
+                ? filter.sortBy
+                : (meta?.driverHasRecentLocation == true
+                      ? 'nearest'
+                      : 'newest'),
+          },
+          onSelectionChanged: (selection) =>
+              notifier.setSortBy(selection.first),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        Row(
+          children: [
+            Expanded(
+              child: TextButton(
+                onPressed: meta == null
+                    ? null
+                    : () => notifier.resetToProfileDefaults(meta!),
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
+                child: Text(l10n.driverResetFilters),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(l10n.supplierApply),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DesktopFilters extends ConsumerWidget {
+  const _DesktopFilters({required this.meta});
+  final DriverDeliveriesListMeta? meta;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = MaterialsUiPalette.of(context);
+    final l10n = context.l10n;
+    final formatters = LocalizedFormatters(l10n);
+    final filter = ref.watch(driverAvailableJobsFilterProvider);
+    final notifier = ref.read(driverAvailableJobsFilterProvider.notifier);
+    final radiusEnabled = hasUsableRadiusReference(meta);
+    final anyDistance = filter.maxDistanceKm == null;
+    final radiusIndex = radiusStepIndex(filter.maxDistanceKm);
+    final radiusKm = anyDistance
+        ? DriverJobsFilterConstants.defaultRadiusKm
+        : radiusKmForStepIndex(radiusIndex);
+    final profileCity = normalizeProfileField(meta?.driverProfileCity);
+    final profileArea = distinctProfileArea(
+      meta?.driverProfileArea,
+      meta?.driverProfileCity,
+    );
+
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      searchRadiusLabel(
+                        anyDistance: anyDistance,
+                        radiusKm: radiusKm,
+                        l10n: l10n,
+                      ),
+                      style: AppTextStyles.label(context),
+                    ),
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 7,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 14,
+                        ),
+                        inactiveTrackColor: anyDistance
+                            ? palette.borderSubtle.withValues(alpha: 0.5)
+                            : null,
+                      ),
+                      child: Slider(
+                        value: radiusIndex.toDouble(),
+                        min: 0,
+                        max:
+                            (DriverJobsFilterConstants.radiusStepsKm.length - 1)
+                                .toDouble(),
+                        divisions:
+                            DriverJobsFilterConstants.radiusStepsKm.length - 1,
+                        label: anyDistance
+                            ? l10n.driverAnyDistance
+                            : l10n.driverWithinKm(radiusKm.round()),
+                        onChanged: !radiusEnabled
+                            ? null
+                            : (value) => notifier.setRadiusKm(
+                                radiusKmForStepIndex(value.round()),
+                              ),
+                      ),
+                    ),
+                    _RadiusMarks(
+                      steps: DriverJobsFilterConstants.radiusStepsKm,
+                      activeIndex: anyDistance ? null : radiusIndex,
+                      muted: anyDistance,
+                      formatters: formatters,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.driverSort,
+                      style: AppTextStyles.label(
+                        context,
+                      ).copyWith(color: palette.textMuted),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SegmentedButton<String>(
+                      segments: [
+                        ButtonSegment(
+                          value: 'nearest',
+                          label: Text(l10n.driverNearest),
+                        ),
+                        ButtonSegment(
+                          value: 'newest',
+                          label: Text(l10n.driverNewest),
+                        ),
+                      ],
+                      selected: {
+                        filter.sortBy.isNotEmpty
+                            ? filter.sortBy
+                            : (meta?.driverHasRecentLocation == true
+                                  ? 'nearest'
+                                  : 'newest'),
+                      },
+                      onSelectionChanged: (selection) =>
+                          notifier.setSortBy(selection.first),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                l10n.driverCityLabel,
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textMuted),
+              ),
+              FilterChip(
+                label: Text(l10n.driverAllCities),
+                selected: filter.city == null,
+                showCheckmark: true,
+                onSelected: (_) => notifier.setCity(null),
+              ),
+              if (profileCity != null)
+                FilterChip(
+                  label: BidiText(profileCity),
+                  selected:
+                      filter.city?.toLowerCase() == profileCity.toLowerCase(),
+                  showCheckmark: true,
+                  onSelected: (_) => notifier.setCity(profileCity),
+                ),
+              Text(
+                l10n.driverAreaLabel,
+                style: AppTextStyles.label(
+                  context,
+                ).copyWith(color: palette.textMuted),
+              ),
+              FilterChip(
+                label: Text(l10n.driverAllAreas),
+                selected: filter.area == null,
+                showCheckmark: true,
+                onSelected: (_) => notifier.setArea(null),
+              ),
+              if (profileArea != null)
+                FilterChip(
+                  label: BidiText(profileArea),
+                  selected:
+                      filter.area?.toLowerCase() == profileArea.toLowerCase(),
+                  showCheckmark: true,
+                  onSelected: (_) => notifier.setArea(profileArea),
+                ),
+              FilterChip(
+                avatar: anyDistance
+                    ? Icon(Icons.check_circle, size: 16, color: palette.mint)
+                    : null,
+                label: Text(l10n.driverAnyDistance),
+                selected: anyDistance,
+                showCheckmark: false,
+                onSelected: !radiusEnabled
+                    ? null
+                    : (selected) {
+                        if (selected) {
+                          notifier.setAnyDistance();
+                        } else {
+                          notifier.setRadiusKm(
+                            DriverJobsFilterConstants.defaultRadiusKm,
+                          );
+                        }
+                      },
+              ),
+              TextButton(
+                onPressed: meta == null
+                    ? null
+                    : () => notifier.resetToProfileDefaults(meta!),
+                style: AppStatusButtonStyle.text(
+                  context,
+                  AppStatusTone.neutral,
+                ),
+                child: Text(l10n.driverResetFilters),
+              ),
+              if (!radiusEnabled)
+                Text(
+                  l10n.driverLocationNeeded,
+                  style: AppTextStyles.body(
+                    context,
+                  ).copyWith(color: palette.textSecondary, fontSize: 12),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared filter / header widgets
+// ---------------------------------------------------------------------------
+
 enum _DriverJobsBlocker { paused, inactive, suspended, unknownStatus }
 
 _DriverJobsBlocker? _resolveJobsBlocker(
@@ -280,7 +817,6 @@ _DriverJobsBlocker? _resolveJobsBlocker(
   if (status == DriverProfileStatus.unknown && profile != null) {
     return _DriverJobsBlocker.unknownStatus;
   }
-
   final accepting = profile?.acceptingNewJobs ?? meta?.acceptingNewJobs;
   if (status == DriverProfileStatus.active && accepting == false) {
     return _DriverJobsBlocker.paused;
@@ -363,28 +899,18 @@ class _DriverJobsBlockedState extends StatelessWidget {
 
 double _driverJobsBottomPadding(BuildContext context) {
   final isCompactMobile = MediaQuery.sizeOf(context).width < 820;
-  if (!isCompactMobile) {
-    return AppSpacing.xl;
-  }
-
+  if (!isCompactMobile) return AppSpacing.xl;
   return kBottomNavigationBarHeight +
       MediaQuery.paddingOf(context).bottom +
       AppSpacing.lg;
 }
 
 String? _areaChipLabel(DriverDeliveriesListMeta? meta) {
-  if (meta == null) {
-    return null;
-  }
-
+  if (meta == null) return null;
   final area = meta.driverProfileArea?.trim();
   final city = meta.driverProfileCity?.trim();
-  if (area != null && area.isNotEmpty) {
-    return area;
-  }
-  if (city != null && city.isNotEmpty) {
-    return city;
-  }
+  if (area != null && area.isNotEmpty) return area;
+  if (city != null && city.isNotEmpty) return city;
   return null;
 }
 
@@ -412,7 +938,13 @@ class _JobsHeader extends StatelessWidget {
         totalAvailableCount != null &&
         totalAvailableCount != nearbyCount;
 
-    return _Panel(
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -422,10 +954,10 @@ class _JobsHeader extends StatelessWidget {
               context,
             ).copyWith(color: palette.textPrimary),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           Text(
             l10n.driverJobsSubtitle,
-            style: AppTextStyles.subtitle(
+            style: AppTextStyles.body(
               context,
             ).copyWith(color: palette.textSecondary),
           ),
@@ -471,356 +1003,32 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: (MediaQuery.sizeOf(context).width - AppSpacing.md * 4).clamp(
-          120.0,
-          420.0,
-        ),
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
       ),
-      child: Container(
-        padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
-        ),
-        decoration: BoxDecoration(
-          color: palette.cardSurfaceAlt,
-          borderRadius: AppRadius.pillAll,
-          border: Border.all(color: palette.borderSubtle),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: palette.mint),
-            const SizedBox(width: AppSpacing.xs),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 2,
-                softWrap: true,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: palette.textSecondary),
-              ),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.pillAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: palette.mint),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textSecondary, fontSize: 12),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AvailableJobsFilters extends ConsumerWidget {
-  const _AvailableJobsFilters({required this.meta});
-
-  final DriverDeliveriesListMeta? meta;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = MaterialsUiPalette.of(context);
-    final l10n = context.l10n;
-    final formatters = LocalizedFormatters(l10n);
-    final filter = ref.watch(driverAvailableJobsFilterProvider);
-    final notifier = ref.read(driverAvailableJobsFilterProvider.notifier);
-    final radiusEnabled = hasUsableRadiusReference(meta);
-    final anyDistance = filter.maxDistanceKm == null;
-    final radiusIndex = radiusStepIndex(filter.maxDistanceKm);
-    final radiusKm = anyDistance
-        ? DriverJobsFilterConstants.defaultRadiusKm
-        : radiusKmForStepIndex(radiusIndex);
-    final profileCity = normalizeProfileField(meta?.driverProfileCity);
-    final profileArea = distinctProfileArea(
-      meta?.driverProfileArea,
-      meta?.driverProfileCity,
-    );
-
-    return _CompactPanel(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 720;
-
-          final radiusSection = Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                searchRadiusLabel(
-                  anyDistance: anyDistance,
-                  radiusKm: radiusKm,
-                  l10n: l10n,
-                ),
-                style: AppTextStyles.label(context),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                l10n.driverDistanceToPickupHint,
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(color: palette.textSecondary, fontSize: 12),
-              ),
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 3,
-                  thumbShape: const RoundSliderThumbShape(
-                    enabledThumbRadius: 7,
-                  ),
-                  overlayShape: const RoundSliderOverlayShape(
-                    overlayRadius: 14,
-                  ),
-                  inactiveTrackColor: anyDistance
-                      ? palette.borderSubtle.withValues(alpha: 0.5)
-                      : null,
-                ),
-                child: Slider(
-                  value: radiusIndex.toDouble(),
-                  min: 0,
-                  max: (DriverJobsFilterConstants.radiusStepsKm.length - 1)
-                      .toDouble(),
-                  divisions: DriverJobsFilterConstants.radiusStepsKm.length - 1,
-                  label: anyDistance
-                      ? l10n.driverAnyDistance
-                      : l10n.driverWithinKm(radiusKm.round()),
-                  onChanged: !radiusEnabled
-                      ? null
-                      : (value) {
-                          notifier.setRadiusKm(
-                            radiusKmForStepIndex(value.round()),
-                          );
-                        },
-                ),
-              ),
-              _RadiusMarks(
-                steps: DriverJobsFilterConstants.radiusStepsKm,
-                activeIndex: anyDistance ? null : radiusIndex,
-                muted: anyDistance,
-                formatters: formatters,
-              ),
-            ],
-          );
-
-          final sortSection = SegmentedButton<String>(
-            segments: [
-              ButtonSegment(value: 'nearest', label: Text(l10n.driverNearest)),
-              ButtonSegment(value: 'newest', label: Text(l10n.driverNewest)),
-            ],
-            selected: {
-              filter.sortBy.isNotEmpty
-                  ? filter.sortBy
-                  : (meta?.driverHasRecentLocation == true
-                        ? 'nearest'
-                        : 'newest'),
-            },
-            onSelectionChanged: (selection) {
-              notifier.setSortBy(selection.first);
-            },
-          );
-
-          final bottomChips = Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                l10n.driverCityLabel,
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: palette.textMuted),
-              ),
-              FilterChip(
-                label: Text(l10n.driverAllCities),
-                selected: filter.city == null,
-                showCheckmark: true,
-                onSelected: (_) => notifier.setCity(null),
-              ),
-              if (profileCity != null)
-                FilterChip(
-                  label: BidiText(profileCity),
-                  selected:
-                      filter.city?.toLowerCase() == profileCity.toLowerCase(),
-                  showCheckmark: true,
-                  onSelected: (_) => notifier.setCity(profileCity),
-                ),
-              Text(
-                l10n.driverAreaLabel,
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: palette.textMuted),
-              ),
-              FilterChip(
-                label: Text(l10n.driverAllAreas),
-                selected: filter.area == null,
-                showCheckmark: true,
-                onSelected: (_) => notifier.setArea(null),
-              ),
-              if (profileArea != null)
-                FilterChip(
-                  label: BidiText(profileArea),
-                  selected:
-                      filter.area?.toLowerCase() == profileArea.toLowerCase(),
-                  showCheckmark: true,
-                  onSelected: (_) => notifier.setArea(profileArea),
-                ),
-              FilterChip(
-                avatar: anyDistance
-                    ? Icon(Icons.check_circle, size: 16, color: palette.mint)
-                    : null,
-                label: Text(l10n.driverAnyDistance),
-                selected: anyDistance,
-                showCheckmark: false,
-                onSelected: !radiusEnabled
-                    ? null
-                    : (selected) {
-                        if (selected) {
-                          notifier.setAnyDistance();
-                        } else {
-                          notifier.setRadiusKm(
-                            DriverJobsFilterConstants.defaultRadiusKm,
-                          );
-                        }
-                      },
-              ),
-              TextButton(
-                onPressed: meta == null
-                    ? null
-                    : () => notifier.resetToProfileDefaults(meta!),
-                style: AppStatusButtonStyle.text(
-                  context,
-                  AppStatusTone.neutral,
-                ),
-                child: Text(l10n.driverResetFilters),
-              ),
-              if (!radiusEnabled)
-                Text(
-                  l10n.driverLocationNeeded,
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: palette.textSecondary, fontSize: 12),
-                ),
-            ],
-          );
-
-          if (wide) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.driverFindNearbyJobs,
-                  style: AppTextStyles.title(context),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.my_location_outlined,
-                      size: 18,
-                      color: palette.mint,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.driverLocationLabel,
-                            style: AppTextStyles.label(
-                              context,
-                            ).copyWith(color: palette.textMuted),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            driverLocationSummary(meta, l10n: l10n),
-                            style: AppTextStyles.body(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 3, child: radiusSection),
-                    const SizedBox(width: AppSpacing.lg),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.driverSort,
-                            style: AppTextStyles.label(
-                              context,
-                            ).copyWith(color: palette.textMuted),
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          sortSection,
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                bottomChips,
-              ],
-            );
-          }
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.driverFindNearbyJobs,
-                style: AppTextStyles.title(context),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.my_location_outlined,
-                    size: 18,
-                    color: palette.mint,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.driverLocationLabel,
-                          style: AppTextStyles.label(
-                            context,
-                          ).copyWith(color: palette.textMuted),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          driverLocationSummary(meta, l10n: l10n),
-                          style: AppTextStyles.body(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-              radiusSection,
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                l10n.driverSort,
-                style: AppTextStyles.label(
-                  context,
-                ).copyWith(color: palette.textMuted),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              sortSection,
-              const SizedBox(height: AppSpacing.sm),
-              bottomChips,
-            ],
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -842,7 +1050,6 @@ class _RadiusMarks extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
     return Row(
       children: [
         for (var index = 0; index < steps.length; index++)
@@ -873,27 +1080,6 @@ class _RadiusMarks extends StatelessWidget {
   }
 }
 
-class _CompactPanel extends StatelessWidget {
-  const _CompactPanel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.borderStrong),
-      ),
-      child: child,
-    );
-  }
-}
-
 class _AvailableJobsEmptyState extends StatelessWidget {
   const _AvailableJobsEmptyState({
     required this.copy,
@@ -910,7 +1096,6 @@ class _AvailableJobsEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
     return AppEmptyStateCard(
       icon: Icons.local_shipping_outlined,
       title: copy.title,
@@ -970,9 +1155,14 @@ class _AvailableJobCard extends ConsumerWidget {
       fallback: labels.locationSummary(delivery.dropoffLocation.safeSummary),
     );
     final distanceText = distanceFromYouLabel(delivery.distanceKm, l10n: l10n);
-    final routeLabel = l10n.deliveryRoute(pickupSummary, dropoffSummary);
 
-    return _Panel(
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -984,9 +1174,7 @@ class _AvailableJobCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     BidiText(
-                      DriverUiLabels(
-                        l10n,
-                      ).materialTitle(delivery.material.title),
+                      labels.materialTitle(delivery.material.title),
                       style: AppTextStyles.title(
                         context,
                       ).copyWith(color: palette.textPrimary),
@@ -994,9 +1182,7 @@ class _AvailableJobCard extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.xs),
                     if (delivery.hasGroupedItems) ...[
                       Text(
-                        DriverUiLabels(
-                          l10n,
-                        ).groupedItemsCount(delivery.itemCount),
+                        labels.groupedItemsCount(delivery.itemCount),
                         style: AppTextStyles.body(
                           context,
                         ).copyWith(color: palette.textSecondary),
@@ -1004,7 +1190,7 @@ class _AvailableJobCard extends ConsumerWidget {
                       const SizedBox(height: 2),
                       for (final item in delivery.items) ...[
                         BidiText(
-                          '${bidiIsolate(DriverUiLabels(l10n).materialTitle(item.title))} × ${bidiIsolate(item.quantityLabel)}',
+                          '${bidiIsolate(labels.materialTitle(item.title))} × ${bidiIsolate(driverQuantityLabel(l10n, item.quantity, item.unit))}',
                           style: AppTextStyles.body(
                             context,
                           ).copyWith(color: palette.textSecondary),
@@ -1013,41 +1199,48 @@ class _AvailableJobCard extends ConsumerWidget {
                       ],
                     ] else
                       Text(
-                        delivery.material.quantityLabel,
+                        driverQuantityLabel(
+                          l10n,
+                          delivery.material.quantityRequested,
+                          delivery.material.unit,
+                        ),
                         style: AppTextStyles.body(
                           context,
                         ).copyWith(color: palette.textSecondary),
                       ),
-                    const SizedBox(height: AppSpacing.xs),
-                    BidiText(
-                      routeLabel,
-                      style: AppTextStyles.label(
-                        context,
-                      ).copyWith(color: palette.textMuted),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Flexible(
-                child: Align(
-                  alignment: AlignmentDirectional.topEnd,
-                  child: AppStatusBadge(
-                    label: deliveryStatusLabel(delivery.status, l10n: l10n),
-                    tone: deliveryStatusAppTone(delivery.status),
-                  ),
+                child: AppStatusBadge(
+                  label: l10n.driverStatusWaitingForAssignment,
+                  tone: AppStatusTone.warning,
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-          _InfoGrid(
-            items: [
-              _InfoItem(
-                l10n.pickupWindow,
-                driverPickupWindowSummary(delivery, l10n: l10n),
+          DriverRouteBlock(
+            pickupSummary: pickupSummary,
+            dropoffSummary: dropoffSummary,
+            compact: true,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
+            children: [
+              _InfoChip(
+                icon: Icons.schedule_outlined,
+                label: driverPickupWindowSummary(delivery, l10n: l10n),
               ),
-              _InfoItem(l10n.driverDistanceToPickup, distanceText),
+              _InfoChip(icon: Icons.near_me_outlined, label: distanceText),
+              if (delivery.hasGroupedItems)
+                _InfoChip(
+                  icon: Icons.inventory_2_outlined,
+                  label: labels.groupedItemsCount(delivery.itemCount),
+                ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1084,34 +1277,50 @@ class _AvailableJobCard extends ConsumerWidget {
 
   Future<void> _acceptDelivery(BuildContext context, WidgetRef ref) async {
     final l10n = context.l10n;
-
     try {
       final assigned = await ref
           .read(driverDeliveryActionControllerProvider.notifier)
           .acceptDelivery(delivery.id);
-
-      if (!context.mounted) {
-        return;
-      }
-
+      if (!context.mounted) return;
       showInfoSnackBar(context, l10n.driverDeliveryAccepted);
       context.push('/driver/deliveries/${assigned.id}');
     } on ApiException catch (error) {
       refreshDriverJobs(ref);
-
-      if (!context.mounted) {
-        return;
-      }
-
+      if (!context.mounted) return;
       final message = _driverAcceptConflictMessage(error, l10n);
       showInfoSnackBar(context, message);
     } catch (error) {
-      if (!context.mounted) {
-        return;
-      }
-
+      if (!context.mounted) return;
       showErrorSnackBar(context, error, l10n: l10n);
     }
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: palette.textMuted),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: palette.textSecondary, fontSize: 12),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1137,27 +1346,6 @@ String _driverAcceptConflictMessage(ApiException error, AppLocalizations l10n) {
   return localizedApiErrorMessage(error, l10n);
 }
 
-class _Panel extends StatelessWidget {
-  const _Panel({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurface,
-        borderRadius: AppRadius.lgAll,
-        border: Border.all(color: palette.borderStrong),
-      ),
-      child: child,
-    );
-  }
-}
-
 class _StatePanel extends StatelessWidget {
   const _StatePanel({
     required this.icon,
@@ -1178,8 +1366,13 @@ class _StatePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
-
-    return _Panel(
+    return Container(
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurface,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderStrong),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1209,79 +1402,6 @@ class _StatePanel extends StatelessWidget {
               child: Text(actionLabel!),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoGrid extends StatelessWidget {
-  const _InfoGrid({required this.items});
-
-  final List<_InfoItem> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 720 ? 2 : 1;
-        return Wrap(
-          spacing: AppSpacing.md,
-          runSpacing: AppSpacing.md,
-          children: [
-            for (final item in items)
-              SizedBox(
-                width: columns == 1
-                    ? constraints.maxWidth
-                    : (constraints.maxWidth - AppSpacing.md) / 2,
-                child: _InfoTile(item: item),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _InfoItem {
-  const _InfoItem(this.label, this.value);
-
-  final String label;
-  final String value;
-}
-
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({required this.item});
-
-  final _InfoItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = MaterialsUiPalette.of(context);
-
-    return Container(
-      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: palette.cardSurfaceAlt,
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: palette.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            item.label,
-            style: AppTextStyles.label(
-              context,
-            ).copyWith(color: palette.textMuted),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          BidiText(
-            item.value,
-            style: AppTextStyles.body(
-              context,
-            ).copyWith(color: palette.textPrimary),
-          ),
         ],
       ),
     );

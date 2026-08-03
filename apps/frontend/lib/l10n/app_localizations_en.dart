@@ -5999,7 +5999,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driverJobsTitle => 'Driver jobs';
 
   @override
-  String get driverJobsSubtitle => 'Basic internal delivery coordination';
+  String get driverJobsSubtitle =>
+      'Pick up supplier materials and deliver them to learners.';
 
   @override
   String driverActiveDeliveriesCount(int active, int max) {
@@ -6293,7 +6294,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get driverReportDeliveryFailed => 'Report delivery failed';
 
   @override
-  String get driverReportDriverIssue => 'Report driver issue';
+  String get driverReportDriverIssue => 'Report that I cannot continue';
 
   @override
   String get driverSupplierHandoverCode => 'Supplier handover code';
@@ -6368,7 +6369,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String driverPartialPickupSummary(int pickedCount, int pendingCount) {
-    return '$pickedCount items will be delivered now. $pendingCount items will remain pending.';
+    String _temp0 = intl.Intl.pluralLogic(
+      pickedCount,
+      locale: localeName,
+      other: '$pickedCount items will be delivered now.',
+      one: '1 item will be delivered now.',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      pendingCount,
+      locale: localeName,
+      other: '$pendingCount items will remain pending.',
+      one: '1 item will remain pending.',
+    );
+    return '$_temp0 $_temp1';
   }
 
   @override
@@ -7242,4 +7255,439 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get driverCancelAction => 'Cancel';
+
+  @override
+  String get driverStatusWaitingForAssignment => 'Waiting for assignment';
+
+  @override
+  String get driverStatusAssigned => 'Assigned — head to pickup';
+
+  @override
+  String get driverStatusAtPickup => 'At pickup location';
+
+  @override
+  String get driverStatusPickedUp => 'Picked up';
+
+  @override
+  String get driverStatusOnTheWay => 'On the way to learner';
+
+  @override
+  String get driverStatusAtDropoff => 'At drop-off location';
+
+  @override
+  String get driverStatusDelivered => 'Delivered';
+
+  @override
+  String get driverStatusCancelled => 'Cancelled';
+
+  @override
+  String get driverStatusPickupFailed => 'Pickup failed';
+
+  @override
+  String get driverStatusDeliveryFailed => 'Delivery failed';
+
+  @override
+  String get driverStatusDriverNoShow => 'Marked as no-show';
+
+  @override
+  String get driverStatusLearnerNoShow => 'Learner no-show';
+
+  @override
+  String get driverStatusAwaitingReview => 'Under admin review';
+
+  @override
+  String get driverNavHome => 'Home';
+
+  @override
+  String get driverNavJobs => 'Jobs';
+
+  @override
+  String get driverNavActive => 'Active';
+
+  @override
+  String get driverNavHistory => 'History';
+
+  @override
+  String get driverNavMore => 'More';
+
+  @override
+  String get driverNavGroupOverview => 'Overview';
+
+  @override
+  String get driverNavGroupWork => 'Work';
+
+  @override
+  String get driverNavGroupHistory => 'History';
+
+  @override
+  String get driverNavGroupAccount => 'Account';
+
+  @override
+  String get driverMoreTitle => 'More options';
+
+  @override
+  String get driverMoreProfile => 'Driver profile';
+
+  @override
+  String get driverMoreNotifications => 'Notifications';
+
+  @override
+  String get driverMoreHistory => 'History and reports';
+
+  @override
+  String get driverMoreAccountSettings => 'Account settings';
+
+  @override
+  String get driverAcceptingJobsOnExplicit => 'Available for new jobs';
+
+  @override
+  String get driverAcceptingJobsOffExplicit => 'Not available right now';
+
+  @override
+  String get driverEditFilters => 'Edit filters';
+
+  @override
+  String get driverPartialPickupSelectAtLeastOne =>
+      'Select at least one item that the supplier handed over now.';
+
+  @override
+  String get driverEmptyActiveTitle => 'No active deliveries';
+
+  @override
+  String get driverEmptyActiveBody =>
+      'When you accept a job, it will appear here until delivery is complete.';
+
+  @override
+  String get driverEmptyActiveCta => 'Browse available jobs';
+
+  @override
+  String get driverViewNearbyJobs => 'View nearby jobs';
+
+  @override
+  String get driverRoutePickupLabel => 'Pickup';
+
+  @override
+  String get driverRouteDropoffLabel => 'Drop-off';
+
+  @override
+  String get driverRouteFrom => 'From';
+
+  @override
+  String get driverRouteTo => 'To';
+
+  @override
+  String get driverRouteArrowSemantic => 'Route direction';
+
+  @override
+  String get driverMapSectionTitle => 'Locations';
+
+  @override
+  String get driverMapPickupPin => 'Pickup location';
+
+  @override
+  String get driverMapDropoffPin => 'Drop-off location';
+
+  @override
+  String get driverMapOpenExternal => 'Open in maps';
+
+  @override
+  String get driverMapUnavailable =>
+      'Map preview is unavailable for this location.';
+
+  @override
+  String get driverUnitPiece => 'piece';
+
+  @override
+  String get driverUnitSheet => 'sheet';
+
+  @override
+  String get driverUnitBag => 'bag';
+
+  @override
+  String get driverUnitKg => 'kg';
+
+  @override
+  String get driverUnitItem => 'item';
+
+  @override
+  String get driverUnitUnit => 'unit';
+
+  @override
+  String get driverUnitPanel => 'panel';
+
+  @override
+  String get driverUnitCrate => 'crate';
+
+  @override
+  String get driverUnitMeter => 'meter';
+
+  @override
+  String get driverUnitLiter => 'liter';
+
+  @override
+  String get driverUnitRoll => 'roll';
+
+  @override
+  String get driverUnitBox => 'box';
+
+  @override
+  String get driverUnitPack => 'pack';
+
+  @override
+  String get driverUnitSet => 'set';
+
+  @override
+  String driverQuantityPiece(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pieces',
+      one: '1 piece',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantitySheet(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sheets',
+      one: '1 sheet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityBag(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bags',
+      one: '1 bag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityKg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kg',
+      one: '1 kg',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityItem(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '1 item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count units',
+      one: '1 unit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityPanel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count panels',
+      one: '1 panel',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityCrate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count crates',
+      one: '1 crate',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityMeter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count meters',
+      one: '1 meter',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityLiter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count liters',
+      one: '1 liter',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityRoll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rolls',
+      one: '1 roll',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityBox(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count boxes',
+      one: '1 box',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantityPack(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count packs',
+      one: '1 pack',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String driverQuantitySet(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sets',
+      one: '1 set',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get notificationDriverPickupReminderTitle => 'Pickup reminder';
+
+  @override
+  String notificationDriverPickupReminderBody(String materialTitle) {
+    return 'Reminder: pickup for $materialTitle is coming up.';
+  }
+
+  @override
+  String get notificationDriverPickupStartingSoonTitle =>
+      'Pickup starting soon';
+
+  @override
+  String notificationDriverPickupStartingSoonBody(String materialTitle) {
+    return 'Pickup for $materialTitle starts in a few minutes.';
+  }
+
+  @override
+  String get notificationDriverPickupWindowStartedTitle =>
+      'Pickup window started';
+
+  @override
+  String notificationDriverPickupWindowStartedBody(String materialTitle) {
+    return 'The pickup window for $materialTitle is open now.';
+  }
+
+  @override
+  String get notificationDriverPickupOverdueTitle => 'Pickup overdue';
+
+  @override
+  String notificationDriverPickupOverdueBody(String materialTitle) {
+    return 'Pickup for $materialTitle is overdue. Complete pickup or report an issue.';
+  }
+
+  @override
+  String get notificationDriverDropoffReminderTitle => 'Drop-off reminder';
+
+  @override
+  String notificationDriverDropoffReminderBody(String materialTitle) {
+    return 'Reminder: drop-off for $materialTitle is coming up.';
+  }
+
+  @override
+  String get notificationDriverDropoffStartingSoonTitle =>
+      'Drop-off starting soon';
+
+  @override
+  String notificationDriverDropoffStartingSoonBody(String materialTitle) {
+    return 'Drop-off for $materialTitle starts in a few minutes.';
+  }
+
+  @override
+  String get notificationDriverDropoffWindowStartedTitle =>
+      'Drop-off window started';
+
+  @override
+  String notificationDriverDropoffWindowStartedBody(String materialTitle) {
+    return 'The drop-off window for $materialTitle is open now.';
+  }
+
+  @override
+  String get notificationDriverDropoffOverdueTitle => 'Drop-off overdue';
+
+  @override
+  String notificationDriverDropoffOverdueBody(String materialTitle) {
+    return 'Drop-off for $materialTitle is overdue. Complete delivery or report an issue.';
+  }
+
+  @override
+  String get notificationDriverDeliveryRequestCreatedTitle =>
+      'Delivery request created';
+
+  @override
+  String notificationDriverDeliveryRequestCreatedBody(String materialTitle) {
+    return 'A delivery request for $materialTitle was created.';
+  }
+
+  @override
+  String get notificationDriverDeliveryAcceptedTitle => 'Delivery accepted';
+
+  @override
+  String notificationDriverDeliveryAcceptedBody(String materialTitle) {
+    return 'You accepted the delivery for $materialTitle.';
+  }
+
+  @override
+  String get notificationDriverDeliveryNextStepTitle => 'Next delivery step';
+
+  @override
+  String notificationDriverDeliveryNextStepBody(String materialTitle) {
+    return 'Continue the delivery for $materialTitle.';
+  }
+
+  @override
+  String get notificationDeliveryDriverAssignedTitle => 'Driver assigned';
+
+  @override
+  String notificationDeliveryDriverAssignedBody(String materialTitle) {
+    return 'You were assigned to deliver $materialTitle.';
+  }
 }

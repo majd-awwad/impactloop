@@ -6,6 +6,8 @@ import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/format/localized_formatters.dart';
 import '../../../../l10n/l10n.dart';
+import '../../../../shared/l10n/driver_quantity_labels.dart';
+import '../../../../shared/l10n/driver_status_labels.dart';
 import '../../../../shared/l10n/driver_ui_labels.dart';
 import '../../../../shared/widgets/app_status_badge.dart';
 import '../../../../shared/widgets/bidi_text.dart';
@@ -13,6 +15,7 @@ import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../application/driver_archive_provider.dart';
 import '../../data/models/driver_archive.dart';
+import '../widgets/driver_route_block.dart';
 
 class DriverHistoryDetailPage extends ConsumerWidget {
   const DriverHistoryDetailPage({super.key, required this.deliveryId});
@@ -50,6 +53,13 @@ class DriverHistoricalDeliveryContent extends StatelessWidget {
     final l10n = context.l10n;
     final labels = DriverUiLabels(l10n);
     final format = LocalizedFormatters(l10n);
+    final pickupSummary = labels.locationSummary(
+      delivery.pickupLocation.safeSummary,
+    );
+    final dropoffSummary = labels.locationSummary(
+      delivery.dropoffLocation.safeSummary,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -67,7 +77,7 @@ class DriverHistoricalDeliveryContent extends StatelessWidget {
                 runSpacing: AppSpacing.sm,
                 children: [
                   AppStatusBadge(
-                    label: deliveryStatusLabel(delivery.status, l10n: l10n),
+                    label: driverDeliveryStatusLabel(delivery.status, l10n),
                     tone: deliveryStatusAppTone(delivery.status),
                   ),
                   AppStatusBadge(
@@ -91,35 +101,38 @@ class DriverHistoricalDeliveryContent extends StatelessWidget {
                 style: AppTextStyles.title(context),
               ),
               const SizedBox(height: AppSpacing.md),
-              _line(
-                l10n.supplier,
-                labels.partyDisplayName(delivery.supplier.displayName),
+              DriverRouteBlock(
+                pickupSummary: pickupSummary,
+                dropoffSummary: dropoffSummary,
               ),
-              _line(
-                l10n.driverPickupLabel,
-                labels.locationSummary(delivery.pickupLocation.safeSummary),
+              const SizedBox(height: AppSpacing.md),
+              _ResponsiveLine(
+                label: l10n.supplier,
+                value: labels.partyDisplayName(delivery.supplier.displayName),
               ),
-              _line(
-                l10n.dropoff,
-                labels.locationSummary(delivery.dropoffLocation.safeSummary),
-              ),
-              _line(
-                l10n.materials,
-                delivery.carriedItems
+              _ResponsiveLine(
+                label: l10n.materials,
+                value: delivery.carriedItems
                     .map(
                       (item) =>
-                          '${bidiIsolate(labels.materialTitle(item.materialTitle))} × ${bidiIsolate(item.quantityLabel)}',
+                          '${bidiIsolate(labels.materialTitle(item.materialTitle))} × ${bidiIsolate(driverQuantityLabel(l10n, item.quantity, item.unit))}',
                     )
                     .join('\n'),
               ),
               if (delivery.partialPickupOccurred)
-                _line(l10n.driverPartialPickupHistory, l10n.driverYes),
+                _ResponsiveLine(
+                  label: l10n.driverPartialPickupHistory,
+                  value: l10n.driverYes,
+                ),
               if (!delivery.itemAuditComplete)
-                _line(l10n.driverItemAudit, l10n.driverLegacyItemAuditWarning),
+                _ResponsiveLine(
+                  label: l10n.driverItemAudit,
+                  value: l10n.driverLegacyItemAuditWarning,
+                ),
               if (delivery.failureReasonCode != null)
-                _line(
-                  l10n.driverFailureReason,
-                  labels.incidentReason(delivery.failureReasonCode!),
+                _ResponsiveLine(
+                  label: l10n.driverFailureReason,
+                  value: labels.incidentReason(delivery.failureReasonCode!),
                 ),
             ],
           ),
@@ -143,7 +156,7 @@ class DriverHistoricalDeliveryContent extends StatelessWidget {
                       contentPadding: EdgeInsets.zero,
                       leading: const Icon(Icons.remove_circle_outline_rounded),
                       title: Text(
-                        '${bidiIsolate(labels.materialTitle(item.materialTitle))} × ${bidiIsolate(item.quantityLabel)}',
+                        '${bidiIsolate(labels.materialTitle(item.materialTitle))} × ${bidiIsolate(driverQuantityLabel(l10n, item.quantity, item.unit))}',
                       ),
                       subtitle: Text(
                         [
@@ -178,7 +191,7 @@ class DriverHistoricalDeliveryContent extends StatelessWidget {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.check_circle_outline_rounded),
-                    title: Text(deliveryStatusLabel(entry.status, l10n: l10n)),
+                    title: Text(driverDeliveryStatusLabel(entry.status, l10n)),
                     subtitle: Text(format.dateTime(entry.occurredAt)),
                   ),
             ],
@@ -187,17 +200,68 @@ class DriverHistoricalDeliveryContent extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _line(String label, String value) => Padding(
-    padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(width: 132, child: Text(label)),
-        Expanded(child: Text(value)),
-      ],
-    ),
-  );
+class _ResponsiveLine extends StatelessWidget {
+  const _ResponsiveLine({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = MaterialsUiPalette.of(context);
+    final narrow = MediaQuery.sizeOf(context).width < 400;
+
+    if (narrow) {
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
+            ),
+            const SizedBox(height: 2),
+            BidiText(
+              value,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textPrimary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 132,
+            child: Text(
+              label,
+              style: AppTextStyles.label(
+                context,
+              ).copyWith(color: palette.textMuted),
+            ),
+          ),
+          Expanded(
+            child: BidiText(
+              value,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DetailPanel extends StatelessWidget {

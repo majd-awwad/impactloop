@@ -2833,7 +2833,7 @@
   "driverInternalDelivery": "توصيل داخلي",
   "driverJobs": "المهام",
   "driverJobsTitle": "مهام السائق",
-  "driverJobsSubtitle": "تنسيق التوصيل الداخلي الأساسي",
+  "driverJobsSubtitle": "استلم المواد من المورّدين وسلّمها إلى المتعلّمين.",
   "driverActiveDeliveriesCount": "التوصيلات النشطة: {active}/{max}",
   "@driverActiveDeliveriesCount": {
     "placeholders": {
@@ -2932,7 +2932,7 @@
       "radius": {"type": "String"}
     }
   },
-  "driverJobsAvailableOutsideRadius": "{count, plural, =1{مهمة واحدة} other{{count} مهام}} متاحة خارج نطاقك الحالي. جرّب توسيع النطاق أو اختيار أي مسافة.",
+  "driverJobsAvailableOutsideRadius": "{count, plural, =0{لا توجد مهام} =1{مهمة واحدة} =2{مهمتان} few{{count} مهام} many{{count} مهمة} other{{count} مهمة}} متاحة خارج نطاقك الحالي. جرّب توسيع النطاق أو اختيار أي مسافة.",
   "@driverJobsAvailableOutsideRadius": {
     "placeholders": {
       "count": {"type": "int"}
@@ -2940,7 +2940,7 @@
   },
   "driverTryIncreaseRadius": "جرّب توسيع النطاق أو اختيار أي مسافة.",
   "driverNoJobsInArea": "لم تُعثر على مهام في هذه المنطقة.",
-  "driverJobsAvailableBroaderFilters": "{count, plural, =1{مهمة واحدة} other{{count} مهام}} متاحة بفلاتر أوسع. جرّب كل المناطق أو إعادة تعيين الفلاتر.",
+  "driverJobsAvailableBroaderFilters": "{count, plural, =0{لا توجد مهام} =1{مهمة واحدة} =2{مهمتان} few{{count} مهام} many{{count} مهمة} other{{count} مهمة}} متاحة بفلاتر أوسع. جرّب كل المناطق أو إعادة تعيين الفلاتر.",
   "@driverJobsAvailableBroaderFilters": {
     "placeholders": {
       "count": {"type": "int"}
@@ -2970,7 +2970,7 @@
   "driverUpdating": "جارٍ التحديث...",
   "driverReportPickupFailed": "الإبلاغ عن فشل الاستلام",
   "driverReportDeliveryFailed": "الإبلاغ عن فشل التوصيل",
-  "driverReportDriverIssue": "الإبلاغ عن مشكلة للسائق",
+  "driverReportDriverIssue": "الإبلاغ عن تعذّري عن الاستمرار",
   "driverSupplierHandoverCode": "رمز تسليم المورّد",
   "driverSupplierHandoverCodeMessage": "أدخل الرمز الذي يعطيك إياه المورّد بعد تسليم المادة.",
   "driverMarkPickedUp": "تأكيد الاستلام",
@@ -2991,7 +2991,7 @@
   "driverPartialPickupPickedSection": "سيُسلَّم الآن",
   "driverPartialPickupPendingSection": "سيبقى معلّقًا",
   "driverPartialPickupReasonRequired": "اختر سببًا لكل عنصر معلّق.",
-  "driverPartialPickupSummary": "سيُسلَّم {pickedCount} عناصر الآن. سيبقى {pendingCount} عناصر معلّقة.",
+  "driverPartialPickupSummary": "{pickedCount, plural, =0{لن يُسلَّم أي عنصر الآن.} =1{سيُسلَّم عنصر واحد الآن.} =2{سيُسلَّمان عنصران الآن.} few{سيُسلَّم {pickedCount} عناصر الآن.} many{سيُسلَّم {pickedCount} عنصرًا الآن.} other{سيُسلَّم {pickedCount} عنصر الآن.}} {pendingCount, plural, =0{لن يبقى أي عنصر معلّق.} =1{سيبقى عنصر واحد معلّق.} =2{سيبقى عنصران معلّقان.} few{ستبقى {pendingCount} عناصر معلّقة.} many{ستبقى {pendingCount} عنصرًا معلّقًا.} other{سيبقى {pendingCount} عنصر معلّق.}}",
   "@driverPartialPickupSummary": {
     "placeholders": {
       "pickedCount": {
@@ -3068,7 +3068,7 @@
       "dateTime": {"type": "String"}
     }
   },
-  "driverAvailableInDays": "متاح خلال {count, plural, =1{يوم واحد} other{{count} أيام}}",
+  "driverAvailableInDays": "متاح خلال {count, plural, =0{أقل من يوم} =1{يوم واحد} =2{يومين} few{{count} أيام} many{{count} يومًا} other{{count} يوم}}",
   "@driverAvailableInDays": {
     "placeholders": {
       "count": {"type": "int"}
@@ -3081,13 +3081,13 @@
       "minutes": {"type": "int"}
     }
   },
-  "driverAvailableInHours": "متاح خلال {count, plural, =1{ساعة واحدة} other{{count} ساعات}}",
+  "driverAvailableInHours": "متاح خلال {count, plural, =0{أقل من ساعة} =1{ساعة واحدة} =2{ساعتين} few{{count} ساعات} many{{count} ساعة} other{{count} ساعة}}",
   "@driverAvailableInHours": {
     "placeholders": {
       "count": {"type": "int"}
     }
   },
-  "driverAvailableInMinutes": "متاح خلال {count, plural, =1{دقيقة واحدة} other{{count} دقائق}}",
+  "driverAvailableInMinutes": "متاح خلال {count, plural, =0{أقل من دقيقة} =1{دقيقة واحدة} =2{دقيقتين} few{{count} دقائق} many{{count} دقيقة} other{{count} دقيقة}}",
   "@driverAvailableInMinutes": {
     "placeholders": {
       "count": {"type": "int"}
@@ -3213,7 +3213,7 @@
       "timeRange": {"type": "String"}
     }
   },
-  "driverPickupStartsInMinutes": "يبدأ الاستلام خلال {minutes} دقيقة · {dateLabel} · {timeRange}",
+  "driverPickupStartsInMinutes": "يبدأ الاستلام خلال {minutes, plural, =0{أقل من دقيقة} =1{دقيقة واحدة} =2{دقيقتين} few{{minutes} دقائق} many{{minutes} دقيقة} other{{minutes} دقيقة}} · {dateLabel} · {timeRange}",
   "@driverPickupStartsInMinutes": {
     "placeholders": {
       "minutes": {"type": "int"},
@@ -3271,7 +3271,7 @@
   "inviteFieldRequired": "مطلوب",
   "driverLocationUnavailableShort": "الموقع غير متاح",
   "driverUnknownParty": "غير معروف",
-  "driverGroupedItemsCount": "{count, plural, =1{عنصر واحد} other{{count} عناصر}}",
+  "driverGroupedItemsCount": "{count, plural, =0{لا عناصر} =1{عنصر واحد} =2{عنصران} few{{count} عناصر} many{{count} عنصرًا} other{{count} عنصر}}",
   "@driverGroupedItemsCount": {
     "placeholders": {
       "count": {"type": "int"}
@@ -3395,5 +3395,232 @@
   "driverJobsUnavailableTitle": "الوظائف المتاحة غير متوفرة",
   "driverAssignedDeliveriesContinue": "تبقى التوصيلات المسندة والتذكيرات والبلاغات وسجل الإشعارات متاحة.",
   "driverNotAcceptingNewJobsError": "استأنف استقبال الوظائف الجديدة قبل قبول هذا التوصيل.",
-  "driverCancelAction": "إلغاء"
+  "driverCancelAction": "إلغاء",
+  "driverStatusWaitingForAssignment": "بانتظار التعيين",
+  "driverStatusAssigned": "معيّن — توجّه للاستلام",
+  "driverStatusAtPickup": "في موقع الاستلام",
+  "driverStatusPickedUp": "تم الاستلام",
+  "driverStatusOnTheWay": "في الطريق إلى المتعلّم",
+  "driverStatusAtDropoff": "في موقع التسليم",
+  "driverStatusDelivered": "تم التسليم",
+  "driverStatusCancelled": "ملغى",
+  "driverStatusPickupFailed": "فشل الاستلام",
+  "driverStatusDeliveryFailed": "فشل التسليم",
+  "driverStatusDriverNoShow": "مُعلَّم كعدم حضور",
+  "driverStatusLearnerNoShow": "المتعلّم لم يحضر",
+  "driverStatusAwaitingReview": "قيد مراجعة الإدارة",
+  "driverNavHome": "الرئيسية",
+  "driverNavJobs": "الوظائف",
+  "driverNavActive": "النشطة",
+  "driverNavHistory": "السجل",
+  "driverNavMore": "المزيد",
+  "driverNavGroupOverview": "نظرة عامة",
+  "driverNavGroupWork": "العمل",
+  "driverNavGroupHistory": "السجل",
+  "driverNavGroupAccount": "الحساب",
+  "driverMoreTitle": "خيارات إضافية",
+  "driverMoreProfile": "ملف السائق",
+  "driverMoreNotifications": "الإشعارات",
+  "driverMoreHistory": "السجل والتقارير",
+  "driverMoreAccountSettings": "إعدادات الحساب",
+  "driverAcceptingJobsOnExplicit": "متاح لاستقبال مهام جديدة",
+  "driverAcceptingJobsOffExplicit": "غير متاح حاليًا",
+  "driverEditFilters": "تعديل الفلاتر",
+  "driverPartialPickupSelectAtLeastOne": "اختر عنصرًا واحدًا على الأقل الذي سلّمه المورّد الآن.",
+  "driverEmptyActiveTitle": "لا توجد توصيلات نشطة",
+  "driverEmptyActiveBody": "عند قبول مهمة، ستظهر هنا حتى يكتمل التسليم.",
+  "driverEmptyActiveCta": "تصفّح الوظائف المتاحة",
+  "driverViewNearbyJobs": "عرض الوظائف القريبة",
+  "driverRoutePickupLabel": "الاستلام",
+  "driverRouteDropoffLabel": "التسليم",
+  "driverRouteFrom": "من",
+  "driverRouteTo": "إلى",
+  "driverRouteArrowSemantic": "اتجاه المسار",
+  "driverMapSectionTitle": "المواقع",
+  "driverMapPickupPin": "موقع الاستلام",
+  "driverMapDropoffPin": "موقع التسليم",
+  "driverMapOpenExternal": "فتح في الخرائط",
+  "driverMapUnavailable": "معاينة الخريطة غير متوفرة لهذا الموقع.",
+  "driverUnitPiece": "قطعة",
+  "driverUnitSheet": "لوح",
+  "driverUnitBag": "كيس",
+  "driverUnitKg": "كغ",
+  "driverUnitItem": "عنصر",
+  "driverUnitUnit": "وحدة",
+  "driverUnitPanel": "لوح",
+  "driverUnitCrate": "صندوق",
+  "driverUnitMeter": "متر",
+  "driverUnitLiter": "لتر",
+  "driverUnitRoll": "لفة",
+  "driverUnitBox": "علبة",
+  "driverUnitPack": "حزمة",
+  "driverUnitSet": "مجموعة",
+  "driverQuantityPiece": "{count, plural, =0{لا قطع} =1{قطعة واحدة} =2{قطعتان} few{{count} قطع} many{{count} قطعة} other{{count} قطعة}}",
+  "@driverQuantityPiece": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantitySheet": "{count, plural, =0{لا ألواح} =1{لوح واحد} =2{لوحان} few{{count} ألواح} many{{count} لوحًا} other{{count} لوح}}",
+  "@driverQuantitySheet": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityBag": "{count, plural, =0{لا أكياس} =1{كيس واحد} =2{كيسان} few{{count} أكياس} many{{count} كيسًا} other{{count} كيس}}",
+  "@driverQuantityBag": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityKg": "{count, plural, =0{0 كغ} =1{1 كغ} other{{count} كغ}}",
+  "@driverQuantityKg": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityItem": "{count, plural, =0{لا عناصر} =1{عنصر واحد} =2{عنصران} few{{count} عناصر} many{{count} عنصرًا} other{{count} عنصر}}",
+  "@driverQuantityItem": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityUnit": "{count, plural, =0{لا وحدات} =1{وحدة واحدة} =2{وحدتان} few{{count} وحدات} many{{count} وحدةً} other{{count} وحدة}}",
+  "@driverQuantityUnit": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityPanel": "{count, plural, =0{لا ألواح} =1{لوح واحد} =2{لوحان} few{{count} ألواح} many{{count} لوحًا} other{{count} لوح}}",
+  "@driverQuantityPanel": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityCrate": "{count, plural, =0{لا صناديق} =1{صندوق واحد} =2{صندوقان} few{{count} صناديق} many{{count} صندوقًا} other{{count} صندوق}}",
+  "@driverQuantityCrate": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityMeter": "{count, plural, =0{لا أمتار} =1{متر واحد} =2{متران} few{{count} أمتار} many{{count} مترًا} other{{count} متر}}",
+  "@driverQuantityMeter": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityLiter": "{count, plural, =0{لا لترات} =1{لتر واحد} =2{لتران} few{{count} لترات} many{{count} لترًا} other{{count} لتر}}",
+  "@driverQuantityLiter": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityRoll": "{count, plural, =0{لا لفات} =1{لفة واحدة} =2{لفتان} few{{count} لفات} many{{count} لفةً} other{{count} لفة}}",
+  "@driverQuantityRoll": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityBox": "{count, plural, =0{لا علب} =1{علبة واحدة} =2{علبتان} few{{count} علب} many{{count} علبةً} other{{count} علبة}}",
+  "@driverQuantityBox": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantityPack": "{count, plural, =0{لا حزم} =1{حزمة واحدة} =2{حزمتان} few{{count} حزم} many{{count} حزمةً} other{{count} حزمة}}",
+  "@driverQuantityPack": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "driverQuantitySet": "{count, plural, =0{لا مجموعات} =1{مجموعة واحدة} =2{مجموعتان} few{{count} مجموعات} many{{count} مجموعةً} other{{count} مجموعة}}",
+  "@driverQuantitySet": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "notificationDriverPickupReminderTitle": "تذكير الاستلام",
+  "notificationDriverPickupReminderBody": "تذكير: موعد استلام {materialTitle} قريب.",
+  "@notificationDriverPickupReminderBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupStartingSoonTitle": "الاستلام يبدأ قريبًا",
+  "notificationDriverPickupStartingSoonBody": "يبدأ استلام {materialTitle} خلال دقائق.",
+  "@notificationDriverPickupStartingSoonBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupWindowStartedTitle": "بدأ موعد الاستلام",
+  "notificationDriverPickupWindowStartedBody": "موعد استلام {materialTitle} مفتوح الآن.",
+  "@notificationDriverPickupWindowStartedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverPickupOverdueTitle": "تأخّر الاستلام",
+  "notificationDriverPickupOverdueBody": "تأخّر استلام {materialTitle}. أكمل الاستلام أو أبلغ عن مشكلة.",
+  "@notificationDriverPickupOverdueBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffReminderTitle": "تذكير التسليم",
+  "notificationDriverDropoffReminderBody": "تذكير: موعد تسليم {materialTitle} قريب.",
+  "@notificationDriverDropoffReminderBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffStartingSoonTitle": "التسليم يبدأ قريبًا",
+  "notificationDriverDropoffStartingSoonBody": "يبدأ تسليم {materialTitle} خلال دقائق.",
+  "@notificationDriverDropoffStartingSoonBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffWindowStartedTitle": "بدأ موعد التسليم",
+  "notificationDriverDropoffWindowStartedBody": "موعد تسليم {materialTitle} مفتوح الآن.",
+  "@notificationDriverDropoffWindowStartedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDropoffOverdueTitle": "تأخّر التسليم",
+  "notificationDriverDropoffOverdueBody": "تأخّر تسليم {materialTitle}. أكمل التسليم أو أبلغ عن مشكلة.",
+  "@notificationDriverDropoffOverdueBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDeliveryRequestCreatedTitle": "طُلب توصيل",
+  "notificationDriverDeliveryRequestCreatedBody": "طُلب توصيل لـ {materialTitle}.",
+  "@notificationDriverDeliveryRequestCreatedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDeliveryAcceptedTitle": "تم قبول التوصيل",
+  "notificationDriverDeliveryAcceptedBody": "قبلت توصيل {materialTitle}.",
+  "@notificationDriverDeliveryAcceptedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDriverDeliveryNextStepTitle": "الخطوة التالية للتوصيل",
+  "notificationDriverDeliveryNextStepBody": "تابع توصيل {materialTitle}.",
+  "@notificationDriverDeliveryNextStepBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  },
+  "notificationDeliveryDriverAssignedTitle": "تم تعيينك للتوصيل",
+  "notificationDeliveryDriverAssignedBody": "عُيّنت لتوصيل {materialTitle}.",
+  "@notificationDeliveryDriverAssignedBody": {
+    "placeholders": {
+      "materialTitle": {"type": "String"}
+    }
+  }
 }

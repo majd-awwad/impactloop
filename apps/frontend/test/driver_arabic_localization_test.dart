@@ -110,7 +110,10 @@ void main() {
     );
     expect(labelsAr.inactiveClosureReason(null), ar.unknownStatus);
     expect(labelsAr.inactiveClosureReason('OTHER'), ar.unknownStatus);
-    expect(labelsAr.transportType('MOTORCYCLE'), ar.driverTransportMotorcycle);
+    expect(
+      labelsAr.transportType('MOTORCYCLE'),
+      ar.driverTransportationMotorcycle,
+    );
     expect(labelsAr.transportType('HOVERBOARD'), ar.unknownStatus);
   });
 

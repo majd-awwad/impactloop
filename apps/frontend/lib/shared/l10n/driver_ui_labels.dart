@@ -51,10 +51,10 @@ class DriverUiLabels {
   }
 
   String transportType(String code) => switch (code.trim().toUpperCase()) {
-    'CAR' => l10n.driverTransportCar,
-    'MOTORCYCLE' => l10n.driverTransportMotorcycle,
-    'BICYCLE' => l10n.driverTransportBicycle,
-    'WALKING' => l10n.driverTransportWalking,
+    'CAR' => l10n.driverTransportationCar,
+    'MOTORCYCLE' => l10n.driverTransportationMotorcycle,
+    'BICYCLE' => l10n.driverTransportationBicycle,
+    'WALKING' => l10n.driverTransportationWalking,
     _ => l10n.unknownStatus,
   };
 
