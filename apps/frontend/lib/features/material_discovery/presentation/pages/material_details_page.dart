@@ -32,7 +32,7 @@ import '../../../comments/presentation/comments_section.dart';
 import '../../../deliveries/presentation/delivery_status_presentation.dart';
 import '../../../home/application/home_suggested_materials_provider.dart';
 import '../../../profile/application/profile_providers.dart';
-import '../../../learning_hub/application/learning_hub_providers.dart';
+import '../../../learning_hub/application/project_build_refresh.dart';
 import '../../../learner_material_requests/application/learner_material_requests_providers.dart';
 import '../../../reservations/application/reservation_create_controller.dart';
 import '../../../reservations/application/reservation_timing_policy.dart';
@@ -566,10 +566,7 @@ class _MaterialDetailsPageState extends ConsumerState<MaterialDetailsPage>
     ref.invalidate(homeSuggestedMaterialsProvider);
     unawaited(_loadViewerStateIfAuthenticated());
 
-    final projectId = widget.projectId?.trim();
-    if (projectId != null && projectId.isNotEmpty) {
-      ref.invalidate(projectBuildProvider(projectId));
-    }
+    ref.refreshLinkedProjectBuild(widget.projectId);
 
     if (hasMaterialRequestMatchId) {
       invalidateLearnerMaterialRequests(ref);

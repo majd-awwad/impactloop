@@ -51,6 +51,37 @@ void main() {
     expect(meta.label.en, isNot('Already owned'));
   });
 
+  test('raw MISSING status does not visually override Acquired', () {
+    const item = ProjectBuildItem(
+      id: 'item-1',
+      requiredComponentId: 'component-1',
+      status: ProjectBuildItemStatus.missing,
+      component: ProjectRequiredComponentItem(
+        id: 'component-1',
+        name: LocalizedText(en: 'Arduino', ar: 'Arduino'),
+        materialType: 'Board',
+        quantity: 1,
+        unit: 'piece',
+        isRequired: true,
+        canBeSubstituted: false,
+      ),
+      isReadyForBuild: true,
+      readinessLabel: 'Ready for build — material acquired',
+      linkedReservation: LinkedReservationSummary(
+        id: 'reservation-1',
+        status: 'COMPLETED',
+        materialId: 'material-1',
+        needsAction: false,
+        statusLabel: 'Ready for build — material acquired',
+      ),
+    );
+
+    final meta = ProjectBuildItemDisplayMeta.forItem(item);
+
+    expect(item.status, ProjectBuildItemStatus.missing);
+    expect(meta.label.en, 'Acquired');
+  });
+
   test('active linked reservation shows In progress instead of Missing', () {
     const item = ProjectBuildItem(
       id: 'item-1',

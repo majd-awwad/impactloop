@@ -39,4 +39,9 @@ class LearningProjectBuildL10n {
     en: 'In progress',
     ar: 'قيد المتابعة',
   );
+
+  static const reservationCompleted = LocalizedText(
+    en: 'Reservation completed',
+    ar: 'اكتمل الحجز',
+  );
 }

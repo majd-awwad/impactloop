@@ -12,7 +12,7 @@ import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/app_feedback.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
 import '../../../home/application/learner_home_provider.dart';
-import '../../../learning_hub/application/learning_hub_providers.dart';
+import '../../../learning_hub/application/project_build_refresh.dart';
 import '../../application/learner_material_requests_providers.dart';
 import '../../data/models/learner_material_request.dart';
 import '../l10n/learner_material_requests_l10n.dart';
@@ -182,7 +182,7 @@ class _RequestDetailBodyState extends ConsumerState<_RequestDetailBody> {
       return;
     }
 
-    ref.invalidate(projectBuildProvider(request.projectId!));
+    ref.refreshLinkedProjectBuild(request.projectId);
     if (request.buildSyncRepaired || request.isFulfilled) {
       ref.invalidate(learnerHomeFeedProvider);
       ref.invalidate(learnerHomeSectionDetailsProvider);

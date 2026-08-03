@@ -64,6 +64,11 @@ class _LearningProjectBuildPageState
   Future<void>? _guideRestoreRequest;
   final Set<String> _updatingItemIds = <String>{};
   final Set<String> _completingStepIds = <String>{};
+  bool _routeSuspended = false;
+  late final ProjectBuildRefreshCoordinator _refreshCoordinator =
+      ProjectBuildRefreshCoordinator(onRefresh: () {
+        ref.invalidate(projectBuildProvider(widget.projectId));
+      });
   late final ProjectBuildRefreshController _buildRefreshController =
       ProjectBuildRefreshController(onRefresh: _refreshBuild);
 
@@ -81,9 +86,34 @@ class _LearningProjectBuildPageState
   }
 
   @override
+  void deactivate() {
+    _routeSuspended = true;
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    if (_routeSuspended) {
+      _routeSuspended = false;
+      unawaited(_refreshBuild());
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
-      _refreshBuild();
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _buildRefreshController.setPaused(false);
+        if (mounted) {
+          unawaited(_refreshBuild());
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+        _buildRefreshController.setPaused(true);
+      case AppLifecycleState.detached:
+        break;
     }
   }
 
@@ -102,8 +132,15 @@ class _LearningProjectBuildPageState
     ref.invalidate(learnerHomeSectionDetailsProvider);
   }
 
-  void _refreshBuild() {
-    ref.invalidate(projectBuildProvider(widget.projectId));
+  Future<void> _refreshBuild() {
+    return _refreshCoordinator.requestRefreshAsync(() async {
+      ref.invalidate(projectBuildProvider(widget.projectId));
+      try {
+        await ref.read(projectBuildProvider(widget.projectId).future);
+      } catch (_) {
+        // Provider surfaces fetch errors in the UI.
+      }
+    });
   }
 
   @override

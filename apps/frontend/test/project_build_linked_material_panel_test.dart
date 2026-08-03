@@ -54,6 +54,10 @@ void main() {
       findsNothing,
     );
     expect(
+      find.text(LearningProjectBuildL10n.reservationCompleted.en),
+      findsOneWidget,
+    );
+    expect(
       find.text(LearningProjectBuildL10n.readyForBuildMaterialAcquired.en),
       findsOneWidget,
     );

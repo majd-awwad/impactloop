@@ -389,6 +389,16 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ),
           ],
+          if (isAcquired) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              LearningProjectBuildL10n.reservationCompleted.resolve(context),
+              style: textTheme.bodyMedium?.copyWith(
+                color: palette.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
           if (isAcquired || isReadyForBuild || linkedReservation != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
