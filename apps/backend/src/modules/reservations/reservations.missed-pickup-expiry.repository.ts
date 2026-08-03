@@ -13,6 +13,7 @@ import {
   runSerializableTransaction,
   loadReservationIdsWithAnyDelivery,
 } from './reservations.quantity.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 import { MISSED_PICKUP_AUTO_CLOSE_GRACE_HOURS } from './reservation-timing-policy.js';
 
 const missedPickupExpirySelect = {
@@ -90,6 +91,7 @@ export const expireStaleMissedPickupsInTransaction = async (
     });
 
     await recomputeAndUpdateMaterialStatus(tx, reservation.materialId);
+    await applyBuildReservationSyncInTransaction(tx, reservation.id);
     expiredIds.push(reservation.id);
   }
 

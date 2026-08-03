@@ -26,17 +26,40 @@ class ProjectBuildItemDisplayMeta {
       );
     }
 
-    if (item.isReadyForBuild &&
-        item.status != ProjectBuildItemStatus.missing) {
-      return _checklistStatusMeta(item.status);
+    if (ProjectBuildAcquisitionState.isAwaitingResolution(item)) {
+      return ProjectBuildItemDisplayMeta(
+        label: LearningProjectBuildL10n.needsAttention,
+        icon: Icons.warning_amber_rounded,
+        tone: AppStatusTone.warning,
+      );
     }
 
-    if (item.linkedReservation != null && !item.isReadyForBuild) {
+    if (ProjectBuildAcquisitionState.hasActiveLinkedReservation(item)) {
       return ProjectBuildItemDisplayMeta(
-        label: LearningProjectBuildL10n.inProgress,
+        label: LearningProjectBuildL10n.reserved,
         icon: Icons.lock_clock_rounded,
         tone: AppStatusTone.info,
       );
+    }
+
+    if (ProjectBuildAcquisitionState.hasSelectedMaterial(item)) {
+      return ProjectBuildItemDisplayMeta(
+        label: LearningProjectBuildL10n.selected,
+        icon: Icons.check_circle_outline,
+        tone: AppStatusTone.primary,
+      );
+    }
+
+    if (ProjectBuildAcquisitionState.isAlreadyOwnedClassification(item)) {
+      return ProjectBuildItemDisplayMeta(
+        label: LearningProjectBuildL10n.alreadyOwned,
+        icon: Icons.home_repair_service_outlined,
+        tone: AppStatusTone.primary,
+      );
+    }
+
+    if (item.isReadyForBuild) {
+      return _checklistStatusMeta(item.status);
     }
 
     return _checklistStatusMeta(item.status);
@@ -62,12 +85,12 @@ class ProjectBuildItemDisplayMeta {
         tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.alreadyOwned => ProjectBuildItemDisplayMeta(
-        label: const LocalizedText(en: 'Already owned', ar: 'مملوكة مسبقاً'),
+        label: LearningProjectBuildL10n.alreadyOwned,
         icon: Icons.home_repair_service_outlined,
         tone: AppStatusTone.primary,
       ),
       ProjectBuildItemStatus.reserved => ProjectBuildItemDisplayMeta(
-        label: const LocalizedText(en: 'Reserved', ar: 'محجوزة'),
+        label: LearningProjectBuildL10n.reserved,
         icon: Icons.lock_clock_rounded,
         tone: AppStatusTone.info,
       ),

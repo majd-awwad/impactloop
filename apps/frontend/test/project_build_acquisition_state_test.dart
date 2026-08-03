@@ -75,6 +75,38 @@ void main() {
       );
     });
 
+    test('awaiting resolution hides classification controls', () {
+      final item = _item(
+        isReadyForBuild: false,
+        reservationStatus: 'AWAITING_RESOLUTION',
+      );
+
+      expect(
+        ProjectBuildAcquisitionState.isAwaitingResolution(item),
+        isTrue,
+      );
+      expect(
+        ProjectBuildAcquisitionState.shouldShowClassificationControls(item),
+        isFalse,
+      );
+    });
+
+    test('selected material hides classification controls', () {
+      final item = _item(
+        isReadyForBuild: false,
+        includeReservation: false,
+      );
+
+      expect(
+        ProjectBuildAcquisitionState.hasSelectedMaterial(item),
+        isTrue,
+      );
+      expect(
+        ProjectBuildAcquisitionState.shouldShowClassificationControls(item),
+        isFalse,
+      );
+    });
+
     test('already owned remains distinct from acquired', () {
       final acquired = _item(
         isReadyForBuild: true,

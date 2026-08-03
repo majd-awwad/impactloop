@@ -295,6 +295,8 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
     final isAcquired =
         linkedReservation?.status.toUpperCase() == 'COMPLETED' &&
         isReadyForBuild;
+    final isAwaitingResolution =
+        linkedReservation?.status.toUpperCase() == 'AWAITING_RESOLUTION';
     final showAvailabilityWarning =
         ProjectBuildAcquisitionState.shouldShowAvailabilityWarning(
           material: material,
@@ -378,7 +380,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ),
           ],
-          if (linkedReservation != null && !isAcquired) ...[
+          if (linkedReservation != null && !isAcquired && !isAwaitingResolution) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               linkedReservation!.statusLabel,
@@ -386,6 +388,17 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                 color: linkedReservation!.needsAction
                     ? colors.warningText
                     : palette.textSecondary,
+              ),
+            ),
+          ],
+          if (isAwaitingResolution) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              LearningProjectBuildL10n.reservationRequiresResolution
+                  .resolve(context),
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.warningText,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -399,7 +412,10 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
             ),
           ],
-          if (isAcquired || isReadyForBuild || linkedReservation != null) ...[
+          if (isAcquired ||
+              isReadyForBuild ||
+              linkedReservation != null ||
+              (!isReadyForBuild && !isAcquired && !isAwaitingResolution)) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               isAcquired
@@ -407,9 +423,12 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                       .resolve(context)
                   : isReadyForBuild
                   ? readinessLabel
-                  : LearningProjectBuildL10n.materialSelectedNotReady.resolve(
+                  : linkedReservation != null
+                  ? LearningProjectBuildL10n.materialSelectedNotReady.resolve(
                       context,
-                    ),
+                    )
+                  : LearningProjectBuildL10n.materialSelectedReserveOrAcquire
+                      .resolve(context),
               style: textTheme.bodyMedium?.copyWith(
                 color: isAcquired || isReadyForBuild
                     ? palette.lime

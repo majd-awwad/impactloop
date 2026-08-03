@@ -25,6 +25,36 @@ class ProjectBuildAcquisitionState {
         item.linkedReservation?.status.toUpperCase() == 'COMPLETED';
   }
 
+  static bool isAwaitingResolution(ProjectBuildItem item) {
+    return item.linkedReservation?.status.toUpperCase() == 'AWAITING_RESOLUTION';
+  }
+
+  static bool hasActiveLinkedReservation(ProjectBuildItem item) {
+    final reservation = item.linkedReservation;
+    if (reservation == null) {
+      return false;
+    }
+
+    final status = reservation.status.toUpperCase();
+    if (status == 'COMPLETED' ||
+        _terminalReservationStatuses.contains(status)) {
+      return false;
+    }
+
+    return _activeReservationStatuses.contains(status);
+  }
+
+  static bool hasSelectedMaterial(ProjectBuildItem item) {
+    return item.linkedMaterial != null &&
+        !isAcquiredViaCompletedReservation(item) &&
+        !isAwaitingResolution(item) &&
+        !hasActiveLinkedReservation(item);
+  }
+
+  static bool isAlreadyOwnedClassification(ProjectBuildItem item) {
+    return item.status == ProjectBuildItemStatus.alreadyOwned;
+  }
+
   static bool itemNeedsActiveRefresh(ProjectBuildItem item) {
     if (isAcquiredViaCompletedReservation(item)) {
       return false;
@@ -73,6 +103,9 @@ class ProjectBuildAcquisitionState {
   }
 
   static bool shouldShowClassificationControls(ProjectBuildItem item) {
-    return !isAcquiredViaCompletedReservation(item);
+    return !isAcquiredViaCompletedReservation(item) &&
+        !isAwaitingResolution(item) &&
+        !hasActiveLinkedReservation(item) &&
+        !hasSelectedMaterial(item);
   }
 }

@@ -12,6 +12,7 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 import {
   groupedDeliveryStateConflict,
   loadAndAssertGroupedDeliveryState,
@@ -121,6 +122,7 @@ const transitionFailureReservations = async (
         note: input.note,
       },
     });
+    await applyBuildReservationSyncInTransaction(tx, reservation.id);
   }
 
   if (input.delivery.deliveryGroupId) {
@@ -236,6 +238,7 @@ export const markLearnerPickupNoShow = async (input: {
     });
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+    await applyBuildReservationSyncInTransaction(tx, reservation.id);
 
     return { outcome: 'UPDATED' as const, reservation };
   });
@@ -332,6 +335,7 @@ export const markDeliveryPickupWindowExpired = async (input: {
         note: 'Delivery pickup window expired',
       },
     });
+    await applyBuildReservationSyncInTransaction(tx, reservation.id);
 
     const duplicate = await tx.noShowReport.findFirst({
       where: {
@@ -490,6 +494,7 @@ export const markDriverNoShow = async (input: {
         note: 'Driver no-show at supplier pickup',
       },
     });
+    await applyBuildReservationSyncInTransaction(tx, reservation.id);
 
     return {
       outcome: 'UPDATED' as const,

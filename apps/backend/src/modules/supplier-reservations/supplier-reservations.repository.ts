@@ -9,6 +9,7 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from '../reservations/reservations.quantity.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 import { ACTIVE_RESERVATION_STATUSES } from '../reservations/reservation-status.js';
 import { resolveReservationFollowUp } from '../reservations/reservation-follow-up.js';
 import {
@@ -927,6 +928,7 @@ export const declineSupplierReservation = async (input: {
     });
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+    await applyBuildReservationSyncInTransaction(tx, updated.id);
 
     return { conflict: false as const, reservationId: updated.id };
   });
@@ -1294,6 +1296,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
       });
 
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+      await applyBuildReservationSyncInTransaction(tx, updated.id);
 
       return { conflict: false as const, reservationId: updated.id };
     }
@@ -1341,6 +1344,7 @@ export const cancelSupplierAcceptedReservation = async (input: {
     });
 
     await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+    await applyBuildReservationSyncInTransaction(tx, updated.id);
 
     return { conflict: false as const, reservationId: updated.id };
   });
@@ -1493,6 +1497,7 @@ export const createSupplierNoShowReport = async (input: {
       });
 
       await recomputeAndUpdateMaterialStatus(tx, existing.materialId);
+      await applyBuildReservationSyncInTransaction(tx, existing.id);
     }
 
     return { report };

@@ -1307,6 +1307,10 @@ class _BuildItemCard extends StatelessWidget {
     final statusStyle = AppStatusStyle.of(context, displayMeta.tone);
     final isAcquired =
         ProjectBuildAcquisitionState.isAcquiredViaCompletedReservation(item);
+    final isAwaitingResolution =
+        ProjectBuildAcquisitionState.isAwaitingResolution(item);
+    final hasSelectedMaterial =
+        ProjectBuildAcquisitionState.hasSelectedMaterial(item);
     final showClassificationControls =
         ProjectBuildAcquisitionState.shouldShowClassificationControls(item);
 
@@ -1372,13 +1376,47 @@ class _BuildItemCard extends StatelessWidget {
                 _BuildStatusChip(meta: displayMeta),
             ],
           ),
-          if (!item.isReadyForBuild && !isAcquired) ...[
+          if (!item.isReadyForBuild && !isAcquired && !isAwaitingResolution) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
-              item.readinessLabel,
+              hasSelectedMaterial
+                  ? LearningProjectBuildL10n.materialSelectedReserveOrAcquire
+                      .resolve(context)
+                  : item.readinessLabel,
               style: AppTextStyles.body(
                 context,
               ).copyWith(color: palette.textSecondary, height: 1.35),
+            ),
+          ],
+          if (isAwaitingResolution) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: statusStyle.background,
+                borderRadius: AppRadius.mdAll,
+                border: Border.all(color: statusStyle.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    LearningProjectBuildL10n.reservationRequiresResolution
+                        .resolve(context),
+                    style: AppTextStyles.subtitle(
+                      context,
+                    ).copyWith(color: statusStyle.foreground),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    LearningProjectBuildL10n.needsAttention.resolve(context),
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: palette.textSecondary, height: 1.35),
+                  ),
+                ],
+              ),
             ),
           ],
           if (isAcquired) ...[

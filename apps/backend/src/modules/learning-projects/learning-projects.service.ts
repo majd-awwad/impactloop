@@ -1102,7 +1102,16 @@ export const getMyProjectBuildById = async (
       fulfillRequestFromCompletedReservation,
     );
 
-    if (repairedCount > 0) {
+    const { reconcileTerminalLinkedReservationsForBuild } = await import(
+      './learning-projects.build-terminal-reconciliation.js'
+    );
+
+    const terminalRepair = await reconcileTerminalLinkedReservationsForBuild(
+      build.id,
+      userId,
+    );
+
+    if (repairedCount > 0 || terminalRepair.repairedCount > 0) {
       build =
         (await learningProjectsRepository.findProjectBuild(id, userId)) ??
         build;

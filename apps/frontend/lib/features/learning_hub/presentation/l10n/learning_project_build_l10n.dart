@@ -44,4 +44,34 @@ class LearningProjectBuildL10n {
     en: 'Reservation completed',
     ar: 'اكتمل الحجز',
   );
+
+  static const needsAttention = LocalizedText(
+    en: 'Needs attention',
+    ar: 'تحتاج إلى متابعة',
+  );
+
+  static const reservationRequiresResolution = LocalizedText(
+    en: 'Reservation requires resolution',
+    ar: 'الحجز يحتاج إلى معالجة',
+  );
+
+  static const selected = LocalizedText(
+    en: 'Selected',
+    ar: 'تم اختيار مادة',
+  );
+
+  static const reserved = LocalizedText(
+    en: 'Reserved',
+    ar: 'محجوزة',
+  );
+
+  static const alreadyOwned = LocalizedText(
+    en: 'Already owned',
+    ar: 'أمتلكها بالفعل',
+  );
+
+  static const materialSelectedReserveOrAcquire = LocalizedText(
+    en: 'Material selected — reserve or acquire it before building.',
+    ar: 'تم اختيار المادة — احجزها أو احصل عليها قبل البناء.',
+  );
 }

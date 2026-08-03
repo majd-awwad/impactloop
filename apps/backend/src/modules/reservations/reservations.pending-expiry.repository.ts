@@ -12,6 +12,7 @@ import {
   recomputeAndUpdateMaterialStatus,
   runSerializableTransaction,
 } from './reservations.quantity.js';
+import { applyBuildReservationSyncInTransaction } from '../learning-projects/learning-projects.build-reservation-sync.js';
 
 const pendingExpirySelect = {
   id: true,
@@ -66,6 +67,7 @@ export const expireStalePendingReservationsInTransaction = async (
     });
 
     await recomputeAndUpdateMaterialStatus(tx, reservation.materialId);
+    await applyBuildReservationSyncInTransaction(tx, reservation.id);
     expiredIds.push(reservation.id);
   }
 

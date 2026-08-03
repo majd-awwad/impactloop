@@ -173,7 +173,9 @@ export const mapLinkedReservationSummary = (
     return null;
   }
 
-  const needsAction = TERMINAL_RESERVATION_STATUSES.has(reservation.status);
+  const needsAction =
+    TERMINAL_RESERVATION_STATUSES.has(reservation.status) ||
+    reservation.status === 'AWAITING_RESOLUTION';
 
   return {
     id: reservation.id,
@@ -203,7 +205,7 @@ const formatReservationStatusLabel = (status: string) => {
     case 'FULFILLMENT_FAILED':
       return 'Reservation ended — choose another option';
     case 'AWAITING_RESOLUTION':
-      return 'Awaiting resolution';
+      return 'Reservation requires resolution';
     default:
       return status
         .toLowerCase()
@@ -270,11 +272,17 @@ export const resolveBuildItemReadiness = (input: {
   if (input.linkedReservation) {
     const reservationStatus = input.linkedReservation.status;
 
+    if (reservationStatus === 'AWAITING_RESOLUTION') {
+      return {
+        isReadyForBuild: false,
+        readinessLabel: 'Reservation requires resolution',
+      };
+    }
+
     if (
       ACTIVE_HOLD_STATUSES.includes(
         reservationStatus as (typeof ACTIVE_HOLD_STATUSES)[number],
-      ) ||
-      reservationStatus === 'AWAITING_RESOLUTION'
+      )
     ) {
       return {
         isReadyForBuild: false,

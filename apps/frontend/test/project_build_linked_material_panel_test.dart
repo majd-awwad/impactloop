@@ -116,4 +116,47 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('selected material without reservation shows reserve action', (
+    tester,
+  ) async {
+    const material = LinkedMaterialSummary(
+      id: 'material-1',
+      title: 'Sorted Plastic Bottle Caps Bag',
+      categoryNameEn: 'Storage',
+      condition: 'GOOD',
+      status: 'AVAILABLE',
+      isPubliclyAvailable: true,
+      isFree: true,
+      currency: 'NIS',
+      supplierName: 'Supplier',
+      city: 'Ramallah',
+      pickupAllowed: true,
+      deliveryAllowed: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProjectBuildLinkedMaterialPanel(
+            material: material,
+            linkedReservation: null,
+            isReadyForBuild: false,
+            readinessLabel:
+                'Material selected — reserve or acquire it before building.',
+            isBusy: false,
+            onViewMaterial: () {},
+            onReserveMaterial: () {},
+            onUnlink: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.text(LearningProjectBuildL10n.materialSelectedReserveOrAcquire.en),
+      findsOneWidget,
+    );
+    expect(find.text('Reserve this material'), findsOneWidget);
+  });
 }
