@@ -3,7 +3,7 @@ import { describe, test } from 'node:test';
 
 import { Prisma } from '../../generated/prisma/client.js';
 
-import { resolveBuildItemState } from './learning-projects.build-item-state.js';
+import { resolveBuildItemState, resolveBuildItemStepUnlockReadinessFromState } from './learning-projects.build-item-state.js';
 import type {
   LinkedMaterialRecord,
   LinkedReservationRecord,
@@ -98,5 +98,79 @@ describe('learning-projects.build-item-state', () => {
     assert.equal(resolved.acquisitionState, 'acquired');
     assert.equal(resolved.allocationResult, 'sufficient');
     assert.equal(resolved.isReadyForBuild, true);
+  });
+});
+
+describe('learning-projects.build-item-state step unlock', () => {
+  test('AVAILABLE self-report is ready for build but does not unlock steps', () => {
+    const resolved = resolveBuildItemState({ status: 'AVAILABLE' });
+    const stepUnlock = resolveBuildItemStepUnlockReadinessFromState({
+      status: 'AVAILABLE',
+    });
+
+    assert.equal(resolved.isReadyForBuild, true);
+    assert.equal(stepUnlock.isReadyForStepUnlock, false);
+  });
+
+  test('ALTERNATIVE self-report is ready for build but does not unlock steps', () => {
+    const resolved = resolveBuildItemState({ status: 'ALTERNATIVE' });
+    const stepUnlock = resolveBuildItemStepUnlockReadinessFromState({
+      status: 'ALTERNATIVE',
+    });
+
+    assert.equal(resolved.isReadyForBuild, true);
+    assert.equal(stepUnlock.isReadyForStepUnlock, false);
+  });
+
+  test('ALREADY_OWNED unlocks steps under existing checklist semantics', () => {
+    const resolved = resolveBuildItemState({ status: 'ALREADY_OWNED' });
+    const stepUnlock = resolveBuildItemStepUnlockReadinessFromState({
+      status: 'ALREADY_OWNED',
+    });
+
+    assert.equal(resolved.isReadyForBuild, true);
+    assert.equal(stepUnlock.isReadyForStepUnlock, true);
+  });
+
+  test('completed sufficient compatible acquisition unlocks steps', () => {
+    const stepUnlock = resolveBuildItemStepUnlockReadinessFromState({
+      status: 'MISSING',
+      requiredQuantity: 1,
+      requiredUnit: 'piece',
+      materialUnit: 'piece',
+      linkedMaterial: { ...linkedMaterial, unit: 'piece' },
+      linkedReservation: completedReservation,
+    });
+
+    assert.equal(stepUnlock.isReadyForStepUnlock, true);
+  });
+
+  test('partial completed acquisition stays locked for steps', () => {
+    const stepUnlock = resolveBuildItemStepUnlockReadinessFromState({
+      status: 'MISSING',
+      requiredQuantity: 4,
+      requiredUnit: 'pieces',
+      materialUnit: 'piece',
+      linkedMaterial: { ...linkedMaterial, unit: 'piece' },
+      linkedReservation: {
+        ...completedReservation,
+        quantityRequested: new Prisma.Decimal(2),
+      },
+    });
+
+    assert.equal(stepUnlock.isReadyForStepUnlock, false);
+  });
+
+  test('incompatible completed acquisition stays locked for steps', () => {
+    const stepUnlock = resolveBuildItemStepUnlockReadinessFromState({
+      status: 'MISSING',
+      requiredQuantity: 1,
+      requiredUnit: 'piece',
+      materialUnit: 'bags',
+      linkedMaterial,
+      linkedReservation: completedReservation,
+    });
+
+    assert.equal(stepUnlock.isReadyForStepUnlock, false);
   });
 });

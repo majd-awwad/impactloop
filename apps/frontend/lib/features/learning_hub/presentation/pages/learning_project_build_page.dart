@@ -330,7 +330,9 @@ class _LearningProjectBuildPageState
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              child: Text(
+                LearningProjectBuildL10n.cancel.resolve(dialogContext),
+              ),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),

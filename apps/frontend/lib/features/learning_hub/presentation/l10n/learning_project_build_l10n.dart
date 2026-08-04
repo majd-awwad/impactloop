@@ -123,6 +123,36 @@ class LearningProjectBuildL10n {
     ar: 'سيبقى الحجز المكتمل وسجل الحصول على المادة محفوظين.',
   );
 
+  static const missing = LocalizedText(
+    en: 'Missing',
+    ar: 'مفقودة',
+  );
+
+  static const linkedOption = LocalizedText(
+    en: 'Linked option',
+    ar: 'الخيار المرتبط',
+  );
+
+  static const reserveThisMaterial = LocalizedText(
+    en: 'Reserve this material',
+    ar: 'احجز هذه المادة',
+  );
+
+  static const viewMaterial = LocalizedText(
+    en: 'View material',
+    ar: 'عرض المادة',
+  );
+
+  static const unlinkMaterial = LocalizedText(
+    en: 'Unlink',
+    ar: 'إلغاء الربط',
+  );
+
+  static const cancel = LocalizedText(
+    en: 'Cancel',
+    ar: 'إلغاء',
+  );
+
   static String _formatQuantityLabel(double value) {
     if (value == value.roundToDouble()) {
       return value.toInt().toString();

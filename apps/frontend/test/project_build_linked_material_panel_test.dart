@@ -228,6 +228,9 @@ void main() {
       find.text(LearningProjectBuildL10n.materialSelectedReserveOrAcquire.en),
       findsOneWidget,
     );
-    expect(find.text('Reserve this material'), findsOneWidget);
+    expect(
+      find.text(LearningProjectBuildL10n.reserveThisMaterial.en),
+      findsOneWidget,
+    );
   });
 }

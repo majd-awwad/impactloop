@@ -1,132 +1,140 @@
 # Learning Hub Feature
 
-**Sources inspected:** `apps/frontend/lib/features/learning_hub/`, `apps/backend/src/modules/learning-projects/`, `docs/08-implementation-status.md`
+**Last updated:** LH-04 core journey closure
+**Sources:** `apps/frontend/lib/features/learning_hub/`, `apps/backend/src/modules/learning-projects/`, learner material requests, reservations, supplier material requests
 
 ## Purpose
 
-Browse educational project ideas (components, steps, links) for inspiration. The current UI supports browsing, saved/followed project tabs, detail, learner draft submission, admin review, project likes/saves/follows, project ratings/reviews, a persisted manual build checklist, and material browsing handoff. In-hub booking and AI material matching are not shipped yet.
+Browse published learning projects, start or continue a persisted build checklist, link platform materials, create material requests, reserve suggested materials, track acquisition readiness, complete build steps, and finish the project build.
 
-## Current status
+## Core learner journey (implemented)
 
-| Layer | Status | Notes |
-|-------|--------|-------|
-| Backend `learning-projects` | **Implemented** | Public read list + detail (`PUBLISHED` only in repository), learner likes/saves/follows/reviews, learner build checklists, learner submit, and owner-scoped submission read/edit/resubmit endpoints |
-| Flutter list/detail pages | **Partial** | `/learning` and `/learning/:id` use `ApiLearningHubRepository` + Riverpod providers; browse exposes category, search, optional `q` route search prefill, difficulty, sanitized tag filters, server-side page navigation, saved/followed tabs for learners, in-card engagement controls, rating summaries, and viewer saved/followed state |
-| Home learning spotlight | **Implemented** | Reuses `learningProjectsProvider` with `limit: 2` on `/home` |
-| Project likes | **Implemented** | List/home/detail surfaces have optimistic learner-only like/unlike controls backed by `POST`/`DELETE /api/learning-projects/:id/like` |
-| Project saves | **Implemented** | List/home/detail surfaces have optimistic learner-only save/unsave controls backed by `POST`/`DELETE /api/learning-projects/:id/save` |
-| Project follows | **Implemented** | List/home/detail surfaces have optimistic learner-only follow/unfollow controls backed by `POST`/`DELETE /api/learning-projects/:id/follow` |
-| Add draft page | **Implemented for learner submit** | `LearningAddDraftPage` uses structured component cards (name, quantity, unit, role, optional matching hints) and posts to `POST /api/learning-projects/submit` with `Idempotency-Key`; submitted projects enter `PENDING_REVIEW` |
-| Learner submissions lifecycle | **Implemented** | `/learning/submissions` lists the learner's own submitted projects, shows `PENDING_REVIEW` / `CHANGES_REQUESTED` / `REJECTED` / `PUBLISHED`, exposes admin feedback, and lets `CHANGES_REQUESTED` projects be edited and resubmitted |
-| Admin project moderation | **Implemented** | `/admin/learning-projects` lists, filters, reviews, approves/rejects/request-changes, hides/restores, and archives projects; admins can enrich component quality on `PENDING_REVIEW` / `CHANGES_REQUESTED` projects before publish |
-| Project build checklist | **Implemented** | Learners can start/continue a persisted manual checklist at `/learning/:id/build`, mark manual statuses, browse ranked deterministic material candidates per item (relevance/convenience/cost, not freshness-first), link/unlink a platform material, reserve linked materials with build-context linking, and see linked reservation progress/readiness |
-| Ratings/reviews | **Implemented** | List/home cards show real `ratingSummary` when reviews exist; detail shows recent reviews and a learner-only review form backed by `PUT`/`DELETE /api/learning-projects/:id/review` |
-| Project links | **Implemented** | Detail links open safe `http`/`https` URLs through `url_launcher`; invalid/missing URLs are disabled |
-| AI material agent | **Not implemented** | No `ai-agent` module |
+1. **Discover** — `/learning` lists published projects with search, category, difficulty, tag filters, and pagination. Learners can switch Saved/Followed tabs. Learner Home spotlight and continuation cards reuse the same APIs.
+2. **Project details** — `/learning/:id` shows components, steps, engagement, reviews, and **Start build** / **Continue checklist**.
+3. **Build checklist** — `/learning/:id/build` persists per-learner progress. Each required component exposes canonical acquisition state (Missing, Selected, Reserved, Needs attention, Acquired, Already owned) plus allocation detail (sufficient, insufficient quantity, incompatible unit).
+4. **Material selection** — Browse ranked candidates, manually link a material, or create a **Material Request** from the build item.
+5. **Supplier suggestion** — Supplier suggests an owned material on the request. Learner sees it on the request detail and can reserve using `materialRequestMatchId`.
+6. **Reservation** — Creating a reservation with `buildItemId` links `project_build_items.linked_reservation_id`. Active reservations show Reserved/In progress. Terminal failures clear stale reservation links and release capacity.
+7. **Completion** — When reservation is `COMPLETED`, fulfilled material requests sync to the build item. Quantity-safe readiness marks the item ready only when acquired quantity and units are sufficient/compatible.
+8. **Acquired access** — Learners can open non-public acquired materials via authenticated `GET /api/materials/:id` (reservation-based fallback).
+9. **Remove allocation** — `POST .../remove-acquired-allocation` clears build links without deleting reservation/request history; reconciliation will not re-link dismissed allocations.
+10. **Step unlock** — Build steps unlock from the same canonical readiness result as item cards and progress.
+11. **Build completion** — Completing all required steps sets `ProjectBuild.status = COMPLETED`. Completed builds are excluded from Learner Home **Continue project** (`status = IN_PROGRESS` only).
 
-Product intent from role planning: the learning hub should support project-to-material linking and automatic material coverage later. Saved/followed project listing is API-backed in the Learning Hub page; build checklist progress is stored per learner/project. Learners can link platform materials to checklist items and reserve them from build context; `linkedReservationId` is written during reservation create (optional `buildItemId`) or via the fallback link-reservation endpoint. Readiness counts a linked reservation only when `status = COMPLETED` (or manual ready statuses). Supplier dashboard `projectSupport` derives confirmed project impact from completed linked reservations without an impact event table.
+## Build item states
 
-**Critical:** Learning Hub list/detail, Home spotlight, learner project submission, and admin project moderation are API-backed. The legacy mock catalog is not a production read path.
+| State | Meaning |
+|-------|---------|
+| Missing | No linked material and no acquisition source |
+| Selected | Material linked but not yet acquired |
+| Reserved | Active linked reservation in progress |
+| Needs attention | Linked reservation requires resolution |
+| Acquired | Completed reservation exists |
+| Already owned | Manual learner-owned status (separate from Acquired) |
 
-## Main user flow (as shipped in Flutter)
+Readiness requires `acquisitionState = acquired`, `allocationResult = sufficient`, compatible units, and no allocation conflict. Partial or incompatible acquisitions remain visible but not ready.
 
-1. User opens `/learning` (public).
-2. Page loads published projects from `GET /api/learning-projects` via `learningProjectsProvider`; optional `/learning?q=<search>` pre-fills the search box and initial query.
-3. Category chips filter by `categoryId` using `GET /api/categories?type=PROJECT`; search, difficulty, and tag filters use the existing learning projects query params.
-4. Optional: switch between **All projects**, **Saved**, and **Following** tabs. Saved/followed tabs require an authenticated learner and call `GET /api/learning-projects/me/saved` or `GET /api/learning-projects/me/followed` with the same filters.
-5. **Project of the week** is hidden unless a project DTO explicitly carries a featured/spotlight flag. It is not inferred from latest/newest ordering. Later pages and saved/followed tabs render as paginated grids.
-6. Next/previous pagination changes the `page` query sent to the active list endpoint while preserving active filters.
-7. Tap project → `/learning/:id` → `learningProjectProvider(id)` loads detail from `GET /api/learning-projects/:id`; existing project links can be opened when they contain valid `http`/`https` URLs.
-8. Authenticated learners can like/unlike, save/unsave, and follow/unfollow from list, Home spotlight, and detail cards; they can review the project from detail. Guests are sent to login and non-learner roles get an info snackbar.
-9. Optional: detail **Start build** calls `POST /api/learning-projects/:id/builds/start` and opens `/learning/:id/build`; existing builds show **Continue checklist**. The checklist uses `GET /api/learning-projects/:id/builds/me` and `PATCH /api/learning-projects/:id/builds/me/items/:itemId`. Learners can open material candidates per item, link/unlink a platform material, **Reserve this material** (navigates to `/materials/:id?projectId&buildItemId&returnTo`), and see linked material + reservation status. Reservation create with `buildItemId` links `project_build_items.linked_reservation_id` in the same transaction.
-10. Optional: `/learning/add-draft` — authenticated learner submits a draft to `POST /api/learning-projects/submit` with an `Idempotency-Key`; backend stores it as `PENDING_REVIEW` and replays duplicate same-key submissions without creating another project.
-11. Optional: authenticated learners open `/learning/submissions` from the Learning Hub callout to view their own submissions. `CHANGES_REQUESTED` items show the admin reason and can be edited at `/learning/submissions/:id/edit`; **Save and resubmit** calls owner PATCH then POST resubmit and returns the project to `PENDING_REVIEW`.
-12. Home `/home` learning spotlight loads up to 2 published projects via `learningProjectsProvider`.
+## Automatic refresh
+
+- Flutter polls the current build only while pending acquisition states exist (`projectBuildRefreshInterval`, 10s).
+- Polling stops when no item needs active refresh.
+- Build fetch runs bounded material-request reconciliation (max 20 fulfilled requests per build) and terminal reservation repair; already-synced reads do not write.
+
+## API endpoints (core journey)
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/api/learning-projects` | Public browse |
+| GET | `/api/learning-projects/:id` | Public detail |
+| POST | `/api/learning-projects/:id/builds/start` | Start/continue build |
+| GET | `/api/learning-projects/:id/builds/me` | Build checklist + reconciliation on read |
+| GET | `.../material-candidates` | Ranked candidates (max 10) |
+| POST | `.../link-material` | Manual link |
+| DELETE | `.../link-material` | Unlink selected material |
+| POST | `.../remove-acquired-allocation` | Remove completed allocation from component |
+| POST | `.../link-reservation` | Repair link for existing reservation |
+| POST | `.../steps/:stepId/complete` | Complete build step |
+| POST | `/api/learner/material-requests` | Create request (optional build linkage) |
+| POST | `/api/supplier/material-requests/:id/suggest` | Supplier suggestion |
+| POST | `/api/reservations` | Create reservation (`buildItemId`, `materialRequestMatchId`) |
+| GET | `/api/materials/:id` | Public detail; optional auth enables acquired fallback |
+
+## Verification commands
+
+### Backend (targeted)
+
+```bash
+node --import tsx --test \
+  src/modules/learning-projects/learning-projects.core-journey.test.ts \
+  src/modules/learning-projects/learning-projects.build-material-request-sync.test.ts \
+  src/modules/learning-projects/learning-projects.build-material-allocation.test.ts \
+  src/modules/learning-projects/learning-projects.build-item-state.test.ts \
+  src/modules/learning-projects/learning-projects.build-steps.test.ts \
+  src/modules/learning-projects/learning-projects.build-acquired-removal.test.ts \
+  src/modules/learning-projects/learning-projects.build-reservation-sync.test.ts \
+  src/modules/materials/materials.acquired-access.http.test.ts \
+  src/modules/materials/materials.acquired-access.test.ts \
+  src/modules/supplier-material-requests/supplier-material-requests.test.ts
+```
+
+### Flutter (targeted)
+
+```bash
+flutter test \
+  test/learning_hub_api_mapper_test.dart \
+  test/project_build_item_display_test.dart \
+  test/project_build_acquisition_state_test.dart \
+  test/project_build_linked_material_panel_test.dart \
+  test/project_build_refresh_test.dart \
+  test/project_build_route_refresh_test.dart \
+  test/learner_material_requests_test.dart \
+  test/notification_display_test.dart \
+  test/learner_notifications_navigation_test.dart
+```
+
+## Manual smoke-test runbook
+
+1. Log in as learner → open **Learning Hub** → browse/search/filter projects.
+2. Open a project → **Start build**.
+3. On a missing component → **Request material** → submit request.
+4. As supplier → suggest a matching owned material.
+5. As learner → open request notification/detail → **View material** → create reservation.
+6. Confirm build item shows **Reserved**; wait or complete reservation as supplier/driver.
+7. Confirm item becomes **Acquired** and ready only when quantity/units match.
+8. Complete unlocked build steps → build status **Completed**.
+9. Open acquired non-public material from reservation history (authenticated).
+10. **Remove from this component** → item returns to Missing; reservation history still works.
+11. Guest/unrelated learner still gets 404 on acquired non-public material.
+
+## Known intentional limitations
+
+- No completed-build portfolio or history list yet
+- No multiple build attempts per project yet
+- No learner Material → Related Projects discovery yet
+- No browse readiness filter/sorting on project cards yet
+- No E-learning layer, checkpoints, or outcomes yet
+- No general unit-conversion engine (compatibility is exact/normalized string match)
+- Already-owned quantity remains boolean/manual, not quantity-evaluated
+- No automatic AI material matching
 
 ## Frontend files
 
 | Area | Path |
 |------|------|
-| Repository | `domain/learning_project_repository.dart`, `data/api_learning_hub_repository.dart`, `data/learning_hub_api_mapper.dart` |
-| Providers | `application/learning_hub_providers.dart` |
-| Legacy mock data | `data/learning_hub_mock_data.dart` (unused sample catalog only) |
-| Theme | `presentation/theme/learning_ui_palette.dart`, `learning_project_visuals.dart` |
-| Domain | `domain/models/learning_project.dart`, `domain/models/learning_project_submission.dart`, `domain/models/project_build.dart`, `domain/models/project_build_material_link.dart`, `domain/learning_projects_result.dart` |
-| Pages | `presentation/pages/learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_project_build_page.dart`, `learning_add_draft_page.dart`, `learning_project_submissions_page.dart` |
-| Widgets | `learning_project_card.dart`, `featured_project_card.dart`, `learning_hub_hero.dart`, `learning_category_chips.dart`, `project_components_section.dart`, `learning_project_component_editor.dart`, `project_build_actions_panel.dart`, `project_build_material_linking.dart`, `project_steps_timeline.dart`, `project_link_list.dart`, `project_reviews_section.dart`, `project_engagement_strip.dart` |
+| Repository | `domain/learning_project_repository.dart`, `data/api_learning_hub_repository.dart` |
+| Providers | `application/learning_hub_providers.dart`, `project_build_refresh.dart` |
+| State display | `presentation/widgets/project_build_acquisition_state.dart`, `project_build_item_display.dart` |
+| Pages | `learning_hub_page.dart`, `learning_project_details_page.dart`, `learning_project_build_page.dart` |
+| L10n | `presentation/l10n/learning_project_build_l10n.dart` |
 
 ## Backend files
 
 | Area | Path |
 |------|------|
-| Module | `modules/learning-projects/learning-projects.routes.ts`, `.controller.ts`, `.service.ts`, `.repository.ts`, `.validation.ts` |
-
-Repository filter: `status: 'PUBLISHED'` (`learning-projects.repository.ts`).
-
-## API endpoints
-
-| Method | Path | Auth | Flutter wired |
-|--------|------|------|---------------|
-| GET | `/api/learning-projects` | Public | **Yes** — Learning Hub list |
-| GET | `/api/learning-projects/me/saved` | JWT + LEARNER | **Yes** — Learning Hub Saved tab |
-| GET | `/api/learning-projects/me/followed` | JWT + LEARNER | **Yes** — Learning Hub Following tab |
-| GET | `/api/learning-projects/:id` | Public | **Yes** — Learning Hub detail |
-| POST | `/api/learning-projects/:id/like` | JWT + LEARNER | **Yes** — list/Home/detail like |
-| DELETE | `/api/learning-projects/:id/like` | JWT + LEARNER | **Yes** — list/Home/detail unlike |
-| POST | `/api/learning-projects/:id/save` | JWT + LEARNER | **Yes** — list/Home/detail save |
-| DELETE | `/api/learning-projects/:id/save` | JWT + LEARNER | **Yes** — list/Home/detail unsave |
-| POST | `/api/learning-projects/:id/follow` | JWT + LEARNER | **Yes** — list/Home/detail follow |
-| DELETE | `/api/learning-projects/:id/follow` | JWT + LEARNER | **Yes** — list/Home/detail unfollow |
-| PUT | `/api/learning-projects/:id/review` | JWT + LEARNER | **Yes** — detail review create/update |
-| DELETE | `/api/learning-projects/:id/review` | JWT + LEARNER | **Yes** — detail review delete |
-| GET | `/api/learning-projects/:id/builds/me` | JWT + LEARNER | **Yes** — build checklist page |
-| POST | `/api/learning-projects/:id/builds/start` | JWT + LEARNER | **Yes** — detail start/continue build |
-| PATCH | `/api/learning-projects/:id/builds/me/items/:itemId` | JWT + LEARNER | **Yes** — manual checklist status/note |
-| GET | `/api/learning-projects/:id/builds/me/items/:itemId/material-candidates` | JWT + LEARNER | **Yes** — build checklist candidate sheet |
-| POST | `/api/learning-projects/:id/builds/me/items/:itemId/link-material` | JWT + LEARNER | **Yes** — link material to checklist item |
-| DELETE | `/api/learning-projects/:id/builds/me/items/:itemId/link-material` | JWT + LEARNER | **Yes** — unlink material from checklist item |
-| POST | `/api/learning-projects/:id/builds/me/items/:itemId/link-reservation` | JWT + LEARNER | **Yes** — fallback repair link for an existing learner reservation |
-| POST | `/api/learning-projects/submit` | Learner auth | **Yes** — add-draft submit for admin review |
-| GET | `/api/learning-projects/mine` | JWT + LEARNER | **Yes** — My submissions list |
-| GET | `/api/learning-projects/mine/:id` | JWT + LEARNER owner-only | **Yes** — submission detail |
-| PATCH | `/api/learning-projects/mine/:id` | JWT + LEARNER owner-only | **Yes** — edit DRAFT / PENDING_REVIEW / CHANGES_REQUESTED |
-| POST | `/api/learning-projects/mine/:id/resubmit` | JWT + LEARNER owner-only | **Yes** — resubmit CHANGES_REQUESTED |
-| GET | `/api/categories?type=PROJECT` | Public | **Yes** — category chips |
-| POST | `/api/learning-projects/submit` | JWT + LEARNER + `Idempotency-Key` | **Yes** — add-draft submit |
-| GET/PATCH | `/api/admin/learning-projects*` | JWT + ADMIN | **Yes** — admin moderation portal |
-
-Optional list filters: `page`, `limit`, `q`, `categoryId`, `difficulty`, `tag`. Saved/followed learner list endpoints support the same filters and return the same list response shape. List/detail DTOs include `likesCount`, `followersCount`, nullable `ratingSummary`, viewer-specific `isLiked`, viewer-specific `isSaved`, and viewer-specific `isFollowing`; detail also includes `recentReviews` and nullable `viewerReview`. Unauthenticated reads receive false engagement state and `viewerReview: null`. Flutter `/learning` exposes `page`, `q`, `categoryId`, `difficulty`, and tag chips derived from tags returned in the project list response. Tag chips are UI-sanitized to hide internal/mock tags such as `mock`, `pagination`, `test`, and `project-01`, and are capped to a small visible set.
-
-Owner submission endpoints never change public detail behavior: `GET /api/learning-projects/:id` still returns only `PUBLISHED`. `/mine` endpoints require `LEARNER`, scope every read/write by `createdBy = current user`, and expose submitter-only moderation fields (`reviewNote`, `changesRequestedReason`, `rejectionReason`). PATCH is allowed for `DRAFT`, `PENDING_REVIEW`, and `CHANGES_REQUESTED`; saving a `PENDING_REVIEW` submission keeps that status and updates admin-review data. Resubmit is allowed only for `CHANGES_REQUESTED`, sets status back to `PENDING_REVIEW`, updates `submittedAt`, and clears current review fields. Existing component rows are updated by id where possible so admin enrichment is not destroyed by full replacement.
-
-## Database tables
-
-| Table | Role |
-|-------|------|
-| `learning_projects` | Core project |
-| `project_images` | Gallery |
-| `project_required_components` | BOM-style components |
-| `project_steps` | Instructions |
-| `project_links` | External links |
-| `project_tags` | Tags on list items |
-| `project_likes` | Learner project engagement |
-| `project_saves` | Private learner saved project state |
-| `project_follows` | Learner project follow state and follower count source |
-| `project_user_reviews` | Learner project rating/review state and rating summary source |
-| `project_builds` | One saved build checklist per learner/project |
-| `project_build_items` | Manual checklist item status/note per required component plus optional linked material/reservation |
-| `categories` | Project category (PROJECT or BOTH type) |
-
-## Reusable components
-
-- App-level: `EntryNavBar`
-- Learning hub widgets are **feature-specific** — not in `shared/widgets/` (see [reusable-widgets](../frontend/reusable-widgets.md))
-
-## Known gaps / Needs verification
-
-- Project moderation is admin-backed; a separate moderator portal/workspace is still **not implemented**.
-- AI material matching — **not implemented**.
-- Automatic reservation creation from build checklist links — **not implemented**.
-- Related projects API on material detail — **not implemented** (search handoff only).
-- Admin component enrichment before publish — **Implemented (v1)** — admin detail returns `componentQuality` warnings; `PATCH /api/admin/learning-projects/:id/components/:componentId` edits a single component while project is `PENDING_REVIEW` or `CHANGES_REQUESTED`; hard issues block approve; soft warnings require confirmation
-- Project of the week should return later as an explicit admin/moderator-selected spotlight feature; it is not currently selected from newest/latest project ordering.
+| Learning projects | `modules/learning-projects/` |
+| Build item state | `learning-projects.build-item-state.ts` |
+| Quantity allocation | `learning-projects.build-material-allocation.ts` |
+| MR sync | `learning-projects.build-material-request-sync.ts` |
+| Reservation sync | `learning-projects.build-reservation-sync.ts` |
+| Acquired access | `modules/materials/materials.acquired-access.ts` |
+| Continuation | `project-build-continuation.ts` |

@@ -641,7 +641,7 @@ class _HubContent extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              _LearningHubRoadmapPanel(onSubmitProject: onSubmitProject),
+              _LearningHubBuildJourneyPanel(onSubmitProject: onSubmitProject),
             ],
           ),
         ),
@@ -1035,8 +1035,8 @@ class _PaginationButton extends StatelessWidget {
   }
 }
 
-class _LearningHubRoadmapPanel extends StatelessWidget {
-  const _LearningHubRoadmapPanel({required this.onSubmitProject});
+class _LearningHubBuildJourneyPanel extends StatelessWidget {
+  const _LearningHubBuildJourneyPanel({required this.onSubmitProject});
 
   final VoidCallback onSubmitProject;
 
@@ -1058,12 +1058,12 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
           final content = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.route_outlined, color: palette.lime),
+              Icon(Icons.construction_outlined, color: palette.lime),
               const SizedBox(height: AppSpacing.md),
               Text(
                 const LocalizedText(
-                  en: 'Build tools are coming next',
-                  ar: 'أدوات البناء قادمة لاحقاً',
+                  en: 'Start a project build',
+                  ar: 'ابدأ بناء مشروع',
                 ).resolve(context),
                 style: AppTextStyles.title(
                   context,
@@ -1072,8 +1072,10 @@ class _LearningHubRoadmapPanel extends StatelessWidget {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 const LocalizedText(
-                  en: 'Saved and followed project lists are available. The next Learning Hub steps are persisted build progress, stronger project-material linking, and in-hub reservation handoff without automated matching.',
-                  ar: 'قوائم المشاريع المحفوظة والمتابعة متاحة. الخطوات القادمة هي حفظ تقدم البناء، وتقوية ربط المشاريع بالمواد، وتحويل الحجز من داخل المركز بدون مطابقة آلية.',
+                  en:
+                      'Open a project, start or continue your build checklist, link materials, request matches, reserve items, and track readiness step by step.',
+                  ar:
+                      'افتح مشروعاً، وابدأ قائمة البناء أو تابعها، واربط المواد، واطلب مطابقات، واحجز العناصر، وتتبع الجاهزية خطوة بخطوة.',
                 ).resolve(context),
                 style: AppTextStyles.body(
                   context,

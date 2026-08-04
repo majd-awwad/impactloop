@@ -18,7 +18,6 @@ import '../../features/notifications/application/notifications_routes.dart';
 import '../../shared/widgets/app_feedback.dart';
 import '../../shared/widgets/notification_bell_button.dart';
 import '../../shared/widgets/user_avatar.dart';
-import '../../features/notifications/application/notifications_routes.dart';
 import 'impact_loop_logo.dart';
 import 'nav_pill_menu.dart';
 
@@ -60,6 +59,13 @@ class EntryNavBar extends ConsumerWidget {
         showNotificationBell ??
         (isAuthenticated && userSupportsNotificationInbox(user));
     if (!shouldShowBell || !isAuthenticated) {
+      return trailingActions;
+    }
+
+    final alreadyHasBell = trailingActions.any(
+      (action) => action is NotificationBellButton,
+    );
+    if (alreadyHasBell) {
       return trailingActions;
     }
 
@@ -356,8 +362,6 @@ class _DesktopNavLayout extends StatelessWidget {
         ],
         if (isAuthenticated && user != null) ...[
           const SizedBox(width: AppSpacing.sm),
-          const NotificationBellButton(compact: true),
-          const SizedBox(width: AppSpacing.sm),
           _AccountMenu(
             user: user!,
             settings: settings,
@@ -543,7 +547,7 @@ class _MobileNavLayout extends StatelessWidget {
               alignment: WrapAlignment.end,
               children: [
                 if (isAuthenticated && user != null) ...[
-                  const NotificationBellButton(compact: true),
+                  ...trailingActions,
                   _AccountMenu(
                     user: user!,
                     settings: settings,
@@ -562,7 +566,7 @@ class _MobileNavLayout extends StatelessWidget {
                     onPressed: onSignIn ?? () => context.go('/login'),
                   ),
                 _UtilityPills(settings: settings, ref: ref, compact: true),
-                ...trailingActions,
+                if (!isAuthenticated) ...trailingActions,
               ],
             ),
           ),

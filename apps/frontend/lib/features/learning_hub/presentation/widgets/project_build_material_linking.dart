@@ -342,7 +342,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                'Linked option',
+                LearningProjectBuildL10n.linkedOption.resolve(context),
                 style: textTheme.labelLarge?.copyWith(
                   color: palette.textPrimary,
                   fontWeight: FontWeight.w700,
@@ -509,7 +509,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                     AppStatusTone.primary,
                   ),
                   icon: const Icon(Icons.event_available_outlined),
-                  label: const Text('Reserve this material'),
+                  label: Text(
+                    LearningProjectBuildL10n.reserveThisMaterial.resolve(context),
+                  ),
                 ),
               OutlinedButton.icon(
                 onPressed: isBusy ? null : onViewMaterial,
@@ -518,7 +520,9 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                   AppStatusTone.neutral,
                 ),
                 icon: const Icon(Icons.open_in_new_rounded),
-                label: const Text('View material'),
+                label: Text(
+                  LearningProjectBuildL10n.viewMaterial.resolve(context),
+                ),
               ),
               if (isAcquired && onUseAnotherMaterial != null)
                 TextButton.icon(
@@ -546,7 +550,7 @@ class ProjectBuildLinkedMaterialPanel extends StatelessWidget {
                       ? LearningProjectBuildL10n.removeFromComponent.resolve(
                           context,
                         )
-                      : 'Unlink',
+                      : LearningProjectBuildL10n.unlinkMaterial.resolve(context),
                 ),
               ),
             ],

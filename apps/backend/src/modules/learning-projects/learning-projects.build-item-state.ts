@@ -308,7 +308,7 @@ export const resolveBuildItemStepUnlockReadinessFromState = (input: {
     };
   }
 
-  if (BUILD_ITEM_READY_STATUSES.has(input.status)) {
+  if (input.status === 'ALREADY_OWNED') {
     return { isReadyForStepUnlock: true };
   }
 
