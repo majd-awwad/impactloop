@@ -210,6 +210,7 @@ void main() {
 
     expect(find.text('Your learning profile'), findsOneWidget);
     expect(find.text('Quick actions'), findsOneWidget);
+    expect(find.text('My builds'), findsOneWidget);
     expect(find.text('Account and Settings'), findsOneWidget);
     expect(find.text('Saved locations'), findsOneWidget);
   });

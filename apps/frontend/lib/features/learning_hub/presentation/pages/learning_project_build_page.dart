@@ -29,9 +29,13 @@ import '../../domain/models/project_material_coverage.dart';
 import '../theme/learning_ui_palette.dart';
 import '../l10n/learning_hub_coverage_l10n.dart';
 import '../l10n/learning_project_build_l10n.dart';
+import '../l10n/project_build_page_l10n.dart';
 import '../widgets/project_build_acquisition_state.dart';
 import '../widgets/project_build_item_display.dart';
+import '../../../learner_builds/application/learner_builds_providers.dart';
+import '../../../learner_builds/presentation/l10n/learner_builds_l10n.dart';
 import '../widgets/project_build_material_linking.dart';
+import '../widgets/project_build_completion_story_section.dart';
 
 class LearningProjectBuildPage extends ConsumerStatefulWidget {
   const LearningProjectBuildPage({
@@ -60,6 +64,7 @@ class _LearningProjectBuildPageState
       <String, Future<void>>{};
 
   bool _isStarting = false;
+  bool _isLifecycleActionInFlight = false;
   bool _openingGuide = false;
   bool _redirectedNarrowGuide = false;
   String? _activeGuideConversationId;
@@ -67,6 +72,7 @@ class _LearningProjectBuildPageState
   final Set<String> _updatingItemIds = <String>{};
   final Set<String> _completingStepIds = <String>{};
   bool _routeSuspended = false;
+  final GlobalKey _completionStorySectionKey = GlobalKey();
   late final ProjectBuildRefreshCoordinator _refreshCoordinator =
       ProjectBuildRefreshCoordinator(onRefresh: () {
         ref.invalidate(projectBuildProvider(widget.projectId));
@@ -447,6 +453,123 @@ class _LearningProjectBuildPageState
     }
   }
 
+  Future<void> _runLifecycleAction(
+    Future<ProjectBuild> Function() action, {
+    required ProjectBuildLifecycleErrorAction errorAction,
+  }) async {
+    if (_isLifecycleActionInFlight) {
+      return;
+    }
+
+    setState(() => _isLifecycleActionInFlight = true);
+    try {
+      await action();
+      invalidateLearnerBuildsAndHome(ref);
+      ref.invalidate(projectBuildProvider(widget.projectId));
+      ref.invalidate(learningProjectProvider(widget.projectId));
+      await ref.read(projectBuildProvider(widget.projectId).future);
+    } catch (error) {
+      if (mounted) {
+        final languageCode = Localizations.localeOf(context).languageCode;
+        showErrorSnackBar(
+          context,
+          error,
+          message: ProjectBuildPageL10n.lifecycleErrorMessage(
+            error,
+            errorAction,
+            languageCode,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLifecycleActionInFlight = false);
+      }
+    }
+  }
+
+  Future<bool> _confirmLifecycleAction({
+    required LocalizedText title,
+    required LocalizedText body,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title.resolve(dialogContext)),
+        content: Text(body.resolve(dialogContext)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(ProjectBuildPageL10n.cancel.resolve(dialogContext)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(ProjectBuildPageL10n.confirm.resolve(dialogContext)),
+          ),
+        ],
+      ),
+    );
+
+    return confirmed == true;
+  }
+
+  Future<void> _pauseBuild(ProjectBuild build) async {
+    final confirmed = await _confirmLifecycleAction(
+      title: ProjectBuildPageL10n.pauseConfirmTitle,
+      body: ProjectBuildPageL10n.pauseConfirmBody,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    return _runLifecycleAction(
+      () => pauseLearnerBuild(ref, build.id),
+      errorAction: ProjectBuildLifecycleErrorAction.pause,
+    );
+  }
+
+  Future<void> _resumeBuild(ProjectBuild build) {
+    return _runLifecycleAction(
+      () => resumeLearnerBuild(ref, build.id),
+      errorAction: ProjectBuildLifecycleErrorAction.resume,
+    );
+  }
+
+  Future<void> _archiveBuild(ProjectBuild build) async {
+    final confirmed = await _confirmLifecycleAction(
+      title: ProjectBuildPageL10n.archiveConfirmTitle,
+      body: ProjectBuildPageL10n.archiveConfirmBody,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    return _runLifecycleAction(
+      () => archiveLearnerBuild(ref, build.id),
+      errorAction: ProjectBuildLifecycleErrorAction.archive,
+    );
+  }
+
+  Future<void> _buildAgain(ProjectBuild build) {
+    return _runLifecycleAction(
+      () => buildProjectAgain(ref, build.projectId),
+      errorAction: ProjectBuildLifecycleErrorAction.buildAgain,
+    );
+  }
+
+  void _scrollToCompletionStory() {
+    final context = _completionStorySectionKey.currentContext;
+    if (context == null) {
+      return;
+    }
+
+    Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
   Future<void> _openBuildGuide(ProjectBuild build) {
     if (_isBuildGuidePanelOpen(context)) {
       return Future.value();
@@ -754,9 +877,17 @@ class _LearningProjectBuildPageState
     final buildContent = _BuildContent(
       projectId: widget.projectId,
       buildRecord: build,
+      completionStorySectionKey: _completionStorySectionKey,
       updatingItemIds: _updatingItemIds,
       completingStepIds: _completingStepIds,
       openingGuide: _openingGuide,
+      isLifecycleActionInFlight: _isLifecycleActionInFlight,
+      onPauseBuild: () => _pauseBuild(build),
+      onResumeBuild: () => _resumeBuild(build),
+      onArchiveBuild: () => _archiveBuild(build),
+      onBuildAgain: () => _buildAgain(build),
+      onEditCompletionStory: _scrollToCompletionStory,
+      onRefreshBuild: _refreshBuild,
       onStatusChanged: _updateItem,
       onEditNote: _editNote,
       onFindMaterials: _findMaterials,
@@ -790,9 +921,17 @@ class _BuildContent extends StatelessWidget {
   const _BuildContent({
     required this.projectId,
     required this.buildRecord,
+    required this.completionStorySectionKey,
     required this.updatingItemIds,
     required this.completingStepIds,
     required this.openingGuide,
+    required this.isLifecycleActionInFlight,
+    required this.onPauseBuild,
+    required this.onResumeBuild,
+    required this.onArchiveBuild,
+    required this.onBuildAgain,
+    required this.onEditCompletionStory,
+    required this.onRefreshBuild,
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
@@ -807,9 +946,17 @@ class _BuildContent extends StatelessWidget {
 
   final String projectId;
   final ProjectBuild buildRecord;
+  final GlobalKey completionStorySectionKey;
   final Set<String> updatingItemIds;
   final Set<String> completingStepIds;
   final bool openingGuide;
+  final bool isLifecycleActionInFlight;
+  final Future<void> Function() onPauseBuild;
+  final Future<void> Function() onResumeBuild;
+  final Future<void> Function() onArchiveBuild;
+  final Future<void> Function() onBuildAgain;
+  final VoidCallback onEditCompletionStory;
+  final Future<void> Function() onRefreshBuild;
   final Future<void> Function(
     ProjectBuildItem item, {
     required ProjectBuildItemStatus status,
@@ -828,6 +975,8 @@ class _BuildContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isEditingLocked = buildRecord.isEditingLocked;
+
     return SingleChildScrollView(
       padding: const EdgeInsetsDirectional.all(AppSpacing.md),
       child: Center(
@@ -837,14 +986,26 @@ class _BuildContent extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _BuildHeader(
+                projectId: projectId,
                 buildRecord: buildRecord,
                 openingGuide: openingGuide,
+                isLifecycleActionInFlight: isLifecycleActionInFlight,
                 onOpenBuildGuide: onOpenBuildGuide,
+                onPauseBuild: onPauseBuild,
+                onResumeBuild: onResumeBuild,
+                onArchiveBuild: onArchiveBuild,
+                onBuildAgain: onBuildAgain,
+                onEditCompletionStory: onEditCompletionStory,
               ),
+              if (isEditingLocked) ...[
+                const SizedBox(height: AppSpacing.md),
+                _BuildLockedNotice(buildRecord: buildRecord),
+              ],
               const SizedBox(height: AppSpacing.lg),
               _MaterialsSection(
                 buildRecord: buildRecord,
                 updatingItemIds: updatingItemIds,
+                isEditingLocked: isEditingLocked,
                 onStatusChanged: onStatusChanged,
                 onEditNote: onEditNote,
                 onFindMaterials: onFindMaterials,
@@ -858,6 +1019,7 @@ class _BuildContent extends StatelessWidget {
               _BuildStepsSection(
                 buildRecord: buildRecord,
                 completingStepIds: completingStepIds,
+                isEditingLocked: isEditingLocked,
                 onCompleteCurrentStep: onCompleteCurrentStep,
               ),
               if (buildRecord.status == ProjectBuildStatus.completed ||
@@ -865,6 +1027,14 @@ class _BuildContent extends StatelessWidget {
                       ProjectBuildNextAction.buildCompleted) ...[
                 const SizedBox(height: AppSpacing.lg),
                 _BuildCompletionNotice(buildRecord: buildRecord),
+                const SizedBox(height: AppSpacing.lg),
+                KeyedSubtree(
+                  key: completionStorySectionKey,
+                  child: ProjectBuildCompletionStorySection(
+                    build: buildRecord,
+                    onUpdated: () => onRefreshBuild(),
+                  ),
+                ),
               ],
             ],
           ),
@@ -876,14 +1046,28 @@ class _BuildContent extends StatelessWidget {
 
 class _BuildHeader extends StatelessWidget {
   const _BuildHeader({
+    required this.projectId,
     required this.buildRecord,
     required this.openingGuide,
+    required this.isLifecycleActionInFlight,
     required this.onOpenBuildGuide,
+    required this.onPauseBuild,
+    required this.onResumeBuild,
+    required this.onArchiveBuild,
+    required this.onBuildAgain,
+    required this.onEditCompletionStory,
   });
 
+  final String projectId;
   final ProjectBuild buildRecord;
   final bool openingGuide;
+  final bool isLifecycleActionInFlight;
   final VoidCallback onOpenBuildGuide;
+  final Future<void> Function() onPauseBuild;
+  final Future<void> Function() onResumeBuild;
+  final Future<void> Function() onArchiveBuild;
+  final Future<void> Function() onBuildAgain;
+  final VoidCallback onEditCompletionStory;
 
   @override
   Widget build(BuildContext context) {
@@ -895,6 +1079,7 @@ class _BuildHeader extends StatelessWidget {
         buildId: buildRecord.id,
         buildStatus: switch (buildRecord.status) {
           ProjectBuildStatus.inProgress => 'IN_PROGRESS',
+          ProjectBuildStatus.paused => 'PAUSED',
           ProjectBuildStatus.completed => 'COMPLETED',
           ProjectBuildStatus.archived => 'ARCHIVED',
         },
@@ -907,6 +1092,13 @@ class _BuildHeader extends StatelessWidget {
             : buildRecord.progress.ready / buildRecord.progress.total,
       ),
     );
+    final statusLabel = LearnerBuildsL10n.statusLabel(buildRecord.status);
+    final statusTone = switch (buildRecord.status) {
+      ProjectBuildStatus.inProgress => AppStatusTone.info,
+      ProjectBuildStatus.paused => AppStatusTone.warning,
+      ProjectBuildStatus.completed => AppStatusTone.success,
+      ProjectBuildStatus.archived => AppStatusTone.neutral,
+    };
 
     return Container(
       padding: const EdgeInsetsDirectional.all(AppSpacing.lg),
@@ -925,17 +1117,45 @@ class _BuildHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: () => context.go('/learning/$projectId'),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                label: Text(ProjectBuildPageL10n.backToProject.resolve(context)),
+              ),
+              TextButton(
+                onPressed: () => context.go('/learner/builds'),
+                child: Text(ProjectBuildPageL10n.myBuilds.resolve(context)),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
           LayoutBuilder(
             builder: (context, constraints) {
-              final stackGuideAction = constraints.maxWidth < 520;
+              final useCompactMenu = constraints.maxWidth < 520;
               final titleBlock = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    buildRecord.project.title,
-                    style: AppTextStyles.display(
-                      context,
-                    ).copyWith(color: palette.textPrimary),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        buildRecord.project.title,
+                        style: AppTextStyles.display(
+                          context,
+                        ).copyWith(color: palette.textPrimary),
+                      ),
+                      AppStatusBadge(
+                        label: statusLabel.resolve(context),
+                        tone: statusTone,
+                      ),
+                    ],
                   ),
                   if (buildRecord.project.shortDescription.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.xs),
@@ -946,6 +1166,15 @@ class _BuildHeader extends StatelessWidget {
                       ).copyWith(color: palette.textSecondary, height: 1.45),
                     ),
                   ],
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    ProjectBuildPageL10n.progressSavedAutomatically.resolve(
+                      context,
+                    ),
+                    style: AppTextStyles.label(
+                      context,
+                    ).copyWith(color: palette.textSecondary),
+                  ),
                 ],
               );
               final guideAction = _BuildGuideCompactAction(
@@ -953,24 +1182,77 @@ class _BuildHeader extends StatelessWidget {
                 hasExistingConversation: buildRecord.guideConversationId != null,
                 onOpenBuildGuide: onOpenBuildGuide,
               );
+              final menuAction = _BuildLifecycleMenu(
+                buildRecord: buildRecord,
+                isBusy: isLifecycleActionInFlight,
+                compact: useCompactMenu,
+                onPause: onPauseBuild,
+                onResume: onResumeBuild,
+                onArchive: onArchiveBuild,
+                onBuildAgain: onBuildAgain,
+                onEditCompletionStory: onEditCompletionStory,
+              );
 
-              if (stackGuideAction) {
+              if (useCompactMenu) {
                 return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    titleBlock,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: titleBlock),
+                        menuAction,
+                      ],
+                    ),
+                    if (buildRecord.status == ProjectBuildStatus.paused) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: isLifecycleActionInFlight
+                              ? null
+                              : onResumeBuild,
+                          icon: const Icon(Icons.play_arrow_rounded),
+                          label: Text(
+                            ProjectBuildPageL10n.resumeBuild.resolve(context),
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.sm),
                     guideAction,
                   ],
                 );
               }
 
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: titleBlock),
-                  const SizedBox(width: AppSpacing.md),
-                  guideAction,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: titleBlock),
+                      const SizedBox(width: AppSpacing.sm),
+                      menuAction,
+                      const SizedBox(width: AppSpacing.sm),
+                      guideAction,
+                    ],
+                  ),
+                  if (buildRecord.status == ProjectBuildStatus.paused) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: FilledButton.icon(
+                        onPressed: isLifecycleActionInFlight
+                            ? null
+                            : onResumeBuild,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: Text(
+                          ProjectBuildPageL10n.resumeBuild.resolve(context),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               );
             },
@@ -1037,6 +1319,7 @@ class _MaterialsSection extends StatelessWidget {
   const _MaterialsSection({
     required this.buildRecord,
     required this.updatingItemIds,
+    required this.isEditingLocked,
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
@@ -1049,6 +1332,7 @@ class _MaterialsSection extends StatelessWidget {
 
   final ProjectBuild buildRecord;
   final Set<String> updatingItemIds;
+  final bool isEditingLocked;
   final Future<void> Function(
     ProjectBuildItem item, {
     required ProjectBuildItemStatus status,
@@ -1126,6 +1410,7 @@ class _MaterialsSection extends StatelessWidget {
                   index: index,
                   item: item,
                   isUpdating: updatingItemIds.contains(item.id),
+                  isEditingLocked: isEditingLocked,
                   onStatusChanged: (status) =>
                       onStatusChanged(item, status: status),
                   onEditNote: () => onEditNote(item),
@@ -1140,6 +1425,208 @@ class _MaterialsSection extends StatelessWidget {
                 ),
               );
             }),
+        ],
+      ),
+    );
+  }
+}
+
+class _BuildLifecycleMenu extends StatelessWidget {
+  const _BuildLifecycleMenu({
+    required this.buildRecord,
+    required this.isBusy,
+    required this.compact,
+    required this.onPause,
+    required this.onResume,
+    required this.onArchive,
+    required this.onBuildAgain,
+    required this.onEditCompletionStory,
+  });
+
+  final ProjectBuild buildRecord;
+  final bool isBusy;
+  final bool compact;
+  final Future<void> Function() onPause;
+  final Future<void> Function() onResume;
+  final Future<void> Function() onArchive;
+  final Future<void> Function() onBuildAgain;
+  final VoidCallback onEditCompletionStory;
+
+  List<PopupMenuEntry<_BuildLifecycleAction>> _menuItems(BuildContext context) {
+    final items = <PopupMenuEntry<_BuildLifecycleAction>>[];
+
+    if (buildRecord.status == ProjectBuildStatus.inProgress) {
+      items.add(
+        PopupMenuItem(
+          value: _BuildLifecycleAction.pause,
+          child: Text(LearnerBuildsL10n.pauseBuild.resolve(context)),
+        ),
+      );
+    }
+
+    if (buildRecord.status == ProjectBuildStatus.paused) {
+      items.add(
+        PopupMenuItem(
+          value: _BuildLifecycleAction.resume,
+          child: Text(LearnerBuildsL10n.resumeBuild.resolve(context)),
+        ),
+      );
+    }
+
+    if (buildRecord.status == ProjectBuildStatus.inProgress ||
+        buildRecord.status == ProjectBuildStatus.paused) {
+      items.add(
+        PopupMenuItem(
+          value: _BuildLifecycleAction.archive,
+          child: Text(LearnerBuildsL10n.archiveBuild.resolve(context)),
+        ),
+      );
+    }
+
+    if (buildRecord.status == ProjectBuildStatus.completed) {
+      items.add(
+        PopupMenuItem(
+          value: _BuildLifecycleAction.editCompletionStory,
+          child: Text(
+            ProjectBuildPageL10n.editCompletionStory.resolve(context),
+          ),
+        ),
+      );
+    }
+
+    if (buildRecord.status == ProjectBuildStatus.completed ||
+        buildRecord.status == ProjectBuildStatus.archived) {
+      items.add(
+        PopupMenuItem(
+          value: _BuildLifecycleAction.buildAgain,
+          child: Text(LearnerBuildsL10n.buildAgain.resolve(context)),
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  void _handleAction(_BuildLifecycleAction action) {
+    switch (action) {
+      case _BuildLifecycleAction.pause:
+        onPause();
+      case _BuildLifecycleAction.resume:
+        onResume();
+      case _BuildLifecycleAction.archive:
+        onArchive();
+      case _BuildLifecycleAction.buildAgain:
+        onBuildAgain();
+      case _BuildLifecycleAction.editCompletionStory:
+        onEditCompletionStory();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final menuLabel = ProjectBuildPageL10n.buildActions.resolve(context);
+    final items = _menuItems(context);
+
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (isBusy) {
+      return const SizedBox.square(
+        dimension: 40,
+        child: Padding(
+          padding: EdgeInsets.all(10),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (compact) {
+      return Semantics(
+        button: true,
+        label: menuLabel,
+        child: PopupMenuButton<_BuildLifecycleAction>(
+          tooltip: menuLabel,
+          icon: const Icon(Icons.more_vert_rounded),
+          onSelected: _handleAction,
+          itemBuilder: (context) => items,
+        ),
+      );
+    }
+
+    return PopupMenuButton<_BuildLifecycleAction>(
+      tooltip: menuLabel,
+      onSelected: _handleAction,
+      itemBuilder: (context) => items,
+      child: Semantics(
+        button: true,
+        label: menuLabel,
+        child: IgnorePointer(
+          child: OutlinedButton(
+            onPressed: () {},
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.more_vert_rounded, size: 18),
+                const SizedBox(width: AppSpacing.xs),
+                Text(menuLabel),
+                const Icon(Icons.arrow_drop_down_rounded, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _BuildLifecycleAction {
+  pause,
+  resume,
+  archive,
+  buildAgain,
+  editCompletionStory,
+}
+
+class _BuildLockedNotice extends StatelessWidget {
+  const _BuildLockedNotice({required this.buildRecord});
+
+  final ProjectBuild buildRecord;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LearningUiPalette.of(context);
+    final message = buildRecord.status == ProjectBuildStatus.paused
+        ? LearnerBuildsL10n.pausedNotice.resolve(context)
+        : LearnerBuildsL10n.readOnlyNotice.resolve(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsetsDirectional.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: palette.cardSurfaceAlt,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(color: palette.borderSubtle),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline_rounded, color: palette.textSecondary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTextStyles.body(
+                context,
+              ).copyWith(color: palette.textSecondary, height: 1.35),
+            ),
+          ),
         ],
       ),
     );
@@ -1199,11 +1686,13 @@ class _BuildStepsSection extends StatelessWidget {
   const _BuildStepsSection({
     required this.buildRecord,
     required this.completingStepIds,
+    required this.isEditingLocked,
     required this.onCompleteCurrentStep,
   });
 
   final ProjectBuild buildRecord;
   final Set<String> completingStepIds;
+  final bool isEditingLocked;
   final VoidCallback onCompleteCurrentStep;
 
   @override
@@ -1252,7 +1741,9 @@ class _BuildStepsSection extends StatelessWidget {
             ...stepProgress.steps.map((step) {
               final isCompleting = completingStepIds.contains(step.stepId);
               final canComplete =
-                  step.state == ProjectBuildStepState.current && !isCompleting;
+                  !isEditingLocked &&
+                  step.state == ProjectBuildStepState.current &&
+                  !isCompleting;
 
               return Padding(
                 padding: const EdgeInsetsDirectional.only(bottom: AppSpacing.md),
@@ -1357,6 +1848,7 @@ class _BuildItemCard extends StatelessWidget {
     required this.index,
     required this.item,
     required this.isUpdating,
+    required this.isEditingLocked,
     required this.onStatusChanged,
     required this.onEditNote,
     required this.onFindMaterials,
@@ -1370,6 +1862,7 @@ class _BuildItemCard extends StatelessWidget {
   final int index;
   final ProjectBuildItem item;
   final bool isUpdating;
+  final bool isEditingLocked;
   final ValueChanged<ProjectBuildItemStatus> onStatusChanged;
   final VoidCallback onEditNote;
   final VoidCallback onFindMaterials;
@@ -1515,7 +2008,7 @@ class _BuildItemCard extends StatelessWidget {
               ),
             ),
           ],
-          if (showClassificationControls) ...[
+          if (showClassificationControls && !isEditingLocked) ...[
             const SizedBox(height: AppSpacing.md),
             Wrap(
               spacing: AppSpacing.sm,
@@ -1586,41 +2079,43 @@ class _BuildItemCard extends StatelessWidget {
               onUseAnotherMaterial: onShowMaterialCandidates,
             ),
           ],
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              FilledButton.tonalIcon(
-                onPressed: isUpdating ? null : onShowMaterialCandidates,
-                icon: const Icon(Icons.playlist_add_check_circle_outlined),
-                label: Text(
-                  item.linkedMaterial == null
-                      ? 'Browse matching materials'
-                      : 'Change material option',
+          if (!isEditingLocked) ...[
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: isUpdating ? null : onShowMaterialCandidates,
+                  icon: const Icon(Icons.playlist_add_check_circle_outlined),
+                  label: Text(
+                    item.linkedMaterial == null
+                        ? 'Browse matching materials'
+                        : 'Change material option',
+                  ),
                 ),
-              ),
-              OutlinedButton.icon(
-                onPressed: isUpdating ? null : onFindMaterials,
-                icon: const Icon(Icons.travel_explore_rounded),
-                label: const Text('Browse all materials'),
-              ),
-              if (!isAcquired &&
-                  item.status == ProjectBuildItemStatus.missing)
                 OutlinedButton.icon(
-                  onPressed: isUpdating ? null : onRequestMaterial,
-                  icon: const Icon(Icons.campaign_outlined),
-                  label: const Text('Request this component'),
+                  onPressed: isUpdating ? null : onFindMaterials,
+                  icon: const Icon(Icons.travel_explore_rounded),
+                  label: const Text('Browse all materials'),
                 ),
-              TextButton.icon(
-                onPressed: isUpdating ? null : onEditNote,
-                icon: const Icon(Icons.edit_note_rounded),
-                label: Text(
-                  item.learnerNote == null ? 'Add note' : 'Edit note',
+                if (!isAcquired &&
+                    item.status == ProjectBuildItemStatus.missing)
+                  OutlinedButton.icon(
+                    onPressed: isUpdating ? null : onRequestMaterial,
+                    icon: const Icon(Icons.campaign_outlined),
+                    label: const Text('Request this component'),
+                  ),
+                TextButton.icon(
+                  onPressed: isUpdating ? null : onEditNote,
+                  icon: const Icon(Icons.edit_note_rounded),
+                  label: Text(
+                    item.learnerNote == null ? 'Add note' : 'Edit note',
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );

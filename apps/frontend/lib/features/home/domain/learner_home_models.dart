@@ -108,6 +108,7 @@ class LearnerHomeContinueProjectRecommendation extends LearnerHomeItem {
     required this.progressPercent,
     required this.readyCount,
     required this.totalCount,
+    this.buildStatus,
   });
 
   final String projectId;
@@ -117,6 +118,7 @@ class LearnerHomeContinueProjectRecommendation extends LearnerHomeItem {
   final int progressPercent;
   final int readyCount;
   final int totalCount;
+  final String? buildStatus;
 }
 
 class LearnerHomeSection {

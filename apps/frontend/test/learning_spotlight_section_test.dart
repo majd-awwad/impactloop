@@ -400,6 +400,11 @@ class _FakeLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
+    return startBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {

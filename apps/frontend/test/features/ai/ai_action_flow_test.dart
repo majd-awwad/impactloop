@@ -1470,6 +1470,11 @@ class _TrackingBuildRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
+    return _refreshedBuild(projectId);
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {
@@ -1869,6 +1874,11 @@ class _StepCompletionTrackingBuildRepository implements LearningProjectRepositor
     String projectId, {
     String? recommendationImpressionId,
   }) async {
+    return _inProgressBuild(projectId);
+  }
+
+  @override
+  Future<ProjectBuild> buildAgain(String projectId) async {
     return _inProgressBuild(projectId);
   }
 

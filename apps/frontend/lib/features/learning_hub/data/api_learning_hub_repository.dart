@@ -194,6 +194,14 @@ class ApiLearningHubRepository implements LearningProjectRepository {
   }
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) {
+    return unwrapApiResponse(
+      _client.post<Map<String, dynamic>>('$_basePath/$projectId/builds/again'),
+      LearningHubApiMapper.fromBuildJson,
+    );
+  }
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {

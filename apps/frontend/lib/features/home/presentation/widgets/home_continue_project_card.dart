@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_radius.dart';
 import '../../../../app/theme/app_spacing.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../shared/models/localized_text.dart';
 import '../../../../shared/widgets/materials/materials_ui_palette.dart';
+import '../../../learner_builds/presentation/l10n/learner_builds_l10n.dart';
 import '../../domain/learner_home_models.dart';
 
 class HomeContinueProjectCard extends StatelessWidget {
@@ -15,6 +17,12 @@ class HomeContinueProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = MaterialsUiPalette.of(context);
+    final isPaused = item.buildStatus?.toUpperCase() == 'PAUSED';
+    final actionHint = isPaused
+        ? LearnerBuildsL10n.resumeBuild.resolve(context)
+        : item.reasons.isNotEmpty
+        ? item.reasons.first
+        : '${item.readyCount} of ${item.totalCount} components ready';
 
     return Material(
       color: Colors.transparent,
@@ -58,12 +66,13 @@ class HomeContinueProjectCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                item.reasons.isNotEmpty
-                    ? item.reasons.first
-                    : '${item.readyCount} of ${item.totalCount} components ready',
+                actionHint,
                 style: AppTextStyles.label(
                   context,
-                ).copyWith(color: palette.textSecondary),
+                ).copyWith(
+                  color: isPaused ? palette.mint : palette.textSecondary,
+                  fontWeight: isPaused ? FontWeight.w700 : FontWeight.w500,
+                ),
               ),
             ],
           ),

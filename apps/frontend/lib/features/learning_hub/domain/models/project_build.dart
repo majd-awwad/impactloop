@@ -3,7 +3,18 @@ import 'project_build_material_link.dart';
 
 export 'project_build_material_link.dart';
 
-enum ProjectBuildStatus { inProgress, completed, archived }
+enum ProjectBuildStatus { inProgress, paused, completed, archived }
+
+extension ProjectBuildStatusApi on ProjectBuildStatus {
+  String get apiValue {
+    return switch (this) {
+      ProjectBuildStatus.inProgress => 'IN_PROGRESS',
+      ProjectBuildStatus.paused => 'PAUSED',
+      ProjectBuildStatus.completed => 'COMPLETED',
+      ProjectBuildStatus.archived => 'ARCHIVED',
+    };
+  }
+}
 
 enum ProjectBuildItemStatus {
   missing,
@@ -169,6 +180,68 @@ class ProjectBuildStepProgressSummary {
   final int percent;
 }
 
+class ProjectBuildCompletionStoryPhoto {
+  const ProjectBuildCompletionStoryPhoto({
+    required this.id,
+    required this.imageUrl,
+    this.caption,
+    required this.sortOrder,
+  });
+
+  final String id;
+  final String imageUrl;
+  final String? caption;
+  final int sortOrder;
+}
+
+class ProjectBuildCompletionStory {
+  const ProjectBuildCompletionStory({
+    this.reflection,
+    this.caption,
+    this.updatedAt,
+    this.photos = const [],
+  });
+
+  final String? reflection;
+  final String? caption;
+  final DateTime? updatedAt;
+  final List<ProjectBuildCompletionStoryPhoto> photos;
+}
+
+class ProjectBuildImpactSummary {
+  const ProjectBuildImpactSummary({
+    required this.projectId,
+    required this.projectTitle,
+    required this.attemptNumber,
+    this.completedAt,
+    this.startedAt,
+    this.elapsedMs,
+    this.requiredMaterialComponentCount = 0,
+    this.readyMaterialComponentCount = 0,
+    this.alreadyOwnedComponentCount = 0,
+    this.acquiredViaImpactLoopCount = 0,
+    this.uniqueAcquiredMaterialCount = 0,
+    this.completedStepCount = 0,
+    this.totalStepCount = 0,
+    this.materialCategoriesUsed = const [],
+  });
+
+  final String projectId;
+  final String projectTitle;
+  final int attemptNumber;
+  final DateTime? completedAt;
+  final DateTime? startedAt;
+  final int? elapsedMs;
+  final int requiredMaterialComponentCount;
+  final int readyMaterialComponentCount;
+  final int alreadyOwnedComponentCount;
+  final int acquiredViaImpactLoopCount;
+  final int uniqueAcquiredMaterialCount;
+  final int completedStepCount;
+  final int totalStepCount;
+  final List<String> materialCategoriesUsed;
+}
+
 class ProjectBuildProject {
   const ProjectBuildProject({
     required this.id,
@@ -223,15 +296,23 @@ class ProjectBuild {
     required this.items,
     required this.materialReadiness,
     required this.stepProgress,
+    this.attemptNumber = 1,
+    this.isReadOnly = false,
     this.startedAt,
     this.completedAt,
+    this.pausedAt,
+    this.archivedAt,
     this.updatedAt,
     this.guideConversationId,
+    this.completionStory,
+    this.impactSummary,
   });
 
   final String id;
   final String projectId;
+  final int attemptNumber;
   final ProjectBuildStatus status;
+  final bool isReadOnly;
   final ProjectBuildProject project;
   final ProjectBuildProgress progress;
   final ProjectBuildMaterialReadiness materialReadiness;
@@ -239,6 +320,16 @@ class ProjectBuild {
   final List<ProjectBuildItem> items;
   final DateTime? startedAt;
   final DateTime? completedAt;
+  final DateTime? pausedAt;
+  final DateTime? archivedAt;
   final DateTime? updatedAt;
   final String? guideConversationId;
+  final ProjectBuildCompletionStory? completionStory;
+  final ProjectBuildImpactSummary? impactSummary;
+
+  bool get isEditingLocked =>
+      isReadOnly ||
+      status == ProjectBuildStatus.paused ||
+      status == ProjectBuildStatus.completed ||
+      status == ProjectBuildStatus.archived;
 }

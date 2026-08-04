@@ -30,10 +30,18 @@ class LearningHubApiMapper {
       id: _stringOrFallback(json['id'], fallback: ''),
       projectId: _stringOrFallback(json['projectId'], fallback: ''),
       status: _mapBuildStatus(json['status']),
+      attemptNumber: _intFromDynamic(json['attemptNumber']) ?? 1,
+      isReadOnly: json['isReadOnly'] == true ||
+          _mapBuildStatus(json['status']) == ProjectBuildStatus.completed ||
+          _mapBuildStatus(json['status']) == ProjectBuildStatus.archived,
       startedAt: _dateTimeFromDynamic(json['startedAt']),
       completedAt: _dateTimeFromDynamic(json['completedAt']),
+      pausedAt: _dateTimeFromDynamic(json['pausedAt']),
+      archivedAt: _dateTimeFromDynamic(json['archivedAt']),
       updatedAt: _dateTimeFromDynamic(json['updatedAt']),
       guideConversationId: _nullableString(json['guideConversationId']),
+      completionStory: _mapCompletionStory(json['completionStory']),
+      impactSummary: _mapImpactSummary(json['impactSummary']),
       project: ProjectBuildProject(
         id: _stringOrFallback(projectJson['id'], fallback: ''),
         title: _stringOrFallback(projectJson['title'], fallback: 'Project'),
@@ -772,12 +780,79 @@ class LearningHubApiMapper {
     );
   }
 
+  static ProjectBuildCompletionStory? completionStoryFromJson(Object? raw) =>
+      _mapCompletionStory(raw);
+
   static ProjectBuildStatus _mapBuildStatus(Object? raw) {
-    return switch (_stringOrFallback(raw, fallback: 'IN_PROGRESS')) {
+    return switch (_stringOrFallback(raw, fallback: 'IN_PROGRESS').toUpperCase()) {
       'COMPLETED' => ProjectBuildStatus.completed,
       'ARCHIVED' => ProjectBuildStatus.archived,
+      'PAUSED' => ProjectBuildStatus.paused,
       _ => ProjectBuildStatus.inProgress,
     };
+  }
+
+  static ProjectBuildCompletionStory? _mapCompletionStory(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final photosJson = json['photos'];
+    final photos = photosJson is List
+        ? photosJson
+              .whereType<Map>()
+              .map(
+                (photo) => ProjectBuildCompletionStoryPhoto(
+                  id: _stringOrFallback(photo['id'], fallback: ''),
+                  imageUrl: _stringOrFallback(photo['imageUrl'], fallback: ''),
+                  caption: _nullableString(photo['caption']),
+                  sortOrder: _intFromDynamic(photo['sortOrder']) ?? 0,
+                ),
+              )
+              .toList(growable: false)
+        : const <ProjectBuildCompletionStoryPhoto>[];
+
+    return ProjectBuildCompletionStory(
+      reflection: _nullableString(json['reflection']),
+      caption: _nullableString(json['caption']),
+      updatedAt: _dateTimeFromDynamic(json['updatedAt']),
+      photos: photos,
+    );
+  }
+
+  static ProjectBuildImpactSummary? _mapImpactSummary(Object? raw) {
+    final json = _asMap(raw);
+    if (json == null) {
+      return null;
+    }
+
+    final categoriesJson = json['materialCategoriesUsed'];
+    final categories = categoriesJson is List
+        ? categoriesJson.whereType<String>().toList(growable: false)
+        : const <String>[];
+
+    return ProjectBuildImpactSummary(
+      projectId: _stringOrFallback(json['projectId'], fallback: ''),
+      projectTitle: _stringOrFallback(json['projectTitle'], fallback: ''),
+      attemptNumber: _intFromDynamic(json['attemptNumber']) ?? 1,
+      completedAt: _dateTimeFromDynamic(json['completedAt']),
+      startedAt: _dateTimeFromDynamic(json['startedAt']),
+      elapsedMs: _intFromDynamic(json['elapsedMs']),
+      requiredMaterialComponentCount:
+          _intFromDynamic(json['requiredMaterialComponentCount']) ?? 0,
+      readyMaterialComponentCount:
+          _intFromDynamic(json['readyMaterialComponentCount']) ?? 0,
+      alreadyOwnedComponentCount:
+          _intFromDynamic(json['alreadyOwnedComponentCount']) ?? 0,
+      acquiredViaImpactLoopCount:
+          _intFromDynamic(json['acquiredViaImpactLoopCount']) ?? 0,
+      uniqueAcquiredMaterialCount:
+          _intFromDynamic(json['uniqueAcquiredMaterialCount']) ?? 0,
+      completedStepCount: _intFromDynamic(json['completedStepCount']) ?? 0,
+      totalStepCount: _intFromDynamic(json['totalStepCount']) ?? 0,
+      materialCategoriesUsed: categories,
+    );
   }
 
   static ProjectBuildItemStatus _mapBuildItemStatus(Object? raw) {

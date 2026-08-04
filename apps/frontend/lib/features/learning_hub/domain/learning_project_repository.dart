@@ -52,6 +52,8 @@ abstract class LearningProjectRepository {
     String? recommendationImpressionId,
   });
 
+  Future<ProjectBuild> buildAgain(String projectId);
+
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {

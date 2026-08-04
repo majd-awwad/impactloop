@@ -1618,6 +1618,9 @@ class _BuildGuideHubRepository implements LearningProjectRepository {
       _build;
 
   @override
+  Future<ProjectBuild> buildAgain(String projectId) async => _build;
+
+  @override
   Future<ProjectBuild> updateBuildItem(
     String projectId,
     String itemId, {

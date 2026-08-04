@@ -151,6 +151,10 @@ class ProjectBuildAcquisitionState {
       return false;
     }
 
+    if (build.status != ProjectBuildStatus.inProgress) {
+      return false;
+    }
+
     return build.items.any(itemNeedsActiveRefresh);
   }
 

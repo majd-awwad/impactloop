@@ -37,6 +37,8 @@ void _showFeedbackSnackBar(
   required Color foregroundColor,
 }) {
   final messenger = ScaffoldMessenger.of(context);
+  final screenWidth = MediaQuery.sizeOf(context).width;
+  final useBoundedWidth = screenWidth > 600;
 
   messenger
     ..hideCurrentSnackBar()
@@ -45,7 +47,10 @@ void _showFeedbackSnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
         backgroundColor: backgroundColor,
-        margin: const EdgeInsets.all(16),
+        width: useBoundedWidth ? 480 : null,
+        margin: useBoundedWidth
+            ? null
+            : const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         showCloseIcon: true,
         closeIconColor: foregroundColor,
       ),

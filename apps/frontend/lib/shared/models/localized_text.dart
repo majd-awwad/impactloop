@@ -9,7 +9,10 @@ class LocalizedText {
 
 extension LocalizedTextX on LocalizedText {
   String resolve(BuildContext context) {
-    final languageCode = Localizations.localeOf(context).languageCode;
+    return resolveFor(Localizations.localeOf(context).languageCode);
+  }
+
+  String resolveFor(String languageCode) {
     return languageCode == 'ar' ? ar : en;
   }
 }
