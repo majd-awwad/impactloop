@@ -47,6 +47,16 @@ import {
   normalizeSubmitComponent,
   type NormalizedSubmitComponent,
 } from './learning-projects.submit-components.js';
+import {
+  batchComputeProjectMaterialCoverage,
+  matchesMaterialAvailabilityFilter,
+  paginateBrowseResults,
+  sortBrowseProjects,
+  type BrowseProjectSortEntry,
+  type LearningProjectsBrowseSort,
+  type MaterialAvailabilityFilter,
+  type ProjectMaterialCoverageResult,
+} from './learning-projects.material-coverage.js';
 
 type SubmitLearningProjectResponse = {
   id: string;
@@ -128,6 +138,19 @@ const mapProjectReview = (review: ProjectReviewRecord) => ({
   updatedAt: review.updatedAt.toISOString(),
 });
 
+const mapMaterialCoverageDto = (
+  coverage?: ProjectMaterialCoverageResult | null,
+) => {
+  if (!coverage) {
+    return null;
+  }
+
+  return {
+    materialCoverage: coverage.materialCoverage,
+    personalBuildReadiness: coverage.personalBuildReadiness,
+  };
+};
+
 const mapLearningProjectListItem = (
   project: Awaited<
     ReturnType<typeof learningProjectsRepository.findLearningProjects>
@@ -139,6 +162,7 @@ const mapLearningProjectListItem = (
     followersCount?: number;
     isFollowing?: boolean;
     ratingSummary?: ReviewSummary;
+    coverage?: ProjectMaterialCoverageResult | null;
   } = {},
 ) => ({
   id: project.id,
@@ -157,6 +181,7 @@ const mapLearningProjectListItem = (
   followersCount: engagement.followersCount ?? 0,
   isFollowing: engagement.isFollowing ?? false,
   createdAt: project.createdAt.toISOString(),
+  ...mapMaterialCoverageDto(engagement.coverage),
 });
 
 const mapSubmissionActions = (status: string) => ({
@@ -273,6 +298,7 @@ const mapLearningProjectDetail = (
     ratingSummary?: ReviewSummary;
     recentReviews?: ProjectReviewRecord[];
     viewerReview?: ProjectReviewRecord | null;
+    coverage?: ProjectMaterialCoverageResult | null;
   } = {},
 ) => ({
   id: project.id,
@@ -300,6 +326,10 @@ const mapLearningProjectDetail = (
     isRequired: component.isRequired,
     canBeSubstituted: component.canBeSubstituted,
     notes: component.notes,
+    publicAvailabilityStatus:
+      engagement.coverage?.componentCoverage.find(
+        (entry) => entry.componentId === component.id,
+      )?.availabilityStatus ?? null,
   })),
   steps: project.steps.map((step) => ({
     id: step.id,
@@ -333,6 +363,8 @@ const mapLearningProjectDetail = (
   followersCount: engagement.followersCount ?? 0,
   isFollowing: engagement.isFollowing ?? false,
   createdAt: project.createdAt.toISOString(),
+  ...mapMaterialCoverageDto(engagement.coverage),
+  componentCoverage: engagement.coverage?.componentCoverage ?? [],
 });
 
 const summarizeMaterialReadiness = (
@@ -647,33 +679,52 @@ export const getLearningProjects = async (
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const result = await learningProjectsRepository.findLearningProjects(query);
+  const candidates =
+    await learningProjectsRepository.findLearningProjectBrowseCandidates(query);
 
-  return mapLearningProjectListResult(result, query, viewer);
+  return mapLearningProjectListResult(candidates, query, viewer);
 };
 
 export const getSavedLearningProjects = async (
   query: LearningProjectsQuery,
   viewer: AccessTokenPayload,
 ) => {
-  const result = await learningProjectsRepository.findSavedLearningProjects(
-    query,
-    viewer.sub,
+  const allCandidates =
+    await learningProjectsRepository.findLearningProjectBrowseCandidates(query);
+  const savedProjectIds = new Set(
+    (
+      await learningProjectsRepository.findSavedProjectIds(
+        viewer.sub,
+        allCandidates.map((project) => project.id),
+      )
+    ).values(),
+  );
+  const candidates = allCandidates.filter((project) =>
+    savedProjectIds.has(project.id),
   );
 
-  return mapLearningProjectListResult(result, query, viewer);
+  return mapLearningProjectListResult(candidates, query, viewer);
 };
 
 export const getFollowedLearningProjects = async (
   query: LearningProjectsQuery,
   viewer: AccessTokenPayload,
 ) => {
-  const result = await learningProjectsRepository.findFollowedLearningProjects(
-    query,
-    viewer.sub,
+  const allCandidates =
+    await learningProjectsRepository.findLearningProjectBrowseCandidates(query);
+  const followedProjectIds = new Set(
+    (
+      await learningProjectsRepository.findFollowedProjectIds(
+        viewer.sub,
+        allCandidates.map((project) => project.id),
+      )
+    ).values(),
+  );
+  const candidates = allCandidates.filter((project) =>
+    followedProjectIds.has(project.id),
   );
 
-  return mapLearningProjectListResult(result, query, viewer);
+  return mapLearningProjectListResult(candidates, query, viewer);
 };
 
 export const getMyLearningProjectSubmissions = async (
@@ -1054,14 +1105,114 @@ export const resubmitMyLearningProjectSubmissionById = async (
   return getMyLearningProjectSubmissionById(id, userId);
 };
 
-const mapLearningProjectListResult = async (
-  result: Awaited<
-    ReturnType<typeof learningProjectsRepository.findLearningProjects>
+const applyCoverageBrowseTransforms = async (
+  candidates: Awaited<
+    ReturnType<typeof learningProjectsRepository.findLearningProjectBrowseCandidates>
   >,
   query: LearningProjectsQuery,
   viewer?: AccessTokenPayload,
 ) => {
-  const projectIds = result.items.map((item) => item.id);
+  const candidateIds = candidates.map((item) => item.id);
+  const coverageByProjectId = await batchComputeProjectMaterialCoverage({
+    projectIds: candidateIds,
+    personalReadinessProjectIds: [],
+  });
+
+  const availabilityFilter: MaterialAvailabilityFilter =
+    query.availability ?? 'ANY';
+  const sort: LearningProjectsBrowseSort = query.sort ?? 'DEFAULT';
+
+  let entries = candidates
+    .map((project) => {
+      const coverage = coverageByProjectId.get(project.id) ?? null;
+      if (!coverage) {
+        return null;
+      }
+
+      return {
+        project,
+        coverage,
+      };
+    })
+    .filter(
+      (
+        entry,
+      ): entry is {
+        project: (typeof candidates)[number];
+        coverage: ProjectMaterialCoverageResult;
+      } => entry != null,
+    )
+    .filter((entry) =>
+      matchesMaterialAvailabilityFilter(
+        entry.coverage.materialCoverage,
+        availabilityFilter,
+      ),
+    );
+
+  const rankingProjectIds = entries.map((entry) => entry.project.id);
+  const likesByProjectId =
+    sort === 'MOST_AVAILABLE' || sort === 'MOST_POPULAR'
+      ? await learningProjectsRepository.countLikesByProjectIds(
+          rankingProjectIds,
+        )
+      : new Map<string, number>();
+
+  const sortEntries: BrowseProjectSortEntry[] = entries.map((entry) => ({
+    id: entry.project.id,
+    createdAt: entry.project.createdAt,
+    difficulty: entry.project.difficulty,
+    estimatedDurationMinutes: entry.project.estimatedDurationMinutes,
+    coverage: entry.coverage.materialCoverage,
+    likesCount: likesByProjectId.get(entry.project.id) ?? 0,
+  }));
+
+  const sortedIds = sortBrowseProjects(sortEntries, sort).map((entry) => entry.id);
+  const entryByProjectId = new Map(
+    entries.map((entry) => [entry.project.id, entry] as const),
+  );
+  entries = sortedIds
+    .map((projectId) => entryByProjectId.get(projectId))
+    .filter((entry): entry is NonNullable<typeof entry> => entry != null);
+
+  const paginated = paginateBrowseResults(entries, query.page, query.limit);
+  const pageProjectIds = paginated.items.map((entry) => entry.project.id);
+
+  if (viewer?.roles.includes('LEARNER') && pageProjectIds.length > 0) {
+    const pageCoverage = await batchComputeProjectMaterialCoverage({
+      projectIds: pageProjectIds,
+      learnerId: viewer.sub,
+      personalReadinessProjectIds: pageProjectIds,
+    });
+
+    for (const projectId of pageProjectIds) {
+      const pageResult = pageCoverage.get(projectId);
+      const existing = coverageByProjectId.get(projectId);
+      if (pageResult && existing) {
+        existing.personalBuildReadiness = pageResult.personalBuildReadiness;
+      }
+    }
+  }
+
+  return {
+    items: paginated.items,
+    pagination: paginated.pagination,
+    coverageByProjectId,
+  };
+};
+
+const mapLearningProjectListResult = async (
+  candidates: Awaited<
+    ReturnType<typeof learningProjectsRepository.findLearningProjectBrowseCandidates>
+  >,
+  query: LearningProjectsQuery,
+  viewer?: AccessTokenPayload,
+) => {
+  const transformed = await applyCoverageBrowseTransforms(
+    candidates,
+    query,
+    viewer,
+  );
+  const projectIds = transformed.items.map((entry) => entry.project.id);
   const [
     likesByProjectId,
     likedProjectIds,
@@ -1079,22 +1230,18 @@ const mapLearningProjectListResult = async (
   ]);
 
   return {
-    items: result.items.map((item) =>
-      mapLearningProjectListItem(item, {
-        likesCount: likesByProjectId.get(item.id) ?? 0,
-        isLiked: likedProjectIds.has(item.id),
-        isSaved: savedProjectIds.has(item.id),
-        followersCount: followsByProjectId.get(item.id) ?? 0,
-        isFollowing: followedProjectIds.has(item.id),
-        ratingSummary: reviewSummariesByProjectId.get(item.id),
+    items: transformed.items.map((entry) =>
+      mapLearningProjectListItem(entry.project, {
+        likesCount: likesByProjectId.get(entry.project.id) ?? 0,
+        isLiked: likedProjectIds.has(entry.project.id),
+        isSaved: savedProjectIds.has(entry.project.id),
+        followersCount: followsByProjectId.get(entry.project.id) ?? 0,
+        isFollowing: followedProjectIds.has(entry.project.id),
+        ratingSummary: reviewSummariesByProjectId.get(entry.project.id),
+        coverage: entry.coverage,
       }),
     ),
-    pagination: {
-      page: query.page,
-      limit: query.limit,
-      total: result.total,
-      totalPages: result.total === 0 ? 0 : Math.ceil(result.total / query.limit),
-    },
+    pagination: transformed.pagination,
   };
 };
 
@@ -1117,6 +1264,7 @@ export const getLearningProjectById = async (
     reviewSummariesByProjectId,
     recentReviews,
     viewerReview,
+    coverageByProjectId,
   ] = await Promise.all([
     learningProjectsRepository.countLikesByProjectIds([project.id]),
     learningProjectsRepository.findLikedProjectIds(viewer?.sub, [project.id]),
@@ -1128,6 +1276,10 @@ export const getLearningProjectById = async (
     learningProjectsRepository.summarizeReviewsByProjectIds([project.id]),
     learningProjectsRepository.findRecentReviewsForProject(project.id),
     learningProjectsRepository.findReviewForViewer(project.id, viewer?.sub),
+    batchComputeProjectMaterialCoverage({
+      projectIds: [project.id],
+      learnerId: viewer?.roles.includes('LEARNER') ? viewer.sub : undefined,
+    }),
   ]);
 
   return mapLearningProjectDetail(project, {
@@ -1139,6 +1291,7 @@ export const getLearningProjectById = async (
     ratingSummary: reviewSummariesByProjectId.get(project.id),
     recentReviews,
     viewerReview,
+    coverage: coverageByProjectId.get(project.id) ?? null,
   });
 };
 

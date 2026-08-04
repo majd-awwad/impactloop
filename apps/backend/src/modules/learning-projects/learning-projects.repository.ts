@@ -120,6 +120,21 @@ const buildLearningProjectsWhere = (
   return where;
 };
 
+export const LEARNING_PROJECT_BROWSE_CANDIDATE_LIMIT = 200;
+
+export const findLearningProjectBrowseCandidates = async (
+  query: LearningProjectsQuery,
+) => {
+  const where = buildLearningProjectsWhere(query);
+
+  return prisma.learningProject.findMany({
+    where,
+    include: learningProjectListInclude,
+    orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+    take: LEARNING_PROJECT_BROWSE_CANDIDATE_LIMIT,
+  });
+};
+
 const learningProjectListInclude = {
   category: {
     select: {
